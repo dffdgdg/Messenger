@@ -1,0 +1,108 @@
+<Styles xmlns="https://github.com/avaloniaui"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:views="using:MessengerDesktop.Views">
+	<Design.PreviewWith>
+		<ToggleButton Classes="IconButton">
+			<Path
+							Data="M10,7.5A1.5,1.501,111.5,9A1.5,1.500,110,7.5Z
+							M10,12A1.5,1.501,111.5,13.5A1.5,1.500,110,12Z
+							M10,16.5A1.5,1.501,111.5,18A1.5,1.500,110,16.5Z"
+							Width="20"
+							Height="20"
+							Fill="{TemplateBinding Foreground}"
+							Stretch="Uniform"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							RenderTransformOrigin="0.5,0.5"/>
+		</ToggleButton>
+	</Design.PreviewWith>
+
+	<Style Selector="Button">
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+	</Style>
+	
+
+
+	<Style Selector="Button.IconButton">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="BorderThickness" Value="0" />
+		<Setter Property="Padding" Value="0" />
+		<Setter Property="Width" Value="40" />
+		<Setter Property="Height" Value="40" />
+		<Setter Property="VerticalContentAlignment" Value="Center" />
+		<Setter Property="HorizontalContentAlignment" Value="Center" />
+	</Style>
+
+	<Style Selector="Button.IconButton:pointerover">
+		<Setter Property="Background" Value="#E0E0E0" />
+	</Style>
+	<Style Selector="TextBlock">
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+	</Style>
+
+	<Style Selector=":is(Button):pressed">
+		<Setter Property="RenderTransform" Value="none" />
+	</Style>
+
+	<Style Selector="Button.icon-button">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="8"/>
+		<Setter Property="CornerRadius" Value="4"/>
+	</Style>
+
+	<Style Selector="Button.icon-button:pointerover">
+		<Setter Property="Background" Value="#20FFFFFF"/>
+	</Style>
+
+	<Style Selector="Button.danger">
+		<Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+	</Style>
+
+	<Style Selector="TextBox, ComboBox">
+		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+	</Style>
+
+	<Style Selector="CheckBox, ToggleButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+	</Style>
+
+	<!-- Centralized styles moved from views -->
+	<!-- Chat info panel animation/size -->
+	<Style Selector="views|ChatInfoPanel">
+		<Setter Property="Width" Value="320"/>
+		<Setter Property="ClipToBounds" Value="True"/>
+		<Setter Property="Margin" Value="-320,0,0,0"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<ThicknessTransition Property="Margin" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="views|ChatInfoPanel[IsVisible=true]">
+		<Setter Property="Margin" Value="0"/>
+	</Style>
+
+	<!-- Message container -->
+	<Style Selector="Border.MessageContainer">
+		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="BorderThickness" Value="0"/>
+	</Style>
+
+	<!-- Messages list padding -->
+	<Style Selector="ItemsControl#MessagesList">
+		<Setter Property="Padding" Value="0,8"/>
+	</Style>
+
+	<Style Selector="TextBox:focus-within /template/ Border">
+		<Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
+	</Style>
+	<Style Selector="TextBox:pointerover /template/ Border">
+		<Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
+	</Style>
+</Styles>

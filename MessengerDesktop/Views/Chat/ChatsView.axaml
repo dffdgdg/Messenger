@@ -1,0 +1,153 @@
+<UserControl x:Name="Root" xmlns="https://github.com/avaloniaui"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+ mc:Ignorable="d" d:DesignWidth="1535" d:DesignHeight="550"
+ x:Class="MessengerDesktop.Views.ChatsView"
+ Background="{DynamicResource PrimaryBG}"
+ x:DataType="vm:ChatsViewModel"
+ xmlns:vm="using:MessengerDesktop.ViewModels"
+ xmlns:conv="using:MessengerDesktop.Converters"
+ xmlns:views="using:MessengerDesktop.Views"
+ xmlns:shared="using:MessengerShared.DTO">
+	<UserControl.Styles>
+		<Style Selector="ListBoxItem">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}" />
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,2"/>
+		</Style>
+		<Style Selector="ListBoxItem:pointerover">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
+		<Style Selector="ListBoxItem:selected">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="Foreground" Value="White"/>
+		</Style>
+		<Style Selector="ListBoxItem:selected TextBlock">
+			<Setter Property="Foreground" Value="White"/>
+		</Style>
+	</UserControl.Styles>
+	<Grid x:Name="MainGrid">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="270" MinWidth="75" MaxWidth="600"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*" MinWidth="400"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Список чатов -->
+		<Grid x:Name="ChatListGrid" Grid.Column="0">
+			<Border Width="1"
+			HorizontalAlignment="Left"
+			VerticalAlignment="Stretch"
+			Background="{DynamicResource BorderDefault}"/>
+
+				<StackPanel Orientation="Vertical">
+					<ListBox ItemsSource="{Binding Chats}"
+					Background="{DynamicResource PrimaryBG}"
+					BorderThickness="0"
+					Margin="11,0,11,0"
+					SelectedItem="{Binding SelectedChat, Mode=TwoWay}">
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="shared:ChatDTO">
+								<Grid x:Name="ChatItemGrid" Height="60" Margin="0,3">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+									</Grid.ColumnDefinitions>
+
+									<!-- Аватар с кликом на профиль -->
+									<Border Background="Transparent"
+									Width="44" Height="44"
+									CornerRadius="22"
+									Margin="4,0"
+									VerticalAlignment="Center"
+									Cursor="Hand"
+ >
+										<Ellipse Width="44" Height="44">
+											<Ellipse.Fill>
+												<Binding Path="Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+											</Ellipse.Fill>
+										</Ellipse>
+									</Border>
+
+									<!-- Название и дата -->
+									<Grid x:Name="ChatDetails"
+									Grid.Column="1"
+									Classes="chatDetails"
+									Margin="8,0,4,0">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="*"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<StackPanel Grid.Column="0"
+										VerticalAlignment="Center"
+ 
+										Cursor="Hand">
+											<TextBlock Text="{Binding Name}"
+											Foreground="{DynamicResource TextPrimary}"
+											FontWeight="SemiBold"
+											FontSize="14"/>
+											<TextBlock Text="..."
+											Foreground="{DynamicResource TextSecondary}"
+											FontSize="12"
+											TextTrimming="CharacterEllipsis"/>
+										</StackPanel>
+
+										<TextBlock Grid.Column="1"
+										VerticalAlignment="Top"
+										Margin="4,2,0,0"
+										Foreground="{DynamicResource TextSecondary}"
+										FontSize="11"
+										Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"/>
+									</Grid>
+								</Grid>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+
+						<ListBox.Styles>
+							<Style Selector="ListBoxItem">
+								<Setter Property="Background" Value="{DynamicResource PrimaryBG}" />
+								<Setter Property="CornerRadius" Value="6"/>
+								<Setter Property="Padding" Value="0"/>
+								<Setter Property="Margin" Value="0,2"/>
+							</Style>
+							<Style Selector="ListBoxItem:pointerover">
+								<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+							</Style>
+							<Style Selector="ListBoxItem:selected">
+								<Setter Property="Background" Value="{DynamicResource Accent}"/>
+								<Setter Property="Foreground" Value="White"/>
+							</Style>
+							<Style Selector="ListBoxItem:selected TextBlock">
+								<Setter Property="Foreground" Value="White"/>
+							</Style>
+						</ListBox.Styles>
+					</ListBox>
+				</StackPanel>
+		</Grid>
+
+		<!-- Разделитель -->
+		<GridSplitter x:Name="GridSplitter"
+		Grid.Column="1"
+		ResizeDirection="Columns"
+		Background="Transparent"
+		ResizeBehavior="PreviousAndNext"/>
+
+		<!-- Основной контент чата -->
+		<Border Grid.Column="2"
+		CornerRadius="16"
+		Background="{DynamicResource SecondaryBG}"
+		BorderBrush="#1B1B1B"
+		BorderThickness="1"
+		Margin="1,0,0,0">
+			<ContentControl Content="{Binding CurrentChatViewModel}" />
+		</Border>
+
+		<!-- Chat info panel moved here to keep single instance in UI -->
+		<views:ChatInfoPanel x:Name="InfoPanel" Grid.Column="3"
+		DataContext="{Binding CurrentChatViewModel}" />
+	</Grid>
+</UserControl>

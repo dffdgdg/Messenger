@@ -1,0 +1,6 @@
+@MessengerAPI_HostAddress = http://localhost:5274
+
+GET {{MessengerAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

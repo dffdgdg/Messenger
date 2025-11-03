@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:shared="using:MessengerShared.DTO"
+             x:Class="MessengerDesktop.Views.ChatInfoPanel"
+             x:DataType="vm:ChatViewModel"
+             Width="320"
+             FontFamily="Segoe UI">
+    <Border Background="{DynamicResource PrimaryBG}"
+            CornerRadius="0,16,16,0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="58"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,0">
+                <Grid VerticalAlignment="Center">
+                    <TextBlock Text="Информация о группе"
+                             FontWeight="SemiBold"
+                             FontSize="16"
+                             Foreground="{DynamicResource TextPrimary}"/>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1" Padding="16">
+                <StackPanel Spacing="24">
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Ellipse Width="64" Height="64" VerticalAlignment="Center">
+                            <Ellipse.Fill>
+                                <Binding Path="Chat.Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Chat.Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                            <TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}" FontSize="12" Foreground="#72767D"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Уведомления" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Включить уведомления" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}"/>
+                            <ToggleSwitch Grid.Column="1"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Participants list -->
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Участники" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
+                        <ItemsControl ItemsSource="{Binding Members}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="shared:UserDTO">
+                                    <Button Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="8,6"
+                                            Margin="0,2"
+                                            HorizontalAlignment="Stretch"
+                                            Classes="hoverAccent"
+                                            
+                                            CommandParameter="{Binding Id}">
+										<!--Command="{Binding ((vm:ChatViewModel)DataContext).ShowUserProfile, RelativeSource={RelativeSource AncestorType=ItemsControl}}"-->
+										<StackPanel Orientation="Horizontal" 
+                                                  Spacing="12" 
+                                                  VerticalAlignment="Center">
+                                            <Ellipse Width="36" Height="36">
+                                                <Ellipse.Fill>
+                                                    <Binding Path="Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}" 
+                                                     VerticalAlignment="Center" 
+                                                     Foreground="{DynamicResource TextPrimary}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

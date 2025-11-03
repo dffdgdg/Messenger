@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MessengerShared.DTO.LoginDTO">
+    <Position X="9.5" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAQAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>DTO\AuthDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.ChatDTO">
+    <Position X="6" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAACAAAAAAAAQAgAQAAAAAAAAAAAAAAAAIAAA=</HashCode>
+      <FileName>DTO\ChatDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.DepartmentDTO">
+    <Position X="7.75" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAACAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DTO\DepartmentDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.MessageDTO">
+    <Position X="11.25" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACACAACABgAAAAAAACAAAAAAAAgRCAAAAAAYAAAgAAQ=</HashCode>
+      <FileName>DTO\MessageDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.UserMentionDTO">
+    <Position X="11.25" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAQAAAAhAAAAAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>DTO\MessageDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.PagedMessagesDTO">
+    <Position X="6" Y="8.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAAAAAACAAAAAAQAAAAI=</HashCode>
+      <FileName>DTO\PagedMessagesDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.PollDTO">
+    <Position X="7.75" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACACAAAAAiAAAAAAACAQAAAQAAAAAAAEAAAAAABACAQ=</HashCode>
+      <FileName>DTO\PollDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.PollOptionDTO">
+    <Position X="13" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACCCAAAAAAAAAAAgAAEAQAAAAAAAAAAAAAAACAAAAAA=</HashCode>
+      <FileName>DTO\PollDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.PollVoteDTO">
+    <Position X="13" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAQEAAAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DTO\PollDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerShared.DTO.UserDTO">
+    <Position X="9.5" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACEAAAABAAgAAQAQQgAAAAEAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DTO\UserDTO.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="MessengerShared.DTO.Theme">
+    <Position X="6" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAACAAAAAAAAAAAIAAAAAAAAAQAAAAAA=</HashCode>
+      <FileName>DTO\UserDTO.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

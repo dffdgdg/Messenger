@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="TopBg">#E8F0FE</Color>
+    <Color x:Key="BaseBg">#FFFFFF</Color>
+
+    <SolidColorBrush x:Key="PanelBg" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="PanelBgSolid" Color="#FFFFFF"/>
+
+    <SolidColorBrush x:Key="PrimaryBG" Color="#F9F0F5"/>
+    <SolidColorBrush x:Key="SecondaryBG" Color="#FCF8FA"/>
+    <SolidColorBrush x:Key="ThirdBg" Color="#FBFBFB"/>
+
+    <SolidColorBrush x:Key="PrimaryBrdr" Color="#EDE9E8"/>
+    <SolidColorBrush x:Key="SecondaryBrdr" Color="#EAEAEA"/>
+
+    <SolidColorBrush x:Key="TextPrimary" Color="#000000"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#666666"/>
+    <SolidColorBrush x:Key="Muted" Color="#999999"/>
+
+    <SolidColorBrush x:Key="BorderDefault" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="BorderHover" Color="#BDBDBD"/>
+    <SolidColorBrush x:Key="BorderFocus" Color="#5865F2"/>
+
+    <SolidColorBrush x:Key="Accent" Color="#5865F2"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#4752C4"/>
+    <SolidColorBrush x:Key="AccentPressed" Color="#3C45A5"/>
+    <SolidColorBrush x:Key="IconAccent" Color="#424242"/>
+    <SolidColorBrush x:Key="Icon" Color="#757575"/>
+
+    <SolidColorBrush x:Key="Outline" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="OutlineHover" Color="#5DC662"/>
+    <SolidColorBrush x:Key="OutlinePressed" Color="#4AAE56"/>
+
+    <SolidColorBrush x:Key="MessageOwnBackground" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="MessageOtherBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="MessageOwnText" Color="#1976D2"/>
+    <SolidColorBrush x:Key="MessageOtherText" Color="#212121"/>
+    <SolidColorBrush x:Key="MessageTimestamp" Color="#757575"/>
+    <SolidColorBrush x:Key="MessageSenderName" Color="#1976D2"/>
+    <SolidColorBrush x:Key="DateDividerBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="DateDividerText" Color="#757575"/>
+
+</ResourceDictionary>

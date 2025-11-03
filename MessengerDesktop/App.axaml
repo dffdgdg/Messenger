@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:MessengerDesktop.Converters"
+             x:Class="MessengerDesktop.App"
+             RequestedThemeVariant="Dark">
+
+	<Application.Resources>
+		<ResourceDictionary>
+			<converters:ConverterLocator x:Key="Converters"/>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="avares://MessengerDesktop/Assets/Icons.axaml"/>
+			</ResourceDictionary.MergedDictionaries>
+			<ResourceDictionary.ThemeDictionaries>
+				<ResourceDictionary x:Key='Light'>
+					<ResourceDictionary.MergedDictionaries>
+						<ResourceInclude Source="Assets/LightTheme.axaml" />
+					</ResourceDictionary.MergedDictionaries>
+				</ResourceDictionary>
+				<ResourceDictionary x:Key='Dark'>
+					<ResourceDictionary.MergedDictionaries>
+						<ResourceInclude Source="Assets/DarkTheme.axaml" />
+					</ResourceDictionary.MergedDictionaries>
+				</ResourceDictionary>
+			</ResourceDictionary.ThemeDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
+
+	<Application.Styles>
+		<FluentTheme/>
+		<StyleInclude Source="avares://MessengerDesktop/Assets/MainStyle.axaml"/>
+	</Application.Styles>
+</Application>

@@ -1,0 +1,146 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             x:Class="MessengerDesktop.Views.ProfileView"
+             x:DataType="vm:ProfileViewModel"
+             Background="{DynamicResource PrimaryBG}">
+
+	<Border CornerRadius="16"
+            Background="{DynamicResource SecondaryBG}"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="1"
+            Padding="32">
+
+		<Grid RowDefinitions="Auto,*"
+              ColumnDefinitions="*"
+              RowSpacing="24">
+
+			<!-- Заголовок -->
+			<TextBlock Text="Профиль"
+                       FontSize="28"
+                       FontWeight="DemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       Grid.Row="0"/>
+
+			<!-- Контент -->
+			<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+				<StackPanel Spacing="28">
+
+					<!-- Информация о пользователе -->
+					<Border CornerRadius="12"
+                            Padding="20"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource BorderDefault}"
+							Background="{DynamicResource ThirdBG}">
+						
+						<StackPanel Orientation="Horizontal"
+                                    Spacing="20"
+                                    VerticalAlignment="Center">
+
+							<!-- Аватар -->
+							<Border Width="96"
+									Height="96"
+									CornerRadius="48"
+									BorderBrush="{DynamicResource BorderDefault}"
+									BorderThickness="1"
+									Background="#1FFFFFFF"
+									ClipToBounds="True">
+								<Image Source="{Binding AvatarBitmap}"
+									   Stretch="UniformToFill"/>
+							</Border>
+
+							<!-- Имя и кнопка -->
+							<StackPanel Spacing="6" VerticalAlignment="Center">
+								<TextBlock Text="{Binding User, Converter={conv:Converter Name=DisplayOrUsername}}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+								<TextBlock Text="{Binding User.Username}"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextSecondary}"/>
+								<Button Content="Загрузить аватар"
+                                        Command="{Binding UploadAvatarCommand}"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,12,0,0"
+                                        Width="160"
+                                        Height="32"
+                                        CornerRadius="6"/>
+							</StackPanel>
+						</StackPanel>
+					</Border>
+
+					<!-- Просмотр профиля -->
+					<Border CornerRadius="12"
+                            Padding="20"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            IsVisible="{Binding !IsEditing}"
+							Background="{DynamicResource ThirdBG}">
+
+
+						<StackPanel Spacing="12">
+							<Grid ColumnDefinitions="180,*" RowDefinitions="Auto" ColumnSpacing="8">
+								<TextBlock Text="Отображаемое имя"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           VerticalAlignment="Center"/>
+								<TextBlock Grid.Column="1"
+                                           Text="{Binding User.DisplayName}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+							</Grid>
+
+							<Button Content="Редактировать профиль"
+                                    Command="{Binding StartEditCommand}"
+                                    Width="200"
+                                    Height="36"
+                                    Margin="0,16,0,0"
+                                    Background="{DynamicResource Accent}"
+                                    Foreground="{DynamicResource TextPrimary}"
+                                    CornerRadius="6"/>
+						</StackPanel>
+					</Border>
+
+					<!-- Редактирование -->
+					<Border CornerRadius="12"
+                            Padding="20"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            IsVisible="{Binding IsEditing}"
+							Background="{DynamicResource ThirdBG}">
+
+						<StackPanel Spacing="18">
+							<StackPanel Spacing="6">
+								<TextBlock Text="Отображаемое имя"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+								<TextBox Text="{Binding TempDisplayName}"
+                                         Watermark="Введите новое имя"
+                                         CornerRadius="6"
+                                         BorderBrush="{DynamicResource BorderDefault}"/>
+							</StackPanel>
+
+							<StackPanel Orientation="Horizontal"
+                                        Spacing="10"
+                                        Margin="0,12,0,0">
+								<Button Content="Сохранить"
+                                        Command="{Binding SaveChangesCommand}"
+                                        Width="120"
+                                        Height="36"
+                                        Background="{DynamicResource Accent}"
+                                        Foreground="{DynamicResource TextPrimary}"
+                                        CornerRadius="6"/>
+								<Button Content="Отмена"
+                                        Command="{Binding CancelEditCommand}"
+                                        Width="100"
+                                        Height="36"
+                                        CornerRadius="6"/>
+							</StackPanel>
+						</StackPanel>
+					</Border>
+
+				</StackPanel>
+			</ScrollViewer>
+		</Grid>
+	</Border>
+</UserControl>

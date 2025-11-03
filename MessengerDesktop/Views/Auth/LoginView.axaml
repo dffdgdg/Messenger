@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+             x:Class="MessengerDesktop.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+    <UserControl.Styles>
+        <!-- Input Fields -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="TextBox:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+            <Setter Property="Background" Value="#232427"/>
+        </Style>
+
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+            <Setter Property="Background" Value="#1A1B1E"/>
+        </Style>
+
+        <!-- CheckBox -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        </Style>
+
+        <!-- Links -->
+        <Style Selector="TextBlock.link">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style Selector="TextBlock.link:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+        </Style>
+
+        <!-- Buttons -->
+        <Style Selector="Button">
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0.2" Easing="CircularEaseOut"/>
+                    <BrushTransition Property="Background" Duration="0.2"/>
+                </Transitions>
+            </Setter>
+            <Setter Property="RenderTransform" Value="none"/>
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="BorderRoot"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Panel>
+                            <Border Name="GlowBorder"
+                                    Background="{DynamicResource Accent}"
+                                    Opacity="0"
+                                    Effect="blur(8)"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0.2"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                            </Border>
+                            <ContentPresenter Name="PART_ContentPresenter"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+											  Foreground="White"
+                                              Padding="{TemplateBinding Padding}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Panel>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+
+        <Style Selector="Button.primary:pointerover /template/ Border#GlowBorder">
+            <Setter Property="Opacity" Value="0.3"/>
+        </Style>
+
+        <Style Selector="Button.primary:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.98)"/>
+        </Style>
+
+        <Style Selector="Button.primary:pressed /template/ Border#GlowBorder">
+            <Setter Property="Opacity" Value="0.1"/>
+        </Style>
+
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        
+        <Style Selector="Button.outline:pointerover">
+            <Setter Property="Background" Value="#232427"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+
+        <Style Selector="Button.outline:pressed">
+            <Setter Property="Background" Value="#1A1B1E"/>
+            <Setter Property="RenderTransform" Value="scale(0.98)"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Canvas ClipToBounds="True">
+            <Rectangle Canvas.Left="-100" Canvas.Top="-100" 
+                     Width="300" Height="300" 
+                     Fill="{DynamicResource Accent}" 
+                     Opacity="0.05">
+                <Rectangle.RenderTransform>
+                    <RotateTransform Angle="45"/>
+                </Rectangle.RenderTransform>
+            </Rectangle>
+            
+            <Ellipse Canvas.Right="-150" Canvas.Bottom="-150"
+                     Width="400" Height="400"
+                     Fill="{DynamicResource Accent}"
+                     Opacity="0.03"/>
+        </Canvas>
+
+        <!-- Login Card -->
+        <Border Background="{DynamicResource PanelBgSolid}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="40"
+                Width="400"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Effect="drop-shadow(0 8 32 rgba(0,0,0,0.25))">
+            
+            <StackPanel Spacing="24">
+                <!-- Header -->
+                <StackPanel Spacing="8" Margin="0,0,0,8">
+                    <TextBlock Text="С возвращением!"
+                              FontSize="24"
+                              FontWeight="Bold"
+                              HorizontalAlignment="Center"
+                              Foreground="{DynamicResource TextPrimary}"/>
+                    <TextBlock Text="Войдите в свой аккаунт"
+                              FontSize="14"
+                              HorizontalAlignment="Center"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                </StackPanel>
+
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Логин"
+                                 FontSize="13"
+                                 FontWeight="Medium"/>
+                        <TextBox Text="{Binding Username}"
+                                Watermark="Введите ваш логин"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Пароль"
+                                 FontSize="13"
+                                 FontWeight="Medium"
+                                 Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBox Text="{Binding Password}"
+                                Watermark="Введите ваш пароль"
+                                PasswordChar="•"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="Auto,*">
+                    <CheckBox Grid.Column="0"
+                              Content="Запомнить меня"
+                              IsChecked="{Binding RememberMe}"/>
+                </Grid>
+                    <Button Classes="primary"
+                            Content="Войти"
+							Foreground="White"
+							VerticalContentAlignment="Center"
+                            Command="{Binding LoginCommand}">
+                        <Button.Styles>
+                            <Style Selector="Button.primary /template/ Border#GlowBorder">
+                                <Setter Property="Transitions">
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0.2"/>
+                                    </Transitions>
+                                </Setter>
+                            </Style>
+                            <Style Selector="Button.primary:pointerover /template/ Border#GlowBorder">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Style>
+                        </Button.Styles>
+                    </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,381 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:shared="using:MessengerShared.DTO"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:views="using:MessengerDesktop.Views"
+			 xmlns:chat="using:MessengerDesktop.Views.Chat"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 x:Class="MessengerDesktop.Views.Chat.ChatView"
+			 x:DataType="vm:ChatViewModel"
+			 x:Name="Root"
+            Design.Width="1280" Design.Height="720"
+        Background="Transparent">
+
+	<UserControl.Styles>
+		<Style Selector="views|ChatInfoPanel">
+			<Setter Property="Width" Value="320"/>
+			<Setter Property="ClipToBounds" Value="True"/>
+			<Setter Property="Margin" Value="-320,0,0,0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<ThicknessTransition Property="Margin" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="views|ChatInfoPanel[IsVisible=true]">
+			<Setter Property="Margin" Value="0"/>
+		</Style>
+		
+		<Style Selector="Border.MessageContainer">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+
+		<Style Selector="ItemsControl#MessagesList">
+			<Setter Property="Padding" Value="0,8"/>
+		</Style>
+
+		<Style Selector="ToggleButton.IconButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Width" Value="40"/>
+			<Setter Property="Height" Value="40"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"
+				/>
+			<Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="Transparent"/>
+				<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			</Style>
+			<Style Selector="^:checked">
+				<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			</Style>
+			<Style Selector="^:pointerover  /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="#22FFFFFF"/>
+			</Style>
+
+			<Style Selector="^:disabled">
+				<Setter Property="Opacity" Value="0.5"/>
+			</Style>
+		</Style>
+	</UserControl.Styles>
+	
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Main chat area -->
+		<Border Grid.Column="0" CornerRadius="16" Background="{DynamicResource SecondaryBG}">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+
+				<!-- Header (без изменений) -->
+				<Border Grid.Row="0" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,0,0,1" Padding="16,0">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+							<Border Width="36" Height="36" CornerRadius="18" ClipToBounds="True">
+								<Panel>
+									<Border>
+										<Border.Background>
+											<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+												<GradientStop Color="#B493F8" Offset="0.0"/>
+												<GradientStop Color="#6F63E0" Offset="1.0"/>
+											</LinearGradientBrush>
+										</Border.Background>
+									</Border>
+									<Image Source="{Binding Chat.Avatar}" Stretch="UniformToFill"/>
+								</Panel>
+							</Border>
+							<TextBlock Text="{Binding Chat.Name}" FontWeight="SemiBold" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}"/>
+						</StackPanel>
+
+						<Border Grid.Column="2" HorizontalAlignment="Right" Background="{DynamicResource PrimaryBG}" CornerRadius="4" Margin="8">
+							<StackPanel Orientation="Horizontal">
+								<Button Classes="IconButton" Foreground="Yellow" ToolTip.Tip="Поиск" CornerRadius="4,0,0,4">
+									<Path Data="{StaticResource SearchIcon}" Fill="{DynamicResource TextPrimary}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Button>
+
+								<ToggleButton Classes="IconButton" ToolTip.Tip="Информация о канале" CornerRadius="0"
+									    IsChecked="{Binding IsInfoPanelOpen}">
+									<Path Data="{StaticResource PanelRight}"
+											Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+										Width="20" Height="20"
+									 Stretch="Uniform"/>
+								</ToggleButton>
+
+								<Button Classes="IconButton" ToolTip.Tip="Меню" CornerRadius="0,4,4,0">
+									<Button.Flyout>
+										<MenuFlyout Placement="BottomEdgeAlignedRight">
+											<MenuItem Header="Создать опрос" Command="{Binding OpenCreatePollCommand}"/>
+											<MenuItem Header="Выйти из чата" Command="{Binding LeaveChatCommand}" Foreground="Red"/>
+										</MenuFlyout>
+									</Button.Flyout>
+									<Path Margin="10,0,0,0" Data="{StaticResource Options}" Width="20" Height="20" Fill="{DynamicResource TextPrimary}" Stretch="Uniform"/>
+								</Button>
+							</StackPanel>
+						</Border>
+					</Grid>
+				</Border>
+
+				<ScrollViewer Name="MessagesScrollViewer"
+					   Grid.Row="1"
+				  VerticalScrollBarVisibility="Auto"
+				   Margin="0,8"
+						   Padding="16,0">
+					<ItemsControl ItemsSource="{Binding Messages}"
+				 x:Name="MessagesList">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate x:DataType="shared:MessageDTO">
+								<Grid Margin="0,4,0,4">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="36"/>
+										<ColumnDefinition Width="*"/>
+									</Grid.ColumnDefinitions>
+
+									<StackPanel Grid.Column="0" VerticalAlignment="Top" Spacing="4">
+										<Button
+										  Background="#444444"
+										  BorderThickness="0"
+										  Padding="0"
+										  VerticalAlignment="Top"
+										  IsVisible="{Binding ShowSenderName}"
+										  Command="{Binding DataContext.OpenProfileCommand, ElementName=Root}"
+										  CommandParameter="{Binding SenderId}"
+										  Height="36"
+										  Width="36"
+										  CornerRadius="18">
+											<Image Source="{Binding SenderAvatarUrl, Converter={conv:Converter Name=AvatarUrl}}}" Stretch="UniformToFill"/>
+										</Button>
+
+										<TextBlock
+											  Text="{Binding CreatedAt, StringFormat=HH:mm}"
+											  Margin="4,8,0,0"
+											  Foreground="#72767D"
+											  FontSize="11"
+											  VerticalAlignment="Top"
+											  HorizontalAlignment="Center"
+											  Opacity="0.7"
+											  IsVisible="{Binding ShowSenderName, Converter={conv:Converter Name=BooleanNegation}}"/>
+									</StackPanel>
+
+									<Border Grid.Column="1"
+											Classes="MessageContainer"
+											Margin="8,0,0,0"
+											Padding="12,8">
+										<Grid>
+											<Grid.RowDefinitions>
+												<RowDefinition Height="Auto"/>
+												<RowDefinition Height="Auto"/>
+											</Grid.RowDefinitions>
+
+											<DockPanel Grid.Row="0" 
+													   LastChildFill="False" 
+													   IsVisible="{Binding ShowSenderName}"
+													   Margin="0,0,0,4">
+												<Button DockPanel.Dock="Left"
+														Background="Transparent"
+														BorderThickness="0"
+														Padding="0"
+														Command="{Binding DataContext.OpenProfileCommand, ElementName=Root}"
+														CommandParameter="{Binding SenderId}">
+													<TextBlock Text="{Binding SenderName}"
+															 FontWeight="SemiBold"
+												 FontSize="15"
+													   Foreground="White"/>
+												</Button>
+
+												<TextBlock Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}"
+												DockPanel.Dock="Right"
+											  Margin="8,0,0,0"
+										   Foreground="#72767D"
+											  FontSize="12"
+											 VerticalAlignment="Center"/>
+											</DockPanel>
+
+											<StackPanel Grid.Row="1" Spacing="8">
+												<SelectableTextBlock Text="{Binding Content}"
+																	 Foreground="#DCDDDE"
+																	 TextWrapping="Wrap"
+																	 FontSize="15"
+																	 Margin="0"/>
+
+												<ContentControl Content="{Binding Poll, Converter={conv:Converter Name=PollToPollViewModel}}"
+																IsVisible="{Binding Poll, Converter={conv:Converter Name=BooleanToVisibility}}"
+																Margin="0"
+																Width="270"
+																HorizontalAlignment="Left">
+													<ContentControl.ContentTemplate>
+														<DataTemplate x:DataType="vm:PollViewModel">
+															<Border Background="{StaticResource SecondaryBrdr}" CornerRadius="4">
+																<Grid>
+																	<Grid.RowDefinitions>
+																		<RowDefinition Height="auto"/>
+																		<RowDefinition Height="auto"/>
+																	</Grid.RowDefinitions>
+																	<StackPanel Spacing="12" Margin="16,16,16,0">
+																		<TextBlock Text="{Binding IsAnonymous, Converter={conv:Converter Name=BooleanToText}, ConverterParameter='Анонимный опрос;Опрос'}"
+																				   FontWeight="Bold"
+																				   FontSize="16"
+																				   Foreground="{DynamicResource TextSecondary}"/>
+																		<Border ContextMenu="{Binding PollContextMenu}">
+																			<ItemsControl ItemsSource="{Binding Options}">
+																				<ItemsControl.ItemTemplate>
+																					<DataTemplate x:DataType="vm:PollOptionViewModel">
+																						<Grid Margin="0,4">
+																							<Grid.RowDefinitions>
+																								<RowDefinition Height="Auto"/>
+																								<RowDefinition Height="Auto"/>
+																							</Grid.RowDefinitions>
+																							<Grid Grid.Row="0">
+																								<Grid.ColumnDefinitions>
+																									<ColumnDefinition Width="*"/>
+																									<ColumnDefinition Width="Auto"/>
+																								</Grid.ColumnDefinitions>
+																								<RadioButton Grid.Column="0"
+																											 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+																											 Content="{Binding OptionText}"
+																											 IsEnabled="{Binding CanVote}"
+																											 Foreground="{DynamicResource TextPrimary}"/>
+																							</Grid>
+																							<ProgressBar Grid.Row="1"
+																									   Margin="0,4,0,0"
+																								  Height="5"
+																								 Value="{Binding VotesPercentage}"
+																							Maximum="100"
+																										 Minimum="0"
+																									IsVisible="{Binding CanVote, Converter={conv:Converter Name=BooleanToInvertedVisibility}}"/>
+																							<TextBlock Text="{Binding VotesPercentage, StringFormat='{}{0:0}%'}"
+																									   Foreground="{DynamicResource TextPrimary}"
+																									   FontWeight="SemiBold"
+																									   FontSize="12"
+																									   HorizontalAlignment="Right"
+																									   VerticalAlignment="Center"
+																									   Margin="8,0"
+																									   IsVisible="{Binding CanVote, Converter={conv:Converter Name=BooleanToInvertedVisibility}}"/>
+																						</Grid>
+																					</DataTemplate>
+																				</ItemsControl.ItemTemplate>
+																			</ItemsControl>
+																		</Border>
+																		<TextBlock Text="{Binding TotalVotes, StringFormat='{}{0:0} голосов'}"
+																				   Padding="0,10"
+																				   VerticalAlignment="Center"
+																				   IsVisible="{Binding CanVote, Converter={conv:Converter Name=BooleanToInvertedVisibility}}"/>
+																	</StackPanel>
+																	<Button Content="Проголосовать"
+																			Grid.Row="1"
+																			Command="{Binding VoteCommand}"
+																			IsEnabled="{Binding CanVote}"
+																			IsVisible="{Binding CanVote}"
+																			Background="Transparent"
+																			Foreground="{DynamicResource TextPrimary}"
+															  CornerRadius="4"
+																	Height="44"
+																   VerticalContentAlignment="Center"
+																 HorizontalContentAlignment="Center"
+															 VerticalAlignment="Bottom"
+															HorizontalAlignment="Stretch"/>
+																</Grid>
+															</Border>
+														</DataTemplate>
+													</ContentControl.ContentTemplate>
+												</ContentControl>
+											</StackPanel>
+										</Grid>
+									</Border>
+								</Grid>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</ScrollViewer>
+
+				<Border Grid.Row="2" VerticalAlignment="Bottom" Padding="16,0,16,20">
+					<Border Background="{DynamicResource PrimaryBG}" CornerRadius="8" BorderThickness="0">
+						<Grid Margin="2">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+
+							<Button Grid.Column="0"
+								   Classes="IconButton"
+								ToolTip.Tip="Прикрепить файл"
+									  Background="Transparent"
+								  Padding="0"
+								 Width="48"
+								   Height="48">
+								<Path Data="{StaticResource ChatAttach}"
+						Fill="{DynamicResource TextSecondary}"
+				 Width="20"
+				   Height="20"
+						  Stretch="Uniform"/>
+							</Button>
+
+							<TextBox Grid.Column="1"
+									 Text="{Binding NewMessage, Mode=TwoWay}"
+									 Background="Transparent"
+									 BorderThickness="0"
+									 Watermark="Сообщение..."
+									 Padding="0,12"
+									 FontSize="16"
+									 Foreground="{DynamicResource TextPrimary}"
+									 AcceptsReturn="True"
+									 FocusAdorner="{x:Null}"
+									 TextWrapping="Wrap"
+									 VerticalContentAlignment="Center"
+									 MinHeight="44"
+									 MaxHeight="400"
+								 CaretBrush="{DynamicResource TextPrimary}">
+								<TextBox.Styles>
+									<Style Selector="TextBox:focus-within /template/ Border">
+										<Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
+										<Setter Property="BorderBrush" Value="{DynamicResource TransparentBrush}" />
+										<Setter Property="BorderThickness" Value="0"/>
+									</Style>
+
+									<Style Selector="TextBox:pointerover /template/ Border">
+										<Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
+										<Setter Property="BorderBrush" Value="{DynamicResource TransparentBrush}" />
+										<Setter Property="BorderThickness" Value="0"/>
+									</Style>
+								</TextBox.Styles>
+							</TextBox>
+
+							<Button Grid.Column="2"
+									Margin="8"
+									MinHeight="30"
+									Background="Transparent"
+									Classes="IconButton"
+									Command="{Binding SendMessageCommand}"
+									IsVisible="{Binding NewMessage, Converter={conv:Converter Name=StringToBoolean}}"
+									IsEnabled="{Binding NewMessage, Converter={conv:Converter Name=StringToBoolean}}">
+								<Path Data="{StaticResource SendIcon}"
+									  Fill="{Binding NewMessage, Converter={conv:Converter Name=StringToBrush}}"
+									  Width="20" Height="20"/>
+							</Button>
+						</Grid>
+					</Border>
+				</Border>
+			</Grid>
+		</Border>
+
+		<!-- Chat info panel -->
+		<!-- ChatInfoPanel moved to ChatsView to preserve its visual state across ChatView instances -->
+	</Grid>
+</UserControl>

@@ -1,0 +1,50 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<!-- === Фоновые базовые === -->
+	<Color x:Key="TopBg">#18004D</Color>
+	<Color x:Key="BaseBg">#0D0F14</Color>
+
+	<SolidColorBrush x:Key="PanelBg" Color="#261E1F22"/>
+	<SolidColorBrush x:Key="PanelBgSolid" Color="#323339"/>
+
+	<SolidColorBrush x:Key="PrimaryBG" Color="#0D0D0D"/>
+	<SolidColorBrush x:Key="SecondaryBG" Color="#121212"/>
+	<SolidColorBrush x:Key="ThirdBG" Color="#1E1E1E"/>
+
+	<SolidColorBrush x:Key="PrimaryBrdr" Color="#3C3C3C"/>
+	<SolidColorBrush x:Key="SecondaryBrdr" Color="#1B1B1B"/>
+
+	<!-- === Текст === -->
+	<SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+	<SolidColorBrush x:Key="TextSecondary" Color="#B9BBBE"/>
+	<SolidColorBrush x:Key="Muted" Color="#A3A6AD"/>
+
+	<!-- === Бордеры / Акценты === -->
+	<SolidColorBrush x:Key="BorderDefault" Color="#1B1B1B"/>
+	<SolidColorBrush x:Key="BorderHover" Color="#40444B"/>
+	<SolidColorBrush x:Key="BorderFocus" Color="#5865F2"/>
+
+	<SolidColorBrush x:Key="Accent" Color="#5865F2"/>
+	<SolidColorBrush x:Key="AccentHover" Color="#4752C4"/>
+	<SolidColorBrush x:Key="AccentPressed" Color="#3C45A5"/>
+	<SolidColorBrush x:Key="IconAccent" Color="#E6E6E6"/>
+	<SolidColorBrush x:Key="Icon" Color="#868686"/>
+
+	<SolidColorBrush x:Key="Outline" Color="#4CAF50"/>
+	<SolidColorBrush x:Key="OutlineHover" Color="#5DC662"/>
+	<SolidColorBrush x:Key="OutlinePressed" Color="#4AAE56"/>
+
+	<!-- === Мессенджер-специфичные === -->
+	<SolidColorBrush x:Key="MessageOwnBackground" Color="#2B6CB0"/>
+	<SolidColorBrush x:Key="MessageOtherBackground" Color="#2F3136"/>
+	<SolidColorBrush x:Key="MessageOwnText" Color="#FFFFFF"/>
+	<SolidColorBrush x:Key="MessageOtherText" Color="#FFFFFF"/>
+	<SolidColorBrush x:Key="MessageTimestamp" Color="#B0B0B0"/>
+	<SolidColorBrush x:Key="MessageSenderName" Color="#4EA3F1"/>
+	<SolidColorBrush x:Key="DateDividerBackground" Color="#202225"/>
+	<SolidColorBrush x:Key="DateDividerText" Color="#AAAAAA"/>
+
+	<SolidColorBrush x:Key="BorderBrush" Color="#2A2D33"/>
+
+</ResourceDictionary>

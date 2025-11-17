@@ -1,200 +1,363 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="MessengerAPI.Middleware.FileProtectionMiddleware" Collapsed="true">
-    <Position X="7.75" Y="3.25" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.AdminController">
+    <Position X="9.5" Y="4" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="5.062" />
+        <Point X="9.5" Y="5.062" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAgAAAAAAAAAgAAAAAAAAAAAAAAAAAAQAAAAAAAAAAA=</HashCode>
-      <FileName>Middleware\FileProtectionMiddleware.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Middleware.FileProtectionMiddlewareExtensions" Collapsed="true">
-    <Position X="7.75" Y="1.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Middleware\FileProtectionMiddleware.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Hubs.ChatHub" Collapsed="true">
-    <Position X="7.75" Y="2.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAACAAAAAAIAAAAAAAAAAAAACAAAA=</HashCode>
-      <FileName>Hubs\ChatHUB.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Helpers.TokenHelper" Collapsed="true">
-    <Position X="7.75" Y="0.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAAAAAAgCAAAAAAABAAAAA=</HashCode>
-      <FileName>Helpers\TokenHelper.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Controllers.AdminController" Collapsed="true">
-    <Position X="2.5" Y="0.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>IAAAAAAAAAAABABAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>IAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Controllers\AdminController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.AuthController" Collapsed="true">
-    <Position X="4.25" Y="0.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.AuthController">
+    <Position X="9.5" Y="7.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="8.5" />
+        <Point X="9.5" Y="8.5" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAAABAAAAAAAQAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAQAAAAAAA=</HashCode>
       <FileName>Controllers\AuthController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.LoginRequest" Collapsed="true">
-    <Position X="4.25" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.BaseController&lt;T&gt;">
+    <Position X="9.5" Y="19" Width="3" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAQAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
-      <FileName>Controllers\AuthController.cs</FileName>
+      <HashCode>AAEAAAAAAACAAAAgAEMgAAAAIgEgAQQAACAAAAAAAEA=</HashCode>
+      <FileName>Controllers\BaseController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.RegisterRequest" Collapsed="true">
-    <Position X="4.25" Y="2.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.ChatsController">
+    <Position X="9.5" Y="9.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="10.625" />
+        <Point X="9.5" Y="10.625" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAAAEAAAAAAAAAAAAQAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
-      <FileName>Controllers\AuthController.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Controllers.ChatsController" Collapsed="true">
-    <Position X="6" Y="0.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAABACAABAAAAAAAAABAAACAAAAAAAAAAAAAAAI=</HashCode>
+      <HashCode>AAAAAAABACAAAAAAAAAAAABAAACAAAAAAAAAAAAAAAI=</HashCode>
       <FileName>Controllers\ChatsController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.DepartmentController" Collapsed="true">
-    <Position X="2.5" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.DepartmentController">
+    <Position X="9.5" Y="14.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="15.405" />
+        <Point X="9.5" Y="15.405" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAAAAAAEAQAABAAAAAAAAAAAAAAAAAAAABAIIAAAAAA=</HashCode>
+      <HashCode>AAAAAAAEAQAAAAAAAAAAAAAAAAAAAAAAABAAIAAAAAA=</HashCode>
       <FileName>Controllers\DepartmentController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.MessagesController" Collapsed="true">
-    <Position X="6" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.MessagesController">
+    <Position X="9.5" Y="5.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="6.625" />
+        <Point X="9.5" Y="6.625" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AQAAAAAAEAAABAAAAAAAAAAAAAAAAACAAAAAAAAAAAA=</HashCode>
+      <HashCode>AQAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAA=</HashCode>
       <FileName>Controllers\MessagesController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.PollController" Collapsed="true">
-    <Position X="2.5" Y="2.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.PollController">
+    <Position X="9.5" Y="12.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="13.438" />
+        <Point X="9.5" Y="13.438" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAADAAA=</HashCode>
       <FileName>Controllers\PollController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.UserController" Collapsed="true">
-    <Position X="6" Y="2.75" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.UserController">
+    <Position X="9.5" Y="16.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Controllers.BaseController&lt;T&gt;" FixedFromPoint="true">
+      <Path>
+        <Point X="9.5" Y="20.25" />
+        <Point X="9.26" Y="20.25" />
+        <Point X="9.26" Y="17.655" />
+        <Point X="9.5" Y="17.655" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAAAAAAAQAAAAAAAAAAAAAAAAQAAAAAAEAAAAAEAAAI=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAEAAAAAEAAAI=</HashCode>
       <FileName>Controllers\UserController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Model.Chat" Collapsed="true">
-    <Position X="9.5" Y="0.75" Width="1.5" />
+  <Class Name="MessengerAPI.Helpers.ModelExtensions">
+    <Position X="14.75" Y="7.25" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAACAAAAACAEAEAAACQAAAQAEAAAAAAAQAAAAQAIAAE=</HashCode>
-      <FileName>Model\Chat.cs</FileName>
+      <HashCode>AAAAAgEAQAAIAAAAAAAAAAAAAAAAAAAABAAAAAAAAAA=</HashCode>
+      <FileName>Helpers\ModelExtensions.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Model.ChatMember" Collapsed="true">
-    <Position X="11.25" Y="0.75" Width="1.5" />
+  <Class Name="MessengerAPI.Helpers.TokenService" BaseTypeListCollapsed="true">
+    <Position X="14.75" Y="11.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAABAAAAAAIAAAAAEAAAAAgAAAAAAAgAAAAAAAAAAAQ=</HashCode>
-      <FileName>Model\ChatMember.cs</FileName>
+      <HashCode>AQAAAAAAAEAAAACAAAAAAAAAAAAAACAAAAAAABAAAAA=</HashCode>
+      <FileName>Helpers\TokenService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="MessengerAPI.Hubs.ChatHub">
+    <Position X="14.75" Y="15.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAACAAAAAAIAAAAAAAAAAAAACAAAA=</HashCode>
+      <FileName>Hubs\ChatHUB.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Model.Department" Collapsed="true">
-    <Position X="13" Y="0.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.AccessControlService">
+    <Position X="14.75" Y="21" Width="2.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.867" Y="5.438" />
+        <Point X="12.867" Y="23.242" />
+        <Point X="14.129" Y="23.242" />
+        <Point X="14.129" Y="23.25" />
+        <Point X="14.75" Y="23.25" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAACACAAAAAAAACAAAABAAQAAAAQAAgAAAAAAAAAAAQ=</HashCode>
-      <FileName>Model\Department.cs</FileName>
+      <HashCode>AAAAAAAAAAAACAAAAAAQAAAAAACAACABAAABAEAAAAA=</HashCode>
+      <FileName>Services\AcessControlService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="MessengerAPI.Services.AdminService">
+    <Position X="11.25" Y="4" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.875" Y="5.438" />
+        <Point X="12.875" Y="4.713" />
+        <Point X="12.75" Y="4.713" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAA=</HashCode>
+      <FileName>Services\AdminService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="MessengerAPI.Services.AuthService">
+    <Position X="11.25" Y="7.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.86" Y="5.438" />
+        <Point X="12.86" Y="8.463" />
+        <Point X="12.75" Y="8.463" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAA=</HashCode>
+      <FileName>Services\AuthService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="MessengerAPI.Services.BaseService&lt;T&gt;">
+    <Position X="14.75" Y="4" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABEACIAAAQAAAIAAAAABAAAAAAABAAAg=</HashCode>
+      <FileName>Services\BaseService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Model.Draft" Collapsed="true">
-    <Position X="14.75" Y="0.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.ChatService">
+    <Position X="11.25" Y="9.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.87" Y="5.438" />
+        <Point X="12.87" Y="11.188" />
+        <Point X="12.75" Y="11.188" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAABAAAAAgAAAAAAAAAAAAkAAAAAAAgAAAAAAAAAAAQ=</HashCode>
-      <FileName>Model\Draft.cs</FileName>
+      <HashCode>AAAAAAEAAAAAAAAAAAASAAAAAACAAAAACAAAAGAAAgA=</HashCode>
+      <FileName>Services\ChatsService.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.Message" Collapsed="true">
-    <Position X="9.5" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.DepartmentService">
+    <Position X="11.25" Y="14.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.873" Y="5.438" />
+        <Point X="12.873" Y="15.562" />
+        <Point X="12.75" Y="15.562" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>EAACAAAAAgAABAAAACAAACAAAAABAAgAAAAAAAAIAAQ=</HashCode>
-      <FileName>Model\Message.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAABAAAABAAAAAAAIAQAAAAQ=</HashCode>
+      <FileName>Services\DepartmentService.cs</FileName>
+      <NewMemberFileName>Services\AuthService.cs</NewMemberFileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.MessageFile" Collapsed="true">
-    <Position X="11.25" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.FileService">
+    <Position X="13" Y="20.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.87" Y="5.438" />
+        <Point X="12.87" Y="21.938" />
+        <Point X="13" Y="21.938" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAACAAAAAAAAAAIAAAAAAAAAAAAAAAAEAAAQIABAAAA=</HashCode>
-      <FileName>Model\MessageFile.cs</FileName>
+      <HashCode>AAAAABAAAABAAAAAAAAQAAAAAAAAAAAAAAEAAAAAAIA=</HashCode>
+      <FileName>Services\FileService.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.MessageStatus" Collapsed="true">
-    <Position X="13" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.MessageService">
+    <Position X="11.25" Y="5.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.874" Y="5.438" />
+        <Point X="12.874" Y="6.625" />
+        <Point X="12.75" Y="6.625" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAADAAAEAAAACAAAAAAAAAgAAAAAAAAEAAAAIAAAAAA=</HashCode>
-      <FileName>Model\MessageStatus.cs</FileName>
+      <HashCode>AAAAAAAgAAAAAAAAAAAAAAAAACAAAAAAEAAAAAAAAAA=</HashCode>
+      <FileName>Services\MessageService.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.MessengerDbContext" Collapsed="true">
-    <Position X="14.75" Y="1.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.PollService">
+    <Position X="11.25" Y="12.5" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.866" Y="5.438" />
+        <Point X="12.866" Y="13.312" />
+        <Point X="12.75" Y="13.312" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>UAAAACAAAQAUBEABACQAQAAAEAAAAAAAAAAAAQAAAAA=</HashCode>
-      <FileName>Model\MessengerDbContext.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAQAAAAAAAAAAAAAAAAACAAACAAAAAAA=</HashCode>
+      <FileName>Services\PollService.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.UserSetting" Collapsed="true">
-    <Position X="9.5" Y="3.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.UserService">
+    <Position X="11.25" Y="16.75" Width="1.5" />
+    <InheritanceLine Type="MessengerAPI.Services.BaseService&lt;T&gt;" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="14.75" Y="5.438" />
+        <Point X="12.863" Y="5.438" />
+        <Point X="12.863" Y="18" />
+        <Point X="12.75" Y="18" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
-      <HashCode>AAABAAAAABAAAAAQAAAgAAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Model\Partial.cs</FileName>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAABAAAACAAAAQAAAAA=</HashCode>
+      <FileName>Services\UserService.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Model.Poll" Collapsed="true">
-    <Position X="9.5" Y="2.75" Width="1.5" />
+  <Interface Name="MessengerAPI.Helpers.ITokenService">
+    <Position X="14.75" Y="14" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ACACAAAAAiAAAAAAACQQQAAAAAAAAAAEAAAAIAAAAAE=</HashCode>
-      <FileName>Model\Poll.cs</FileName>
+      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAA=</HashCode>
+      <FileName>Helpers\TokenService.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Model.PollOption" Collapsed="true">
-    <Position X="11.25" Y="2.75" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IAccessControlService">
+    <Position X="14.75" Y="9.5" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAACAAAAAAAAAAAgAAUAQAAAAAAACAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Model\PollOption.cs</FileName>
+      <HashCode>AAAAAAAAAAAACAAAAAAQAAAAAACAACAAAAABAEAAAAA=</HashCode>
+      <FileName>Services\AcessControlService.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Model.PollVote" Collapsed="true">
-    <Position X="13" Y="2.75" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IAdminService">
+    <Position X="13" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAADAAAAAAAAAAAAAQEACAgAAAAACAAAAAAAAAABAAA=</HashCode>
-      <FileName>Model\PollVote.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAA=</HashCode>
+      <FileName>Services\AdminService.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerAPI.Model.User" Collapsed="true">
-    <Position X="14.75" Y="2.75" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IAuthService">
+    <Position X="13" Y="7.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>UACCEAAAAAAEJEABASQAAAAAEAAAAABAAAAAAQAAAAA=</HashCode>
-      <FileName>Model\User.cs</FileName>
+      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAA=</HashCode>
+      <FileName>Services\AuthService.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Enum Name="MessengerAPI.Model.ChatRole" Collapsed="true">
-    <Position X="11.25" Y="3.75" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IChatService">
+    <Position X="13" Y="9.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAgAAAAAAAAAAAAAEAAAAACAAAAAAAAAA=</HashCode>
-      <FileName>Model\ChatRole.cs</FileName>
+      <HashCode>AAAAAAEAAAAAAAAAAAASAAAAAACAAAAACAAAAGAAAgA=</HashCode>
+      <FileName>Services\ChatsService.cs</FileName>
     </TypeIdentifier>
-  </Enum>
-  <Enum Name="MessengerAPI.Model.Theme" Collapsed="true">
-    <Position X="13" Y="3.75" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IDepartmentService">
+    <Position X="13" Y="14.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAACAAAAAAAAAAAIAAAAAAAAAQAAAAAA=</HashCode>
-      <FileName>Model\Theme.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAABAAAABAAAAAAAAAQAAAAQ=</HashCode>
+      <FileName>Services\DepartmentService.cs</FileName>
+      <NewMemberFileName>Services\AuthService.cs</NewMemberFileName>
     </TypeIdentifier>
-  </Enum>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IFileService">
+    <Position X="13" Y="19" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAEAAAAAAIA=</HashCode>
+      <FileName>Services\FileService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IMessageService">
+    <Position X="13" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAgAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Services\MessageService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IPollService">
+    <Position X="13" Y="12.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAQAAAAAAAAAAAAAAAAACAAACAAAAAAA=</HashCode>
+      <FileName>Services\PollService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IUserService">
+    <Position X="13" Y="16.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAABAAAACAAAAQAAAAA=</HashCode>
+      <FileName>Services\UserService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>

@@ -1,19 +1,21 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using MessengerDesktop.ViewModels.Dialog;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class DepartmentDialogViewModel : DialogViewModelBase
+    /// <summary>
+    /// ViewModel диалога редактирования отдела.
+    /// </summary>
+    public partial class DepartmentDialogViewModel : DialogBaseViewModel
     {
         public Func<DepartmentDialogViewModel, Task>? SaveAction { get; set; }
-        public Action? CancelAction { get; set; }
 
         public int? EditId { get; set; }
 
@@ -24,7 +26,7 @@ namespace MessengerDesktop.ViewModels
         private string name = string.Empty;
 
         private readonly List<DepartmentDTO> _availableDepartments;
-        
+
         [ObservableProperty]
         private ObservableCollection<DepartmentDTO> departments;
 
@@ -43,10 +45,13 @@ namespace MessengerDesktop.ViewModels
 
         private readonly DepartmentDTO _noParentDepartment;
 
-        public DepartmentDialogViewModel(List<DepartmentDTO> departments, DepartmentDTO? department = null)
+        public DepartmentDialogViewModel(List<DepartmentDTO>? departments, DepartmentDTO? department = null)
         {
-            _availableDepartments = departments;
+            _availableDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
             EditId = department?.Id;
+            Title = department == null ? "Создать отдел" : $"Редактировать: {department.Name}";
+            CanCloseOnBackgroundClick = true;
+            
             _noParentDepartment = new DepartmentDTO { Id = -1, Name = "(Нет родительского отдела)", ParentDepartmentId = null };
 
             if (department != null)
@@ -56,9 +61,8 @@ namespace MessengerDesktop.ViewModels
             }
 
             UpdateAvailableParents(department);
-            
-            SelectedParent = department?.ParentDepartmentId.HasValue == true
-                ? Departments.FirstOrDefault(d => d.Id == department.ParentDepartmentId)
+
+            SelectedParent = department?.ParentDepartmentId.HasValue == true ? Departments.FirstOrDefault(d => d.Id == department.ParentDepartmentId) 
                 : _noParentDepartment;
         }
 
@@ -82,17 +86,15 @@ namespace MessengerDesktop.ViewModels
         private HashSet<int> GetAllChildDepartments(int departmentId)
         {
             var children = new HashSet<int>();
-            var directChildren = _availableDepartments
-                .Where(d => d.ParentDepartmentId == departmentId)
-                .Select(d => d.Id);
-            
+            var directChildren = _availableDepartments.Where(d => d.ParentDepartmentId == departmentId).Select(d => d.Id);
+
             foreach (var childId in directChildren)
             {
                 children.Add(childId);
                 var grandChildren = GetAllChildDepartments(childId);
                 children.UnionWith(grandChildren);
             }
-            
+
             return children;
         }
 
@@ -101,13 +103,25 @@ namespace MessengerDesktop.ViewModels
         {
             if (string.IsNullOrWhiteSpace(Name))
             {
+                ErrorMessage = "Введите название отдела";
                 return;
             }
 
-            if (SaveAction != null)
+            await SafeExecuteAsync(async () =>
             {
-                await SaveAction.Invoke(this);
+                if (SaveAction != null)
+                    await SaveAction.Invoke(this);
+                SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлен";
+                RequestClose();
+            });
+        }
+
+        partial void OnNameChanged(string value)
+        {
+            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
+            {
+                ErrorMessage = null;
             }
-        }        
+        }
     }
 }

@@ -17,22 +17,6 @@
 			<Border CornerRadius="8,8,0,0">
 				<Grid Margin="22,0">
 
-					<Button HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="16"
-                            Command="{Binding CloseCommand}"
-                            Classes="IconButton"
-                            Padding="0"
-                            Background="Transparent">
-						<Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41
-                                    L10.59,12L5,17.59L6.41,19L12,13.41
-                                    L17.59,19L19,17.59L13.41,12L19,6.41Z"
-                              Fill="White"
-                              Width="20"
-                              Height="20"
-                              Margin="0,0,5,5"/>
-					</Button>
-
 					<!-- Title -->
 					<TextBlock Margin="12,22,22,0"
                                FontWeight="Bold"
@@ -127,6 +111,7 @@
 						<Button Content="Отправить"
                                 HorizontalAlignment="Right"
                                 Margin="0,8,0,0"
+                                Command="{Binding SendMessageCommand}"
                                 Classes="AccentButton"/>
 					</StackPanel>
 

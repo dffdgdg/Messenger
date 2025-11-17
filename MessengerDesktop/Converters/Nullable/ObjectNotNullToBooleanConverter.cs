@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters
+namespace MessengerDesktop.Converters.Nullable
 {
     public class ObjectNotNullToBooleanConverter : IValueConverter
     {

@@ -1,163 +1,123 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using MessengerShared.DTO;
+using MessengerShared.Response;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Services;
-
-public class AuthService
+namespace MessengerDesktop.Services
 {
-    private readonly HttpClient _httpClient;
-    private const string TokenKey = "auth_token";
-    private const string UserIdKey = "user_id";
-
-    public string? Token { get; private set; }
-    public int? UserId { get; private set; }
-    public bool IsAuthenticated => !string.IsNullOrEmpty(Token);
-
-    public AuthService(HttpClient httpClient)
+    public partial class AuthService : ObservableObject
     {
-        _httpClient = httpClient;
-        LoadStoredAuth();
-    }
+        private readonly HttpClient _httpClient;
+        private readonly ISecureStorageService _secureStorage;
 
-    private void LoadStoredAuth()
-    {
-        try
+        private const string TokenKey = "auth_token";
+        private const string UserIdKey = "user_id";
+
+        [ObservableProperty]
+        private int? userId;
+
+        [ObservableProperty]
+        private string? token;
+
+        [ObservableProperty]
+        private bool isAuthenticated;
+
+        [ObservableProperty]
+        private bool isInitialized = false;
+
+        public AuthService(HttpClient httpClient, ISecureStorageService secureStorage)
         {
-            Token = App.Current?.Storage.Get(TokenKey)?.ToString();
-            var userIdStr = App.Current?.Storage.Get(UserIdKey)?.ToString();
-            if (int.TryParse(userIdStr, out var userId))
+            _httpClient = httpClient;
+            _secureStorage = secureStorage;
+            _ = InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            try
             {
-                UserId = userId;
+                var storedToken = await _secureStorage.GetAsync<string>(TokenKey);
+                UserId = await _secureStorage.GetAsync<int?>(UserIdKey);
+
+                if (!string.IsNullOrEmpty(storedToken) && UserId.HasValue)
+                {
+                    Token = storedToken;
+                    _httpClient.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", storedToken);
+                    IsAuthenticated = true;
+                }
             }
-            if (!string.IsNullOrEmpty(Token))
+            catch (Exception ex)
             {
-                App.UpdateHttpClientToken(Token);
+                System.Diagnostics.Debug.WriteLine($"LoadStoredAuth error: {ex.Message}");
+                await ClearAuthAsync();
+            }
+            finally
+            {
+                IsInitialized = true; 
             }
         }
-        catch (Exception)
+
+        public async Task WaitForInitializationAsync()
         {
+            while (!IsInitialized)
+            {
+                await Task.Delay(10);
+            }
+        }
+
+        private async Task SaveAuthAsync(string newToken, int newUserId)
+        {
+            await _secureStorage.SaveAsync(TokenKey, newToken);
+            await _secureStorage.SaveAsync(UserIdKey, newUserId);
+
+            Token = newToken;
+            UserId = newUserId;
+            IsAuthenticated = true;
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", newToken);
+        }
+
+        public async Task ClearAuthAsync()
+        {
+            await _secureStorage.RemoveAsync(TokenKey);
+            await _secureStorage.RemoveAsync(UserIdKey);
+
             Token = null;
             UserId = null;
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+            IsAuthenticated = false;
         }
-    }
 
-    private void SaveAuth(string token, int userId)
-    {
-        Token = token;
-        UserId = userId;
-        App.Current?.Storage.Set(TokenKey, token);
-        App.Current?.Storage.Set(UserIdKey, userId.ToString());
-
-        App.UpdateHttpClientToken(token);
-        NotificationService.SetAuthToken(token);
-
-        
-    }
-
-    public void ClearAuth()
-    {
-        Token = null;
-        UserId = null;
-        App.Current?.Storage.Remove(TokenKey);
-        App.Current?.Storage.Remove(UserIdKey);
-
-        App.UpdateHttpClientToken(null);
-        NotificationService.SetAuthToken(null);
-    }
-
-    public async Task<bool> LoginAsync(string username, string password)
-    {
-        try
+        public async Task<bool> LoginAsync(string username, string password)
         {
-            System.Diagnostics.Debug.WriteLine($"LoginAsync: username={username}");
-
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", new { username, password });
-            System.Diagnostics.Debug.WriteLine($"Login response status: {response.StatusCode}");
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var rawJson = await response.Content.ReadAsStringAsync();
-
-                try
-                {
-                    var options = new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        PropertyNameCaseInsensitive = true 
-                    };
-
-                    var result = await response.Content.ReadFromJsonAsync<AuthResponse>(options);
-
-                    if (result != null && result.Id > 0)
-                    {
-                        SaveAuth(result.Token, result.Id);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception jsonEx)
-                {
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
                     return false;
+
+                var loginDto = new LoginDTO { Username = username.Trim(), Password = password };
+                var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginDto);
+
+                if (!response.IsSuccessStatusCode)
+                    return false;
+
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDTO>>();
+                if (apiResponse?.Success == true && apiResponse.Data?.Id > 0)
+                {
+                    await SaveAuthAsync(apiResponse.Data.Token, apiResponse.Data.Id);
+                    return true;
                 }
+                return false;
             }
-            else
+            catch
             {
-                var error = await response.Content.ReadAsStringAsync();
                 return false;
             }
         }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"LoginAsync exception: {ex.Message}");
-            NotificationService.ShowError($"Ошибка входа: {ex.Message}");
-            return false;
-        }
-    }
-
-    public async Task<bool> RegisterAsync(string username, string password, string? displayName)
-    {
-        try
-        {
-            var response = await _httpClient.PostAsJsonAsync("api/auth/register",
-                        new { username, password, displayName });
-
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
-                if (result != null)
-                {
-                    SaveAuth(result.Token, result.Id);
-                    return true;
-                }
-            }
-            return false;
-        }
-        catch (Exception ex)
-        {
-            NotificationService.ShowError($"Ошибка регистрации: {ex.Message}");
-            return false;
-        }
-    }
-
-    private class AuthResponse
-    {
-        [JsonPropertyName("Id")]
-        public int Id { get; set; }
-
-        [JsonPropertyName("Username")]
-        public string Username { get; set; } = "";
-
-        [JsonPropertyName("DisplayName")]
-        public string? DisplayName { get; set; }
-
-        [JsonPropertyName("Token")]
-        public string Token { get; set; } = "";
     }
 }

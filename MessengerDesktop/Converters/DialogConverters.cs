@@ -8,7 +8,7 @@ namespace MessengerDesktop.Converters
     {
         public static readonly BoolToStringConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue && parameter is string options)
             {
@@ -18,7 +18,7 @@ namespace MessengerDesktop.Converters
             return string.Empty;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -28,7 +28,7 @@ namespace MessengerDesktop.Converters
     {
         public static readonly IndexToTextConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is int index && parameter is string options)
             {
@@ -38,7 +38,7 @@ namespace MessengerDesktop.Converters
             return string.Empty;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -48,7 +48,7 @@ namespace MessengerDesktop.Converters
     {
         public static readonly EqualityConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value != null && parameter != null)
             {
@@ -57,7 +57,7 @@ namespace MessengerDesktop.Converters
             return false;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -67,12 +67,12 @@ namespace MessengerDesktop.Converters
     {
         public static readonly StringNotNullOrEmptyConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             return !string.IsNullOrEmpty(value as string);
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -80,7 +80,7 @@ namespace MessengerDesktop.Converters
 
     public class NullToBoolConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (parameter is string options)
             {
@@ -90,7 +90,7 @@ namespace MessengerDesktop.Converters
             return string.Empty;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

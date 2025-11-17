@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using MessengerDesktop.Converters.Base;
 using MessengerShared.DTO;
+using MessengerShared.Enum;
 
 namespace MessengerDesktop.Converters.Message
 {

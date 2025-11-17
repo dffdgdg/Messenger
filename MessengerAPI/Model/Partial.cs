@@ -1,4 +1,6 @@
-﻿namespace MessengerAPI.Model
+﻿using MessengerShared.Enum;
+
+namespace MessengerAPI.Model
 {
     public partial class UserSetting
     {

@@ -7,12 +7,13 @@
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 x:Class="MessengerDesktop.Views.Chat.ChatView"
+			 xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
 			 x:DataType="vm:ChatViewModel"
 			 x:Name="Root"
             Design.Width="1280" Design.Height="720"
         Background="Transparent">
 
-	<UserControl.Styles>
+    <UserControl.Styles>
 		<Style Selector="views|ChatInfoPanel">
 			<Setter Property="Width" Value="320"/>
 			<Setter Property="ClipToBounds" Value="True"/>
@@ -70,7 +71,6 @@
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 
-		<!-- Main chat area -->
 		<Border Grid.Column="0" CornerRadius="16" Background="{DynamicResource SecondaryBG}">
 			<Grid>
 				<Grid.RowDefinitions>
@@ -79,7 +79,6 @@
 					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
 
-				<!-- Header (без изменений) -->
 				<Border Grid.Row="0" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,0,0,1" Padding="16,0">
 					<Grid>
 						<Grid.ColumnDefinitions>
@@ -98,7 +97,8 @@
 											</LinearGradientBrush>
 										</Border.Background>
 									</Border>
-									<Image Source="{Binding Chat.Avatar}" Stretch="UniformToFill"/>
+									<Image Source="{Binding Chat.Avatar}" Stretch="UniformToFill">
+									</Image>
 								</Panel>
 							</Border>
 							<TextBlock Text="{Binding Chat.Name}" FontWeight="SemiBold" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}"/>
@@ -137,10 +137,9 @@
 				  VerticalScrollBarVisibility="Auto"
 				   Margin="0,8"
 						   Padding="16,0">
-					<ItemsControl ItemsSource="{Binding Messages}"
-				 x:Name="MessagesList">
+					<ItemsControl ItemsSource="{Binding Messages}" x:Name="MessagesList">
 						<ItemsControl.ItemTemplate>
-							<DataTemplate x:DataType="shared:MessageDTO">
+							<DataTemplate x:DataType="vmChat:MessageViewModel">
 								<Grid Margin="0,4,0,4">
 									<Grid.ColumnDefinitions>
 										<ColumnDefinition Width="36"/>
@@ -157,9 +156,12 @@
 										  Command="{Binding DataContext.OpenProfileCommand, ElementName=Root}"
 										  CommandParameter="{Binding SenderId}"
 										  Height="36"
+										  ClipToBounds="True"
 										  Width="36"
 										  CornerRadius="18">
-											<Image Source="{Binding SenderAvatarUrl, Converter={conv:Converter Name=AvatarUrl}}}" Stretch="UniformToFill"/>
+											<Image Stretch="UniformToFill"
+												   Source="{Binding SenderAvatarUrl, Converter={conv:Converter Name=AvatarWithAuthConverter}}">
+											</Image>
 										</Button>
 
 										<TextBlock
@@ -196,7 +198,7 @@
 													<TextBlock Text="{Binding SenderName}"
 															 FontWeight="SemiBold"
 												 FontSize="15"
-													   Foreground="White"/>
+													   Foreground="{DynamicResource TextPrimary}"/>
 												</Button>
 
 												<TextBlock Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}"
@@ -209,10 +211,27 @@
 
 											<StackPanel Grid.Row="1" Spacing="8">
 												<SelectableTextBlock Text="{Binding Content}"
-																	 Foreground="#DCDDDE"
+																	 Foreground="{DynamicResource TextSecondary}"
 																	 TextWrapping="Wrap"
 																	 FontSize="15"
 																	 Margin="0"/>
+
+												<!-- Attachments preview -->
+												<ItemsControl ItemsSource="{Binding Files}" Margin="0" IsVisible="{Binding Files.Count}}">
+													<ItemsControl.ItemTemplate>
+														<DataTemplate>
+															<Border Background="{DynamicResource SecondaryBrdr}" CornerRadius="6" Padding="8" Margin="0,4">
+																<StackPanel Orientation="Horizontal" Spacing="8">
+																	<Image Width="48" Height="48" Stretch="UniformToFill" Source="{Binding Url}" IsVisible="{Binding PreviewType, Converter={conv:Converter Name=Equals}, ConverterParameter=image}"/>
+																	<StackPanel>
+																		<TextBlock Text="{Binding FileName}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+																		<TextBlock Text="{Binding ContentType}" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
+																	</StackPanel>
+																</StackPanel>
+															</Border>
+														</DataTemplate>
+													</ItemsControl.ItemTemplate>
+												</ItemsControl>
 
 												<ContentControl Content="{Binding Poll, Converter={conv:Converter Name=PollToPollViewModel}}"
 																IsVisible="{Binding Poll, Converter={conv:Converter Name=BooleanToVisibility}}"
@@ -258,7 +277,7 @@
 																								 Value="{Binding VotesPercentage}"
 																							Maximum="100"
 																										 Minimum="0"
-																									IsVisible="{Binding CanVote, Converter={conv:Converter Name=BooleanToInvertedVisibility}}"/>
+																										 IsVisible="{Binding CanVote, Converter={conv:Converter Name=BooleanToInvertedVisibility}}"/>
 																							<TextBlock Text="{Binding VotesPercentage, StringFormat='{}{0:0}%'}"
 																									   Foreground="{DynamicResource TextPrimary}"
 																									   FontWeight="SemiBold"
@@ -305,7 +324,8 @@
 				</ScrollViewer>
 
 				<Border Grid.Row="2" VerticalAlignment="Bottom" Padding="16,0,16,20">
-					<Border Background="{DynamicResource PrimaryBG}" CornerRadius="8" BorderThickness="0">
+					<Grid RowDefinitions="Auto,Auto">
+						<Border Background="{DynamicResource PrimaryBG}" CornerRadius="8" BorderThickness="0">
 						<Grid Margin="2">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto"/>
@@ -314,17 +334,18 @@
 							</Grid.ColumnDefinitions>
 
 							<Button Grid.Column="0"
-								   Classes="IconButton"
-								ToolTip.Tip="Прикрепить файл"
-									  Background="Transparent"
-								  Padding="0"
-								 Width="48"
-								   Height="48">
+									Classes="IconButton"
+									ToolTip.Tip="Прикрепить файл"
+									Background="Transparent"
+									Padding="0"
+									Width="48"
+									Height="48"
+									Command="{Binding AttachFileCommand}">
 								<Path Data="{StaticResource ChatAttach}"
-						Fill="{DynamicResource TextSecondary}"
-				 Width="20"
-				   Height="20"
-						  Stretch="Uniform"/>
+									  Fill="{DynamicResource TextSecondary}"
+									  Width="20"
+									  Height="20"
+									  Stretch="Uniform"/>
 							</Button>
 
 							<TextBox Grid.Column="1"
@@ -341,7 +362,7 @@
 									 VerticalContentAlignment="Center"
 									 MinHeight="44"
 									 MaxHeight="400"
-								 CaretBrush="{DynamicResource TextPrimary}">
+									 CaretBrush="{DynamicResource TextPrimary}">
 								<TextBox.Styles>
 									<Style Selector="TextBox:focus-within /template/ Border">
 										<Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
@@ -371,11 +392,22 @@
 							</Button>
 						</Grid>
 					</Border>
+
+						<ItemsControl Grid.Row="1" ItemsSource="{Binding LocalAttachments}" Margin="0,8,0,0">
+							<ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource PrimaryBG}" CornerRadius="6" Padding="8" Margin="0,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Image Width="36" Height="36" Source="{Binding Thumbnail}" IsVisible="{Binding Thumbnail, Converter={conv:Converter Name=NullToVisibility}}"/>
+                                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+					</Grid>
 				</Border>
 			</Grid>
 		</Border>
-
-		<!-- Chat info panel -->
-		<!-- ChatInfoPanel moved to ChatsView to preserve its visual state across ChatView instances -->
 	</Grid>
 </UserControl>

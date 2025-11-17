@@ -3,17 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerShared.DTO;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class PollViewModel : ViewModelBase
+    public partial class PollViewModel : BaseViewModel
     {
         [ObservableProperty]
         private string question = string.Empty;
@@ -36,17 +33,17 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private int totalVotes;
 
-        private readonly HttpClient _httpClient;
+        private readonly IApiClientService _apiClient;
         public ContextMenu PollContextMenu { get; }
 
-        public PollViewModel(PollDTO poll, int userId, HttpClient httpClient)
+        public PollViewModel(PollDTO poll, int userId, IApiClientService apiClient)
         {
             PollId = poll.Id;
             UserId = userId;
             question = poll.Question;
             allowsMultipleAnswers = poll.AllowsMultipleAnswers;
             isAnonymous = poll.IsAnonymous ?? false;
-            _httpClient = httpClient;
+            _apiClient = apiClient;
             totalVotes = poll.Options.Sum(o => o.VotesCount);
 
             options = new ObservableCollection<PollOptionViewModel>(
@@ -143,12 +140,16 @@ namespace MessengerDesktop.ViewModels
             var selected = Options.Where(o => o.IsSelected).Select(o => o.Id).ToList();
             if (selected.Count == 0)
             {
-                try { await NotificationService.ShowInfo("Выберите опцию перед голосованием"); } catch { }
+                ErrorMessage = "Пожалуйста выберите вариант ответа";
                 return;
             }
 
-            try
+            await SafeExecuteAsync(async () =>
             {
+                System.Diagnostics.Debug.WriteLine($"=== SENDING VOTE ===");
+                System.Diagnostics.Debug.WriteLine($"PollId: {PollId}, UserId: {UserId}");
+                System.Diagnostics.Debug.WriteLine($"Selected options: {string.Join(", ", selected)}");
+
                 var voteDto = new PollVoteDTO
                 {
                     PollId = PollId,
@@ -156,33 +157,30 @@ namespace MessengerDesktop.ViewModels
                     OptionIds = selected
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/poll/vote", voteDto);
-                if (response != null && response.IsSuccessStatusCode)
+                var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>("api/poll/vote", voteDto);
+
+                if (result.Success && result.Data != null)
                 {
-                    var updated = await response.Content.ReadFromJsonAsync<PollDTO>();
-                    if (updated != null)
-                    {
-                        ApplyDto(updated);
-                        try { await NotificationService.ShowSuccess("Голос учтён"); } catch { }
-                    }
+                    System.Diagnostics.Debug.WriteLine($"Vote successful, received updated poll with {result.Data.Options.Count} options");
+                    ApplyDto(result.Data);
+                    SuccessMessage = "Голос учтен";
                 }
                 else
                 {
-                    var err = response == null ? "no response" : await response.Content.ReadAsStringAsync();
-                    try { await NotificationService.ShowError($"Ошибка голосования: {err}"); } catch { }
+                    System.Diagnostics.Debug.WriteLine($"Vote failed: {result.Error}");
+                    ErrorMessage = $"Ошибка голосования: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                try {await NotificationService.ShowError($"Ошибка голосования: {ex.Message}"); } catch { }
-            }
+            });
         }
 
         [RelayCommand]
         private async Task CancelVote()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
+                System.Diagnostics.Debug.WriteLine($"=== CANCELLING VOTE ===");
+                System.Diagnostics.Debug.WriteLine($"PollId: {PollId}, UserId: {UserId}");
+
                 var voteDto = new PollVoteDTO
                 {
                     PollId = PollId,
@@ -190,26 +188,20 @@ namespace MessengerDesktop.ViewModels
                     OptionIds = []
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/poll/vote", voteDto);
-                if (response != null && response.IsSuccessStatusCode)
+                var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>("api/poll/vote", voteDto);
+
+                if (result.Success && result.Data != null)
                 {
-                    var updated = await response.Content.ReadFromJsonAsync<PollDTO>();
-                    if (updated != null)
-                    {
-                        ApplyDto(updated);
-                        try {await NotificationService.ShowInfo("Голос отменён"); } catch { }
-                    }
+                    System.Diagnostics.Debug.WriteLine("Vote cancelled successfully");
+                    ApplyDto(result.Data);
+                    SuccessMessage = "Голос отменен";
                 }
                 else
                 {
-                    var err = response == null ? "no response" : await response.Content.ReadAsStringAsync();
-                    try {await NotificationService.ShowError($"Ошибка отмены голоса: {err}"); } catch { }
+                    System.Diagnostics.Debug.WriteLine($"Cancel vote failed: {result.Error}");
+                    ErrorMessage = $"Ошибка отмены голоса: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                try {await NotificationService.ShowError($"Ошибка отмены голоса: {ex.Message}"); } catch { }
-            }
+            });
         }
     }
 }

@@ -1,497 +1,113 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="MessengerDesktop.ViewModels.AdminViewModel" Collapsed="true">
-    <Position X="16" Y="10.25" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.ApiClientService" BaseTypeListCollapsed="true">
+    <Position X="27.75" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>MCDAAiFAQQRQgAAAIBAAAggqoQggAEAQQDIAAACAABA=</HashCode>
-      <FileName>ViewModels\Admin\AdminViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.DepartmentGroup">
-    <Position X="42" Y="6.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAA=</HashCode>
-      <FileName>ViewModels\Admin\AdminViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.HierarchicalDepartmentViewModel">
-    <Position X="45" Y="5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAACQAAAAAgAAASAAAAAAAQQAAEAAAAAAAAAAAAAAAE=</HashCode>
-      <FileName>ViewModels\Admin\HierarchicalDepartmentViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.LoginViewModel" Collapsed="true">
-    <Position X="31.75" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>ACAAAAEAAAABAAAAABAAAIEgAABAAAACAAAQAgAAAAA=</HashCode>
-      <FileName>ViewModels\Auth\LoginViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.SavedCredentials">
-    <Position X="45" Y="9.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAQAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
-      <FileName>ViewModels\Auth\LoginViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.ChatsViewModel" Collapsed="true">
-    <Position X="18.25" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAgAAAEAAAIAEBAAQAAgAAAAAEIIAAAACACAAIA=</HashCode>
-      <FileName>ViewModels\Chat\ChatsViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.ChatViewModel" Collapsed="true">
-    <Position X="22.75" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>CABAAAsAQAARAAAcGDGASAYCYACAgEShEABIUAAACAA=</HashCode>
-      <FileName>ViewModels\Chat\ChatViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.PollOptionViewModel">
-    <Position X="48.25" Y="8.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>ECACAAAAAAAAAAAgAAAAQACQAgAAQAAAAAAAAAAAAIA=</HashCode>
-      <FileName>ViewModels\Chat\PollOptionViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.PollViewModel">
-    <Position X="43.25" Y="9.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>QEAAEAAAAAAAAAIAADEAAAggAAQAMAAAAAAAAAABIAA=</HashCode>
-      <FileName>ViewModels\Chat\PollViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.DepartmentDialogViewModel" Collapsed="true">
-    <Position X="38.5" Y="11.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AgAAAIAAAAgEQBCAAAAAAAAgAAAEAAAAABAAEAJAIAA=</HashCode>
-      <FileName>ViewModels\Dialog\DepartmentDialogViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.PollDialogViewModel" Collapsed="true">
-    <Position X="36.25" Y="11.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AEAAAABAAAgAAAIEgCgAAEABAAQAAEAAAAAABAAAAAA=</HashCode>
-      <FileName>ViewModels\Dialog\PollDialogViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.UserEditDialogViewModel" Collapsed="true">
-    <Position X="25" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>ACAAAIAAQBgAAAAAAAAAAAEAAAAAQAAAAAAAAABAAAg=</HashCode>
-      <FileName>ViewModels\Dialog\UserEditDialogViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.UserProfileDialogViewModel" Collapsed="true">
-    <Position X="29.5" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAgAAAAAIgDAAAAAAAAAAAAAAAgIAAACAASA=</HashCode>
-      <FileName>ViewModels\Dialog\UserProfileDialogViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.MainMenuViewModel" Collapsed="true">
-    <Position X="34" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAgABAABAAAADAIECJgCQAQAAKAAAPAABAAAEADBAAA=</HashCode>
-      <FileName>ViewModels\MainMenuViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.MainWindowViewModel" Collapsed="true">
-    <Position X="40.75" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>QAAAAAAAAAAAAAAAAABAAAIAAABAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>ViewModels\MainWindowViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.ProfileViewModel" Collapsed="true">
-    <Position X="20.5" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>gABAAABAAAAAAAAICBAAAAgAAAAAAAAAAgYAABAgBQI=</HashCode>
-      <FileName>ViewModels\ProfileViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.SettingsViewModel" Collapsed="true">
-    <Position X="27.25" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAEIAwCBgAAAgAAAAgAAAAAAAAAAEAAAA=</HashCode>
-      <FileName>ViewModels\SettingsViewModel.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.ViewModelBase" Collapsed="true">
-    <Position X="28.25" Y="8.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>ViewModels\ViewModelBase.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.ViewModels.Dialog.DialogViewModelBase" Collapsed="true">
-    <Position X="37.25" Y="10.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAQAAAAABAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>ViewModels\Dialog\DialogViewModelBase.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Avatar.AvatarUrlConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="23.75" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAABAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Avatar\AvatarUrlConverter.cs</FileName>
+      <HashCode>ACAABAAAAgAAAAAAABAAAAIgAAAAEAAAAICAIgAAAIA=</HashCode>
+      <FileName>Services\ApiClientService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Converters.Base.ValueConverterBase&lt;TIn, TOut&gt;" Collapsed="true">
-    <Position X="13.25" Y="0.5" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.AppSettings" Collapsed="true">
+    <Position X="30" Y="8.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAIAAAAAACAABAIAAAAAAAAgAAAAQAAAAAAAAACA=</HashCode>
-      <FileName>Converters\Base\BaseValueConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Base.ValueConverterBase" Collapsed="true">
-    <Position X="8.25" Y="3.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAQAAAAAAAAABAIAAAAAAACgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Base\ValueConverterBase.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Boolean.BooleanToRotateTransformConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="27.25" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgQAAAAAAAgAAAAAAA=</HashCode>
-      <FileName>Converters\Boolean\BooleanToRotateTransformConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Boolean.BooleanToTextConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="29" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Boolean\BooleanToTextConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Common.BooleanToRotateTransformConverter" Collapsed="true">
-    <Position X="5" Y="4.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAQAAAAAAAAAAAAAAAAAAAAAQAAAAAAAgAAAAAAA=</HashCode>
-      <FileName>Converters\Common\BooleanToRotateTransformConverter.cs</FileName>
+      <HashCode>AAAAAAAAAEAAAAAAAAQAAAAAAAAAAAAEAIAEAAAAAAA=</HashCode>
+      <FileName>Services\AppSettings.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Common.BoolToStringConverter" Collapsed="true">
-    <Position X="5.5" Y="1.75" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.AuthService" Collapsed="true">
+    <Position X="31.75" Y="8.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAAAAABAQAAAAAAAAACA=</HashCode>
-      <FileName>Converters\Common\BoolToStringConverter.cs</FileName>
+      <HashCode>EgEAAAAAAAAAAgAACBAgQAABAAgCIAAEAAAAAAAAAAA=</HashCode>
+      <FileName>Services\AuthService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Common.IndexToTextConverter" Collapsed="true">
-    <Position X="7.25" Y="4.75" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.ChatInfoPanelStateStore" Collapsed="true">
+    <Position X="33.5" Y="8.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Common\CommonConverters.cs</FileName>
+      <HashCode>AAABAAAAAAAABABAEgAABAAAAAAAAAAAAAAAAgAAAAA=</HashCode>
+      <FileName>Services\ChatInfoPanelStateStore.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Common.EqualityConverter" Collapsed="true">
-    <Position X="9.5" Y="4.75" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.ClipboardService" Collapsed="true">
+    <Position X="31.75" Y="6.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Common\CommonConverters.cs</FileName>
+      <HashCode>AAgAAAAAAAAAAAAAAAEAAAAAAAAQAAAAAACAACAAAAA=</HashCode>
+      <FileName>Services\ClipboardService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Common.StringNotNullOrEmptyConverter" Collapsed="true">
-    <Position X="11.75" Y="4.75" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.DialogService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="30" Y="9.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Common\CommonConverters.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Common.DisplayNameConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="25.5" Y="2.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Common\DisplayNameConverter.cs</FileName>
+      <HashCode>AAAkAAAAAAQAAAAAAAAAAAAAAAAAAgBAAEABQAgAAAA=</HashCode>
+      <FileName>Services\DialogService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Converters.Common.DisplayOrUsernameConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="27.25" Y="2.5" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.NavigationService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="31.75" Y="9.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Common\DisplayOrUsernameConverter.cs</FileName>
+      <HashCode>AAAAAAAgAAAAAEAAAACAAAAAAAAAABAAAgAAAAAAAAA=</HashCode>
+      <FileName>Services\NavigationService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Converters.Constants.ColorScheme" Collapsed="true">
-    <Position X="25.5" Y="1.5" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.NotificationService" Collapsed="true">
+    <Position X="33.5" Y="9.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AEAAAAAAIAIAAAAAAAAABAAAAAAAAAAAAAAACAAAAAA=</HashCode>
-      <FileName>Converters\Constants\ColorScheme.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAQAABASAEABAAAAAAAABABEAAEBAAAA=</HashCode>
+      <FileName>Services\NotificationService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Constants.DateTimeFormats" Collapsed="true">
-    <Position X="23.75" Y="2.5" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.SecureStorageService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="28.25" Y="10.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAgEAAAAAAAAAAAAQAAAAAAACAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Constants\DateTimeFormats.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.DateTime.DateTimeConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30.75" Y="1.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>gAAAAAAIAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAIAAA=</HashCode>
-      <FileName>Converters\DateTime\DateTimeConverter.cs</FileName>
+      <HashCode>AQAAAAAAAAAEAAAQAAiAAAAAAIAAIAAAEAAAIAAAIAA=</HashCode>
+      <FileName>Services\SecureStorage.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Converters.DateTime.DateTimeFormatConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="1.5" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.Storage" Collapsed="true">
+    <Position X="30" Y="10.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>gAAAAAAIAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAIAAA=</HashCode>
-      <FileName>Converters\DateTime\DateTimeFormatConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.DateTime.DateTimeToDisplayTextConverter" Collapsed="true">
-    <Position X="10" Y="1.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAIAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAACA=</HashCode>
-      <FileName>Converters\DateTime\DateTimeToDisplayTextConverter.cs</FileName>
+      <HashCode>AAABgIAAAAAABABAEAACBAAAAAAAAAAAAAAAAAAAgAA=</HashCode>
+      <FileName>Services\Storage.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.DateTime.LastMessageDateConverter" Collapsed="true">
-    <Position X="14.5" Y="1.75" Width="1.5" />
+  <Class Name="MessengerDesktop.Services.WindowService" Collapsed="true">
+    <Position X="31.75" Y="10.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAIAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DateTime\LastMessageDateConverter.cs</FileName>
+      <HashCode>AAgAAAAAAAAAAQAAAAABAAAAAAAQAAAAAEAAAEAAAAA=</HashCode>
+      <FileName>Services\WindowService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Converters.Department.DepartmentHierarchyConverter" Collapsed="true">
-    <Position X="16.75" Y="1.75" Width="1.5" />
+  <Interface Name="MessengerDesktop.Services.IApiClientService" Collapsed="true">
+    <Position X="28.25" Y="11.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAACACAAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Department\DepartmentHierarchyConverter.cs</FileName>
+      <HashCode>AAAABAAAAgAAAAAAAAAAAAIAAAAAEAAAAAAAIAAAAIA=</HashCode>
+      <FileName>Services\ApiClientService.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Hierarchy.ChildrenHeightConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="23.75" Y="1.5" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerDesktop.Services.IDialogService" Collapsed="true">
+    <Position X="30" Y="11.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAEAAAAAAgAA=</HashCode>
-      <FileName>Converters\Hierarchy\ChildrenHeightConverter.cs</FileName>
+      <HashCode>AAAgAAAAAAQAAAAAAAAAAAAAAAAAAgAAAEABQAAAAAA=</HashCode>
+      <FileName>Services\DialogService.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Hierarchy.LevelToMarginConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="27.25" Y="3.5" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerDesktop.Services.INavigationService" Collapsed="true">
+    <Position X="31.75" Y="11.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAABAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Hierarchy\LevelToMarginConverter.cs</FileName>
+      <HashCode>AAAAAAAgAAAAAEAAAACAAAAAAAAAABAAAgAAAAAAAAA=</HashCode>
+      <FileName>Services\NavigationService.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Hierarchy.LevelToVisibilityConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="29" Y="3.5" Width="1.5" />
+  </Interface>
+  <Interface Name="MessengerDesktop.Services.ISecureStorageService" Collapsed="true">
+    <Position X="33.5" Y="11.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Hierarchy\LevelToVisibilityConverter.cs</FileName>
+      <HashCode>AAAAAAAAAAAEAAAAAAgAAAAAAIAAAAAAAAAAIAAAAAA=</HashCode>
+      <FileName>Services\SecureStorage.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Message.MessageToMarginConverter" Collapsed="true">
-    <Position X="7.75" Y="1.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAABAAACAAAAAAAAAAAQAAAAAAgAAAA=</HashCode>
-      <FileName>Converters\Message\MessageToMarginConverter.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Message.MessageSenderVisibilityConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="23.75" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Message\MessageVisibilityConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Message.PrevSenderToMarginConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="23.75" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Message\PrevSenderToMarginConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Message.MessageAlignmentConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30.75" Y="3.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAACAAAAAAEAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\Message\MessageAlignmentConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.User.UserIdToColorConverter" Collapsed="true">
-    <Position X="19" Y="1.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAAACAAAQAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\UI\User\UserIdToColorConverter.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.UI.BooleanToVisibilityConverter" Collapsed="true">
-    <Position X="21.25" Y="1.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\UI\BooleanToVisibilityConverter.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.UI.MessageMarginConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="3.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAABAAAAAAAAAAAIAAAIAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\UI\MessageMarginConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.UI.VisibilityConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAEAAAAAAAAAAAIAAAAAAAAgAAAAABAAAAAAAAAA=</HashCode>
-      <FileName>Converters\UI\VisibilityConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Converter" Collapsed="true">
-    <Position X="27.25" Y="1.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAACAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\ConverterExtension.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.MultiConverter" Collapsed="true">
-    <Position X="25.5" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAACAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\ConverterExtension.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.ConverterLocator" Collapsed="true">
-    <Position X="29" Y="1.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>gEAUAGAAACAAASCoCEAggmAAEAA0BAABQMIAEIwAaAA=</HashCode>
-      <FileName>Converters\ConverterLocator.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Converters.IntToMarginConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="2.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DepartmentHierarchyConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.IntToVisibilityConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="23.75" Y="3.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DepartmentHierarchyConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.BoolToStringConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DialogConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.IndexToTextConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30.75" Y="2.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DialogConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.EqualityConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="29" Y="2.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DialogConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.StringNotNullOrEmptyConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="25.5" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAQAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DialogConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.NullToBoolConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="29" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\DialogConverters.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.NullEmptyConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="27.25" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>IQAAAAAAAIAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAE=</HashCode>
-      <FileName>Converters\NullEmptyConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.ObjectNotNullToBooleanConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30.75" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\ObjectNotNullToBooleanConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.PollToPollViewModelConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="32.5" Y="4.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAJAAAAgACAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\PollToPollViewModelConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.StringToBooleanConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="27.25" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>Converters\StringToBooleanConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.StringToBrushConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="29" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAIAAAAAAAIAAAAAAAAgAAAAAAAAAAAAAAAE=</HashCode>
-      <FileName>Converters\StringToBrushConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.UrlToImageBrushConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30.75" Y="5.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAgAAAAAAAAABAAAAAA=</HashCode>
-      <FileName>Converters\UrlToImageBrushConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Converters.Boolean.BooleanConverter" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="25.5" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAABEAAAAAAIgAAAIAAAAAAAAwUAAAABQAgAAAAAgA=</HashCode>
-      <FileName>Converters\Boolean\BooleanConverter.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
+  </Interface>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>

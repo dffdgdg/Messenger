@@ -1,59 +1,94 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Services;
+using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class UserEditDialogViewModel : ViewModelBase
+    /// <summary>
+    /// ViewModel диалога редактирования пользователя.
+    /// Используется в админ-панели для создания/редактирования пользователей.
+    /// </summary>
+    public partial class UserEditDialogViewModel : DialogBaseViewModel
     {
-        [ObservableProperty]
-        private string username = string.Empty;
+        private readonly UserDTO? _originalUser;
 
         [ObservableProperty]
-        private string displayName = string.Empty;
+        private string _username = string.Empty;
 
         [ObservableProperty]
-        private DepartmentDTO? selectedDepartment;
+        private string _displayName = string.Empty;
 
         [ObservableProperty]
-        private List<DepartmentDTO> availableDepartments = [];
+        private int? _departmentId;
 
         [ObservableProperty]
-        private bool isNewUser;
+        private ObservableCollection<DepartmentDTO> _departments = [];
 
-        public Action<UserDTO>? SaveAction { get; set; }
-        public Action? CancelAction { get; set; }
+        /// <summary>Callback для сохранения пользователя</summary>
+        public Func<UserDTO, Task>? SaveAction { get; set; }
 
-        public UserEditDialogViewModel(UserDTO? user, List<DepartmentDTO> departments)
+        public bool IsNewUser => _originalUser == null;
+
+        public UserEditDialogViewModel(UserDTO? user, ObservableCollection<DepartmentDTO> departments)
         {
-            IsNewUser = user == null;
-            availableDepartments = departments;
+            _originalUser = user;
+            Departments = departments;
+            Title = user == null ? "Создать пользователя" : $"Редактировать: {user.DisplayName ?? user.Username}";
+            CanCloseOnBackgroundClick = true;
 
             if (user != null)
             {
-                Username = user.Username;
+                Username = user.Username ?? string.Empty;
                 DisplayName = user.DisplayName ?? string.Empty;
-                SelectedDepartment = departments.Find(d => d.Id == user.DepartmentId);
+                DepartmentId = user.DepartmentId;
             }
         }
 
         [RelayCommand]
-        private void Save()
+        private async Task Save()
         {
-            var user = new UserDTO
+            if (string.IsNullOrWhiteSpace(Username))
             {
-                Username = Username,
-                DisplayName = DisplayName,
-                DepartmentId = SelectedDepartment?.Id,
-                Department = SelectedDepartment?.Name
-            };
+                ErrorMessage = "Введите имя пользователя";
+                return;
+            }
 
-            SaveAction?.Invoke(user);
+            if (string.IsNullOrWhiteSpace(DisplayName))
+            {
+                ErrorMessage = "Введите отображаемое имя";
+                return;
+            }
+
+            await SafeExecuteAsync(async () =>
+            {
+                var user = new UserDTO
+                {
+                    Id = _originalUser?.Id ?? 0,
+                    Username = Username,
+                    DisplayName = DisplayName,
+                    DepartmentId = DepartmentId
+                };
+
+                if (SaveAction != null)
+                {
+                    await SaveAction(user);
+                    SuccessMessage = IsNewUser ? "Пользователь создан" : "Пользователь обновлен";
+                    RequestClose();
+                }
+            });
         }
 
-        [RelayCommand]
-        private void Cancel() => CancelAction?.Invoke();
+        partial void OnDisplayNameChanged(string value)
+        {
+            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
+            {
+                ErrorMessage = null;
+            }
+        }
     }
 }

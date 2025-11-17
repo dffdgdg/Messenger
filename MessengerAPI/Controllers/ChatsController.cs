@@ -1,152 +1,97 @@
-using MessengerAPI.Model;
+using MessengerAPI.Services;
 using MessengerShared.DTO;
+using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
 
 namespace MessengerAPI.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ChatsController(MessengerDbContext context) : ControllerBase
+    public class ChatsController(IChatService chatService, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
     {
-        private readonly MessengerDbContext _context = context;
-
-        // Получить чаты пользователя
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<ChatDTO>>> GetUserChats(int userId)
+        public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserChats(int userId)
         {
-            var chatIds = await _context.ChatMembers
-    .Where(cm => cm.UserId == 7)
-    .Select(cm => cm.ChatId)
-    .ToListAsync();
-            System.Diagnostics.Debug.WriteLine(string.Join(",", chatIds));
+            if (!IsCurrentUser(userId))
+                return Forbidden("Access denied to user chats");
 
-            var chats = await _context.Chats.Where(c => chatIds.Contains(c.Id)).Select(c => new ChatDTO
+            return await ExecuteAsync(async () =>
             {
-                Id = c.Id,
-                Name = c.Name,
-                IsGroup = c.IsGroup,
-                CreatedById = c.CreatedById ?? 0, 
-                LastMessageDate = c.LastMessageTime,
-                Avatar = c.Avatar != null ? $"{Request.Scheme}://{Request.Host}{c.Avatar}" : null
-    })
-    .ToListAsync();
-
-            return Ok(chats);
+                var chats = await chatService.GetUserChatsAsync(userId, Request);
+                return chats;
+            }, "User chats retrieved successfully");
         }
 
-        // Получить информацию о чате по id
         [HttpGet("{chatId}")]
-        public async Task<ActionResult<ChatDTO>> GetChat(int chatId)
+        public async Task<ActionResult<ApiResponse<ChatDTO>>> GetChat(int chatId)
         {
-            var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId);
-            if (chat == null)
-                return NotFound();
+            var currentUserId = GetCurrentUserId();
 
-            return Ok(new ChatDTO
+            return await ExecuteAsync(async () =>
             {
-                Id = chat.Id,
-                Name = chat.Name,
-                IsGroup = chat.IsGroup,
-                CreatedById = (int)chat.CreatedById,
-                LastMessageDate = chat.LastMessageTime,
-                Avatar = chat.Avatar != null ? $"{Request.Scheme}://{Request.Host}{chat.Avatar}" : null
+                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+                var chat = await chatService.GetChatAsync(chatId, Request);
+                return chat ?? throw new KeyNotFoundException($"Chat with ID {chatId} not found");
             });
         }
 
-        // Получить участников чата
         [HttpGet("{chatId}/members")]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetChatMembers(int chatId)
+        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetChatMembers(int chatId)
         {
-            var members = await _context.ChatMembers
-                .Where(cm => cm.ChatId == chatId)
-                .Include(cm => cm.User)
-                .Select(cm => new UserDTO
-                {
-                    Id = cm.User.Id,
-                    Username = cm.User.Username,
-                    DisplayName = cm.User.DisplayName,
-                    Avatar = cm.User.Avatar != null ? $"{Request.Scheme}://{Request.Host}{cm.User.Avatar}" : null
-                })
-                .ToListAsync();
-            return Ok(members);
+            var currentUserId = GetCurrentUserId();
+
+            return await ExecuteAsync(async () =>
+            {
+                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+                var members = await chatService.GetChatMembersAsync(chatId, Request);
+                return members;
+            }, "Chat members retrieved successfully");
         }
 
-        // Добавить чат
+
         [HttpPost]
-        public async Task<ActionResult<ChatDTO>> CreateChat([FromBody] ChatDTO chatDto)
+        public async Task<ActionResult<ApiResponse<ChatDTO>>> CreateChat([FromBody] ChatDTO chatDto)
         {
-            var chat = new Chat
-            {
-                Name = chatDto.Name,
-                IsGroup = chatDto.IsGroup,
-                CreatedById = chatDto.CreatedById
-            };
-            _context.Chats.Add(chat);
-            await _context.SaveChangesAsync();
+            var currentUserId = GetCurrentUserId();
 
-            var member = new ChatMember
+            return await ExecuteAsync(async () =>
             {
-                ChatId = chat.Id,
-                UserId = (int)chat.CreatedById,
-                Role = ChatRole.owner
-            };
-            _context.ChatMembers.Add(member);
-            await _context.SaveChangesAsync();
+                ValidateModel();
 
-            chatDto.Id = chat.Id;
-            return Ok(chatDto);
+                if (chatDto.CreatedById != currentUserId)
+                    throw new UnauthorizedAccessException("Cannot create chat for another user");
+
+                var chat = await chatService.CreateChatAsync(chatDto); 
+                return chat;
+            }, "Чат успешно создан");
         }
 
-        // Загрузить аватарку чата
         [HttpPost("{id}/avatar")]
-        public async Task<IActionResult> UploadAvatar(int id, IFormFile file)
+        public async Task<ActionResult> UploadAvatar(int id, IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("No file uploaded");
-
-            var chat = await _context.Chats.FindAsync(id);
-            if (chat == null)
-                return NotFound("Чат не найден");
-
-            // Проверка, является ли файл изображением
-            if (!file.ContentType.StartsWith("image/"))
-                return BadRequest("Файл должен быть изображением");
-
-            // Генерация имени файла
-            var fileName = $"{Guid.NewGuid()}.webp";
-            var relativePath = Path.Combine("avatars", "chats", fileName);
-            var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
-
-            // Убедиться, что каталог существует
-            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+            var currentUserId = GetCurrentUserId();
 
             try
             {
-                using var image = await Image.LoadAsync(file.OpenReadStream());
-                await image.SaveAsWebpAsync(absolutePath, new WebpEncoder
-                {
-                    Quality = 80
-                });
+                if (file == null || file.Length == 0)
+                    return BadRequest("No file provided");
 
-                if (!string.IsNullOrEmpty(chat.Avatar))
-                {
-                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", chat.Avatar.TrimStart('/'));
-                    if (System.IO.File.Exists(oldPath))
-                        System.IO.File.Delete(oldPath);
-                }
+                await chatService.EnsureUserIsChatAdminAsync(currentUserId, id);
 
-                // Обновить путь к аватарке чата в базе данных
-                chat.Avatar = "/" + relativePath.Replace('\\', '/');
-                await _context.SaveChangesAsync();
-
-                return Ok(new { AvatarUrl = $"{Request.Scheme}://{Request.Host}{chat.Avatar}" });
+                var avatarUrl = await chatService.UploadChatAvatarAsync(id, file, Request);
+                return SuccessWithData(new { AvatarUrl = avatarUrl }, "Chat avatar uploaded successfully");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid file or chat not found for avatar upload {ChatId}", id);
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "User {UserId} attempted to upload avatar for chat {ChatId} without permission", currentUserId, id);
+                return Forbidden(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Ошибка обработки изображения: {ex.Message}");
+                return InternalError(ex, "Error uploading chat avatar");
             }
         }
     }

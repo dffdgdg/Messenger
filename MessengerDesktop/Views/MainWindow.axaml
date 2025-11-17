@@ -5,6 +5,7 @@
         xmlns:chat="using:MessengerDesktop.Views.Chat"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:conv="using:MessengerDesktop.Converters"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="MessengerDesktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -14,17 +15,30 @@
 		ExtendClientAreaChromeHints="Default"
 		ExtendClientAreaTitleBarHeightHint="35"
         Background="{DynamicResource PrimaryBG}"
-        TransparencyLevelHint="AcrylicBlur">
+        TransparencyLevelHint="AcrylicBlur" MinWidth="890" MinHeight="500">
 
 	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition/>
+			<ColumnDefinition MinWidth="200" MaxWidth="600"/>
+			<ColumnDefinition/>
+		</Grid.ColumnDefinitions>
 		<Grid PointerPressed="OnTitleBarPointerPressed"
 		 IsHitTestVisible="True"
 		 Height="35"
 		 VerticalAlignment="Top"
 		 Background="Transparent"
 		 ZIndex="1000"/>
+		<Grid PointerPressed="OnTitleBarPointerPressed"
+			  Grid.Column="2"
+		 IsHitTestVisible="True"
+		 Height="35"
+		 VerticalAlignment="Top"
+		 Background="Transparent"
+		 ZIndex="1000"/>
 
-		<ContentControl Content="{Binding CurrentViewModel}" >
+		<!-- Основной контент -->
+		<ContentControl Content="{Binding CurrentViewModel}" Grid.ColumnSpan="3" >
 			<ContentControl.DataTemplates>
 				<DataTemplate DataType="vm:LoginViewModel">
 					<views:LoginView/>
@@ -49,5 +63,55 @@
 				</DataTemplate>
 			</ContentControl.DataTemplates>
 		</ContentControl>
+
+		<!-- Глобальный слой диалогов на весь экран -->
+		<Grid Name="DialogOverlay"
+              IsVisible="{Binding HasOpenDialogs}"
+              Grid.ColumnSpan="3"
+              Background="Transparent"
+              ZIndex="10000"
+              Opacity="1">
+
+			<Grid.Styles>
+				<Style Selector="Grid#DialogOverlay">
+					<Style.Animations>
+						<Animation Duration="0:0:0.3">
+							<KeyFrame Cue="0%">
+								<Setter Property="Opacity" Value="0"/>
+							</KeyFrame>
+							<KeyFrame Cue="100%">
+								<Setter Property="Opacity" Value="1"/>
+							</KeyFrame>
+						</Animation>
+					</Style.Animations>
+				</Style>
+			</Grid.Styles>
+
+			<!-- Фон затемнения -->
+			<Rectangle Fill="#80000000"
+                       PointerPressed="OnDialogBackgroundPressed"
+                       IsHitTestVisible="True"/>
+
+			<!-- Динамическое отображение текущего диалога -->
+			<ContentControl Content="{Binding CurrentDialog}" 
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            ZIndex="10001">
+				<ContentControl.DataTemplates>
+					<DataTemplate DataType="vm:UserProfileDialogViewModel">
+						<views:UserProfileDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:PollDialogViewModel">
+						<views:PollDialog Width="400"/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:UserEditDialogViewModel">
+						<views:UserEditDialog Width="500"/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:DepartmentDialogViewModel">
+						<views:DepartmentDialog Width="400"/>
+					</DataTemplate>
+				</ContentControl.DataTemplates>
+			</ContentControl>
+		</Grid>
 	</Grid>
 </Window>

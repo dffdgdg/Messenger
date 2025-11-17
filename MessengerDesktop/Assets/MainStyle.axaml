@@ -17,10 +17,14 @@
 		</ToggleButton>
 	</Design.PreviewWith>
 
+	<Style Selector="UserControl">
+		<Setter Property="Design.Height" Value="400"/>
+		<Setter Property="Design.Width" Value="800"/>
+	</Style>
 	<Style Selector="Button">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="HorizontalContentAlignment" Value="Center"/>
 	</Style>
-	
 
 
 	<Style Selector="Button.IconButton">

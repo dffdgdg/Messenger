@@ -1,15 +1,15 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views;
-using MessengerDesktop.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Net.Http;
-using Avalonia.Styling;
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
+using Avalonia.Styling;
 
 namespace MessengerDesktop
 {
@@ -55,11 +55,12 @@ namespace MessengerDesktop
             {
                 var services = new ServiceCollection();
 
-                // Сначала регистрируем сервисы без зависимостей
+                // Сервисы
+                services.AddSingleton<ISecureStorageService, SecureStorageService>();
+                services.AddSingleton<IApiClientService, ApiClientService>();
+                services.AddSingleton<IDialogService, DialogService>();
                 services.AddSingleton<AuthService>();
-                services.AddSingleton<INavigationService, NavigationService>();
 
-                // HttpClient регистрируем через фабрику
                 services.AddSingleton<HttpClient>(sp =>
                 {
                     var handler = new HttpClientHandler
@@ -74,8 +75,9 @@ namespace MessengerDesktop
                         BaseAddress = new Uri(ApiUrl),
                         Timeout = TimeSpan.FromSeconds(30)
                     };
-                    // Токен будет добавляться позже, после аутентификации
                 });
+
+                services.AddSingleton<INavigationService, NavigationService>();
 
                 // ViewModels
                 services.AddSingleton<MainWindowViewModel>();
@@ -85,6 +87,7 @@ namespace MessengerDesktop
                 services.AddTransient<ChatsViewModel>();
                 services.AddTransient<ProfileViewModel>();
                 services.AddTransient<SettingsViewModel>();
+                services.AddTransient<ChatViewModel>();
 
                 return services.BuildServiceProvider();
             }
@@ -106,63 +109,17 @@ namespace MessengerDesktop
                 var mainWindow = new MainWindow();
                 desktop.MainWindow = mainWindow;
 
-                // Инициализируем сервисы
                 WindowService.Initialize(mainWindow);
                 NotificationService.Initialize(mainWindow);
 
-                // Получаем ViewModel через сервисы
                 var mainWindowViewModel = Services.GetRequiredService<MainWindowViewModel>();
                 mainWindow.DataContext = mainWindowViewModel;
 
-                // Обработчик выхода
                 desktop.Exit += Desktop_Exit;
             }
 
             System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted completed");
             base.OnFrameworkInitializationCompleted();
-        }
-
-        public static string? GetCurrentToken()
-        {
-            try
-            {
-                var authService = Current?.Services.GetRequiredService<AuthService>();
-                return authService?.Token;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"GetCurrentToken error: {ex.Message}");
-                return null;
-            }
-        }
-
-        public static void UpdateHttpClientToken(string? token)
-        {
-            try
-            {
-                var httpClient = Current?.Services.GetRequiredService<HttpClient>();
-                if (httpClient != null)
-                {
-                    // Очищаем старые заголовки
-                    httpClient.DefaultRequestHeaders.Remove("Authorization");
-
-                    // Добавляем новый токен
-                    if (!string.IsNullOrEmpty(token))
-                    {
-                        httpClient.DefaultRequestHeaders.Authorization =
-                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                        System.Diagnostics.Debug.WriteLine("HttpClient token updated successfully");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("HttpClient token cleared");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"UpdateHttpClientToken error: {ex.Message}");
-            }
         }
 
         private void LoadThemeSettings()

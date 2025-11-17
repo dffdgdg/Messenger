@@ -52,11 +52,8 @@
             </TextBox>
 
             <!-- Department Selection -->
-            <ComboBox ItemsSource="{Binding AvailableDepartments}"
-                     SelectedItem="{Binding SelectedDepartment}"
-					 
+            <ComboBox ItemsSource="{Binding Departments}"
                      Margin="0,0,0,24"
-                     Width="240"
                      PlaceholderText="Выбрать отдел"
 					 Background="{DynamicResource PrimaryBG}">
                 <ComboBox.ItemTemplate>

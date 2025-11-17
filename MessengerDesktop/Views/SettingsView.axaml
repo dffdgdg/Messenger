@@ -5,13 +5,11 @@
              xmlns:vm="using:MessengerDesktop.ViewModels"
              mc:Ignorable="d"
              x:Class="MessengerDesktop.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel" Background="{DynamicResource PrimaryBG}">
-	<Border CornerRadius="16"
-            Background="{DynamicResource SecondaryBG}"
-            BorderBrush="{DynamicResource BorderDefault}"
-            BorderThickness="1"
-            Padding="32">
-		<Grid Margin="32,24">
+             x:DataType="vm:SettingsViewModel" Background="{DynamicResource FourthBG}"
+			 Design.Width="800" Design.Height="900">
+	<Border BorderThickness="1,0,0,0" BorderBrush="{DynamicResource BorderDefault}"
+            Background="{DynamicResource FourthBG}">
+		<Grid Margin="20" MaxWidth="1000">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="*"/>
@@ -27,60 +25,83 @@
 			<!-- Основные секции -->
 			<StackPanel Grid.Row="1" Spacing="20">
 
-				<!-- Внешний вид -->
+				<TextBlock Text="Внешний вид" 
+						   FontSize="16"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextPrimary}"/>
 				<Border CornerRadius="12"
                         Padding="20"
                         BorderBrush="{DynamicResource BorderDefault}"
                         BorderThickness="1"
 						Background="{DynamicResource ThirdBG}">
-					<StackPanel Spacing="14">
-						<TextBlock Text="Внешний вид"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary}"/>
-
-						<StackPanel Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    Spacing="12">
-							<TextBlock Text="Тема:"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       Width="120"/>
-							<ComboBox Width="200"
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="48"/>
+									<ColumnDefinition/>
+									<ColumnDefinition Width="146"/>
+								</Grid.ColumnDefinitions>
+								<Path VerticalAlignment="Center" Data="{DynamicResource Info}" Fill="{DynamicResource TextPrimary}"/>
+								<TextBlock VerticalAlignment="Center" HorizontalAlignment="Left"
+										   Text="Выберите тему" Grid.Column="1"/>
+								<ComboBox Grid.Column="2" Width="160"
                                       ItemsSource="{Binding AvailableThemes}"
                                       SelectedItem="{Binding SelectedTheme}"
                                       Background="{DynamicResource SecondaryBG}"
                                       BorderBrush="{DynamicResource BorderDefault}"
                                       Foreground="{DynamicResource TextPrimary}"
-                                      CornerRadius="6"/>
-						</StackPanel>
-					</StackPanel>
+                                      CornerRadius="6"
+									  HorizontalAlignment="Right"/>
+							</Grid>
 				</Border>
 
-				<!-- Поведение -->
+				<TextBlock Text="Поведение"
+						   FontSize="16"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextPrimary}"/>
 				<Border CornerRadius="12"
-                        Padding="20"
-                        BorderBrush="{DynamicResource BorderDefault}"
-                        BorderThickness="1"
-						Background="{DynamicResource ThirdBG}">
-					
-
-					<StackPanel Spacing="10">
-						<TextBlock Text="Поведение"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary}"/>
-
-						<CheckBox Content="Включить уведомления"
-                                  IsChecked="{Binding NotificationsEnabled}"
-                                  Foreground="{DynamicResource TextPrimary}"/>
-
-						<CheckBox Content="Разрешить поиск профиля"
-                                  IsChecked="{Binding CanBeFoundInSearch}"
-                                  Foreground="{DynamicResource TextPrimary}"/>
-					</StackPanel>
+					Padding="20"
+					BorderBrush="{DynamicResource BorderDefault}"
+					BorderThickness="1"
+					Background="{DynamicResource ThirdBG}">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="48"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="146"/>
+						</Grid.ColumnDefinitions>
+						<Path VerticalAlignment="Center" Data="{DynamicResource Notifications}" Fill="{DynamicResource TextPrimary}"/>
+						<TextBlock VerticalAlignment="Center" HorizontalAlignment="Left"
+								   Text="Уведомления" Grid.Column="1"/>
+						<ToggleSwitch Grid.Column="2"
+							  IsChecked="{Binding NotificationsEnabled}"
+							  Foreground="{DynamicResource TextPrimary}"
+							  CornerRadius="6"
+							  HorizontalAlignment="Right"/>
+					</Grid>
 				</Border>
-			</StackPanel>
+
+				<Border CornerRadius="12"
+					Padding="20"
+					BorderBrush="{DynamicResource BorderDefault}"
+					BorderThickness="1"
+					Background="{DynamicResource ThirdBG}">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="48"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="146"/>
+						</Grid.ColumnDefinitions>
+						<Path VerticalAlignment="Center" Data="{DynamicResource UserSearch}" Fill="{DynamicResource TextPrimary}"/>
+						<TextBlock VerticalAlignment="Center" HorizontalAlignment="Left"
+								   Text="Разрешить поиск профиля" Grid.Column="1"/>
+						<ToggleSwitch Grid.Column="2"
+							  IsChecked="{Binding CanBeFoundInSearch}"
+							  Foreground="{DynamicResource TextPrimary}"
+							  CornerRadius="6"
+							  HorizontalAlignment="Right"/>
+					</Grid>
+				</Border>
+				</StackPanel>
 		</Grid>
 	</Border>
 </UserControl>

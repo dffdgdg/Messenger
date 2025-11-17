@@ -1,5 +1,6 @@
 ﻿using Avalonia.Data.Converters;
 using MessengerShared.DTO;
+using MessengerShared.Enum;
 using System;
 using System.Globalization;
 

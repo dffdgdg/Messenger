@@ -2,7 +2,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
- mc:Ignorable="d" d:DesignWidth="1535" d:DesignHeight="550"
+ mc:Ignorable="d" Design.Height="500"
  x:Class="MessengerDesktop.Views.ChatsView"
  Background="{DynamicResource PrimaryBG}"
  x:DataType="vm:ChatsViewModel"
@@ -36,7 +36,6 @@
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 
-		<!-- Список чатов -->
 		<Grid x:Name="ChatListGrid" Grid.Column="0">
 			<Border Width="1"
 			HorizontalAlignment="Left"
@@ -57,17 +56,16 @@
 										<ColumnDefinition Width="*"/>
 									</Grid.ColumnDefinitions>
 
-									<!-- Аватар с кликом на профиль -->
 									<Border Background="Transparent"
 									Width="44" Height="44"
 									CornerRadius="22"
 									Margin="4,0"
 									VerticalAlignment="Center"
-									Cursor="Hand"
+									
  >
 										<Ellipse Width="44" Height="44">
 											<Ellipse.Fill>
-												<Binding Path="Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+												<Binding Path="Avatar"/>
 											</Ellipse.Fill>
 										</Ellipse>
 									</Border>
@@ -140,7 +138,7 @@
 		<Border Grid.Column="2"
 		CornerRadius="16"
 		Background="{DynamicResource SecondaryBG}"
-		BorderBrush="#1B1B1B"
+		BorderBrush="{DynamicResource SecondaryBrdr}"
 		BorderThickness="1"
 		Margin="1,0,0,0">
 			<ContentControl Content="{Binding CurrentChatViewModel}" />

@@ -1,135 +1,107 @@
-using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerShared.DTO;
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class ProfileViewModel : ViewModelBase
+    public partial class ProfileViewModel : BaseViewModel
     {
-        private readonly HttpClient _httpClient;
+        private readonly IApiClientService _apiClient;
 
         [ObservableProperty]
-        private UserDTO? user;
+        private UserDTO? _user;
 
         [ObservableProperty]
-        private int userId;
+        private int _userId;
 
         [ObservableProperty]
-        private bool isEditing;
+        private bool _isEditing;
 
         [ObservableProperty]
-        private string tempDisplayName = string.Empty;
+        private string _tempDisplayName = string.Empty;
 
         [ObservableProperty]
-        private Bitmap? avatarBitmap;
+        private Bitmap? _avatarBitmap;
 
-        private bool hasUnsavedChanges;
+        private bool _hasUnsavedChanges;
 
-        public string? AvatarUrl => User?.Avatar == null ? null : $"https://localhost:7190{User.Avatar}";
-
-        public ProfileViewModel(int userId)
+        public string? AvatarUrl
         {
-            // Set up HttpClient with timeout and SSL handling
-            var handler = new HttpClientHandler
+            get
             {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-            };
-            _httpClient = new HttpClient(handler)
-            {
-                BaseAddress = new Uri(App.ApiUrl),
-                Timeout = TimeSpan.FromMinutes(5) // Longer timeout for uploads
-            };
+                if (string.IsNullOrEmpty(User?.Avatar))
+                    return null;
 
-            this.userId = userId;
-            _ = LoadUser();
-        }
+                var avatar = User.Avatar.Trim();
 
-        partial void OnUserChanged(UserDTO? value)
-        {
-            OnPropertyChanged(nameof(AvatarUrl));
-            _ = LoadAvatarBitmap();
-        }
+                if (avatar.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    return avatar;
 
-        private async Task LoadUser()
-        {
-            var result = await _httpClient.GetFromJsonAsync<UserDTO>($"api/user/{this.UserId}");
-            if (result != null)
-            {
-                User = result;
-                TempDisplayName = result.DisplayName ?? string.Empty;
+                var baseUrl = App.ApiUrl.TrimEnd('/');
+                var avatarPath = avatar.TrimStart('/');
+                return $"{baseUrl}/{avatarPath}";
             }
         }
 
-        private async Task LoadAvatarBitmap()
+        public ProfileViewModel(int userId, IApiClientService apiClient)
         {
-            if (User?.Avatar == null)
+            _apiClient = apiClient;
+            UserId = userId;
+            _ = LoadUser();
+        }
+
+        partial void OnUserChanged(UserDTO? value) => OnPropertyChanged(nameof(AvatarUrl));
+
+        private async Task LoadUser()
+        {
+            await SafeExecuteAsync(async () =>
+            {
+                var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
+                if (result.Success && result.Data != null)
+                {
+                    User = result.Data;
+                    TempDisplayName = result.Data.DisplayName ?? string.Empty;
+
+                    await LoadAvatarAsync();
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка загрузки профиля: {result.Error}";
+                }
+            });
+        }
+        private async Task LoadAvatarAsync()
+        {
+            if (string.IsNullOrWhiteSpace(AvatarUrl))
             {
                 AvatarBitmap = null;
                 return;
             }
+
             try
             {
-                var url = $"https://localhost:7190{User.Avatar}";
-
-                // Сначала пробуем загрузить без токена для проверки защиты
-                using (var testClient = new HttpClient(new HttpClientHandler
+                var stream = await _apiClient.GetStreamAsync(AvatarUrl);
+                if (stream == null)
                 {
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-                }))
-                {
-                    var testResponse = await testClient.GetAsync(url);
-                    if (testResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        NotificationService.ShowWarning("Проверка защиты: доступ без токена запрещен (это правильно)");
-                    }
-                    else
-                    {
-                        NotificationService.ShowError("Внимание: файл доступен без авторизации!");
-                    }
+                    ErrorMessage = "Не удалось загрузить аватар (stream == null)";
+                    return;
                 }
 
-                // Теперь пробуем загрузить с токеном
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var token = NotificationService.GetAuthToken();
-                if (!string.IsNullOrEmpty(token))
-                {
-                    request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                }
-
-                using var response = await _httpClient.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    await using var stream = await response.Content.ReadAsStreamAsync();
-                    AvatarBitmap = new Bitmap(stream);
-                    NotificationService.ShowSuccess("Аватар успешно загружен с токеном");
-                }
-                else
-                {
-                    AvatarBitmap = null;
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        NotificationService.ShowError("Нет доступа к файлу: отсутствует или недействительный токен");
-                    }
-                    else
-                    {
-                        NotificationService.ShowError($"Ошибка загрузки аватара: {response.StatusCode}");
-                    }
-                }
+                AvatarBitmap = new Bitmap(stream);
             }
             catch (Exception ex)
             {
+                ErrorMessage = $"Ошибка загрузки аватара: {ex.Message}";
                 AvatarBitmap = null;
-                NotificationService.ShowError($"Ошибка загрузки аватара: {ex.Message}");
             }
         }
+
 
         [RelayCommand]
         private void StartEdit()
@@ -137,53 +109,56 @@ namespace MessengerDesktop.ViewModels
             if (User == null) return;
             TempDisplayName = User.DisplayName ?? string.Empty;
             IsEditing = true;
-            hasUnsavedChanges = false;
+            _hasUnsavedChanges = false;
+            ClearMessages(); 
         }
 
         [RelayCommand]
         private void CancelEdit()
         {
-            if (!hasUnsavedChanges || User == null) 
+            if (!_hasUnsavedChanges || User == null)
             {
                 IsEditing = false;
                 return;
             }
             TempDisplayName = User.DisplayName ?? string.Empty;
             IsEditing = false;
-            hasUnsavedChanges = false;
+            _hasUnsavedChanges = false;
+            ClearMessages(); 
         }
 
         [RelayCommand]
         private async Task SaveChanges()
         {
             if (User == null) return;
-            try
+
+            await SafeExecuteAsync(async () =>
             {
+                if (string.IsNullOrWhiteSpace(TempDisplayName))
+                {
+                    ErrorMessage = "Введите отображаемое имя";
+                    return;
+                }
+
                 var updatedUser = new UserDTO
                 {
                     Id = User.Id,
                     Username = User.Username,
-                    DisplayName = TempDisplayName,
+                    DisplayName = TempDisplayName.Trim(),
                     Avatar = User.Avatar
                 };
-                var response = await _httpClient.PutAsJsonAsync($"api/user/{User.Id}", updatedUser);
-                if (response.IsSuccessStatusCode)
+
+                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{User.Id}", updatedUser);
+                if (result.Success)
                 {
-                    User.DisplayName = TempDisplayName;
+                    User.DisplayName = TempDisplayName.Trim();
                     IsEditing = false;
-                    hasUnsavedChanges = false;
-                    await NotificationService.ShowSuccess("Изменения сохранены");
+                    _hasUnsavedChanges = false;
+                    SuccessMessage = "Данные обновлены";
                 }
                 else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    await NotificationService.ShowError($"Ошибка сохранения: {error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка: {ex.Message}");
-            }
+                    ErrorMessage = $"Ошибка обновления: {result.Error}";
+            });
         }
 
         [RelayCommand]
@@ -191,68 +166,69 @@ namespace MessengerDesktop.ViewModels
         {
             if (User == null) return;
 
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var dlg = new OpenFileDialog
-                {
-                    AllowMultiple = false,
-                    Title = "Выберите изображение"
-                };
-                dlg.Filters.Add(new FileDialogFilter { Name = "Images", Extensions = { "png", "jpg", "jpeg", "gif" } });
-
                 var window = App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                    ? desktop.MainWindow : null;
+                    ? desktop.MainWindow
+                    : null;
 
-                var result = await dlg.ShowAsync(window);
-                if (result == null || result.Length == 0) return;
-
-                var filePath = result[0];
-                var fileInfo = new FileInfo(filePath);
-
-                if (fileInfo.Length > 5 * 1024 * 1024)
+                if (window?.StorageProvider == null)
                 {
-                    await NotificationService.ShowError("Файл слишком большой. Максимальный размер: 5MB");
+                    ErrorMessage = "Ошибка доступа к файловой системе";
                     return;
                 }
 
-                // Use using statements for proper disposal
-                using var fileStream = File.OpenRead(filePath);
-                using var streamContent = new StreamContent(fileStream);
-                using var content = new MultipartFormDataContent();
-
-                // Add file content
-                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
-                    GetMimeType(Path.GetExtension(filePath)));
-                content.Add(streamContent, "file", Path.GetFileName(filePath));
-
-                // Upload with timeout handling
-                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(2));
-                var response = await _httpClient.PostAsync($"api/user/{User.Id}/avatar", content, cts.Token);
-
-                if (response.IsSuccessStatusCode)
+                var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    var userInfo = await _httpClient.GetFromJsonAsync<UserDTO>($"api/user/{User.Id}");
-                    if (userInfo != null)
+                    Title = "Выберите изображение",
+                    AllowMultiple = false,
+                    FileTypeFilter =
+                    [
+                        new FilePickerFileType("Изображения")
+                        {
+                            Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif"]
+                        }
+                    ]
+                });
+
+                if (files == null || files.Count == 0)
+                    return;
+
+                var file = files[0];
+
+                await using var fileStream = await file.OpenReadAsync();
+
+                if (fileStream.Length > 5 * 1024 * 1024)
+                {
+                    ErrorMessage = "Файл слишком большой. Максимальный размер: 5MB";
+                    return;
+                }
+
+                var uploadResult = await _apiClient.UploadFileAsync<UserDTO>(
+                    $"api/user/{User.Id}/avatar",
+                    fileStream,
+                    file.Name,
+                    GetMimeType(Path.GetExtension(file.Name)));
+
+                if (uploadResult.Success)
+                {
+                    if (uploadResult.Data != null && !string.IsNullOrEmpty(uploadResult.Data.Avatar))
+                        User.Avatar = uploadResult.Data.Avatar;
+                    else
                     {
-                        User.Avatar = userInfo.Avatar;
-                        await LoadAvatarBitmap();
-                        await NotificationService.ShowSuccess("Аватар успешно загружен");
+                        var refreshed = await _apiClient.GetAsync<UserDTO>($"api/user/{User.Id}");
+                        if (refreshed.Success && refreshed.Data != null) User = refreshed.Data;
                     }
+
+                    OnPropertyChanged(nameof(AvatarUrl));
+                    await LoadAvatarAsync();
+                    SuccessMessage = "Аватар успешно загружен";
                 }
                 else
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    await NotificationService.ShowError($"Ошибка загрузки: {error}");
+                    ErrorMessage = $"Ошибка загрузки: {uploadResult.Error}";
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                await NotificationService.ShowError("Превышено время ожидания загрузки");
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка загрузки: {ex.Message}");
-            }
+            });
         }
 
         private static string GetMimeType(string extension) => extension.ToLower() switch
@@ -265,7 +241,9 @@ namespace MessengerDesktop.ViewModels
 
         partial void OnTempDisplayNameChanged(string value)
         {
-            hasUnsavedChanges = true;
+            _hasUnsavedChanges = true;
+            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
+                ErrorMessage = null;
         }
     }
 }

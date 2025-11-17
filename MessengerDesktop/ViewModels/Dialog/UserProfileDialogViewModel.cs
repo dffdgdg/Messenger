@@ -1,35 +1,45 @@
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
+using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
+using System.IO;
 using System.Threading.Tasks;
-using System.Net.Http;
-using Avalonia.Media.Imaging;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class UserProfileDialogViewModel : ViewModelBase
+    /// <summary>
+    /// ViewModel диалога профиля пользователя.
+    /// Отображает информацию о пользователе и позволяет отправить личное сообщение.
+    /// </summary>
+    public partial class UserProfileDialogViewModel : DialogBaseViewModel
     {
-        private readonly HttpClient _httpClient = new() { BaseAddress = new Uri(App.ApiUrl) };
-        
-        public Action? CloseAction { get; set; }
+        private readonly IApiClientService _apiClient;
+
+        [ObservableProperty]
+        private UserDTO? _user;
+
+        [ObservableProperty]
+        private string? _message;
+
+        [ObservableProperty]
+        private Bitmap? _avatarBitmap;
+
+        /// <summary>Callback для отправки сообщения</summary>
         public Func<string, Task>? SendMessageAction { get; set; }
 
-        [ObservableProperty]
-        private UserDTO? user;
+        public string? AvatarUrl => User?.Avatar == null 
+            ? null 
+            : $"{App.ApiUrl.TrimEnd('/')}/{User.Avatar.TrimStart('/')}?v={DateTime.Now.Ticks}";
 
-        [ObservableProperty]
-        private string? message;
-
-        [ObservableProperty]
-        private Bitmap? avatarBitmap;
-
-        public string? AvatarUrl => User?.Avatar == null ? null : $"{App.ApiUrl}{User.Avatar}";
-
-        public UserProfileDialogViewModel(UserDTO user)
+        public UserProfileDialogViewModel(UserDTO user, IApiClientService apiClient)
         {
-            this.user = user;
+            _user = user;
+            _apiClient = apiClient;
+            Title = $"Профиль: {user.DisplayName ?? user.Username}";
+            CanCloseOnBackgroundClick = true;
             _ = LoadAvatarAsync();
         }
 
@@ -41,55 +51,60 @@ namespace MessengerDesktop.ViewModels
                 return;
             }
 
-            try
+            await SafeExecuteAsync(async () =>
             {
-                using var response = await _httpClient.GetAsync(AvatarUrl);
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    await using var stream = await response.Content.ReadAsStreamAsync();
-                    AvatarBitmap = new Bitmap(stream);
+                    var stream = await _apiClient.GetStreamAsync(AvatarUrl);
+
+                    if (stream != null)
+                    {
+                        AvatarBitmap = new Bitmap(stream);
+                    }
+                    else
+                    {
+                        AvatarBitmap = null;
+                    }
                 }
-                else
+                catch (Exception)
                 {
                     AvatarBitmap = null;
                 }
-            }
-            catch (Exception)
-            {
-                AvatarBitmap = null;
-            }
-        }
-
-        [RelayCommand]
-        private void Close()
-        {
-            CloseAction?.Invoke();
+            });
         }
 
         [RelayCommand]
         private async Task SendMessage()
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (string.IsNullOrWhiteSpace(Message))
+            {
+                ErrorMessage = "Введите сообщение";
                 return;
+            }
 
-            try
+            await SafeExecuteAsync(async () =>
             {
                 if (SendMessageAction != null)
                 {
-                    await SendMessageAction(message);
-                    Close();
+                    await SendMessageAction(Message);
+                    SuccessMessage = "Сообщение отправлено";
+                    RequestClose();
                 }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка отправки сообщения: {ex.Message}");
-            }
+            });
         }
 
         partial void OnUserChanged(UserDTO? value)
         {
             OnPropertyChanged(nameof(AvatarUrl));
             _ = LoadAvatarAsync();
+        }
+
+        partial void OnMessageChanged(string? value)
+        {
+            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
+            {
+                ErrorMessage = null;
+            }
         }
     }
 }

@@ -15,13 +15,11 @@
 		<ResourceDictionary>
 			<DataTemplate x:Key="DepartmentTemplate" DataType="vm:HierarchicalDepartmentViewModel">
 				<StackPanel Margin="0,0,0,4">
-					<!-- Сам блок -->
 					<Border Background="{DynamicResource ThirdBG}"
 							Classes="department-item"
 							CornerRadius="6"
 							Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}">
 						<Grid>
-							<!-- Горизонтальная линия от родителя -->
 							<Border Height="2"
 									Width="16"
 									Background="Yellow"
@@ -30,7 +28,6 @@
 									Margin="-16,0,0,0"
 									IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"/>
 
-							<!-- Контент -->
 							<Border Padding="12,10">
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<Button Grid.Column="0"
@@ -76,9 +73,7 @@
 						</Grid>
 					</Border>
 
-					<!-- Вложенные -->
 					<Grid IsVisible="{Binding IsExpanded}" Margin="24,0,0,0">
-						<!-- Вертикальная линия, тянущаяся только по количеству детей -->
 						<Border Width="2"
 								Background="Yellow"
 								HorizontalAlignment="Left"
@@ -119,7 +114,7 @@
                          DockPanel.Dock="Top"
                          FontSize="24"
                          FontWeight="Bold"
-                         Foreground="White"
+                         Foreground="{DynamicResource TextPrimary}"
                          Margin="8,0,0,24"/>
 
 				<ListBox SelectedIndex="{Binding SelectedTabIndex}"
@@ -156,7 +151,6 @@
 			</DockPanel>
 		</Border>
 
-		<!-- Content Area -->
 		<Border Grid.Column="1" CornerRadius="8" Background="{DynamicResource SecondaryBG}" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1">
 			<Grid Margin="24">
 				<Grid.RowDefinitions>
@@ -164,7 +158,6 @@
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<!-- Header -->
 				<Grid ColumnDefinitions="*,Auto,Auto"
 					  Margin="0,0,0,16">
 					<TextBox Grid.Column="0"
@@ -195,22 +188,19 @@
 						<StackPanel Orientation="Horizontal"
 								  Spacing="8">
 							<PathIcon Data="{StaticResource add_regular}"
-									Width="16" Height="16"/>
-							<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Создать пользователя|Создать Отдел'}"/>
+									Width="16" Height="16"  Foreground="White"/>
+							<TextBlock Foreground="White" Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Создать пользователя|Создать Отдел'}"/>
 						</StackPanel>
 					</Button>
 				</Grid>
 
-				<!-- Content -->
 				<Grid Grid.Row="1">
-					<!-- Loading indicator -->
 					<ProgressBar IsIndeterminate="True"
-								IsVisible="{Binding IsLoading}"
+								IsVisible="{Binding IsBusy}"
 								VerticalAlignment="Top"
 								Height="2"
 								Margin="0,-8,0,0"/>
 
-					<!-- Error message -->
 					<TextBlock Text="{Binding ErrorMessage}"
 							  IsVisible="{Binding ErrorMessage, Converter={conv:Converter Name=StringNotNullOrEmpty}}"
 							  Foreground="#C42B1C"
@@ -218,13 +208,11 @@
 							  VerticalAlignment="Top"
 							  Margin="0,8,0,0"/>
 
-					<!-- Main Content -->
 					<Border Background="{DynamicResource SecondaryBG}"
 							CornerRadius="12"
 							Padding="20"
 							Margin="0,24,0,0">
 						<Grid>
-							<!-- Users List -->
 							<ScrollViewer IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
 								<ItemsControl ItemsSource="{Binding FilteredGroupedUsers}">
 									<ItemsControl.ItemTemplate>
@@ -307,62 +295,9 @@
 				</Grid>
 			</Grid>
 		</Border>
-		<!--сюда-->
-		<Grid IsVisible="{Binding IsUserDialogOpen}"
-              Background="#80000000"
-              Grid.ColumnSpan="2"
-			  
-              ZIndex="1000">
-			<views:UserEditDialog DataContext="{Binding UserDialogViewModel}" Height="250"/>
-		</Grid>
-
-		<Grid IsVisible="{Binding IsDepartmentDialogOpen}"
-              Background="#80000000"
-              Grid.ColumnSpan="2"
-              ZIndex="1000">
-			<Border Background="{DynamicResource SecondaryBG}"
-                    CornerRadius="12"
-                    Width="400"
-                    Padding="24" Height="250">
-				<StackPanel>
-					<TextBlock Text="{Binding DepartmentDialogViewModel.IsNewDepartment, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Создать отдел|Редактировать отдел'}"
-                             FontSize="20"
-                             FontWeight="Bold"
-                             Margin="0,0,0,16"/>
-
-					<TextBox Text="{Binding DepartmentDialogViewModel.Name}"
-                            Classes="clearButton"
-                            Watermark="Название отдела"
-                            Margin="0,0,0,12"/>
-
-					<ComboBox ItemsSource="{Binding DepartmentDialogViewModel.Departments}"
-                             SelectedItem="{Binding DepartmentDialogViewModel.SelectedParent}"
-                             PlaceholderText="Выбрать родительский отдел"
-                             Margin="0,0,0,24">
-						<ComboBox.ItemTemplate>
-							<DataTemplate>
-								<TextBlock Text="{Binding Name}"/>
-							</DataTemplate>
-						</ComboBox.ItemTemplate>
-					</ComboBox>
-
-					<StackPanel Orientation="Horizontal"
-                              HorizontalAlignment="Right"
-                              Spacing="12">
-						<Button Content="Отмена"
-                                Classes="outline"
-                                Command="{Binding DepartmentDialogViewModel.CancelCommand}"/>
-						<Button Content="Сохранить"
-                                Classes="accent"
-                                Command="{Binding DepartmentDialogViewModel.SaveCommand}"/>
-					</StackPanel>
-				</StackPanel>
-			</Border>
-		</Grid>
 	</Grid>
 
 	<UserControl.Styles>
-		<!-- Button Styles -->
 		<Style Selector="Button.outline">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="#0078D4"/>
@@ -394,21 +329,18 @@
 			<Setter Property="Background" Value="#404149"/>
 		</Style>
 
-		<!-- Department List Styles -->
 		<Style Selector="Border.department-item">
 			<Setter Property="Transitions">
 				<Transitions>
 					<BrushTransition Property="Background" Duration="0:0:0.15"/>
 				</Transitions>
 			</Setter>
-			<!--<Setter Property="BoxShadow" Value="0 2px 4px 0 #1A1B1E"/>-->
 		</Style>
 
 		<Style Selector="Border.department-item:pointerover">
 			<Setter Property="Background" Value="#32343A"/>
 		</Style>
 
-		<!-- Input Control Styles -->
 		<Style Selector="TextBox.clearButton">
 			<Setter Property="Background" Value="#2B2D31"/>
 			<Setter Property="Height" Value="36"/>

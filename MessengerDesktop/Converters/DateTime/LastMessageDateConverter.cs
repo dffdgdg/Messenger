@@ -2,6 +2,7 @@ using System.Globalization;
 using MessengerDesktop.Converters.Base;
 using MessengerDesktop.Converters.Constants;
 using MessengerShared.DTO;
+using MessengerShared.Enum;
 
 namespace MessengerDesktop.Converters.DateTime
 {

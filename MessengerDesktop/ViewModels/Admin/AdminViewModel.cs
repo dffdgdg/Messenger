@@ -2,20 +2,23 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerShared.DTO;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class AdminViewModel : ViewModelBase
+    /// <summary>
+    /// ViewModel админ-панели для управления пользователями и отделами.
+    /// </summary>
+    public partial class AdminViewModel : BaseViewModel
     {
-        private readonly HttpClient _httpClient;
+        private readonly IApiClientService _apiClient;
+        private readonly MainWindowViewModel _mainWindowViewModel;
 
         [ObservableProperty]
         private ObservableCollection<UserDTO> users = [];
@@ -28,9 +31,6 @@ namespace MessengerDesktop.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<HierarchicalDepartmentViewModel> hierarchicalDepartments = [];
-
-        [ObservableProperty]
-        private bool isLoading;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredGroupedUsers), nameof(FilteredHierarchicalDepartments))]
@@ -46,114 +46,99 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private ObservableCollection<HierarchicalDepartmentViewModel> filteredHierarchicalDepartments = [];
 
-        [ObservableProperty]
-        private bool isUserDialogOpen;
-
-        [ObservableProperty]
-        private bool isDepartmentDialogOpen;
-
-        [ObservableProperty]
-        private UserEditDialogViewModel? userDialogViewModel;
-
-        [ObservableProperty]
-        private DepartmentDialogViewModel? departmentDialogViewModel;
-
-        [ObservableProperty]
-        private string? errorMessage;
-
-        public AdminViewModel(HttpClient httpClient)
+        public AdminViewModel(IApiClientService apiClient, MainWindowViewModel mainWindowViewModel)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _apiClient = apiClient;
+            _mainWindowViewModel = mainWindowViewModel;
             PropertyChanged += OnPropertyChanged;
             InitializeAsync();
         }
 
-        private async void InitializeAsync()
-        {
-            try
-            {
-                await LoadData();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Failed to load data: " + ex.Message;
-            }
-        }
+        private async void InitializeAsync() =>
+            await SafeExecuteAsync(async () => { await LoadData(); });
 
-        private async Task LoadData()
-        {
-            try
-            {
-                IsLoading = true;
-                ErrorMessage = string.Empty;
-
-                await LoadDepartments();
-                await LoadUsers();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error loading data: " + ex.Message;
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
+        private async Task LoadData() =>
+            await SafeExecuteAsync(async () => { await LoadDepartments(); await LoadUsers(); });
 
         [RelayCommand]
-        private async Task Refresh()
-        {
-            await LoadData();
-        }
+        private async Task Refresh() => await LoadData();
 
         private async Task LoadUsers()
         {
             try
             {
-                var response = await _httpClient.GetAsync("api/admin/users");
-                if (response.IsSuccessStatusCode)
+                System.Diagnostics.Debug.WriteLine("=== LoadUsers START ===");
+
+                var result = await _apiClient.GetAsync<List<UserDTO>>("api/admin/users");
+
+                System.Diagnostics.Debug.WriteLine($"Result - Success: {result.Success}");
+                System.Diagnostics.Debug.WriteLine($"Result - Error: '{result.Error}'");
+                System.Diagnostics.Debug.WriteLine($"Result - Message: '{result.Message}'");
+                System.Diagnostics.Debug.WriteLine($"Result - Data: {result.Data}");
+                System.Diagnostics.Debug.WriteLine($"Result - Data is null: {result.Data == null}");
+                System.Diagnostics.Debug.WriteLine($"Result - Data count: {result.Data?.Count ?? 0}");
+
+                if (result.Data != null)
                 {
-                    var loadedUsers = await response.Content.ReadFromJsonAsync<List<UserDTO>>();
-                    if (loadedUsers != null)
+                    foreach (var user in result.Data.Take(3))
                     {
-                        Users = new ObservableCollection<UserDTO>(loadedUsers);
-                        UpdateGroupedUsers();
+                        System.Diagnostics.Debug.WriteLine($"User {user.Id}: {user.Username}, Theme: {user.Theme}");
                     }
+                }
+
+                if (result.Success && result.Data != null)
+                {
+                    Users = new ObservableCollection<UserDTO>(result.Data);
+                    UpdateGroupedUsers();
+                    System.Diagnostics.Debug.WriteLine("LoadUsers - SUCCESS");
                 }
                 else
                 {
-                    ErrorMessage = $"Failed to load users. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Failed to load users: {result.Error}";
+                    System.Diagnostics.Debug.WriteLine($"LoadUsers - FAILED: {result.Error}");
                 }
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error loading users: " + ex.Message;
+                System.Diagnostics.Debug.WriteLine($"LoadUsers - EXCEPTION: {ex}");
+                ErrorMessage = $"Exception loading users: {ex.Message}";
             }
+
+            System.Diagnostics.Debug.WriteLine("=== LoadUsers END ===");
         }
 
         private async Task LoadDepartments()
         {
             try
             {
-                var response = await _httpClient.GetAsync("api/department");
-                if (response.IsSuccessStatusCode)
+                System.Diagnostics.Debug.WriteLine("=== LoadDepartments START ===");
+
+                var result = await _apiClient.GetAsync<List<DepartmentDTO>>("api/department");
+
+                System.Diagnostics.Debug.WriteLine($"LoadDepartments - Success: {result.Success}");
+                System.Diagnostics.Debug.WriteLine($"LoadDepartments - Error: {result.Error}");
+                System.Diagnostics.Debug.WriteLine($"LoadDepartments - Data: {result.Data != null}");
+                System.Diagnostics.Debug.WriteLine($"LoadDepartments - Data count: {result.Data?.Count ?? 0}");
+
+                if (result.Success && result.Data != null)
                 {
-                    var loadedDepartments = await response.Content.ReadFromJsonAsync<List<DepartmentDTO>>();
-                    if (loadedDepartments != null)
-                    {
-                        Departments = new ObservableCollection<DepartmentDTO>(loadedDepartments);
-                        BuildHierarchicalDepartments();
-                    }
+                    Departments = new ObservableCollection<DepartmentDTO>(result.Data);
+                    BuildHierarchicalDepartments();
+                    System.Diagnostics.Debug.WriteLine("LoadDepartments - SUCCESS");
                 }
                 else
                 {
-                    ErrorMessage = $"Failed to load departments. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Failed to load departments: {result.Error}";
+                    System.Diagnostics.Debug.WriteLine($"LoadDepartments - FAILED: {result.Error}");
                 }
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error loading departments: " + ex.Message;
+                System.Diagnostics.Debug.WriteLine($"LoadDepartments EXCEPTION: {ex}");
+                ErrorMessage = $"Exception loading departments: {ex.Message}";
             }
+
+            System.Diagnostics.Debug.WriteLine("=== LoadDepartments END ===");
         }
 
         private void UpdateGroupedUsers()
@@ -186,158 +171,118 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         private async Task Create()
         {
-            if (SelectedTabIndex == 0)
-            {
-                OpenCreateUserDialog();
-            }
-            else
-            {
-                OpenCreateDepartment();
-            }
+            if (SelectedTabIndex == 0) 
+                await OpenCreateUserDialog();            
+            else 
+                await OpenCreateDepartment();
         }
 
         [RelayCommand]
-        private void OpenCreateUserDialog()
+        private async Task OpenCreateUserDialog()
         {
-            UserDialogViewModel = new UserEditDialogViewModel(null, [.. Departments])
+            var dialog = new UserEditDialogViewModel(null, Departments)
             {
-                SaveAction = async (user) =>
-                {
-                    await CreateUser(user);
-                    IsUserDialogOpen = false;
-                },
-                CancelAction = () => IsUserDialogOpen = false
+                SaveAction = async (user) => await CreateUser(user)
             };
-            IsUserDialogOpen = true;
+            await _mainWindowViewModel.ShowDialogAsync(dialog);
         }
 
         [RelayCommand]
-        private void OpenCreateDepartment()
+        private async Task OpenCreateDepartment()
         {
-            DepartmentDialogViewModel = new DepartmentDialogViewModel([.. Departments])
+            var dialog = new DepartmentDialogViewModel([.. Departments])
             {
-                SaveAction = async (dept) =>
-                {
-                    await CreateDepartment(dept);
-                    IsDepartmentDialogOpen = false;
-                },
-                CancelAction = () => IsDepartmentDialogOpen = false
+                SaveAction = async (dept) => await CreateDepartment(dept)
             };
-            IsDepartmentDialogOpen = true;
+            await _mainWindowViewModel.ShowDialogAsync(dialog);
         }
 
         [RelayCommand]
         private async Task OpenEditUserDialog(UserDTO user)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                UserDialogViewModel = new UserEditDialogViewModel(user, [.. Departments])
+                var dialog = new UserEditDialogViewModel(user, Departments)
                 {
-                    SaveAction = async (editedUser) =>
-                    {
-                        await UpdateUser(editedUser);
-                        IsUserDialogOpen = false;
-                    },
-                    CancelAction = () => IsUserDialogOpen = false
+                    SaveAction = async (editedUser) => await UpdateUser(editedUser)
                 };
-                IsUserDialogOpen = true;
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error opening edit dialog: " + ex.Message;
-            }
+                await _mainWindowViewModel.ShowDialogAsync(dialog);
+            });
         }
 
         [RelayCommand]
         private async Task ToggleBan(UserDTO user)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var response = await _httpClient.PostAsync($"api/user/{user.Id}/toggle-ban", null);
-                if (response.IsSuccessStatusCode)
+                var result = await _apiClient.PostAsync($"api/admin/users/{user.Id}/toggle-ban", null);
+                if (result.Success)
                 {
                     await LoadUsers();
+                    SuccessMessage = "User ban status updated";
                 }
                 else
                 {
-                    ErrorMessage = $"Failed to toggle ban. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Failed to toggle ban: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error toggling ban: " + ex.Message;
-            }
+            });
         }
 
         private async Task CreateUser(UserDTO user)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var response = await _httpClient.PostAsJsonAsync("api/user", user);
-                if (response.IsSuccessStatusCode)
+                var result = await _apiClient.PostAsync<UserDTO>("api/admin/users", user);
+                if (result.Success)
                 {
                     await LoadUsers();
-                    NotificationService.ShowSuccess("User created successfully");
+                    SuccessMessage = "User created successfully";
                 }
                 else
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    ErrorMessage = $"Failed to create user: {error}";
+                    ErrorMessage = $"Failed to create user: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error creating user: " + ex.Message;
-            }
+            });
         }
 
         private async Task UpdateUser(UserDTO user)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var response = await _httpClient.PutAsJsonAsync($"api/user/{user.Id}", user);
-                if (response.IsSuccessStatusCode)
+                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{user.Id}", user);
+                if (result.Success)
                 {
                     await LoadUsers();
-                    await NotificationService.ShowSuccess("User updated successfully");
+                    SuccessMessage = "User updated successfully";
                 }
                 else
                 {
-                    ErrorMessage = $"Failed to update user. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Failed to update user: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error updating user: " + ex.Message;
-            }
+            });
         }
 
         private async Task CreateDepartment(DepartmentDialogViewModel dept)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
                 var departmentDto = new DepartmentDTO
                 {
                     Name = dept.Name,
-                    ParentDepartmentId = dept.SelectedParent?.Id
+                    ParentDepartmentId = dept.SelectedParent?.Id > 0 ? dept.SelectedParent.Id : null
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/department", departmentDto);
-                if (response.IsSuccessStatusCode)
+                var result = await _apiClient.PostAsync<DepartmentDTO>("api/department", departmentDto);
+                if (result.Success)
                 {
                     await LoadDepartments();
-                    await NotificationService.ShowSuccess("Department created successfully");
+                    SuccessMessage = "Department created successfully";
                 }
                 else
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    ErrorMessage = $"Failed to create department: {error}";
+                    ErrorMessage = $"Failed to create department: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error creating department: " + ex.Message;
-            }
+            });
         }
 
         private void BuildHierarchicalDepartments()
@@ -361,9 +306,7 @@ namespace MessengerDesktop.ViewModels
         private HierarchicalDepartmentViewModel CreateHierarchicalDepartment(DepartmentDTO department, int level)
         {
             var viewModel = new HierarchicalDepartmentViewModel(department, level);
-            var children = Departments
-                .Where(d => d.ParentDepartmentId == department.Id)
-                .Select(d => CreateHierarchicalDepartment(d, level + 1));
+            var children = Departments.Where(d => d.ParentDepartmentId == department.Id).Select(d => CreateHierarchicalDepartment(d, level + 1));
             foreach (var child in children)
             {
                 viewModel.Children.Add(child);
@@ -385,13 +328,12 @@ namespace MessengerDesktop.ViewModels
                     group.DepartmentName,
                     new ObservableCollection<UserDTO>(
                         group.Users.Where(user =>
-                            (user.DisplayName?.ToLower(System.Globalization.CultureInfo.CurrentCulture).Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
-                            (user.Username?.ToLower(System.Globalization.CultureInfo.CurrentCulture).Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false)
+                            (user.DisplayName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
+                            (user.Username?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false)
                         )
                     )
                 ))
-                .Where(group => group.Users.Any())
-                .ToList();
+                .Where(group => group.Users.Any()).ToList();
 
             FilteredGroupedUsers = new ObservableCollection<DepartmentGroup>(filtered);
         }
@@ -421,22 +363,19 @@ namespace MessengerDesktop.ViewModels
 
         private static HierarchicalDepartmentViewModel? CloneAndFilterDepartment(HierarchicalDepartmentViewModel original, string searchQuery)
         {
-            // Check if this department or any of its children match the search
             bool matchesSearch = original.Name.Contains(searchQuery, StringComparison.CurrentCultureIgnoreCase);
             var matchingChildren = new List<HierarchicalDepartmentViewModel>();
 
-            // Recursively check children
             foreach (var child in original.Children)
             {
                 var matchingChild = CloneAndFilterDepartment(child, searchQuery);
                 if (matchingChild != null)
                 {
                     matchingChildren.Add(matchingChild);
-                    matchesSearch = true; // If any child matches, we want to show this parent
+                    matchesSearch = true;
                 }
             }
 
-            // If this department or any of its children match, create a filtered clone
             if (matchesSearch)
             {
                 var clone = new HierarchicalDepartmentViewModel(new DepartmentDTO
@@ -446,10 +385,9 @@ namespace MessengerDesktop.ViewModels
                     ParentDepartmentId = original.ParentDepartmentId
                 }, original.Level)
                 {
-                    IsExpanded = true // Always expand when filtering
+                    IsExpanded = true
                 };
 
-                // Add matching children
                 foreach (var child in matchingChildren)
                 {
                     clone.Children.Add(child);
@@ -465,19 +403,11 @@ namespace MessengerDesktop.ViewModels
         {
             if (e.PropertyName == nameof(SearchQuery))
             {
-                if (SelectedTabIndex == 0)
-                {
-                    FilterUsers();
-                }
-                else
-                {
-                    FilterDepartments();
-                }
+                if (SelectedTabIndex == 0) FilterUsers();
+                else FilterDepartments();
             }
-            else if (e.PropertyName == nameof(SelectedTabIndex))
-            {
+            else if (e.PropertyName == nameof(SelectedTabIndex)) 
                 UpdateSearch();
-            }
         }
 
         private void UpdateSearch()
@@ -485,31 +415,22 @@ namespace MessengerDesktop.ViewModels
             if (!string.IsNullOrEmpty(SearchQuery))
             {
                 if (SelectedTabIndex == 0)
-                {
                     FilterUsers();
-                }
                 else
-                {
                     FilterDepartments();
-                }
             }
         }
 
         [RelayCommand]
-        private void OpenEditDepartment(DepartmentDTO department)
+        private async Task OpenEditDepartment(DepartmentDTO department)
         {
             try
             {
-                DepartmentDialogViewModel = new DepartmentDialogViewModel([.. Departments], department)
+                var dialog = new DepartmentDialogViewModel([.. Departments], department)
                 {
-                    SaveAction = async (dept) =>
-                    {
-                        await UpdateDepartment(dept, department.Id);
-                        IsDepartmentDialogOpen = false;
-                    },
-                    CancelAction = () => IsDepartmentDialogOpen = false
+                    SaveAction = async (dept) => await UpdateDepartment(dept, department.Id)
                 };
-                IsDepartmentDialogOpen = true;
+                await _mainWindowViewModel.ShowDialogAsync(dialog);
             }
             catch (Exception ex)
             {
@@ -519,34 +440,30 @@ namespace MessengerDesktop.ViewModels
 
         private async Task UpdateDepartment(DepartmentDialogViewModel dept, int departmentId)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
                 var departmentDto = new DepartmentDTO
                 {
                     Id = departmentId,
                     Name = dept.Name,
-                    ParentDepartmentId = dept.SelectedParent?.Id
+                    ParentDepartmentId = dept.SelectedParent?.Id > 0 ? dept.SelectedParent.Id : null
                 };
 
-                var response = await _httpClient.PutAsJsonAsync($"api/department/{departmentId}", departmentDto);
-                if (response.IsSuccessStatusCode)
+                var result = await _apiClient.PutAsync<DepartmentDTO>($"api/department/{departmentId}", departmentDto);
+                if (result.Success)
                 {
                     await LoadDepartments();
-                    await NotificationService.ShowSuccess("Department updated successfully");
+                    SuccessMessage = "Department updated successfully";
                 }
                 else
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    ErrorMessage = $"Failed to update department: {error}";
+                    ErrorMessage = $"Failed to update department: {result.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "Error updating department: " + ex.Message;
-            }
+            });
         }
     }
 
+    /// <summary>Группа пользователей по отделам</summary>
     public class DepartmentGroup(string departmentName, ObservableCollection<UserDTO> users)
     {
         public string DepartmentName { get; } = departmentName;

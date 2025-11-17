@@ -1,11 +1,11 @@
-using MessengerShared.DTO;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerShared.DTO;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class HierarchicalDepartmentViewModel : ViewModelBase
+    public partial class HierarchicalDepartmentViewModel : BaseViewModel
     {
         [ObservableProperty]
         private DepartmentDTO department;

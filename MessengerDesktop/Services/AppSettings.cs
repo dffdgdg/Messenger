@@ -46,7 +46,7 @@ namespace MessengerDesktop.Services
             }
         }
 
-        public static void SetSetting(string key, string value)
+        public async static void SetSetting(string key, string value)
         {
             try
             {
@@ -58,11 +58,11 @@ namespace MessengerDesktop.Services
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка сохранения настроек: {ex.Message}");
+                await NotificationService.ShowError($"Ошибка сохранения настроек: {ex.Message}");
             }
         }
 
-        public static void RemoveSetting(string key)
+        public async static void RemoveSetting(string key)
         {
             try
             {
@@ -74,7 +74,7 @@ namespace MessengerDesktop.Services
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка удаления настроек: {ex.Message}");
+                await NotificationService.ShowError($"Ошибка удаления настроек: {ex.Message}");
             }
         }
     }

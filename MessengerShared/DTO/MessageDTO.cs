@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace MessengerShared.DTO
 {
     public class MessageDTO
@@ -13,11 +10,9 @@ namespace MessengerShared.DTO
         public string? Content { get; set; }
         public DateTime CreatedAt { get; set; }
         public PollDTO? Poll { get; set; }
-        public List<UserMentionDTO> Mentions { get; set; } = [];
         public bool IsOwn { get; set; }
         public bool IsPrevSameSender { get; set; }
         public MessageDTO? PreviousMessage { get; set; }
-        public bool IsMentioned { get; set; }
         public bool ShowSenderName 
         { 
             get
@@ -33,13 +28,7 @@ namespace MessengerShared.DTO
             }
             set { } 
         }
-    }
 
-    public class UserMentionDTO
-    {
-        public int UserId { get; set; }
-        public string Username { get; set; } = string.Empty;
-        public int StartIndex { get; set; }
-        public int Length { get; set; }
+        public List<MessageFileDTO> Files { get; set; } = [];
     }
 }

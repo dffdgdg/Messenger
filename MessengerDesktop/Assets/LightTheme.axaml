@@ -7,9 +7,10 @@
     <SolidColorBrush x:Key="PanelBg" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="PanelBgSolid" Color="#FFFFFF"/>
 
-    <SolidColorBrush x:Key="PrimaryBG" Color="#F9F0F5"/>
+    <SolidColorBrush x:Key="PrimaryBG" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="SecondaryBG" Color="#FCF8FA"/>
-    <SolidColorBrush x:Key="ThirdBg" Color="#FBFBFB"/>
+    <SolidColorBrush x:Key="ThirdBG" Color="#FBFBFB"/>
+    <SolidColorBrush x:Key="FourthBG" Color="#F3F3F3"/>
 
     <SolidColorBrush x:Key="PrimaryBrdr" Color="#EDE9E8"/>
     <SolidColorBrush x:Key="SecondaryBrdr" Color="#EAEAEA"/>
@@ -22,7 +23,7 @@
     <SolidColorBrush x:Key="BorderHover" Color="#BDBDBD"/>
     <SolidColorBrush x:Key="BorderFocus" Color="#5865F2"/>
 
-    <SolidColorBrush x:Key="Accent" Color="#5865F2"/>
+    <SolidColorBrush x:Key="Accent" Color="#419FD9"/>
     <SolidColorBrush x:Key="AccentHover" Color="#4752C4"/>
     <SolidColorBrush x:Key="AccentPressed" Color="#3C45A5"/>
     <SolidColorBrush x:Key="IconAccent" Color="#424242"/>

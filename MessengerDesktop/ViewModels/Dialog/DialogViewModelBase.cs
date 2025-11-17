@@ -4,16 +4,44 @@ using System;
 
 namespace MessengerDesktop.ViewModels.Dialog
 {
-    public abstract partial class DialogViewModelBase : ViewModelBase
+    /// <summary>
+    /// Базовая ViewModel для всех диалогов.
+    /// Обеспечивает стандартное поведение: закрытие, отмена, обработка ошибок.
+    /// </summary>
+    public abstract partial class DialogBaseViewModel : BaseViewModel
     {
+        /// <summary>Событие запроса на закрытие диалога</summary>
         public Action? CloseRequested { get; set; }
 
-        protected void RequestClose() => CloseRequested?.Invoke();
-
-        [RelayCommand]
-        protected virtual void Cancel() => RequestClose();
-
+        /// <summary>Заголовок диалога</summary>
         [ObservableProperty]
-        private bool _isBusy;
+        private string title = "Диалог";
+
+        /// <summary>Может ли быть закрыт нажатием на фон</summary>
+        [ObservableProperty]
+        private bool canCloseOnBackgroundClick = true;
+
+        /// <summary>Запросить закрытие диалога</summary>
+        protected void RequestClose()
+        {
+            CloseRequested?.Invoke();
+        }
+
+        /// <summary>Команда отмены (закрытие диалога)</summary>
+        [RelayCommand]
+        protected virtual void Cancel()
+        {
+            RequestClose();
+        }
+
+        /// <summary>Команда закрытия диалога через фон</summary>
+        [RelayCommand]
+        public void CloseOnBackgroundClick()
+        {
+            if (CanCloseOnBackgroundClick)
+            {
+                RequestClose();
+            }
+        }
     }
 }

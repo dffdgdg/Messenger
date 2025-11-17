@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400"
+             x:Class="MessengerDesktop.Views.DepartmentDialog"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             x:DataType="vm:DepartmentDialogViewModel">
+
+    <Border Background="{DynamicResource SecondaryBG}"
+            CornerRadius="12"
+            Width="400"
+            Padding="24">
+        <StackPanel>
+            <TextBlock Text="{Binding Title}"
+                     FontSize="20"
+                     FontWeight="Bold"
+                     Margin="0,0,0,16"/>
+
+            <!-- Department Name -->
+            <TextBox Text="{Binding Name}"
+                    Classes="clearButton"
+                    Watermark="Название отдела"
+                    Margin="0,0,0,12"
+                    Background="{DynamicResource PrimaryBG}">
+                <TextBox.InnerLeftContent>
+                    <PathIcon Data="{StaticResource folder_regular}"
+                            Width="16"
+                            Height="16"
+                            Margin="12,0,8,0"
+                            Opacity="0.5"/>
+                </TextBox.InnerLeftContent>
+            </TextBox>
+
+            <!-- Parent Department Selection -->
+            <ComboBox ItemsSource="{Binding Departments}"
+                     SelectedItem="{Binding SelectedParent}"
+                     Margin="0,0,0,24"
+                     PlaceholderText="Выбрать родительский отдел"
+                     Background="{DynamicResource PrimaryBG}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="shared:DepartmentDTO">
+                        <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Action Buttons -->
+            <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Right"
+                      Spacing="12">
+                <Button Content="Отмена"
+                        Classes="outline"
+                        Command="{Binding CancelCommand}"/>
+                <Button Content="Сохранить"
+                        Classes="accent"
+                        Command="{Binding SaveCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+
+    <UserControl.Styles>
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#0078D4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <Style Selector="TextBox.clearButton">
+            <Setter Property="Background" Value="#2B2D31"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#404149"/>
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#2B2D31"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#404149"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </UserControl.Styles>
+</UserControl>

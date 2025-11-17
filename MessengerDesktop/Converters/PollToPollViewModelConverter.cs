@@ -1,49 +1,64 @@
 using Avalonia.Data.Converters;
+using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
 using MessengerShared.DTO;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Diagnostics;
 using System.Globalization;
-using System.Net.Http;
 
 namespace MessengerDesktop.Converters;
 
 public class PollToPollViewModelConverter : IValueConverter
 {
-    public static int UserId { get; set; }
+    private static IApiClientService? _apiClientService;
+    private static AuthService? _authService;
 
-    private static HttpClient? _httpClient;
-    public static HttpClient HttpClient
+    public static IApiClientService ApiClientService
     {
         get
         {
-            _httpClient ??= App.Current.Services.GetRequiredService<HttpClient>();
-            return _httpClient;
+            _apiClientService ??= App.Current.Services.GetRequiredService<IApiClientService>();
+            return _apiClientService;
         }
-        set => _httpClient = value;
+    }
+
+    public static AuthService AuthService
+    {
+        get
+        {
+            _authService ??= App.Current.Services.GetRequiredService<AuthService>();
+            return _authService;
+        }
     }
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not PollDTO poll)
         {
-            Debug.WriteLine("PollToPollViewModelConverter: value is not PollDTO or is null");
             return null;
         }
-        // ensure Options is not null
+
+        var userId = AuthService.UserId ?? 0;
+        if (userId == 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: UserId is 0 - user not authenticated");
+            return null;
+        }
+
         poll.Options ??= [];
-        Debug.WriteLine($"PollToPollViewModelConverter: Converting PollDTO Id={poll.Id}, MessageId={poll.MessageId}, OptionsCount={poll.Options.Count}");
+        System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: Converting PollDTO Id={poll.Id}, UserId={userId}");
+
         try
         {
-            return new PollViewModel(poll, UserId, HttpClient);
+            return new PollViewModel(poll, userId, ApiClientService);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"PollToPollViewModelConverter: exception creating PollViewModel: {ex}");
+            System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: exception creating PollViewModel: {ex}");
             return null;
         }
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
 }

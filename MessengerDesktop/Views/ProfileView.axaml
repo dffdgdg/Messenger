@@ -2,74 +2,91 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:qwe="using:Avalonia.Markup.Declarative"
              x:Class="MessengerDesktop.Views.ProfileView"
              x:DataType="vm:ProfileViewModel"
-             Background="{DynamicResource PrimaryBG}">
+             Background="{DynamicResource PrimaryBG}"
+			 Design.Width="800" Design.Height="900">
 
-	<Border CornerRadius="16"
-            Background="{DynamicResource SecondaryBG}"
-            BorderBrush="{DynamicResource BorderDefault}"
-            BorderThickness="1"
-            Padding="32">
+	<Border BorderThickness="1,0,0,0" BorderBrush="{DynamicResource BorderDefault}"
+            Background="{DynamicResource FourthBG}">
 
 		<Grid RowDefinitions="Auto,*"
               ColumnDefinitions="*"
-              RowSpacing="24">
+              RowSpacing="24"
+			  MaxWidth="1000" Margin="20">
 
-			<!-- Заголовок -->
 			<TextBlock Text="Профиль"
                        FontSize="28"
                        FontWeight="DemiBold"
                        Foreground="{DynamicResource TextPrimary}"
                        Grid.Row="0"/>
 
-			<!-- Контент -->
 			<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
 				<StackPanel Spacing="28">
 
-					<!-- Информация о пользователе -->
+					<StackPanel Orientation="Horizontal"
+								Spacing="20"
+								VerticalAlignment="Center">
+
+						<Border Width="96"
+								Height="96"
+								CornerRadius="48"
+								BorderBrush="{DynamicResource BorderDefault}"
+								BorderThickness="1"
+								Background="{DynamicResource ThirdBG}"
+								ClipToBounds="True">
+							<Image Source="{Binding AvatarBitmap}"
+								   Width="120"
+								   Height="120"
+								   Stretch="UniformToFill">
+								<Image.Styles>
+									<Style Selector="Image:empty">
+										<Setter Property="Source" Value="avares://MessengerDesktop/Assets/Images/default-avatar.webp"/>
+									</Style>
+								</Image.Styles>
+								<!--<Path Data="{DynamicResource ProfileIcon}" Fill="{DynamicResource TextPrimary}"/>-->
+							</Image>
+						</Border>
+
+						<StackPanel Spacing="6" VerticalAlignment="Center">
+							<TextBlock Text="{Binding User?.DisplayName}"
+									   FontSize="20"
+									   FontWeight="SemiBold"
+									   Foreground="{DynamicResource TextPrimary}"/>
+							<TextBlock Text="{Binding User?.Username}"
+									   FontSize="14"
+									   Foreground="{DynamicResource TextSecondary}"/>
+
+						</StackPanel>
+					</StackPanel>
+
 					<Border CornerRadius="12"
                             Padding="20"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource BorderDefault}"
+                            IsVisible="{Binding !IsEditing}"
 							Background="{DynamicResource ThirdBG}">
-						
-						<StackPanel Orientation="Horizontal"
-                                    Spacing="20"
-                                    VerticalAlignment="Center">
-
-							<!-- Аватар -->
-							<Border Width="96"
-									Height="96"
-									CornerRadius="48"
-									BorderBrush="{DynamicResource BorderDefault}"
-									BorderThickness="1"
-									Background="#1FFFFFFF"
-									ClipToBounds="True">
-								<Image Source="{Binding AvatarBitmap}"
-									   Stretch="UniformToFill"/>
-							</Border>
-
-							<!-- Имя и кнопка -->
-							<StackPanel Spacing="6" VerticalAlignment="Center">
-								<TextBlock Text="{Binding User, Converter={conv:Converter Name=DisplayOrUsername}}"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimary}"/>
-								<TextBlock Text="{Binding User.Username}"
-                                           FontSize="14"
-                                           Foreground="{DynamicResource TextSecondary}"/>
-								<Button Content="Загрузить аватар"
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="48"/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="146"/>
+							</Grid.ColumnDefinitions>
+							<Path VerticalAlignment="Center" Data="{DynamicResource Info}" Fill="{DynamicResource TextPrimary}"/>
+							<TextBlock VerticalAlignment="Center" HorizontalAlignment="Left"
+									   Text="Выберите файл" Grid.Column="1"/>
+							<Button Grid.Column="2"
+								Content="Загрузить аватар"
                                         Command="{Binding UploadAvatarCommand}"
-                                        HorizontalAlignment="Left"
+										Foreground="White"
                                         Margin="0,12,0,0"
                                         Width="160"
                                         Height="32"
-                                        CornerRadius="6"/>
-							</StackPanel>
-						</StackPanel>
+                                        CornerRadius="6"
+									HorizontalAlignment="Right"/>
+						</Grid>
 					</Border>
-
 					<!-- Просмотр профиля -->
 					<Border CornerRadius="12"
                             Padding="20"
@@ -91,12 +108,12 @@
 							</Grid>
 
 							<Button Content="Редактировать профиль"
+									Foreground="White"
                                     Command="{Binding StartEditCommand}"
                                     Width="200"
                                     Height="36"
                                     Margin="0,16,0,0"
                                     Background="{DynamicResource Accent}"
-                                    Foreground="{DynamicResource TextPrimary}"
                                     CornerRadius="6"/>
 						</StackPanel>
 					</Border>
@@ -138,7 +155,21 @@
 							</StackPanel>
 						</StackPanel>
 					</Border>
-
+					<Border CornerRadius="12"
+												Padding="20"
+												BorderThickness="1"
+												BorderBrush="{DynamicResource BorderDefault}"
+												IsVisible="{Binding !IsEditing}"
+												Background="{DynamicResource ThirdBG}">
+						<Button Content="Выйти "
+                                        Command="{Binding UploadAvatarCommand}"
+                                        HorizontalAlignment="Left"
+										Foreground="White"
+                                        Margin="0,12,0,0"
+                                        Width="160"
+                                        Height="32"
+                                        CornerRadius="6"/>
+					</Border>
 				</StackPanel>
 			</ScrollViewer>
 		</Grid>

@@ -1,24 +1,27 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
+using MessengerDesktop.ViewModels.Chat;
 using MessengerShared.DTO;
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class ChatViewModel : ViewModelBase
+    public partial class ChatViewModel : BaseViewModel
     {
-        private readonly HttpClient _httpClient;
+        private readonly IApiClientService _apiClient;
+        private readonly AuthService _authService;
         private readonly int _chatId;
         private HubConnection? _hubConnection;
         private bool _isLoadingMessages;
@@ -35,7 +38,7 @@ namespace MessengerDesktop.ViewModels
         private ObservableCollection<UserDTO> members = [];
 
         [ObservableProperty]
-        private ObservableCollection<MessageDTO> messages = [];
+        private ObservableCollection<MessageViewModel> messages = [];
 
         [ObservableProperty]
         private bool isInitialLoading = true;
@@ -59,230 +62,321 @@ namespace MessengerDesktop.ViewModels
         private int userId;
 
         [ObservableProperty]
-        private string? errorMessage;
-
-        [ObservableProperty]
         private UserProfileDialogViewModel? userProfileDialog;
+
+        public ObservableCollection<MessengerDesktop.ViewModels.Chat.LocalFileAttachment> LocalAttachments { get; } = [];
 
         public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
 
-        public ChatViewModel(int chatId, int userId, ChatsViewModel parent)
+        public ChatViewModel(int chatId, ChatsViewModel parent, IApiClientService apiClient)
         {
+            _apiClient = apiClient;
             Parent = parent;
-            _httpClient = App.Current.Services.GetRequiredService<HttpClient>();
-            
+            _authService = App.Current.Services.GetRequiredService<AuthService>();
             _chatId = chatId;
-            this.userId = userId;
-            Converters.PollToPollViewModelConverter.UserId = userId;
+            UserId = _authService.UserId ?? throw new InvalidOperationException("User not authenticated");
 
             _ = InitializeChat();
         }
 
         private async Task InitializeChat()
         {
-            IsInitialLoading = true;
-            try
+            await SafeExecuteAsync(async () =>
             {
-                await Task.WhenAll(
-                    LoadChat(),
-                    LoadMembers(),
-                    LoadInitialMessages()
-                );
+                IsInitialLoading = true;
+                await LoadChat();
+                await LoadMembers();
+                await LoadInitialMessages();
                 await InitHub();
-            }
-            finally
-            {
-                IsInitialLoading = false;
-            }
+            }, finallyAction: () => IsInitialLoading = false);
         }
+
 
         private async Task LoadChat()
         {
             try
             {
-                var result = await _httpClient.GetFromJsonAsync<ChatDTO>($"api/chats/{_chatId}");
-                if (result != null)
+                var result = await _apiClient.GetAsync<ChatDTO>($"api/chats/{_chatId}");
+                if (result.Success && result.Data != null)
                 {
-                    // Добавляем хэш к аватару чата
-                    if (!string.IsNullOrEmpty(result.Avatar))
-                    {
-                        result.Avatar = GetAvatarUrlWithHash(result.Avatar);
-                    }
-                    Chat = result;
+                    if (!string.IsNullOrEmpty(result.Data.Avatar))
+                        result.Data.Avatar = GetAvatarUrlWithHash(result.Data.Avatar);
+
+                    Chat = result.Data;
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка загрузки чата: {result.Error}";
                 }
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                NotificationService.ShowError($"Ошибка загрузки чата: {ex.Message}");
+                Console.WriteLine($"HTTP ошибка: {ex.Message}");
+                throw;
             }
         }
 
         private async Task LoadInitialMessages()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                System.Diagnostics.Debug.WriteLine($"LoadInitialMessages: ChatId={_chatId}, UserId={UserId}");
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] LoadInitialMessages called. Current Members count: {Members.Count}");
 
                 var url = $"api/messages/chat/{_chatId}?userId={UserId}&page=1&pageSize={PageSize}";
-                System.Diagnostics.Debug.WriteLine($"Запрос сообщений: {url}");
+                var result = await _apiClient.GetAsync<PagedMessagesDTO>(url);
 
-                // Проверяем заголовки HttpClient
-                var httpClient = App.Current.Services.GetRequiredService<HttpClient>();
-                System.Diagnostics.Debug.WriteLine($"HttpClient Auth Header: {httpClient.DefaultRequestHeaders.Authorization}");
-
-                var response = await httpClient.GetAsync(url);
-                System.Diagnostics.Debug.WriteLine($"Response status: {response.StatusCode}");
-
-                if (response.IsSuccessStatusCode)
+                if (result.Success && result.Data != null)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"Messages response: {json}");
-
-                    var result = await response.Content.ReadFromJsonAsync<PagedMessagesDTO>();
-
-                    if (result != null)
+                    if (Members.Count == 0 && result.Data.Messages.Count > 0)
                     {
-                        _hasMoreMessages = result.HasMoreMessages;
-                        _currentPage = result.CurrentPage;
-
-                        var messages = result.Messages;
-                        System.Diagnostics.Debug.WriteLine($"Получено сообщений: {messages.Count}");
-
-                        SetMessageRelations(messages);
-                        ProcessMessagesMetadata(messages);
-                        Messages = new ObservableCollection<MessageDTO>(messages);
-                        UpdatePollsCount();
-
-                        System.Diagnostics.Debug.WriteLine($"Сообщения загружены успешно");
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Members are empty but messages exist! Reloading members...");
+                        await LoadMembers();
                     }
-                    else
+
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] After LoadMembers: Members count = {Members.Count}");
+
+                    SetMessageRelations(result.Data.Messages);
+
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] ProcessMessagesMetadata complete. Now loading avatars...");
+
+                    var vmTasks = result.Data.Messages.Select(async msg =>
                     {
-                        System.Diagnostics.Debug.WriteLine("Результат messages = null");
-                    }
+                        var vm = new MessageViewModel(msg);
+                        if (!string.IsNullOrEmpty(msg.SenderAvatarUrl))
+                        {
+                            try
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Loading avatar for message {msg.Id}: {msg.SenderAvatarUrl}");
+                                vm.AvatarBitmap = await LoadBitmapAsync(msg.SenderAvatarUrl);
+                                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Avatar loaded for message {msg.Id}");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Failed to load avatar for message {msg.Id}: {ex.Message}");
+                            }
+                        }
+                        return vm;
+                    }).ToList();
+
+                    var vms = await Task.WhenAll(vmTasks);
+                    
+                    ProcessMessagesMetadata(result.Data.Messages, [.. vms]);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Loaded {vms.Length} messages with avatars. Final members count: {Members.Count}");
+                    Messages = new ObservableCollection<MessageViewModel>(vms);
                 }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"Ошибка загрузки сообщений: {response.StatusCode}, {error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Исключение в LoadInitialMessages: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
-                NotificationService.ShowError($"Ошибка загрузки сообщений: {ex.Message}");
-            }
+            });
         }
 
-        private async Task LoadMembers()
+        private static async Task<Bitmap?> LoadBitmapAsync(string url)
         {
             try
             {
-                var result = await _httpClient.GetFromJsonAsync<ObservableCollection<UserDTO>>($"api/chats/{_chatId}/members");
-                if (result != null && result.Count > 0)
-                {
-                    Members = result;
-                    return;
-                }
+                using var client = new HttpClient();
+                await using var stream = await client.GetStreamAsync(url);
 
-                if (Chat != null && !Chat.IsGroup)
-                {
-                    if (int.TryParse(Chat.Name, out var otherUserId))
-                    {
-                        var other = await _httpClient.GetFromJsonAsync<UserDTO>($"api/user/{otherUserId}");
-                        var me = await _httpClient.GetFromJsonAsync<UserDTO>($"api/user/{UserId}");
-                        var members = new ObservableCollection<UserDTO>();
-                        if (me != null) members.Add(me);
-                        if (other != null && (me == null || other.Id != me.Id)) members.Add(other);
-                        Members = members;
-                    }
-                }
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                ms.Position = 0;
+
+                return new Bitmap(ms);
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка загрузки участников: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"LoadBitmapAsync error: {ex.Message}");
+                return null;
             }
+        }
+
+
+        private async Task LoadMembers()
+        {
+            await SafeExecuteAsync(async () =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] LoadMembers called for chatId: {_chatId}");
+
+                var result = await _apiClient.GetAsync<List<UserDTO>>($"api/chats/{_chatId}/members");
+                
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] LoadMembers API result - Success: {result.Success}, Data count: {result.Data?.Count ?? 0}");
+                
+                if (result.Success && result.Data != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Members loaded from API: {string.Join(", ", result.Data.Select(u => $"{u.DisplayName ?? u.Username} ({u.Id})"))}");
+                    Members = new ObservableCollection<UserDTO>(result.Data);
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] API members endpoint failed or returned null. Fallback for private chat...");
+
+                if (Chat != null && !Chat.IsGroup)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Chat is private, attempting to parse otherUserId from: {Chat.Name}");
+                    
+                    if (int.TryParse(Chat.Name, out var otherUserId))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Fetching user data for otherUserId: {otherUserId} and current userId: {UserId}");
+
+                        var otherResult = await _apiClient.GetAsync<UserDTO>($"api/user/{otherUserId}");
+                        var meResult = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
+
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] otherResult - Success: {otherResult.Success}, User: {otherResult.Data?.DisplayName ?? otherResult.Data?.Username}");
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] meResult - Success: {meResult.Success}, User: {meResult.Data?.DisplayName ?? meResult.Data?.Username}");
+
+                        var members = new ObservableCollection<UserDTO>();
+                        if (meResult.Success && meResult.Data != null)
+                            members.Add(meResult.Data);
+                        if (otherResult.Success && otherResult.Data != null &&
+                            (meResult.Data == null || otherResult.Data.Id != meResult.Data.Id))
+                            members.Add(otherResult.Data);
+
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Fallback members loaded: {string.Join(", ", members.Select(u => $"{u.DisplayName ?? u.Username} ({u.Id})"))}");
+                        Members = members;
+                    }
+                    else
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Failed to parse Chat.Name as userId: {Chat.Name}");
+                }
+                else
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Chat is null or is group chat. Members remain empty.");
+            });
         }
 
         [RelayCommand]
         private async Task LoadOlderMessages()
         {
-            if (!_hasMoreMessages || _isLoadingMessages)
-                return;
+            if (!_hasMoreMessages || _isLoadingMessages) return;
 
-            try
+            await SafeExecuteAsync(async () =>
             {
                 _isLoadingMessages = true;
                 IsLoadingOlderMessages = true;
 
-                var result = await _httpClient.GetFromJsonAsync<PagedMessagesDTO>(
-                    $"api/messages/chat/{_chatId}?userId={userId}&page={_currentPage + 1}&pageSize={PageSize}");
+                var result = await _apiClient.GetAsync<PagedMessagesDTO>(
+                    $"api/messages/chat/{_chatId}?userId={UserId}&page={_currentPage + 1}&pageSize={PageSize}");
 
-                if (result != null && result.Messages.Count != 0)
+                if (result.Success && result.Data != null && result.Data.Messages.Count != 0)
                 {
-                    _hasMoreMessages = result.HasMoreMessages;
-                    _currentPage = result.CurrentPage;
-
-                    var oldMessages = result.Messages;
-                    SetMessageRelations(oldMessages);
-                    ProcessMessagesMetadata(oldMessages);
-
-                    foreach (var message in oldMessages)
+                    if (Members.Count == 0)
                     {
-                        Messages.Insert(0, message);
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] LoadOlderMessages: Members are empty! Reloading...");
+                        await LoadMembers();
                     }
+
+                    _hasMoreMessages = result.Data.HasMoreMessages;
+                    _currentPage = result.Data.CurrentPage;
+
+                    var oldMessages = result.Data.Messages;
+                    SetMessageRelations(oldMessages);
+
+                    var vmTasks = oldMessages.Select(async msg =>
+                    {
+                        var vm = new MessageViewModel(msg);
+                        if (!string.IsNullOrEmpty(msg.SenderAvatarUrl))
+                        {
+                            try
+                            {
+                                vm.AvatarBitmap = await LoadBitmapAsync(msg.SenderAvatarUrl);
+                            }
+                            catch { }
+                        }
+                        return vm;
+                    }).ToList();
+
+                    var vms = await Task.WhenAll(vmTasks);
+                    
+                    ProcessMessagesMetadata(oldMessages, [.. vms]);
+
+                    foreach (var vm in vms)
+                        Messages.Insert(0, vm);
 
                     UpdatePollsCount();
                 }
-            }
-            catch (Exception ex)
-            {
-                NotificationService.ShowError($"Ошибка загрузки старых сообщений: {ex.Message}");
-            }
-            finally
+                else if (!result.Success)
+                {
+                    ErrorMessage = $"Ошибка загрузки сообщений: {result.Error}";
+                }
+            }, finallyAction: () =>
             {
                 _isLoadingMessages = false;
                 IsLoadingOlderMessages = false;
-            }
+            });
         }
 
-        private void ProcessMessagesMetadata(List<MessageDTO> messages)
+        private void ProcessMessagesMetadata(List<MessageDTO> messages, List<MessageViewModel>? viewModels = null)
         {
-            System.Diagnostics.Debug.WriteLine($"ProcessMessagesMetadata: обрабатываем {messages.Count} сообщений");
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] ProcessMessagesMetadata called with {messages.Count} messages");
+            System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Available members: {Members.Count} - {string.Join(", ", Members.Select(u => $"{u.DisplayName ?? u.Username} ({u.Id})"))}");
 
             var userDict = Members.ToDictionary(u => u.Id);
-            foreach (var msg in messages)
+
+            for (int i = 0; i < messages.Count; i++)
             {
-                if (userDict.TryGetValue(msg.SenderId, out var user))
+                var msg = messages[i];
+                var vm = viewModels?[i]; 
+
+                System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id} from {msg.SenderId}: API SenderName='{msg.SenderName}', API SenderAvatarUrl='{msg.SenderAvatarUrl}'");
+
+                if (!string.IsNullOrEmpty(msg.SenderName) && msg.SenderName != $"User #{msg.SenderId}")
                 {
-                    msg.SenderName = user.DisplayName ?? user.Username;
-
-                    System.Diagnostics.Debug.WriteLine($"Сообщение {msg.Id}: SenderId={msg.SenderId}, UserAvatar={user.Avatar}");
-
-                    if (!string.IsNullOrEmpty(user.Avatar))
-                    {
-                        var avatarUrl = GetAvatarUrlWithHash(user.Avatar);
-                        msg.SenderAvatarUrl = avatarUrl;
-                        System.Diagnostics.Debug.WriteLine($"Avatar URL: {avatarUrl}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Avatar is null or empty for user {user.Id}");
-                        msg.SenderAvatarUrl = null;
-                    }
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: Using API SenderName '{msg.SenderName}'");
+                    if (vm != null) vm.SenderName = msg.SenderName;
+                }
+                else if (userDict.TryGetValue(msg.SenderId, out var user))
+                {
+                    var senderName = user.DisplayName ?? user.Username;
+                    msg.SenderName = senderName;
+                    if (vm != null) vm.SenderName = senderName;
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: Using Members SenderName '{senderName}'");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"User {msg.SenderId} not found in members dictionary");
-                    msg.SenderAvatarUrl = null;
+                    var placeholderName = $"User #{msg.SenderId}";
+                    msg.SenderName = placeholderName;
+                    if (vm != null) vm.SenderName = placeholderName;
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: Using placeholder '{placeholderName}'");
+                }
+
+                if (string.IsNullOrEmpty(msg.SenderAvatarUrl))
+                {
+                    if (userDict.TryGetValue(msg.SenderId, out var userForAvatar) && !string.IsNullOrEmpty(userForAvatar.Avatar))
+                    {
+                        var avatarUrl = GetSafeAvatarUrl(userForAvatar.Avatar);
+                        msg.SenderAvatarUrl = avatarUrl;
+                        if (vm != null) vm.SenderAvatarUrl = avatarUrl;
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: Using Members Avatar '{avatarUrl}'");
+                    }
+                    else
+                        System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: No avatar found");
+                }
+                else
+                {
+                    if (vm != null) vm.SenderAvatarUrl = msg.SenderAvatarUrl;
+                    System.Diagnostics.Debug.WriteLine($"[ChatViewModel] Message {msg.Id}: Using API Avatar '{msg.SenderAvatarUrl}'");
                 }
             }
         }
 
-        private void UpdatePollsCount()
+        private static string GetSafeAvatarUrl(string? avatarUrl)
         {
-            PollsCount = Messages.Count(m => m.Poll != null);
+            if (string.IsNullOrEmpty(avatarUrl))
+                return "avares://MessengerDesktop/Assets/Images/default-avatar.webp";
+
+            try
+            {
+                if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    return avatarUrl;
+
+                var baseUri = new Uri(App.ApiUrl);
+                var avatarUri = new Uri(baseUri, avatarUrl.TrimStart('/'));
+                return avatarUri.ToString();
+            }
+            catch
+            {
+                return "avares://MessengerDesktop/Assets/Images/default-avatar.webp";
+            }
         }
+
+        private void UpdatePollsCount() =>
+            PollsCount = Messages.Count(m => m.Poll != null);
 
         private void SetMessageRelations(List<MessageDTO> messages)
         {
@@ -294,7 +388,6 @@ namespace MessengerDesktop.ViewModels
                 msg.IsOwn = (msg.SenderId == UserId);
                 msg.IsPrevSameSender = lastSenderId != null && msg.SenderId == lastSenderId;
                 msg.PreviousMessage = previousMessage;
-                msg.IsMentioned = (msg.Mentions != null && msg.Mentions.Any(m => m.UserId == UserId)) && !msg.IsOwn;
                 msg.ShowSenderName = !msg.IsPrevSameSender;
 
                 lastSenderId = msg.SenderId;
@@ -305,33 +398,44 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         private async Task SendMessage()
         {
-            if (string.IsNullOrWhiteSpace(NewMessage))
-                return;
+            if (string.IsNullOrWhiteSpace(NewMessage) && LocalAttachments.Count == 0) return;
 
-            try
+            await SafeExecuteAsync(async () =>
             {
                 var msg = new MessageDTO
                 {
                     ChatId = _chatId,
                     Content = NewMessage,
                     SenderId = UserId,
+                    Files = []
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/messages", msg);
-                if (response.IsSuccessStatusCode)
+                foreach (var local in LocalAttachments.ToList())
+                {
+                    try
+                    {
+                        local.Data.Position = 0;
+                        var uploadResult = await _apiClient.UploadFileAsync<MessengerShared.DTO.MessageFileDTO>($"api/files/upload?chatId={_chatId}", local.Data, local.FileName, local.ContentType);
+                        if (uploadResult.Success && uploadResult.Data != null)
+                            msg.Files.Add(uploadResult.Data);
+                        else
+                            System.Diagnostics.Debug.WriteLine($"File upload failed: {uploadResult.Error}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Upload attachment error: {ex.Message}");
+                    }
+                }
+
+                var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>("api/messages", msg);
+
+                if (result.Success && result.Data != null)
                 {
                     NewMessage = string.Empty;
+                    LocalAttachments.Clear();
                 }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    NotificationService.ShowError($"Ошибка отправки: {error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                NotificationService.ShowError($"Ошибка: {ex.Message}");
-            }
+                else ErrorMessage = $"Ошибка отправки: {result.Error}";
+            });
         }
 
         [RelayCommand]
@@ -366,18 +470,11 @@ namespace MessengerDesktop.ViewModels
             try
             {
                 var authService = App.Current.Services.GetRequiredService<AuthService>();
-                if (string.IsNullOrEmpty(authService.Token))
-                {
-                    throw new InvalidOperationException("Authentication token is missing");
-                }
-
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl($"{App.ApiUrl}chatHub", options =>
-                          {
-                              options.AccessTokenProvider = () => Task.FromResult(authService.Token);
-                          })
-                          .WithAutomaticReconnect()
-                      .Build();
+                
+                _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options =>
+                    {
+                        options.AccessTokenProvider = () => Task.FromResult(authService.Token);
+                    }).WithAutomaticReconnect().Build();
 
                 _hubConnection.On<MessageDTO>("ReceiveMessageDTO", HandleNewMessage);
 
@@ -386,58 +483,57 @@ namespace MessengerDesktop.ViewModels
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка подключения к чату: {ex.Message}");
+                ErrorMessage = $"Ошибка подключения к чату: {ex.Message}";
             }
         }
 
-        private void HandleNewMessage(MessageDTO messageDto)
+        private async void HandleNewMessage(MessageDTO messageDto)
         {
             if (messageDto.ChatId != _chatId) return;
 
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
             {
-                if (Messages.Any(m => m.Id == messageDto.Id))
-                    return;
+                if (Messages.Any(m => m.Id == messageDto.Id)) return;
 
                 messageDto.IsOwn = messageDto.SenderId == UserId;
+
                 if (Messages.Count > 0)
                 {
-                    var lastMessage = Messages.Last();
-                    messageDto.PreviousMessage = lastMessage;
-                    messageDto.IsPrevSameSender = lastMessage != null && messageDto.SenderId == lastMessage.SenderId;
+                    var lastMessageVm = Messages.Last();
+                    messageDto.PreviousMessage = lastMessageVm.Message; // <-- берем DTO
+                    messageDto.IsPrevSameSender = lastMessageVm.SenderId == messageDto.SenderId;
                 }
-                messageDto.IsMentioned = (messageDto.Mentions != null && messageDto.Mentions.Any(m => m.UserId == UserId)) && !messageDto.IsOwn;
 
-                ProcessMessagesMetadata([messageDto]);
-                Messages.Add(messageDto);
+                var vm = new MessageViewModel(messageDto);
+
+                if (!string.IsNullOrEmpty(messageDto.SenderAvatarUrl))
+                {
+                    try { vm.AvatarBitmap = await LoadBitmapAsync(messageDto.SenderAvatarUrl); }
+                    catch { }
+                }
+
+                ProcessMessagesMetadata([messageDto], [vm]);
+
+                Messages.Add(vm);
                 UpdatePollsCount();
 
                 if (!IsScrolledToBottom)
-                {
                     HasNewMessages = true;
-                }
             });
         }
 
         [RelayCommand]
         private async Task LeaveChat()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var response = await _httpClient.PostAsync($"api/chats/{_chatId}/leave?userId={userId}", null);
-                if (response.IsSuccessStatusCode)
-                {
-                    NotificationService.ShowSuccess("Вы покинули чат", copyToClipboard: false);
-                }
+                var result = await _apiClient.PostAsync($"api/chats/{_chatId}/leave?userId={UserId}", null);
+
+                if (result.Success)
+                    SuccessMessage = "Вы покинули чат";
                 else
-                {
-                    NotificationService.ShowError("Ошибка при выходе из чата", copyToClipboard: false);
-                }
-            }
-            catch (Exception ex)
-            {
-                NotificationService.ShowError($"Ошибка: {ex.Message}");
-            }
+                    ErrorMessage = $"Ошибка при выходе из чата: {result.Error}";
+            });
         }
 
         [RelayCommand]
@@ -445,15 +541,18 @@ namespace MessengerDesktop.ViewModels
         {
             if (Parent?.Parent is MainMenuViewModel menu)
             {
-                await menu.ShowUserProfile(userId);
+                await menu.ShowUserProfileAsync(userId);
                 return;
             }
 
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-                desktop.MainWindow?.DataContext is MainWindowViewModel mwvm &&
-                mwvm.CurrentViewModel is MainMenuViewModel mainMenu)
+                desktop.MainWindow?.DataContext is MainWindowViewModel mwvm)
             {
-                await mainMenu.ShowUserProfile(userId);
+                await mwvm.ShowDialogAsync(
+                    new UserProfileDialogViewModel(
+                        new UserDTO { Id = userId }, 
+                        App.Current.Services.GetRequiredService<IApiClientService>())
+                );
                 return;
             }
 
@@ -465,24 +564,28 @@ namespace MessengerDesktop.ViewModels
             if (string.IsNullOrEmpty(avatarUrl))
                 return string.Empty;
 
-            if (avatarUrl.StartsWith("http"))
+            if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                return $"{avatarUrl}?v={DateTime.Now.Ticks}";
+                var uriBuilder = new UriBuilder(avatarUrl);
+                var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+                query["v"] = DateTime.Now.Ticks.ToString();
+                uriBuilder.Query = query.ToString();
+                return uriBuilder.ToString();
             }
 
-            return $"{App.ApiUrl.TrimEnd('/')}{avatarUrl}?v={DateTime.Now.Ticks}";
+            var baseUrl = App.ApiUrl.TrimEnd('/');
+            var cleanAvatarPath = avatarUrl.TrimStart('/');
+            return $"{baseUrl}/{cleanAvatarPath}?v={DateTime.Now.Ticks}";
         }
 
         [RelayCommand]
         private void ToggleInfoPanel()
         {
-            // Toggle global panel state
             var current = ChatInfoPanelStateStore.Get();
             ChatInfoPanelStateStore.Set(!current);
             OnPropertyChanged(nameof(IsInfoPanelOpen));
         }
 
-        // New property backed by global store to persist panel open state (global, not per-chat)
         public bool IsInfoPanelOpen
         {
             get => ChatInfoPanelStateStore.Get();
@@ -494,11 +597,6 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
-        // Called by source generator when Chat property changes
-        partial void OnChatChanged(ChatDTO? value)
-        {
-            // Notify that IsInfoPanelOpen may have changed for the new chat
-            OnPropertyChanged(nameof(IsInfoPanelOpen));
-        }
+        partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
     }
 }

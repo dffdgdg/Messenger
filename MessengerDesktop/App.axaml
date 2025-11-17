@@ -11,11 +11,6 @@
 				<ResourceInclude Source="avares://MessengerDesktop/Assets/Icons.axaml"/>
 			</ResourceDictionary.MergedDictionaries>
 			<ResourceDictionary.ThemeDictionaries>
-				<ResourceDictionary x:Key='Light'>
-					<ResourceDictionary.MergedDictionaries>
-						<ResourceInclude Source="Assets/LightTheme.axaml" />
-					</ResourceDictionary.MergedDictionaries>
-				</ResourceDictionary>
 				<ResourceDictionary x:Key='Dark'>
 					<ResourceDictionary.MergedDictionaries>
 						<ResourceInclude Source="Assets/DarkTheme.axaml" />

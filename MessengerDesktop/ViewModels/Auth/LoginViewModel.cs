@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class LoginViewModel : ViewModelBase
+    public partial class LoginViewModel : BaseViewModel
     {
-        private readonly HttpClient _httpClient;
         private readonly AuthService _authService;
         private readonly INavigationService _navigation;
         private const string CredentialsFile = "credentials.json";
@@ -24,26 +23,35 @@ namespace MessengerDesktop.ViewModels
         private string password = string.Empty;
 
         [ObservableProperty]
-        private string? errorMessage;
-
-        [ObservableProperty]
         private bool rememberMe;
 
-        public LoginViewModel(HttpClient httpClient, AuthService authService, INavigationService navigation)
+        public LoginViewModel(AuthService authService, INavigationService navigation)
         {
-            _httpClient = httpClient;
             _authService = authService;
             _navigation = navigation;
-            LoadSavedCredentials();
+            _ = InitializeAsync();
         }
 
-        private void LoadSavedCredentials()
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                await _authService.WaitForInitializationAsync();
+                await LoadSavedCredentialsAsync();
+            }
+            catch (Exception ex)
+            {
+                await NotificationService.ShowError($"Ошибка инициализации: {ex.Message}");
+            }
+        }
+
+        private async Task LoadSavedCredentialsAsync()
         {
             try
             {
                 if (File.Exists(CredentialsFile))
                 {
-                    var json = File.ReadAllText(CredentialsFile);
+                    var json = await File.ReadAllTextAsync(CredentialsFile);
                     var credentials = JsonSerializer.Deserialize<LoginDTO>(json);
                     if (credentials != null)
                     {
@@ -55,44 +63,40 @@ namespace MessengerDesktop.ViewModels
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка загрузки данных: {ex.Message}");
+                await NotificationService.ShowError($"Ошибка загрузки данных: {ex.Message}");
             }
         }
 
-        private void SaveCredentials()
+        private async Task SaveCredentialsAsync()
         {
-            if (RememberMe)
+            try
             {
-                try
+                if (RememberMe)
                 {
                     var credentials = new LoginDTO { Username = Username, Password = Password };
                     var json = JsonSerializer.Serialize(credentials);
-                    File.WriteAllText(CredentialsFile, json);
+                    await File.WriteAllTextAsync(CredentialsFile, json);
                 }
-                catch (Exception ex)
-                {
-                    NotificationService.ShowError($"Ошибка сохранения данных: {ex.Message}");
-                }
-            }
-            else if (File.Exists(CredentialsFile))
-            {
-                try
+                else if (File.Exists(CredentialsFile))
                 {
                     File.Delete(CredentialsFile);
                 }
-                catch (Exception ex)
-                {
-                    NotificationService.ShowError($"Ошибка удаления данных: {ex.Message}");
-                }
+            }
+            catch (Exception ex)
+            {
+                await NotificationService.ShowError($"Ошибка сохранения данных: {ex.Message}");
             }
         }
 
         [RelayCommand]
         public async Task Login()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                ErrorMessage = null;
+                if (!_authService.IsInitialized)
+                {
+                    await _authService.WaitForInitializationAsync();
+                }
 
                 if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
                 {
@@ -101,29 +105,53 @@ namespace MessengerDesktop.ViewModels
                 }
 
                 var success = await _authService.LoginAsync(Username, Password);
+
                 if (success)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Login успешен: UserId={_authService.UserId}");
+                    await Task.Delay(100);
 
-                    SaveCredentials();
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (_authService.UserId.HasValue) break;
+                        await Task.Delay(50);
+                    }
 
                     if (_authService.UserId.HasValue)
                     {
-                        NotificationService.ShowSuccess($"Переход в MainMenu с UserId={_authService.UserId.Value}");
-                        _navigation.NavigateToMainMenu(_authService.UserId.Value);
+                        await SaveCredentialsAsync();
+                        SuccessMessage = "Успешный вход!";
+                        _navigation.NavigateToMainMenu();
                     }
                     else
                     {
-                        NotificationService.ShowError("ОШИБКА: UserId is null после успешного логина!");
                         ErrorMessage = "Ошибка авторизации: ID пользователя не получен";
                     }
                 }
-                else ErrorMessage = "Неверный логин или пароль";
+                else
+                {
+                    ErrorMessage = "Неверный логин или пароль";
+                }
+            });
+        }
+
+        [RelayCommand]
+        public async Task ClearCredentials()
+        {
+            try
+            {
+                if (File.Exists(CredentialsFile))
+                {
+                    File.Delete(CredentialsFile);
+                }
+                Username = string.Empty;
+                Password = string.Empty;
+                RememberMe = false;
+                ClearMessages();
+                await NotificationService.ShowSuccess("Данные для входа очищены");
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Ошибка входа: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Login: {ex.Message}");
+                await NotificationService.ShowError($"Ошибка очистки данных: {ex.Message}");
             }
         }
     }

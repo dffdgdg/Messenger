@@ -4,42 +4,41 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerShared.DTO;
+using MessengerShared.Enum;
 using System;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class SettingsViewModel : ViewModelBase
+    public partial class SettingsViewModel : BaseViewModel, IDisposable
     {
-        private readonly HttpClient _httpClient = new() { BaseAddress = new System.Uri(App.ApiUrl) };
+        private readonly IApiClientService _apiClient;
         private readonly MainMenuViewModel _mainMenuViewModel;
         private readonly Timer _autoSaveTimer;
         private bool _isSaving;
         private bool _hasPendingChanges;
 
         [ObservableProperty]
-        private int userId;
+        private int _userId;
 
         [ObservableProperty]
-        private Theme selectedTheme = Theme.light;
+        private Theme _selectedTheme;
 
         [ObservableProperty]
-        private bool notificationsEnabled = true;
+        private bool _notificationsEnabled = true;
 
         [ObservableProperty]
-        private bool canBeFoundInSearch = true;
+        private bool _canBeFoundInSearch = true;
 
         public Theme[] AvailableThemes { get; } = (Theme[])Enum.GetValues(typeof(Theme));
 
-        // Свойство для отображения текущей темы в UI (если нужно)
         public string CurrentThemeDisplay => SelectedTheme.ToString();
 
-        public SettingsViewModel(MainMenuViewModel mainMenuViewModel)
+        public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient)
         {
             _mainMenuViewModel = mainMenuViewModel;
+            _apiClient = apiClient;
             UserId = mainMenuViewModel.UserId;
 
             _autoSaveTimer = new Timer(async _ => await SaveSettings(), null, Timeout.Infinite, Timeout.Infinite);
@@ -49,26 +48,26 @@ namespace MessengerDesktop.ViewModels
 
         private async Task LoadSettings()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var result = await _httpClient.GetFromJsonAsync<UserDTO>($"api/user/{UserId}");
-                if (result != null)
+                var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
+                if (result.Success && result.Data != null)
                 {
                     _isSaving = true;
 
-                    SelectedTheme = result.Theme ?? Theme.light;
-                    NotificationsEnabled = result.NotificationsEnabled ?? true;
-                    CanBeFoundInSearch = result.CanBeFoundInSearch ?? true;
+                    //SelectedTheme = result.Data.Theme ?? Theme.light;
+                    //NotificationsEnabled = result.Data.NotificationsEnabled ?? true;
+                    //CanBeFoundInSearch = result.Data.CanBeFoundInSearch ?? true;
 
                     ApplyTheme(SelectedTheme);
 
                     _isSaving = false;
                 }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка загрузки настроек: {ex.Message}");
-            }
+                else
+                {
+                    ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
+                }
+            });
         }
 
         private async Task SaveSettings()
@@ -83,21 +82,24 @@ namespace MessengerDesktop.ViewModels
                 var updatedUser = new UserDTO
                 {
                     Id = UserId,
-                    Theme = SelectedTheme,
-                    NotificationsEnabled = NotificationsEnabled,
-                    CanBeFoundInSearch = CanBeFoundInSearch
+                    //Theme = SelectedTheme,
+                    //NotificationsEnabled = NotificationsEnabled,
+                    //CanBeFoundInSearch = CanBeFoundInSearch
                 };
 
-                var response = await _httpClient.PutAsJsonAsync($"api/user/{UserId}", updatedUser);
-                if (!response.IsSuccessStatusCode)
+                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{UserId}", updatedUser);
+                if (result.Success)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    await NotificationService.ShowError($"Ошибка сохранения: {error}");
+                    SuccessMessage = "Настройки сохранены";
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка сохранения: {result.Error}";
                 }
             }
             catch (Exception ex)
             {
-                await NotificationService.ShowError($"Ошибка: {ex.Message}");
+                ErrorMessage = $"Ошибка: {ex.Message}";
             }
             finally
             {
@@ -114,32 +116,28 @@ namespace MessengerDesktop.ViewModels
                 _ => ThemeVariant.Default
             };
 
-            // Обновляем свойство для привязок в UI
             OnPropertyChanged(nameof(CurrentThemeDisplay));
         }
 
         [RelayCommand]
-        private void ToggleTheme()
-        {
-            // Переключаем между светлой и темной темой
-            SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
+        private void ToggleTheme() => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
 
-            // Тема применится автоматически через OnSelectedThemeChanged
-        }
+        [RelayCommand]
+        private async Task SaveNow() =>
+            await SaveSettings();
 
         private void ScheduleAutoSave()
         {
             if (_isSaving) return;
 
             _hasPendingChanges = true;
-            _autoSaveTimer.Change(500, Timeout.Infinite);
+            _autoSaveTimer.Change(1000, Timeout.Infinite);
         }
 
         partial void OnSelectedThemeChanged(Theme value)
         {
             if (!_isSaving)
             {
-                // Применяем тему сразу при изменении
                 ApplyTheme(value);
                 ScheduleAutoSave();
             }
@@ -147,18 +145,13 @@ namespace MessengerDesktop.ViewModels
 
         partial void OnNotificationsEnabledChanged(bool value)
         {
-            if (!_isSaving)
-            {
-                ScheduleAutoSave();
-            }
+            if (!_isSaving) ScheduleAutoSave();
         }
 
         partial void OnCanBeFoundInSearchChanged(bool value)
         {
-            if (!_isSaving)
-            {
-                ScheduleAutoSave();
-            }
+            if (!_isSaving) ScheduleAutoSave();
+
         }
 
         public void Dispose()
@@ -166,9 +159,16 @@ namespace MessengerDesktop.ViewModels
             _autoSaveTimer?.Dispose();
 
             if (_hasPendingChanges && !_isSaving)
-            {
                 _ = SaveSettings();
-            }
+        }
+
+        [RelayCommand]
+        private void ResetToDefaults()
+        {
+            SelectedTheme = Theme.light;
+            NotificationsEnabled = true;
+            CanBeFoundInSearch = true;
+            SuccessMessage = "Настройки сброшены к значениям по умолчанию";
         }
     }
 }

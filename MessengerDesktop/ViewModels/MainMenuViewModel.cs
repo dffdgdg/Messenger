@@ -3,315 +3,292 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerShared.DTO;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class MainMenuViewModel : ViewModelBase
+    public partial class MainMenuViewModel : BaseViewModel
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
-        private readonly HttpClient _httpClient;
+        private readonly IApiClientService _apiClient;
+        private readonly AuthService _authService;
         private ChatsViewModel? _chatsViewModel, _chatsViewModel2;
         private ProfileViewModel? _profileViewModel;
         private AdminViewModel? _adminViewModel;
 
         [ObservableProperty]
-        private ViewModelBase? currentMenuViewModel;
+        private BaseViewModel? _currentMenuViewModel;
 
         [ObservableProperty]
-        private UserProfileDialogViewModel? userProfileDialog;
+        private int _userId;
 
         [ObservableProperty]
-        private bool isPollDialogOpen;
+        private string _searchText = string.Empty;
 
         [ObservableProperty]
-        private PollDialogViewModel? pollDialogViewModel;
+        private ObservableCollection<UserDTO> _allContacts = [];
 
         [ObservableProperty]
-        private int userId;
+        private ObservableCollection<UserDTO> _filteredContacts = [];
 
         [ObservableProperty]
-        private string searchText = string.Empty;
+        private ObservableCollection<ChatDTO> _userChats = [];
 
         [ObservableProperty]
-        private ObservableCollection<UserDTO> allContacts = [];
+        private bool _hasSearchResults;
 
-        [ObservableProperty]
-        private ObservableCollection<UserDTO> filteredContacts = [];
-
-        [ObservableProperty]
-        private ObservableCollection<ChatDTO> userChats = [];
-
-        [ObservableProperty]
-        private bool hasSearchResults;
-
-        private Action? _onPollCreated;
-
-        public MainMenuViewModel(MainWindowViewModel mainWindowViewModel, HttpClient httpClient, int userId)
+        public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,
+                           IApiClientService apiClient,
+                           AuthService authService)
         {
             _mainWindowViewModel = mainWindowViewModel;
-            _httpClient = httpClient;
-            UserId = userId;
+            _apiClient = apiClient;
+            _authService = authService;
+            UserId = authService.UserId ?? throw new InvalidOperationException("User not authenticated");
+
             _ = LoadContactsAndChats();
         }
 
         [RelayCommand]
         public async Task SetItem(int index)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
                 switch (index)
                 {
                     case 0:
-                        CurrentMenuViewModel = new SettingsViewModel(this);
+                        CurrentMenuViewModel = new SettingsViewModel(this, _apiClient);
                         break;
                     case 1:
-                        _chatsViewModel ??= new ChatsViewModel(UserId, this, true);
+                        _chatsViewModel ??= new ChatsViewModel(this, true, _apiClient, _authService);
                         CurrentMenuViewModel = _chatsViewModel;
                         break;
                     case 3:
-                        _profileViewModel ??= new ProfileViewModel(UserId);
+                        _profileViewModel ??= new ProfileViewModel(UserId, _apiClient);
                         CurrentMenuViewModel = _profileViewModel;
                         break;
                     case 4:
-                        _adminViewModel ??= new AdminViewModel(_httpClient);
+                        _adminViewModel ??= new AdminViewModel(_apiClient, _mainWindowViewModel);
                         CurrentMenuViewModel = _adminViewModel;
                         break;
                     case 5:
-                        _chatsViewModel2 ??= new ChatsViewModel(UserId, this, false);
+                        _chatsViewModel2 ??= new ChatsViewModel(this, false, _apiClient, _authService);
                         CurrentMenuViewModel = _chatsViewModel2;
                         break;
                 }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка навигации: {ex.Message}");
-            }
+            }, "Переключение раздела");
         }
 
         [RelayCommand]
         public async Task OpenOrCreateChat(UserDTO user)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
                 var existingChat = UserChats.FirstOrDefault(c => !c.IsGroup && c.Name == user.Id.ToString());
                 ChatDTO? chatToOpen = existingChat;
+
                 if (existingChat == null)
                 {
                     var chat = new ChatDTO { Name = user.Id.ToString(), IsGroup = false, CreatedById = UserId };
-                    var response = await _httpClient.PostAsJsonAsync("api/chats", chat);
-                    if (response.IsSuccessStatusCode)
+
+                    var result = await _apiClient.PostAsync<ChatDTO, ChatDTO>("api/chats", chat);
+
+                    if (result.Success && result.Data != null)
                     {
-                        var created = await response.Content.ReadFromJsonAsync<ChatDTO>();
-                        if (created != null)
-                        {
-                            UserChats.Add(created);
-                            chatToOpen = created;
-                        }
+                        UserChats.Add(result.Data);
+                        chatToOpen = result.Data;
+                        System.Diagnostics.Debug.WriteLine($"New chat created: {result.Data.Id}");
+                    }
+                    else
+                    {
+                        ErrorMessage = $"Ошибка создания чата: {result.Error}";
+                        return;
                     }
                 }
-                _chatsViewModel ??= new ChatsViewModel(UserId, this, false);
+
+                _chatsViewModel ??= new ChatsViewModel(this, false, _apiClient, _authService);
                 if (chatToOpen != null)
                 {
-                    if (!_chatsViewModel.Chats.Any(c => c.Id == chatToOpen.Id)) 
+                    if (!_chatsViewModel.Chats.Any(c => c.Id == chatToOpen.Id))
                         _chatsViewModel.Chats.Add(chatToOpen);
                     _chatsViewModel.SelectedChat = chatToOpen;
                 }
                 CurrentMenuViewModel = _chatsViewModel;
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка: {ex.Message}");
-            }
+                SuccessMessage = "Чат открыт";
+            });
         }
 
+        public async Task ShowUserProfileAsync(int userId)
+        {
+            await SafeExecuteAsync(async () =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] ShowUserProfileAsync called for userId: {userId}");
+
+                var result = await _apiClient.GetAsync<UserDTO>($"api/user/{userId}");
+
+                if (result.Success && result.Data != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] User loaded: {result.Data.DisplayName ?? result.Data.Username}");
+
+                    var dialog = new UserProfileDialogViewModel(result.Data, _apiClient)
+                    {
+                        SendMessageAction = async (message) =>
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] SendMessageAction callback invoked");
+                            await SendDirectMessage(result.Data.Id, message);
+                        }
+                    };
+
+                    System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] Calling ShowDialogAsync for UserProfileDialog");
+                    await _mainWindowViewModel.ShowDialogAsync(dialog);
+                    System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] ShowDialogAsync completed");
+                }
+                else 
+                {
+                    ErrorMessage = $"Не удалось получить данные пользователя: {result.Error}";
+                    System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] Failed to load user: {result.Error}");
+                }
+            });
+        }
 
         public async Task ShowPollDialogAsync(int chatId, Action? onPollCreated = null)
         {
             try
             {
-                _onPollCreated = onPollCreated;
-                PollDialogViewModel = new PollDialogViewModel(chatId)
+                System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] ShowPollDialogAsync called for chatId: {chatId}");
+
+                var pollDialog = new PollDialogViewModel(chatId)
                 {
-                    CloseAction = () =>
-                    {
-                        IsPollDialogOpen = false;
-                        PollDialogViewModel = null;
-                    },
-                    CreateAction = async pollDto =>
-                    {
+                    CreateAction = async pollDto => 
+                    { 
+                        System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] Poll CreateAction callback invoked");
                         await CreatePoll(pollDto);
-                        _onPollCreated?.Invoke();
+                        onPollCreated?.Invoke();
                     }
                 };
-                IsPollDialogOpen = true;
+
+                System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] Calling ShowDialogAsync for PollDialog");
+                await _mainWindowViewModel.ShowDialogAsync(pollDialog);
+                System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] ShowDialogAsync completed");
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Ошибка открытия диалога опроса: {ex.Message}");
+                ErrorMessage = $"Ошибка открытия диалога опроса: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"[MainMenuViewModel] ShowPollDialogAsync error: {ex}");
             }
         }
 
         private async Task CreatePoll(PollDTO pollDto)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
                 pollDto.CreatedById = UserId;
                 pollDto.MessageId = 0;
-                var response = await _httpClient.PostAsJsonAsync("api/poll", pollDto);
-                if (response.IsSuccessStatusCode)
+
+                var result = await _apiClient.PostAsync<PollDTO, MessageDTO>("api/poll", pollDto);
+
+                if (result.Success && result.Data != null)
                 {
-                    await NotificationService.ShowSuccess("Опрос создан");
-                    IsPollDialogOpen = false;
+                    SuccessMessage = "Опрос создан";
                 }
                 else
                 {
-                    await NotificationService.ShowError("Ошибка создания опроса");
+                    ErrorMessage = $"Ошибка создания опроса: {result.Error}";
+                    System.Diagnostics.Debug.WriteLine($"CreatePoll failed: {result.Error}, Details: {result.Details}");
                 }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка создания опроса: {ex.Message}");
-            }
+            });
         }
 
-        partial void OnSearchTextChanged(string value)
-        {
-            UpdateFilteredContacts();
-        }
+        partial void OnSearchTextChanged(string value) => UpdateFilteredContacts();
 
         private async Task LoadContactsAndChats()
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var usersResponse = await _httpClient.GetAsync("api/users");
-                if (usersResponse.IsSuccessStatusCode)
+                System.Diagnostics.Debug.WriteLine($"LoadContactsAndChats: UserId={UserId}");
+
+                var usersResult = await _apiClient.GetAsync<List<UserDTO>>("api/user");
+                if (usersResult.Success && usersResult.Data != null)
                 {
-                    var users = await usersResponse.Content.ReadFromJsonAsync<ObservableCollection<UserDTO>>();
-                    if (users != null)
-                    {
-                        AllContacts = new ObservableCollection<UserDTO>(users.Where(u => u.Id != UserId));
-                    }
+                    AllContacts = new ObservableCollection<UserDTO>(usersResult.Data.Where(u => u.Id != UserId));
+                    System.Diagnostics.Debug.WriteLine($"Users loaded: {AllContacts.Count} contacts");
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка загрузки пользователей: {usersResult.Error}";
+                    System.Diagnostics.Debug.WriteLine($"Users load failed: {usersResult.Error}");
+                    return;
                 }
 
-                var chatsResponse = await _httpClient.GetAsync($"api/chats/user/{UserId}");
-                if (chatsResponse.IsSuccessStatusCode)
+                var chatsResult = await _apiClient.GetAsync<List<ChatDTO>>($"api/chats/user/{UserId}");
+                if (chatsResult.Success && chatsResult.Data != null)
                 {
-                    var chats = await chatsResponse.Content.ReadFromJsonAsync<ObservableCollection<ChatDTO>>();
-                    if (chats != null)
-                    {
-                        UserChats = chats;
-                    }
+                    UserChats = new ObservableCollection<ChatDTO>(chatsResult.Data);
+                    System.Diagnostics.Debug.WriteLine($"Chats loaded: {UserChats.Count} chats");
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка загрузки чатов: {chatsResult.Error}";
+                    System.Diagnostics.Debug.WriteLine($"Chats load failed: {chatsResult.Error}");
+                    return;
                 }
 
                 UpdateFilteredContacts();
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка загрузки данных: {ex.Message}");
-            }
+                SuccessMessage = "Данные загружены";
+            });
         }
 
         private void UpdateFilteredContacts()
         {
             if (AllContacts == null) return;
-            
+
             var search = SearchText?.ToLowerInvariant() ?? string.Empty;
-            var dialogUserIds = UserChats
-                .Where(c => !c.IsGroup && c.Name != null)
-                .Select(c => int.TryParse(c.Name, out var id) ? id : (int?)null)
-                .Where(id => id.HasValue)
-                .Select(id => id.Value)
-                .ToHashSet();
+            var dialogUserIds = UserChats.Where(c => !c.IsGroup && c.Name != null).
+                Select(c => int.TryParse(c.Name, out var id) ? id : (int?)null).Where(id => id.HasValue).Select(id => id.Value).ToHashSet();
 
             var withDialog = AllContacts.Where(u => dialogUserIds.Contains(u.Id));
             var withoutDialog = AllContacts.Where(u => !dialogUserIds.Contains(u.Id));
-            
+
             var filtered = withDialog.Concat(withoutDialog)
-                .Where(u => string.IsNullOrWhiteSpace(search) || 
-                           (u.DisplayName ?? u.Username ?? string.Empty).Contains(search, StringComparison.InvariantCultureIgnoreCase))
-                .ToList();
+                .Where(u => string.IsNullOrWhiteSpace(search) || (u.DisplayName ?? u.Username ?? string.Empty).
+                Contains(search, StringComparison.CurrentCultureIgnoreCase)).ToList();
 
             FilteredContacts = new ObservableCollection<UserDTO>(filtered);
             HasSearchResults = FilteredContacts.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
         }
 
-        public async Task ShowUserProfile(int userId)
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/user/{userId}");
-                if (response.IsSuccessStatusCode)
-                {
-                    var user = await response.Content.ReadFromJsonAsync<UserDTO>();
-                    if (user != null)
-                    {
-                        var dialog = new UserProfileDialogViewModel(user)
-                        {
-                            CloseAction = () => UserProfileDialog = null,
-                            SendMessageAction = async (message) =>
-                            {
-                                await SendDirectMessage(user.Id, message);
-                                UserProfileDialog = null;
-                            }
-                        };
-                        UserProfileDialog = dialog;
-                    }
-                }
-                else
-                {
-                    await NotificationService.ShowError("Не удалось загрузить профиль пользователя");
-                }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка загрузки профиля: {ex.Message}");
-            }
-        }
-
         private async Task SendDirectMessage(int userId, string message)
         {
-            try
+            await SafeExecuteAsync(async () =>
             {
-                var chatResponse = await _httpClient.PostAsJsonAsync("api/chats", new ChatDTO
+                var chatResult = await _apiClient.PostAsync<ChatDTO, ChatDTO>("api/chats", new ChatDTO
                 {
                     Name = userId.ToString(),
                     IsGroup = false,
                     CreatedById = UserId
                 });
 
-                if (chatResponse.IsSuccessStatusCode)
+                if (chatResult.Success && chatResult.Data != null)
                 {
-                    var chat = await chatResponse.Content.ReadFromJsonAsync<ChatDTO>();
-                    if (chat != null)
+                    var messageResult = await _apiClient.PostAsync<MessageDTO, MessageDTO>("api/messages", new MessageDTO
                     {
-                        var messageDto = new MessageDTO
-                        {
-                            ChatId = chat.Id,
-                            Content = message,
-                            SenderId = UserId
-                        };
+                        ChatId = chatResult.Data.Id,
+                        Content = message,
+                        SenderId = UserId
+                    });
 
-                        var response = await _httpClient.PostAsJsonAsync("api/messages", messageDto);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            await SetItem(1);
-                        }
-                        else
-                        {
-                           await NotificationService.ShowError("Ошибка отправки сообщения");
-                        }
+                    if (messageResult.Success)
+                    {
+                        await SetItem(1);
+                        SuccessMessage = "Сообщение отправлено";
                     }
+                    else ErrorMessage = $"Ошибка отправки сообщения: {messageResult.Error}";
                 }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка отправки сообщения: {ex.Message}");
-            }
+                else ErrorMessage = $"Ошибка создания чата: {chatResult.Error}";
+            });
         }
     }
 }

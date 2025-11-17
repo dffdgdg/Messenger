@@ -35,7 +35,11 @@
                     <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                         <Ellipse Width="64" Height="64" VerticalAlignment="Center">
                             <Ellipse.Fill>
-                                <Binding Path="Chat.Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+                                <ImageBrush Stretch="UniformToFill">
+                                    <ImageBrush.Source>
+                                        <Binding Path="Chat.Avatar"/>
+                                    </ImageBrush.Source>
+                                </ImageBrush>
                             </Ellipse.Fill>
                         </Ellipse>
 
@@ -69,15 +73,19 @@
                                             Margin="0,2"
                                             HorizontalAlignment="Stretch"
                                             Classes="hoverAccent"
-                                            
+											HorizontalContentAlignment="Left"
+                                            Command="{Binding $parent[UserControl].DataContext.OpenProfileCommand}"
                                             CommandParameter="{Binding Id}">
-										<!--Command="{Binding ((vm:ChatViewModel)DataContext).ShowUserProfile, RelativeSource={RelativeSource AncestorType=ItemsControl}}"-->
 										<StackPanel Orientation="Horizontal" 
                                                   Spacing="12" 
                                                   VerticalAlignment="Center">
                                             <Ellipse Width="36" Height="36">
                                                 <Ellipse.Fill>
-                                                    <Binding Path="Avatar" Converter="{conv:Converter Name=UrlToImageBrush}"/>
+                                                    <ImageBrush Stretch="UniformToFill">
+                                                        <ImageBrush.Source>
+                                                            <Binding Path="Avatar"/>
+                                                        </ImageBrush.Source>
+                                                    </ImageBrush>
                                                 </Ellipse.Fill>
                                             </Ellipse>
                                             <TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}" 

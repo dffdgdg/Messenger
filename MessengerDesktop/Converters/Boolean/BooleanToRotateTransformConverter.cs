@@ -9,16 +9,15 @@ namespace MessengerDesktop.Converters.Boolean
         public double TrueValue { get; set; } = 90;
         public double FalseValue { get; set; } = 0;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
-            {
                 return boolValue ? TrueValue : FalseValue;
-            }
-            return 0;
+
+            return FalseValue; 
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

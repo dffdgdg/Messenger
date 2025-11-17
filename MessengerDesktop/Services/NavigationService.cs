@@ -1,23 +1,22 @@
 ﻿using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Net.Http;
 
 namespace MessengerDesktop.Services
 {
     public interface INavigationService
     {
         void NavigateToLogin();
-        void NavigateToMainMenu(int userId);
-        void NavigateTo<T>() where T : ViewModelBase;
-        event Action<ViewModelBase>? CurrentViewModelChanged;
-        ViewModelBase? CurrentViewModel { get; }
+        void NavigateToMainMenu();
+        void NavigateTo<T>() where T : BaseViewModel;
+        event Action<BaseViewModel>? CurrentViewModelChanged;
+        BaseViewModel? CurrentViewModel { get; }
     }
 
-    public class NavigationService(IServiceProvider serviceProvider, AuthService authService, HttpClient httpClient) : INavigationService
+    public class NavigationService(IServiceProvider serviceProvider, AuthService authService) : INavigationService
     {
-        public ViewModelBase? CurrentViewModel { get; private set; }
-        public event Action<ViewModelBase>? CurrentViewModelChanged;
+        public BaseViewModel? CurrentViewModel { get; private set; }
+        public event Action<BaseViewModel>? CurrentViewModelChanged;
 
         public void NavigateToLogin()
         {
@@ -25,15 +24,19 @@ namespace MessengerDesktop.Services
             CurrentViewModelChanged?.Invoke(CurrentViewModel);
         }
 
-        public void NavigateToMainMenu(int userId)
+        public void NavigateToMainMenu()
         {
-            var menu = ActivatorUtilities.CreateInstance<MainMenuViewModel>(
-                serviceProvider, httpClient, userId);
-            CurrentViewModel = menu;
+            if (!authService.IsAuthenticated || !authService.UserId.HasValue)
+            {
+                NavigateToLogin();
+                return;
+            }
+
+            CurrentViewModel = serviceProvider.GetRequiredService<MainMenuViewModel>();
             CurrentViewModelChanged?.Invoke(CurrentViewModel);
         }
 
-        public void NavigateTo<T>() where T : ViewModelBase
+        public void NavigateTo<T>() where T : BaseViewModel
         {
             CurrentViewModel = serviceProvider.GetRequiredService<T>();
             CurrentViewModelChanged?.Invoke(CurrentViewModel);

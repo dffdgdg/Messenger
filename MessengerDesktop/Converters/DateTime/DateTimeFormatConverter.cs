@@ -1,61 +1,85 @@
-﻿using Avalonia.Data.Converters;
+﻿using MessengerDesktop.Converters.Base;
 using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.DateTime
+namespace MessengerDesktop.Converters.DateTime;
+
+public class DateTimeFormatConverter : ValueConverterBase<System.DateTime, string>
 {
-    public class DateTimeFormatConverter : IValueConverter
+    private static readonly CultureInfo DefaultCulture = new("ru-RU");
+
+    public DateTimeFormat Format { get; set; } = DateTimeFormat.Default;
+    public string? CustomFormat { get; set; }
+
+    protected override string ConvertCore(System.DateTime value, object? parameter, CultureInfo culture)
     {
-        public string Format { get; set; } = "default";
-        public bool UseRelativeTime { get; set; } = true;
+        if (value == default) return string.Empty;
 
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (value is not System.DateTime dateTime || dateTime == default)
-                return string.Empty;
+        culture = DefaultCulture;
 
-            culture ??= new CultureInfo("ru-RU");
+        if (parameter is string formatStr && Enum.TryParse<DateTimeFormat>(formatStr, true, out var format))
+            return FormatDateTime(value, format, culture);
 
-            return Format.ToLowerInvariant() switch
-            {
-                "time" => dateTime.ToString("HH:mm", culture),
-                "date" => dateTime.ToString("dd.MM.yyyy", culture),
-                "shortdate" => dateTime.ToString("dd.MM", culture),
-                "datetime" => dateTime.ToString("dd.MM.yyyy HH:mm", culture),
-                "chat" => GetChatTime(dateTime, culture),
-                "relative" => GetRelativeTime(dateTime, culture),
-                _ => UseRelativeTime ? GetChatTime(dateTime, culture) : dateTime.ToString("dd.MM.yyyy HH:mm", culture)
-            };
-        }
+        if (!string.IsNullOrEmpty(CustomFormat))
+            return value.ToString(CustomFormat, culture);
 
-        private static string GetChatTime(System.DateTime dateTime, CultureInfo culture)
-        {
-            var now = System.DateTime.Now;
-            return dateTime.Date switch
-            {
-                var date when date == now.Date => dateTime.ToString("HH:mm", culture),
-                var date when date == now.Date.AddDays(-1) => "Вчера",
-                var date when date.Year == now.Year => dateTime.ToString("d MMMM", culture),
-                _ => dateTime.ToString("d MMMM yyyy", culture)
-            };
-        }
-
-        private static string GetRelativeTime(System.DateTime dateTime, CultureInfo culture)
-        {
-            var now = System.DateTime.Now;
-            var diff = now - dateTime;
-
-            if (diff.TotalMinutes < 1) return "только что";
-            if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} мин назад";
-            if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} ч назад";
-            if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} д назад";
-
-            return dateTime.ToString("dd.MM.yy", culture);
-        }
-
-        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException("ConvertBack is not supported for DateTimeFormatConverter");
-        }
+        return FormatDateTime(value, Format, culture);
     }
+
+    private static string FormatDateTime(System.DateTime dateTime, DateTimeFormat format, CultureInfo culture)
+    {
+        return format switch
+        {
+            DateTimeFormat.Time => dateTime.ToString("HH:mm", culture),
+            DateTimeFormat.Date => dateTime.ToString("dd.MM.yyyy", culture),
+            DateTimeFormat.ShortDate => dateTime.ToString("dd.MM", culture),
+            DateTimeFormat.DateTime => dateTime.ToString("dd.MM.yyyy HH:mm", culture),
+            DateTimeFormat.Chat => FormatChatTime(dateTime, culture),
+            DateTimeFormat.Relative => FormatRelativeTime(dateTime),
+            _ => dateTime.ToString("dd.MM.yyyy HH:mm", culture)
+        };
+    }
+
+    private static string FormatChatTime(System.DateTime dateTime, CultureInfo culture)
+    {
+        var now = System.DateTime.Now;
+
+        if (dateTime.Date == now.Date)
+            return dateTime.ToString("HH:mm", culture);
+
+        if (dateTime.Date == now.Date.AddDays(-1))
+            return "Вчера";
+
+        if (dateTime.Year == now.Year)
+            return dateTime.ToString("d MMMM", culture);
+
+        return dateTime.ToString("d MMMM yyyy", culture);
+    }
+
+    private static string FormatRelativeTime(System.DateTime dateTime)
+    {
+        var diff = System.DateTime.Now - dateTime;
+
+        return diff.TotalMinutes switch
+        {
+            < 1 => "только что",
+            < 60 => $"{(int)diff.TotalMinutes} мин назад",
+            < 1440 => $"{(int)diff.TotalHours} ч назад", 
+            < 10080 => $"{(int)diff.TotalDays} д назад",
+            _ => dateTime.ToString("dd.MM.yy")
+        };
+    }
+
+    protected override object? HandleInvalidInput(object? value) => string.Empty;
+}
+
+public enum DateTimeFormat
+{
+    Default,
+    Time,
+    Date,
+    ShortDate,
+    DateTime,
+    Chat,
+    Relative
 }

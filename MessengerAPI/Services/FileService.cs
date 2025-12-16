@@ -14,18 +14,17 @@ namespace MessengerAPI.Services
         bool IsValidImage(IFormFile file);
     }
 
-    public class FileService(MessengerDbContext context,IWebHostEnvironment env,ILogger<FileService> logger) 
-        : BaseService<FileService>(context, logger), IFileService
+    public class FileService(MessengerDbContext context, IWebHostEnvironment env, ILogger<FileService> logger): BaseService<FileService>(context, logger), IFileService
     {
         private readonly string[] _allowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-        private const long _maxFileSize = 20 * 1024 * 1024; // 20 MB for attachments
+        private const long _maxFileSize = 20 * 1024 * 1024; // 20 MB
 
         public async Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null)
         {
             try
             {
                 if (!IsValidImage(file))
-                    throw new ArgumentException("Invalid image file");
+                    throw new ArgumentException("Некорректный файл изображения");
 
                 if (!string.IsNullOrEmpty(oldFilePath))
                     DeleteFile(oldFilePath);
@@ -41,23 +40,27 @@ namespace MessengerAPI.Services
                 using var image = await Image.LoadAsync(file.OpenReadStream());
 
                 if (image.Width > 1600 || image.Height > 1600)
-                    image.Mutate(x => x.Resize(new ResizeOptions { Size = new Size(1600, 1600), Mode = ResizeMode.Max }));
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Size = new Size(1600, 1600),
+                        Mode = ResizeMode.Max
+                    }));
 
                 await image.SaveAsWebpAsync(absolutePath, new WebpEncoder { Quality = 85 });
 
                 var resultPath = "/" + relativePath.Replace('\\', '/');
-                _logger.LogInformation("Image saved successfully: {FilePath}", resultPath);
+                _logger.LogInformation("Изображение сохранено: {FilePath}", resultPath);
 
                 return resultPath;
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "Invalid image file provided");
+                _logger.LogWarning(ex, "Предоставлен некорректный файл изображения");
                 throw;
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, "saving image file");
+                LogOperationError(ex, "сохранение изображения");
                 throw;
             }
         }
@@ -67,10 +70,10 @@ namespace MessengerAPI.Services
             try
             {
                 if (file == null || file.Length == 0)
-                    throw new ArgumentException("No file provided");
+                    throw new ArgumentException("Файл не предоставлен");
 
                 if (file.Length > _maxFileSize)
-                    throw new ArgumentException("File too large");
+                    throw new ArgumentException("Файл слишком большой");
 
                 var ext = Path.GetExtension(file.FileName) ?? string.Empty;
                 var fileName = $"{Guid.NewGuid()}{ext}";
@@ -87,31 +90,25 @@ namespace MessengerAPI.Services
                     await file.CopyToAsync(fs);
                 }
 
-                var mf = new MessageFile
-                {
-                    FileName = file.FileName,
-                    ContentType = file.ContentType ?? "application/octet-stream",
-                    Path = "/" + relativePath.Replace('\\', '/'),
-                };
-
-                _context.MessageFiles.Add(mf);
-                await SaveChangesAsync();
+                _logger.LogDebug("Файл сохранён: {FilePath}", absolutePath);
 
                 var dto = new MessageFileDTO
                 {
-                    Id = mf.Id,
-                    MessageId = mf.MessageId,
-                    FileName = mf.FileName,
-                    ContentType = mf.ContentType,
-                    Url = mf.Path != null ? $"{request.Scheme}://{request.Host}{mf.Path}" : null,
-                    PreviewType = GetPreviewType(mf.ContentType)
+                    Id = 0,
+                    MessageId = 0,
+                    FileName = file.FileName,
+                    ContentType = file.ContentType ?? "application/octet-stream",
+                    Url = $"{request.Scheme}://{request.Host}/" + relativePath.Replace('\\', '/'),
+                    PreviewType = GetPreviewType(file.ContentType)
                 };
+
+                _logger.LogDebug("Создан DTO файла: FileName={FileName}, Url={Url}", dto.FileName, dto.Url);
 
                 return dto;
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, "saving message file");
+                LogOperationError(ex, "сохранение файла сообщения");
                 throw;
             }
         }
@@ -120,21 +117,21 @@ namespace MessengerAPI.Services
         {
             try
             {
-                if (string.IsNullOrEmpty(filePath)) 
+                if (string.IsNullOrEmpty(filePath))
                     return;
 
                 var fullPath = Path.Combine(env.WebRootPath ?? "wwwroot", filePath.TrimStart('/'));
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);
-                    _logger.LogInformation("File deleted successfully: {FilePath}", filePath);
+                    _logger.LogInformation("Файл удалён: {FilePath}", filePath);
                 }
                 else
-                    _logger.LogWarning("File not found for deletion: {FilePath}", filePath);
+                    _logger.LogWarning("Файл не найден для удаления: {FilePath}", filePath);
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, "deleting file");
+                LogOperationError(ex, "удаление файла");
                 throw;
             }
         }
@@ -146,22 +143,21 @@ namespace MessengerAPI.Services
 
             if (file.Length == 0)
             {
-                _logger.LogWarning("Empty file provided");
+                _logger.LogWarning("Предоставлен пустой файл");
                 return false;
             }
 
             if (file.Length > _maxFileSize)
             {
-                _logger.LogWarning("File too large: {FileSize} bytes, max allowed: {MaxSize}", file.Length, _maxFileSize);
+                _logger.LogWarning("Файл слишком большой: {FileSize} байт, максимум: {MaxSize}",
+                    file.Length, _maxFileSize);
                 return false;
             }
 
-            _ = (file.ContentType ?? string.Empty).ToLower();
-            // allow any content types here for attachments; image checks separate
             return true;
         }
 
-        private static string GetPreviewType(string contentType)
+        private static string GetPreviewType(string? contentType)
         {
             if (string.IsNullOrEmpty(contentType)) return "file";
             var t = contentType.ToLowerInvariant();

@@ -1,13 +1,9 @@
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace MessengerDesktop.Views
+namespace MessengerDesktop.Views;
+
+public partial class MainMenuView : UserControl
 {
-    public partial class MainMenuView : UserControl
-    {
-        public MainMenuView()
-        {
-            AvaloniaXamlLoader.Load(this);
-        }
-    }
+    public MainMenuView() 
+        => InitializeComponent();
 }

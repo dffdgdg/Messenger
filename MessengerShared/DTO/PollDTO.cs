@@ -4,8 +4,8 @@ namespace MessengerShared.DTO
     {
         public int Id { get; set; }
         public int MessageId { get; set; }
-        public int CreatedById { get; set; }
         public int ChatId { get; set; }
+        public int CreatedById { get; set; }
         public string Question { get; set; } = string.Empty;
         public bool? IsAnonymous { get; set; }
         public bool? AllowsMultipleAnswers { get; set; }
@@ -22,9 +22,7 @@ namespace MessengerShared.DTO
     {
         public int Id { get; set; }
         public int PollId { get; set; }
-        // Some parts of the code expect 'OptionText'
         public string OptionText { get; set; } = string.Empty;
-        // Other parts expect 'Text'
         public string Text
         {
             get => OptionText;
@@ -37,12 +35,9 @@ namespace MessengerShared.DTO
 
     public class PollVoteDTO
     {
-        // Supports both single-option vote and multi-option vote payloads
         public int PollId { get; set; }
         public int UserId { get; set; }
-        // Single option id (used in some endpoints)
         public int? OptionId { get; set; }
-        // Multiple option ids (used by UI when selecting multiple)
         public List<int>? OptionIds { get; set; }
     }
 }

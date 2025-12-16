@@ -1,139 +1,107 @@
 using Avalonia.Data.Converters;
 using MessengerDesktop.Converters.Boolean;
-using MessengerDesktop.Converters.Common;
+using MessengerDesktop.Converters.Comparison;
 using MessengerDesktop.Converters.DateTime;
+using MessengerDesktop.Converters.Domain;
+using MessengerDesktop.Converters.Generic;
 using MessengerDesktop.Converters.Hierarchy;
 using MessengerDesktop.Converters.Message;
-using MessengerDesktop.Converters.Nullable;
-using MessengerDesktop.Converters.UI;
-using MessengerDesktop.Services;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 
-namespace MessengerDesktop.Converters
+namespace MessengerDesktop.Converters;
+
+public sealed class ConverterLocator
 {
-    public sealed class ConverterLocator
+    private static readonly Lazy<ConverterLocator> LazyInstance = new(() => new ConverterLocator());
+    public static ConverterLocator Instance => LazyInstance.Value;
+
+    private readonly Dictionary<string, IValueConverter> _converters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IMultiValueConverter> _multiConverters = new(StringComparer.OrdinalIgnoreCase);
+
+    public ConverterLocator() 
+        => RegisterConverters();
+
+    private void RegisterConverters()
     {
-        private static readonly Lazy<ConverterLocator> _instance = new(() => new ConverterLocator());
+        Register<BoolToStringConverter>("BoolToString");
+        Register<ZeroToTrueConverter>("ZeroToTrue");
+        Register<BoolToRotationConverter>("BoolToRotation", "BooleanToRotateTransform");
+        Register<BoolToRotationConverter>("Initials", "InitialsConverter");
 
-        public static ConverterLocator Instance => _instance.Value;
+        Register<EqualityConverter>("Equality", "Equals");
+        Register<NotEqualityConverter>("NotEquals", "NotEquality");
 
-        private readonly Dictionary<string, IValueConverter> _converters = [];
-        private readonly Dictionary<string, IMultiValueConverter> _multiConverters = [];
+        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Chat }, "MessageTime", "ChatTime");
+        Register(new DateTimeFormatConverter { Format = DateTimeFormat.DateTime }, "FullDateTime");
+        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Relative }, "RelativeTime");
+        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Time }, "TimeOnly");
+        Register<LastMessageDateConverter>("LastMessageDate");
 
-        private readonly IApiClientService _apiClientService;
+        Register<LevelToMarginConverter>("LevelToMargin");
+        Register<LevelToVisibilityConverter>("LevelToVisibility");
 
-        public ConverterLocator()
-        {
-            _apiClientService = App.Current.Services.GetRequiredService<IApiClientService>();
-            InitializeConverters();
-        }
+        Register<MessageAlignmentConverter>("MessageAlignment");
+        Register<MessageMarginConverter>("MessageToMargin", "MessageMargin");
+        Register<HasContentConverter>("HasContent");
 
-        private void InitializeConverters()
-        {
-            // Boolean converters
-            _converters[nameof(BooleanToRotateTransform)] = new Boolean.BooleanToRotateTransformConverter();
-            _converters[nameof(BooleanNegation)] = new BooleanConverter { Invert = true };
-            _converters[nameof(BooleanToVisibility)] = new BooleanConverter();
-            _converters[nameof(BooleanToInvertedVisibility)] = new BooleanConverter { Invert = true };
-            _converters[nameof(BooleanToText)] = new BooleanToTextConverter();
+        Register<DisplayOrUsernameConverter>("DisplayOrUsername");
+        Register<PollToPollViewModelConverter>("PollToPollViewModel");
 
-            // Common converters
-            _converters[nameof(Equality)] = new EqualityConverter();
-            _converters[nameof(StringNotNullOrEmpty)] = new StringNotNullOrEmptyConverter();
-            _converters[nameof(ObjectNotNullToBoolean)] = new ObjectNotNullToBooleanConverter();
-            _converters[nameof(IndexToText)] = new IndexToTextConverter();
-            _converters[nameof(BoolToString)] = new BoolToStringConverter();
-            _converters[nameof(StringToBoolean)] = new StringToBooleanConverter();
-            _converters[nameof(StringToBrush)] = new StringToBrushConverter();
+        Register<IndexToTextConverter>("IndexToText");
 
-            // Layout / UI
-            _converters[nameof(ChildrenHeight)] = new ChildrenHeightConverter();
-            _converters[nameof(LevelToVisibility)] = new LevelToVisibilityConverter();
-            _converters[nameof(LevelToMargin)] = new LevelToMarginConverter();
-
-            // Date / time converters
-            _converters[nameof(MessageTime)] = new DateTimeFormatConverter { Format = "chat" };
-            _converters[nameof(FullDateTime)] = new DateTimeFormatConverter { Format = "datetime", UseRelativeTime = false };
-            _converters[nameof(RelativeTime)] = new DateTimeFormatConverter { Format = "relative" };
-            _converters[nameof(TimeOnly)] = new DateTimeFormatConverter { Format = "time" };
-            _converters[nameof(LastMessageDate)] = new LastMessageDateConverter();
-
-            // Message converters
-            _converters[nameof(MessageToMargin)] = new MessageMarginConverter();
-            _converters[nameof(MessageAlignment)] = new MessageAlignmentConverter();
-            _converters[nameof(DisplayOrUsername)] = new DisplayOrUsernameConverter();
-
-            // Poll converter
-            _converters[nameof(PollToPollViewModel)] = new PollToPollViewModelConverter();
-
-            // Visibility converters
-            _converters[nameof(Visibility)] = new VisibilityConverter();
-            _converters[nameof(InvertedVisibility)] = new VisibilityConverter { Invert = true };
-            _converters[nameof(NullToVisibility)] = new NullEmptyConverter
-            {
-                WhenNull = false,
-                WhenEmpty = false,
-                WhenHasValue = true
-            };
-            _converters[nameof(StringNotEmpty)] = new NullEmptyConverter
-            {
-                WhenNull = false,
-                WhenEmpty = false,
-                WhenHasValue = true
-            };
-
-            _converters[nameof(AvatarWithAuthConverter)] = new AvatarConverter(_apiClientService);
-        }
-
-        public IValueConverter ChildrenHeight => GetConverter(nameof(ChildrenHeight));
-        public IValueConverter BooleanToRotateTransform => GetConverter(nameof(BooleanToRotateTransform));
-        public IValueConverter LevelToVisibility => GetConverter(nameof(LevelToVisibility));
-        public IValueConverter LevelToMargin => GetConverter(nameof(LevelToMargin));
-        public IValueConverter BoolToString => GetConverter(nameof(BoolToString));
-        public IValueConverter Equality => GetConverter(nameof(Equality));
-        public IValueConverter BooleanNegation => GetConverter(nameof(BooleanNegation));
-        public IValueConverter StringNotNullOrEmpty => GetConverter(nameof(StringNotNullOrEmpty));
-        public IValueConverter BooleanToVisibility => GetConverter(nameof(BooleanToVisibility));
-        public IValueConverter BooleanToInvertedVisibility => GetConverter(nameof(BooleanToInvertedVisibility));
-        public IValueConverter BooleanToText => GetConverter(nameof(BooleanToText));
-        public IValueConverter ObjectNotNullToBoolean => GetConverter(nameof(ObjectNotNullToBoolean));
-        public IValueConverter IndexToText => GetConverter(nameof(IndexToText));
-        public IValueConverter StringToBoolean => GetConverter(nameof(StringToBoolean));
-        public IValueConverter StringToBrush => GetConverter(nameof(StringToBrush));
-        public IValueConverter MessageTime => GetConverter(nameof(MessageTime));
-        public IValueConverter FullDateTime => GetConverter(nameof(FullDateTime));
-        public IValueConverter RelativeTime => GetConverter(nameof(RelativeTime));
-        public IValueConverter TimeOnly => GetConverter(nameof(TimeOnly));
-        public IValueConverter MessageToMargin => GetConverter(nameof(MessageToMargin));
-        public IValueConverter MessageAlignment => GetConverter(nameof(MessageAlignment));
-        public IValueConverter PollToPollViewModel => GetConverter(nameof(PollToPollViewModel));
-        public IValueConverter Visibility => GetConverter(nameof(Visibility));
-        public IValueConverter InvertedVisibility => GetConverter(nameof(InvertedVisibility));
-        public IValueConverter LastMessageDate => GetConverter(nameof(LastMessageDate));
-        public IValueConverter DisplayOrUsername => GetConverter(nameof(DisplayOrUsername));
-        public IValueConverter NullToVisibility => GetConverter(nameof(NullToVisibility));
-        public IValueConverter StringNotEmpty => GetConverter(nameof(StringNotEmpty));
-        public IValueConverter AvatarWithAuthConverter => GetConverter(nameof(AvatarWithAuthConverter));
-
-
-        public IValueConverter GetConverterByName(string name) => GetConverter(name);
-        public IMultiValueConverter GetMultiConverterByName(string name) => GetMultiConverter(name);
-        private IValueConverter GetConverter(string name)
-        {
-            if (_converters.TryGetValue(name, out var converter))
-                return converter;
-
-            throw new InvalidOperationException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
-        }
-
-        private IMultiValueConverter GetMultiConverter(string name)
-        {
-            if (_multiConverters.TryGetValue(name, out var converter))
-                return converter;
-
-            throw new InvalidOperationException($"MultiConverter '{name}' not found.");
-        }
+        RegisterMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
     }
+
+    #region Registration helpers
+
+    private void Register<T>(params string[] names) where T : IValueConverter, new()
+    {
+        var converter = new T();
+        foreach (var name in names)
+            _converters[name] = converter;
+    }
+
+    private void Register(IValueConverter converter, params string[] names)
+    {
+        foreach (var name in names)
+            _converters[name] = converter;
+    }
+
+    private void RegisterMulti<T>(params string[] names) where T : IMultiValueConverter, new()
+    {
+        var converter = new T();
+        foreach (var name in names)
+            _multiConverters[name] = converter;
+    }
+
+    #endregion
+
+    #region Public access
+
+    public IValueConverter GetConverter(string name)
+    {
+        if (_converters.TryGetValue(name, out var converter))
+            return converter;
+
+        throw new InvalidOperationException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
+    }
+
+    public IMultiValueConverter GetMultiConverter(string name)
+    {
+        if (_multiConverters.TryGetValue(name, out var converter))
+            return converter;
+
+        throw new InvalidOperationException($"MultiConverter '{name}' not found.");
+    }
+
+    public IValueConverter InvertedVisibility => GetConverter("InvertedVisibility");
+    public IValueConverter Equality => GetConverter("Equality");
+    public IValueConverter MessageTime => GetConverter("MessageTime");
+    public IValueConverter DisplayOrUsername => GetConverter("DisplayOrUsername");
+
+    public IValueConverter GetConverterByName(string name) => GetConverter(name);
+    public IMultiValueConverter GetMultiConverterByName(string name) => GetMultiConverter(name);
+
+    #endregion
 }

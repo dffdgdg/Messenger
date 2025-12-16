@@ -1,4 +1,7 @@
-﻿namespace MessengerAPI.Model;
+﻿using System;
+using System.Collections.Generic;
+
+namespace MessengerAPI.Model;
 
 public partial class Department
 {
@@ -12,9 +15,9 @@ public partial class Department
 
     public virtual Chat? Chat { get; set; }
 
-    public virtual ICollection<Department> InverseParentDepartment { get; set; } = [];
+    public virtual ICollection<Department> InverseParentDepartment { get; set; } = new List<Department>();
 
     public virtual Department? ParentDepartment { get; set; }
 
-    public virtual ICollection<User> Users { get; set; } = [];
+    public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

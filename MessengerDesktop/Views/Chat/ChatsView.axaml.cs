@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.VisualTree;
 using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 
 namespace MessengerDesktop.Views
@@ -15,11 +16,13 @@ namespace MessengerDesktop.Views
         private bool _isDragging = false;
         private const double COMPACT_WIDTH = 75;
         private const double COMPACT_THRESHOLD = 200;
+        private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
 
         public ChatsView()
         {
             InitializeComponent();
-            
+
+            _chatInfoPanelStateStore = App.Current.Services.GetRequiredService<IChatInfoPanelStateStore>();
             _chatListGrid = this.FindControl<Grid>("ChatListGrid");
             _mainGrid = this.FindControl<Grid>("MainGrid");
 
@@ -67,14 +70,16 @@ namespace MessengerDesktop.Views
             if (panel == null) return;
 
             var isAnyChatSelected = vm.CurrentChatViewModel != null;
-            var globalOpen = ChatInfoPanelStateStore.Get();
+            var globalOpen = _chatInfoPanelStateStore.IsOpen;
 
             panel.IsVisible = isAnyChatSelected && globalOpen;
         }
 
-        private void Splitter_DragStarted(object? sender, VectorEventArgs e) => _isDragging = true;
+        private void Splitter_DragStarted(object? sender, VectorEventArgs e) 
+            => _isDragging = true;
 
-        private void Splitter_DragCompleted(object? sender, VectorEventArgs e) => _isDragging = false;
+        private void Splitter_DragCompleted(object? sender, VectorEventArgs e) 
+            => _isDragging = false;
 
         private void ChatListColumn_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
         {

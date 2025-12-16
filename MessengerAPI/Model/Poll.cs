@@ -1,12 +1,13 @@
-﻿namespace MessengerAPI.Model;
+﻿using System;
+using System.Collections.Generic;
+
+namespace MessengerAPI.Model;
 
 public partial class Poll
 {
     public int Id { get; set; }
 
     public int MessageId { get; set; }
-
-    public int CreatedById { get; set; }
 
     public string Question { get; set; } = null!;
 
@@ -18,11 +19,9 @@ public partial class Poll
 
     public DateTime? ClosesAt { get; set; }
 
-    public virtual User CreatedBy { get; set; } = null!;
-
     public virtual Message Message { get; set; } = null!;
 
-    public virtual ICollection<PollOption> PollOptions { get; set; } = [];
+    public virtual ICollection<PollOption> PollOptions { get; set; } = new List<PollOption>();
 
-    public virtual ICollection<PollVote> PollVotes { get; set; } = [];
+    public virtual ICollection<PollVote> PollVotes { get; set; } = new List<PollVote>();
 }

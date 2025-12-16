@@ -1,8 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -55,13 +54,14 @@ namespace MessengerDesktop.ViewModels
         }
 
         private async void InitializeAsync() =>
-            await SafeExecuteAsync(async () => { await LoadData(); });
+            await SafeExecuteAsync(LoadData);
 
-        private async Task LoadData() =>
-            await SafeExecuteAsync(async () => { await LoadDepartments(); await LoadUsers(); });
+        private async Task LoadData() 
+            => await SafeExecuteAsync(async () => { await LoadDepartments(); await LoadUsers(); });
 
         [RelayCommand]
-        private async Task Refresh() => await LoadData();
+        private async Task Refresh() 
+            => await LoadData();
 
         private async Task LoadUsers()
         {
@@ -289,10 +289,8 @@ namespace MessengerDesktop.ViewModels
         {
             try
             {
-                var rootDepartments = Departments
-                    .Where(d => !d.ParentDepartmentId.HasValue)
-                    .Select(d => CreateHierarchicalDepartment(d, 0))
-                    .ToList();
+                var rootDepartments = Departments.Where(d => !d.ParentDepartmentId.HasValue)
+                    .Select(d => CreateHierarchicalDepartment(d, 0)).ToList();
 
                 HierarchicalDepartments = new ObservableCollection<HierarchicalDepartmentViewModel>(rootDepartments);
                 FilteredHierarchicalDepartments = new ObservableCollection<HierarchicalDepartmentViewModel>(rootDepartments);
@@ -323,8 +321,7 @@ namespace MessengerDesktop.ViewModels
             }
 
             var query = SearchQuery.ToLower();
-            var filtered = GroupedUsers
-                .Select(group => new DepartmentGroup(
+            var filtered = GroupedUsers.Select(group => new DepartmentGroup(
                     group.DepartmentName,
                     new ObservableCollection<UserDTO>(
                         group.Users.Where(user =>
@@ -421,6 +418,9 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
+        public int UsersCount => Users?.Count ?? 0;
+        public int DepartmentsCount => Departments?.Count ?? 0;
+
         [RelayCommand]
         private async Task OpenEditDepartment(DepartmentDTO department)
         {
@@ -438,6 +438,31 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
+        [RelayCommand]
+        private void ClearError() 
+            => ErrorMessage = string.Empty;
+
+        [RelayCommand]
+        private void ClearSuccess() 
+            => SuccessMessage = string.Empty;
+
+        [RelayCommand]
+        private async Task DeleteDepartment(DepartmentDTO department)
+        {
+            await SafeExecuteAsync(async () =>
+            {
+                var result = await _apiClient.DeleteAsync($"api/department/{department.Id}");
+                if (result.Success)
+                {
+                    await LoadDepartments();
+                    SuccessMessage = "Отдел удалён";
+                }
+                else
+                {
+                    ErrorMessage = $"Ошибка удаления: {result.Error}";
+                }
+            });
+        }
         private async Task UpdateDepartment(DepartmentDialogViewModel dept, int departmentId)
         {
             await SafeExecuteAsync(async () =>
@@ -468,5 +493,6 @@ namespace MessengerDesktop.ViewModels
     {
         public string DepartmentName { get; } = departmentName;
         public ObservableCollection<UserDTO> Users { get; } = users;
+        public bool IsBanned { get; set; }
     }
 }

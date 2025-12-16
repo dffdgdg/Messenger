@@ -1,11 +1,14 @@
-using MessengerAPI.Services;
+п»їusing MessengerAPI.Services;
 using MessengerShared.DTO;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers
 {
-    public class UserController(IUserService userService, ILogger<UserController> logger) : BaseController<UserController>(logger)
+    public class UserController(
+        IUserService userService,
+        ILogger<UserController> logger)
+        : BaseController<UserController>(logger)
     {
         [HttpGet]
         public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetAllUsers()
@@ -14,7 +17,7 @@ namespace MessengerAPI.Controllers
             {
                 var users = await userService.GetAllUsersAsync();
                 return users;
-            }, "Пользователи получены успешно");
+            }, "РџРѕР»СЊР·РѕРІР°С‚РµР»Рё РїРѕР»СѓС‡РµРЅС‹ СѓСЃРїРµС€РЅРѕ");
         }
 
         [HttpGet("{id}")]
@@ -23,7 +26,45 @@ namespace MessengerAPI.Controllers
             return await ExecuteAsync(async () =>
             {
                 var user = await userService.GetUserAsync(id);
-                return user ?? throw new KeyNotFoundException($"Пользователь с ID {id} не найден");
+                return user ?? throw new KeyNotFoundException($"РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃ ID {id} РЅРµ РЅР°Р№РґРµРЅ");
+            });
+        }
+
+        [HttpGet("online")]
+        public async Task<ActionResult<ApiResponse<OnlineUsersResponseDTO>>> GetOnlineUsers()
+        {
+            return await ExecuteAsync(async () =>
+            {
+                var onlineIds = await userService.GetOnlineUserIdsAsync();
+                return new OnlineUsersResponseDTO
+                {
+                    OnlineUserIds = onlineIds,
+                    TotalOnline = onlineIds.Count
+                };
+            }, "РЎРїРёСЃРѕРє РѕРЅР»Р°Р№РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РїРѕР»СѓС‡РµРЅ");
+        }
+
+        [HttpGet("{id}/status")]
+        public async Task<ActionResult<ApiResponse<OnlineStatusDTO>>> GetUserOnlineStatus(int id)
+        {
+            return await ExecuteAsync(async () =>
+            {
+                var status = await userService.GetOnlineStatusAsync(id);
+                return status;
+            });
+        }
+
+        [HttpPost("status/batch")]
+        public async Task<ActionResult<ApiResponse<List<OnlineStatusDTO>>>> GetUsersOnlineStatus(
+            [FromBody] List<int> userIds)
+        {
+            return await ExecuteAsync(async () =>
+            {
+                if (userIds == null || userIds.Count == 0)
+                    throw new ArgumentException("РЎРїРёСЃРѕРє ID РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј");
+
+                var statuses = await userService.GetOnlineStatusesAsync(userIds);
+                return statuses;
             });
         }
 
@@ -35,34 +76,23 @@ namespace MessengerAPI.Controllers
                 ValidateModel();
 
                 if (id != userDto.Id)
-                    throw new ArgumentException("ID mismatch");
+                    throw new ArgumentException("РќРµСЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ ID");
 
                 await userService.UpdateUserAsync(id, userDto);
-            }, "Пользователь обновлен успешно");
+            }, "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕР±РЅРѕРІР»С‘РЅ СѓСЃРїРµС€РЅРѕ");
         }
 
         [HttpPost("{id}/avatar")]
-        public async Task<ActionResult> UploadAvatar(int id, IFormFile file)
+        public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(int id, IFormFile file)
         {
-            try
+            return await ExecuteAsync(async () =>
             {
                 if (file == null || file.Length == 0)
-                    return BadRequest("Нет файла");
+                    throw new ArgumentException("Р¤Р°Р№Р» РЅРµ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅ");
 
                 var avatarUrl = await userService.UploadAvatarAsync(id, file, Request);
-
-                var response = new { AvatarUrl = avatarUrl };
-                return SuccessWithData(response, "Аватар загружен успешно");
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Неверный файл или пользователь не найден для загрузки аватара {UserId}", id);
-                return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return InternalError(ex, "ОШИБКА загрузки аватара");
-            }
+                return new AvatarResponseDTO { AvatarUrl = avatarUrl };
+            }, "РђРІР°С‚Р°СЂ Р·Р°РіСЂСѓР¶РµРЅ СѓСЃРїРµС€РЅРѕ");
         }
     }
 }

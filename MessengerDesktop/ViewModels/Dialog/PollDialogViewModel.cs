@@ -9,9 +9,6 @@ using System.Linq;
 
 namespace MessengerDesktop.ViewModels
 {
-    /// <summary>
-    /// ViewModel диалога создания опроса.
-    /// </summary>
     public partial class PollDialogViewModel : DialogBaseViewModel
     {
         private readonly int _chatId;
@@ -36,7 +33,6 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private bool _isAnonymous = true;
 
-        /// <summary>Callback для создания опроса</summary>
         public Action<PollDTO>? CreateAction { get; set; }
 
         public bool CanCreate => !string.IsNullOrWhiteSpace(Question) && Options.Count >= 2 && Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
@@ -75,7 +71,8 @@ namespace MessengerDesktop.ViewModels
         }
 
         [RelayCommand]
-        private void AddOption() => Options.Add(new OptionItem());
+        private void AddOption() 
+            => Options.Add(new OptionItem());
 
         [RelayCommand]
         private void RemoveOption(OptionItem? item)

@@ -4,5 +4,6 @@ namespace MessengerDesktop.Views;
 
 public partial class ProfileView : UserControl
 {
-    public ProfileView() => InitializeComponent();
+    public ProfileView() 
+        => InitializeComponent();
 }

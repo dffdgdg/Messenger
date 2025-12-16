@@ -14,12 +14,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Folder Include="Models\" />
-		<Folder Include="Resources\" />
+		<AvaloniaResource Include="Assets\**" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<AvaloniaResource Include="Assets\**" />
+	  <AvaloniaXaml Remove="Models\**" />
+	  <Compile Remove="Models\**" />
+	  <EmbeddedResource Remove="Models\**" />
+	  <None Remove="Models\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -28,6 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AsyncImageLoader.Avalonia" Version="3.4.3" />
 		<PackageReference Include="Avalonia" Version="11.3.8" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
 		<PackageReference Include="Avalonia.Labs.Notifications" Version="11.3.1" />
@@ -58,5 +61,11 @@
 		<AvaloniaResource Update="Assets\MainStyle.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Views\Chat\ChatEditDialogView.axaml.cs">
+	    <DependentUpon>ChatEditDialogView.axaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 </Project>

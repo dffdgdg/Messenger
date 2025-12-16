@@ -62,8 +62,8 @@ namespace MessengerDesktop.ViewModels
 
             UpdateAvailableParents(department);
 
-            SelectedParent = department?.ParentDepartmentId.HasValue == true ? Departments.FirstOrDefault(d => d.Id == department.ParentDepartmentId) 
-                : _noParentDepartment;
+            SelectedParent = department?.ParentDepartmentId.HasValue == true ? 
+                Departments.FirstOrDefault(d => d.Id == department.ParentDepartmentId) : _noParentDepartment;
         }
 
         private void UpdateAvailableParents(DepartmentDTO? currentDepartment)

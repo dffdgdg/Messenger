@@ -1,19 +1,14 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    /// <summary>
-    /// ViewModel диалога профиля пользователя.
-    /// Отображает информацию о пользователе и позволяет отправить личное сообщение.
-    /// </summary>
     public partial class UserProfileDialogViewModel : DialogBaseViewModel
     {
         private readonly IApiClientService _apiClient;
@@ -26,8 +21,6 @@ namespace MessengerDesktop.ViewModels
 
         [ObservableProperty]
         private Bitmap? _avatarBitmap;
-
-        /// <summary>Callback для отправки сообщения</summary>
         public Func<string, Task>? SendMessageAction { get; set; }
 
         public string? AvatarUrl => User?.Avatar == null 

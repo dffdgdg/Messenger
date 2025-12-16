@@ -10,7 +10,8 @@ namespace MessengerShared.DTO
         public string? Department { get; set; }
         public int? DepartmentId { get; set; }
         public string? Avatar { get; set; }
-
+        public bool IsOnline { get; set; }
+        public DateTime? LastOnline { get; set; }
         public Theme? Theme { get; set; }
         public bool? NotificationsEnabled { get; set; }
         public bool? CanBeFoundInSearch { get; set; }

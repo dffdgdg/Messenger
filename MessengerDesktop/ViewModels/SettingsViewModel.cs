@@ -1,8 +1,9 @@
-using Avalonia;
+п»їusing Avalonia;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Storage;
 using MessengerShared.DTO;
 using MessengerShared.Enum;
 using System;
@@ -18,6 +19,7 @@ namespace MessengerDesktop.ViewModels
         private readonly Timer _autoSaveTimer;
         private bool _isSaving;
         private bool _hasPendingChanges;
+        private bool _isLoaded;
 
         [ObservableProperty]
         private int _userId;
@@ -42,8 +44,22 @@ namespace MessengerDesktop.ViewModels
             UserId = mainMenuViewModel.UserId;
 
             _autoSaveTimer = new Timer(async _ => await SaveSettings(), null, Timeout.Infinite, Timeout.Infinite);
-
+            _selectedTheme = GetCurrentAppTheme();
             _ = LoadSettings();
+        }
+
+        private static Theme GetCurrentAppTheme()
+        {
+            var themeVariant = Application.Current?.RequestedThemeVariant;
+
+            if (themeVariant == ThemeVariant.Dark)
+                return Theme.dark;
+            if (themeVariant == ThemeVariant.Light)
+                return Theme.light;
+
+            return Application.Current?.ActualThemeVariant == ThemeVariant.Dark
+                ? Theme.dark
+                : Theme.light;
         }
 
         private async Task LoadSettings()
@@ -55,17 +71,27 @@ namespace MessengerDesktop.ViewModels
                 {
                     _isSaving = true;
 
-                    //SelectedTheme = result.Data.Theme ?? Theme.light;
-                    //NotificationsEnabled = result.Data.NotificationsEnabled ?? true;
-                    //CanBeFoundInSearch = result.Data.CanBeFoundInSearch ?? true;
+                    var serverTheme = (Theme)result.Data.Theme;
+                    var serverNotifications = result.Data.NotificationsEnabled ?? true;
+                    var serverCanBeFound = result.Data.CanBeFoundInSearch ?? true;
 
-                    ApplyTheme(SelectedTheme);
+                    if (SelectedTheme != serverTheme)
+                    {
+                        SelectedTheme = serverTheme;
+                        ApplyTheme(SelectedTheme);
+                        OnPropertyChanged(nameof(SelectedTheme));
+                    }
+
+                    NotificationsEnabled = serverNotifications;
+                    CanBeFoundInSearch = serverCanBeFound;
 
                     _isSaving = false;
+                    _isLoaded = true;
                 }
                 else
                 {
-                    ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
+                    ErrorMessage = $"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РЅР°СЃС‚СЂРѕРµРє: {result.Error}";
+                    _isLoaded = true;
                 }
             });
         }
@@ -82,24 +108,24 @@ namespace MessengerDesktop.ViewModels
                 var updatedUser = new UserDTO
                 {
                     Id = UserId,
-                    //Theme = SelectedTheme,
-                    //NotificationsEnabled = NotificationsEnabled,
-                    //CanBeFoundInSearch = CanBeFoundInSearch
+                    Theme = SelectedTheme,
+                    NotificationsEnabled = NotificationsEnabled,
+                    CanBeFoundInSearch = CanBeFoundInSearch
                 };
 
                 var result = await _apiClient.PutAsync<UserDTO>($"api/user/{UserId}", updatedUser);
                 if (result.Success)
                 {
-                    SuccessMessage = "Настройки сохранены";
+                    SuccessMessage = "РќР°СЃС‚СЂРѕР№РєРё СЃРѕС…СЂР°РЅРµРЅС‹";
                 }
                 else
                 {
-                    ErrorMessage = $"Ошибка сохранения: {result.Error}";
+                    ErrorMessage = $"РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ: {result.Error}";
                 }
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Ошибка: {ex.Message}";
+                ErrorMessage = $"РћС€РёР±РєР°: {ex.Message}";
             }
             finally
             {
@@ -109,22 +135,25 @@ namespace MessengerDesktop.ViewModels
 
         private void ApplyTheme(Theme theme)
         {
-            Application.Current!.RequestedThemeVariant = theme switch
+            var themeVariant = theme switch
             {
                 Theme.dark => ThemeVariant.Dark,
                 Theme.light => ThemeVariant.Light,
                 _ => ThemeVariant.Default
             };
 
+            App.Current.ThemeVariant = themeVariant;
+
             OnPropertyChanged(nameof(CurrentThemeDisplay));
         }
 
         [RelayCommand]
-        private void ToggleTheme() => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
+        private void ToggleTheme() 
+            => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
 
         [RelayCommand]
-        private async Task SaveNow() =>
-            await SaveSettings();
+        private async Task SaveNow() 
+            => await SaveSettings();
 
         private void ScheduleAutoSave()
         {
@@ -136,7 +165,7 @@ namespace MessengerDesktop.ViewModels
 
         partial void OnSelectedThemeChanged(Theme value)
         {
-            if (!_isSaving)
+            if (!_isSaving && _isLoaded)
             {
                 ApplyTheme(value);
                 ScheduleAutoSave();
@@ -145,21 +174,12 @@ namespace MessengerDesktop.ViewModels
 
         partial void OnNotificationsEnabledChanged(bool value)
         {
-            if (!_isSaving) ScheduleAutoSave();
+            if (!_isSaving && _isLoaded) ScheduleAutoSave();
         }
 
         partial void OnCanBeFoundInSearchChanged(bool value)
         {
-            if (!_isSaving) ScheduleAutoSave();
-
-        }
-
-        public void Dispose()
-        {
-            _autoSaveTimer?.Dispose();
-
-            if (_hasPendingChanges && !_isSaving)
-                _ = SaveSettings();
+            if (!_isSaving && _isLoaded) ScheduleAutoSave();
         }
 
         [RelayCommand]
@@ -168,7 +188,15 @@ namespace MessengerDesktop.ViewModels
             SelectedTheme = Theme.light;
             NotificationsEnabled = true;
             CanBeFoundInSearch = true;
-            SuccessMessage = "Настройки сброшены к значениям по умолчанию";
+            SuccessMessage = "РќР°СЃС‚СЂРѕР№РєРё СЃР±СЂРѕС€РµРЅС‹ Рє Р·РЅР°С‡РµРЅРёСЏРј РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ";
+        }
+
+        public void Dispose()
+        {
+            _autoSaveTimer?.Dispose();
+
+            if (_hasPendingChanges && !_isSaving)
+                _ = SaveSettings();
         }
     }
 }

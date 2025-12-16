@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Model;
 
@@ -128,6 +130,7 @@ public partial class MessengerDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone");
             entity.Property(e => e.EditedAt).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
 
             entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ChatId)
@@ -164,10 +167,6 @@ public partial class MessengerDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone");
             entity.Property(e => e.IsAnonymous).HasDefaultValue(true);
-
-            entity.HasOne(d => d.CreatedBy).WithMany(p => p.Polls)
-                .HasForeignKey(d => d.CreatedById)
-                .HasConstraintName("Polls_CreatedById_fkey");
 
             entity.HasOne(d => d.Message).WithMany(p => p.Polls)
                 .HasForeignKey(d => d.MessageId)

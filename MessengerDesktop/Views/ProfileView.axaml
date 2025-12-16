@@ -1,177 +1,248 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:qwe="using:Avalonia.Markup.Declarative"
-             x:Class="MessengerDesktop.Views.ProfileView"
-             x:DataType="vm:ProfileViewModel"
-             Background="{DynamicResource PrimaryBG}"
-			 Design.Width="800" Design.Height="900">
+    <UserControl xmlns="https://github.com/avaloniaui"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="using:MessengerDesktop.ViewModels"
+                 x:Class="MessengerDesktop.Views.ProfileView"
+                 x:DataType="vm:ProfileViewModel"
+                 Background="{DynamicResource PrimaryBG}"
+                 Design.Width="800" Design.Height="900">
 
-	<Border BorderThickness="1,0,0,0" BorderBrush="{DynamicResource BorderDefault}"
-            Background="{DynamicResource FourthBG}">
+	    <UserControl.Styles>
+		    <Style Selector="Button.avatar-button:pointerover Border#AvatarOverlay">
+			    <Setter Property="Opacity" Value="1"/>
+		    </Style>
+	    </UserControl.Styles>
 
-		<Grid RowDefinitions="Auto,*"
-              ColumnDefinitions="*"
-              RowSpacing="24"
-			  MaxWidth="1000" Margin="20">
+	    <Border BorderThickness="1,1,1,0"
+				CornerRadius="16"
+                BorderBrush="{DynamicResource BorderDefault}"
+				Background="{DynamicResource SecondaryBG}"
+				ClipToBounds="True">
 
-			<TextBlock Text="Профиль"
-                       FontSize="28"
-                       FontWeight="DemiBold"
-                       Foreground="{DynamicResource TextPrimary}"
-                       Grid.Row="0"/>
+		    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          HorizontalContentAlignment="Stretch">
 
-			<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-				<StackPanel Spacing="28">
+			    <Border Padding="32,24"
+                        HorizontalAlignment="Stretch">
 
-					<StackPanel Orientation="Horizontal"
-								Spacing="20"
-								VerticalAlignment="Center">
+				    <StackPanel MaxWidth="700"
+                                MinWidth="400"
+                                Spacing="24"
+                                HorizontalAlignment="Center">
 
-						<Border Width="96"
-								Height="96"
-								CornerRadius="48"
-								BorderBrush="{DynamicResource BorderDefault}"
-								BorderThickness="1"
-								Background="{DynamicResource ThirdBG}"
-								ClipToBounds="True">
-							<Image Source="{Binding AvatarBitmap}"
-								   Width="120"
-								   Height="120"
-								   Stretch="UniformToFill">
-								<Image.Styles>
-									<Style Selector="Image:empty">
-										<Setter Property="Source" Value="avares://MessengerDesktop/Assets/Images/default-avatar.webp"/>
-									</Style>
-								</Image.Styles>
-								<!--<Path Data="{DynamicResource ProfileIcon}" Fill="{DynamicResource TextPrimary}"/>-->
-							</Image>
-						</Border>
+					    <TextBlock Text="Профиль" Classes="PageTitle" Margin="0,0,0,8"/>
 
-						<StackPanel Spacing="6" VerticalAlignment="Center">
-							<TextBlock Text="{Binding User?.DisplayName}"
-									   FontSize="20"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource TextPrimary}"/>
-							<TextBlock Text="{Binding User?.Username}"
-									   FontSize="14"
-									   Foreground="{DynamicResource TextSecondary}"/>
+					    <!-- Секция: Аватар и основная информация -->
+					    <Border Classes="ProfileSection">
+						    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
 
-						</StackPanel>
-					</StackPanel>
-
-					<Border CornerRadius="12"
-                            Padding="20"
-                            BorderThickness="1"
-                            BorderBrush="{DynamicResource BorderDefault}"
-                            IsVisible="{Binding !IsEditing}"
-							Background="{DynamicResource ThirdBG}">
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="48"/>
-								<ColumnDefinition/>
-								<ColumnDefinition Width="146"/>
-							</Grid.ColumnDefinitions>
-							<Path VerticalAlignment="Center" Data="{DynamicResource Info}" Fill="{DynamicResource TextPrimary}"/>
-							<TextBlock VerticalAlignment="Center" HorizontalAlignment="Left"
-									   Text="Выберите файл" Grid.Column="1"/>
-							<Button Grid.Column="2"
-								Content="Загрузить аватар"
+							    <Button Classes="avatar-button"
                                         Command="{Binding UploadAvatarCommand}"
-										Foreground="White"
-                                        Margin="0,12,0,0"
-                                        Width="160"
-                                        Height="32"
-                                        CornerRadius="6"
-									HorizontalAlignment="Right"/>
-						</Grid>
-					</Border>
-					<!-- Просмотр профиля -->
-					<Border CornerRadius="12"
-                            Padding="20"
-                            BorderThickness="1"
-                            BorderBrush="{DynamicResource BorderDefault}"
-                            IsVisible="{Binding !IsEditing}"
-							Background="{DynamicResource ThirdBG}">
+                                        Background="{DynamicResource TransparentBrush}"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        Cursor="Hand"
+                                        ToolTip.Tip="Нажмите, чтобы изменить аватар">
+								    <Panel>
+									    <Border Classes="Avatar XLarge"
+                                                BorderBrush="{DynamicResource BorderDefault}"
+                                                BorderThickness="2"
+                                                Background="{DynamicResource SecondaryBG}">
+										    <Image Source="{Binding AvatarBitmap}"
+                                                   Stretch="UniformToFill">
+											    <Image.Styles>
+												    <Style Selector="Image">
+													    <Setter Property="Source"
+                                                                Value="avares://MessengerDesktop/Assets/Images/default-avatar.webp"/>
+												    </Style>
+											    </Image.Styles>
+										    </Image>
+									    </Border>
 
+									    <Border x:Name="AvatarOverlay"
+                                                Width="100" Height="100"
+                                                CornerRadius="50"
+                                                Background="{DynamicResource DialogOverlay}"
+                                                Opacity="0">
+										    <Border.Transitions>
+											    <Transitions>
+												    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+											    </Transitions>
+										    </Border.Transitions>
+										    <Path Data="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"
+                                                  Fill="{DynamicResource TextPrimary}"
+                                                  Width="28" Height="28"
+                                                  Stretch="Uniform"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+									    </Border>
+								    </Panel>
+							    </Button>
 
-						<StackPanel Spacing="12">
-							<Grid ColumnDefinitions="180,*" RowDefinitions="Auto" ColumnSpacing="8">
-								<TextBlock Text="Отображаемое имя"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           VerticalAlignment="Center"/>
-								<TextBlock Grid.Column="1"
-                                           Text="{Binding User.DisplayName}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimary}"/>
-							</Grid>
+							    <StackPanel Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Spacing="4">
+								    <TextBlock Text="{Binding User.DisplayName, FallbackValue='Имя пользователя'}"
+                                               FontSize="22"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
 
-							<Button Content="Редактировать профиль"
-									Foreground="White"
-                                    Command="{Binding StartEditCommand}"
-                                    Width="200"
-                                    Height="36"
-                                    Margin="0,16,0,0"
-                                    Background="{DynamicResource Accent}"
-                                    CornerRadius="6"/>
-						</StackPanel>
-					</Border>
+								    <StackPanel Orientation="Horizontal" Spacing="4">
+									    <TextBlock Text="@"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource Muted}"/>
+									    <TextBlock Text="{Binding User.Username, FallbackValue='username'}"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource TextSecondary}"/>
+								    </StackPanel>
+							    </StackPanel>
+						    </Grid>
+					    </Border>
 
-					<!-- Редактирование -->
-					<Border CornerRadius="12"
-                            Padding="20"
-                            BorderThickness="1"
-                            BorderBrush="{DynamicResource BorderDefault}"
-                            IsVisible="{Binding IsEditing}"
-							Background="{DynamicResource ThirdBG}">
+					    <!-- Секция: Редактирование профиля -->
+					    <Border Classes="ProfileSection">
+						    <StackPanel Spacing="20">
+							    <StackPanel Orientation="Horizontal" Spacing="10">
+								    <Path Data="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+                                          Fill="{DynamicResource TextSecondary}"
+                                          Width="18" Height="18"
+                                          Stretch="Uniform"
+                                          VerticalAlignment="Center"/>
+								    <TextBlock Text="Информация профиля"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"/>
+							    </StackPanel>
 
-						<StackPanel Spacing="18">
-							<StackPanel Spacing="6">
-								<TextBlock Text="Отображаемое имя"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimary}"/>
-								<TextBox Text="{Binding TempDisplayName}"
-                                         Watermark="Введите новое имя"
-                                         CornerRadius="6"
-                                         BorderBrush="{DynamicResource BorderDefault}"/>
-							</StackPanel>
+							    <!-- Режим просмотра -->
+							    <StackPanel Spacing="16" IsVisible="{Binding !IsEditing}">
+								    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="150,*" RowSpacing="16">
+									    <TextBlock Text="Отображаемое имя"
+                                                   FontSize="13"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource Muted}"
+                                                   VerticalAlignment="Center"/>
+									    <TextBlock Grid.Column="1"
+                                                   Text="{Binding User.DisplayName}"
+                                                   FontSize="15"
+                                                   VerticalAlignment="Center"/>
 
-							<StackPanel Orientation="Horizontal"
-                                        Spacing="10"
-                                        Margin="0,12,0,0">
-								<Button Content="Сохранить"
-                                        Command="{Binding SaveChangesCommand}"
-                                        Width="120"
-                                        Height="36"
-                                        Background="{DynamicResource Accent}"
-                                        Foreground="{DynamicResource TextPrimary}"
-                                        CornerRadius="6"/>
-								<Button Content="Отмена"
-                                        Command="{Binding CancelEditCommand}"
-                                        Width="100"
-                                        Height="36"
-                                        CornerRadius="6"/>
-							</StackPanel>
-						</StackPanel>
-					</Border>
-					<Border CornerRadius="12"
-												Padding="20"
-												BorderThickness="1"
-												BorderBrush="{DynamicResource BorderDefault}"
-												IsVisible="{Binding !IsEditing}"
-												Background="{DynamicResource ThirdBG}">
-						<Button Content="Выйти "
-                                        Command="{Binding UploadAvatarCommand}"
-                                        HorizontalAlignment="Left"
-										Foreground="White"
-                                        Margin="0,12,0,0"
-                                        Width="160"
-                                        Height="32"
-                                        CornerRadius="6"/>
-					</Border>
-				</StackPanel>
-			</ScrollViewer>
-		</Grid>
-	</Border>
-</UserControl>
+									    <TextBlock Grid.Row="1"
+                                                   Text="Имя пользователя"
+                                                   FontSize="13"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource Muted}"
+                                                   VerticalAlignment="Center"/>
+									    <TextBlock Grid.Row="1" Grid.Column="1"
+                                                   Text="{Binding User.Username}"
+                                                   FontSize="15"
+                                                   VerticalAlignment="Center"/>
+								    </Grid>
+
+								    <Button Content="Редактировать"
+                                            Command="{Binding StartEditCommand}"
+                                            HorizontalAlignment="Left"
+                                            Classes="DialogAccent"
+                                            Padding="24,12"
+                                            CornerRadius="8"
+                                            FontWeight="Medium"
+                                            Margin="0,8,0,0"/>
+							    </StackPanel>
+
+							    <!-- Режим редактирования -->
+							    <StackPanel Spacing="16" IsVisible="{Binding IsEditing}">
+								    <StackPanel Spacing="8">
+									    <TextBlock Text="Отображаемое имя"
+                                                   FontSize="13"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource Muted}"/>
+									    <TextBox Text="{Binding TempDisplayName}"
+                                                 Watermark="Введите отображаемое имя"
+                                                 Padding="14,12"
+                                                 CornerRadius="8"
+                                                 BorderBrush="{DynamicResource BorderDefault}"
+                                                 Background="{DynamicResource SecondaryBG}"
+                                                 FontSize="14"/>
+								    </StackPanel>
+
+								    <StackPanel Orientation="Horizontal"
+                                                Spacing="12"
+                                                Margin="0,8,0,0">
+									    <Button Content="Сохранить"
+                                                Command="{Binding SaveChangesCommand}"
+                                                Classes="DialogAccent"
+                                                Padding="24,12"
+                                                CornerRadius="8"
+                                                FontWeight="Medium"/>
+									    <Button Content="Отмена"
+                                                Command="{Binding CancelEditCommand}"
+                                                Classes="DialogOutline"
+                                                Padding="24,12"
+                                                CornerRadius="8"
+                                                FontWeight="Medium"/>
+								    </StackPanel>
+							    </StackPanel>
+						    </StackPanel>
+					    </Border>
+
+					    <!-- Секция: Выход -->
+					    <Border Classes="ProfileSection">
+						    <Grid ColumnDefinitions="*,Auto" RowSpacing="4">
+							    <StackPanel Spacing="4" VerticalAlignment="Center">
+								    <TextBlock Text="Выход"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"/>
+								    <TextBlock Text="Выйти из текущего аккаунта"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextSecondary}"/>
+							    </StackPanel>
+
+							    <Button Grid.Column="1"
+                                        Content="Выйти"
+                                        Command="{Binding LogoutCommand}"
+                                        Classes="DialogDanger"
+                                        Padding="24,12"
+                                        CornerRadius="8"
+                                        FontWeight="Medium"
+                                        VerticalAlignment="Center"/>
+						    </Grid>
+					    </Border>
+
+					    <!-- Сообщения об ошибках -->
+					    <Border Classes="AlertError"
+                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+						    <StackPanel Orientation="Horizontal" Spacing="12">
+							    <Path Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                                      Fill="{DynamicResource ErrorBrush}"
+                                      Width="20" Height="20"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center"/>
+							    <TextBlock Text="{Binding ErrorMessage}"
+                                           Foreground="{DynamicResource ErrorBrush}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+						    </StackPanel>
+					    </Border>
+
+					    <!-- Сообщения об успехе -->
+					    <Border Classes="AlertSuccess"
+                                IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+						    <StackPanel Orientation="Horizontal" Spacing="12">
+							    <Path Data="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"
+                                      Fill="{DynamicResource SuccessBrush}"
+                                      Width="20" Height="20"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center"/>
+							    <TextBlock Text="{Binding SuccessMessage}"
+                                           Foreground="{DynamicResource SuccessBrush}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+						    </StackPanel>
+					    </Border>
+
+				    </StackPanel>
+			    </Border>
+		    </ScrollViewer>
+	    </Border>
+    </UserControl>

@@ -1,4 +1,7 @@
-﻿namespace MessengerAPI.Model;
+﻿using System;
+using System.Collections.Generic;
+
+namespace MessengerAPI.Model;
 
 public partial class Message
 {
@@ -14,11 +17,13 @@ public partial class Message
 
     public DateTime? EditedAt { get; set; }
 
+    public bool? IsDeleted { get; set; }
+
     public virtual Chat Chat { get; set; } = null!;
 
-    public virtual ICollection<MessageFile> MessageFiles { get; set; } = [];
+    public virtual ICollection<MessageFile> MessageFiles { get; set; } = new List<MessageFile>();
 
-    public virtual ICollection<Poll> Polls { get; set; } = [];
+    public virtual ICollection<Poll> Polls { get; set; } = new List<Poll>();
 
     public virtual User Sender { get; set; } = null!;
 }

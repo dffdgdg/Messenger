@@ -1,158 +1,138 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+п»їusing CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
-using MessengerShared.DTO;
+using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Navigation;
 using System;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels;
+
+public partial class LoginViewModel : BaseViewModel
 {
-    public partial class LoginViewModel : BaseViewModel
+    private readonly IAuthService _authService;
+    private readonly INavigationService _navigation;
+    private readonly ISecureStorageService _secureStorage;
+    private readonly INotificationService _notificationService;
+
+    private const string RememberMeKey = "remember_me";
+    private const string UsernameKey = "saved_username";
+
+    [ObservableProperty]
+    private string username = string.Empty;
+
+    [ObservableProperty]
+    private string password = string.Empty;
+
+    [ObservableProperty]
+    private bool rememberMe;
+
+    public LoginViewModel(
+        IAuthService authService,
+        INavigationService navigation,
+        ISecureStorageService secureStorage,
+        INotificationService notificationService)
     {
-        private readonly AuthService _authService;
-        private readonly INavigationService _navigation;
-        private const string CredentialsFile = "credentials.json";
+        _authService = authService;
+        _navigation = navigation;
+        _secureStorage = secureStorage;
+        _notificationService = notificationService;
+        _ = InitializeAsync();
+    }
 
-        [ObservableProperty]
-        private string username = string.Empty;
-
-        [ObservableProperty]
-        private string password = string.Empty;
-
-        [ObservableProperty]
-        private bool rememberMe;
-
-        public LoginViewModel(AuthService authService, INavigationService navigation)
+    private async Task InitializeAsync()
+    {
+        try
         {
-            _authService = authService;
-            _navigation = navigation;
-            _ = InitializeAsync();
-        }
+            await _authService.WaitForInitializationAsync();
 
-        private async Task InitializeAsync()
-        {
-            try
+            if (_authService.IsAuthenticated)
             {
+                _navigation.NavigateToMainMenu();
+                return;
+            }
+
+            await LoadSavedUsernameAsync();
+        }
+        catch (Exception ex)
+        {
+            await _notificationService.ShowErrorAsync($"РћС€РёР±РєР° РёРЅРёС†РёР°Р»РёР·Р°С†РёРё: {ex.Message}");
+        }
+    }
+
+    private async Task LoadSavedUsernameAsync()
+    {
+        try
+        {
+            RememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
+            if (RememberMe)
+            {
+                Username = await _secureStorage.GetAsync<string>(UsernameKey) ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Load username error: {ex.Message}");
+        }
+    }
+
+    private async Task SaveUsernameAsync()
+    {
+        try
+        {
+            await _secureStorage.SaveAsync(RememberMeKey, RememberMe);
+            if (RememberMe)
+            {
+                await _secureStorage.SaveAsync(UsernameKey, Username);
+            }
+            else
+            {
+                await _secureStorage.RemoveAsync(UsernameKey);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Save username error: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    public async Task Login()
+    {
+        await SafeExecuteAsync(async () =>
+        {
+            if (!_authService.IsInitialized)
                 await _authService.WaitForInitializationAsync();
-                await LoadSavedCredentialsAsync();
-            }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                await NotificationService.ShowError($"Ошибка инициализации: {ex.Message}");
+                ErrorMessage = "Р’РІРµРґРёС‚Рµ Р»РѕРіРёРЅ Рё РїР°СЂРѕР»СЊ";
+                return;
             }
-        }
 
-        private async Task LoadSavedCredentialsAsync()
-        {
-            try
+            var success = await _authService.LoginAsync(Username, Password);
+
+            if (success)
             {
-                if (File.Exists(CredentialsFile))
-                {
-                    var json = await File.ReadAllTextAsync(CredentialsFile);
-                    var credentials = JsonSerializer.Deserialize<LoginDTO>(json);
-                    if (credentials != null)
-                    {
-                        Username = credentials.Username;
-                        Password = credentials.Password;
-                        RememberMe = true;
-                    }
-                }
+                await SaveUsernameAsync();
+                SuccessMessage = "РЈСЃРїРµС€РЅС‹Р№ РІС…РѕРґ!";
+                _navigation.NavigateToMainMenu();
             }
-            catch (Exception ex)
+            else
             {
-                await NotificationService.ShowError($"Ошибка загрузки данных: {ex.Message}");
+                ErrorMessage = "РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ";
             }
-        }
+        });
+    }
 
-        private async Task SaveCredentialsAsync()
-        {
-            try
-            {
-                if (RememberMe)
-                {
-                    var credentials = new LoginDTO { Username = Username, Password = Password };
-                    var json = JsonSerializer.Serialize(credentials);
-                    await File.WriteAllTextAsync(CredentialsFile, json);
-                }
-                else if (File.Exists(CredentialsFile))
-                {
-                    File.Delete(CredentialsFile);
-                }
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка сохранения данных: {ex.Message}");
-            }
-        }
-
-        [RelayCommand]
-        public async Task Login()
-        {
-            await SafeExecuteAsync(async () =>
-            {
-                if (!_authService.IsInitialized)
-                {
-                    await _authService.WaitForInitializationAsync();
-                }
-
-                if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
-                {
-                    ErrorMessage = "Введите логин и пароль";
-                    return;
-                }
-
-                var success = await _authService.LoginAsync(Username, Password);
-
-                if (success)
-                {
-                    await Task.Delay(100);
-
-                    for (int i = 0; i < 5; i++)
-                    {
-                        if (_authService.UserId.HasValue) break;
-                        await Task.Delay(50);
-                    }
-
-                    if (_authService.UserId.HasValue)
-                    {
-                        await SaveCredentialsAsync();
-                        SuccessMessage = "Успешный вход!";
-                        _navigation.NavigateToMainMenu();
-                    }
-                    else
-                    {
-                        ErrorMessage = "Ошибка авторизации: ID пользователя не получен";
-                    }
-                }
-                else
-                {
-                    ErrorMessage = "Неверный логин или пароль";
-                }
-            });
-        }
-
-        [RelayCommand]
-        public async Task ClearCredentials()
-        {
-            try
-            {
-                if (File.Exists(CredentialsFile))
-                {
-                    File.Delete(CredentialsFile);
-                }
-                Username = string.Empty;
-                Password = string.Empty;
-                RememberMe = false;
-                ClearMessages();
-                await NotificationService.ShowSuccess("Данные для входа очищены");
-            }
-            catch (Exception ex)
-            {
-                await NotificationService.ShowError($"Ошибка очистки данных: {ex.Message}");
-            }
-        }
+    [RelayCommand]
+    public async Task ClearCredentials()
+    {
+        await _secureStorage.RemoveAsync(RememberMeKey);
+        await _secureStorage.RemoveAsync(UsernameKey);
+        Username = string.Empty;
+        Password = string.Empty;
+        RememberMe = false;
+        ClearMessages();
     }
 }

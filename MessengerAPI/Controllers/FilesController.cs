@@ -3,27 +3,23 @@ using MessengerShared.DTO;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MessengerAPI.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class FilesController(IFileService fileService, ILogger<FilesController> logger) : ControllerBase
+namespace MessengerAPI.Controllers
 {
-    [HttpPost("upload")]
-    public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload([FromQuery] int chatId, IFormFile file)
+    public class FilesController(IFileService fileService, ILogger<FilesController> logger) : BaseController<FilesController>(logger)
     {
-        try
+        [HttpPost("upload")]
+        public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload(
+            [FromQuery] int chatId,
+            IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest(new ApiResponse { Success = false, Error = "No file" });
+            return await ExecuteAsync(async () =>
+            {
+                if (file == null || file.Length == 0)
+                    throw new ArgumentException("No file provided");
 
-            var dto = await fileService.SaveMessageFileAsync(file, chatId, Request);
-            return Ok(new ApiResponse<MessageFileDTO> { Success = true, Data = dto });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "File upload failed");
-            return StatusCode(500, new ApiResponse { Success = false, Error = ex.Message });
+                var dto = await fileService.SaveMessageFileAsync(file, chatId, Request);
+                return dto;
+            }, "Файлы загружены успешно");
         }
     }
 }

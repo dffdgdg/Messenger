@@ -1,4 +1,7 @@
-﻿namespace MessengerAPI.Model;
+﻿using System;
+using System.Collections.Generic;
+
+namespace MessengerAPI.Model;
 
 public partial class PollVote
 {

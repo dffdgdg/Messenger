@@ -2,7 +2,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO;
 using System;
 using System.IO;
@@ -49,10 +50,16 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
-        public ProfileViewModel(int userId, IApiClientService apiClient)
+        public ProfileViewModel(IApiClientService apiClient, IAuthService authService)
         {
-            _apiClient = apiClient;
-            UserId = userId;
+            _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+
+            ArgumentNullException.ThrowIfNull(authService);
+
+            if (!authService.UserId.HasValue)
+                throw new InvalidOperationException("User not authenticated");
+
+            UserId = authService.UserId.Value;
             _ = LoadUser();
         }
 
@@ -160,7 +167,11 @@ namespace MessengerDesktop.ViewModels
                     ErrorMessage = $"Ошибка обновления: {result.Error}";
             });
         }
-
+        [RelayCommand]
+        private async Task Logout()
+        {
+            
+        }
         [RelayCommand]
         private async Task UploadAvatar()
         {

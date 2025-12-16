@@ -5,8 +5,10 @@ namespace MessengerDesktop.Views
 {
     public partial class AdminView : UserControl
     {
-        public AdminView() => InitializeComponent();
+        public AdminView() 
+            => InitializeComponent();
 
-        private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+        private void InitializeComponent() 
+            => AvaloniaXamlLoader.Load(this);
     }
 }

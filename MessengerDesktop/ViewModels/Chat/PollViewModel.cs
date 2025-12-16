@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
 using System.Collections.ObjectModel;
 using System.ComponentModel;

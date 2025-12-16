@@ -1,40 +1,27 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
+using MessengerDesktop.DependencyInjection;
 using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Platform;
+using MessengerDesktop.Services.Storage;
 using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
-using Avalonia.Styling;
 
 namespace MessengerDesktop
 {
-    public partial class App : Application
+    public partial class App : Application, IDisposable
     {
+        private bool _disposed;
+        private INotificationService? _notificationService;
+
         public new static App Current => (App)Application.Current!;
-        public IServiceProvider Services { get; private set; }
-        public Storage Storage { get; } = new Storage();
 
-        private const string ThemeSettingsFile = "theme_settings.json";
-        private ThemeVariant _themeVariant;
-
-        public ThemeVariant ThemeVariant
-        {
-            get => _themeVariant;
-            set
-            {
-                if (_themeVariant != value)
-                {
-                    _themeVariant = value;
-                    RequestedThemeVariant = value;
-                    SaveThemeSettings();
-                }
-            }
-        }
+        public IServiceProvider Services { get; private set; } = null!;
 
         public static readonly string ApiUrl =
 #if DEBUG
@@ -43,129 +30,166 @@ namespace MessengerDesktop
             "http://localhost:5274/";
 #endif
 
-        public App()
-        {
-            Services = ConfigureServices;
-            LoadThemeSettings();
-        }
-
-        private static IServiceProvider ConfigureServices
-        {
-            get
-            {
-                var services = new ServiceCollection();
-
-                // Сервисы
-                services.AddSingleton<ISecureStorageService, SecureStorageService>();
-                services.AddSingleton<IApiClientService, ApiClientService>();
-                services.AddSingleton<IDialogService, DialogService>();
-                services.AddSingleton<AuthService>();
-
-                services.AddSingleton<HttpClient>(sp =>
-                {
-                    var handler = new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-                        CheckCertificateRevocationList = false,
-                        UseProxy = false
-                    };
-
-                    return new HttpClient(handler)
-                    {
-                        BaseAddress = new Uri(ApiUrl),
-                        Timeout = TimeSpan.FromSeconds(30)
-                    };
-                });
-
-                services.AddSingleton<INavigationService, NavigationService>();
-
-                // ViewModels
-                services.AddSingleton<MainWindowViewModel>();
-                services.AddTransient<MainMenuViewModel>();
-                services.AddTransient<LoginViewModel>();
-                services.AddTransient<AdminViewModel>();
-                services.AddTransient<ChatsViewModel>();
-                services.AddTransient<ProfileViewModel>();
-                services.AddTransient<SettingsViewModel>();
-                services.AddTransient<ChatViewModel>();
-
-                return services.BuildServiceProvider();
-            }
-        }
-
         public override void Initialize()
         {
-            System.Diagnostics.Debug.WriteLine("App Initialize starting...");
+            System.Diagnostics.Debug.WriteLine("[App] Initialize starting...");
             AvaloniaXamlLoader.Load(this);
-            System.Diagnostics.Debug.WriteLine("App Initialize completed");
+            Services = ConfigureServices();
+            System.Diagnostics.Debug.WriteLine("[App] Initialize completed");
+        }
+
+        private static ServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            services.AddMessengerCoreServices(ApiUrl);
+            services.AddMessengerViewModels();
+
+            return services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            });
         }
 
         public override void OnFrameworkInitializationCompleted()
         {
-            System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted starting...");
+            System.Diagnostics.Debug.WriteLine("[App] OnFrameworkInitializationCompleted starting...");
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var mainWindow = new MainWindow();
                 desktop.MainWindow = mainWindow;
 
-                WindowService.Initialize(mainWindow);
-                NotificationService.Initialize(mainWindow);
+                InitializePlatformServices(mainWindow);
+                LoadThemeFromSettings();
 
                 var mainWindowViewModel = Services.GetRequiredService<MainWindowViewModel>();
                 mainWindow.DataContext = mainWindowViewModel;
 
-                desktop.Exit += Desktop_Exit;
+                desktop.Exit += OnApplicationExit;
+                desktop.ShutdownRequested += OnShutdownRequested;
             }
 
-            System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted completed");
+            System.Diagnostics.Debug.WriteLine("[App] OnFrameworkInitializationCompleted completed");
             base.OnFrameworkInitializationCompleted();
         }
 
-        private void LoadThemeSettings()
+        private void InitializePlatformServices(MainWindow mainWindow)
+        {
+            var platformService = Services.GetRequiredService<IPlatformService>();
+            platformService.Initialize(mainWindow);
+
+            var notificationService = Services.GetRequiredService<INotificationService>();
+            notificationService.Initialize(mainWindow);
+            _notificationService = notificationService;
+
+            System.Diagnostics.Debug.WriteLine("[App] Platform services initialized");
+        }
+
+        private void LoadThemeFromSettings()
         {
             try
             {
-                if (File.Exists(ThemeSettingsFile))
-                {
-                    var json = File.ReadAllText(ThemeSettingsFile);
-                    var settings = JsonSerializer.Deserialize<ThemeSettings>(json);
-                    _themeVariant = settings?.IsDarkTheme == true ? ThemeVariant.Dark : ThemeVariant.Light;
-                }
-                else
-                {
-                    _themeVariant = ThemeVariant.Dark;
-                }
-            }
-            catch
-            {
-                _themeVariant = ThemeVariant.Dark;
-            }
+                var settingsService = Services.GetRequiredService<ISettingsService>();
+                var isDarkTheme = settingsService.Get<bool?>("IsDarkTheme") ?? true;
+                RequestedThemeVariant = isDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
 
-            RequestedThemeVariant = _themeVariant;
+                System.Diagnostics.Debug.WriteLine($"[App] Theme loaded: {(isDarkTheme ? "Dark" : "Light")}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] Error loading theme: {ex.Message}");
+                RequestedThemeVariant = ThemeVariant.Dark;
+            }
         }
 
-        private void SaveThemeSettings()
+        public void ToggleTheme()
         {
+            var newTheme = RequestedThemeVariant == ThemeVariant.Dark
+                ? ThemeVariant.Light
+                : ThemeVariant.Dark;
+
+            RequestedThemeVariant = newTheme;
+
             try
             {
-                var settings = new ThemeSettings(_themeVariant == ThemeVariant.Dark);
-                var json = JsonSerializer.Serialize(settings);
-                File.WriteAllText(ThemeSettingsFile, json);
+                var settingsService = Services.GetRequiredService<ISettingsService>();
+                settingsService.Set("IsDarkTheme", newTheme == ThemeVariant.Dark);
+
+                System.Diagnostics.Debug.WriteLine($"[App] Theme toggled to: {newTheme}");
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[App] Error saving theme: {ex.Message}");
             }
         }
 
-        private void Desktop_Exit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+        public ThemeVariant ThemeVariant
         {
-            WindowService.Cleanup();
-            NotificationService.Cleanup();
+            get => RequestedThemeVariant ?? ThemeVariant.Dark;
+            set
+            {
+                if (RequestedThemeVariant != value)
+                {
+                    RequestedThemeVariant = value;
+
+                    try
+                    {
+                        var settingsService = Services.GetRequiredService<ISettingsService>();
+                        settingsService.Set("IsDarkTheme", value == ThemeVariant.Dark);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[App] Error saving theme variant: {ex.Message}");
+                    }
+                }
+            }
         }
 
-        public void ToggleTheme() => ThemeVariant = ThemeVariant == ThemeVariant.Dark ? ThemeVariant.Light : ThemeVariant.Dark;
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("[App] Shutdown requested");
+        }
+
+        private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("[App] Application exiting...");
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            System.Diagnostics.Debug.WriteLine("[App] Disposing resources...");
+
+            try
+            {
+                _notificationService = null;
+
+                var platformService = Services.GetService<IPlatformService>();
+                platformService?.Cleanup();
+
+                var mainWindowVm = Services.GetService<MainWindowViewModel>();
+                mainWindowVm?.Dispose();
+
+                var apiClient = Services.GetService<IApiClientService>();
+                (apiClient as IDisposable)?.Dispose();
+
+                var authService = Services.GetService<AuthService>();
+
+                (Services as IDisposable)?.Dispose();
+
+                System.Diagnostics.Debug.WriteLine("[App] Resources disposed successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] Error during disposal: {ex.Message}");
+            }
+
+            GC.SuppressFinalize(this);
+        }
     }
-
-    public record ThemeSettings(bool IsDarkTheme);
 }

@@ -12,6 +12,9 @@ namespace MessengerShared.DTO
         public PollDTO? Poll { get; set; }
         public bool IsOwn { get; set; }
         public bool IsPrevSameSender { get; set; }
+        public DateTime? EditedAt { get; set; } 
+        public bool IsEdited { get; set; }     
+        public bool IsDeleted { get; set; }      
         public MessageDTO? PreviousMessage { get; set; }
         public bool ShowSenderName 
         { 

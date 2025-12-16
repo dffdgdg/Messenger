@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
@@ -9,10 +8,6 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    /// <summary>
-    /// ViewModel диалога редактирования пользователя.
-    /// Используется в админ-панели для создания/редактирования пользователей.
-    /// </summary>
     public partial class UserEditDialogViewModel : DialogBaseViewModel
     {
         private readonly UserDTO? _originalUser;
@@ -29,7 +24,6 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private ObservableCollection<DepartmentDTO> _departments = [];
 
-        /// <summary>Callback для сохранения пользователя</summary>
         public Func<UserDTO, Task>? SaveAction { get; set; }
 
         public bool IsNewUser => _originalUser == null;

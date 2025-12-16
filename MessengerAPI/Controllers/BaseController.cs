@@ -1,5 +1,4 @@
-﻿using MessengerShared.DTO;
-using MessengerShared.Response;
+﻿using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -11,144 +10,170 @@ namespace MessengerAPI.Controllers
     {
         protected readonly ILogger<T> _logger = logger;
 
-        #region Success Responses
-
-        protected ActionResult<TResponse> Success<TResponse>(TResponse data, string? message = null)
-        {
-            var response = new ApiResponse<TResponse>
-            {
-                Success = true,
-                Data = data,
-                Message = message,
-                Timestamp = DateTime.UtcNow
-            };
-            return Ok(response);
-        }
-
-        protected ActionResult Success(string? message = null)
-        {
-            var response = new ApiResponse<object>
-            {
-                Success = true,
-                Message = message,
-                Timestamp = DateTime.UtcNow
-            };
-            return Ok(response);
-        }
+        #region User Identity
 
         protected int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new UnauthorizedAccessException("Invalid user identity");
+                throw new UnauthorizedAccessException("Недействительная идентификация пользователя");
             return userId;
         }
 
         protected string GetCurrentUsername()
         {
             var usernameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
-            return usernameClaim ?? throw new UnauthorizedAccessException("Username not found");
+            return usernameClaim ?? throw new UnauthorizedAccessException("Имя пользователя не найдено");
         }
 
-        protected bool IsCurrentUser(int userId)
+        protected bool IsCurrentUser(int userId) => GetCurrentUserId() == userId;
+
+        #endregion
+
+        #region Success Responses
+
+        protected ActionResult SuccessWithData<TData>(TData data, string? message = null)
         {
-            return GetCurrentUserId() == userId;
-        }
-        protected ActionResult SuccessWithData<E>(E data, string? message = null)
-        {
-            var response = new ApiResponse<E>
+            return Ok(new ApiResponse<TData>
             {
                 Success = true,
                 Data = data,
                 Message = message,
-                Timestamp = DateTime.UtcNow
-            };
-            return Ok(response);
+                Timestamp = DateTime.Now
+            });
         }
-        protected ActionResult Created<TResponse>(TResponse data, string message = "Resource created successfully")
+
+        protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null)
         {
-            var response = new ApiResponse<TResponse>
+            return Ok(new ApiResponse<TData>
             {
                 Success = true,
                 Data = data,
                 Message = message,
-                Timestamp = DateTime.UtcNow
-            };
-            return StatusCode(StatusCodes.Status201Created, response);
+                Timestamp = DateTime.Now
+            });
         }
 
-        protected ActionResult NoContent(string message = "Resource updated successfully")
+        protected ActionResult<ApiResponse<object>> Success(string? message = null)
         {
-            var response = new ApiResponse<object>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
                 Message = message,
-                Timestamp = DateTime.UtcNow
-            };
-            return StatusCode(StatusCodes.Status200OK, response);
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult<ApiResponse<TData>> Created<TData>(TData data, string message = "Ресурс успешно создан")
+        {
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<TData>
+            {
+                Success = true,
+                Data = data,
+                Message = message,
+                Timestamp = DateTime.Now
+            });
         }
 
         #endregion
 
         #region Error Responses
 
-        protected ActionResult BadRequest(string error, string? details = null)
+        protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null)
         {
-            var response = new ApiResponse<object>
+            return BadRequest(new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
                 Details = details,
-                Timestamp = DateTime.UtcNow
-            };
-            return BadRequest(response);
+                Timestamp = DateTime.Now
+            });
         }
 
-        protected ActionResult NotFound(string error = "Resource not found")
+        protected ActionResult BadRequestMessage(string error, string? details = null)
         {
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Error = error,
+                Details = details,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден")
+        {
+            return NotFound(new ApiResponse<TData>
+            {
+                Success = false,
+                Error = error,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ")
+        {
+            return Unauthorized(new ApiResponse<TData>
+            {
+                Success = false,
+                Error = error,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
+            {
+                Success = false,
+                Error = error,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult Forbidden(string error = "Доступ запрещён")
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
+            {
+                Success = false,
+                Error = error,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        protected ActionResult InternalError(Exception ex, string error = "Произошла внутренняя ошибка")
+        {
+            _logger.LogError(ex, "Внутренняя ошибка сервера: {Message}", ex.Message);
+
             var response = new ApiResponse<object>
             {
                 Success = false,
                 Error = error,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.Now
             };
-            return NotFound(response);
+
+            var env = HttpContext.RequestServices.GetService<IWebHostEnvironment>();
+            if (env?.IsDevelopment() == true)
+            {
+                response.Details = ex.ToString();
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError, response);
         }
 
-        protected ActionResult Unauthorized(string error = "Unauthorized access")
+        protected ActionResult<ApiResponse<TData>> InternalError<TData>(Exception ex, string error = "Произошла внутренняя ошибка")
         {
-            var response = new ApiResponse<object>
+            _logger.LogError(ex, "Внутренняя ошибка сервера: {Message}", ex.Message);
+
+            var response = new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
-                Timestamp = DateTime.UtcNow
-            };
-            return Unauthorized(response);
-        }
-
-        protected ActionResult Forbidden(string error = "Access forbidden")
-        {
-            var response = new ApiResponse<object>
-            {
-                Success = false,
-                Error = error,
-                Timestamp = DateTime.UtcNow
-            };
-            return StatusCode(StatusCodes.Status403Forbidden, response);
-        }
-
-        protected ActionResult InternalError(Exception ex, string error = "An internal error occurred")
-        {
-            _logger.LogError(ex, "Internal server error");
-
-            var response = new ApiResponse<object>
-            {
-                Success = false,
-                Error = error,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.Now
             };
 
-            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+            var env = HttpContext.RequestServices.GetService<IWebHostEnvironment>();
+            if (env?.IsDevelopment() == true)
             {
                 response.Details = ex.ToString();
             }
@@ -158,73 +183,89 @@ namespace MessengerAPI.Controllers
 
         #endregion
 
-        #region Helper Methods
+        #region Execute Helpers
 
-        protected async Task<ActionResult<ApiResponse<T>>> ExecuteAsync<T>(Func<Task<T>> action,string? successMessage = null)
+        protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<TResult>> action, string? successMessage = null)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> START: {successMessage}");
-
                 var result = await action();
 
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> - action result: {result != null}");
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> - result type: {typeof(T)}");
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> - result actual type: {result?.GetType()}");
-
-                if (result is List<UserDTO> users)
-                {
-                    System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> - users count: {users.Count}");
-                }
-
-                var response = new ApiResponse<T>
+                return Ok(new ApiResponse<TResult>
                 {
                     Success = true,
                     Data = result,
                     Message = successMessage,
-                    Timestamp = DateTime.UtcNow
-                };
-
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> - response created: {response != null}");
-
-                return Ok(response);
+                    Timestamp = DateTime.Now
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Ошибка валидации");
+                return BadRequest<TResult>(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Попытка неавторизованного доступа");
+                return Unauthorized<TResult>(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Ресурс не найден");
+                return NotFound<TResult>(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Недопустимая операция");
+                return BadRequest<TResult>(ex.Message);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ExecuteAsync<T> EXCEPTION: {ex}");
-
-                var errorResponse = new ApiResponse<T>
-                {
-                    Success = false,
-                    Error = ex.Message,
-                    Timestamp = DateTime.UtcNow
-                };
-
-                return BadRequest(errorResponse);
+                return InternalError<TResult>(ex);
             }
         }
 
-        protected async Task<ActionResult> ExecuteAsync(Func<Task> action, string? successMessage = null)
+        protected async Task<IActionResult> ExecuteAsync(Func<Task> action, string? successMessage = null)
         {
             try
             {
                 await action();
-                return Success(successMessage);
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = successMessage,
+                    Timestamp = DateTime.Now
+                });
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "Bad request");
-                return BadRequest(ex.Message);
+                _logger.LogWarning(ex, "Ошибка валидации");
+                return BadRequestMessage(ex.Message);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "Unauthorized access");
-                return Unauthorized(ex.Message);
+                _logger.LogWarning(ex, "Попытка неавторизованного доступа");
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = ex.Message,
+                    Timestamp = DateTime.Now
+                });
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogWarning(ex, "Resource not found");
-                return NotFound(ex.Message);
+                _logger.LogWarning(ex, "Ресурс не найден");
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = ex.Message,
+                    Timestamp = DateTime.Now
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Недопустимая операция");
+                return BadRequestMessage(ex.Message);
             }
             catch (Exception ex)
             {
@@ -232,18 +273,17 @@ namespace MessengerAPI.Controllers
             }
         }
 
-        protected bool ValidateModel()
+        #endregion
+
+        #region Validation
+
+        protected void ValidateModel()
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToArray();
-
-                throw new ArgumentException($"Invalid model: {string.Join(", ", errors)}");
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray();
+                throw new ArgumentException($"Некорректная модель: {string.Join(", ", errors)}");
             }
-            return true;
         }
 
         #endregion

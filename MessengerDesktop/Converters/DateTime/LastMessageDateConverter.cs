@@ -1,34 +1,26 @@
-using System.Globalization;
-using MessengerDesktop.Converters.Base;
-using MessengerDesktop.Converters.Constants;
+﻿using MessengerDesktop.Converters.Base;
 using MessengerShared.DTO;
-using MessengerShared.Enum;
+using System.Globalization;
 
-namespace MessengerDesktop.Converters.DateTime
+namespace MessengerDesktop.Converters.DateTime;
+
+public class LastMessageDateConverter : ValueConverterBase<MessageDTO, string>
 {
-    public class LastMessageDateConverter : ValueConverterBase<MessageDTO, string>
+    private static readonly DateTimeFormatConverter InnerConverter = new()
     {
-        private static readonly CultureInfo RussianCulture = new("ru-RU");
+        Format = DateTimeFormat.Chat
+    };
 
-        protected override string ConvertValue(MessageDTO message, object? parameter, CultureInfo culture)
-        {
-            if (message.CreatedAt == default) return string.Empty;
+    protected override string ConvertCore(MessageDTO message, object? parameter, CultureInfo culture)
+    {
+        if (message.CreatedAt == default)
+            return string.Empty;
 
-            var now = System.DateTime.Now;
-            var messageDate = message.CreatedAt;
-
-            return messageDate.Date switch
-            {
-                var date when date == now.Date => messageDate.ToString(DateTimeFormats.TimeOnly, RussianCulture),
-
-                var date when date == now.Date.AddDays(-1) => messageDate.ToString(DateTimeFormats.YesterdayWithTime, RussianCulture),
-
-                var date when date.Year == now.Year => messageDate.ToString(DateTimeFormats.DateWithTime, RussianCulture),
-
-                _ => messageDate.ToString(DateTimeFormats.FullDateWithTime, RussianCulture)
-            };
-        }
-
-        protected override object? HandleConversionError(object? value) => string.Empty;
+        return InnerConverter.Convert(message.CreatedAt, typeof(string), null, culture) as string
+               ?? string.Empty;
     }
+
+    protected override object? HandleError(System.Exception ex, object? value) => string.Empty;
+
+    protected override object? HandleInvalidInput(object? value) => string.Empty;
 }

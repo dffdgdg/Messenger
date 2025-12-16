@@ -8,111 +8,149 @@
              d:DesignWidth="400"
              x:Class="MessengerDesktop.Views.UserProfileDialog"
              x:DataType="vm:UserProfileDialogViewModel">
+
 	<Border Width="400"
             Background="{DynamicResource SecondaryBG}"
-            CornerRadius="8"
-            BoxShadow="0 4 20 #40000000">
+            CornerRadius="16"
+			BorderThickness="1"
+			BorderBrush="{DynamicResource BorderDefault}"
+            BoxShadow="0 8 32 #50000000">
 
 		<Grid RowDefinitions="Auto,*">
-			<Border CornerRadius="8,8,0,0">
-				<Grid Margin="22,0">
 
-					<!-- Title -->
-					<TextBlock Margin="12,22,22,0"
-                               FontWeight="Bold"
-                               Text="Информация"/>
-
-				</Grid>
+			<!-- ================= HEADER ================= -->
+			<Border Background="{DynamicResource PrimaryBG}"
+                    CornerRadius="12,12,0,0"
+                    Padding="24,18">
+				<TextBlock Text="Профиль пользователя"
+                           FontSize="17"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimary}"/>
 			</Border>
 
 			<!-- ================= CONTENT ================= -->
-			<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-				<StackPanel Margin="24,12,24,24" Spacing="16">
+			<ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+				<StackPanel Margin="24,20,24,24" Spacing="20">
 
-					<!-- BLOCK 1: Аватар и имя -->
-					<StackPanel>
-						<Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-							<Border Width="70"
-                                    Height="70"
-                                    CornerRadius="50"
-                                    Background="#444444"
-                                    ClipToBounds="True"
-                                    VerticalAlignment="Center">
-								<Image Source="{Binding AvatarBitmap}"
-                                       Stretch="UniformToFill"
-                                       />
-							</Border>
+					<!-- ===== БЛОК 1: Аватар и имя ===== -->
+					<Grid ColumnDefinitions="Auto,*"
+                          HorizontalAlignment="Stretch">
 
-							<StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
-								<TextBlock Text="{Binding User.DisplayName}"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimary}"/>
-								<TextBlock Text="был(а) недавно"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextSecondary}"/>
-							</StackPanel>
+						<!-- Аватар слева -->
+						<Border Width="64"
+                                Height="64"
+                                CornerRadius="32"
+                                Background="#3A3A3A"
+                                ClipToBounds="True"
+                                BoxShadow="0 2 8 #30000000"
+                                VerticalAlignment="Top"
+                                Margin="0,0,16,0">
+							<Image Source="{Binding AvatarBitmap}"
+                                   Stretch="UniformToFill"/>
+						</Border>
+
+						<!-- Имя и статус справа -->
+						<StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="2">
+							<TextBlock Text="{Binding User.DisplayName}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       TextWrapping="Wrap"/>
+
+							<TextBlock Text="был(а) недавно"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+						</StackPanel>
+					</Grid>
+
+					<!-- Разделитель -->
+					<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+					<!-- ===== БЛОК 2: Информация об аккаунте ===== -->
+					<StackPanel Spacing="12">
+						<TextBlock Text="ИНФОРМАЦИЯ"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Opacity="0.7"/>
+
+						<!-- Username -->
+						<Grid ColumnDefinitions="*,*">
+							<TextBlock Text="Имя пользователя"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+							<TextBlock Grid.Column="1"
+                                       Text="{Binding User.Username, StringFormat='@{0}'}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       HorizontalAlignment="Right"/>
 						</Grid>
 
-						<!-- Разделитель -->
-						<Border Height="1"
-                                Background="{DynamicResource BorderDefault}"
-                                Margin="0,8,0,0"/>
+						<!-- Отдел -->
+						<Grid ColumnDefinitions="*,*"
+                              IsVisible="{Binding User.Department, Converter={x:Static ObjectConverters.IsNotNull}}">
+							<TextBlock Text="Отдел"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+							<TextBlock Grid.Column="1"
+                                       Text="{Binding User.Department}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       HorizontalAlignment="Right"
+                                       TextTrimming="CharacterEllipsis"/>
+						</Grid>
 					</StackPanel>
 
-					<!-- BLOCK 2: Основная информация -->
-					<StackPanel>
-						<TextBlock Text="{Binding User.Username}"
-                                   FontSize="14"
+					<!-- Разделитель -->
+					<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+					<!-- ===== БЛОК 3: Контактная информация ===== -->
+					<StackPanel Spacing="12">
+						<TextBlock Text="КОНТАКТЫ"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSecondary}"
-                                   HorizontalAlignment="Center"/>
+                                   Opacity="0.7"/>
 
-						<TextBlock Text="{Binding User.Department}"
-                                   FontSize="14"
+						<TextBlock Text="Контактная информация не указана"
+                                   FontSize="13"
                                    Foreground="{DynamicResource TextSecondary}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,4,0,0"
-                                   IsVisible="{Binding User.Department, Converter={conv:Converter Name=ObjectNotNullToBoolean}}"/>
-
-						<!-- Разделитель -->
-						<Border Height="1"
-                                Background="{DynamicResource BorderDefault}"
-                                Margin="0,12,0,0"/>
+                                   FontStyle="Italic"/>
 					</StackPanel>
 
-					<!-- BLOCK 3: Дополнительная информация -->
-					<StackPanel>
-						<TextBlock Text="Контактная информация"
-                                   FontWeight="Bold"
-                                   FontSize="14"
-                                   Margin="0,0,0,6"
-                                   Foreground="{DynamicResource TextPrimary}"/>
+					<!-- Разделитель -->
+					<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-						
+					<!-- ===== БЛОК 4: Быстрое сообщение ===== -->
+					<StackPanel Spacing="12">
+						<TextBlock Text="НАПИСАТЬ СООБЩЕНИЕ"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Opacity="0.7"/>
 
-						<!-- Разделитель -->
-						<Border Height="1"
-                                Background="{DynamicResource BorderDefault}"
-                                Margin="0,12,0,0"/>
-					</StackPanel>
-
-					<!-- BLOCK 4: Отправка сообщения -->
-					<StackPanel>
 						<TextBox Text="{Binding Message}"
                                  AcceptsReturn="True"
                                  TextWrapping="Wrap"
-                                 MinHeight="80"
-                                 MaxHeight="160"
-                                 Watermark="Написать сообщение..."
+                                 MinHeight="70"
+                                 MaxHeight="140"
+                                 Watermark="Введите сообщение..."
                                  Background="{DynamicResource PrimaryBG}"
+                                 BorderBrush="{DynamicResource BorderDefault}"
+                                 BorderThickness="1"
                                  CornerRadius="8"
-                                 Padding="12"/>
+                                 Padding="12,10"/>
 
 						<Button Content="Отправить"
                                 HorizontalAlignment="Right"
-                                Margin="0,8,0,0"
                                 Command="{Binding SendMessageCommand}"
-                                Classes="AccentButton"/>
+                                Classes="AccentButton"
+                                Padding="20,10"
+                                CornerRadius="8"/>
 					</StackPanel>
 
 				</StackPanel>

@@ -20,9 +20,28 @@ namespace MessengerAPI.Controllers
                 if (!success)
                     throw new ArgumentException(error);
 
-                Console.WriteLine($"TOKEN WITH BEARER: Bearer {data.Token}");
-                return data;
+                return data!;
             }, "Авторизация прошла успешно");
         }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Register([FromBody] RegisterDTO request)
+        {
+            return await ExecuteAsync(async () =>
+            {
+                ValidateModel();
+                var (success, data, error) = await authService.RegisterAsync(
+                    request.Username,
+                    request.Password,
+                    request.DisplayName);
+
+                if (!success)
+                    throw new ArgumentException(error);
+
+                return data!;
+            }, "Регистрация прошла успешно");
+        }
+        
     }
 }

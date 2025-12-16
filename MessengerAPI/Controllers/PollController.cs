@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
     public class PollController(IPollService pollService, ILogger<PollController> logger) : BaseController<PollController>(logger)
     {
         [HttpGet("{pollId}")]
@@ -16,7 +14,7 @@ namespace MessengerAPI.Controllers
             {
                 var poll = await pollService.GetPollAsync(pollId, userId);
                 return poll ?? throw new KeyNotFoundException($"Опрос с ID {pollId} не найден");
-            }, "Poll retrieved successfully");
+            }, "Poll получен успешно");
         }
 
         [HttpPost]

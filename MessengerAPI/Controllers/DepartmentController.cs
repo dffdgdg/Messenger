@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
     public class DepartmentController(IDepartmentService departmentService, ILogger<DepartmentController> logger) : BaseController<DepartmentController>(logger)
     {
         [HttpGet]
@@ -16,52 +14,37 @@ namespace MessengerAPI.Controllers
             {
                 var departments = await departmentService.GetDepartmentsAsync();
                 return departments;
-            }, "Отдел успешно загружен");
+            }, "Отделы успешно загружены");
         }
 
         [HttpPost]
-        public async Task<ActionResult<DepartmentDTO>> CreateDepartment([FromBody] DepartmentDTO dto)
+        public async Task<ActionResult<ApiResponse<DepartmentDTO>>> CreateDepartment([FromBody] DepartmentDTO dto)
         {
-            try
+            return await ExecuteAsync(async () =>
             {
+                ValidateModel();
                 var department = await departmentService.CreateDepartmentAsync(dto);
-                return CreatedAtAction(nameof(GetDepartments), new { id = department.Id }, department);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "ОШИБКА создания отдела");
-                return BadRequest(new { error = ex.Message });
-            }
+                return department;
+            }, "Отдел успешно создан");
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDTO dto)
         {
-            try
+            return await ExecuteAsync(async () =>
             {
+                ValidateModel();
                 await departmentService.UpdateDepartmentAsync(id, dto);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "ОШИБКА обновления отдела {DepartmentId}", id);
-                return BadRequest(new { error = ex.Message });
-            }
+            }, "Отдел успешно обновлён");
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
-            try
+            return await ExecuteAsync(async () =>
             {
                 await departmentService.DeleteDepartmentAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "ОШИБКА удаления отдела {DepartmentId}", id);
-                return BadRequest(new { error = ex.Message });
-            }
+            }, "Отдел успешно удалён");
         }
     }
 }

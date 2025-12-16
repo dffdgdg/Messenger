@@ -1,5 +1,6 @@
 ﻿using MessengerAPI.Helpers;
 using MessengerAPI.Hubs;
+using MessengerAPI.Middleware; 
 using MessengerAPI.Model;
 using MessengerAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,12 +17,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    options.SerializerOptions.WriteIndented = true;
+    options.SerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
 });
 
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
+
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
 });
 
 builder.Services.AddDbContext<MessengerDbContext>(options => options.UseNpgsql(
@@ -32,6 +39,8 @@ builder.Services.AddDbContext<MessengerDbContext>(options => options.UseNpgsql(
     }
 ));
 
+
+builder.Services.AddSingleton<IOnlineUserService, OnlineUserService>(); 
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IAccessControlService, AccessControlService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -43,33 +52,35 @@ builder.Services.AddScoped<IPollService, PollService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = TokenService.GetValidationParameters(builder.Configuration);
-
-    options.Events = new JwtBearerEvents
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        OnMessageReceived = context =>
+        options.TokenValidationParameters = TokenService.GetValidationParameters(builder.Configuration);
+
+        options.Events = new JwtBearerEvents
         {
-            var accessToken = context.Request.Query["access_token"];
-
-            if (!string.IsNullOrEmpty(accessToken) &&
-                context.HttpContext.Request.Path.StartsWithSegments("/chathub"))
+            OnMessageReceived = context =>
             {
-                context.Token = accessToken;
+                var accessToken = context.Request.Query["access_token"];
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/chathub"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
             }
+        };
+    });
 
-            return Task.CompletedTask;
-        }
-    };
-});
-
-builder.Services.AddAuthorizationBuilder().SetFallbackPolicy(new AuthorizationPolicyBuilder()
-    .RequireAuthenticatedUser().Build());
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
 
 builder.Services.AddSignalR();
-builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -104,11 +115,16 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials();
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .SetIsOriginAllowed(_ => true)
+              .AllowCredentials();
     });
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {
@@ -123,6 +139,17 @@ if (!Directory.Exists(avatarPath))
     Directory.CreateDirectory(avatarPath);
 
 var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".ipynb"] = "application/x-ipynb+json";
+provider.Mappings[".json"] = "application/json";
+provider.Mappings[".md"] = "text/markdown";
+provider.Mappings[".yaml"] = "application/x-yaml";
+provider.Mappings[".yml"] = "application/x-yaml";
+provider.Mappings[".csv"] = "text/csv";
+provider.Mappings[".py"] = "text/x-python";
+provider.Mappings[".cs"] = "text/plain";
+provider.Mappings[".ts"] = "text/typescript";
+provider.Mappings[".tsx"] = "text/typescript";
+provider.Mappings[".jsx"] = "text/javascript";
 provider.Mappings[".jpg"] = "image/jpeg";
 provider.Mappings[".jpeg"] = "image/jpeg";
 provider.Mappings[".png"] = "image/png";
@@ -130,6 +157,15 @@ provider.Mappings[".gif"] = "image/gif";
 provider.Mappings[".webp"] = "image/webp";
 
 app.UseStaticFiles();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.WebRootPath ?? "wwwroot", "uploads")),
+    RequestPath = "/uploads",
+    ContentTypeProvider = provider,
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "application/octet-stream"
+});
 
 app.UseStaticFiles(new StaticFileOptions
 {

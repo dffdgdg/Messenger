@@ -20,7 +20,8 @@ namespace MessengerAPI.Services
         {
             try
             {
-                var poll = await _context.Polls.Include(p => p.PollOptions).Include(p => p.PollVotes).FirstOrDefaultAsync(p => p.Id == pollId);
+                var poll = await _context.Polls.Include(p => p.PollOptions).Include(p => p.PollVotes).Include(p=> p.Message).
+                    FirstOrDefaultAsync(p => p.Id == pollId);
 
                 if (poll == null) return null;
 
@@ -56,7 +57,6 @@ namespace MessengerAPI.Services
                 {
                     Id = poll.Id,
                     MessageId = poll.MessageId,
-                    CreatedById = poll.CreatedById,
                     ChatId = chatId,
                     Question = poll.Question,
                     IsAnonymous = poll.IsAnonymous ?? false,
@@ -93,7 +93,6 @@ namespace MessengerAPI.Services
                 var poll = new Poll
                 {
                     MessageId = message.Id,
-                    CreatedById = pollDto.CreatedById,
                     Question = pollDto.Question,
                     IsAnonymous = pollDto.IsAnonymous,
                     AllowsMultipleAnswers = pollDto.AllowsMultipleAnswers,
@@ -139,7 +138,6 @@ namespace MessengerAPI.Services
                         Id = poll.Id,
                         MessageId = message.Id,
                         ChatId = message.ChatId,
-                        CreatedById = poll.CreatedById,
                         Question = poll.Question,
                         IsAnonymous = poll.IsAnonymous ?? false,
                         AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,

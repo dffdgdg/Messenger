@@ -3,103 +3,111 @@
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:conv="using:MessengerDesktop.Converters"
              xmlns:shared="using:MessengerShared.DTO"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="MessengerDesktop.Views.ChatInfoPanel"
              x:DataType="vm:ChatViewModel"
+             x:Name="InfoPanelRoot"
              Width="320"
+			 Design.Height="720"
              FontFamily="Segoe UI">
-    <Border Background="{DynamicResource PrimaryBG}"
-            CornerRadius="0,16,16,0">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="58"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <Border Grid.Row="0"
+	<Border Background="{DynamicResource PrimaryBG}"
+            CornerRadius="0,16,16,0">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="58"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+
+			<Border Grid.Row="0"
                     BorderBrush="{DynamicResource BorderDefault}"
                     BorderThickness="0,0,0,1"
                     Padding="16,0">
-                <Grid VerticalAlignment="Center">
-                    <TextBlock Text="Информация о группе"
-                             FontWeight="SemiBold"
-                             FontSize="16"
-                             Foreground="{DynamicResource TextPrimary}"/>
-                </Grid>
-            </Border>
+				<Grid VerticalAlignment="Center">
+					<TextBlock Text="Информация о группе"
+                               FontWeight="SemiBold"
+                               FontSize="16"/>
+				</Grid>
+			</Border>
 
-            <!-- Content -->
-            <ScrollViewer Grid.Row="1" Padding="16">
-                <StackPanel Spacing="24">
+			<ScrollViewer Grid.Row="1" Padding="16">
+				<StackPanel Spacing="24">
 
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                        <Ellipse Width="64" Height="64" VerticalAlignment="Center">
-                            <Ellipse.Fill>
-                                <ImageBrush Stretch="UniformToFill">
-                                    <ImageBrush.Source>
-                                        <Binding Path="Chat.Avatar"/>
-                                    </ImageBrush.Source>
-                                </ImageBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
+					<!-- Аватар и название -->
+					<StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+						<Border Classes="Avatar Large">
+							<Image Stretch="UniformToFill"
+                                   asyncImageLoader:ImageLoader.Source="{Binding Chat.Avatar}"/>
+						</Border>
 
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Chat.Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
-                            <TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}" FontSize="12" Foreground="#72767D"/>
-                        </StackPanel>
-                    </StackPanel>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock Text="{Binding Chat.Name}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"/>
+							<TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextMuted}"/>
+						</StackPanel>
+					</StackPanel>
 
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Уведомления" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Включить уведомления" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}"/>
-                            <ToggleSwitch Grid.Column="1"/>
-                        </Grid>
-                    </StackPanel>
+					<!-- Уведомления -->
+					<StackPanel Spacing="8">
+						<TextBlock Text="Уведомления"
+                                   FontWeight="Bold"
+                                   FontSize="14"/>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="*"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+							<TextBlock Text="Включить уведомления"
+                                       VerticalAlignment="Center"/>
+							<ToggleSwitch Grid.Column="1" />
+						</Grid>
+					</StackPanel>
 
-                    <!-- Participants list -->
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Участники" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
-                        <ItemsControl ItemsSource="{Binding Members}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="shared:UserDTO">
-                                    <Button Background="Transparent"
+					<!-- Участники -->
+					<StackPanel Spacing="8">
+						<TextBlock Text="Участники"
+                                   FontWeight="Bold"
+                                   FontSize="14"/>
+
+						<ItemsControl ItemsSource="{Binding Members}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="shared:UserDTO">
+									<Button Background="{DynamicResource TransparentBrush}"
                                             BorderThickness="0"
                                             Padding="8,6"
                                             Margin="0,2"
                                             HorizontalAlignment="Stretch"
-                                            Classes="hoverAccent"
-											HorizontalContentAlignment="Left"
-                                            Command="{Binding $parent[UserControl].DataContext.OpenProfileCommand}"
+                                            HorizontalContentAlignment="Left"
+                                            Command="{Binding DataContext.OpenProfileCommand, ElementName=InfoPanelRoot}"
                                             CommandParameter="{Binding Id}">
-										<StackPanel Orientation="Horizontal" 
-                                                  Spacing="12" 
-                                                  VerticalAlignment="Center">
-                                            <Ellipse Width="36" Height="36">
-                                                <Ellipse.Fill>
-                                                    <ImageBrush Stretch="UniformToFill">
-                                                        <ImageBrush.Source>
-                                                            <Binding Path="Avatar"/>
-                                                        </ImageBrush.Source>
-                                                    </ImageBrush>
-                                                </Ellipse.Fill>
-                                            </Ellipse>
-                                            <TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}" 
-                                                     VerticalAlignment="Center" 
-                                                     Foreground="{DynamicResource TextPrimary}"/>
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+										<Grid ColumnDefinitions="Auto,*">
+											<Border Classes="Avatar Small">
+												<Panel>
+													<TextBlock FontSize="14"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextSecondary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+													<Image Stretch="UniformToFill"
+                                                           asyncImageLoader:ImageLoader.Source="{Binding Avatar}"/>
+												</Panel>
+											</Border>
 
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
-    </Border>
+											<TextBlock Grid.Column="1"
+                                                       Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0,0,0"/>
+										</Grid>
+									</Button>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</StackPanel>
+				</StackPanel>
+			</ScrollViewer>
+		</Grid>
+	</Border>
 </UserControl>

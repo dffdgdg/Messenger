@@ -1,12 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
+using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
-{
+{   
     public partial class MainWindowViewModel : BaseViewModel
     {
         private readonly INavigationService _navigation;
@@ -21,21 +23,37 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private bool _hasOpenDialogs;
 
+        [ObservableProperty]
+        private bool _isDialogVisible;
+
         public MainWindowViewModel(INavigationService navigation, IDialogService dialogService)
         {
-            System.Diagnostics.Debug.WriteLine("[MainWindowViewModel] Constructor called");
-            System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] navigation: {navigation?.GetType().Name ?? "null"}");
-            System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] dialogService: {dialogService?.GetType().Name ?? "null"}");
+            _navigation = navigation ?? throw new System.ArgumentNullException(nameof(navigation));
+            _dialogService = dialogService ?? throw new System.ArgumentNullException(nameof(dialogService));
 
-            _navigation = navigation;
-            _dialogService = dialogService;
-
-            System.Diagnostics.Debug.WriteLine("[MainWindowViewModel] Subscribing to events...");
             _navigation.CurrentViewModelChanged += OnNavigationViewModelChanged;
             _dialogService.OnDialogStackChanged += OnDialogStackChanged;
 
-            System.Diagnostics.Debug.WriteLine("[MainWindowViewModel] Constructor completed, navigating to login");
+            if (_dialogService is INotifyPropertyChanged notifyPropertyChanged)
+            {
+                notifyPropertyChanged.PropertyChanged += OnDialogServicePropertyChanged;
+            }
+
             _navigation.NavigateToLogin();
+        }
+
+        private void OnDialogServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(DialogService.IsDialogVisible):
+                    IsDialogVisible = _dialogService.IsDialogVisible;
+                    break;
+
+                case nameof(DialogService.CurrentDialog):
+                    CurrentDialog = _dialogService.CurrentDialog;
+                    break;
+            }
         }
 
         private void OnNavigationViewModelChanged(BaseViewModel vm)
@@ -46,27 +64,14 @@ namespace MessengerDesktop.ViewModels
 
         private void OnDialogStackChanged()
         {
-            System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] OnDialogStackChanged called. Stack size: {_dialogService.DialogStack.Count}");
-
-            var newDialog = _dialogService.DialogStack.Count > 0 ? 
-                _dialogService.DialogStack[_dialogService.DialogStack.Count - 1] : null;
-
-            CurrentDialog = newDialog;
+            CurrentDialog = _dialogService.CurrentDialog;
             HasOpenDialogs = _dialogService.HasOpenDialogs;
-
-            if (CurrentDialog != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] CurrentDialog set to: {CurrentDialog.GetType().Name} - {CurrentDialog.Title}");
-                System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] HasOpenDialogs: {HasOpenDialogs}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainWindowViewModel] CurrentDialog cleared");
-            }
+            IsDialogVisible = _dialogService.IsDialogVisible;
         }
 
         [RelayCommand]
-        public static void ToggleTheme() => App.Current.ToggleTheme();
+        public static void ToggleTheme()
+            => App.Current.ToggleTheme();
 
         [RelayCommand]
         public async Task Logout()
@@ -82,7 +87,8 @@ namespace MessengerDesktop.ViewModels
         }
 
         [RelayCommand]
-        public void ClearNotifications() => ClearMessages();
+        public void ClearNotifications()
+            => ClearMessages();
 
         [RelayCommand]
         public async Task RefreshCurrentView()
@@ -90,13 +96,19 @@ namespace MessengerDesktop.ViewModels
             await SafeExecuteAsync(async () =>
             {
                 if (CurrentViewModel is ChatsViewModel chatsViewModel)
-                    if (chatsViewModel.LoadChatsCommand?.CanExecute(null) == true) 
+                {
+                    if (chatsViewModel.LoadChatsCommand?.CanExecute(null) == true)
                         await chatsViewModel.LoadChatsCommand.ExecuteAsync(null);
+                }
                 else if (CurrentViewModel is AdminViewModel adminViewModel)
-                    if (adminViewModel.RefreshCommand?.CanExecute(null) == true) 
+                {
+                    if (adminViewModel.RefreshCommand?.CanExecute(null) == true)
                         await adminViewModel.RefreshCommand.ExecuteAsync(null);
-                else if (CurrentViewModel is ProfileViewModel profileViewModel) 
+                }
+                else if (CurrentViewModel is ProfileViewModel)
+                {
                     OnPropertyChanged(nameof(CurrentViewModel));
+                }
 
                 SuccessMessage = "Данные обновлены";
             });
@@ -106,19 +118,29 @@ namespace MessengerDesktop.ViewModels
         public void ShowSettings()
         {
             if (CurrentViewModel is MainMenuViewModel mainMenu)
-                mainMenu.SetItem(0); 
+                mainMenu.SetItemCommand.Execute(0);
         }
 
-        /// <summary>Показать диалог</summary>
-        public async Task ShowDialogAsync<TViewModel>(TViewModel dialogViewModel) where TViewModel : DialogBaseViewModel
-        {
-            await _dialogService.ShowAsync(dialogViewModel);
-        }
+        public async Task ShowDialogAsync<TViewModel>(TViewModel dialogViewModel)
+            where TViewModel : DialogBaseViewModel
+            => await _dialogService.ShowAsync(dialogViewModel);
 
-        protected override void ClearMessages()
+        protected override void Dispose(bool disposing)
         {
-            base.ClearMessages();
-            System.Diagnostics.Debug.WriteLine("MainWindow messages cleared");
+            if (disposing)
+            {
+                _navigation.CurrentViewModelChanged -= OnNavigationViewModelChanged;
+                _dialogService.OnDialogStackChanged -= OnDialogStackChanged;
+
+                if (_dialogService is INotifyPropertyChanged notifyPropertyChanged)
+                {
+                    notifyPropertyChanged.PropertyChanged -= OnDialogServicePropertyChanged;
+                }
+
+                (CurrentViewModel as System.IDisposable)?.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
     }
 }

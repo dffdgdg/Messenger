@@ -32,8 +32,6 @@ namespace MessengerDesktop.ViewModels
 
         [RelayCommand]
         private void ToggleExpand()
-        {
-            IsExpanded = !IsExpanded;
-        }
+            => IsExpanded = !IsExpanded;
     }
 }

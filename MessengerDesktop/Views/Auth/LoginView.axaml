@@ -3,233 +3,271 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:conv="using:MessengerDesktop.Converters"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
              x:Class="MessengerDesktop.Views.LoginView"
              x:DataType="vm:LoginViewModel">
-    <UserControl.Styles>
-        <!-- Input Fields -->
-        <Style Selector="TextBox">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
 
-        <Style Selector="TextBox:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
-            <Setter Property="Background" Value="#232427"/>
-        </Style>
+	<UserControl.Styles>
+		<!-- Input Fields -->
+		<Style Selector="TextBox.login-input">
+			<Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="14,12"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="MinHeight" Value="46"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="TextBox:focus">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="#1A1B1E"/>
-        </Style>
+		<Style Selector="TextBox.login-input:pointerover">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+		</Style>
 
-        <!-- CheckBox -->
-        <Style Selector="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-            <Setter Property="FontSize" Value="13"/>
-        </Style>
+		<Style Selector="TextBox.login-input:focus">
+			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-        </Style>
+		<Style Selector="TextBox.login-input:focus /template/ Border">
+			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <!-- Links -->
-        <Style Selector="TextBlock.link">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        
-        <Style Selector="TextBlock.link:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="TextDecorations" Value="Underline"/>
-        </Style>
+		<Style Selector="TextBlock.field-label">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+			<Setter Property="Margin" Value="2,0,0,0"/>
+		</Style>
 
-        <!-- Buttons -->
-        <Style Selector="Button">
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24,0"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0.2" Easing="CircularEaseOut"/>
-                    <BrushTransition Property="Background" Duration="0.2"/>
-                </Transitions>
-            </Setter>
-            <Setter Property="RenderTransform" Value="none"/>
-        </Style>
+		<Style Selector="CheckBox.remember-me">
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
 
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Name="BorderRoot"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}">
-                        <Panel>
-                            <Border Name="GlowBorder"
-                                    Background="{DynamicResource Accent}"
-                                    Opacity="0"
-                                    Effect="blur(8)"
-                                    CornerRadius="{TemplateBinding CornerRadius}">
-                                <Border.Transitions>
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0.2"/>
-                                    </Transitions>
-                                </Border.Transitions>
-                            </Border>
-                            <ContentPresenter Name="PART_ContentPresenter"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding ContentTemplate}"
-											  Foreground="White"
-                                              Padding="{TemplateBinding Padding}"
-                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                        </Panel>
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-        </Style>
+		<!-- Primary Button -->
+		<Style Selector="Button.primary">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+			<Setter Property="Height" Value="46"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="15"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Button.primary:pointerover /template/ Border#GlowBorder">
-            <Setter Property="Opacity" Value="0.3"/>
-        </Style>
+		<Style Selector="Button.primary:pointerover">
+			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+		</Style>
 
-        <Style Selector="Button.primary:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.98)"/>
-        </Style>
+		<Style Selector="Button.primary:pressed">
+			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+			<Setter Property="RenderTransform" Value="scale(0.98)"/>
+		</Style>
 
-        <Style Selector="Button.primary:pressed /template/ Border#GlowBorder">
-            <Setter Property="Opacity" Value="0.1"/>
-        </Style>
+		<Style Selector="Button.primary:disabled">
+			<Setter Property="Opacity" Value="0.5"/>
+		</Style>
 
-        <Style Selector="Button.outline">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-        </Style>
-        
-        <Style Selector="Button.outline:pointerover">
-            <Setter Property="Background" Value="#232427"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
-        </Style>
+		<!-- Messages -->
+		<Style Selector="Border.message-error">
+			<Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="14,12"/>
+		</Style>
 
-        <Style Selector="Button.outline:pressed">
-            <Setter Property="Background" Value="#1A1B1E"/>
-            <Setter Property="RenderTransform" Value="scale(0.98)"/>
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="Border.message-success">
+			<Setter Property="Background" Value="{DynamicResource SuccessBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="14,12"/>
+		</Style>
+	</UserControl.Styles>
 
-    <Grid>
-        <Canvas ClipToBounds="True">
-            <Rectangle Canvas.Left="-100" Canvas.Top="-100" 
-                     Width="300" Height="300" 
-                     Fill="{DynamicResource Accent}" 
-                     Opacity="0.05">
-                <Rectangle.RenderTransform>
-                    <RotateTransform Angle="45"/>
-                </Rectangle.RenderTransform>
-            </Rectangle>
-            
-            <Ellipse Canvas.Right="-150" Canvas.Bottom="-150"
-                     Width="400" Height="400"
-                     Fill="{DynamicResource Accent}"
-                     Opacity="0.03"/>
-        </Canvas>
+	<Grid>
+		<!-- Background -->
+		<Panel>
+			<!-- Base Gradient -->
+			<Border>
+				<Border.Background>
+					<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+						<GradientStop Color="{DynamicResource LoginBgStart}" Offset="0"/>
+						<GradientStop Color="{DynamicResource LoginBgMiddle}" Offset="0.5"/>
+						<GradientStop Color="{DynamicResource LoginBgEnd}" Offset="1"/>
+					</LinearGradientBrush>
+				</Border.Background>
+			</Border>
 
-        <!-- Login Card -->
-        <Border Background="{DynamicResource PanelBgSolid}"
-                BorderBrush="{DynamicResource BorderDefault}"
+			<!-- Grid Pattern -->
+			<Canvas IsHitTestVisible="False" Opacity="0.3">
+				<Canvas.OpacityMask>
+					<RadialGradientBrush Center="0.5,0.5" RadiusX="0.7" RadiusY="0.7">
+						<GradientStop Color="#FF000000" Offset="0"/>
+						<GradientStop Color="#00000000" Offset="1"/>
+					</RadialGradientBrush>
+				</Canvas.OpacityMask>
+
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="80"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="160"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="240"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="320"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="400"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="480"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="560"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="640"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="720"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="800"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="880"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="960"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="1040"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="1120"/>
+				<Line StartPoint="0,0" EndPoint="0,1000" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Left="1200"/>
+
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="80"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="160"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="240"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="320"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="400"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="480"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="560"/>
+				<Line StartPoint="0,0" EndPoint="1500,0" Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1" Canvas.Top="640"/>
+			</Canvas>
+
+			<!-- Accent Glow - Top Left -->
+			<Ellipse Width="600" Height="600"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Top"
+                     Margin="-250,-200,0,0"
+                     IsHitTestVisible="False"
+                     Fill="{DynamicResource LoginGlowPrimary}"/>
+
+			<!-- Accent Glow - Bottom Right -->
+			<Ellipse Width="500" Height="500"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Bottom"
+                     Margin="0,0,-150,-150"
+                     IsHitTestVisible="False"
+                     Fill="{DynamicResource LoginGlowSecondary}"/>
+		</Panel>
+
+		<!-- Login Card -->
+		<Border Background="{DynamicResource LoginCardBg}"
+                BorderBrush="{DynamicResource LoginCardBorder}"
                 BorderThickness="1"
                 CornerRadius="16"
-                Padding="40"
-                Width="400"
+                Padding="40,36"
+                MaxWidth="400"
+                MinWidth="360"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Effect="drop-shadow(0 8 32 rgba(0,0,0,0.25))">
-            
-            <StackPanel Spacing="24">
-                <!-- Header -->
-                <StackPanel Spacing="8" Margin="0,0,0,8">
-                    <TextBlock Text="С возвращением!"
-                              FontSize="24"
-                              FontWeight="Bold"
+                VerticalAlignment="Center">
+			<Border.Effect>
+				<DropShadowEffect BlurRadius="60"
+                                  OffsetY="12"
+                                  Opacity="0.4"
+                                  Color="Black"/>
+			</Border.Effect>
+
+			<StackPanel Spacing="28">
+				<!-- Logo & Header -->
+				<StackPanel Spacing="16" HorizontalAlignment="Center">
+					<!-- Logo -->
+					<Border Width="56" Height="56"
+                            CornerRadius="14"
+                            HorizontalAlignment="Center">
+						<Border.Background>
+							<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+								<GradientStop Color="{DynamicResource LoginLogoStart}" Offset="0"/>
+								<GradientStop Color="{DynamicResource LoginLogoEnd}" Offset="1"/>
+							</LinearGradientBrush>
+						</Border.Background>
+						<Path Data="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18"
+                              Width="28" Height="28"
+                              Stretch="Uniform"
+                              Fill="{DynamicResource TextOnAccent}"
                               HorizontalAlignment="Center"
-                              Foreground="{DynamicResource TextPrimary}"/>
-                    <TextBlock Text="Войдите в свой аккаунт"
-                              FontSize="14"
-                              HorizontalAlignment="Center"
-                              Foreground="{DynamicResource TextSecondary}"/>
-                </StackPanel>
+                              VerticalAlignment="Center"/>
+					</Border>
 
-                <StackPanel Spacing="16">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Логин"
-                                 FontSize="13"
-                                 FontWeight="Medium"/>
-                        <TextBox Text="{Binding Username}"
-                                Watermark="Введите ваш логин"/>
-                    </StackPanel>
+					<StackPanel Spacing="6">
+						<TextBlock Text="Корпоративный мессенджер"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimary}"/>
+						<TextBlock Text="Войдите в свой аккаунт"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}"/>
+					</StackPanel>
+				</StackPanel>
 
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Пароль"
-                                 FontSize="13"
-                                 FontWeight="Medium"
-                                 Foreground="{DynamicResource TextPrimary}"/>
-                        <TextBox Text="{Binding Password}"
-                                Watermark="Введите ваш пароль"
-                                PasswordChar="•"/>
-                    </StackPanel>
-                </StackPanel>
+				<!-- Error Message -->
+				<Border Classes="message-error"
+                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+					<TextBlock Text="{Binding ErrorMessage}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center"/>
+				</Border>
 
-                <Grid ColumnDefinitions="Auto,*">
-                    <CheckBox Grid.Column="0"
-                              Content="Запомнить меня"
-                              IsChecked="{Binding RememberMe}"/>
-                </Grid>
-                    <Button Classes="primary"
-                            Content="Войти"
-							Foreground="White"
-							VerticalContentAlignment="Center"
-                            Command="{Binding LoginCommand}">
-                        <Button.Styles>
-                            <Style Selector="Button.primary /template/ Border#GlowBorder">
-                                <Setter Property="Transitions">
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0.2"/>
-                                    </Transitions>
-                                </Setter>
-                            </Style>
-                            <Style Selector="Button.primary:pointerover /template/ Border#GlowBorder">
-                                <Setter Property="Opacity" Value="0.7"/>
-                            </Style>
-                        </Button.Styles>
-                    </Button>
-            </StackPanel>
-        </Border>
-    </Grid>
+				<!-- Success Message -->
+				<Border Classes="message-success"
+                        IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+					<TextBlock Text="{Binding SuccessMessage}"
+                               Foreground="{DynamicResource SuccessBrush}"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center"/>
+				</Border>
+
+				<!-- Form Fields -->
+				<StackPanel Spacing="18">
+					<StackPanel Spacing="8">
+						<TextBlock Text="Логин" Classes="field-label"/>
+						<TextBox Classes="login-input"
+                                 Text="{Binding Username}"
+                                 Watermark="Введите логин"/>
+					</StackPanel>
+
+					<StackPanel Spacing="8">
+						<TextBlock Text="Пароль" Classes="field-label"/>
+						<TextBox Classes="login-input"
+                                 Text="{Binding Password}"
+                                 Watermark="Введите пароль"
+                                 PasswordChar="•"
+                                 RevealPassword="False"/>
+					</StackPanel>
+				</StackPanel>
+
+				<!-- Remember Me -->
+				<CheckBox Classes="remember-me"
+                          Content="Запомнить меня"
+                          IsChecked="{Binding RememberMe}"/>
+
+				<!-- Login Button -->
+				<Button Classes="primary"
+                        Content="Войти"
+                        Command="{Binding LoginCommand}"/>
+			</StackPanel>
+		</Border>
+	</Grid>
 </UserControl>

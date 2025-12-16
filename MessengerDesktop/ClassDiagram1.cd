@@ -1,112 +1,76 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="MessengerDesktop.Services.ApiClientService" BaseTypeListCollapsed="true">
-    <Position X="27.75" Y="6" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.Factories.ChatsViewModelFactory" BaseTypeListCollapsed="true">
+    <Position X="7" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ACAABAAAAgAAAAAAABAAAAIgAAAAEAAAAICAIgAAAIA=</HashCode>
-      <FileName>Services\ApiClientService.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>ViewModels\Factories\ChatsViewModelFactory.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Services.AppSettings" Collapsed="true">
-    <Position X="30" Y="8.5" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.Factories.ChatViewModelFactory" BaseTypeListCollapsed="true">
+    <Position X="8.75" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAEAAAAAAAAQAAAAAAAAAAAAEAIAEAAAAAAA=</HashCode>
-      <FileName>Services\AppSettings.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Services.AuthService" Collapsed="true">
-    <Position X="31.75" Y="8.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>EgEAAAAAAAAAAgAACBAgQAABAAgCIAAEAAAAAAAAAAA=</HashCode>
-      <FileName>Services\AuthService.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Services.ChatInfoPanelStateStore" Collapsed="true">
-    <Position X="33.5" Y="8.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAABAAAAAAAABABAEgAABAAAAAAAAAAAAAAAAgAAAAA=</HashCode>
-      <FileName>Services\ChatInfoPanelStateStore.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Services.ClipboardService" Collapsed="true">
-    <Position X="31.75" Y="6.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAgAAAAAAAAAAAAAAAEAAAAAAAAQAAAAAACAACAAAAA=</HashCode>
-      <FileName>Services\ClipboardService.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="MessengerDesktop.Services.DialogService" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="30" Y="9.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAkAAAAAAQAAAAAAAAAAAAAAAAAAgBAAEABQAgAAAA=</HashCode>
-      <FileName>Services\DialogService.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>ViewModels\Factories\ChatViewModelFactory.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Services.NavigationService" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="31.75" Y="9.5" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.ChatsViewModel" Collapsed="true">
+    <Position X="6.75" Y="3" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAgAAAAAEAAAACAAAAAAAAAABAAAgAAAAAAAAA=</HashCode>
-      <FileName>Services\NavigationService.cs</FileName>
+      <HashCode>AAAIAAgAAAEAAQIAkBAAQAAgQAAAAAIAAAAACACAAAA=</HashCode>
+      <FileName>ViewModels\Chat\ChatsViewModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerDesktop.ViewModels.ChatViewModel" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="8.5" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CABACCJBUUAEAYgcGCEASAYiaYKCokSBNABIcoAoKAA=</HashCode>
+      <FileName>ViewModels\Chat\ChatViewModel.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerDesktop.Services.NotificationService" Collapsed="true">
-    <Position X="33.5" Y="9.5" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.PollOptionViewModel" Collapsed="true">
+    <Position X="8.5" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAQAABASAEABAAAAAAAABABEAAEBAAAA=</HashCode>
-      <FileName>Services\NotificationService.cs</FileName>
+      <HashCode>ECACAAAAAAAAAAAgAAAAQACQAgAAQAAAAAAAAAAAAIA=</HashCode>
+      <FileName>ViewModels\Chat\PollOptionViewModel.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Services.SecureStorageService" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="28.25" Y="10.5" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.PollViewModel" Collapsed="true">
+    <Position X="10.25" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AQAAAAAAAAAEAAAQAAiAAAAAAIAAIAAAEAAAIAAAIAA=</HashCode>
-      <FileName>Services\SecureStorage.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="MessengerDesktop.Services.Storage" Collapsed="true">
-    <Position X="30" Y="10.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAABgIAAAAAABABAEAACBAAAAAAAAAAAAAAAAAAAgAA=</HashCode>
-      <FileName>Services\Storage.cs</FileName>
+      <HashCode>QEAAEAAAAAAAAQIAACEAAAggAAQAMAAAAAAAAAABIAA=</HashCode>
+      <FileName>ViewModels\Chat\PollViewModel.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerDesktop.Services.WindowService" Collapsed="true">
-    <Position X="31.75" Y="10.5" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.Chat.LocalFileAttachment" Collapsed="true">
+    <Position X="10.25" Y="3" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAgAAAAAAAAAAQAAAAABAAAAAAAQAAAAAEAAAEAAAAA=</HashCode>
-      <FileName>Services\WindowService.cs</FileName>
+      <HashCode>AAAAAAAAACAAAAJAAAAACAAAAAAAABAAAABQAABAAAA=</HashCode>
+      <FileName>ViewModels\Chat\LocalFileAttachment.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Interface Name="MessengerDesktop.Services.IApiClientService" Collapsed="true">
-    <Position X="28.25" Y="11.75" Width="1.5" />
+  <Class Name="MessengerDesktop.ViewModels.Chat.MessageViewModel" Collapsed="true">
+    <Position X="6.75" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAABAAAAgAAAAAAAAAAAAIAAAAAEAAAAAAAIAAAAIA=</HashCode>
-      <FileName>Services\ApiClientService.cs</FileName>
+      <HashCode>ACAGAAAAAgAAAAAAACAAAAAAAAgBCAAAAiAAIAAAAIA=</HashCode>
+      <FileName>ViewModels\Chat\MessageViewModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="MessengerDesktop.ViewModels.Factories.IChatViewModelFactory">
+    <Position X="8.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>ViewModels\Factories\IViewModelFactory.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="MessengerDesktop.Services.IDialogService" Collapsed="true">
-    <Position X="30" Y="11.75" Width="1.5" />
+  <Interface Name="MessengerDesktop.ViewModels.Factories.IChatsViewModelFactory">
+    <Position X="7" Y="1.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAgAAAAAAQAAAAAAAAAAAAAAAAAAgAAAEABQAAAAAA=</HashCode>
-      <FileName>Services\DialogService.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="MessengerDesktop.Services.INavigationService" Collapsed="true">
-    <Position X="31.75" Y="11.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAgAAAAAEAAAACAAAAAAAAAABAAAgAAAAAAAAA=</HashCode>
-      <FileName>Services\NavigationService.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
-  <Interface Name="MessengerDesktop.Services.ISecureStorageService" Collapsed="true">
-    <Position X="33.5" Y="11.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAEAAAAAAgAAAAAAIAAAAAAAAAAIAAAAAA=</HashCode>
-      <FileName>Services\SecureStorage.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>ViewModels\Factories\IViewModelFactory.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Font Name="Segoe UI" Size="9" />

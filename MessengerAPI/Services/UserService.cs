@@ -1,8 +1,8 @@
-﻿using MessengerAPI.Helpers;
+﻿// Services/UserService.cs
+using MessengerAPI.Helpers;
 using MessengerAPI.Model;
 using MessengerShared.DTO;
 using Microsoft.EntityFrameworkCore;
-using SixLabors.ImageSharp;
 
 namespace MessengerAPI.Services
 {
@@ -12,17 +12,27 @@ namespace MessengerAPI.Services
         Task<UserDTO?> GetUserAsync(int id);
         Task UpdateUserAsync(int id, UserDTO userDto);
         Task<string> UploadAvatarAsync(int id, IFormFile file, HttpRequest request);
+        Task<List<int>> GetOnlineUserIdsAsync();
+        Task<OnlineStatusDTO> GetOnlineStatusAsync(int userId);
+        Task<List<OnlineStatusDTO>> GetOnlineStatusesAsync(List<int> userIds);
     }
-    public class UserService(MessengerDbContext context,IFileService fileService,IAccessControlService accessControl, ILogger<UserService> logger) 
+
+    public class UserService(MessengerDbContext context,IFileService fileService,IAccessControlService accessControl,IOnlineUserService onlineUserService,ILogger<UserService> logger)
         : BaseService<UserService>(context, logger), IUserService
     {
         public async Task<List<UserDTO>> GetAllUsersAsync()
         {
             try
             {
-                var users = await _context.Users.Include(u => u.DepartmentNavigation).Include(u => u.UserSetting).AsNoTracking().ToListAsync();
+                var users = await _context.Users
+                    .Include(u => u.DepartmentNavigation)
+                    .Include(u => u.UserSetting)
+                    .AsNoTracking()
+                    .ToListAsync();
 
-                return [.. users.Select(u => u.ToDto())];
+                var onlineUserIds = onlineUserService.GetOnlineUserIds();
+
+                return [.. users.Select(u => MapToDto(u, onlineUserIds.Contains(u.Id)))];
             }
             catch (Exception ex)
             {
@@ -35,9 +45,15 @@ namespace MessengerAPI.Services
         {
             try
             {
-                var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.DepartmentNavigation).FirstOrDefaultAsync(u => u.Id == id);
+                var user = await _context.Users
+                    .Include(u => u.UserSetting)
+                    .Include(u => u.DepartmentNavigation)
+                    .FirstOrDefaultAsync(u => u.Id == id);
 
-                return user?.ToDto();
+                if (user == null) return null;
+
+                var isOnline = onlineUserService.IsUserOnline(id);
+                return MapToDto(user, isOnline);
             }
             catch (Exception ex)
             {
@@ -46,11 +62,53 @@ namespace MessengerAPI.Services
             }
         }
 
+        public async Task<List<int>> GetOnlineUserIdsAsync()
+        {
+            await Task.CompletedTask;
+            return [.. onlineUserService.GetOnlineUserIds()];
+        }
+
+        public async Task<OnlineStatusDTO> GetOnlineStatusAsync(int userId)
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .Select(u => new { u.Id, u.LastOnline })
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            return new OnlineStatusDTO
+            {
+                UserId = userId,
+                IsOnline = onlineUserService.IsUserOnline(userId),
+                LastOnline = user?.LastOnline
+            };
+        }
+
+        public async Task<List<OnlineStatusDTO>> GetOnlineStatusesAsync(List<int> userIds)
+        {
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .AsNoTracking()
+                .Select(u => new { u.Id, u.LastOnline })
+                .ToListAsync();
+
+            var onlineIds = onlineUserService.FilterOnlineUserIds(userIds);
+
+            return [.. users.Select(u => new OnlineStatusDTO
+            {
+                UserId = u.Id,
+                IsOnline = onlineIds.Contains(u.Id),
+                LastOnline = u.LastOnline
+            })];
+        }
+
         public async Task UpdateUserAsync(int id, UserDTO userDto)
         {
             try
             {
-                var user = await FindEntityAsync<User>(id);
+                var user = await _context.Users
+                    .Include(u => u.UserSetting)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
                 ValidateEntityExists(user, "User", id);
 
                 if (id != userDto.Id)
@@ -58,8 +116,7 @@ namespace MessengerAPI.Services
 
                 user.DisplayName = userDto.DisplayName;
                 user.Department = userDto.DepartmentId;
-
-                user.UpdateSettings(userDto);
+                user.UpdateSettings(userDto);  
 
                 await SaveChangesAsync();
             }
@@ -90,6 +147,24 @@ namespace MessengerAPI.Services
             await SaveChangesAsync();
 
             return $"{request.Scheme}://{request.Host}/avatars/users/{fileName}";
+        }
+
+        private static UserDTO MapToDto(User user, bool isOnline)
+        {
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                DisplayName = user.DisplayName,
+                Department = user.DepartmentNavigation?.Name,
+                DepartmentId = user.DepartmentNavigation?.Id,
+                Avatar = user.Avatar,
+                NotificationsEnabled = user.UserSetting?.NotificationsEnabled ?? true,
+                CanBeFoundInSearch = user.UserSetting?.CanBeFoundInSearch ?? true,
+                Theme = user.UserSetting?.Theme ?? 0,
+                IsOnline = isOnline,
+                LastOnline = user.LastOnline
+            };
         }
     }
 }

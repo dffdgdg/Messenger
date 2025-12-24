@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             x:Class="MessengerDesktop.Views.Dialogs.ConfirmDialog"
+             x:DataType="vm:ConfirmDialogViewModel">
+
+	<Border Classes="DialogContainer" Width="380">
+		<StackPanel Spacing="16">
+			<StackPanel Orientation="Horizontal" Spacing="12">
+				<Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource WarningBgBrush}">
+					<PathIcon Data="{StaticResource warning_regular}" Width="20" Height="20"
+                              Foreground="{DynamicResource WarningBrush}"/>
+				</Border>
+				<TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+			</StackPanel>
+
+			<TextBlock Text="{Binding Message}" FontSize="14" Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" LineHeight="22"/>
+
+			<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="0,8"/>
+
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+				<Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
+				<Button Content="Подтвердить" Classes="DialogDanger" Command="{Binding ConfirmCommand}"/>
+			</StackPanel>
+		</StackPanel>
+	</Border>
+</UserControl>

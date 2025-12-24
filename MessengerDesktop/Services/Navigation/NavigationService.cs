@@ -2,6 +2,7 @@
 using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 
 namespace MessengerDesktop.Services.Navigation;
 
@@ -14,10 +15,10 @@ public interface INavigationService
     BaseViewModel? CurrentViewModel { get; }
 }
 
-public class NavigationService(IServiceProvider serviceProvider, IAuthService authService) : INavigationService
+public class NavigationService(IServiceProvider serviceProvider, IAuthManager authManager) : INavigationService
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-    private readonly IAuthService _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+    private readonly IAuthManager _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
 
     public BaseViewModel? CurrentViewModel { get; private set; }
     public event Action<BaseViewModel>? CurrentViewModelChanged;
@@ -27,22 +28,35 @@ public class NavigationService(IServiceProvider serviceProvider, IAuthService au
         CurrentViewModel = _serviceProvider.GetRequiredService<LoginViewModel>();
         CurrentViewModelChanged?.Invoke(CurrentViewModel);
     }
+    private readonly Stack<Type> _navigationHistory = new();
 
+    public bool CanGoBack => _navigationHistory.Count > 1;
+
+    public void NavigateTo<T>() where T : BaseViewModel
+    {
+        _navigationHistory.Push(typeof(T));
+        CurrentViewModel = _serviceProvider.GetRequiredService<T>();
+        CurrentViewModelChanged?.Invoke(CurrentViewModel);
+    }
+
+    public void GoBack()
+    {
+        if (!CanGoBack) return;
+
+        _navigationHistory.Pop(); 
+        var previousType = _navigationHistory.Peek();
+        CurrentViewModel = (BaseViewModel)_serviceProvider.GetRequiredService(previousType);
+        CurrentViewModelChanged?.Invoke(CurrentViewModel);
+    }
     public void NavigateToMainMenu()
     {
-        if (!_authService.IsAuthenticated || !_authService.UserId.HasValue)
+        if (!_authManager.Session.IsAuthenticated || !_authManager.Session.UserId.HasValue)
         {
             NavigateToLogin();
             return;
         }
 
         CurrentViewModel = _serviceProvider.GetRequiredService<MainMenuViewModel>();
-        CurrentViewModelChanged?.Invoke(CurrentViewModel);
-    }
-
-    public void NavigateTo<T>() where T : BaseViewModel
-    {
-        CurrentViewModel = _serviceProvider.GetRequiredService<T>();
         CurrentViewModelChanged?.Invoke(CurrentViewModel);
     }
 }

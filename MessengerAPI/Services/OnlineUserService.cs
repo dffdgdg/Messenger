@@ -7,74 +7,47 @@ namespace MessengerAPI.Services
         void UserConnected(int userId, string connectionId);
         void UserDisconnected(int userId, string connectionId);
         bool IsUserOnline(int userId);
+        bool IsOnline(int userId); 
         HashSet<int> GetOnlineUserIds();
         HashSet<int> FilterOnlineUserIds(IEnumerable<int> userIds);
-        int GetOnlineCount();
-        IReadOnlyDictionary<int, int> GetConnectionCounts();
+        HashSet<int> FilterOnline(IEnumerable<int> userIds);
+        int OnlineCount { get; }
     }
 
     public class OnlineUserService : IOnlineUserService
     {
-        private readonly ConcurrentDictionary<int, HashSet<string>> _userConnections = new();
-        private readonly object _lock = new();
+        private readonly ConcurrentDictionary<int, ConcurrentDictionary<string, byte>> _connections = new();
 
         public void UserConnected(int userId, string connectionId)
         {
-            lock (_lock)
-            {
-                if (!_userConnections.TryGetValue(userId, out var connections))
-                {
-                    connections = [];
-                    _userConnections[userId] = connections;
-                }
-                connections.Add(connectionId);
-            }
+            var userConnections = _connections.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>());
+            userConnections.TryAdd(connectionId, 0);
         }
 
         public void UserDisconnected(int userId, string connectionId)
         {
-            lock (_lock)
+            if (!_connections.TryGetValue(userId, out var userConnections))
+                return;
+
+            userConnections.TryRemove(connectionId, out _);
+
+            // Удаляем пользователя, если нет активных подключений
+            if (userConnections.IsEmpty)
             {
-                if (_userConnections.TryGetValue(userId, out var connections))
-                {
-                    connections.Remove(connectionId);
-                    if (connections.Count == 0)
-                    {
-                        _userConnections.TryRemove(userId, out _);
-                    }
-                }
+                _connections.TryRemove(userId, out _);
             }
         }
 
-        public bool IsUserOnline(int userId)
-        {
-            return _userConnections.TryGetValue(userId, out var connections) && connections.Count > 0;
-        }
+        public bool IsUserOnline(int userId) => IsOnline(userId);
 
-        public HashSet<int> GetOnlineUserIds()
-        {
-            lock (_lock)
-            {
-                return [.. _userConnections.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key)];
-            }
-        }
+        public bool IsOnline(int userId) => _connections.TryGetValue(userId, out var connections) && !connections.IsEmpty;
 
-        public HashSet<int> FilterOnlineUserIds(IEnumerable<int> userIds)
-        {
-            lock (_lock)
-            {
-                return [.. userIds.Where(IsUserOnline)];
-            }
-        }
+        public HashSet<int> GetOnlineUserIds() => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
 
-        public int GetOnlineCount() => _userConnections.Count(kv => kv.Value.Count > 0);
+        public HashSet<int> FilterOnlineUserIds(IEnumerable<int> userIds) => FilterOnline(userIds);
 
-        public IReadOnlyDictionary<int, int> GetConnectionCounts()
-        {
-            lock (_lock)
-            {
-                return _userConnections.ToDictionary(kv => kv.Key, kv => kv.Value.Count);
-            }
-        }
+        public HashSet<int> FilterOnline(IEnumerable<int> userIds) => [.. userIds.Where(IsOnline)];
+
+        public int OnlineCount => _connections.Count(kv => !kv.Value.IsEmpty);
     }
 }

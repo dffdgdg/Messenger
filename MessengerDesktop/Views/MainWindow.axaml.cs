@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Platform;
+using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;

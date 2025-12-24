@@ -1,5 +1,4 @@
 ﻿using Avalonia;
-using Avalonia.Labs.Notifications;
 using System;
 
 namespace MessengerDesktop
@@ -7,10 +6,8 @@ namespace MessengerDesktop
     internal sealed class Program
     {
         [STAThread]
-        public static void Main(string[] args)
-            => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        public static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace();
+        public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace();
     }
 }

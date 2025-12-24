@@ -2,35 +2,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:shared="using:MessengerShared.DTO"
-             xmlns:conv="using:MessengerDesktop.Converters"
              x:Class="MessengerDesktop.Views.DepartmentDialog"
              x:DataType="vm:DepartmentDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="400">
-		<StackPanel>
-			<TextBlock Text="{Binding Title}"
-                       FontSize="20"
-                       FontWeight="Bold"
-                       Margin="0,0,0,16"/>
+		<StackPanel Spacing="16">
+			<TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold"/>
 
-			<TextBox Text="{Binding Name}"
-                     Classes="DialogInput"
-                     Watermark="Название отдела"
-                     Margin="0,0,0,12">
+			<TextBox Text="{Binding Name}" Classes="DialogInput" Watermark="Название отдела">
 				<TextBox.InnerLeftContent>
-					<PathIcon Data="{StaticResource folder_regular}"
-                              Width="16" Height="16"
-                              Margin="12,0,8,0"
-                              Opacity="0.5"/>
+					<PathIcon Data="{StaticResource folder_regular}" Width="16" Height="16"
+                              Margin="12,0,8,0" Opacity="0.5"/>
 				</TextBox.InnerLeftContent>
 			</TextBox>
 
-			<ComboBox ItemsSource="{Binding Departments}"
-                      SelectedItem="{Binding SelectedParent}"
-                      Classes="DialogCombo"
-                      Margin="0,0,0,24"
-                      PlaceholderText="Выбрать родительский отдел"
-                      HorizontalAlignment="Stretch">
+			<ComboBox ItemsSource="{Binding AvailableParents}" SelectedItem="{Binding SelectedParent}"
+                      Classes="DialogCombo" PlaceholderText="Выбрать родительский отдел" HorizontalAlignment="Stretch">
 				<ComboBox.ItemTemplate>
 					<DataTemplate x:DataType="shared:DepartmentDTO">
 						<TextBlock Text="{Binding Name}"/>
@@ -38,15 +25,9 @@
 				</ComboBox.ItemTemplate>
 			</ComboBox>
 
-			<StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Spacing="12">
-				<Button Content="Отмена"
-                        Classes="DialogOutline"
-                        Command="{Binding CancelCommand}"/>
-				<Button Content="Сохранить"
-                        Classes="DialogAccent"
-                        Command="{Binding SaveCommand}"/>
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
+				<Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
+				<Button Content="Сохранить" Classes="DialogAccent" Command="{Binding SaveCommand}"/>
 			</StackPanel>
 		</StackPanel>
 	</Border>

@@ -1,6 +1,4 @@
-﻿using Avalonia.Data.Converters;
-using MessengerDesktop.Converters.Base;
-using System;
+﻿using MessengerDesktop.Converters.Base;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters
@@ -9,14 +7,9 @@ namespace MessengerDesktop.Converters
     {
         public static readonly ZeroToTrueConverter Instance = new();
 
-        protected override bool ConvertCore(int value, object? parameter, CultureInfo culture)
-        {
-            return value == 0;
-        }
+        protected override bool ConvertCore(int value, object? parameter, CultureInfo culture) 
+            => value == 0;
 
-        protected override object? HandleInvalidInput(object? value)
-        {
-            return false;
-        }
+        protected override object? HandleInvalidInput(object? value) => false;
     }
 }

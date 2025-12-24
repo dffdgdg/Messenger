@@ -1,756 +1,839 @@
-﻿using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
+﻿using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Helpers;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
-using MessengerDesktop.Services.Platform;
-using MessengerDesktop.ViewModels.Chat;
+using MessengerDesktop.Services.UI;
 using MessengerShared.DTO;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
+using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels.Chat;
+
+public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 {
-    public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
+    private readonly IApiClientService _apiClient;
+    private readonly IAuthManager _authManager;
+    private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
+    private readonly INotificationService _notificationService;
+    private readonly int _chatId;
+    private readonly IChatNotificationApiService _notificationApiService;
+    private readonly IGlobalHubConnection _globalHub;
+    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
+
+    private readonly ChatMessageManager _messageManager;
+    private readonly ChatAttachmentManager _attachmentManager;
+    private readonly ChatSearchManager _searchManager;
+    private ChatHubConnection? _hubConnection;
+    private readonly ChatMemberLoader _memberLoader;
+
+    private CancellationTokenSource? _loadingCts;
+    private CancellationTokenSource? _searchCts;
+    private bool _disposed;
+    private readonly TaskCompletionSource _initTcs = new();
+
+    public ChatsViewModel Parent { get; }
+
+    public event Action<MessageViewModel>? ScrollToMessageRequested;
+
+    #region Observable Properties
+
+    [ObservableProperty]
+    private bool isNotificationEnabled;
+
+    [ObservableProperty]
+    private bool isLoadingMuteState;
+
+    [ObservableProperty]
+    private UserDTO? contactUser;
+
+    [ObservableProperty]
+    private bool isContactOnline;
+
+    [ObservableProperty]
+    private string? contactLastSeen;
+
+    public bool IsContactChat => Chat?.Type == ChatType.Contact;
+
+    public bool IsGroupChat => Chat?.Type == ChatType.Chat || Chat?.Type == ChatType.Department;
+
+    public string InfoPanelTitle => IsContactChat ? "Информация о пользователе" : "Информация о группе";
+
+    public string InfoPanelSubtitle
     {
-        private readonly IApiClientService _apiClient;
-        private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
-        private readonly int _chatId;
-        private readonly INotificationService _notificationService;
-        private HubConnection? _hubConnection;
-        private CancellationTokenSource? _loadingCts;
-        private bool _isLoadingMessages;
-        private int _currentPage = 1;
-        private bool _hasMoreMessages = true;
-        private bool _disposed;
-        private const int PageSize = 50;
-
-        public ChatsViewModel Parent { get; }
-
-        [ObservableProperty]
-        private ChatDTO? chat;
-
-        [ObservableProperty]
-        private ObservableCollection<UserDTO> members = [];
-
-        [ObservableProperty]
-        private ObservableCollection<MessageViewModel> messages = [];
-
-        [ObservableProperty]
-        private bool isInitialLoading = true;
-
-        [ObservableProperty]
-        private bool isLoadingOlderMessages;
-
-        [ObservableProperty]
-        private bool hasNewMessages;
-
-        [ObservableProperty]
-        private bool isScrolledToBottom = true;
-
-        [ObservableProperty]
-        private int pollsCount;
-
-        [ObservableProperty]
-        private string newMessage = string.Empty;
-
-        [ObservableProperty]
-        private int userId;
-
-        [ObservableProperty]
-        private UserProfileDialogViewModel? userProfileDialog;
-
-        [ObservableProperty]
-        private string searchQuery = string.Empty;
-
-        [ObservableProperty]
-        private ObservableCollection<MessageViewModel> searchResults = [];
-
-        [ObservableProperty]
-        private bool isSearching;
-
-        [ObservableProperty]
-        private int searchResultsCount;
-
-        public ObservableCollection<LocalFileAttachment> LocalAttachments { get; } = [];
-
-        public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
-
-        private readonly IAuthService _authService;
-
-        public ChatViewModel(
-            int chatId,
-            ChatsViewModel parent,
-            IApiClientService apiClient,
-            IAuthService authService,
-            IChatInfoPanelStateStore chatInfoPanelStateStore,
-            INotificationService notificationService)
+        get
         {
-            _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _chatInfoPanelStateStore = chatInfoPanelStateStore ?? throw new ArgumentNullException(nameof(chatInfoPanelStateStore));
-            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-            Parent = parent ?? throw new ArgumentNullException(nameof(parent));
-            _chatId = chatId;
-            UserId = _authService.UserId ?? throw new InvalidOperationException("User not authenticated");
-
-            _ = InitializeChatAsync();
+            if (IsContactChat)
+            {
+                if (IsContactOnline) return "в сети";
+                if (!string.IsNullOrEmpty(ContactLastSeen)) return ContactLastSeen;
+                return "не в сети";
+            }
+            return $"{Members.Count} участников";
         }
+    }
 
-        /// <summary>
-        /// Фабричный метод для создания с полной инициализацией
-        /// </summary>
-        public static async Task<ChatViewModel> CreateAsync(int chatId,ChatsViewModel parent,IApiClientService apiClient,AuthService authService,IChatInfoPanelStateStore chatInfoPanelStateStore, INotificationService notificationService)
+    [ObservableProperty]
+    private ChatDTO? chat;
+
+    [ObservableProperty]
+    private ObservableCollection<UserDTO> members = [];
+
+    [ObservableProperty]
+    private bool isInitialLoading = true;
+
+    [ObservableProperty]
+    private bool isLoadingOlderMessages;
+
+    [ObservableProperty]
+    private bool hasNewMessages;
+
+    [ObservableProperty]
+    private bool isScrolledToBottom = true;
+
+    /// <summary>
+    /// Событие для скролла к определённому индексу сообщения
+    /// </summary>
+    public event Action<int>? ScrollToIndexRequested;
+    [ObservableProperty]
+    private int pollsCount;
+
+    [ObservableProperty]
+    private string newMessage = string.Empty;
+
+    [ObservableProperty]
+    private int userId;
+
+    [ObservableProperty]
+    private UserProfileDialogViewModel? userProfileDialog;
+
+    [ObservableProperty]
+    private string searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private bool isSearching;
+
+    [ObservableProperty]
+    private int searchResultsCount;
+
+    [ObservableProperty]
+    private bool isSearchMode;
+
+    [ObservableProperty]
+    private string? searchError;
+
+    [ObservableProperty]
+    private int? highlightedMessageId;
+
+    #endregion
+
+    #region Public Properties
+
+    public ObservableCollection<MessageViewModel> Messages => _messageManager.Messages;
+    public ObservableCollection<LocalFileAttachment> LocalAttachments => _attachmentManager.Attachments;
+    public ObservableCollection<MessageViewModel> SearchResults => _searchManager.Results;
+
+    public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
+
+    public bool IsInfoPanelOpen
+    {
+        get => _chatInfoPanelStateStore.IsOpen;
+        set
         {
-            var vm = new ChatViewModel(chatId, parent, apiClient, authService, chatInfoPanelStateStore, notificationService); 
-            await vm.WaitForInitializationAsync();
-            return vm;
+            if (_chatInfoPanelStateStore.IsOpen == value) return;
+            _chatInfoPanelStateStore.IsOpen = value;
+            OnPropertyChanged();
         }
+    }
 
-        private readonly TaskCompletionSource _initTcs = new();
+    public List<string> PopularEmojis { get; } =
+    [
+        "😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅", "😭", "😤",
+        "❤", "👍", "👎", "🎉", "🔥", "✨", "💯", "🙏", "👏", "🤝",
+        "💪", "🎁", "📱", "💻", "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"
+    ];
 
-        public Task WaitForInitializationAsync() => _initTcs.Task;
-
-        private async Task InitializeChatAsync()
+    public bool IsChatNotificationsEnabled
+    {
+        get => IsNotificationEnabled;
+        set
         {
-            _loadingCts = new CancellationTokenSource();
-            var ct = _loadingCts.Token;
+            if (IsNotificationEnabled == !value) return;
+            _ = ToggleChatNotificationsCommand.ExecuteAsync(null);
+        }
+    }
 
-            try
-            {
-                IsInitialLoading = true;
+    #endregion
 
-                await LoadChatAsync(ct);
-                await LoadMembersAsync(ct);
-                await LoadInitialMessagesAsync(ct);
-                await InitHubAsync(ct);
+    public ChatViewModel(int chatId,ChatsViewModel parent,IApiClientService apiClient,IAuthManager authManager,IChatInfoPanelStateStore chatInfoPanelStateStore,
+    INotificationService notificationService,IChatNotificationApiService notificationApiService,IGlobalHubConnection globalHub,IFileDownloadService fileDownloadService,  
+    IStorageProvider? storageProvider = null)  
+    {
+        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+        _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
+        _chatInfoPanelStateStore = chatInfoPanelStateStore ?? throw new ArgumentNullException(nameof(chatInfoPanelStateStore));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _notificationApiService = notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService));
+        _globalHub = globalHub ?? throw new ArgumentNullException(nameof(globalHub));
+        Parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
-                _initTcs.TrySetResult();
-            }
-            catch (OperationCanceledException)
+        _chatId = chatId;
+        UserId = _authManager.Session.UserId ?? 0;
+
+        _globalHub.SetCurrentChat(_chatId);
+
+        _messageManager = new ChatMessageManager(
+            chatId, UserId, apiClient, () => Members,
+            fileDownloadService, notificationService);
+
+        _attachmentManager = new ChatAttachmentManager(
+            chatId, apiClient, storageProvider);
+
+        _searchManager = new ChatSearchManager(chatId, UserId, apiClient, () => Members);
+        _memberLoader = new ChatMemberLoader(chatId, UserId, apiClient);
+
+        Chat = new ChatDTO
+        {
+            Id = chatId,
+            Name = "Загрузка...",
+            Type = ChatType.Chat
+        };
+
+        _ = InitializeChatAsync();
+    }
+
+    public Task WaitForInitializationAsync() => _initTcs.Task;
+
+    #region Initialization
+
+
+    private async Task InitializeChatAsync()
+    {
+        _loadingCts = new CancellationTokenSource();
+        var ct = _loadingCts.Token;
+
+        try
+        {
+            IsInitialLoading = true;
+
+            await LoadChatAsync(ct);
+            await LoadMembersAsync(ct);
+            await InitHubAsync(ct);
+
+            var readInfo = await _hubConnection!.GetReadInfoAsync();
+            _messageManager.SetReadInfo(readInfo);
+
+            var scrollToIndex = await _messageManager.LoadInitialMessagesAsync(ct);
+
+            await LoadNotificationSettingsAsync(ct);
+
+            UpdatePollsCount();
+            _initTcs.TrySetResult();
+
+            if (scrollToIndex.HasValue)
             {
-                _initTcs.TrySetCanceled();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Ошибка инициализации чата: {ex.Message}";
-                _initTcs.TrySetException(ex);
-            }
-            finally
-            {
-                IsInitialLoading = false;
+                await Task.Delay(150, ct);
+                ScrollToIndexRequested?.Invoke(scrollToIndex.Value);
             }
         }
-
-        private async Task LoadChatAsync(CancellationToken ct)
+        catch (OperationCanceledException)
         {
-            var result = await _apiClient.GetAsync<ChatDTO>($"api/chats/{_chatId}", ct);
+            _initTcs.TrySetCanceled();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка инициализации чата: {ex.Message}";
+            _initTcs.TrySetException(ex);
+        }
+        finally
+        {
+            IsInitialLoading = false;
+        }
+    }
 
-            if (result.Success && result.Data != null)
+    private async Task LoadNotificationSettingsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var settings = await _notificationApiService.GetChatSettingsAsync(_chatId, ct);
+            if (settings != null)
             {
-                if (!string.IsNullOrEmpty(result.Data.Avatar))
-                    result.Data.Avatar = GetAvatarUrlWithHash(result.Data.Avatar);
+                IsNotificationEnabled = settings.NotificationsEnabled;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ошибка загрузки настроек уведомлений: {ex.Message}");
+        }
+    }
 
-                Chat = result.Data;
+    /// <summary>
+    /// Вызывается из View когда сообщение становится видимым
+    /// </summary>
+    public async Task OnMessageVisibleAsync(MessageViewModel message)
+    {
+        if (!message.IsUnread || message.SenderId == UserId)
+            return;
+
+        // Отмечаем локально
+        message.IsUnread = false;
+        _messageManager.MarkAsReadLocally(message.Id);
+
+        // Отправляем на сервер
+        if (_hubConnection != null)
+        {
+            await _hubConnection.MarkMessageAsReadAsync(message.Id);
+        }
+    }
+    /// <summary>
+    /// Загрузить более новые сообщения
+    /// </summary>
+    [RelayCommand]
+    private async Task LoadNewerMessages()
+    {
+        if (_messageManager.IsLoading || !_messageManager.HasMoreNewer) return;
+
+        var ct = _loadingCts?.Token ?? CancellationToken.None;
+        await _messageManager.LoadNewerMessagesAsync(ct);
+        UpdatePollsCount();
+    }
+    [RelayCommand]
+    private async Task ToggleChatNotifications()
+    {
+        if (IsLoadingMuteState) return;
+
+        try
+        {
+            IsLoadingMuteState = true;
+            var newNotificationsState = !IsNotificationEnabled;
+
+            var success = await _notificationApiService.SetChatMuteAsync(_chatId, newNotificationsState);
+
+            if (success)
+            {
+                IsNotificationEnabled = newNotificationsState;
+
+                var message = newNotificationsState
+                    ? "Уведомления включены для этого чата"
+                    : "Уведомления отключены для этого чата";
+
+                await _notificationService.ShowInfoAsync(message);
             }
             else
             {
-                throw new HttpRequestException($"Ошибка загрузки чата: {result.Error}");
+                await _notificationService.ShowErrorAsync("Не удалось изменить настройки");
             }
         }
-
-        private async Task LoadMembersAsync(CancellationToken ct)
+        catch (Exception ex)
         {
-            var result = await _apiClient.GetAsync<List<UserDTO>>($"api/chats/{_chatId}/members", ct);
+            await _notificationService.ShowErrorAsync($"Ошибка: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingMuteState = false;
+        }
+    }
 
-            if (result.Success && result.Data != null)
-            {
-                Members = new ObservableCollection<UserDTO>(result.Data);
-                return;
-            }
+    partial void OnIsNotificationEnabledChanged(bool value) => OnPropertyChanged(nameof(IsChatNotificationsEnabled));
 
-            if (Chat != null && !Chat.IsGroup && int.TryParse(Chat.Name, out var otherUserId))
-            {
-                var members = new ObservableCollection<UserDTO>();
+    private async Task LoadChatAsync(CancellationToken ct)
+    {
+        var result = await _apiClient.GetAsync<ChatDTO>($"api/chats/{_chatId}", ct);
 
-                var meResult = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}", ct);
-                if (meResult.Success && meResult.Data != null)
-                    members.Add(meResult.Data);
+        if (result.Success && result.Data is not null)
+        {
+            if (!string.IsNullOrEmpty(result.Data.Avatar))
+                result.Data.Avatar = AvatarHelper.GetUrlWithCacheBuster(result.Data.Avatar);
 
-                var otherResult = await _apiClient.GetAsync<UserDTO>($"api/user/{otherUserId}", ct);
-                if (otherResult.Success && otherResult.Data != null && otherResult.Data.Id != UserId)
-                    members.Add(otherResult.Data);
+            Chat = result.Data;
+        }
+        else
+        {
+            throw new HttpRequestException($"Ошибка загрузки чата: {result.Error}");
+        }
+    }
 
-                Members = members;
-            }
+    private async Task LoadMembersAsync(CancellationToken ct)
+    {
+        Members = await _memberLoader.LoadMembersAsync(Chat, ct);
+
+        if (IsContactChat)
+        {
+            await LoadContactUserAsync(ct);
         }
 
-        private async Task LoadInitialMessagesAsync(CancellationToken ct)
+        OnPropertyChanged(nameof(InfoPanelSubtitle));
+    }
+
+    private async Task LoadContactUserAsync(CancellationToken ct)
+    {
+        try
         {
-            var url = $"api/messages/chat/{_chatId}?userId={UserId}&page=1&pageSize={PageSize}&includeFiles=false";
-            var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+            var contact = Members.FirstOrDefault(m => m.Id != UserId);
 
-            if (result.Success && result.Data != null)
+            if (contact != null)
             {
-                if (Members.Count == 0 && result.Data.Messages.Count > 0)
-                    await LoadMembersAsync(ct);
+                ContactUser = contact;
+                IsContactOnline = contact.IsOnline;
 
-                SetMessageRelations(result.Data.Messages);
-
-                var vms = result.Data.Messages
-                    .Select(msg => new MessageViewModel(msg))
-                    .ToList();
-
-                ProcessMessagesMetadata(result.Data.Messages, vms);
-
-                Messages = new ObservableCollection<MessageViewModel>(vms);
-                IsScrolledToBottom = true;
-
-                _hasMoreMessages = result.Data.HasMoreMessages;
-                _currentPage = result.Data.CurrentPage;
-            }
-        }
-
-        [RelayCommand]
-        private async Task LoadOlderMessages()
-        {
-            if (!_hasMoreMessages || _isLoadingMessages) return;
-
-            var ct = _loadingCts?.Token ?? CancellationToken.None;
-
-            try
-            {
-                _isLoadingMessages = true;
-                IsLoadingOlderMessages = true;
-
-                var result = await _apiClient.GetAsync<PagedMessagesDTO>(
-                    $"api/messages/chat/{_chatId}?userId={UserId}&page={_currentPage + 1}&pageSize={PageSize}", ct);
-
-                if (result.Success && result.Data != null && result.Data.Messages.Count != 0)
+                if (!contact.IsOnline && contact.LastOnline.HasValue)
                 {
-                    _hasMoreMessages = result.Data.HasMoreMessages;
-                    _currentPage = result.Data.CurrentPage;
-
-                    SetMessageRelations(result.Data.Messages);
-
-                    var vms = result.Data.Messages
-                        .Select(msg => new MessageViewModel(msg))
-                        .ToList();
-
-                    ProcessMessagesMetadata(result.Data.Messages, vms);
-
-                    foreach (var vm in vms)
-                        Messages.Insert(0, vm);
-
-                    UpdatePollsCount();
-                }
-            }
-            finally
-            {
-                _isLoadingMessages = false;
-                IsLoadingOlderMessages = false;
-            }
-        }
-
-        private async Task InitHubAsync(CancellationToken ct)
-        {
-            try
-            {
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl($"{App.ApiUrl}chatHub", options =>
-                    {
-                        options.AccessTokenProvider = () => Task.FromResult(_authService.Token);
-                    })
-                    .WithAutomaticReconnect()
-                    .Build();
-
-                _hubConnection.On<MessageDTO>("ReceiveMessageDTO", HandleNewMessage);
-
-                await _hubConnection.StartAsync(ct);
-                await _hubConnection.InvokeAsync("JoinChat", _chatId.ToString(), ct);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Hub connection error: {ex.Message}");
-            }
-        }
-
-        private void HandleNewMessage(MessageDTO messageDto)
-        {
-            if (messageDto.ChatId != _chatId) return;
-
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                if (Messages.Any(m => m.Id == messageDto.Id)) return;
-
-                messageDto.IsOwn = messageDto.SenderId == UserId;
-
-                if (Messages.Count > 0)
-                {
-                    var lastMessageVm = Messages.Last();
-                    messageDto.PreviousMessage = lastMessageVm.Message;
-                    messageDto.IsPrevSameSender = lastMessageVm.SenderId == messageDto.SenderId;
+                    ContactLastSeen = FormatLastSeen(contact.LastOnline.Value);
                 }
 
-                var vm = new MessageViewModel(messageDto);
-                ProcessMessagesMetadata([messageDto], [vm]);
-
-                Messages.Add(vm);
-                UpdatePollsCount();
-
-                if (!IsScrolledToBottom)
-                    HasNewMessages = true;
-            });
-        }
-
-        [RelayCommand]
-        private async Task SendMessage()
-        {
-            if (string.IsNullOrWhiteSpace(NewMessage) && LocalAttachments.Count == 0) return;
-
-            await SafeExecuteAsync(async ct =>
-            {
-                var msg = new MessageDTO
+                if (Chat != null)
                 {
-                    ChatId = _chatId,
-                    Content = NewMessage,
-                    SenderId = UserId,
-                    Files = []
-                };
-
-                foreach (var local in LocalAttachments.ToList())
-                {
-                    try
+                    Chat.Name = contact.DisplayName ?? contact.Username ?? Chat.Name;
+                    if (!string.IsNullOrEmpty(contact.Avatar))
                     {
-                        local.Data.Position = 0;
-                        var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>(
-                            $"api/files/upload?chatId={_chatId}",
-                            local.Data,
-                            local.FileName,
-                            local.ContentType,
-                            ct);
-
-                        if (uploadResult.Success && uploadResult.Data != null)
-                            msg.Files.Add(uploadResult.Data);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Upload error: {ex.Message}");
+                        Chat.Avatar = contact.Avatar;
                     }
                 }
-
-                var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>("api/messages", msg, ct);
-
-                if (result.Success && result.Data != null)
-                {
-                    NewMessage = string.Empty;
-                    ClearLocalAttachments();
-                }
-                else
-                {
-                    ErrorMessage = $"Ошибка отправки: {result.Error}";
-                }
-            });
-        }
-
-        [RelayCommand]
-        private void RemoveAttachment(LocalFileAttachment attachment)
-        {
-            if (LocalAttachments.Remove(attachment))
-            {
-                attachment.Dispose();
-            }
-        }
-
-        private void ClearLocalAttachments()
-        {
-            foreach (var attachment in LocalAttachments)
-                attachment.Dispose();
-
-            LocalAttachments.Clear();
-        }
-
-        [RelayCommand]
-        private void InsertEmoji(string emoji)
-        {
-            NewMessage += emoji;
-        }
-
-        [RelayCommand]
-        private async Task OpenCreatePoll()
-        {
-            if (Parent?.Parent is MainMenuViewModel menu)
-            {
-                await menu.ShowPollDialogAsync(_chatId, async () => await LoadInitialMessagesAsync(CancellationToken.None));
-                return;
             }
 
-            await _notificationService.ShowErrorAsync("Не удалось открыть диалог опроса", copyToClipboard: false);
+            OnPropertyChanged(nameof(IsContactChat));
+            OnPropertyChanged(nameof(IsGroupChat));
+            OnPropertyChanged(nameof(InfoPanelTitle));
+            OnPropertyChanged(nameof(InfoPanelSubtitle));
+            OnPropertyChanged(nameof(ContactUser));
         }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"LoadContactUser error: {ex.Message}");
+        }
+    }
 
-        [RelayCommand]
-        private void ScrollToLatest()
+    private static string FormatLastSeen(DateTime lastOnline)
+    {
+        var now = DateTime.Now;
+        var diff = now - lastOnline;
+
+        if (diff.TotalMinutes < 1)
+            return "был(а) только что";
+        if (diff.TotalMinutes < 60)
+            return $"был(а) {(int)diff.TotalMinutes} мин. назад";
+        if (diff.TotalHours < 24)
+            return $"был(а) {(int)diff.TotalHours} ч. назад";
+        if (diff.TotalDays < 2)
+            return "был(а) вчера";
+        if (diff.TotalDays < 7)
+            return $"был(а) {(int)diff.TotalDays} дн. назад";
+
+        return $"был(а) {lastOnline:dd.MM.yyyy}";
+    }
+
+    private async Task InitHubAsync(CancellationToken ct)
+    {
+        _hubConnection = new ChatHubConnection(_chatId, _authManager);
+        _hubConnection.MessageReceived += OnMessageReceived;
+        _hubConnection.MessageRead += OnMessageRead;
+        await _hubConnection.ConnectAsync(ct);
+    }
+
+    private void OnMessageReceived(MessageDTO messageDto)
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            _messageManager.AddReceivedMessage(messageDto);
+            UpdatePollsCount();
+
+            if (!IsScrolledToBottom)
+            {
+                HasNewMessages = true;
+            }
+            else
+            {
+                await MarkMessagesAsReadAsync();
+            }
+        });
+    }
+
+    private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (lastReadMessageId.HasValue)
+            {
+                foreach (var msg in Messages.Where(m => m.Id <= lastReadMessageId.Value && m.SenderId == UserId))
+                {
+                    msg.IsRead = true;
+                }
+            }
+        });
+    }
+
+    #endregion
+
+    #region Mark As Read
+
+    /// <summary>
+    /// Отмечает сообщения как прочитанные с debounce
+    /// </summary>
+    public async Task MarkMessagesAsReadAsync(int? messageId = null)
+    {
+        if ((DateTime.UtcNow - _lastMarkAsReadTime).TotalSeconds < 1)
+            return;
+
+        _lastMarkAsReadTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.MarkAsReadAsync(messageId);
+        }
+    }
+
+    /// <summary>
+    /// Вызывается когда пользователь проскроллил и видит сообщения
+    /// </summary>
+    public async Task OnMessagesVisibleAsync() => await MarkMessagesAsReadAsync();
+    /// <summary>
+    /// Есть ли более новые сообщения для загрузки
+    /// </summary>
+    public bool HasMoreNewer => _messageManager.HasMoreNewer;
+    partial void OnIsScrolledToBottomChanged(bool value)
+    {
+        if (value)
         {
             HasNewMessages = false;
-            IsScrolledToBottom = true;
+            _ = MarkMessagesAsReadAsync();
         }
-
-        [RelayCommand]
-        private async Task LeaveChat()
-        {
-            await SafeExecuteAsync(async ct =>
-            {
-                var result = await _apiClient.PostAsync($"api/chats/{_chatId}/leave?userId={UserId}", null, ct);
-
-                if (result.Success)
-                    SuccessMessage = "Вы покинули чат";
-                else
-                    ErrorMessage = $"Ошибка при выходе из чата: {result.Error}";
-            });
-        }
-
-        [RelayCommand]
-        private async Task SearchMessages()
-        {
-            if (string.IsNullOrWhiteSpace(SearchQuery))
-            {
-                SearchResults.Clear();
-                SearchResultsCount = 0;
-                return;
-            }
-
-            await SafeExecuteAsync(async ct =>
-            {
-                IsSearching = true;
-
-                var result = await _apiClient.GetAsync<SearchMessagesResponseDTO>(
-                    $"api/messages/chat/{_chatId}/search?query={Uri.EscapeDataString(SearchQuery)}&userId={UserId}&page=1&pageSize=20", ct);
-
-                if (result.Success && result.Data != null)
-                {
-                    SearchResultsCount = result.Data.TotalCount;
-
-                    var vms = result.Data.Messages
-                        .Select(msg => new MessageViewModel(msg))
-                        .ToList();
-
-                    ProcessMessagesMetadata(result.Data.Messages, vms);
-                    SearchResults = new ObservableCollection<MessageViewModel>(vms);
-                }
-                else if (!result.Success)
-                {
-                    ErrorMessage = $"Ошибка поиска: {result.Error}";
-                }
-            }, finallyAction: () => IsSearching = false);
-        }
-
-        [RelayCommand]
-        private void ToggleInfoPanel()
-        {
-            _chatInfoPanelStateStore.IsOpen = !_chatInfoPanelStateStore.IsOpen;
-            OnPropertyChanged(nameof(IsInfoPanelOpen));
-        }
-
-        public bool IsInfoPanelOpen
-        {
-            get => _chatInfoPanelStateStore.IsOpen;
-            set
-            {
-                if (_chatInfoPanelStateStore.IsOpen == value) return;
-                _chatInfoPanelStateStore.IsOpen = value;
-                OnPropertyChanged(nameof(IsInfoPanelOpen));
-            }
-        }
-
-        [RelayCommand]
-        private async Task AttachFile()
-        {
-            try
-            {
-                var platformService = App.Current.Services.GetRequiredService<IPlatformService>();
-                var mainWindow = platformService.MainWindow;
-
-                if (mainWindow is null)
-                {
-                    ErrorMessage = "Не удалось получить главное окно";
-                    return;
-                }
-
-                var storageProvider = mainWindow.StorageProvider;
-                if (storageProvider is null)
-                {
-                    ErrorMessage = "StorageProvider недоступен";
-                    return;
-                }
-
-                var options = new FilePickerOpenOptions
-                {
-                    Title = "Выберите файлы для прикрепления",
-                    AllowMultiple = true
-                };
-
-                var files = await storageProvider.OpenFilePickerAsync(options);
-
-                foreach (var file in files)
-                {
-                    var path = file.TryGetLocalPath();
-                    if (path is not null)
-                    {
-                        await AddFileAttachmentAsync(path);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Ошибка при выборе файлов: {ex.Message}";
-            }
-        }
-
-
-        private async Task AddFileAttachmentAsync(string filePath)
-        {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                if (fileInfo.Length > 20 * 1024 * 1024)
-                {
-                    System.Diagnostics.Debug.WriteLine($"File too large: {fileInfo.Name}");
-                    return;
-                }
-
-                var fileName = Path.GetFileName(filePath);
-                var contentType = GetMimeType(filePath);
-
-                await using var fileStream = File.OpenRead(filePath);
-                var memoryStream = new MemoryStream();
-                await fileStream.CopyToAsync(memoryStream);
-                memoryStream.Position = 0;
-
-                var attachment = new LocalFileAttachment
-                {
-                    FileName = fileName,
-                    ContentType = contentType,
-                    FilePath = filePath,
-                    Data = memoryStream
-                };
-
-                if (contentType.StartsWith("image/"))
-                {
-                    try
-                    {
-                        memoryStream.Position = 0;
-                        attachment.Thumbnail = new Bitmap(memoryStream);
-                        memoryStream.Position = 0;
-                    }
-                    catch
-                    {
-
-                    }
-                }
-
-                LocalAttachments.Add(attachment);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error processing file {filePath}: {ex.Message}");
-            }
-        }
-
-        [RelayCommand]
-        public async Task OpenProfile(int userId)
-        {
-            if (Parent?.Parent is MainMenuViewModel menu)
-            {
-                await menu.ShowUserProfileAsync(userId);
-                return;
-            }
-
-            await _notificationService.ShowErrorAsync("Не удалось открыть профиль", copyToClipboard: false);
-        }
-
-        #region Helper Methods
-
-        private void ProcessMessagesMetadata(List<MessageDTO> messages, List<MessageViewModel>? viewModels = null)
-        {
-            var userDict = Members.ToDictionary(u => u.Id);
-
-            for (int i = 0; i < messages.Count; i++)
-            {
-                var msg = messages[i];
-                var vm = viewModels?[i];
-
-                if (!string.IsNullOrEmpty(msg.SenderName) && msg.SenderName != $"User #{msg.SenderId}")
-                {
-                    if (vm != null) vm.SenderName = msg.SenderName;
-                }
-                else if (userDict.TryGetValue(msg.SenderId, out var user))
-                {
-                    var senderName = user.DisplayName ?? user.Username;
-                    msg.SenderName = senderName;
-                    if (vm != null) vm.SenderName = senderName;
-                }
-                else
-                {
-                    var placeholderName = $"User #{msg.SenderId}";
-                    msg.SenderName = placeholderName;
-                    if (vm != null) vm.SenderName = placeholderName;
-                }
-
-                if (string.IsNullOrEmpty(msg.SenderAvatarUrl))
-                {
-                    if (userDict.TryGetValue(msg.SenderId, out var userForAvatar) && !string.IsNullOrEmpty(userForAvatar.Avatar))
-                    {
-                        var avatarUrl = GetSafeAvatarUrl(userForAvatar.Avatar);
-                        msg.SenderAvatarUrl = avatarUrl;
-                        if (vm != null) vm.SenderAvatarUrl = avatarUrl;
-                    }
-                }
-                else
-                {
-                    if (vm != null) vm.SenderAvatarUrl = msg.SenderAvatarUrl;
-                }
-            }
-        }
-
-        private void SetMessageRelations(List<MessageDTO> messages)
-        {
-            MessageDTO? previousMessage = null;
-            int? lastSenderId = null;
-
-            foreach (var msg in messages)
-            {
-                msg.IsOwn = msg.SenderId == UserId;
-                msg.IsPrevSameSender = lastSenderId != null && msg.SenderId == lastSenderId;
-                msg.PreviousMessage = previousMessage;
-                msg.ShowSenderName = !msg.IsPrevSameSender;
-
-                lastSenderId = msg.SenderId;
-                previousMessage = msg;
-            }
-        }
-
-        private void UpdatePollsCount() =>
-            PollsCount = Messages.Count(m => m.Poll != null);
-
-        private static string GetSafeAvatarUrl(string? avatarUrl)
-        {
-            if (string.IsNullOrEmpty(avatarUrl))
-                return "avares://MessengerDesktop/Assets/Images/default-avatar.webp";
-
-            try
-            {
-                if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                    return avatarUrl;
-
-                var baseUri = new Uri(App.ApiUrl);
-                var avatarUri = new Uri(baseUri, avatarUrl.TrimStart('/'));
-                return avatarUri.ToString();
-            }
-            catch
-            {
-                return "avares://MessengerDesktop/Assets/Images/default-avatar.webp";
-            }
-        }
-
-        private static string GetAvatarUrlWithHash(string? avatarUrl)
-        {
-            if (string.IsNullOrEmpty(avatarUrl))
-                return string.Empty;
-
-            if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                var uriBuilder = new UriBuilder(avatarUrl);
-                var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
-                query["v"] = DateTime.Now.Ticks.ToString();
-                uriBuilder.Query = query.ToString();
-                return uriBuilder.ToString();
-            }
-
-            var baseUrl = App.ApiUrl.TrimEnd('/');
-            var cleanAvatarPath = avatarUrl.TrimStart('/');
-            return $"{baseUrl}/{cleanAvatarPath}?v={DateTime.Now.Ticks}";
-        }
-
-        private static string GetMimeType(string filePath)
-        {
-            var ext = Path.GetExtension(filePath).ToLowerInvariant();
-            return ext switch
-            {
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                ".gif" => "image/gif",
-                ".webp" => "image/webp",
-                ".mp4" => "video/mp4",
-                ".webm" => "video/webm",
-                ".mp3" => "audio/mpeg",
-                ".wav" => "audio/wav",
-                ".pdf" => "application/pdf",
-                ".doc" or ".docx" => "application/msword",
-                ".xls" or ".xlsx" => "application/vnd.ms-excel",
-                ".txt" => "text/plain",
-                _ => "application/octet-stream"
-            };
-        }
-
-        partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
-
-        #endregion
-
-        #region Properties
-
-        public List<string> PopularEmojis { get; } =
-        [
-            "😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅", "😭", "😤", "❤", "👍", "👎", "🎉", "🔥", "✨",
-            "💯", "🙏", "👏", "🤝", "💪", "🎁", "📱", "💻", "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"
-        ];
-
-        #endregion
-
-        #region IAsyncDisposable
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_disposed) return;
-            _disposed = true;
-            _loadingCts?.Cancel();
-            _loadingCts?.Dispose();
-            _loadingCts = null;
-            if (_hubConnection != null)
-            {
-                try
-                {
-                    await _hubConnection.StopAsync();
-                    await _hubConnection.DisposeAsync();
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Error disposing hub connection: {ex.Message}"
-                    );
-                }
-
-                _hubConnection = null;
-            }
-            ClearLocalAttachments();
-            Dispose();
-            GC.SuppressFinalize(this);
-        }
-
-
-        #endregion
     }
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand]
+    private async Task LoadOlderMessages()
+    {
+        if (_messageManager.IsLoading) return;
+
+        var ct = _loadingCts?.Token ?? CancellationToken.None;
+
+        try
+        {
+            IsLoadingOlderMessages = true;
+            await _messageManager.LoadOlderMessagesAsync(ct);
+            UpdatePollsCount();
+        }
+        finally
+        {
+            IsLoadingOlderMessages = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(NewMessage) && LocalAttachments.Count == 0)
+            return;
+
+        await SafeExecuteAsync(async ct =>
+        {
+            var files = await _attachmentManager.UploadAllAsync(ct);
+
+            var msg = new MessageDTO
+            {
+                ChatId = _chatId,
+                Content = NewMessage,
+                SenderId = UserId,
+                Files = files
+            };
+
+            var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>("api/messages", msg, ct);
+
+            if (result.Success)
+            {
+                NewMessage = string.Empty;
+                _attachmentManager.Clear();
+            }
+            else
+            {
+                ErrorMessage = $"Ошибка отправки: {result.Error}";
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void RemoveAttachment(LocalFileAttachment attachment) => _attachmentManager.Remove(attachment);
+
+    [RelayCommand]
+    private void InsertEmoji(string emoji) => NewMessage += emoji;
+
+    [RelayCommand]
+    private async Task AttachFile()
+    {
+        if (!await _attachmentManager.PickAndAddFilesAsync())
+        {
+            ErrorMessage = "Не удалось выбрать файлы";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleInfoPanel() => IsInfoPanelOpen = !IsInfoPanelOpen;
+
+    [RelayCommand]
+    private async Task ScrollToLatest()
+    {
+        HasNewMessages = false;
+        IsScrolledToBottom = true;
+
+        await MarkMessagesAsReadAsync();
+    }
+
+    [RelayCommand]
+    private async Task LeaveChat()
+    {
+        await SafeExecuteAsync(async ct =>
+        {
+            var result = await _apiClient.PostAsync($"api/chats/{_chatId}/leave?userId={UserId}", null, ct);
+
+            if (result.Success)
+                SuccessMessage = "Вы покинули чат";
+            else
+                ErrorMessage = $"Ошибка при выходе из чата: {result.Error}";
+        });
+    }
+
+    [RelayCommand]
+    private async Task OpenCreatePoll()
+    {
+        if (Parent?.Parent is MainMenuViewModel menu)
+        {
+            await menu.ShowPollDialogAsync(_chatId, async () =>
+                await _messageManager.LoadInitialMessagesAsync());
+            return;
+        }
+
+        await _notificationService.ShowErrorAsync("Не удалось открыть диалог опроса", copyToClipboard: false);
+    }
+
+    [RelayCommand]
+    public async Task OpenProfile(int userId)
+    {
+        if (Parent?.Parent is MainMenuViewModel menu)
+        {
+            await menu.ShowUserProfileAsync(userId);
+            return;
+        }
+
+        await _notificationService.ShowErrorAsync("Не удалось открыть профиль", copyToClipboard: false);
+    }
+
+    #endregion
+
+    #region Search Commands & Methods
+
+    [RelayCommand]
+    private void ToggleSearch()
+    {
+        IsSearchMode = !IsSearchMode;
+
+        if (!IsSearchMode)
+        {
+            ClearSearch();
+        }
+    }
+
+    [RelayCommand]
+    private void CloseSearch()
+    {
+        IsSearchMode = false;
+        ClearSearch();
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        SearchResultsCount = 0;
+        SearchError = null;
+        _searchCts?.Cancel();
+    }
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        _ = PerformSearchWithDebounceAsync(value);
+    }
+
+    private async Task PerformSearchWithDebounceAsync(string query)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        SearchError = null;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            SearchResults.Clear();
+            SearchResultsCount = 0;
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            if (token.IsCancellationRequested) return;
+
+            IsSearching = true;
+
+            var (success, error) = await _searchManager.SearchAsync(query, token);
+
+            if (token.IsCancellationRequested) return;
+
+            if (success)
+            {
+                SearchResultsCount = _searchManager.TotalCount;
+            }
+            else
+            {
+                SearchError = error ?? "Ошибка поиска";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            SearchError = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    public async Task ScrollToMessageAsync(int messageId)
+    {
+        try
+        {
+            var existingMessage = Messages.FirstOrDefault(m => m.Id == messageId);
+
+            if (existingMessage != null)
+            {
+                var index = Messages.IndexOf(existingMessage);
+                ScrollToIndexRequested?.Invoke(index);
+                HighlightMessage(existingMessage);
+                return;
+            }
+
+            var targetIndex = await _messageManager.LoadMessagesAroundAsync(messageId);
+
+            if (targetIndex.HasValue)
+            {
+                await Task.Delay(100);
+                ScrollToIndexRequested?.Invoke(targetIndex.Value);
+
+                var targetMessage = Messages.FirstOrDefault(m => m.Id == messageId);
+                if (targetMessage != null)
+                {
+                    HighlightMessage(targetMessage);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[ChatViewModel] Failed to load messages around {messageId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ScrollToMessage error: {ex.Message}");
+        }
+    }
+
+    private void HighlightMessage(MessageViewModel message)
+    {
+        foreach (var m in Messages)
+        {
+            m.IsHighlighted = false;
+        }
+
+        message.IsHighlighted = true;
+        HighlightedMessageId = message.Id;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            Dispatcher.UIThread.Post(() =>
+            {
+                message.IsHighlighted = false;
+                HighlightedMessageId = null;
+            });
+        });
+    }
+
+    [RelayCommand]
+    private async Task GoToSearchResult(MessageViewModel? searchResult)
+    {
+        if (searchResult == null) return;
+
+        IsSearchMode = false;
+
+        await ScrollToMessageAsync(searchResult.Id);
+
+        ClearSearch();
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private void UpdatePollsCount() => PollsCount = _messageManager.GetPollsCount();
+
+    partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
+
+    #endregion
+
+    #region IAsyncDisposable
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_globalHub is GlobalHubConnection hub)
+        {
+            hub.SetCurrentChat(null);
+        }
+
+        _loadingCts?.Cancel();
+        _loadingCts?.Dispose();
+        _loadingCts = null;
+
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
+
+        if (_hubConnection is not null)
+        {
+            _hubConnection.MessageReceived -= OnMessageReceived;
+            _hubConnection.MessageRead -= OnMessageRead;
+            await _hubConnection.DisposeAsync();
+            _hubConnection = null;
+        }
+
+        Messages.Clear();
+        Members.Clear();
+        LocalAttachments.Clear();
+        SearchResults.Clear();
+
+        _attachmentManager.Dispose();
+
+        Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
 }

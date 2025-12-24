@@ -1,185 +1,294 @@
-﻿using MessengerAPI.Model;
+﻿using MessengerAPI.Configuration;
+using MessengerAPI.Helpers;
+using MessengerAPI.Model;
 using MessengerShared.DTO;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace MessengerAPI.Services
 {
     public interface IDepartmentService
     {
         Task<List<DepartmentDTO>> GetDepartmentsAsync();
+        Task<DepartmentDTO?> GetDepartmentAsync(int id);
         Task<DepartmentDTO> CreateDepartmentAsync(DepartmentDTO dto);
         Task UpdateDepartmentAsync(int id, DepartmentDTO dto);
         Task DeleteDepartmentAsync(int id);
+
+        Task<List<UserDTO>> GetDepartmentMembersAsync(int departmentId);
+        Task AddUserToDepartmentAsync(int departmentId, int userId, int requesterId);
+        Task RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId);
+
+        Task<bool> IsDepartmentHeadAsync(int userId, int departmentId);
+        Task<bool> CanManageDepartmentAsync(int userId, int departmentId);
     }
 
-    public class DepartmentService(MessengerDbContext context, ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
+    public class DepartmentService(MessengerDbContext context,IOptions<MessengerSettings> settings,ILogger<DepartmentService> logger) 
+        : BaseService<DepartmentService>(context, logger), IDepartmentService
     {
+        private readonly MessengerSettings _settings = settings.Value;
+
+        #region CRUD
+
         public async Task<List<DepartmentDTO>> GetDepartmentsAsync()
         {
-            try
-            {
-                var departments = await _context.Departments
-                    .AsNoTracking()
-                    .Select(d => new DepartmentDTO
-                    {
-                        Id = d.Id,
-                        Name = d.Name,
-                        ParentDepartmentId = d.ParentDepartmentId
-                    })
-                    .ToListAsync();
+            var departments = await _context.Departments
+                .Include(d => d.HeadNavigation)
+                .AsNoTracking()
+                .ToListAsync();
 
-                _logger.LogDebug("Получено {Count} отделов", departments.Count);
-                return departments;
-            }
-            catch (Exception ex)
+            var userCounts = await _context.Users
+                .Where(u => u.Department != null)
+                .GroupBy(u => u.Department)
+                .Select(g => new { DepartmentId = g.Key!.Value, Count = g.Count() })
+                .ToDictionaryAsync(x => x.DepartmentId, x => x.Count);
+
+            return [.. departments.Select(d => new DepartmentDTO
             {
-                LogOperationError(ex, "получение отделов");
-                throw;
-            }
+                Id = d.Id,
+                Name = d.Name,
+                ParentDepartmentId = d.ParentDepartmentId,
+                Head = d.Head,
+                HeadName = d.HeadNavigation?.FormatDisplayName(),
+                UserCount = userCounts.GetValueOrDefault(d.Id, 0)
+            })];
+        }
+
+        public async Task<DepartmentDTO?> GetDepartmentAsync(int id)
+        {
+            var department = await _context.Departments
+                .Include(d => d.HeadNavigation)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (department is null)
+                return null;
+
+            var userCount = await _context.Users.CountAsync(u => u.Department == id);
+
+            return new DepartmentDTO
+            {
+                Id = department.Id,
+                Name = department.Name,
+                ParentDepartmentId = department.ParentDepartmentId,
+                Head = department.Head,
+                HeadName = department.HeadNavigation?.FormatDisplayName(),
+                UserCount = userCount
+            };
         }
 
         public async Task<DepartmentDTO> CreateDepartmentAsync(DepartmentDTO dto)
         {
-            try
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                throw new ArgumentException("Название обязательно");
+
+            await ValidateParentDepartmentAsync(dto.ParentDepartmentId);
+            await ValidateHeadAsync(dto.Head);
+
+            var entity = new Department
             {
-                if (string.IsNullOrWhiteSpace(dto.Name))
-                    throw new ArgumentException("Название обязательно");
+                Name = dto.Name.Trim(),
+                ParentDepartmentId = dto.ParentDepartmentId,
+                Head = dto.Head
+            };
 
-                if (dto.ParentDepartmentId.HasValue)
-                {
-                    var parentExists = await _context.Departments.AnyAsync(d => d.Id == dto.ParentDepartmentId.Value);
+            _context.Departments.Add(entity);
+            await SaveChangesAsync();
 
-                    if (!parentExists)
-                        throw new ArgumentException("Родительский отдел не существует");
-                }
+            _logger.LogInformation("Отдел создан: {DepartmentId} '{Name}'", entity.Id, entity.Name);
 
-                var entity = new Department
-                {
-                    Name = dto.Name.Trim(),
-                    ParentDepartmentId = dto.ParentDepartmentId
-                };
+            dto.Id = entity.Id;
+            dto.UserCount = 0;
 
-                _context.Departments.Add(entity);
-                await SaveChangesAsync();
-
-                dto.Id = entity.Id;
-
-                _logger.LogInformation("Отдел {DepartmentId} '{Name}' создан", entity.Id, entity.Name);
-                return dto;
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Ошибка валидации при создании отдела");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "создание отдела");
-                throw;
-            }
+            return dto;
         }
 
         public async Task UpdateDepartmentAsync(int id, DepartmentDTO dto)
         {
-            try
+            var entity = await _context.Departments.FindAsync(id);
+            EnsureNotNull(entity, id);
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                throw new ArgumentException("Название обязательно");
+
+            // Проверка циклических зависимостей
+            if (dto.ParentDepartmentId == id)
+                throw new ArgumentException("Отдел не может быть родителем самому себе");
+
+            if (dto.ParentDepartmentId.HasValue)
             {
-                var entity = await FindEntityAsync<Department>(id);
-                ValidateEntityExists(entity, "Отдел", id);
-
-                if (string.IsNullOrWhiteSpace(dto.Name))
-                    throw new ArgumentException("Название обязательно");
-
-                if (dto.ParentDepartmentId == id)
-                    throw new ArgumentException("Отдел не может быть родителем самому себе");
-
-                if (dto.ParentDepartmentId.HasValue)
-                {
-                    var childDepartments = await GetAllChildDepartmentsAsync(id);
-                    if (childDepartments.Contains(dto.ParentDepartmentId.Value))
-                        throw new ArgumentException("Нельзя установить дочерний отдел как родительский");
-                }
-
-                entity.Name = dto.Name.Trim();
-                entity.ParentDepartmentId = dto.ParentDepartmentId;
-
-                await SaveChangesAsync();
-
-                _logger.LogInformation("Отдел {DepartmentId} обновлён", id);
+                var childIds = await GetAllChildIdsAsync(id);
+                if (childIds.Contains(dto.ParentDepartmentId.Value))
+                    throw new ArgumentException("Нельзя установить дочерний отдел как родительский");
             }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Ошибка валидации при обновлении отдела {DepartmentId}", id);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "обновление отдела", id);
-                throw;
-            }
+
+            await ValidateHeadAsync(dto.Head);
+
+            entity!.Name = dto.Name.Trim();
+            entity.ParentDepartmentId = dto.ParentDepartmentId;
+            entity.Head = dto.Head;
+
+            await SaveChangesAsync();
+
+            _logger.LogInformation("Отдел обновлён: {DepartmentId}", id);
         }
 
         public async Task DeleteDepartmentAsync(int id)
         {
-            try
-            {
-                var entity = await FindEntityAsync<Department>(id);
-                ValidateEntityExists(entity, "Отдел", id);
+            var entity = await _context.Departments.FindAsync(id);
+            EnsureNotNull(entity, id);
 
-                var hasChildren = await _context.Departments.AnyAsync(d => d.ParentDepartmentId == id);
+            if (await _context.Departments.AnyAsync(d => d.ParentDepartmentId == id))
+                throw new InvalidOperationException("Нельзя удалить отдел с дочерними отделами");
 
-                if (hasChildren)
-                    throw new InvalidOperationException("Нельзя удалить отдел с дочерними отделами");
+            if (await _context.Users.AnyAsync(u => u.Department == id))
+                throw new InvalidOperationException("Нельзя удалить отдел с сотрудниками");
 
-                var hasUsers = await _context.Users
-                    .AnyAsync(u => u.Department == id);
+            _context.Departments.Remove(entity!);
+            await SaveChangesAsync();
 
-                if (hasUsers)
-                    throw new InvalidOperationException("Нельзя удалить отдел с назначенными пользователями");
-
-                _context.Departments.Remove(entity);
-                await SaveChangesAsync();
-
-                _logger.LogInformation("Отдел {DepartmentId} удалён", id);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Нарушение бизнес-правила при удалении отдела {DepartmentId}", id);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "удаление отдела", id);
-                throw;
-            }
+            _logger.LogInformation("Отдел удалён: {DepartmentId}", id);
         }
 
-        private async Task<HashSet<int>> GetAllChildDepartmentsAsync(int departmentId)
+        #endregion
+
+        #region Members
+
+        public async Task<List<UserDTO>> GetDepartmentMembersAsync(int departmentId)
         {
-            try
+            var exists = await _context.Departments.AnyAsync(d => d.Id == departmentId);
+            if (!exists)
+                throw new KeyNotFoundException($"Отдел с ID {departmentId} не найден");
+
+            var users = await _context.Users.Where(u => u.Department == departmentId).Include(u => u.DepartmentNavigation).AsNoTracking().ToListAsync();
+
+            return [.. users.Select(u => new UserDTO
             {
-                var children = new HashSet<int>();
-                var departments = await _context.Departments.AsNoTracking().ToListAsync();
+                Id = u.Id,
+                Username = u.Username,
+                DisplayName = u.FormatDisplayName(),
+                Surname = u.Surname,
+                Name = u.Name,
+                Midname = u.Midname,
+                Avatar = u.Avatar,
+                DepartmentId = u.Department,
+                Department = u.DepartmentNavigation?.Name
+            })];
+        }
 
-                void AddChildren(int parentId)
+        public async Task AddUserToDepartmentAsync(int departmentId, int userId, int requesterId)
+        {
+            if (!await CanManageDepartmentAsync(requesterId, departmentId))
+                throw new UnauthorizedAccessException("Нет прав на управление отделом");
+
+            if (!await _context.Departments.AnyAsync(d => d.Id == departmentId))
+                throw new KeyNotFoundException($"Отдел с ID {departmentId} не найден");
+
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
+
+            if (user.Department == departmentId)
+                throw new InvalidOperationException("Пользователь уже в этом отделе");
+
+            if (user.Department.HasValue && !await IsAdminAsync(requesterId))
+                throw new InvalidOperationException("Только администратор может перемещать между отделами");
+
+            user.Department = departmentId;
+            await SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Пользователь {UserId} добавлен в отдел {DepartmentId} пользователем {RequesterId}",
+                userId, departmentId, requesterId);
+        }
+
+        public async Task RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId)
+        {
+            if (!await CanManageDepartmentAsync(requesterId, departmentId))
+                throw new UnauthorizedAccessException("Нет прав на управление отделом");
+
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
+
+            if (user.Department != departmentId)
+                throw new InvalidOperationException("Пользователь не в этом отделе");
+
+            var department = await _context.Departments.FindAsync(departmentId);
+            if (department?.Head == userId)
+                throw new InvalidOperationException("Сначала назначьте другого начальника");
+
+            user.Department = null;
+            await SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Пользователь {UserId} удалён из отдела {DepartmentId} пользователем {RequesterId}",
+                userId, departmentId, requesterId);
+        }
+
+        #endregion
+
+        #region Permissions
+
+        public async Task<bool> IsDepartmentHeadAsync(int userId, int departmentId)
+            => await _context.Departments.AnyAsync(d => d.Id == departmentId && d.Head == userId);
+
+        public async Task<bool> CanManageDepartmentAsync(int userId, int departmentId)
+        {
+            if (await IsAdminAsync(userId))
+                return true;
+
+            return await IsDepartmentHeadAsync(userId, departmentId);
+        }
+
+        private async Task<bool> IsAdminAsync(int userId)
+            => await _context.Users.AnyAsync(u => u.Id == userId && u.Department == _settings.AdminDepartmentId);
+
+        #endregion
+
+        #region Validation Helpers
+
+        private async Task ValidateParentDepartmentAsync(int? parentId)
+        {
+            if (!parentId.HasValue) return;
+
+            var exists = await _context.Departments.AnyAsync(d => d.Id == parentId.Value);
+            if (!exists)
+                throw new ArgumentException("Родительский отдел не существует");
+        }
+
+        private async Task ValidateHeadAsync(int? headId)
+        {
+            if (!headId.HasValue) return;
+
+            var exists = await _context.Users.AnyAsync(u => u.Id == headId.Value);
+            if (!exists)
+                throw new ArgumentException("Указанный пользователь не существует");
+        }
+
+        private async Task<HashSet<int>> GetAllChildIdsAsync(int departmentId)
+        {
+            var allDepartments = await _context.Departments.AsNoTracking().Select(d => new { d.Id, d.ParentDepartmentId }).ToListAsync();
+
+            var children = new HashSet<int>();
+            var queue = new Queue<int>();
+            queue.Enqueue(departmentId);
+
+            while (queue.Count > 0)
+            {
+                var parentId = queue.Dequeue();
+                var directChildren = allDepartments.Where(d => d.ParentDepartmentId == parentId).Select(d => d.Id);
+
+                foreach (var childId in directChildren)
                 {
-                    var directChildren = departments
-                        .Where(d => d.ParentDepartmentId == parentId)
-                        .Select(d => d.Id);
-
-                    foreach (var childId in directChildren)
+                    if (children.Add(childId))
                     {
-                        if (children.Add(childId)) AddChildren(childId);
+                        queue.Enqueue(childId);
                     }
                 }
+            }
 
-                AddChildren(departmentId);
-                return children;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "получение дочерних отделов", departmentId);
-                throw;
-            }
+            return children;
         }
+
+        #endregion
     }
 }

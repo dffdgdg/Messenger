@@ -9,8 +9,6 @@ public partial class Chat
 
     public string? Name { get; set; }
 
-    public bool IsGroup { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public int? CreatedById { get; set; }
@@ -24,8 +22,6 @@ public partial class Chat
     public virtual User? CreatedBy { get; set; }
 
     public virtual Department? Department { get; set; }
-
-    public virtual ICollection<Draft> Drafts { get; set; } = new List<Draft>();
 
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 }

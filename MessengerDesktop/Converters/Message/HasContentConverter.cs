@@ -1,6 +1,7 @@
 using Avalonia.Data.Converters;
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Message
@@ -15,13 +16,11 @@ namespace MessengerDesktop.Converters.Message
             if (value is ICollection collection)
                 return collection.Count > 0;
 
-            System.Diagnostics.Debug.WriteLine($"[HasContentConverter] Unknown type: {value?.GetType().Name}, Value: {value}");
+            Debug.WriteLine($"[HasContentConverter] Unknown type: {value?.GetType().Name}, Value: {value}");
             return false;
         }
 
-        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        }
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) 
+            => throw new NotSupportedException();
     }
 }

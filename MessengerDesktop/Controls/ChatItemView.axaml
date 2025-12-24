@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:controls="using:MessengerDesktop.Controls"
+             x:Class="MessengerDesktop.Controls.ChatItemView"
+             x:DataType="shared:ChatDTO">
+
+	<Grid Height="52" ColumnDefinitions="Auto,*">
+		<!-- Аватар -->
+		<controls:AvatarControl Grid.Column="0"
+                                 Classes="Medium"
+                                 Source="{Binding Avatar}"
+                                 DisplayName="{Binding Name}"
+                                 FallbackIcon="{StaticResource GroupIcon}"
+                                 ShowOnlineIndicator="False"
+                                 VerticalAlignment="Center"/>
+
+		<!-- Информация -->
+		<StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,8,0">
+			<TextBlock Text="{Binding Name}" Classes="ChatName"/>
+			<TextBlock Classes="ChatPreview"
+                       IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+				<Run Text="{Binding LastMessageSenderName}"/>
+				<Run Text=": "/>
+				<Run Text="{Binding LastMessagePreview}"/>
+			</TextBlock>
+			<TextBlock Text="Нет сообщений"
+                       Foreground="{DynamicResource TextMuted}"
+                       FontSize="13"
+                       Margin="0,2,0,0"
+                       IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+		</StackPanel>
+	</Grid>
+</UserControl>

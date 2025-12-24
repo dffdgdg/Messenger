@@ -1,149 +1,242 @@
-﻿// Controls/CircularProgress.cs
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using System;
 
-namespace MessengerDesktop.Controls
+namespace MessengerDesktop.Controls;
+
+public class CircularProgress : Control
 {
-    public class CircularProgress : Control
+    private double _animationAngle;
+
+    public static readonly StyledProperty<double> ValueProperty =
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Value), 0);
+
+    public static readonly StyledProperty<double> MaximumProperty =
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Maximum), 100);
+
+    public static readonly StyledProperty<double> MinimumProperty =
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Minimum), 0);
+
+    public static readonly StyledProperty<double> StrokeWidthProperty =
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(StrokeWidth), 4);
+
+    public static readonly StyledProperty<double> SizeProperty =
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Size), 32);
+
+    public static readonly StyledProperty<IBrush?> ForegroundProperty =
+        AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(Foreground), Brushes.DodgerBlue);
+
+    public static readonly StyledProperty<IBrush?> BackgroundTrackProperty =
+        AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(BackgroundTrack));
+
+    public static readonly StyledProperty<bool> IsIndeterminateProperty =
+        AvaloniaProperty.Register<CircularProgress, bool>(nameof(IsIndeterminate), false);
+
+    public double Value
     {
-        public static readonly StyledProperty<double> ValueProperty =
-            AvaloniaProperty.Register<CircularProgress, double>(nameof(Value), 0);
+        get => GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);
+    }
 
-        public static readonly StyledProperty<double> MaximumProperty =
-            AvaloniaProperty.Register<CircularProgress, double>(nameof(Maximum), 100);
+    public double Maximum
+    {
+        get => GetValue(MaximumProperty);
+        set => SetValue(MaximumProperty, value);
+    }
 
-        public static readonly StyledProperty<double> StrokeWidthProperty =
-            AvaloniaProperty.Register<CircularProgress, double>(nameof(StrokeWidth), 4);
+    public double Minimum
+    {
+        get => GetValue(MinimumProperty);
+        set => SetValue(MinimumProperty, value);
+    }
 
-        public static readonly StyledProperty<double> SizeProperty =
-            AvaloniaProperty.Register<CircularProgress, double>(nameof(Size), 24);
+    public double StrokeWidth
+    {
+        get => GetValue(StrokeWidthProperty);
+        set => SetValue(StrokeWidthProperty, value);
+    }
 
-        public static readonly StyledProperty<IBrush?> ForegroundProperty =
-            AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(Foreground), Brushes.White);
+    public double Size
+    {
+        get => GetValue(SizeProperty);
+        set => SetValue(SizeProperty, value);
+    }
 
-        public static readonly StyledProperty<IBrush?> BackgroundStrokeProperty =
-            AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(BackgroundStroke));
+    public IBrush? Foreground
+    {
+        get => GetValue(ForegroundProperty);
+        set => SetValue(ForegroundProperty, value);
+    }
 
-        public double Value
+    public IBrush? BackgroundTrack
+    {
+        get => GetValue(BackgroundTrackProperty);
+        set => SetValue(BackgroundTrackProperty, value);
+    }
+
+    public bool IsIndeterminate
+    {
+        get => GetValue(IsIndeterminateProperty);
+        set => SetValue(IsIndeterminateProperty, value);
+    }
+
+    private IDisposable? _timerSubscription;
+
+    static CircularProgress()
+    {
+        AffectsRender<CircularProgress>(
+            ValueProperty,
+            MaximumProperty,
+            MinimumProperty,
+            StrokeWidthProperty,
+            SizeProperty,
+            ForegroundProperty,
+            BackgroundTrackProperty,
+            IsIndeterminateProperty);
+    }
+
+    public CircularProgress()
+    {
+        Width = Size;
+        Height = Size;
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == SizeProperty)
         {
-            get => GetValue(ValueProperty);
-            set => SetValue(ValueProperty, value);
+            Width = Size;
+            Height = Size;
         }
-
-        public double Maximum
+        else if (change.Property == IsIndeterminateProperty)
         {
-            get => GetValue(MaximumProperty);
-            set => SetValue(MaximumProperty, value);
-        }
-
-        public double StrokeWidth
-        {
-            get => GetValue(StrokeWidthProperty);
-            set => SetValue(StrokeWidthProperty, value);
-        }
-
-        public double Size
-        {
-            get => GetValue(SizeProperty);
-            set => SetValue(SizeProperty, value);
-        }
-
-        public IBrush? Foreground
-        {
-            get => GetValue(ForegroundProperty);
-            set => SetValue(ForegroundProperty, value);
-        }
-
-        public IBrush? BackgroundStroke
-        {
-            get => GetValue(BackgroundStrokeProperty);
-            set => SetValue(BackgroundStrokeProperty, value);
-        }
-
-        static CircularProgress()
-        {
-            AffectsRender<CircularProgress>(
-                ValueProperty,
-                MaximumProperty,
-                StrokeWidthProperty,
-                SizeProperty,
-                ForegroundProperty,
-                BackgroundStrokeProperty);
-        }
-
-        public override void Render(DrawingContext context)
-        {
-            base.Render(context);
-
-            var size = Size;
-            var strokeWidth = StrokeWidth;
-            var radius = (size - strokeWidth) / 2;
-            var center = new Point(size / 2, size / 2);
-
-            // Фоновый круг
-            var bgBrush = BackgroundStroke ?? new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-            var bgPen = new Pen(bgBrush, strokeWidth);
-            context.DrawEllipse(null, bgPen, center, radius, radius);
-
-            // Прогресс
-            if (Value > 0 && Maximum > 0)
+            if (IsIndeterminate)
             {
-                var progress = Math.Min(Value / Maximum, 1.0);
-                var angle = progress * 360;
-
-                var foregroundPen = new Pen(Foreground, strokeWidth)
-                {
-                    LineCap = PenLineCap.Round
-                };
-
-                var startAngle = -90; // Начинаем сверху
-                var sweepAngle = angle;
-
-                var geometry = CreateArcGeometry(center, radius, startAngle, sweepAngle);
-                context.DrawGeometry(null, foregroundPen, geometry);
+                StartAnimation();
+            }
+            else
+            {
+                StopAnimation();
             }
         }
+    }
 
-        private static PathGeometry CreateArcGeometry(Point center, double radius, double startAngle, double sweepAngle)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (IsIndeterminate)
         {
-            var startRad = startAngle * Math.PI / 180;
-            var endRad = (startAngle + sweepAngle) * Math.PI / 180;
+            StartAnimation();
+        }
+    }
 
-            var startPoint = new Point(
-                center.X + radius * Math.Cos(startRad),
-                center.Y + radius * Math.Sin(startRad));
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        StopAnimation();
+    }
 
-            var endPoint = new Point(
-                center.X + radius * Math.Cos(endRad),
-                center.Y + radius * Math.Sin(endRad));
+    private void StartAnimation()
+    {
+        StopAnimation();
 
-            var isLargeArc = sweepAngle > 180;
+        _timerSubscription = Avalonia.Threading.DispatcherTimer.Run(() =>
+        {
+            _animationAngle = (_animationAngle + 6) % 360;
+            InvalidateVisual();
+            return true;
+        },TimeSpan.FromMilliseconds(16)); // ~60 FPS
+    }
 
-            var figure = new PathFigure
-            {
-                StartPoint = startPoint,
-                IsClosed = false
-            };
+    private void StopAnimation()
+    {
+        _timerSubscription?.Dispose();
+        _timerSubscription = null;
+        _animationAngle = 0;
+    }
 
-            figure.Segments!.Add(new ArcSegment
-            {
-                Point = endPoint,
-                Size = new Size(radius, radius),
-                SweepDirection = SweepDirection.Clockwise,
-                IsLargeArc = isLargeArc
-            });
+    public override void Render(DrawingContext context)
+    {
+        base.Render(context);
 
-            var geometry = new PathGeometry();
-            geometry.Figures!.Add(figure);
+        var size = Math.Min(Bounds.Width, Bounds.Height);
+        if (size <= 0) return;
 
-            return geometry;
+        var strokeWidth = StrokeWidth;
+        var radius = (size - strokeWidth) / 2;
+        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
+
+        // Фоновый трек
+        if (BackgroundTrack != null)
+        {
+            var trackPen = new Pen(BackgroundTrack, strokeWidth, lineCap: PenLineCap.Round);
+            context.DrawEllipse(null, trackPen, center, radius, radius);
         }
 
-        protected override Size MeasureOverride(Size availableSize)
+        // Прогресс
+        if (Foreground == null) return;
+
+        var pen = new Pen(Foreground, strokeWidth, lineCap: PenLineCap.Round);
+
+        if (IsIndeterminate)
         {
-            return new Size(Size, Size);
+            // Анимированная дуга для неопределённого состояния
+            DrawIndeterminateArc(context, center, radius, pen);
         }
+        else
+        {
+            // Обычный прогресс
+            DrawProgressArc(context, center, radius, pen);
+        }
+    }
+
+    private void DrawProgressArc(DrawingContext context, Point center, double radius, Pen pen)
+    {
+        var range = Maximum - Minimum;
+        if (range <= 0) return;
+
+        var normalizedValue = Math.Clamp((Value - Minimum) / range, 0, 1);
+        if (normalizedValue <= 0) return;
+
+        var sweepAngle = normalizedValue * 360;
+        DrawArc(context, center, radius, -90, sweepAngle, pen);
+    }
+
+    private void DrawIndeterminateArc(DrawingContext context, Point center, double radius, Pen pen)
+    {
+        var startAngle = _animationAngle - 90;
+        var sweepAngle = 90.0;
+
+        DrawArc(context, center, radius, startAngle, sweepAngle, pen);
+    }
+
+    private static void DrawArc(DrawingContext context, Point center, double radius, double startAngle, double sweepAngle, Pen pen)
+    {
+        if (sweepAngle >= 360)
+        {
+            context.DrawEllipse(null, pen, center, radius, radius);
+            return;
+        }
+
+        var startRad = startAngle * Math.PI / 180;
+        var endRad = (startAngle + sweepAngle) * Math.PI / 180;
+
+        var startPoint = new Point(center.X + radius * Math.Cos(startRad),center.Y + radius * Math.Sin(startRad));
+
+        var endPoint = new Point(center.X + radius * Math.Cos(endRad), center.Y + radius * Math.Sin(endRad));
+
+        var isLargeArc = sweepAngle > 180;
+
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            ctx.BeginFigure(startPoint, false);
+            ctx.ArcTo(endPoint, new Size(radius, radius), 0, isLargeArc, SweepDirection.Clockwise);
+        }
+
+        context.DrawGeometry(null, pen, geometry);
     }
 }

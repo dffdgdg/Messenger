@@ -1,8 +1,9 @@
 using Avalonia.Data.Converters;
 using MessengerDesktop.Converters.Boolean;
-using MessengerDesktop.Converters.Comparison;
+using MessengerDesktop.Converters.Comparsion;
 using MessengerDesktop.Converters.DateTime;
 using MessengerDesktop.Converters.Domain;
+using MessengerDesktop.Converters.Enum;
 using MessengerDesktop.Converters.Generic;
 using MessengerDesktop.Converters.Hierarchy;
 using MessengerDesktop.Converters.Message;
@@ -24,13 +25,19 @@ public sealed class ConverterLocator
 
     private void RegisterConverters()
     {
+        Register<ThemeToDisplayConverter>("ThemeToDisplay");
         Register<BoolToStringConverter>("BoolToString");
         Register<ZeroToTrueConverter>("ZeroToTrue");
+        Register<BoolToOnlineColorConverter>("BoolToOnline");
+        Register<BoolToOpacityConverter>("BoolToOpacity");
         Register<BoolToRotationConverter>("BoolToRotation", "BooleanToRotateTransform");
         Register<BoolToRotationConverter>("Initials", "InitialsConverter");
 
+        Register<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");
+
         Register<EqualityConverter>("Equality", "Equals");
         Register<NotEqualityConverter>("NotEquals", "NotEquality");
+        Register<GreaterThanZeroConverter>("GreaterThanZero", "GreaterThanZero");
 
         Register(new DateTimeFormatConverter { Format = DateTimeFormat.Chat }, "MessageTime", "ChatTime");
         Register(new DateTimeFormatConverter { Format = DateTimeFormat.DateTime }, "FullDateTime");
@@ -50,6 +57,8 @@ public sealed class ConverterLocator
 
         Register<IndexToTextConverter>("IndexToText");
 
+        RegisterMulti<BooleanAndConverter>("BooleanAnd");
+        RegisterMulti<LastSeenTextConverter>("LastSeen");
         RegisterMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
     }
 

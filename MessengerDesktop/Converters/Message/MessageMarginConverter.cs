@@ -17,9 +17,7 @@ namespace MessengerDesktop.Converters.Message
             return isOwn ? OwnMessageMargin : OtherMessageMargin;
         }
 
-        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException("ConvertBack is not supported for MessageMarginConverter");
-        }
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) 
+            => throw new NotSupportedException("ConvertBack is not supported for MessageMarginConverter");
     }
 }

@@ -10,193 +10,175 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels;
+
+public partial class SettingsViewModel : BaseViewModel
 {
-    public partial class SettingsViewModel : BaseViewModel, IDisposable
+    private readonly IApiClientService _apiClient;
+    private readonly ISettingsService _settingsService;  
+    private readonly Timer _autoSaveTimer;
+    private readonly int _userId;
+    private bool _isSaving;
+    private bool _hasPendingChanges;
+    private bool _isLoaded;
+
+    [ObservableProperty] private Theme _selectedTheme;
+    [ObservableProperty] private bool _notificationsEnabled = true;
+    [ObservableProperty] private bool _canBeFoundInSearch = true;
+
+    public Theme[] AvailableThemes { get; } = Enum.GetValues<Theme>();
+    public string CurrentThemeDisplay => SelectedTheme.ToString();
+
+    public SettingsViewModel(
+        MainMenuViewModel mainMenuViewModel,
+        IApiClientService apiClient,
+        ISettingsService settingsService) 
     {
-        private readonly IApiClientService _apiClient;
-        private readonly MainMenuViewModel _mainMenuViewModel;
-        private readonly Timer _autoSaveTimer;
-        private bool _isSaving;
-        private bool _hasPendingChanges;
-        private bool _isLoaded;
+        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _userId = mainMenuViewModel?.UserId ?? throw new ArgumentNullException(nameof(mainMenuViewModel));
 
-        [ObservableProperty]
-        private int _userId;
+        _autoSaveTimer = new Timer(async _ => await SaveSettingsAsync(), null, Timeout.Infinite, Timeout.Infinite);
+        _selectedTheme = GetCurrentAppTheme();
 
-        [ObservableProperty]
-        private Theme _selectedTheme;
+        _ = LoadSettingsAsync();
+    }
 
-        [ObservableProperty]
-        private bool _notificationsEnabled = true;
+    private static Theme GetCurrentAppTheme()
+    {
+        var app = Application.Current;
+        var themeVariant = app?.RequestedThemeVariant ?? app?.ActualThemeVariant;
+        return themeVariant == ThemeVariant.Dark ? Theme.dark : Theme.light;
+    }
 
-        [ObservableProperty]
-        private bool _canBeFoundInSearch = true;
-
-        public Theme[] AvailableThemes { get; } = (Theme[])Enum.GetValues(typeof(Theme));
-
-        public string CurrentThemeDisplay => SelectedTheme.ToString();
-
-        public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient)
+    private async Task LoadSettingsAsync()
+    {
+        await SafeExecuteAsync(async () =>
         {
-            _mainMenuViewModel = mainMenuViewModel;
-            _apiClient = apiClient;
-            UserId = mainMenuViewModel.UserId;
-
-            _autoSaveTimer = new Timer(async _ => await SaveSettings(), null, Timeout.Infinite, Timeout.Infinite);
-            _selectedTheme = GetCurrentAppTheme();
-            _ = LoadSettings();
-        }
-
-        private static Theme GetCurrentAppTheme()
-        {
-            var themeVariant = Application.Current?.RequestedThemeVariant;
-
-            if (themeVariant == ThemeVariant.Dark)
-                return Theme.dark;
-            if (themeVariant == ThemeVariant.Light)
-                return Theme.light;
-
-            return Application.Current?.ActualThemeVariant == ThemeVariant.Dark
-                ? Theme.dark
-                : Theme.light;
-        }
-
-        private async Task LoadSettings()
-        {
-            await SafeExecuteAsync(async () =>
+            var result = await _apiClient.GetAsync<UserDTO>($"api/user/{_userId}");
+            if (!result.Success || result.Data == null)
             {
-                var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
-                if (result.Success && result.Data != null)
-                {
-                    _isSaving = true;
-
-                    var serverTheme = (Theme)result.Data.Theme;
-                    var serverNotifications = result.Data.NotificationsEnabled ?? true;
-                    var serverCanBeFound = result.Data.CanBeFoundInSearch ?? true;
-
-                    if (SelectedTheme != serverTheme)
-                    {
-                        SelectedTheme = serverTheme;
-                        ApplyTheme(SelectedTheme);
-                        OnPropertyChanged(nameof(SelectedTheme));
-                    }
-
-                    NotificationsEnabled = serverNotifications;
-                    CanBeFoundInSearch = serverCanBeFound;
-
-                    _isSaving = false;
-                    _isLoaded = true;
-                }
-                else
-                {
-                    ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
-                    _isLoaded = true;
-                }
-            });
-        }
-
-        private async Task SaveSettings()
-        {
-            if (_isSaving) return;
+                ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
+                _isLoaded = true;
+                return;
+            }
 
             _isSaving = true;
-            _hasPendingChanges = false;
-
             try
             {
-                var updatedUser = new UserDTO
-                {
-                    Id = UserId,
-                    Theme = SelectedTheme,
-                    NotificationsEnabled = NotificationsEnabled,
-                    CanBeFoundInSearch = CanBeFoundInSearch
-                };
+                var data = result.Data;
+                var serverTheme = (Theme)data.Theme;
 
-                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{UserId}", updatedUser);
-                if (result.Success)
+                if (SelectedTheme != serverTheme)
                 {
-                    SuccessMessage = "Настройки сохранены";
+                    SelectedTheme = serverTheme;
+                    ApplyTheme(serverTheme);
                 }
-                else
-                {
-                    ErrorMessage = $"Ошибка сохранения: {result.Error}";
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Ошибка: {ex.Message}";
+
+                NotificationsEnabled = data.NotificationsEnabled ?? true;
+
+                _settingsService.NotificationsEnabled = NotificationsEnabled;
+                _settingsService.CanBeFoundInSearch = CanBeFoundInSearch;
             }
             finally
             {
                 _isSaving = false;
+                _isLoaded = true;
+            }
+        });
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (_isSaving) return;
+
+        _isSaving = true;
+        _hasPendingChanges = false;
+
+        try
+        {
+            var result = await _apiClient.PutAsync<UserDTO>($"api/user/{_userId}", new UserDTO
+            {
+                Id = _userId,
+                Theme = SelectedTheme,
+                NotificationsEnabled = NotificationsEnabled,
+            });
+
+            if (result.Success)
+            {
+                _settingsService.NotificationsEnabled = NotificationsEnabled;
+                _settingsService.CanBeFoundInSearch = CanBeFoundInSearch;
+
+                SuccessMessage = "Настройки сохранены";
+            }
+            else
+            {
+                ErrorMessage = $"Ошибка сохранения: {result.Error}";
             }
         }
-
-        private void ApplyTheme(Theme theme)
+        catch (Exception ex)
         {
-            var themeVariant = theme switch
-            {
-                Theme.dark => ThemeVariant.Dark,
-                Theme.light => ThemeVariant.Light,
-                _ => ThemeVariant.Default
-            };
-
-            App.Current.ThemeVariant = themeVariant;
-
-            OnPropertyChanged(nameof(CurrentThemeDisplay));
+            ErrorMessage = $"Ошибка: {ex.Message}";
         }
-
-        [RelayCommand]
-        private void ToggleTheme() 
-            => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
-
-        [RelayCommand]
-        private async Task SaveNow() 
-            => await SaveSettings();
-
-        private void ScheduleAutoSave()
+        finally
         {
-            if (_isSaving) return;
-
-            _hasPendingChanges = true;
-            _autoSaveTimer.Change(1000, Timeout.Infinite);
+            _isSaving = false;
         }
+    }
 
-        partial void OnSelectedThemeChanged(Theme value)
+    private void ApplyTheme(Theme theme)
+    {
+        if (App.Current == null) return;
+
+        App.Current.ThemeVariant = theme switch
         {
-            if (!_isSaving && _isLoaded)
-            {
-                ApplyTheme(value);
-                ScheduleAutoSave();
-            }
-        }
+            Theme.dark => ThemeVariant.Dark,
+            Theme.light => ThemeVariant.Light,
+            _ => ThemeVariant.Default
+        };
+        OnPropertyChanged(nameof(CurrentThemeDisplay));
+    }
 
-        partial void OnNotificationsEnabledChanged(bool value)
+    private void ScheduleAutoSave()
+    {
+        if (_isSaving || !_isLoaded) return;
+        _hasPendingChanges = true;
+        _autoSaveTimer.Change(1000, Timeout.Infinite);
+    }
+
+    partial void OnSelectedThemeChanged(Theme value)
+    {
+        if (_isSaving || !_isLoaded) return;
+        ApplyTheme(value);
+        ScheduleAutoSave();
+    }
+
+    partial void OnNotificationsEnabledChanged(bool value) => ScheduleAutoSave();
+    partial void OnCanBeFoundInSearchChanged(bool value) => ScheduleAutoSave();
+
+    [RelayCommand]
+    private void ToggleTheme() => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
+
+    [RelayCommand]
+    private async Task SaveNow() => await SaveSettingsAsync();
+
+    [RelayCommand]
+    private void ResetToDefaults()
+    {
+        SelectedTheme = Theme.light;
+        NotificationsEnabled = true;
+        CanBeFoundInSearch = true;
+        SuccessMessage = "Настройки сброшены";
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            if (!_isSaving && _isLoaded) ScheduleAutoSave();
-        }
-
-        partial void OnCanBeFoundInSearchChanged(bool value)
-        {
-            if (!_isSaving && _isLoaded) ScheduleAutoSave();
-        }
-
-        [RelayCommand]
-        private void ResetToDefaults()
-        {
-            SelectedTheme = Theme.light;
-            NotificationsEnabled = true;
-            CanBeFoundInSearch = true;
-            SuccessMessage = "Настройки сброшены к значениям по умолчанию";
-        }
-
-        public void Dispose()
-        {
-            _autoSaveTimer?.Dispose();
-
+            _autoSaveTimer.Dispose();
             if (_hasPendingChanges && !_isSaving)
-                _ = SaveSettings();
+                _ = SaveSettingsAsync();
         }
+        base.Dispose(disposing);
     }
 }

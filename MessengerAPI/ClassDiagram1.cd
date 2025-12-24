@@ -1,224 +1,424 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MessengerAPI.Common.Result">
+    <Position X="9.5" Y="16.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAABAAAAAAAAQAAAAAAAAAAAgAAAACAAAAAAIAAAAA=</HashCode>
+      <FileName>Common\Result.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Common.Result&lt;T&gt;">
+    <Position X="9.5" Y="19.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAgAAAAAAAAAAAAAAgAAAAgAAAACAAAAgAAAAAAA=</HashCode>
+      <FileName>Common\Result.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Configuration.MessengerSettings" Collapsed="true">
+    <Position X="31.75" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAACAAAAAAAAEAAABAAAAAAAAAACACAQAQ=</HashCode>
+      <FileName>Configuration\MessengerSettings.cs</FileName>
+    </TypeIdentifier>
+  </Class>
   <Class Name="MessengerAPI.Controllers.AdminController">
-    <Position X="9.75" Y="6" Width="1.5" />
+    <Position X="5.5" Y="5.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>IAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Controllers\AdminController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.AuthController">
-    <Position X="16.25" Y="6" Width="1.5" />
+    <Position X="12.25" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAQAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAA=</HashCode>
       <FileName>Controllers\AuthController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.BaseController&lt;T&gt;">
-    <Position X="17.5" Y="0.5" Width="1.5" />
+    <Position X="15.5" Y="0.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAEAAAAAAACAAAAgAEMgAAAAIgEgAQQIAAAAAAAAAEA=</HashCode>
       <FileName>Controllers\BaseController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.ChatsController">
-    <Position X="12" Y="6" Width="1.75" />
+    <Position X="23.5" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAABACAAAAAAAAAAAABAAACAAAAAAAAAAAAAAAI=</HashCode>
+      <HashCode>AAAAQAAJAKAAAAAACAAAAABAAACAAAAAAAAAAAAgAAI=</HashCode>
       <FileName>Controllers\ChatsController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.DepartmentController">
-    <Position X="18.25" Y="6" Width="2" />
+    <Position X="7.75" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAEAQAAAAAAAAAAAAAAAAAAAAAAABAAIAAAAAA=</HashCode>
+      <HashCode>AAAAAAAEAQAAAAAAAAAAAAAAAAIAAAAEABAAIAAEACE=</HashCode>
       <FileName>Controllers\DepartmentController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.FilesController">
-    <Position X="25" Y="6" Width="1.5" />
+    <Position X="14.5" Y="5.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Controllers\FilesController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MessengerAPI.Controllers.MessagesController">
-    <Position X="14" Y="6" Width="1.75" />
+    <Position X="19" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AQAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAIAAAAAA=</HashCode>
+      <HashCode>AQAAAgBAAAAAgAAAAAAAAAAAAAAIAACAAAAAAACAABA=</HashCode>
       <FileName>Controllers\MessagesController.cs</FileName>
     </TypeIdentifier>
   </Class>
+  <Class Name="MessengerAPI.Controllers.NotificationController">
+    <Position X="25.75" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAABAAAAAACAAAAAAAAAAAgAAAAAAA=</HashCode>
+      <FileName>Controllers\NotificationController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
   <Class Name="MessengerAPI.Controllers.PollController">
-    <Position X="21" Y="6" Width="1.5" />
+    <Position X="10" Y="5.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAADAAA=</HashCode>
       <FileName>Controllers\PollController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Controllers.UserController">
-    <Position X="23" Y="6" Width="1.5" />
+  <Class Name="MessengerAPI.Controllers.ReadReceiptsController">
+    <Position X="16.75" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAEAAAAAEAAAI=</HashCode>
+      <HashCode>AAQAAAAAAAAAAAAAAAAgAAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Controllers\ReadReceiptsController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Controllers.UserController">
+    <Position X="21.25" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABACAAgAAAAAAAAAAIAQAAAAAAEAAAAAEAAAI=</HashCode>
       <FileName>Controllers\UserController.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Middleware.ExceptionHandlingMiddleware">
-    <Position X="26.75" Y="6" Width="1.5" />
+  <Class Name="MessengerAPI.Helpers.ModelExtensions" Collapsed="true">
+    <Position X="33.5" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAAABhAAAAAAAAAAAAAAAAAAAAAAAAACBAAAAAAAAAA=</HashCode>
+      <FileName>Helpers\ModelExtensions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Helpers.JwtSettings" Collapsed="true">
+    <Position X="31.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAAAAAECAAAAAAAAAAAAAAgAAAAAAAAIAAAAAA=</HashCode>
+      <FileName>Helpers\TokenService.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Helpers.TokenService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="28.25" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAAAEAAAAAAgAAAAAAAAAAAACAAAAAAEBAAAAA=</HashCode>
+      <FileName>Helpers\TokenService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="MessengerAPI.Hubs.ChatHub" Collapsed="true">
+    <Position X="31.75" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAgEAAACCAAAAAAAAggBgAIAAAAAAAAAAAAADEAAA=</HashCode>
+      <FileName>Hubs\ChatHub.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Middleware.ExceptionHandlingMiddleware" Collapsed="true">
+    <Position X="28.25" Y="1.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAQAAQAAAAAAAA=</HashCode>
       <FileName>Middleware\ExceptionHandlingMiddleware.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Middleware.ExceptionHandlingMiddlewareExtensions">
-    <Position X="29" Y="6" Width="3" />
+  <Class Name="MessengerAPI.Middleware.ExceptionHandlingMiddlewareExtensions" Collapsed="true">
+    <Position X="30" Y="1.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAA=</HashCode>
       <FileName>Middleware\ExceptionHandlingMiddleware.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Services.AccessControlService" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="38.5" Y="8.75" Width="1.5" />
+  <Class Name="MessengerAPI.Model.Chat" Collapsed="true">
+    <Position X="30" Y="0.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAACAAAAAAQAAAAAACAACABAAABAEAAAAA=</HashCode>
+      <HashCode>AAACAAAAACAEAAAAACQAAAQAEAAAAAAAQQAAAQAAAAE=</HashCode>
+      <FileName>Model\Chat.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.ChatMember" Collapsed="true">
+    <Position X="33.5" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQBAAAAAFIAAAAAEAAAAAgAAAAAAAgIAAAAAAAAAAQ=</HashCode>
+      <FileName>Model\ChatMember.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.Department" Collapsed="true">
+    <Position X="35.25" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACACAAAAAAAICAAAABAAQAAAAQAAgAAAAAQAAAAAQ=</HashCode>
+      <FileName>Model\Department.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.Message" Collapsed="true">
+    <Position X="33.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAACAAAAAgAEBAAAACAAACAAAAABAAgAAAAAAQAIAAQ=</HashCode>
+      <FileName>Model\Message.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.MessageFile" Collapsed="true">
+    <Position X="35.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAAIAAAAAAAAAAAAAAAAEAAAQIABAAAA=</HashCode>
+      <FileName>Model\MessageFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.MessageStatus" Collapsed="true">
+    <Position X="28.25" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAADAAAEAAAACAAAAAAAAAgAAAAAAAAEAAAAIAAAAAA=</HashCode>
+      <FileName>Model\MessageStatus.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.MessengerDbContext" Collapsed="true">
+    <Position X="30" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>UAAAACAAAAAUBAABACQAQAAAEAAAAAAAAAAAAQAAAAA=</HashCode>
+      <FileName>Model\MessengerDbContext.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.UserSetting" Collapsed="true">
+    <Position X="31.75" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAAAABAAAAAQAAAAAAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Model\Partial.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.User" Collapsed="true">
+    <Position X="30" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QACCEAAAAAAEIBABASQAAAQAFAAAAABAAAAAARAAAAA=</HashCode>
+      <FileName>Model\Partial.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.Poll" Collapsed="true">
+    <Position X="30" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACACAAAAAgAAAAAAAAQQQAAAAAAAAAAEAAAAIAAAAAA=</HashCode>
+      <FileName>Model\Poll.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.PollOption" Collapsed="true">
+    <Position X="31.75" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAAAgAAUAQAAAAAAACAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Model\PollOption.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Model.PollVote" Collapsed="true">
+    <Position X="33.5" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAADAAAAAAAAAAAAAQEACAgAAAAACAAAAAAAAAABAAA=</HashCode>
+      <FileName>Model\PollVote.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MessengerAPI.Services.AccessControlService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="28.25" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAACAABAAAAAAAAAAAgCAAAAAAAAAAAQBAgAAAE=</HashCode>
       <FileName>Services\AcessControlService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
   </Class>
-  <Class Name="MessengerAPI.Services.AdminService" Collapsed="true">
-    <Position X="29.25" Y="10" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAA=</HashCode>
-      <FileName>Services\AdminService.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
-  </Class>
   <Class Name="MessengerAPI.Services.AuthService">
-    <Position X="20.25" Y="10" Width="1.5" />
+    <Position X="8.75" Y="13" Width="2" />
     <TypeIdentifier>
-      <HashCode>AgAAAAAAAAAEAAAAAAACAAQBBAAAAAAiCAAACBCAQAA=</HashCode>
+      <HashCode>AgAAAAAAgAAAAAAAgAACAAAAAAAAAAACAAEACAAAAAA=</HashCode>
       <FileName>Services\AuthService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Services.BaseService&lt;T&gt;" Collapsed="true">
-    <Position X="28" Y="8.75" Width="1.5" />
+  <Class Name="MessengerAPI.Services.BaseService&lt;T&gt;">
+    <Position X="14" Y="9.75" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAABEACIAAAQAAAIAAAAABAAAAAAABAAAg=</HashCode>
+      <HashCode>AAAAAAAAAAAABEAAAAAAAAAAIAACAQAAAAAAAAAACAA=</HashCode>
       <FileName>Services\BaseService.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="MessengerAPI.Services.ChatService" Collapsed="true">
-    <Position X="31.5" Y="10" Width="1.5" />
+  <Class Name="MessengerAPI.Services.ChatService">
+    <Position X="19" Y="13" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAEAAAAAAAAAAAASAAAAAACAAAAACAAAAGAAAgA=</HashCode>
-      <FileName>Services\ChatsService.cs</FileName>
+      <HashCode>AACBKAEAAAAAAAAEgAASIAABAACAAAAACAAAAGAAAgg=</HashCode>
+      <FileName>Services\ChatService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="MessengerAPI.Services.DepartmentService">
-    <Position X="22.5" Y="10" Width="1.5" />
+    <Position X="5.25" Y="13" Width="2.75" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAABAAAABAAAAAAAIAQAAAAQ=</HashCode>
+      <HashCode>AAAAAAABAAIAAAAAgAFAAIBAAgABIAAAEAAAAQgEAAQ=</HashCode>
       <FileName>Services\DepartmentService.cs</FileName>
       <NewMemberFileName>Services\AuthService.cs</NewMemberFileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="MessengerAPI.Services.FileService">
-    <Position X="27" Y="10" Width="1.5" />
+    <Position X="14.5" Y="13" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAABAAIABAAAAAAAAQAAAAAAAAAAEAAAEAAAAAAIA=</HashCode>
+      <HashCode>AAAABAAABAAAAAAAgAAQAAAAAIAAAAEAAAEQAAAAAIA=</HashCode>
       <FileName>Services\FileService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Services.MessageService" Collapsed="true">
-    <Position X="36" Y="10" Width="1.5" />
+  <Class Name="MessengerAPI.Services.MessageService">
+    <Position X="21.25" Y="13" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAgIAAAAAAAAAABAAAAACAAAAACEAAAAAAAAAA=</HashCode>
+      <HashCode>IgEAEAAgIAAAAAUAgAABAQAAAKAAAQCCAAAEgAAAAUg=</HashCode>
       <FileName>Services\MessageService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Services.PollService">
-    <Position X="24.75" Y="10" Width="1.5" />
+  <Class Name="MessengerAPI.Services.NotificationService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="35.25" Y="2.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAQAAAAAAAAAAAAAAAAACAAACAAAAAAA=</HashCode>
+      <HashCode>EAAECCAAAAAAAABAAAAAAQAAAAAAAAAAAAABBAABAAA=</HashCode>
+      <FileName>Services\NotificationService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="MessengerAPI.Services.OnlineUserService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="28.25" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQAAAAAAAAAACEQAAAECAAAAAAEAAEAAABAA=</HashCode>
+      <FileName>Services\OnlineUserService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="MessengerAPI.Services.PollService">
+    <Position X="11.5" Y="13" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAQAAAAAAAAAAAAAAAAACAAAGAAAAAAA=</HashCode>
       <FileName>Services\PollService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="MessengerAPI.Services.UserService" Collapsed="true">
-    <Position X="33.75" Y="10" Width="1.5" />
+  <Class Name="MessengerAPI.Services.ReadReceiptService" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="35.25" Y="3.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAABAAAACAAAAQAAAAA=</HashCode>
+      <HashCode>AAAAAAACAAAAAAAgAAAAAiAAAAAAAAEACAAABABAAAg=</HashCode>
+      <FileName>Services\ReadReceiptService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="MessengerAPI.Services.UserService">
+    <Position X="23.5" Y="13" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAIAAQAAAAACIAAAAAAABAAAACAAEAQAAAAA=</HashCode>
       <FileName>Services\UserService.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Interface Name="MessengerAPI.Services.IAccessControlService" Collapsed="true">
-    <Position X="38.5" Y="10" Width="1.5" />
+  <Class Name="MessengerAPI.Services.AdminService">
+    <Position X="16.75" Y="13" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAACAAAAAAQAAAAAACAACABAAABAEAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAABAAAABACEAAAAAAABAA=</HashCode>
+      <FileName>Services\AdminService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="MessengerAPI.Helpers.ITokenService" Collapsed="true">
+    <Position X="30" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAAAAAAACAAAAAAABAAAAA=</HashCode>
+      <FileName>Helpers\TokenService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IAccessControlService" Collapsed="true">
+    <Position X="28.25" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAACAAAAAAAAAAAAAAgCAAAAAAAAAAAQAAgAAAE=</HashCode>
       <FileName>Services\AcessControlService.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="MessengerAPI.Services.IAdminService" Collapsed="true">
-    <Position X="40.25" Y="10" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAA=</HashCode>
-      <FileName>Services\AdminService.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
   <Interface Name="MessengerAPI.Services.IAuthService" Collapsed="true">
-    <Position X="42" Y="10" Width="1.5" />
+    <Position X="31.75" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAABAAAAA=</HashCode>
+      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Services\AuthService.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="MessengerAPI.Services.IChatService" Collapsed="true">
-    <Position X="38.5" Y="10.75" Width="1.5" />
+    <Position X="33.5" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAEAAAAAAAAAAAASAAAAAACAAAAACAAAAGAAAgA=</HashCode>
-      <FileName>Services\ChatsService.cs</FileName>
+      <HashCode>AACBIAEAAAAAAAAEAAASAAABAACAAAAACAAAAGAAAgA=</HashCode>
+      <FileName>Services\ChatService.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="MessengerAPI.Services.IDepartmentService" Collapsed="true">
-    <Position X="40.25" Y="10.75" Width="1.5" />
+    <Position X="35.25" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAABAAAABAAAAAAAAAQAAAAQ=</HashCode>
+      <HashCode>AAAAAAABAAAAAAAAAABAAIBAAgABIAAAEAAAAQAAAAQ=</HashCode>
       <FileName>Services\DepartmentService.cs</FileName>
       <NewMemberFileName>Services\AuthService.cs</NewMemberFileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="MessengerAPI.Services.IFileService" Collapsed="true">
-    <Position X="42" Y="10.75" Width="1.5" />
+    <Position X="28.25" Y="6.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAQAAAAAAAAAAEAAAEAAAAAAIA=</HashCode>
       <FileName>Services\FileService.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Interface Name="MessengerAPI.Services.IMessageService" Collapsed="true">
-    <Position X="38.5" Y="11.5" Width="1.5" />
+    <Position X="30" Y="6.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAgAAAAAAAAAAABAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>IAAAEAAgAAAAAAUAAAABAQAAAKAAAACAAAAAAAAAAAA=</HashCode>
       <FileName>Services\MessageService.cs</FileName>
     </TypeIdentifier>
   </Interface>
+  <Interface Name="MessengerAPI.Services.INotificationService" Collapsed="true">
+    <Position X="31.75" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAAAAAAABAAAAAAQAAAAAAAAAAAAABAAAAAAA=</HashCode>
+      <FileName>Services\NotificationService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IOnlineUserService" Collapsed="true">
+    <Position X="33.5" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQAAAAAAAAAACEQAAAECAAAAAAEAAEAAAAAA=</HashCode>
+      <FileName>Services\OnlineUserService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
   <Interface Name="MessengerAPI.Services.IPollService" Collapsed="true">
-    <Position X="40.25" Y="11.5" Width="1.5" />
+    <Position X="35.25" Y="6.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAQAAAAAAAAAAAAAAAAACAAACAAAAAAA=</HashCode>
       <FileName>Services\PollService.cs</FileName>
     </TypeIdentifier>
   </Interface>
-  <Interface Name="MessengerAPI.Services.IUserService" Collapsed="true">
-    <Position X="42" Y="11.5" Width="1.5" />
+  <Interface Name="MessengerAPI.Services.IReadReceiptService" Collapsed="true">
+    <Position X="28.25" Y="7.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAABAAAACAAAAQAAAAA=</HashCode>
+      <HashCode>AAAAAAACAAAAAAAAAAAAAiAAAAAAAAEACAAABAAAAAg=</HashCode>
+      <FileName>Services\ReadReceiptService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IUserService" Collapsed="true">
+    <Position X="31.75" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAIAAQAAAAACIAAAAAAABAAAACAAEAQAAAAA=</HashCode>
       <FileName>Services\UserService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="MessengerAPI.Services.IAdminService" Collapsed="true">
+    <Position X="30" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAABAAAABAAAAAAAAAABAA=</HashCode>
+      <FileName>Services\AdminService.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Font Name="Segoe UI" Size="9" />

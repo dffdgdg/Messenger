@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MessengerDesktop.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="MessengerDesktop.Controls.AvatarControl"
+             x:Name="Root">
+
+	<UserControl.Styles>
+		<Style Selector="controls|AvatarControl.Small">
+			<Setter Property="Size" Value="32"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="IconSize" Value="14"/>
+		</Style>
+		<Style Selector="controls|AvatarControl.Medium">
+			<Setter Property="Size" Value="40"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="IconSize" Value="18"/>
+		</Style>
+		<Style Selector="controls|AvatarControl.Large">
+			<Setter Property="Size" Value="56"/>
+			<Setter Property="FontSize" Value="20"/>
+			<Setter Property="IconSize" Value="24"/>
+		</Style>
+		<Style Selector="controls|AvatarControl.XLarge">
+			<Setter Property="Size" Value="80"/>
+			<Setter Property="FontSize" Value="28"/>
+			<Setter Property="IconSize" Value="32"/>
+		</Style>
+		<Style Selector="controls|AvatarControl.XXLarge">
+			<Setter Property="Size" Value="100"/>
+			<Setter Property="FontSize" Value="36"/>
+			<Setter Property="IconSize" Value="40"/>
+		</Style>
+	</UserControl.Styles>
+
+	<Border x:Name="AvatarBorder"
+            Width="{Binding Size, ElementName=Root}"
+            Height="{Binding Size, ElementName=Root}"
+            ClipToBounds="True"
+            Background="{Binding PlaceholderBackground, ElementName=Root}">
+
+		<Panel>
+			<!-- Изображение аватара -->
+			<Image x:Name="AvatarImage"
+                   Stretch="UniformToFill"
+                   asyncImageLoader:ImageLoader.Source="{Binding ImageSource, ElementName=Root}"
+                   IsVisible="{Binding HasImage, ElementName=Root}"/>
+
+			<!-- Плейсхолдер с инициалами -->
+			<TextBlock Text="{Binding Initials, ElementName=Root}"
+                       FontSize="{Binding FontSize, ElementName=Root}"
+                       FontWeight="SemiBold"
+                       Foreground="{Binding PlaceholderForeground, ElementName=Root}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding ShowInitials, ElementName=Root}"/>
+
+			<!-- Плейсхолдер с иконкой -->
+			<PathIcon Data="{Binding IconData, ElementName=Root}"
+                      Width="{Binding IconSize, ElementName=Root}"
+                      Height="{Binding IconSize, ElementName=Root}"
+                      Foreground="{Binding PlaceholderForeground, ElementName=Root}"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      IsVisible="{Binding ShowIcon, ElementName=Root}"/>
+
+			<!-- Индикатор онлайн -->
+			<Border x:Name="OnlineIndicator"
+                    IsVisible="{Binding ShowOnlineStatus, ElementName=Root}"
+                    Width="{Binding OnlineIndicatorSize, ElementName=Root}"
+                    Height="{Binding OnlineIndicatorSize, ElementName=Root}"
+                    CornerRadius="{Binding OnlineIndicatorSize, ElementName=Root}"
+                    Background="{DynamicResource OnlineStatus}"
+                    BorderBrush="{DynamicResource PrimaryBG}"
+                    BorderThickness="2"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"/>
+		</Panel>
+	</Border>
+</UserControl>

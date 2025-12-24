@@ -5,10 +5,7 @@ namespace MessengerAPI.Middleware
 {
     public class ExceptionHandlingMiddleware(RequestDelegate next,ILogger<ExceptionHandlingMiddleware> logger,IWebHostEnvironment env)
     {
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
+        private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
         public async Task InvokeAsync(HttpContext context)
         {
@@ -64,7 +61,6 @@ namespace MessengerAPI.Middleware
 
     public static class ExceptionHandlingMiddlewareExtensions
     {
-        public static IApplicationBuilder UseExceptionHandling(this IApplicationBuilder app) =>
-            app.UseMiddleware<ExceptionHandlingMiddleware>();
+        public static IApplicationBuilder UseExceptionHandling(this IApplicationBuilder app) => app.UseMiddleware<ExceptionHandlingMiddleware>();
     }
 }

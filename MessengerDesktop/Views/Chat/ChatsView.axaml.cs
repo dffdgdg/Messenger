@@ -75,11 +75,9 @@ namespace MessengerDesktop.Views
             panel.IsVisible = isAnyChatSelected && globalOpen;
         }
 
-        private void Splitter_DragStarted(object? sender, VectorEventArgs e) 
-            => _isDragging = true;
+        private void Splitter_DragStarted(object? sender, VectorEventArgs e) => _isDragging = true;
 
-        private void Splitter_DragCompleted(object? sender, VectorEventArgs e) 
-            => _isDragging = false;
+        private void Splitter_DragCompleted(object? sender, VectorEventArgs e) => _isDragging = false;
 
         private void ChatListColumn_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
         {

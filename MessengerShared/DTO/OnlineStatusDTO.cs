@@ -1,11 +1,6 @@
 ﻿namespace MessengerShared.DTO
 {
-    public class OnlineStatusDTO
-    {
-        public int UserId { get; set; }
-        public bool IsOnline { get; set; }
-        public DateTime? LastOnline { get; set; }
-    }
+    public record OnlineStatusDTO(int UserId, bool IsOnline, DateTime? LastOnline);
 
     public class OnlineUsersResponseDTO
     {

@@ -5,99 +5,118 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels;
+
+public partial class UserProfileDialogViewModel : DialogBaseViewModel
 {
-    public partial class UserProfileDialogViewModel : DialogBaseViewModel
+    private readonly IApiClientService _apiClient;
+
+    [ObservableProperty]
+    private UserDTO _user;
+
+    [ObservableProperty]
+    private Bitmap? _avatarBitmap;
+
+    [ObservableProperty]
+    private string _department = string.Empty;
+
+    /// <summary>
+    /// Callback для открытия/создания чата с пользователем
+    /// </summary>
+    public Func<UserDTO, Task>? OpenChatWithUserAction { get; set; }
+
+    public string? AvatarUrl => GetAbsoluteUrl(User.Avatar);
+
+    /// <summary>
+    /// Показывать ли кнопку "Написать" (скрываем для своего профиля)
+    /// </summary>
+    public bool CanSendMessage { get; init; } = true;
+
+    public UserProfileDialogViewModel(UserDTO user, IApiClientService apiClient)
     {
-        private readonly IApiClientService _apiClient;
+        _user = user ?? throw new ArgumentNullException(nameof(user));
+        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
 
-        [ObservableProperty]
-        private UserDTO? _user;
+        Title = $"Профиль: {user.DisplayName ?? user.Username}";
+        CanCloseOnBackgroundClick = true;
+        Department = user.Department ?? string.Empty;
+    }
 
-        [ObservableProperty]
-        private string? _message;
+    [RelayCommand]
+    public Task Initialize() => InitializeAsync(LoadAvatarAsync);
 
-        [ObservableProperty]
-        private Bitmap? _avatarBitmap;
-        public Func<string, Task>? SendMessageAction { get; set; }
-
-        public string? AvatarUrl => User?.Avatar == null 
-            ? null 
-            : $"{App.ApiUrl.TrimEnd('/')}/{User.Avatar.TrimStart('/')}?v={DateTime.Now.Ticks}";
-
-        public UserProfileDialogViewModel(UserDTO user, IApiClientService apiClient)
+    /// <summary>
+    /// Команда "Написать сообщение" - открывает или создаёт чат с пользователем
+    /// </summary>
+    [RelayCommand]
+    private async Task SendMessage()
+    {
+        if (OpenChatWithUserAction == null)
         {
-            _user = user;
-            _apiClient = apiClient;
-            Title = $"Профиль: {user.DisplayName ?? user.Username}";
-            CanCloseOnBackgroundClick = true;
-            _ = LoadAvatarAsync();
+            ErrorMessage = "Действие не настроено";
+            return;
         }
 
-        private async Task LoadAvatarAsync()
+        try
         {
-            if (string.IsNullOrEmpty(AvatarUrl))
+            RequestClose();
+            await OpenChatWithUserAction.Invoke(User);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка открытия чата: {ex.Message}";
+        }
+    }
+
+    private async Task LoadAvatarAsync()
+    {
+        if (string.IsNullOrEmpty(AvatarUrl))
+        {
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
+            return;
+        }
+
+        try
+        {
+            await using var stream = await _apiClient.GetStreamAsync(AvatarUrl);
+            if (stream == null)
             {
+                AvatarBitmap?.Dispose();
                 AvatarBitmap = null;
                 return;
             }
 
-            await SafeExecuteAsync(async () =>
-            {
-                try
-                {
-                    var stream = await _apiClient.GetStreamAsync(AvatarUrl);
+            var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
 
-                    if (stream != null)
-                    {
-                        AvatarBitmap = new Bitmap(stream);
-                    }
-                    else
-                    {
-                        AvatarBitmap = null;
-                    }
-                }
-                catch (Exception)
-                {
-                    AvatarBitmap = null;
-                }
-            });
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = new Bitmap(memoryStream);
         }
-
-        [RelayCommand]
-        private async Task SendMessage()
+        catch
         {
-            if (string.IsNullOrWhiteSpace(Message))
-            {
-                ErrorMessage = "Введите сообщение";
-                return;
-            }
-
-            await SafeExecuteAsync(async () =>
-            {
-                if (SendMessageAction != null)
-                {
-                    await SendMessageAction(Message);
-                    SuccessMessage = "Сообщение отправлено";
-                    RequestClose();
-                }
-            });
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
         }
+    }
 
-        partial void OnUserChanged(UserDTO? value)
+    partial void OnUserChanged(UserDTO value)
+    {
+        OnPropertyChanged(nameof(AvatarUrl));
+        Title = $"Профиль: {value.DisplayName ?? value.Username}";
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            OnPropertyChanged(nameof(AvatarUrl));
-            _ = LoadAvatarAsync();
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
         }
-
-        partial void OnMessageChanged(string? value)
-        {
-            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
-            {
-                ErrorMessage = null;
-            }
-        }
+        base.Dispose(disposing);
     }
 }

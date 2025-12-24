@@ -1,20 +1,16 @@
-﻿using MessengerDesktop.Services.Api;
+﻿using MessengerDesktop.Services;
+using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 
 namespace MessengerDesktop.ViewModels.Factories;
 
-public class ChatsViewModelFactory(
-    IApiClientService apiClient,
-    IAuthService authService,
-    IChatViewModelFactory chatViewModelFactory) : IChatsViewModelFactory
+public interface IChatsViewModelFactory
 {
-    public ChatsViewModel Create(MainMenuViewModel parent, bool isGroupMode)
-    {
-        return new ChatsViewModel(
-            parent,
-            isGroupMode,
-            apiClient,
-            authService,
-            chatViewModelFactory);
-    }
+    ChatsViewModel Create(MainMenuViewModel parent, bool isGroupMode);
+}
+
+public class ChatsViewModelFactory(IApiClientService apiClient,IAuthManager authManager,IChatViewModelFactory chatViewModelFactory,
+    IGlobalHubConnection globalHub) : IChatsViewModelFactory
+{
+    public ChatsViewModel Create(MainMenuViewModel parent, bool isGroupMode) => new(parent, isGroupMode, apiClient, authManager, chatViewModelFactory, globalHub);
 }

@@ -6,111 +6,227 @@ namespace MessengerAPI.Helpers
 {
     public static class ModelExtensions
     {
-        public static UserDTO ToDto(this User user, HttpRequest? request = null)
+        #region User Extensions
+
+        public static UserDTO ToDto(this User user, HttpRequest? request = null, bool? isOnline = null)
         {
-            var dto = new UserDTO
+            return new UserDTO
             {
                 Id = user.Id,
                 Username = user.Username,
-                DisplayName = user.DisplayName,
+                DisplayName = user.FormatDisplayName(),
+                Name = user.Name,
+                Surname = user.Surname,
+                Midname = user.Midname,
                 Department = user.DepartmentNavigation?.Name,
                 DepartmentId = user.DepartmentNavigation?.Id,
-                Avatar = GetFullAvatarUrl(user.Avatar, request),
-                Theme = user.UserSetting?.Theme.ToSharedTheme(),
+                Avatar = BuildFullUrl(user.Avatar, request),
+                Theme = user.UserSetting?.Theme,
                 NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
-                CanBeFoundInSearch = user.UserSetting?.CanBeFoundInSearch
+                IsOnline = (bool)isOnline,
+                LastOnline = user.LastOnline
             };
+        }
+
+        public static string FormatDisplayName(this User user)
+        {
+            var parts = new[] { user.Surname, user.Name, user.Midname }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
+
+            var formatted = string.Join(" ", parts);
+            return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;
+        }
+
+        public static void UpdateSettings(this User user, UserDTO dto)
+        {
+            user.UserSetting ??= new UserSetting { UserId = user.Id };
+
+            if (dto.Theme.HasValue)
+                user.UserSetting.Theme = dto.Theme.Value;
+
+            if (dto.NotificationsEnabled.HasValue)
+                user.UserSetting.NotificationsEnabled = dto.NotificationsEnabled.Value;
+        }
+
+        public static void UpdateProfile(this User user, UserDTO dto)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.Surname))
+                user.Surname = dto.Surname.Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.Name))
+                user.Name = dto.Name.Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.Midname))
+                user.Midname = dto.Midname.Trim();
+
+            if (dto.DepartmentId.HasValue)
+                user.Department = dto.DepartmentId;
+
+            user.UpdateSettings(dto);
+        }
+
+        #endregion
+
+        #region Chat Extensions
+
+        /// <summary>
+        /// Базовая конвертация Chat в DTO
+        /// </summary>
+        public static ChatDTO ToDto(this Chat chat, HttpRequest? request = null) => new()
+        {
+            Id = chat.Id,
+            Name = chat.Name,
+            Type = chat.Type,
+            CreatedById = chat.CreatedById ?? 0,
+            LastMessageDate = chat.LastMessageTime,
+            Avatar = BuildFullUrl(chat.Avatar, request)
+        };
+
+        /// <summary>
+        /// Конвертация Chat в DTO с подстановкой данных собеседника для диалогов
+        /// </summary>
+        public static ChatDTO ToDto(this Chat chat, User? dialogPartner, HttpRequest? request = null)
+        {
+            var dto = chat.ToDto(request);
+
+            if (chat.Type == ChatType.Contact && dialogPartner != null)
+            {
+                dto.Name = dialogPartner.FormatDisplayName();
+                dto.Avatar = BuildFullUrl(dialogPartner.Avatar, request);
+            }
 
             return dto;
         }
 
-        public static ChatDTO ToDto(this Chat chat, HttpRequest? request = null)
-        {
-            return new ChatDTO
-            {
-                Id = chat.Id,
-                Name = chat.Name,
-                IsGroup = chat.IsGroup,
-                CreatedById = chat.CreatedById ?? 0,
-                LastMessageDate = chat.LastMessageTime,
-                Avatar = GetFullAvatarUrl(chat.Avatar, request)
-            };
-        }
+        #endregion
 
-        public static void UpdateSettings(this User user, UserDTO userDto)
+        #region Message Extensions
+
+        public static MessageDTO ToDto(this Message message, int? currentUserId = null, HttpRequest? request = null)
         {
-            if (user.UserSetting == null)
+            var isDeleted = message.IsDeleted ?? false;
+
+            var dto = new MessageDTO
             {
-                user.UserSetting = new UserSetting
-                {
-                    UserId = user.Id,
-                    Theme = userDto.Theme.ToModelTheme(),
-                    NotificationsEnabled = userDto.NotificationsEnabled ?? true,
-                    CanBeFoundInSearch = userDto.CanBeFoundInSearch ?? true
-                };
+                Id = message.Id,
+                ChatId = message.ChatId,
+                SenderId = message.SenderId,
+                Content = isDeleted ? "[Сообщение удалено]" : message.Content,
+                CreatedAt = message.CreatedAt,
+                EditedAt = message.EditedAt,
+                IsEdited = message.EditedAt.HasValue && !isDeleted,
+                IsDeleted = isDeleted,
+                SenderName = message.Sender?.FormatDisplayName(),
+                SenderAvatarUrl = BuildFullUrl(message.Sender?.Avatar, request),
+                IsOwn = currentUserId.HasValue && message.SenderId == currentUserId
+            };
+
+            if (!isDeleted)
+            {
+                dto.Files = message.MessageFiles?.Select(f => f.ToDto(request)).ToList() ?? [];
+                dto.Poll = message.Polls?.FirstOrDefault()?.ToDto(currentUserId);
             }
             else
             {
-                user.UserSetting.Theme = userDto.Theme.ToModelTheme() ?? user.UserSetting.Theme;
-                user.UserSetting.NotificationsEnabled = userDto.NotificationsEnabled ?? user.UserSetting.NotificationsEnabled;
-                user.UserSetting.CanBeFoundInSearch = userDto.CanBeFoundInSearch ?? user.UserSetting.CanBeFoundInSearch;
+                dto.Files = [];
             }
+
+            return dto;
         }
 
-        private static string? GetFullAvatarUrl(string? avatarPath, HttpRequest? request)
+        #endregion
+
+        #region MessageFile Extensions
+
+        public static MessageFileDTO ToDto(this MessageFile file, HttpRequest? request = null) => new()
         {
-            if (string.IsNullOrEmpty(avatarPath) || request == null)
-                return avatarPath;
+            Id = file.Id,
+            MessageId = file.MessageId,
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Url = BuildFullUrl(file.Path, request),
+            PreviewType = DeterminePreviewType(file.ContentType)
+        };
 
-            return $"{request.Scheme}://{request.Host}{avatarPath}";
-        }
+        #endregion
 
-        public static Theme? ToSharedTheme(this Theme? theme)
+        #region Poll Extensions
+
+        public static PollDTO ToDto(this Poll poll, int? currentUserId = null)
         {
-            if (!theme.HasValue) return null;
+            var selectedOptionIds = currentUserId.HasValue
+                ? poll.PollOptions?
+                    .SelectMany(o => o.PollVotes ?? [])
+                    .Where(v => v.UserId == currentUserId)
+                    .Select(v => v.OptionId)
+                    .ToList() ?? []
+                : [];
 
-            return theme.Value switch
+            return new PollDTO
             {
-                Theme.light => Theme.light,
-                Theme.dark => Theme.dark,
-                Theme.system => Theme.system,
-                _ => Theme.system
+                Id = poll.Id,
+                MessageId = poll.MessageId,
+                ChatId = poll.Message?.ChatId ?? 0,
+                Question = poll.Question,
+                IsAnonymous = poll.IsAnonymous ?? false,
+                AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
+                ClosesAt = poll.ClosesAt,
+                Options = poll.PollOptions?
+                    .OrderBy(o => o.Position)
+                    .Select(o => o.ToDto(poll.IsAnonymous ?? false))
+                    .ToList() ?? [],
+                SelectedOptionIds = selectedOptionIds,
+                CanVote = selectedOptionIds.Count == 0
             };
         }
 
-        public static Theme? ToModelTheme(this Theme? theme)
+        public static PollOptionDTO ToDto(this PollOption option, bool isAnonymous = false) => new()
         {
-            if (!theme.HasValue) return null;
-
-            return theme.Value switch
+            Id = option.Id,
+            PollId = option.PollId,
+            Text = option.OptionText,
+            Position = option.Position,
+            VotesCount = option.PollVotes?.Count ?? 0,
+            Votes = isAnonymous ? [] : option.PollVotes?.Select(v => new PollVoteDTO
             {
-                Theme.light => Theme.light,
-                Theme.dark => Theme.dark,
-                Theme.system => Theme.system,
-                _ => Theme.system
+                PollId = v.PollId,
+                UserId = v.UserId,
+                OptionId = v.OptionId
+            }).ToList() ?? []
+        };
+
+        #endregion
+
+        #region Helpers
+
+        public static string? BuildFullUrl(string? path, HttpRequest? request)
+        {
+            if (string.IsNullOrEmpty(path) || request == null)
+                return path;
+
+            // Если уже полный URL
+            if (path.StartsWith("http://") || path.StartsWith("https://"))
+                return path;
+
+            return $"{request.Scheme}://{request.Host}{path}";
+        }
+
+        private static string DeterminePreviewType(string? contentType)
+        {
+            if (string.IsNullOrEmpty(contentType))
+                return "file";
+
+            var type = contentType.ToLowerInvariant();
+
+            return type switch
+            {
+                _ when type.StartsWith("image/") => "image",
+                _ when type.StartsWith("video/") => "video",
+                _ when type.StartsWith("audio/") => "audio",
+                _ => "file"
             };
         }
 
-        public static Theme? ToSharedTheme(this Theme theme)
-        {
-            return theme switch
-            {
-                Theme.light => Theme.light,
-                Theme.dark => Theme.dark,
-                Theme.system => Theme.system,
-                _ => Theme.system
-            };
-        }
-
-        public static Theme? ToModelTheme(this Theme theme)
-        {
-            return theme switch
-            {
-                Theme.light => Theme.light,
-                Theme.dark => Theme.dark,
-                Theme.system => Theme.system,
-                _ => Theme.system
-            };
-        }
+        #endregion
     }
 }

@@ -4,113 +4,157 @@ using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels;
+
+public partial class PollDialogViewModel : DialogBaseViewModel
 {
-    public partial class PollDialogViewModel : DialogBaseViewModel
+    private const int MinOptions = 2;
+    private const int MaxOptions = 10;
+
+    private readonly int _chatId;
+
+    [ObservableProperty]
+    private string _question = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<OptionItem> _options;
+
+    [ObservableProperty]
+    private bool _allowsMultipleAnswers;
+
+    [ObservableProperty]
+    private bool _isAnonymous = true;
+
+    public Action<PollDTO>? CreateAction { get; set; }
+
+    public bool CanAddOption => Options.Count < MaxOptions;
+    public bool CanRemoveOption => Options.Count > MinOptions;
+    public bool CanCreate =>
+        !string.IsNullOrWhiteSpace(Question) &&
+        Options.Count >= MinOptions &&
+        Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
+
+    public PollDialogViewModel(int chatId)
     {
-        private readonly int _chatId;
+        _chatId = chatId;
+        Title = "Создать опрос";
+        CanCloseOnBackgroundClick = true;
 
-        public PollDialogViewModel(int chatId)
+        _options = [new(), new()];
+        SubscribeToOptions(_options);
+    }
+
+    partial void OnQuestionChanged(string value)
+    {
+        if (CanCreate) ErrorMessage = null;
+        NotifyStateChanged();
+    }
+
+    partial void OnOptionsChanged(ObservableCollection<OptionItem>? oldValue,ObservableCollection<OptionItem> newValue)
+    {
+        if (oldValue != null)
+            UnsubscribeFromOptions(oldValue);
+
+        SubscribeToOptions(newValue);
+        NotifyStateChanged();
+    }
+
+    private void SubscribeToOptions(ObservableCollection<OptionItem> options)
+    {
+        options.CollectionChanged += OnOptionsCollectionChanged;
+        foreach (var item in options)
+            item.PropertyChanged += OnOptionPropertyChanged;
+    }
+
+    private void UnsubscribeFromOptions(ObservableCollection<OptionItem> options)
+    {
+        options.CollectionChanged -= OnOptionsCollectionChanged;
+        foreach (var item in options)
+            item.PropertyChanged -= OnOptionPropertyChanged;
+    }
+
+    private void OnOptionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+            foreach (OptionItem item in e.OldItems)
+                item.PropertyChanged -= OnOptionPropertyChanged;
+
+        if (e.NewItems != null)
+            foreach (OptionItem item in e.NewItems)
+                item.PropertyChanged += OnOptionPropertyChanged;
+
+        NotifyStateChanged();
+    }
+
+    private void OnOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(OptionItem.Text))
         {
-            _chatId = chatId;
-            Title = "Создать опрос";
-            CanCloseOnBackgroundClick = true;
-            SubscribeOptionItems(Options);
+            if (CanCreate) ErrorMessage = null;
+            NotifyStateChanged();
+        }
+    }
+
+    private void NotifyStateChanged()
+    {
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanAddOption));
+        OnPropertyChanged(nameof(CanRemoveOption));
+        CreateCommand.NotifyCanExecuteChanged();
+        AddOptionCommand.NotifyCanExecuteChanged();
+        RemoveOptionCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddOption))]
+    private void AddOption() => Options.Add(new OptionItem());
+
+    [RelayCommand(CanExecute = nameof(CanRemoveOption))]
+    private void RemoveOption(OptionItem? item)
+    {
+        if (item != null)
+            Options.Remove(item);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCreate))]
+    private void Create()
+    {
+        if (!CanCreate)
+        {
+            ErrorMessage = "Заполните вопрос и минимум 2 варианта ответа";
+            return;
         }
 
-        [ObservableProperty]
-        private string _question = string.Empty;
-
-        [ObservableProperty]
-        private ObservableCollection<OptionItem> _options = [new OptionItem(), new OptionItem()];
-
-        [ObservableProperty]
-        private bool _allowsMultipleAnswers = false;
-
-        [ObservableProperty]
-        private bool _isAnonymous = true;
-
-        public Action<PollDTO>? CreateAction { get; set; }
-
-        public bool CanCreate => !string.IsNullOrWhiteSpace(Question) && Options.Count >= 2 && Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
-
-        partial void OnQuestionChanged(string value) => OnPropertyChanged(nameof(CanCreate));
-
-        partial void OnOptionsChanged(ObservableCollection<OptionItem> value)
+        CreateAction?.Invoke(new PollDTO
         {
-            OnPropertyChanged(nameof(CanCreate));
-            SubscribeOptionItems(value);
-        }
-
-        private void SubscribeOptionItems(ObservableCollection<OptionItem> optionItems)
-        {
-            optionItems.CollectionChanged += (s, e) =>
+            ChatId = _chatId,
+            Question = Question.Trim(),
+            AllowsMultipleAnswers = AllowsMultipleAnswers,
+            IsAnonymous = IsAnonymous,
+            Options = [.. Options.Select((o, i) => new PollOptionDTO
             {
-                OnPropertyChanged(nameof(CanCreate));
-                if (e.NewItems != null)
-                    foreach (OptionItem item in e.NewItems)
-                        item.PropertyChanged += OptionItem_PropertyChanged;
-                if (e.OldItems != null)
-                    foreach (OptionItem item in e.OldItems) 
-                        item.PropertyChanged -= OptionItem_PropertyChanged;
-            };
+                OptionText = o.Text.Trim(),
+                Position = i
+            })]
+        });
 
-            foreach (var item in optionItems)
-            {
-                item.PropertyChanged += OptionItem_PropertyChanged;
-            }
-        }
+        RequestClose();
+    }
 
-        private void OptionItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(OptionItem.Text))
-                OnPropertyChanged(nameof(CanCreate));
-        }
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            UnsubscribeFromOptions(Options);
 
-        [RelayCommand]
-        private void AddOption() 
-            => Options.Add(new OptionItem());
+        base.Dispose(disposing);
+    }
 
-        [RelayCommand]
-        private void RemoveOption(OptionItem? item)
-        {
-            if (item != null && Options.Count > 2)
-                Options.Remove(item);
-        }
-
-        [RelayCommand]
-        private void Create()
-        {
-            if (!CanCreate)
-            {
-                ErrorMessage = "Заполните вопрос и минимум 2 варианта ответа";
-                return;
-            }
-
-            var poll = new PollDTO
-            {
-                ChatId = _chatId,
-                Question = Question,
-                AllowsMultipleAnswers = AllowsMultipleAnswers,
-                IsAnonymous = IsAnonymous,
-                Options = [.. Options.Select((o, i) => new PollOptionDTO
-                {
-                    OptionText = o.Text,
-                    Position = i
-                })]
-            };
-
-            CreateAction?.Invoke(poll);
-            RequestClose(); 
-        }
-
-        public partial class OptionItem : ObservableObject
-        {
-            [ObservableProperty]
-            private string _text = string.Empty;
-        }
+    public partial class OptionItem : ObservableObject
+    {
+        [ObservableProperty]
+        private string _text = string.Empty;
     }
 }

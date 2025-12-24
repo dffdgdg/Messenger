@@ -21,6 +21,8 @@ public partial class Message
 
     public virtual Chat Chat { get; set; } = null!;
 
+    public virtual ICollection<ChatMember> ChatMembers { get; set; } = new List<ChatMember>();
+
     public virtual ICollection<MessageFile> MessageFiles { get; set; } = new List<MessageFile>();
 
     public virtual ICollection<Poll> Polls { get; set; } = new List<Poll>();

@@ -1,431 +1,553 @@
-﻿using MessengerAPI.Hubs;
+﻿using MessengerAPI.Configuration;
+using MessengerAPI.Helpers;
+using MessengerAPI.Hubs;
 using MessengerAPI.Model;
 using MessengerShared.DTO;
+using MessengerShared.Enum;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace MessengerAPI.Services
 {
     public interface IMessageService
     {
-        Task<MessageDTO> CreateMessageAsync(MessageDTO messageDto, HttpRequest request);
-        Task<MessageDTO> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO updateDto, HttpRequest request);
+        Task<MessageDTO> CreateMessageAsync(MessageDTO dto, HttpRequest request);
+        Task<MessageDTO> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO dto, HttpRequest request);
         Task DeleteMessageAsync(int messageId, int userId);
         Task<PagedMessagesDTO> GetChatMessagesAsync(int chatId, int? userId, int page, int pageSize, HttpRequest request);
+        Task<PagedMessagesDTO> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count, HttpRequest request);
+        Task<PagedMessagesDTO> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count, HttpRequest request);
+        Task<PagedMessagesDTO> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count, HttpRequest request);
         Task<SearchMessagesResponseDTO> SearchMessagesAsync(int chatId, int? userId, string query, int page, int pageSize, HttpRequest request);
+        Task<GlobalSearchResponseDTO> GlobalSearchAsync(int userId, string query, int page, int pageSize, HttpRequest request);
         Task<bool> IsMessageOwnerAsync(int messageId, int userId);
     }
 
     public class MessageService(
         MessengerDbContext context,
         IHubContext<ChatHub> hubContext,
-        ILogger<MessageService> logger)
-        : BaseService<MessageService>(context, logger), IMessageService
+        INotificationService notificationService,
+        IReadReceiptService readReceiptService,
+        IOptions<MessengerSettings> settings,
+        ILogger<MessageService> logger) : BaseService<MessageService>(context, logger), IMessageService
     {
-        /// <summary>
-        /// Проверяет, является ли пользователь автором сообщения
-        /// </summary>
+        private readonly MessengerSettings _settings = settings.Value;
+
         public async Task<bool> IsMessageOwnerAsync(int messageId, int userId)
+            => await _context.Messages.AnyAsync(m => m.Id == messageId && m.SenderId == userId);
+
+        public async Task<MessageDTO> CreateMessageAsync(MessageDTO dto, HttpRequest request)
         {
-            return await _context.Messages
-                .AnyAsync(m => m.Id == messageId && m.SenderId == userId);
+            var message = new Message
+            {
+                ChatId = dto.ChatId,
+                SenderId = dto.SenderId,
+                Content = dto.Content,
+                IsDeleted = false
+            };
+
+            if (dto.Poll != null)
+            {
+                message.Polls.Add(CreatePollFromDto(dto.Poll));
+            }
+
+            _context.Messages.Add(message);
+            await SaveChangesAsync();
+
+            if (dto.Files?.Count > 0)
+            {
+                await SaveMessageFilesAsync(message.Id, dto.Files, request);
+            }
+
+            await UpdateChatLastMessageTimeAsync(dto.ChatId);
+
+            var createdMessage = await LoadFullMessageAsync(message.Id);
+            var messageDto = createdMessage.ToDto(dto.SenderId, request);
+
+            // Отправляем через SignalR
+            await SendToGroupSafeAsync(dto.ChatId, "ReceiveMessageDTO", messageDto);
+
+            // Обновляем счётчики непрочитанных для всех участников
+            await UpdateUnreadCountsForChatAsync(dto.ChatId, dto.SenderId);
+
+            // Отправляем уведомления
+            await NotifyNewMessageSafeAsync(messageDto, request);
+
+            _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}", message.Id, dto.ChatId);
+
+            return messageDto;
         }
 
         /// <summary>
-        /// Редактирование сообщения (только автор может редактировать)
+        /// Обновить счётчики непрочитанных для всех участников чата (кроме отправителя)
         /// </summary>
-        public async Task<MessageDTO> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO updateDto, HttpRequest request)
+        private async Task UpdateUnreadCountsForChatAsync(int chatId, int senderId)
         {
             try
             {
-                var message = await _context.Messages
-                    .Include(m => m.Sender)
-                    .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-                    .Include(m => m.MessageFiles)
-                    .FirstOrDefaultAsync(m => m.Id == messageId)
-                    ?? throw new KeyNotFoundException($"Сообщение с ID {messageId} не найдено");
+                var memberIds = await _context.ChatMembers
+                    .Where(cm => cm.ChatId == chatId && cm.UserId != senderId)
+                    .Select(cm => cm.UserId)
+                    .ToListAsync();
 
-                if (message.SenderId != userId)
-                    throw new UnauthorizedAccessException("Вы можете редактировать только свои сообщения");
-
-                if (message.IsDeleted == true)
-                    throw new InvalidOperationException("Нельзя редактировать удалённое сообщение");
-
-                if (message.Polls.Count != 0)
-                    throw new InvalidOperationException("Нельзя редактировать сообщение с опросом");
-
-                if (string.IsNullOrWhiteSpace(updateDto.Content))
-                    throw new ArgumentException("Содержимое сообщения не может быть пустым");
-
-                message.Content = updateDto.Content.Trim();
-                message.EditedAt = DateTime.Now;
-
-                await SaveChangesAsync();
-
-                _logger.LogInformation("Сообщение {MessageId} отредактировано пользователем {UserId}",
-                    messageId, userId);
-
-                var messageDto = MapToDto(message, userId, true, request);
-
-                try
+                foreach (var memberId in memberIds)
                 {
-                    await hubContext.Clients.Group(message.ChatId.ToString()).SendAsync("MessageUpdated", messageDto);
-                }
-                catch (Exception hubEx)
-                {
-                    _logger.LogWarning(hubEx, "Не удалось отправить обновление сообщения через SignalR");
-                }
+                    var unreadCount = await readReceiptService.GetUnreadCountAsync(memberId, chatId);
 
-                return messageDto;
+                    await hubContext.Clients.Group($"user_{memberId}")
+                        .SendAsync("UnreadCountUpdated", chatId, unreadCount);
+                }
             }
-            catch (Exception ex) when (ex is not KeyNotFoundException
-                                       && ex is not UnauthorizedAccessException
-                                       && ex is not InvalidOperationException
-                                       && ex is not ArgumentException)
+            catch (Exception ex)
             {
-                LogOperationError(ex, "редактирование сообщения", messageId);
-                throw;
+                _logger.LogWarning(ex, "Не удалось обновить счётчики непрочитанных для чата {ChatId}", chatId);
             }
         }
 
+        #region Get Messages Methods
+
+        public async Task<PagedMessagesDTO> GetChatMessagesAsync(
+            int chatId, int? userId, int page, int pageSize, HttpRequest request)
+        {
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(
+                page, pageSize, _settings.DefaultPageSize, _settings.MaxPageSize);
+
+            var query = _context.Messages
+                .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+                .Include(m => m.Sender)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .Include(m => m.MessageFiles)
+                .OrderByDescending(m => m.CreatedAt)
+                .AsNoTracking();
+
+            var totalCount = await query.CountAsync();
+            var skipCount = (normalizedPage - 1) * normalizedPageSize;
+
+            var messages = await Paginate(query, normalizedPage, normalizedPageSize).ToListAsync();
+
+            var messageDtos = messages.Select(m => m.ToDto(userId, request)).Reverse().ToList();
+
+            return new PagedMessagesDTO
+            {
+                Messages = messageDtos,
+                CurrentPage = normalizedPage,
+                TotalCount = totalCount,
+                HasMoreMessages = totalCount > skipCount + normalizedPageSize,
+                HasNewerMessages = false // При загрузке последних - новее нет
+            };
+        }
+
         /// <summary>
-        /// Удаление сообщения
+        /// Получить сообщения вокруг указанного ID (для скролла к непрочитанным)
         /// </summary>
+        public async Task<PagedMessagesDTO> GetMessagesAroundAsync(
+            int chatId, int messageId, int userId, int count, HttpRequest request)
+        {
+            var halfCount = count / 2;
+
+            // Сообщения ДО целевого (включая целевое)
+            var beforeAndTarget = await _context.Messages
+                .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
+                .OrderByDescending(m => m.Id)
+                .Take(halfCount + 1)
+                .Include(m => m.Sender)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Сообщения ПОСЛЕ целевого
+            var after = await _context.Messages
+                .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
+                .OrderBy(m => m.Id)
+                .Take(halfCount)
+                .Include(m => m.Sender)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Собираем в правильном порядке
+            var messages = beforeAndTarget
+                .OrderBy(m => m.Id)
+                .Concat(after)
+                .Select(m => m.ToDto(userId, request))
+                .ToList();
+
+            // Проверяем есть ли ещё старые
+            var oldestLoadedId = beforeAndTarget.Count > 0 ? beforeAndTarget.Min(m => m.Id) : messageId;
+            var hasOlder = await _context.Messages
+                .AnyAsync(m => m.ChatId == chatId && m.Id < oldestLoadedId && m.IsDeleted != true);
+
+            // Проверяем есть ли ещё новые
+            var newestLoadedId = after.Count > 0 ? after.Max(m => m.Id) : messageId;
+            var hasNewer = await _context.Messages
+                .AnyAsync(m => m.ChatId == chatId && m.Id > newestLoadedId && m.IsDeleted != true);
+
+            return new PagedMessagesDTO
+            {
+                Messages = messages,
+                HasMoreMessages = hasOlder,
+                HasNewerMessages = hasNewer,
+                TotalCount = messages.Count,
+                CurrentPage = 1
+            };
+        }
+
+        /// <summary>
+        /// Получить сообщения до указанного ID (для подгрузки старых)
+        /// </summary>
+        public async Task<PagedMessagesDTO> GetMessagesBeforeAsync(
+            int chatId, int messageId, int userId, int count, HttpRequest request)
+        {
+            var messages = await _context.Messages
+                .Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true)
+                .OrderByDescending(m => m.Id)
+                .Take(count)
+                .Include(m => m.Sender)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
+            var hasMore = await _context.Messages
+                .AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true);
+
+            return new PagedMessagesDTO
+            {
+                Messages = [.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, request))],
+                HasMoreMessages = hasMore,
+                HasNewerMessages = true,
+                TotalCount = messages.Count,
+                CurrentPage = 1
+            };
+        }
+
+        /// <summary>
+        /// Получить сообщения после указанного ID (для подгрузки новых)
+        /// </summary>
+        public async Task<PagedMessagesDTO> GetMessagesAfterAsync(
+            int chatId, int messageId, int userId, int count, HttpRequest request)
+        {
+            var messages = await _context.Messages
+                .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
+                .OrderBy(m => m.Id)
+                .Take(count)
+                .Include(m => m.Sender)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
+            var hasNewer = await _context.Messages
+                .AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true);
+
+            return new PagedMessagesDTO
+            {
+                Messages = [.. messages.Select(m => m.ToDto(userId, request))],
+                HasMoreMessages = true,
+                HasNewerMessages = hasNewer,
+                TotalCount = messages.Count,
+                CurrentPage = 1
+            };
+        }
+
+        #endregion
+        public async Task<MessageDTO> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO dto, HttpRequest request)
+        {
+            var message = await LoadFullMessageAsync(messageId);
+
+            ValidateMessageModification(message, userId);
+
+            if (message.Polls.Count != 0)
+                throw new InvalidOperationException("Нельзя редактировать сообщение с опросом");
+
+            if (string.IsNullOrWhiteSpace(dto.Content))
+                throw new ArgumentException("Содержимое сообщения не может быть пустым");
+
+            message.Content = dto.Content.Trim();
+            message.EditedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+            await SaveChangesAsync();
+
+            var messageDto = message.ToDto(userId, request);
+
+            await SendToGroupSafeAsync(message.ChatId, "MessageUpdated", messageDto);
+
+            _logger.LogInformation("Сообщение {MessageId} отредактировано", messageId);
+
+            return messageDto;
+        }
+
         public async Task DeleteMessageAsync(int messageId, int userId)
         {
-            try
+            var message = await _context.Messages
+                .Include(m => m.MessageFiles)
+                .FirstOrDefaultAsync(m => m.Id == messageId)
+                ?? throw new KeyNotFoundException($"Сообщение с ID {messageId} не найдено");
+
+            ValidateMessageModification(message, userId);
+
+            message.IsDeleted = true;
+            message.Content = null;
+            message.EditedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+            await SaveChangesAsync();
+
+            await SendToGroupSafeAsync(message.ChatId, "MessageDeleted", new
             {
-                var message = await _context.Messages
-                    .Include(m => m.MessageFiles)
-                    .FirstOrDefaultAsync(m => m.Id == messageId)
-                    ?? throw new KeyNotFoundException($"Сообщение с ID {messageId} не найдено");
+                MessageId = messageId,
+                message.ChatId
+            });
 
-                if (message.SenderId != userId)
-                    throw new UnauthorizedAccessException("Вы можете удалять только свои сообщения");
-
-                if (message.IsDeleted == true)
-                    throw new InvalidOperationException("Сообщение уже удалено");
-
-                message.IsDeleted = true;
-                message.Content = null;
-                message.EditedAt = DateTime.Now;
-
-                await SaveChangesAsync();
-
-                _logger.LogInformation("Сообщение {MessageId} удалено пользователем {UserId}",
-                    messageId, userId);
-
-                try
-                {
-                    await hubContext.Clients.Group(message.ChatId.ToString()).SendAsync("MessageDeleted", new { MessageId = messageId, message.ChatId });
-                }
-                catch (Exception hubEx)
-                {
-                    _logger.LogWarning(hubEx, "Не удалось отправить уведомление об удалении через SignalR");
-                }
-            }
-            catch (Exception ex) when (ex is not KeyNotFoundException
-                                       && ex is not UnauthorizedAccessException
-                                       && ex is not InvalidOperationException)
-            {
-                LogOperationError(ex, "удаление сообщения", messageId);
-                throw;
-            }
+            _logger.LogInformation("Сообщение {MessageId} удалено", messageId);
         }
 
-        public async Task<MessageDTO> CreateMessageAsync(MessageDTO messageDto, HttpRequest request)
+        #region Search
+
+        public async Task<SearchMessagesResponseDTO> SearchMessagesAsync(
+            int chatId, int? userId, string query, int page, int pageSize, HttpRequest request)
         {
-            try
+            if (string.IsNullOrWhiteSpace(query))
             {
-                var message = new Message
+                return new SearchMessagesResponseDTO
                 {
-                    ChatId = messageDto.ChatId,
-                    SenderId = messageDto.SenderId,
-                    Content = messageDto.Content,
-                    IsDeleted = false
-                };
-
-                if (messageDto.Poll != null)
-                {
-                    var poll = new Poll
-                    {
-                        Question = messageDto.Poll.Question,
-                        IsAnonymous = messageDto.Poll.IsAnonymous,
-                        AllowsMultipleAnswers = messageDto.Poll.AllowsMultipleAnswers,
-                        PollOptions = messageDto.Poll.Options?.Select(o => new PollOption
-                        {
-                            OptionText = o.Text,
-                            Position = o.Position
-                        }).ToList() ?? []
-                    };
-
-                    message.Polls.Add(poll);
-                }
-
-                _context.Messages.Add(message);
-                await SaveChangesAsync();
-
-                System.Diagnostics.Debug.WriteLine($"[MessageService] Message created with ID: {message.Id}");
-
-                if (messageDto.Files != null && messageDto.Files.Count > 0)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[MessageService] Processing {messageDto.Files.Count} files for message {message.Id}");
-
-                    foreach (var f in messageDto.Files)
-                    {
-                        try
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[MessageService] Creating MessageFile: {f.FileName}");
-
-                            var mf = new MessageFile
-                            {
-                                FileName = f.FileName,
-                                ContentType = f.ContentType,
-                                Path = f.Url?.Replace($"{request.Scheme}://{request.Host}", "") ?? f.Url,
-                                MessageId = message.Id
-                            };
-                            _context.MessageFiles.Add(mf);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[MessageService] Error processing file {f.FileName}: {ex.Message}");
-                        }
-                    }
-
-                    if (messageDto.Files.Count > 0)
-                        await SaveChangesAsync();
-                }
-
-                var createdMessage = await _context.Messages
-                    .Include(m => m.Sender)
-                    .Include(m => m.Polls).ThenInclude(p => p.PollOptions)
-                    .Include(m => m.MessageFiles)
-                    .FirstOrDefaultAsync(m => m.Id == message.Id);
-
-                ValidateEntityExists(createdMessage, "Message", message.Id);
-
-                System.Diagnostics.Debug.WriteLine($"[MessageService] Message {message.Id} has {createdMessage?.MessageFiles?.Count ?? 0} files");
-
-                var fullMessageDto = MapToDto(createdMessage!, messageDto.SenderId, true, request);
-
-                try
-                {
-                    await hubContext.Clients.Group(createdMessage!.ChatId.ToString())
-                        .SendAsync("ReceiveMessageDTO", fullMessageDto);
-                }
-                catch (Exception hubEx)
-                {
-                    _logger.LogWarning(hubEx, "Failed to send message via SignalR");
-                }
-
-                return fullMessageDto;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "creating message");
-                throw;
-            }
-        }
-
-        public async Task<PagedMessagesDTO> GetChatMessagesAsync(int chatId, int? userId, int page, int pageSize, HttpRequest request)
-        {
-            try
-            {
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 50;
-                if (pageSize > 100) pageSize = 100;
-
-                var query = _context.Messages
-                    .Where(m => m.ChatId == chatId)
-                    .Include(m => m.Sender)
-                    .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-                    .Include(m => m.MessageFiles)
-                    .OrderByDescending(m => m.CreatedAt)
-                    .AsNoTracking();
-
-                var totalCount = await query.CountAsync();
-                var skipCount = (page - 1) * pageSize;
-                var hasMoreMessages = totalCount > skipCount + pageSize;
-
-                var messages = await query.Skip(skipCount).Take(pageSize).ToListAsync();
-
-                var messageDtos = messages.Select(m => MapToDto(m, userId, userId.HasValue && m.SenderId == userId, request)).Reverse().ToList();
-
-                return new PagedMessagesDTO
-                {
-                    Messages = messageDtos,
-                    CurrentPage = page,
-                    TotalCount = totalCount,
-                    HasMoreMessages = hasMoreMessages
+                    Messages = [],
+                    TotalCount = 0,
+                    CurrentPage = page
                 };
             }
-            catch (Exception ex)
+
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, 20, _settings.MaxPageSize);
+            var escapedQuery = EscapeLikePattern(query);
+
+            var baseQuery = _context.Messages
+                .Where(m => m.ChatId == chatId)
+                .Where(m => m.IsDeleted != true)
+                .Where(m => m.Content != null && EF.Functions.ILike(m.Content, $"%{escapedQuery}%"))
+                .Include(m => m.Sender)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .Include(m => m.MessageFiles)
+                .OrderByDescending(m => m.CreatedAt)
+                .AsNoTracking();
+
+            var totalCount = await baseQuery.CountAsync();
+            var messages = await Paginate(baseQuery, normalizedPage, normalizedPageSize).ToListAsync();
+
+            return new SearchMessagesResponseDTO
             {
-                LogOperationError(ex, "getting chat messages", chatId);
-                throw;
-            }
+                Messages = [.. messages.Select(m => m.ToDto(userId, request)).Reverse()],
+                TotalCount = totalCount,
+                CurrentPage = normalizedPage,
+                HasMoreMessages = totalCount > (normalizedPage - 1) * normalizedPageSize + normalizedPageSize
+            };
         }
 
-        private static MessageDTO MapToDto(Message message, int? userId, bool isOwn = false, HttpRequest? request = null, IWebHostEnvironment? env = null)
+        public async Task<GlobalSearchResponseDTO> GlobalSearchAsync(
+            int userId, string query, int page, int pageSize, HttpRequest request)
         {
-            var isDeleted = message.IsDeleted ?? false;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return new GlobalSearchResponseDTO
+                {
+                    Chats = [],
+                    Messages = [],
+                    CurrentPage = page
+                };
+            }
 
-            var dto = new MessageDTO
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, 20, 50);
+            var escapedQuery = EscapeLikePattern(query);
+
+            var userChatIds = await _context.ChatMembers
+                .Where(cm => cm.UserId == userId)
+                .Select(cm => cm.ChatId)
+                .ToListAsync();
+
+            if (userChatIds.Count == 0)
+            {
+                return new GlobalSearchResponseDTO
+                {
+                    Chats = [],
+                    Messages = [],
+                    CurrentPage = page
+                };
+            }
+
+            var foundChats = await SearchChatsAsync(userChatIds, escapedQuery, userId, request);
+
+            var (messages, totalCount, hasMore) = await SearchMessagesGlobalAsync(
+                userChatIds, escapedQuery, userId, normalizedPage, normalizedPageSize, request);
+
+            return new GlobalSearchResponseDTO
+            {
+                Chats = foundChats,
+                Messages = messages,
+                TotalChatsCount = foundChats.Count,
+                TotalMessagesCount = totalCount,
+                CurrentPage = normalizedPage,
+                HasMoreMessages = hasMore
+            };
+        }
+
+        private async Task<List<ChatDTO>> SearchChatsAsync(List<int> userChatIds, string query, int userId, HttpRequest request)
+        {
+            const int maxResults = 5;
+            var result = new List<ChatDTO>();
+
+            var dialogs = await _context.Chats
+                .Where(c => userChatIds.Contains(c.Id))
+                .Where(c => c.Type == ChatType.Contact)
+                .Include(c => c.ChatMembers).ThenInclude(cm => cm.User)
+                .AsNoTracking()
+                .ToListAsync();
+
+            foreach (var chat in dialogs)
+            {
+                var partner = chat.ChatMembers.FirstOrDefault(cm => cm.UserId != userId)?.User;
+                if (partner == null) continue;
+
+                var displayName = partner.FormatDisplayName();
+                var username = partner.Username ?? "";
+
+                if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    username.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add(new ChatDTO
+                    {
+                        Id = chat.Id,
+                        Name = displayName,
+                        Type = chat.Type,
+                        Avatar = !string.IsNullOrEmpty(partner.Avatar)
+                            ? $"{request.Scheme}://{request.Host}{partner.Avatar}"
+                            : null,
+                        LastMessageDate = chat.LastMessageTime
+                    });
+                }
+            }
+
+            var groupChats = await _context.Chats
+                .Where(c => userChatIds.Contains(c.Id))
+                .Where(c => c.Type != ChatType.Contact)
+                .Where(c => EF.Functions.ILike(c.Name, $"%{query}%"))
+                .Take(maxResults)
+                .AsNoTracking()
+                .ToListAsync();
+
+            result.AddRange(groupChats.Select(c => c.ToDto(request)));
+
+            return [.. result.Take(maxResults)];
+        }
+
+        private async Task<(List<GlobalSearchMessageDTO> Messages, int TotalCount, bool HasMore)> SearchMessagesGlobalAsync(
+            List<int> userChatIds, string query, int userId, int page, int pageSize, HttpRequest request)
+        {
+            var messagesQuery = _context.Messages
+                .Where(m => userChatIds.Contains(m.ChatId))
+                .Where(m => m.IsDeleted != true)
+                .Where(m => m.Content != null && EF.Functions.ILike(m.Content, $"%{query}%"))
+                .Include(m => m.Sender)
+                .Include(m => m.Chat)
+                .Include(m => m.MessageFiles)
+                .OrderByDescending(m => m.CreatedAt)
+                .AsNoTracking();
+
+            var totalCount = await messagesQuery.CountAsync();
+            var messages = await Paginate(messagesQuery, page, pageSize).ToListAsync();
+
+            var dialogChatIds = messages
+                .Where(m => m.Chat.Type == ChatType.Contact)
+                .Select(m => m.ChatId)
+                .Distinct()
+                .ToList();
+
+            var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId, request);
+
+            var result = messages
+                .Select(m => CreateGlobalSearchMessageDto(m, query, dialogPartners, request))
+                .ToList();
+
+            return (result, totalCount, totalCount > (page - 1) * pageSize + pageSize);
+        }
+
+        private async Task<Dictionary<int, (string Name, string? Avatar)>> GetDialogPartnersAsync(
+            List<int> chatIds, int userId, HttpRequest request)
+        {
+            if (chatIds.Count == 0) return [];
+
+            var partners = await _context.ChatMembers
+                .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
+                .Include(cm => cm.User)
+                .AsNoTracking()
+                .ToListAsync();
+
+            return partners
+                .Where(p => p.User != null)
+                .ToDictionary(
+                    p => p.ChatId,
+                    p => (
+                        Name: p.User!.FormatDisplayName(),
+                        Avatar: !string.IsNullOrEmpty(p.User.Avatar)
+                            ? $"{request.Scheme}://{request.Host}{p.User.Avatar}"
+                            : (string?)null
+                    ));
+        }
+
+        private static GlobalSearchMessageDTO CreateGlobalSearchMessageDto(
+            Message message,
+            string searchTerm,
+            Dictionary<int, (string Name, string? Avatar)> dialogPartners,
+            HttpRequest request)
+        {
+            var dto = new GlobalSearchMessageDTO
             {
                 Id = message.Id,
                 ChatId = message.ChatId,
+                ChatType = message.Chat.Type,
                 SenderId = message.SenderId,
-                Content = isDeleted ? "[Сообщение удалено]" : message.Content,
+                SenderName = message.Sender?.FormatDisplayName(),
+                Content = message.Content,
                 CreatedAt = message.CreatedAt,
-                EditedAt = message.EditedAt,
-                IsEdited = message.EditedAt.HasValue && !isDeleted,
-                IsDeleted = isDeleted,
-                SenderName = message.Sender?.DisplayName ?? message.Sender?.Username,
-                IsOwn = isOwn
+                HighlightedContent = CreateHighlightedContent(message.Content, searchTerm),
+                HasFiles = message.MessageFiles?.Any() ?? false
             };
 
-            if (message.Sender != null && !string.IsNullOrEmpty(message.Sender.Avatar) && request != null)
-                dto.SenderAvatarUrl = $"{request.Scheme}://{request.Host}{message.Sender.Avatar}";
-
-            if (!isDeleted)
+            if (message.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(message.ChatId, out var partner))
             {
-                dto.Files = message.MessageFiles?.Select(f => new MessageFileDTO
-                {
-                    Id = f.Id,
-                    MessageId = f.MessageId,
-                    FileName = f.FileName,
-                    ContentType = f.ContentType,
-                    Url = f.Path != null && request != null ? $"{request.Scheme}://{request.Host}{f.Path}": f.Path,
-                    PreviewType = GetPreviewType(f.ContentType),
-                    FileSize = 0
-                }).ToList() ?? [];
-
-                var poll = message.Polls?.FirstOrDefault();
-                if (poll != null && poll.Id > 0 && !string.IsNullOrEmpty(poll.Question))
-                {
-                    dto.Poll = new PollDTO
-                    {
-                        Id = poll.Id,
-                        MessageId = poll.MessageId,
-                        ChatId = message.ChatId,
-                        Question = poll.Question,
-                        IsAnonymous = poll.IsAnonymous ?? false,
-                        AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
-                        CreatedAt = poll.CreatedAt,
-                        ClosesAt = poll.ClosesAt,
-                        Options = poll.PollOptions?.OrderBy(o => o.Position).Select(o => new PollOptionDTO
-                        {
-                            Id = o.Id,
-                            PollId = o.PollId,
-                            Text = o.OptionText,
-                            Position = o.Position,
-                            VotesCount = o.PollVotes?.Count ?? 0
-                        }).ToList() ?? []
-                    };
-
-                    if (userId.HasValue)
-                    {
-                        dto.Poll.SelectedOptionIds = poll.PollOptions?
-                            .SelectMany(o => o.PollVotes ?? [])
-                            .Where(v => v.UserId == userId)
-                            .Select(v => v.OptionId)
-                            .ToList() ?? [];
-                        dto.Poll.CanVote = dto.Poll.SelectedOptionIds.Count == 0;
-                    }
-                }
+                dto.ChatName = partner.Name;
+                dto.ChatAvatar = partner.Avatar;
             }
             else
             {
-                dto.Files = [];
+                dto.ChatName = message.Chat.Name;
+                dto.ChatAvatar = !string.IsNullOrEmpty(message.Chat.Avatar)
+                    ? $"{request.Scheme}://{request.Host}{message.Chat.Avatar}"
+                    : null;
             }
 
             return dto;
         }
 
-        private static long GetFileSize(string? relativePath, IWebHostEnvironment env)
+        private static string? CreateHighlightedContent(string? content, string searchTerm)
         {
-            if (string.IsNullOrEmpty(relativePath))
-                return 0;
+            if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(searchTerm))
+                return content;
 
-            try
-            {
-                var fullPath = Path.Combine(env.WebRootPath ?? "wwwroot", relativePath.TrimStart('/'));
-                if (File.Exists(fullPath))
-                {
-                    return new FileInfo(fullPath).Length;
-                }
-            }
-            catch { }
+            var index = content.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+                return content.Length > 100 ? content[..100] + "..." : content;
 
-            return 0;
-        }
-        private static string GetPreviewType(string contentType)
-        {
-            if (string.IsNullOrEmpty(contentType)) return "file";
-            var t = contentType.ToLowerInvariant();
-            if (t.StartsWith("image/")) return "image";
-            if (t.StartsWith("video/")) return "video";
-            if (t.StartsWith("audio/")) return "audio";
-            return "file";
-        }
+            const int contextLength = 40;
+            var start = Math.Max(0, index - contextLength);
+            var end = Math.Min(content.Length, index + searchTerm.Length + contextLength);
 
-        public async Task<SearchMessagesResponseDTO> SearchMessagesAsync(
-            int chatId, int? userId, string query, int page, int pageSize, HttpRequest request)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(query))
-                    return new SearchMessagesResponseDTO
-                    {
-                        Messages = [],
-                        TotalCount = 0,
-                        CurrentPage = page
-                    };
+            var prefix = start > 0 ? "..." : "";
+            var suffix = end < content.Length ? "..." : "";
 
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 20;
-                if (pageSize > 100) pageSize = 100;
-
-                var escapedQuery = EscapeLikePattern(query);
-
-                var baseQuery = _context.Messages
-                    .Where(m => m.ChatId == chatId &&
-                                (m.IsDeleted == null || m.IsDeleted == false) &&
-                                m.Content != null &&
-                                EF.Functions.ILike(m.Content, $"%{escapedQuery}%"))
-                    .Include(m => m.Sender)
-                    .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-                    .Include(m => m.MessageFiles)
-                    .OrderByDescending(m => m.CreatedAt)
-                    .AsNoTracking();
-
-                var totalCount = await baseQuery.CountAsync();
-                var skipCount = (page - 1) * pageSize;
-                var hasMoreMessages = totalCount > skipCount + pageSize;
-
-                var messages = await baseQuery
-                    .Skip(skipCount)
-                    .Take(pageSize)
-                    .ToListAsync();
-
-                var messageDtos = messages
-                    .Select(m => MapToDto(m, userId, userId.HasValue && m.SenderId == userId, request))
-                    .Reverse()
-                    .ToList();
-
-                return new SearchMessagesResponseDTO
-                {
-                    Messages = messageDtos,
-                    TotalCount = totalCount,
-                    CurrentPage = page,
-                    HasMoreMessages = hasMoreMessages
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching messages in chat {ChatId}", chatId);
-                throw;
-            }
+            return prefix + content[start..end] + suffix;
         }
 
         private static string EscapeLikePattern(string pattern)
@@ -438,5 +560,92 @@ namespace MessengerAPI.Services
                 .Replace("%", "\\%")
                 .Replace("_", "\\_");
         }
+
+        #endregion
+
+        #region Private Methods
+
+        private static Poll CreatePollFromDto(PollDTO pollDto) => new()
+        {
+            Question = pollDto.Question,
+            IsAnonymous = pollDto.IsAnonymous,
+            AllowsMultipleAnswers = pollDto.AllowsMultipleAnswers,
+            PollOptions = pollDto.Options?.Select((o, index) => new PollOption
+            {
+                OptionText = o.Text,
+                Position = o.Position > 0 ? o.Position : index
+            }).ToList() ?? []
+        };
+
+        private async Task SaveMessageFilesAsync(int messageId, List<MessageFileDTO> files, HttpRequest request)
+        {
+            foreach (var f in files)
+            {
+                var path = f.Url?.Replace($"{request.Scheme}://{request.Host}", "") ?? f.Url;
+
+                _context.MessageFiles.Add(new MessageFile
+                {
+                    MessageId = messageId,
+                    FileName = f.FileName,
+                    ContentType = f.ContentType,
+                    Path = path
+                });
+            }
+
+            await SaveChangesAsync();
+        }
+
+        private async Task UpdateChatLastMessageTimeAsync(int chatId)
+        {
+            var chat = await _context.Chats.FindAsync(chatId);
+            if (chat != null)
+            {
+                chat.LastMessageTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task<Message> LoadFullMessageAsync(int messageId) => await _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+            .Include(m => m.MessageFiles)
+            .FirstOrDefaultAsync(m => m.Id == messageId)
+            ?? throw new KeyNotFoundException($"Сообщение {messageId} не найдено");
+
+        private static void ValidateMessageModification(Message message, int userId)
+        {
+            if (message.SenderId != userId)
+                throw new UnauthorizedAccessException("Вы можете изменять только свои сообщения");
+
+            if (message.IsDeleted == true)
+                throw new InvalidOperationException("Сообщение уже удалено");
+        }
+
+        private async Task SendToGroupSafeAsync<T>(int chatId, string method, T data)
+        {
+            try
+            {
+                await hubContext.Clients.Group($"chat_{chatId}").SendAsync(method, data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось отправить {Method} через SignalR в чат {ChatId}", method, chatId);
+            }
+        }
+
+        private async Task NotifyNewMessageSafeAsync(MessageDTO message, HttpRequest request)
+        {
+            try
+            {
+                await notificationService.NotifyNewMessageAsync(message, request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось отправить уведомления для сообщения {MessageId}", message.Id);
+            }
+        }
+
+        #endregion
     }
 }

@@ -32,114 +32,93 @@ namespace MessengerAPI.Controllers
 
         #region Success Responses
 
-        protected ActionResult SuccessWithData<TData>(TData data, string? message = null)
-        {
-            return Ok(new ApiResponse<TData>
+        protected ActionResult SuccessWithData<TData>(TData data, string? message = null) 
+            => Ok(new ApiResponse<TData>
             {
                 Success = true,
                 Data = data,
                 Message = message,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null)
-        {
-            return Ok(new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null) => 
+            Ok(new ApiResponse<TData>
             {
                 Success = true,
                 Data = data,
                 Message = message,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<object>> Success(string? message = null)
-        {
-            return Ok(new ApiResponse<object>
+        protected ActionResult<ApiResponse<object>> Success(string? message = null) 
+            => Ok(new ApiResponse<object>
             {
                 Success = true,
                 Message = message,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<TData>> Created<TData>(TData data, string message = "Ресурс успешно создан")
-        {
-            return StatusCode(StatusCodes.Status201Created, new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> Created<TData>(TData data, string message = "Ресурс успешно создан") 
+            => StatusCode(StatusCodes.Status201Created, new ApiResponse<TData>
             {
                 Success = true,
                 Data = data,
                 Message = message,
                 Timestamp = DateTime.Now
             });
-        }
-
         #endregion
 
         #region Error Responses
 
-        protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null)
-        {
-            return BadRequest(new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null) 
+            => BadRequest(new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
                 Details = details,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult BadRequestMessage(string error, string? details = null)
-        {
-            return BadRequest(new ApiResponse<object>
+        protected ActionResult BadRequestMessage(string error, string? details = null) 
+            => BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Error = error,
                 Details = details,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден")
-        {
-            return NotFound(new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден") 
+            => NotFound(new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ")
-        {
-            return Unauthorized(new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ") 
+            => Unauthorized(new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
+        protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён") 
+            => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
             {
                 Success = false,
                 Error = error,
                 Timestamp = DateTime.Now
             });
-        }
 
-        protected ActionResult Forbidden(string error = "Доступ запрещён")
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
+        protected ActionResult Forbidden(string error = "Доступ запрещён") 
+            => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
             {
                 Success = false,
                 Error = error,
                 Timestamp = DateTime.Now
             });
-        }
 
         protected ActionResult InternalError(Exception ex, string error = "Произошла внутренняя ошибка")
         {

@@ -5,8 +5,46 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers
 {
-    public class ChatsController(IChatService chatService,ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
+    public class ChatsController(IChatService chatService, ILogger<ChatsController> logger): BaseController<ChatsController>(logger)
     {
+        [HttpGet("user/{userId}/dialogs")]
+        public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserDialogs(int userId)
+        {
+            if (!IsCurrentUser(userId))
+                return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+
+            return await ExecuteAsync(async () =>
+            {
+                return await chatService.GetUserDialogsAsync(userId, Request);
+            }, "Диалоги пользователя получены успешно");
+        }
+
+        [HttpGet("user/{userId}/contact/{contactUserId}")]
+        public async Task<ActionResult<ApiResponse<ChatDTO?>>> GetContactChat(int userId, int contactUserId)
+        {
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId != userId)
+                return Forbidden<ChatDTO?>("Доступ запрещён");
+
+            return await ExecuteAsync(async () =>
+            {
+                return await chatService.GetContactChatAsync(userId, contactUserId, Request);
+            });
+        }
+
+        [HttpGet("user/{userId}/groups")]
+        public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserGroups(int userId)
+        {
+            if (!IsCurrentUser(userId))
+                return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+
+            return await ExecuteAsync(async () =>
+            {
+                return await chatService.GetUserGroupsAsync(userId, Request);
+            }, "Групповые чаты пользователя получены успешно");
+        }
+
         [HttpGet("user/{userId}")]
         public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserChats(int userId)
         {
@@ -28,7 +66,8 @@ namespace MessengerAPI.Controllers
             return await ExecuteAsync(async () =>
             {
                 await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                var chat = await chatService.GetChatAsync(chatId, Request);
+
+                var chat = await chatService.GetChatAsync(chatId, currentUserId, Request);
                 return chat ?? throw new KeyNotFoundException($"Чат с ID {chatId} не найден");
             });
         }
@@ -64,9 +103,7 @@ namespace MessengerAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<ChatDTO>>> UpdateChat(
-            int id,
-            [FromBody] UpdateChatDTO updateDto)
+        public async Task<ActionResult<ApiResponse<ChatDTO>>> UpdateChat(int id,[FromBody] UpdateChatDTO updateDto)
         {
             var currentUserId = GetCurrentUserId();
 

@@ -1,8 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MessengerDesktop.ViewModels"
+        xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+        xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+        xmlns:vmDepartment="using:MessengerDesktop.ViewModels.Department"
         xmlns:views="using:MessengerDesktop.Views"
+        xmlns:dialogs="using:MessengerDesktop.Views.Dialogs"
         xmlns:chat="using:MessengerDesktop.Views.Chat"
+        xmlns:department="using:MessengerDesktop.Views.Department"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -110,7 +115,7 @@
 				<DataTemplate DataType="vm:ChatsViewModel">
 					<views:ChatsView/>
 				</DataTemplate>
-				<DataTemplate DataType="vm:ChatViewModel">
+				<DataTemplate DataType="vmChat:ChatViewModel">
 					<chat:ChatView/>
 				</DataTemplate>
 				<DataTemplate DataType="vm:AdminViewModel">
@@ -121,6 +126,9 @@
 				</DataTemplate>
 				<DataTemplate DataType="vm:SettingsViewModel">
 					<views:SettingsView/>
+				</DataTemplate>
+				<DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
+					<department:DepartmentManagementView/>
 				</DataTemplate>
 			</ContentControl.DataTemplates>
 		</ContentControl>
@@ -159,6 +167,15 @@
 					</DataTemplate>
 					<DataTemplate DataType="vm:DepartmentDialogViewModel">
 						<views:DepartmentDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:ConfirmDialogViewModel">
+						<dialogs:ConfirmDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:SelectUserDialogViewModel">
+						<dialogs:SelectUserDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vm:DepartmentHeadDialogViewModel">
+						<views:DepartmentHeadDialog/>
 					</DataTemplate>
 				</ContentControl.DataTemplates>
 			</ContentControl>

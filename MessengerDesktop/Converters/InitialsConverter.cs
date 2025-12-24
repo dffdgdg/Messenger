@@ -1,5 +1,4 @@
-﻿using Avalonia.Data.Converters;
-using MessengerDesktop.Converters.Base;
+﻿using MessengerDesktop.Converters.Base;
 using System;
 using System.Globalization;
 
@@ -28,14 +27,8 @@ namespace MessengerDesktop.Converters
             return "?";
         }
 
-        protected override object? HandleError(Exception ex, object? value)
-        {
-            return "?";
-        }
+        protected override object? HandleError(Exception ex, object? value) => "?";
 
-        protected override object? HandleInvalidInput(object? value)
-        {
-            return "?";
-        }
+        protected override object? HandleInvalidInput(object? value) => "?";
     }
 }

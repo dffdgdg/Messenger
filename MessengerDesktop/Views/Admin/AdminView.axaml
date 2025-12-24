@@ -7,172 +7,111 @@
              x:DataType="vm:AdminViewModel"
              x:Name="Root"
              Background="{DynamicResource PrimaryBG}"
-             Design.Width="1700"
-			 Design.Height="720">
+			 Design.Width="1280" Design.Height="720">
 
 	<UserControl.Resources>
-		<ResourceDictionary>
-			<!-- Шаблон отдела -->
-			<DataTemplate x:Key="DepartmentTemplate" DataType="vm:HierarchicalDepartmentViewModel">
-				<StackPanel Margin="0,0,0,4">
-					<Border Background="{DynamicResource ThirdBG}"
-                            Classes="department-item hoverable"
-                            CornerRadius="8"
-                            Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}">
-						<Grid>
-							<!-- Горизонтальная линия связи -->
-							<Border Height="2"
-                                    Width="20"
-                                    Background="{DynamicResource HierarchyLineBrush}"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Left"
-                                    Margin="-20,0,0,0"
-                                    IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"/>
-
-							<Border Padding="12">
-								<Grid ColumnDefinitions="Auto,*,Auto">
-									<!-- Кнопка раскрытия -->
-									<Button Grid.Column="0"
-                                            Command="{Binding ToggleExpandCommand}"
-                                            IsVisible="{Binding HasChildren}"
-                                            Classes="icon-button subtle"
-                                            Margin="0,0,12,0"
-                                            Width="28" Height="28"
-                                            VerticalAlignment="Center">
-										<PathIcon Data="{StaticResource chevron_down}"
-                                                  Width="12" Height="12"
-                                                  Foreground="{DynamicResource TextSecondary}">
-											<PathIcon.RenderTransform>
-												<RotateTransform Angle="{Binding IsExpanded, Converter={conv:Converter Name=BooleanToRotateTransform}}"/>
-											</PathIcon.RenderTransform>
-										</PathIcon>
-									</Button>
-
-									<!-- Placeholder если нет детей -->
-									<Border Grid.Column="0"
-                                            Width="28" Height="28"
-                                            Margin="0,0,12,0"
-                                            IsVisible="{Binding !HasChildren}"/>
-
-									<!-- Информация об отделе -->
-									<StackPanel Grid.Column="1"
-                                                Orientation="Horizontal"
-                                                Spacing="12"
-                                                VerticalAlignment="Center">
-										<Border Background="{DynamicResource CardBgBrush}"
-                                                Width="40" Height="40"
-                                                CornerRadius="10">
-											<PathIcon Data="{StaticResource organization_regular}"
-                                                      Width="18" Height="18"
-                                                      Foreground="{DynamicResource TextSecondary}"/>
-										</Border>
-										<TextBlock Text="{Binding Name}"
-                                                   FontSize="14"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextPrimary}"
-                                                   VerticalAlignment="Center"/>
-									</StackPanel>
-
-									<!-- Действия -->
-									<StackPanel Grid.Column="2"
-                                                Orientation="Horizontal"
-                                                Spacing="4"
-                                                VerticalAlignment="Center">
-										<Button Classes="icon-button"
-                                                Command="{Binding DataContext.OpenEditDepartmentCommand, ElementName=Root}"
-                                                CommandParameter="{Binding Department}"
-                                                ToolTip.Tip="Редактировать отдел">
-											<PathIcon Data="{StaticResource edit_regular}"
-                                                      Width="14" Height="14"
-                                                      Foreground="{DynamicResource Icon}"/>
-										</Button>
-									</StackPanel>
-								</Grid>
-							</Border>
-						</Grid>
-					</Border>
-
-					<!-- Дочерние элементы -->
-					<Grid IsVisible="{Binding IsExpanded}" Margin="28,0,0,0">
-						<Border Width="2"
+		<DataTemplate x:Key="DepartmentTemplate" DataType="vm:HierarchicalDepartmentViewModel">
+			<StackPanel Margin="0,0,0,4">
+				<Border Background="{DynamicResource ThirdBG}"
+                        Classes="Hoverable"
+                        CornerRadius="8"
+                        Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}">
+					<Grid>
+						<Border Height="2" Width="20"
                                 Background="{DynamicResource HierarchyLineBrush}"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Stretch"
-                                Margin="8,0,0,12"
-                                IsVisible="{Binding HasChildren}"/>
+                                VerticalAlignment="Center" HorizontalAlignment="Left"
+                                Margin="-20,0,0,0"
+                                IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"/>
 
-						<ItemsControl ItemsSource="{Binding Children}"
-                                      Margin="16,4,0,0"
-                                      ItemTemplate="{StaticResource DepartmentTemplate}">
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<StackPanel Spacing="4"/>
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-						</ItemsControl>
+						<Border Padding="12">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Button Grid.Column="0"
+                                        Command="{Binding ToggleExpandCommand}"
+                                        IsVisible="{Binding HasChildren}"
+                                        Classes="IconButton Subtle Small"
+                                        Margin="0,0,12,0">
+									<PathIcon Data="{StaticResource chevron_down}" Width="12" Height="12"
+                                              Foreground="{DynamicResource TextSecondary}">
+										<PathIcon.RenderTransform>
+											<RotateTransform Angle="{Binding IsExpanded, Converter={conv:Converter Name=BooleanToRotateTransform}}"/>
+										</PathIcon.RenderTransform>
+									</PathIcon>
+								</Button>
+
+								<Border Grid.Column="0" Width="28" Height="28" Margin="0,0,12,0"
+                                        IsVisible="{Binding !HasChildren}"/>
+
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+									<Border Background="{DynamicResource CardBgBrush}" Width="40" Height="40" CornerRadius="10">
+										<PathIcon Data="{StaticResource organization_regular}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+									</Border>
+									<TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+								</StackPanel>
+
+								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+									<Button Classes="IconButton Small"
+                                            Command="{Binding DataContext.OpenEditDepartmentCommand, ElementName=Root}"
+                                            CommandParameter="{Binding Department}"
+                                            ToolTip.Tip="Редактировать отдел">
+										<PathIcon Data="{StaticResource edit_regular}" Width="14" Height="14"
+                                                  Foreground="{DynamicResource Icon}"/>
+									</Button>
+								</StackPanel>
+							</Grid>
+						</Border>
 					</Grid>
-				</StackPanel>
-			</DataTemplate>
-		</ResourceDictionary>
+				</Border>
+
+				<Grid IsVisible="{Binding IsExpanded}" Margin="28,0,0,0">
+					<Border Width="2" Background="{DynamicResource HierarchyLineBrush}"
+                            HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                            Margin="8,0,0,12" IsVisible="{Binding HasChildren}"/>
+					<ItemsControl ItemsSource="{Binding Children}" Margin="16,4,0,0"
+                                  ItemTemplate="{StaticResource DepartmentTemplate}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel Spacing="4"/>
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+					</ItemsControl>
+				</Grid>
+			</StackPanel>
+		</DataTemplate>
 	</UserControl.Resources>
 
-	<Border CornerRadius="16" BorderBrush="{DynamicResource BorderDefault}" 
-			ClipToBounds="True" BorderThickness="1">
-		<Grid ColumnDefinitions="Auto,*">
-			<!-- ===================== БОКОВАЯ ПАНЕЛЬ ===================== -->
-			<Border Grid.Column="0"
-					Width="260"
-					Background="{DynamicResource SecondaryBG}"
-					BorderThickness="0,0,1,0"
-					BorderBrush="{DynamicResource BorderDefault}">
+	<Border Classes="PageContainer">
+		<Grid ColumnDefinitions="260,*">
+
+			<!-- Боковая панель -->
+			<Border Grid.Column="0" Background="{DynamicResource SecondaryBG}"
+                    BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderDefault}">
 				<DockPanel>
-					<!-- Заголовок -->
 					<Border DockPanel.Dock="Top" Padding="20,24,20,16">
 						<StackPanel Spacing="4">
-							<TextBlock Text="Администрирование"
-									   FontSize="20"
-									   FontWeight="Bold"
-									   Foreground="{DynamicResource TextPrimary}"/>
-							<TextBlock Text="Управление системой"
-									   FontSize="12"
-									   Foreground="{DynamicResource TextSecondary}"/>
+							<TextBlock Text="Администрирование" FontSize="20" FontWeight="Bold"/>
+							<TextBlock Text="Управление системой" FontSize="12"
+                                       Foreground="{DynamicResource TextSecondary}"/>
 						</StackPanel>
 					</Border>
 
-					<!-- Разделитель -->
-					<Border DockPanel.Dock="Top"
-							Height="1"
-							Background="{DynamicResource BorderDefault}"
-							Margin="16,0"/>
+					<Border DockPanel.Dock="Top" Height="1"
+                            Background="{DynamicResource BorderDefault}" Margin="16,0"/>
 
-					<!-- Навигация -->
 					<ScrollViewer DockPanel.Dock="Top" Margin="12,16">
 						<StackPanel Spacing="4">
-							<TextBlock Text="РАЗДЕЛЫ"
-									   FontSize="11"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource TextSecondary}"
-									   Margin="8,0,0,8"
-									   Opacity="0.7"/>
-
-							<ListBox SelectedIndex="{Binding SelectedTabIndex}"
-									 Background="Transparent"
-									 BorderThickness="0"
-									 Classes="nav-menu">
+							<TextBlock Text="РАЗДЕЛЫ" Classes="CategoryHeader"/>
+							<ListBox SelectedIndex="{Binding SelectedTabIndex}" Classes="NavMenu">
 								<ListBoxItem>
 									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource person_regular}"
-												  Width="18" Height="18"/>
-										<TextBlock Text="Сотрудники"
-												   VerticalAlignment="Center"/>
+										<PathIcon Data="{StaticResource person_regular}" Width="18" Height="18"/>
+										<TextBlock Text="Сотрудники" VerticalAlignment="Center"/>
 									</StackPanel>
 								</ListBoxItem>
 								<ListBoxItem>
 									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource organization_regular}"
-												  Width="18" Height="18"/>
-										<TextBlock Text="Отделы"
-												   VerticalAlignment="Center"/>
+										<PathIcon Data="{StaticResource organization_regular}" Width="18" Height="18"/>
+										<TextBlock Text="Отделы" VerticalAlignment="Center"/>
 									</StackPanel>
 								</ListBoxItem>
 							</ListBox>
@@ -181,145 +120,83 @@
 				</DockPanel>
 			</Border>
 
-			<!-- ===================== ОСНОВНОЙ КОНТЕНТ ===================== -->
+			<!-- Основной контент -->
 			<Border Grid.Column="1" Background="{DynamicResource PrimaryBG}">
 				<Grid Margin="24" RowDefinitions="Auto,Auto,*">
 
-					<!-- Заголовок секции -->
 					<StackPanel Grid.Row="0" Margin="0,0,0,20">
 						<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Сотрудники|Отделы'}"
-								   FontSize="24"
-								   FontWeight="Bold"
-								   Foreground="{DynamicResource TextPrimary}"/>
+                                   FontSize="24" FontWeight="Bold"/>
 						<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Управление учетными записями сотрудников|Структура отделов организации'}"
-								   FontSize="13"
-								   Foreground="{DynamicResource TextSecondary}"
-								   Margin="0,4,0,0"/>
+                                   FontSize="13" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
 					</StackPanel>
 
-					<!-- Панель инструментов -->
-					<Border Grid.Row="1"
-							Background="{DynamicResource SecondaryBG}"
-							BorderBrush="{DynamicResource BorderDefault}"
-							CornerRadius="16"
-							BorderThickness="1"
-							Padding="16"
-							Margin="0,0,0,16">
+					<Border Grid.Row="1" Background="{DynamicResource SecondaryBG}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            CornerRadius="16" BorderThickness="1" Padding="16" Margin="0,0,0,16">
 						<Grid ColumnDefinitions="*,Auto,Auto">
-							<!-- Поиск -->
-							<TextBox Grid.Column="0"
-									 Classes="search"
-									 Text="{Binding SearchQuery}"
-									 Watermark="Поиск...">
+							<TextBox Grid.Column="0" Classes="Search" Text="{Binding SearchQuery}" Watermark="Поиск...">
 								<TextBox.InnerLeftContent>
-									<PathIcon Data="{StaticResource search_regular}"
-											  Width="16" Height="16"
-											  Margin="12,0,8,0"
-											  Foreground="{DynamicResource TextSecondary}"/>
+									<PathIcon Data="{StaticResource search_regular}" Width="16" Height="16"
+                                              Margin="12,0,8,0" Foreground="{DynamicResource TextSecondary}"/>
 								</TextBox.InnerLeftContent>
 							</TextBox>
 
-							<!-- Обновить -->
-							<Button Grid.Column="1"
-									Command="{Binding RefreshCommand}"
-									Classes="icon-button"
-									Margin="12,0,0,0"
-									ToolTip.Tip="Обновить данные">
-								<PathIcon Data="{StaticResource refresh_regular}"
-										  Width="16" Height="16"
-										  Foreground="{DynamicResource Icon}"/>
+							<Button Grid.Column="1" Command="{Binding RefreshCommand}"
+                                    Classes="IconButton" Margin="12,0,0,0" ToolTip.Tip="Обновить данные">
+								<PathIcon Data="{StaticResource refresh_regular}" Width="16" Height="16"
+                                          Foreground="{DynamicResource Icon}"/>
 							</Button>
 
-							<!-- Создать -->
-							<Button Grid.Column="2"
-									Classes="primary"
-									Command="{Binding CreateCommand}"
-									Margin="12,0,0,0">
+							<Button Grid.Column="2" Classes="Primary" Command="{Binding CreateCommand}" Margin="12,0,0,0">
 								<StackPanel Orientation="Horizontal" Spacing="8">
-									<PathIcon Data="{StaticResource add_regular}"
-											  Width="14" Height="14"
-											  Foreground="{DynamicResource TextOnAccent}"/>
+									<PathIcon Data="{StaticResource add_regular}" Width="14" Height="14"
+                                              Foreground="{DynamicResource TextOnAccent}"/>
 									<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Добавить сотрудника|Создать отдел'}"
-											   Foreground="{DynamicResource TextOnAccent}"/>
+                                               Foreground="{DynamicResource TextOnAccent}"/>
 								</StackPanel>
 							</Button>
 						</Grid>
 					</Border>
 
-					<!-- Контент -->
 					<Grid Grid.Row="2">
-						<!-- Индикатор загрузки -->
-						<Border IsVisible="{Binding IsBusy}"
-								Background="{DynamicResource SecondaryBG}"
-								BorderBrush="{DynamicResource BorderDefault}"
-								BorderThickness="1"
-								CornerRadius="16"
-								ZIndex="100">
-							<StackPanel VerticalAlignment="Center"
-										HorizontalAlignment="Center"
-										Spacing="16">
-								<ProgressBar IsIndeterminate="True"
-											 Width="200"/>
-								<TextBlock Text="Загрузка данных..."
-										   Foreground="{DynamicResource TextSecondary}"
-										   HorizontalAlignment="Center"/>
+						<!-- Loading -->
+						<Border IsVisible="{Binding IsBusy}" Background="{DynamicResource SecondaryBG}"
+                                BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
+                                CornerRadius="16" ZIndex="100">
+							<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+								<ProgressBar IsIndeterminate="True" Width="200"/>
+								<TextBlock Text="Загрузка данных..." Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center"/>
 							</StackPanel>
 						</Border>
 
-						<!-- Сообщение об ошибке -->
-						<Border IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-								Background="{DynamicResource DangerBgBrush}"
-								BorderBrush="{DynamicResource DangerBorderBrush}"
-								BorderThickness="1"
-								CornerRadius="8"
-								Padding="16"
-								VerticalAlignment="Top"
-								Margin="0,0,0,16"
-								ZIndex="50">
+						<!-- Error -->
+						<Border Classes="AlertError" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
+                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
-								<PathIcon Grid.Column="0"
-										  Data="{StaticResource warning_regular}"
-										  Width="20" Height="20"
-										  Foreground="{DynamicResource DangerBrush}"
-										  Margin="0,0,12,0"/>
-								<TextBlock Grid.Column="1"
-										   Text="{Binding ErrorMessage}"
-										   Foreground="{DynamicResource DangerBrush}"
-										   VerticalAlignment="Center"
-										   TextWrapping="Wrap"/>
+								<PathIcon Data="{StaticResource warning_regular}" Width="20" Height="20"
+                                          Foreground="{DynamicResource DangerBrush}" Margin="0,0,12,0"/>
+								<TextBlock Grid.Column="1" Text="{Binding ErrorMessage}"
+                                           Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
 							</Grid>
 						</Border>
 
-						<!-- Сообщение об успехе -->
-						<Border IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-								Background="{DynamicResource SuccessBgBrush}"
-								BorderBrush="{DynamicResource SuccessBorderBrush}"
-								BorderThickness="1"
-								CornerRadius="8"
-								Padding="16"
-								VerticalAlignment="Top"
-								Margin="0,0,0,16"
-								ZIndex="50">
+						<!-- Success -->
+						<Border Classes="AlertSuccess" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
+                                IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
-								<PathIcon Grid.Column="0"
-										  Data="{StaticResource checkmark_regular}"
-										  Width="20" Height="20"
-										  Foreground="{DynamicResource SuccessBrush}"
-										  Margin="0,0,12,0"/>
-								<TextBlock Grid.Column="1"
-										   Text="{Binding SuccessMessage}"
-										   Foreground="{DynamicResource SuccessBrush}"
-										   VerticalAlignment="Center"
-										   TextWrapping="Wrap"/>
+								<PathIcon Data="{StaticResource checkmark_regular}" Width="20" Height="20"
+                                          Foreground="{DynamicResource SuccessBrush}" Margin="0,0,12,0"/>
+								<TextBlock Grid.Column="1" Text="{Binding SuccessMessage}"
+                                           Foreground="{DynamicResource SuccessBrush}" TextWrapping="Wrap"/>
 							</Grid>
 						</Border>
 
-						<!-- Список пользователей -->
-						<Border Background="{DynamicResource SecondaryBG}"
-								BorderThickness="1"
-								BorderBrush="{DynamicResource BorderDefault}"
-								CornerRadius="16"
-								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
+						<!-- Users List -->
+						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
+                                IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
 							<ScrollViewer Padding="16">
 								<ItemsControl ItemsSource="{Binding FilteredGroupedUsers}">
 									<ItemsControl.ItemsPanel>
@@ -330,29 +207,18 @@
 									<ItemsControl.ItemTemplate>
 										<DataTemplate DataType="vm:DepartmentGroup">
 											<StackPanel>
-												<!-- Заголовок группы -->
 												<Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-													<Border Background="{DynamicResource CardBgBrush}"
-															CornerRadius="6"
-															Padding="12,6">
+													<Border Background="{DynamicResource CardBgBrush}" CornerRadius="6" Padding="12,6">
 														<StackPanel Orientation="Horizontal" Spacing="8">
-															<PathIcon Data="{StaticResource organization_regular}"
-																	  Width="14" Height="14"
-																	  Foreground="{DynamicResource TextSecondary}"/>
-															<TextBlock Text="{Binding DepartmentName}"
-																	   FontSize="13"
-																	   FontWeight="SemiBold"
-																	   Foreground="{DynamicResource TextPrimary}"/>
+															<PathIcon Data="{StaticResource organization_regular}" Width="14" Height="14"
+                                                                      Foreground="{DynamicResource TextSecondary}"/>
+															<TextBlock Text="{Binding DepartmentName}" FontSize="13" FontWeight="SemiBold"/>
 														</StackPanel>
 													</Border>
-													<Border Grid.Column="1"
-															Height="1"
-															Background="{DynamicResource BorderDefault}"
-															Margin="12,0,0,0"
-															VerticalAlignment="Center"/>
+													<Border Grid.Column="1" Height="1" Background="{DynamicResource BorderDefault}"
+                                                            Margin="12,0,0,0" VerticalAlignment="Center"/>
 												</Grid>
 
-												<!-- Список пользователей -->
 												<ItemsControl ItemsSource="{Binding Users}">
 													<ItemsControl.ItemsPanel>
 														<ItemsPanelTemplate>
@@ -361,54 +227,34 @@
 													</ItemsControl.ItemsPanel>
 													<ItemsControl.ItemTemplate>
 														<DataTemplate DataType="shared:UserDTO">
-															<Border Classes="user-card hoverable"
-																	Background="{DynamicResource ItemBgBrush}"
-																	CornerRadius="8"
-																	Padding="12,10">
+															<Border Classes="Hoverable HoverActions"
+                                                                    Background="{DynamicResource ItemBgBrush}"
+                                                                    CornerRadius="8" Padding="12,10">
 																<Grid ColumnDefinitions="Auto,*,Auto">
-																	<!-- Аватар -->
-																	<Border Width="40" Height="40"
-																			Background="{DynamicResource CardBgBrush}"
-																			CornerRadius="20"
-																			Margin="0,0,12,0">
-																		<PathIcon Data="{StaticResource person_regular}"
-																				  Width="18" Height="18"
-																				  Foreground="{DynamicResource TextSecondary}"/>
+																	<Border Width="40" Height="40" Background="{DynamicResource CardBgBrush}"
+                                                                            CornerRadius="20" Margin="0,0,12,0">
+																		<PathIcon Data="{StaticResource person_regular}" Width="18" Height="18"
+                                                                                  Foreground="{DynamicResource TextSecondary}"/>
 																	</Border>
 
-																	<!-- Информация -->
-																	<StackPanel Grid.Column="1"
-																				VerticalAlignment="Center"
-																				Spacing="2">
-																		<TextBlock Text="{Binding DisplayName}"
-																				   FontWeight="SemiBold"
-																				   FontSize="14"
-																				   Foreground="{DynamicResource TextPrimary}"/>
+																	<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+																		<TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="14"/>
 																		<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-																				   Foreground="{DynamicResource TextSecondary}"
-																				   FontSize="12"/>
+                                                                                   Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
 																	</StackPanel>
 
-																	<!-- Действия -->
-																	<StackPanel Grid.Column="2"
-																				Orientation="Horizontal"
-																				Spacing="4"
-																				Classes="actions">
-																		<Button Classes="icon-button"
-																				Command="{Binding DataContext.OpenEditUserDialogCommand, ElementName=Root}"
-																				CommandParameter="{Binding .}"
-																				ToolTip.Tip="Редактировать">
-																			<PathIcon Data="{StaticResource edit_regular}"
-																					  Width="14" Height="14"
-																					  Foreground="{DynamicResource Icon}"/>
+																	<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Classes="Actions">
+																		<Button Classes="IconButton Small"
+                                                                                Command="{Binding DataContext.OpenEditUserDialogCommand, ElementName=Root}"
+                                                                                CommandParameter="{Binding .}" ToolTip.Tip="Редактировать">
+																			<PathIcon Data="{StaticResource edit_regular}" Width="14" Height="14"
+                                                                                      Foreground="{DynamicResource Icon}"/>
 																		</Button>
-																		<Button Classes="icon-button danger"
-																				Command="{Binding DataContext.ToggleBanCommand, ElementName=Root}"
-																				CommandParameter="{Binding .}"
-																				ToolTip.Tip="Заблокировать">
-																			<PathIcon Data="{StaticResource block_regular}"
-																					  Width="14" Height="14"
-																					  Foreground="{DynamicResource Icon}"/>
+																		<Button Classes="IconButton Small Danger"
+                                                                                Command="{Binding DataContext.ToggleBanCommand, ElementName=Root}"
+                                                                                CommandParameter="{Binding .}" ToolTip.Tip="Заблокировать">
+																			<PathIcon Data="{StaticResource block_regular}" Width="14" Height="14"
+                                                                                      Foreground="{DynamicResource Icon}"/>
 																		</Button>
 																	</StackPanel>
 																</Grid>
@@ -423,15 +269,13 @@
 							</ScrollViewer>
 						</Border>
 
-						<!-- Список отделов -->
-						<Border Background="{DynamicResource SecondaryBG}"
-								BorderThickness="1"
-								BorderBrush="{DynamicResource BorderDefault}"
-								CornerRadius="16"
-								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
+						<!-- Departments List -->
+						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
+                                IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
 							<ScrollViewer Padding="16">
 								<ItemsControl ItemsSource="{Binding FilteredHierarchicalDepartments}"
-											  ItemTemplate="{StaticResource DepartmentTemplate}">
+                                              ItemTemplate="{StaticResource DepartmentTemplate}">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<StackPanel Spacing="8"/>
@@ -445,129 +289,4 @@
 			</Border>
 		</Grid>
 	</Border>
-	
-
-	<!-- ===================== СТИЛИ ===================== -->
-	<UserControl.Styles>
-		<!-- Навигационное меню -->
-		<Style Selector="ListBox.nav-menu">
-			<Setter Property="Padding" Value="0"/>
-		</Style>
-		<Style Selector="ListBox.nav-menu ListBoxItem">
-			<Setter Property="Padding" Value="12,10"/>
-			<Setter Property="Margin" Value="0,2"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-					<BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="ListBox.nav-menu ListBoxItem:pointerover">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-		</Style>
-		<Style Selector="ListBox.nav-menu ListBoxItem:selected">
-			<Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-		</Style>
-		<Style Selector="ListBox.nav-menu ListBoxItem:selected PathIcon">
-			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-		</Style>
-
-		<!-- Кнопки -->
-		<Style Selector="Button.primary">
-			<Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-			<Setter Property="Padding" Value="16,10"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="Button.primary:pointerover">
-			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-		</Style>
-		<Style Selector="Button.primary:pressed">
-			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-		</Style>
-
-		<Style Selector="Button.icon-button">
-			<Setter Property="Width" Value="36"/>
-			<Setter Property="Height" Value="36"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Opacity" Value="0.7"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="Button.icon-button:pointerover">
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="Opacity" Value="1"/>
-		</Style>
-
-		<Style Selector="Button.icon-button.subtle">
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="Opacity" Value="1"/>
-		</Style>
-
-		<Style Selector="Button.icon-button.danger:pointerover">
-			<Setter Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
-		</Style>
-		<Style Selector="Button.icon-button.danger:pointerover PathIcon">
-			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-		</Style>
-
-		<!-- Карточки с hover-эффектом -->
-		<Style Selector="Border.hoverable">
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="Border.hoverable:pointerover">
-			<Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-		</Style>
-
-		<!-- Показывать действия только при наведении -->
-		<Style Selector="Border.user-card StackPanel.actions">
-			<Setter Property="Opacity" Value="0"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="Border.user-card:pointerover StackPanel.actions">
-			<Setter Property="Opacity" Value="1"/>
-		</Style>
-
-		<Style Selector="TextBox.search">
-			<Setter Property="Background" Value="{DynamicResource ItemBgBrush}"/>
-			<Setter Property="Height" Value="40"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-			<Setter Property="Padding" Value="8,0"/>
-			<Setter Property="HorizontalAlignment" Value="Stretch"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-			<Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
-		</Style>
-		<Style Selector="TextBox.search:focus">
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-		</Style>
-		<Style Selector="TextBox.search:pointerover">
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
-		</Style>
-	</UserControl.Styles>
 </UserControl>

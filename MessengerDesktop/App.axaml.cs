@@ -5,12 +5,16 @@ using Avalonia.Styling;
 using MessengerDesktop.DependencyInjection;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Auth;  
+using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Storage;
+using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 
 namespace MessengerDesktop
 {
@@ -32,10 +36,10 @@ namespace MessengerDesktop
 
         public override void Initialize()
         {
-            System.Diagnostics.Debug.WriteLine("[App] Initialize starting...");
+            Debug.WriteLine("[App] Initialize starting...");
             AvaloniaXamlLoader.Load(this);
             Services = ConfigureServices();
-            System.Diagnostics.Debug.WriteLine("[App] Initialize completed");
+            Debug.WriteLine("[App] Initialize completed");
         }
 
         private static ServiceProvider ConfigureServices()
@@ -54,7 +58,7 @@ namespace MessengerDesktop
 
         public override void OnFrameworkInitializationCompleted()
         {
-            System.Diagnostics.Debug.WriteLine("[App] OnFrameworkInitializationCompleted starting...");
+            Debug.WriteLine("[App] OnFrameworkInitializationCompleted starting...");
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -71,7 +75,7 @@ namespace MessengerDesktop
                 desktop.ShutdownRequested += OnShutdownRequested;
             }
 
-            System.Diagnostics.Debug.WriteLine("[App] OnFrameworkInitializationCompleted completed");
+            Debug.WriteLine("[App] OnFrameworkInitializationCompleted completed");
             base.OnFrameworkInitializationCompleted();
         }
 
@@ -84,7 +88,7 @@ namespace MessengerDesktop
             notificationService.Initialize(mainWindow);
             _notificationService = notificationService;
 
-            System.Diagnostics.Debug.WriteLine("[App] Platform services initialized");
+            Debug.WriteLine("[App] Platform services initialized");
         }
 
         private void LoadThemeFromSettings()
@@ -95,11 +99,11 @@ namespace MessengerDesktop
                 var isDarkTheme = settingsService.Get<bool?>("IsDarkTheme") ?? true;
                 RequestedThemeVariant = isDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
 
-                System.Diagnostics.Debug.WriteLine($"[App] Theme loaded: {(isDarkTheme ? "Dark" : "Light")}");
+                Debug.WriteLine($"[App] Theme loaded: {(isDarkTheme ? "Dark" : "Light")}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[App] Error loading theme: {ex.Message}");
+                Debug.WriteLine($"[App] Error loading theme: {ex.Message}");
                 RequestedThemeVariant = ThemeVariant.Dark;
             }
         }
@@ -117,11 +121,11 @@ namespace MessengerDesktop
                 var settingsService = Services.GetRequiredService<ISettingsService>();
                 settingsService.Set("IsDarkTheme", newTheme == ThemeVariant.Dark);
 
-                System.Diagnostics.Debug.WriteLine($"[App] Theme toggled to: {newTheme}");
+                Debug.WriteLine($"[App] Theme toggled to: {newTheme}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[App] Error saving theme: {ex.Message}");
+                Debug.WriteLine($"[App] Error saving theme: {ex.Message}");
             }
         }
 
@@ -141,20 +145,18 @@ namespace MessengerDesktop
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[App] Error saving theme variant: {ex.Message}");
+                        Debug.WriteLine($"[App] Error saving theme variant: {ex.Message}");
                     }
                 }
             }
         }
 
-        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
-        {
-            System.Diagnostics.Debug.WriteLine("[App] Shutdown requested");
-        }
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) 
+            => Debug.WriteLine("[App] Shutdown requested");
 
         private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("[App] Application exiting...");
+            Debug.WriteLine("[App] Application exiting...");
             Dispose();
         }
 
@@ -163,10 +165,11 @@ namespace MessengerDesktop
             if (_disposed) return;
             _disposed = true;
 
-            System.Diagnostics.Debug.WriteLine("[App] Disposing resources...");
+            Debug.WriteLine("[App] Disposing resources...");
 
             try
             {
+                _notificationService?.Dispose();
                 _notificationService = null;
 
                 var platformService = Services.GetService<IPlatformService>();
@@ -178,15 +181,25 @@ namespace MessengerDesktop
                 var apiClient = Services.GetService<IApiClientService>();
                 (apiClient as IDisposable)?.Dispose();
 
-                var authService = Services.GetService<AuthService>();
+                var authManager = Services.GetService<IAuthManager>() as IDisposable;
+                authManager?.Dispose();
+
+                var sessionStore = Services.GetService<ISessionStore>() as IDisposable;
+                sessionStore?.Dispose();
+
+                var dialogService = Services.GetService<IDialogService>() as IDisposable;
+                dialogService?.Dispose();
+
+                var navigationService = Services.GetService<INavigationService>() as IDisposable;
+                navigationService?.Dispose();
 
                 (Services as IDisposable)?.Dispose();
 
-                System.Diagnostics.Debug.WriteLine("[App] Resources disposed successfully");
+                Debug.WriteLine("[App] Resources disposed successfully");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[App] Error during disposal: {ex.Message}");
+                Debug.WriteLine($"[App] Error during disposal: {ex.Message}");
             }
 
             GC.SuppressFinalize(this);

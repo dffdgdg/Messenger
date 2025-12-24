@@ -15,8 +15,6 @@ public partial class Poll
 
     public bool? AllowsMultipleAnswers { get; set; }
 
-    public DateTime CreatedAt { get; set; }
-
     public DateTime? ClosesAt { get; set; }
 
     public virtual Message Message { get; set; } = null!;

@@ -1,104 +1,107 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MessengerDesktop.ViewModels"
-             mc:Ignorable="d"
              x:Class="MessengerDesktop.Views.SettingsView"
              x:DataType="vm:SettingsViewModel"
-             Background="{DynamicResource PrimaryBg}"
-             Design.Width="800" Design.Height="900">
+			 xmlns:conv="using:MessengerDesktop.Converters"
+             Background="{DynamicResource PrimaryBG}">
 
-	<Border BorderThickness="1"
-            CornerRadius="16"
-                BorderBrush="{DynamicResource BorderDefault}"
-				Background="{DynamicResource SecondaryBG}"
-				ClipToBounds="True">
-		<Grid Margin="20" MaxWidth="1000">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="*"/>
-			</Grid.RowDefinitions>
+	<Border Classes="PageContainer">
+		<ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Classes="ThinScrollbar">
+			<Border Padding="32,24">
+				<Grid HorizontalAlignment="Center">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" MaxWidth="600"/>
+					</Grid.ColumnDefinitions>
 
-			<TextBlock Text="Настройки" Classes="PageTitle" Margin="0,0,0,24"/>
+					<StackPanel Spacing="24">
+						<TextBlock Text="Настройки" Classes="PageTitle"/>
 
-			<StackPanel Grid.Row="1" Spacing="20">
+						<StackPanel Spacing="12">
+							<TextBlock Text="Внешний вид" Classes="SectionHeader Large"/>
 
-				<TextBlock Text="Внешний вид"
-                           FontSize="16"
-                           FontWeight="SemiBold"/>
+							<Border Classes="SettingsSection">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+									<Border Width="40" Height="40"
+                                            CornerRadius="10">
+										<PathIcon Data="{DynamicResource Info}"
+                                                  Width="18" Height="18"
+                                                  Foreground="{DynamicResource Accent}"/>
+									</Border>
 
-				<Border Classes="SettingsSection">
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="48"/>
-							<ColumnDefinition/>
-							<ColumnDefinition Width="146"/>
-						</Grid.ColumnDefinitions>
-						<Path VerticalAlignment="Center"
-                              Data="{DynamicResource Info}"
-                              Fill="{DynamicResource TextPrimary}"/>
-						<TextBlock VerticalAlignment="Center"
-                                   HorizontalAlignment="Left"
-                                   Text="Выберите тему"
-                                   Grid.Column="1"/>
-						<ComboBox Grid.Column="2"
-                                  Width="160"
-                                  ItemsSource="{Binding AvailableThemes}"
-                                  SelectedItem="{Binding SelectedTheme}"
-                                  Background="{DynamicResource SecondaryBG}"
-                                  BorderBrush="{DynamicResource BorderDefault}"
-                                  CornerRadius="6"
-                                  HorizontalAlignment="Right"/>
-					</Grid>
-				</Border>
+									<StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
+										<TextBlock Text="Тема оформления"
+                                                   FontWeight="Medium"/>
+										<TextBlock Text="Выберите светлую или тёмную тему"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}"/>
+									</StackPanel>
 
-				<TextBlock Text="Поведение"
-                           FontSize="16"
-                           FontWeight="SemiBold"/>
+									<ComboBox Grid.Column="2" Classes="DialogCombo"
+											  Width="160" ItemsSource="{Binding AvailableThemes}"
+											  SelectedItem="{Binding SelectedTheme}" VerticalAlignment="Center">
+										<ComboBox.ItemTemplate>
+											<DataTemplate>
+												<TextBlock Text="{Binding Converter={conv:Converter Name=ThemeToDisplay}}"/>
+											</DataTemplate>
+										</ComboBox.ItemTemplate>
+									</ComboBox>
+								</Grid>
+							</Border>
+						</StackPanel>
 
-				<Border Classes="SettingsSection">
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="48"/>
-							<ColumnDefinition/>
-							<ColumnDefinition Width="146"/>
-						</Grid.ColumnDefinitions>
-						<Path VerticalAlignment="Center"
-                              Data="{DynamicResource Notifications}"
-                              Fill="{DynamicResource TextPrimary}"/>
-						<TextBlock VerticalAlignment="Center"
-                                   HorizontalAlignment="Left"
-                                   Text="Уведомления"
-                                   Grid.Column="1"/>
-						<ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding NotificationsEnabled}"
-                                      CornerRadius="6"
-                                      HorizontalAlignment="Right"/>
-					</Grid>
-				</Border>
+						<!-- Поведение -->
+						<StackPanel Spacing="12">
+							<TextBlock Text="Поведение" Classes="SectionHeader Large"/>
 
-				<Border Classes="SettingsSection">
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="48"/>
-							<ColumnDefinition/>
-							<ColumnDefinition Width="146"/>
-						</Grid.ColumnDefinitions>
-						<Path VerticalAlignment="Center"
-                              Data="{DynamicResource UserSearch}"
-                              Fill="{DynamicResource TextPrimary}"/>
-						<TextBlock VerticalAlignment="Center"
-                                   HorizontalAlignment="Left"
-                                   Text="Разрешить поиск профиля"
-                                   Grid.Column="1"/>
-						<ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding CanBeFoundInSearch}"
-                                      CornerRadius="6"
-                                      HorizontalAlignment="Right"/>
-					</Grid>
-				</Border>
-			</StackPanel>
-		</Grid>
+							<Border Classes="SettingsSection">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+									<Border Width="40" Height="40"
+                                            CornerRadius="10">
+										<PathIcon Data="{DynamicResource Notifications}"
+                                                  Width="18" Height="18"
+                                                  Foreground="{DynamicResource WarningBrush}"/>
+									</Border>
+
+									<StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
+										<TextBlock Text="Уведомления"
+                                                   FontWeight="Medium"/>
+										<TextBlock Text="Показывать уведомления о новых сообщениях"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}"/>
+									</StackPanel>
+
+									<ToggleSwitch Grid.Column="2"
+                                                  IsChecked="{Binding NotificationsEnabled}"
+                                                  VerticalAlignment="Center"/>
+								</Grid>
+							</Border>
+						</StackPanel>
+
+						<!-- О приложении -->
+						<StackPanel Spacing="12">
+							<TextBlock Text="О приложении" Classes="SectionHeader Large"/>
+
+							<Border Classes="SettingsSection">
+								<StackPanel Spacing="8">
+									<TextBlock Text="Версия: 1.0.0"
+                                               FontSize="14"
+                                               Foreground="{DynamicResource TextSecondary}"/>
+									<TextBlock Text="© 2025 Messenger Desktop"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}"/>
+								</StackPanel>
+							</Border>
+						</StackPanel>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</ScrollViewer>
 	</Border>
 </UserControl>

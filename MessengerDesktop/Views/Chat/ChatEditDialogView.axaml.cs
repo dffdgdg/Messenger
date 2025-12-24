@@ -6,10 +6,7 @@ namespace MessengerDesktop.Views
 {
     public partial class ChatEditDialog : UserControl
     {
-        public ChatEditDialog()
-        {
-            InitializeComponent();
-        }
+        public ChatEditDialog() => InitializeComponent();
 
         private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
         {

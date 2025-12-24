@@ -18,15 +18,32 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AvaloniaResource Remove="Assets\Animations\**" />
+	  <AvaloniaXaml Remove="Assets\Animations\**" />
 	  <AvaloniaXaml Remove="Models\**" />
+	  <Compile Remove="Assets\Animations\**" />
 	  <Compile Remove="Models\**" />
+	  <EmbeddedResource Remove="Assets\Animations\**" />
 	  <EmbeddedResource Remove="Models\**" />
+	  <None Remove="Assets\Animations\**" />
 	  <None Remove="Models\**" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AvaloniaXaml Remove="Assets\Animations.axaml" />
 	  <AvaloniaXaml Remove="Assets\LightTheme.axaml" />
 	  <AvaloniaXaml Remove="Assets\MainStyle.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\ChatInfoSkeleton.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\ChatListSkeleton.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\ChatMessagesSkeleton.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Common.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Controls.axaml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Assets\Styles\ChatInfoSkeleton.axaml.cs" />
+	  <Compile Remove="Assets\Styles\ChatListSkeleton.axaml.cs" />
+	  <Compile Remove="Assets\Styles\ChatMessagesSkeleton.axaml.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -50,7 +67,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\MessengerAPI\MessengerAPI.csproj" />
 	  <ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
 	</ItemGroup>
 
@@ -61,11 +77,29 @@
 		<AvaloniaResource Update="Assets\MainStyle.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
+		<AvaloniaResource Update="Assets\Styles\Animations.axaml">
+		  <SubType>Designer</SubType>
+		</AvaloniaResource>
+		<AvaloniaResource Update="Assets\Styles\Common.axaml">
+		  <SubType>Designer</SubType>
+		</AvaloniaResource>
+		<AvaloniaResource Update="Assets\Styles\Controls.axaml">
+		  <SubType>Designer</SubType>
+		</AvaloniaResource>
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Compile Update="Views\Chat\ChatEditDialogView.axaml.cs">
 	    <DependentUpon>ChatEditDialogView.axaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Views\Department\DepartmentManagementView.axaml.cs">
+	    <DependentUpon>DepartmentManagementView.axaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Views\Dialog\ConfirmDialog.axaml.cs">
+	    <DependentUpon>ConfirmDialog.axaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Views\Dialog\SelectUserDialog.axaml.cs">
+	    <DependentUpon>SelectUserDialog.axaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 </Project>

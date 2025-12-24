@@ -90,8 +90,7 @@ public abstract class ValueConverterBase<TIn, TOut> : IValueConverter
 
     protected abstract TOut? ConvertCore(TIn value, object? parameter, CultureInfo culture);
 
-    protected virtual TIn? ConvertBackCore(TOut value, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    protected virtual TIn? ConvertBackCore(TOut value, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 
     protected virtual bool SupportsConvertBack => false;
     protected virtual object? HandleError(Exception ex, object? value) => default(TOut);

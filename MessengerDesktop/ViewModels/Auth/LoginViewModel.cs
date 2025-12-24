@@ -1,16 +1,17 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
+using MessengerDesktop.Services.UI;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
 
 public partial class LoginViewModel : BaseViewModel
 {
-    private readonly IAuthService _authService;
+    private readonly IAuthManager _authManager;
     private readonly INavigationService _navigation;
     private readonly ISecureStorageService _secureStorage;
     private readonly INotificationService _notificationService;
@@ -27,16 +28,13 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool rememberMe;
 
-    public LoginViewModel(
-        IAuthService authService,
-        INavigationService navigation,
-        ISecureStorageService secureStorage,
-        INotificationService notificationService)
+    public LoginViewModel(IAuthManager authManager,INavigationService navigation,ISecureStorageService secureStorage,INotificationService notificationService)
     {
-        _authService = authService;
+        _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _navigation = navigation;
         _secureStorage = secureStorage;
         _notificationService = notificationService;
+
         _ = InitializeAsync();
     }
 
@@ -44,9 +42,9 @@ public partial class LoginViewModel : BaseViewModel
     {
         try
         {
-            await _authService.WaitForInitializationAsync();
+            await _authManager.WaitForInitializationAsync();
 
-            if (_authService.IsAuthenticated)
+            if (_authManager.Session.IsAuthenticated)
             {
                 _navigation.NavigateToMainMenu();
                 return;
@@ -72,7 +70,7 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Load username error: {ex.Message}");
+            Debug.WriteLine($"Load username error: {ex.Message}");
         }
     }
 
@@ -92,7 +90,7 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Save username error: {ex.Message}");
+            Debug.WriteLine($"Save username error: {ex.Message}");
         }
     }
 
@@ -101,8 +99,8 @@ public partial class LoginViewModel : BaseViewModel
     {
         await SafeExecuteAsync(async () =>
         {
-            if (!_authService.IsInitialized)
-                await _authService.WaitForInitializationAsync();
+            if (!_authManager.IsInitialized)
+                await _authManager.WaitForInitializationAsync();
 
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
@@ -110,9 +108,9 @@ public partial class LoginViewModel : BaseViewModel
                 return;
             }
 
-            var success = await _authService.LoginAsync(Username, Password);
+            var result = await _authManager.LoginAsync(Username, Password);
 
-            if (success)
+            if (result.Success)
             {
                 await SaveUsernameAsync();
                 SuccessMessage = "Успешный вход!";
@@ -120,7 +118,7 @@ public partial class LoginViewModel : BaseViewModel
             }
             else
             {
-                ErrorMessage = "Неверный логин или пароль";
+                ErrorMessage = result.Error ?? "Неверный логин или пароль";
             }
         });
     }

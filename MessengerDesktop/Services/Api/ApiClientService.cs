@@ -2,8 +2,10 @@
 using MessengerShared.Response;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,13 +32,15 @@ namespace MessengerDesktop.Services.Api
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
-        private readonly IAuthService _authService;
+        private readonly ISessionStore _sessionStore;
         private bool _disposed;
 
-        public ApiClientService(HttpClient httpClient, IAuthService authService)  
+        private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
+
+        public ApiClientService(HttpClient httpClient, ISessionStore sessionStore)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
 
             _jsonOptions = new JsonSerializerOptions
             {
@@ -46,30 +50,35 @@ namespace MessengerDesktop.Services.Api
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
 
-            SafeUpdateAuthorizationHeader();
+            UpdateAuthorizationHeader();
 
-            if (_authService is INotifyPropertyChanged notifyPropertyChanged)
+            _sessionStore.SessionChanged += OnSessionChanged;
+
+            if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
             {
-                notifyPropertyChanged.PropertyChanged += OnAuthServicePropertyChanged;
+                notifyPropertyChanged.PropertyChanged += OnSessionPropertyChanged;
             }
         }
 
-        private void OnAuthServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnSessionChanged() => UpdateAuthorizationHeader();
+
+        private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(AuthService.Token) or nameof(AuthService.IsAuthenticated))
+            if (e.PropertyName is nameof(ISessionStore.Token)
+                or nameof(ISessionStore.IsAuthenticated))
             {
-                SafeUpdateAuthorizationHeader();
+                UpdateAuthorizationHeader();
             }
         }
 
-        private void SafeUpdateAuthorizationHeader()
+        private void UpdateAuthorizationHeader()
         {
             try
             {
-                if (!string.IsNullOrEmpty(_authService.Token))
+                if (!string.IsNullOrEmpty(_sessionStore.Token))
                 {
                     _httpClient.DefaultRequestHeaders.Authorization =
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _authService.Token);
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _sessionStore.Token);
                 }
                 else
                 {
@@ -78,12 +87,14 @@ namespace MessengerDesktop.Services.Api
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating authorization header: {ex.Message}");
+                Debug.WriteLine($"Error updating authorization header: {ex.Message}");
             }
         }
 
         public async Task<ApiResponse> DeleteAsync(string url, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.DeleteAsync(url, ct);
@@ -98,26 +109,35 @@ namespace MessengerDesktop.Services.Api
                 return CreateErrorResponse(ex);
             }
         }
+        private HttpRequestMessage CreateRequest(HttpMethod method, string url)
+        {
+            var request = new HttpRequestMessage(method, url);
+            var token = _sessionStore.Token;
+            if (!string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization =
+                    new AuthenticationHeaderValue("Bearer", token);
+            }
+            return request;
+        }
 
         public async Task<ApiResponse<T>> GetAsync<T>(string url, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.GetAsync(url, ct);
+                using var request = CreateRequest(HttpMethod.Get, url);
+                var response = await _httpClient.SendAsync(request, ct);
                 return await ProcessResponseAsync<T>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<T>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
@@ -135,6 +155,8 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<ApiResponse<T>> PostAsync<T>(string url, object data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
@@ -152,6 +174,8 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<ApiResponse> PostAsync(string url, object? data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
@@ -169,6 +193,8 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<ApiResponse<T>> PutAsync<T>(string url, object data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
@@ -186,6 +212,8 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
@@ -203,6 +231,8 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<ApiResponse> PutAsync(string url, object data, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
@@ -220,21 +250,48 @@ namespace MessengerDesktop.Services.Api
 
         public async Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
-                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+                if (!string.IsNullOrEmpty(_sessionStore.Token))
+                {
+                    request.Headers.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _sessionStore.Token);
+                }
+
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"GetStreamAsync failed: {response.StatusCode}");
+                    Debug.WriteLine($"GetStreamAsync failed: {response.StatusCode} for {url}");
+                    response.Dispose();
                     return null;
                 }
 
-                await using var networkStream = await response.Content.ReadAsStreamAsync(ct);
+                var contentLength = response.Content.Headers.ContentLength;
+
+                if (contentLength.HasValue && contentLength.Value > LargeFileThreshold)
+                {
+                    return await CreateTempFileStreamAsync(response, ct);
+                }
+
                 var memoryStream = new MemoryStream();
-                await networkStream.CopyToAsync(memoryStream, ct);
-                memoryStream.Position = 0;
-                return memoryStream;
+                try
+                {
+                    await response.Content.CopyToAsync(memoryStream, ct);
+                    memoryStream.Position = 0;
+                    response.Dispose();
+                    return memoryStream;
+                }
+                catch
+                {
+                    await memoryStream.DisposeAsync();
+                    response.Dispose();
+                    throw;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -242,13 +299,42 @@ namespace MessengerDesktop.Services.Api
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetStreamAsync error: {ex}");
+                Debug.WriteLine($"GetStreamAsync error for {url}: {ex}");
                 return null;
+            }
+        }
+
+        private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
+        {
+            var tempPath = Path.GetTempFileName();
+
+            try
+            {
+                await using (var fileStream = new FileStream(tempPath, FileMode.Create,
+                    FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+                {
+                    await response.Content.CopyToAsync(fileStream, ct);
+                }
+
+                response.Dispose();
+
+                return new FileStream(tempPath, FileMode.Open, FileAccess.Read,FileShare.Read, 81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+            }
+            catch
+            {
+                response.Dispose();
+                if (File.Exists(tempPath))
+                {
+                    try { File.Delete(tempPath); } catch { }
+                }
+                throw;
             }
         }
 
         public async Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
+
             try
             {
                 using var content = new MultipartFormDataContent();
@@ -356,18 +442,21 @@ namespace MessengerDesktop.Services.Api
             Timestamp = DateTime.Now
         };
 
+        private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
+
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
 
-            if (_authService is INotifyPropertyChanged notifyPropertyChanged)
+            _sessionStore.SessionChanged -= OnSessionChanged;
+
+            if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
             {
-                notifyPropertyChanged.PropertyChanged -= OnAuthServicePropertyChanged;
+                notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
             }
 
             GC.SuppressFinalize(this);
         }
-
     }
 }

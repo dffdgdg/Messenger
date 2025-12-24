@@ -1,175 +1,120 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerDesktop.Services.Auth;
-using MessengerShared.DTO;
+Ôªøusing MessengerShared.DTO.Auth;
 using MessengerShared.Response;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Services;
+namespace MessengerDesktop.Services.Auth;
 
-public partial class AuthService : ObservableObject, IAuthService
+public interface IAuthService
 {
-    private readonly HttpClient _httpClient;
-    private readonly ISecureStorageService _secureStorage;
-    private readonly TaskCompletionSource _initializationTcs = new();
+    Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default);
+    Task<ApiResponse> ValidateTokenAsync(string token, CancellationToken ct = default);
+    Task<ApiResponse> LogoutAsync(string token, CancellationToken ct = default);
+}
 
-    private const string TokenKey = "auth_token";
-    private const string UserIdKey = "user_id";
+public class AuthService(HttpClient httpClient) : IAuthService
+{
+    private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
-    [ObservableProperty]
-    private int? userId;
-
-    [ObservableProperty]
-    private string? token;
-
-    [ObservableProperty]
-    private bool isAuthenticated;
-
-    [ObservableProperty]
-    private bool isInitialized;
-
-    public AuthService(HttpClient httpClient, ISecureStorageService secureStorage)
-    {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
-        _ = InitializeInternalAsync();
-    }
-
-    private async Task InitializeInternalAsync()
-    {
-        try
-        {
-            await LoadStoredAuthAsync();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"AuthService initialization error: {ex.Message}");
-            await ClearAuthAsync();
-        }
-        finally
-        {
-            IsInitialized = true;
-            _initializationTcs.TrySetResult();
-        }
-    }
-
-    private async Task LoadStoredAuthAsync()
-    {
-        var storedToken = await _secureStorage.GetAsync<string>(TokenKey);
-        var storedUserId = await _secureStorage.GetAsync<int?>(UserIdKey);
-
-        if (!string.IsNullOrEmpty(storedToken) && storedUserId.HasValue)
-        {
-            var isValid = await ValidateTokenAsync(storedToken);
-
-            if (isValid)
-            {
-                Token = storedToken;
-                UserId = storedUserId;
-                UpdateHttpClientAuthorization(storedToken);
-                IsAuthenticated = true;
-            }
-            else
-            {
-                await ClearAuthAsync();
-            }
-        }
-    }
-    private async Task<bool> ValidateTokenAsync(string token)
-    {
-        try
-        {
-            // ¬ÂÏÂÌÌÓ ÛÒÚ‡Ì‡‚ÎË‚‡ÂÏ ÚÓÍÂÌ ‰Îˇ ÔÓ‚ÂÍË
-            var oldAuth = _httpClient.DefaultRequestHeaders.Authorization;
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            // ƒÂÎ‡ÂÏ ÔÓÒÚÓÈ Á‡ÔÓÒ ‰Îˇ ÔÓ‚ÂÍË ÚÓÍÂÌ‡
-            var response = await _httpClient.GetAsync("api/auth/validate");
-
-            // ¬ÓÒÒÚ‡Ì‡‚ÎË‚‡ÂÏ ÓË„ËÌ‡Î¸Ì˚È Á‡„ÓÎÓ‚ÓÍ
-            _httpClient.DefaultRequestHeaders.Authorization = oldAuth;
-
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    public Task WaitForInitializationAsync() => _initializationTcs.Task;
-
-    public async Task<bool> WaitForInitializationAsync(TimeSpan timeout)
-    {
-        var timeoutTask = Task.Delay(timeout);
-        var completedTask = await Task.WhenAny(_initializationTcs.Task, timeoutTask);
-        return completedTask == _initializationTcs.Task;
-    }
-
-    public async Task<bool> LoginAsync(string username, string password)
+    public async Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-                return false;
+                return ApiResponseHelper.Error<AuthResponseDTO>("–ò–º—è –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—è –∏ –ø–∞—Ä–æ–ª—å –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã");
 
-            var loginDto = new LoginDTO
-            {
-                Username = username.Trim(),
-                Password = password
-            };
+            var loginDto = new LoginRequest(username, password.Trim());
 
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginDto);
+            var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginDto, ct);
 
             if (!response.IsSuccessStatusCode)
-                return false;
-
-            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDTO>>();
-
-            if (apiResponse?.Success == true && apiResponse.Data?.Id > 0)
             {
-                await SaveAuthAsync(apiResponse.Data.Token, apiResponse.Data.Id);
-                return true;
+                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                return ApiResponseHelper.Error<AuthResponseDTO>(
+                    $"–û—à–∏–±–∫–∞ –∞–≤—Ç–æ—Ä–∏–∑–∞—Ü–∏–∏: {response.StatusCode}",
+                    errorContent);
             }
 
-            return false;
+            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDTO>>(ct);
+
+            if (apiResponse != null)
+            {
+                return apiResponse;
+            }
+
+            try
+            {
+                var directData = await response.Content.ReadFromJsonAsync<AuthResponseDTO>(ct);
+                if (directData != null)
+                {
+                    return ApiResponseHelper.Success(directData, "–ê–≤—Ç–æ—Ä–∏–∑–∞—Ü–∏—è —É—Å–ø–µ—à–Ω–∞");
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
+
+            return ApiResponseHelper.Error<AuthResponseDTO>("–ù–µ —É–¥–∞–ª–æ—Å—å –ø—Ä–æ—á–∏—Ç–∞—Ç—å –æ—Ç–≤–µ—Ç —Å–µ—Ä–≤–µ—Ä–∞");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
-            return false;
+            return ApiResponseHelper.Error<AuthResponseDTO>($"–û—à–∏–±–∫–∞ –∞–≤—Ç–æ—Ä–∏–∑–∞—Ü–∏–∏: {ex.Message}");
         }
     }
 
-    private async Task SaveAuthAsync(string newToken, int newUserId)
+    public async Task<ApiResponse> ValidateTokenAsync(string token, CancellationToken ct = default)
     {
-        await _secureStorage.SaveAsync(TokenKey, newToken);
-        await _secureStorage.SaveAsync(UserIdKey, newUserId);
+        try
+        {
+            if (string.IsNullOrEmpty(token)) return ApiResponseHelper.Error("–¢–æ–∫–µ–Ω –Ω–µ –ø—Ä–µ–¥–æ—Å—Ç–∞–≤–ª–µ–Ω");
 
-        Token = newToken;
-        UserId = newUserId;
-        IsAuthenticated = true;
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/validate");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        UpdateHttpClientAuthorization(newToken);
+            var response = await _httpClient.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? ApiResponseHelper.Success()
+                : ApiResponseHelper.Error($"–¢–æ–∫–µ–Ω –Ω–µ–¥–µ–π—Å—Ç–≤–∏—Ç–µ–ª–µ–Ω: {response.StatusCode}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ApiResponseHelper.Error($"–û—à–∏–±–∫–∞ –≤–∞–ª–∏–¥–∞—Ü–∏–∏: {ex.Message}");
+        }
     }
 
-    public async Task ClearAuthAsync()
+    public async Task<ApiResponse> LogoutAsync(string token, CancellationToken ct = default)
     {
-        await _secureStorage.RemoveAsync(TokenKey);
-        await _secureStorage.RemoveAsync(UserIdKey);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/logout");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        Token = null;
-        UserId = null;
-        IsAuthenticated = false;
+            var response = await _httpClient.SendAsync(request, ct);
 
-        _httpClient.DefaultRequestHeaders.Authorization = null;
-    }
-
-    private void UpdateHttpClientAuthorization(string token)
-    {
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            return response.IsSuccessStatusCode
+                ? ApiResponseHelper.Success("–í—ã—Ö–æ–¥ –≤—ã–ø–æ–ª–Ω–µ–Ω —É—Å–ø–µ—à–Ω–æ")
+                : ApiResponseHelper.Error($"–û—à–∏–±–∫–∞ –≤—ã—Ö–æ–¥–∞: {response.StatusCode}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ApiResponseHelper.Error($"–û—à–∏–±–∫–∞ –≤—ã—Ö–æ–¥–∞: {ex.Message}");
+        }
     }
 }

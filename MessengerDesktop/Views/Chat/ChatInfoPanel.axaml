@@ -1,113 +1,259 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
              xmlns:conv="using:MessengerDesktop.Converters"
              xmlns:shared="using:MessengerShared.DTO"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:skeleton="using:MessengerDesktop.Views.Controls"
              x:Class="MessengerDesktop.Views.ChatInfoPanel"
              x:DataType="vm:ChatViewModel"
              x:Name="InfoPanelRoot"
              Width="320"
-			 Design.Height="720"
+             Design.Height="720"
              FontFamily="Segoe UI">
 
 	<Border Background="{DynamicResource PrimaryBG}"
             CornerRadius="0,16,16,0">
-		<Grid>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="58"/>
-				<RowDefinition Height="*"/>
-			</Grid.RowDefinitions>
-
+		<Grid RowDefinitions="58,*">
+			<!-- Заголовок -->
 			<Border Grid.Row="0"
                     BorderBrush="{DynamicResource BorderDefault}"
                     BorderThickness="0,0,0,1"
                     Padding="16,0">
-				<Grid VerticalAlignment="Center">
-					<TextBlock Text="Информация о группе"
+				<Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+					<TextBlock Text="{Binding InfoPanelTitle}"
                                FontWeight="SemiBold"
                                FontSize="16"/>
+					<Button Grid.Column="1"
+                            Command="{Binding ToggleInfoPanelCommand}"
+                            Classes="IconButton Small">
+						<PathIcon Data="{StaticResource Close}"
+                                  Width="12" Height="12"/>
+					</Button>
 				</Grid>
 			</Border>
 
-			<ScrollViewer Grid.Row="1" Padding="16">
-				<StackPanel Spacing="24">
+			<!-- Контент -->
+			<Grid Grid.Row="1">
 
-					<!-- Аватар и название -->
-					<StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-						<Border Classes="Avatar Large">
-							<Image Stretch="UniformToFill"
-                                   asyncImageLoader:ImageLoader.Source="{Binding Chat.Avatar}"/>
-						</Border>
+				<!-- Skeleton Loading -->
+				<!--<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>-->
 
-						<StackPanel VerticalAlignment="Center">
-							<TextBlock Text="{Binding Chat.Name}"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"/>
-							<TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMuted}"/>
+				<!-- Основной контент -->
+				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
+                              IsVisible="{Binding !IsInitialLoading}"
+                              Padding="16">
+					<StackPanel Spacing="20">
+
+						<!-- ========== ЛИЧНЫЙ ДИАЛОГ ========== -->
+						<StackPanel IsVisible="{Binding IsContactChat}" Spacing="20">
+
+							<!-- Аватар по центру -->
+							<StackPanel HorizontalAlignment="Center" Spacing="12">
+								<controls:AvatarControl Classes="XXLarge"
+                                                        Source="{Binding ContactUser.Avatar}"
+                                                        DisplayName="{Binding ContactUser.DisplayName}"
+                                                        IsOnline="{Binding IsContactOnline}"
+                                                        HorizontalAlignment="Center"/>
+
+								<!-- Имя -->
+								<TextBlock Text="{Binding ContactUser.DisplayName}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           IsVisible="{Binding ContactUser.DisplayName, 
+                                                      Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+								<!-- Username если нет DisplayName -->
+								<TextBlock Text="{Binding ContactUser.Username}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding ContactUser.DisplayName, 
+                                                      Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+
+								<!-- Статус -->
+								<TextBlock Text="{Binding ContactLastSeen}"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center"/>
+							</StackPanel>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Информация -->
+							<StackPanel Spacing="16">
+								<!-- Username -->
+								<StackPanel Spacing="2"
+                                            IsVisible="{Binding ContactUser.Username, 
+                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+									<TextBlock Text="Имя пользователя"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}"/>
+									<TextBlock Text="{Binding ContactUser.Username, StringFormat='@{0}'}"
+                                               FontSize="14"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+								</StackPanel>
+
+								<!-- Отдел -->
+								<StackPanel Spacing="2"
+                                            IsVisible="{Binding ContactUser.Department, 
+                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+									<TextBlock Text="Отдел"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}"/>
+									<TextBlock Text="{Binding ContactUser.Department}"
+                                               FontSize="14"/>
+								</StackPanel>
+							</StackPanel>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Уведомления -->
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<PathIcon Data="{StaticResource Notifications}"
+                                          Width="18" Height="18"
+                                          Foreground="{DynamicResource TextSecondary}"
+                                          Margin="0,0,12,0"/>
+								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
+								<ToggleSwitch Grid.Column="2"
+                                              IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+                                              IsEnabled="{Binding !IsLoadingMuteState}"
+                                              OnContent=""
+                                              OffContent=""/>
+							</Grid>
 						</StackPanel>
+
+						<!-- ========== ГРУППОВОЙ ЧАТ ========== -->
+						<StackPanel IsVisible="{Binding IsGroupChat}" Spacing="20">
+
+							<!-- Аватар и название -->
+							<StackPanel Orientation="Horizontal" Spacing="12">
+								<controls:AvatarControl Classes="Large"
+                                                        Source="{Binding Chat.Avatar}"
+                                                        DisplayName="{Binding Chat.Name}"
+                                                        FallbackIcon="{StaticResource GroupIcon}"
+                                                        ShowOnlineIndicator="False"/>
+
+								<StackPanel VerticalAlignment="Center" Spacing="2">
+									<TextBlock Text="{Binding Chat.Name}"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"/>
+									<TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}"/>
+								</StackPanel>
+							</StackPanel>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Уведомления -->
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<PathIcon Data="{StaticResource Notifications}"
+                                          Width="18" Height="18"
+                                          Foreground="{DynamicResource TextSecondary}"
+                                          Margin="0,0,12,0"/>
+								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
+								<ToggleSwitch Grid.Column="2"
+                                              IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+                                              IsEnabled="{Binding !IsLoadingMuteState}"
+                                              OnContent=""
+                                              OffContent=""/>
+							</Grid>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Медиа -->
+							<StackPanel Spacing="4">
+								<TextBlock Text="Медиа и файлы" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8"/>
+
+								<Button Classes="InfoPanelItem">
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<PathIcon Data="{StaticResource Image}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+										<TextBlock Text="Фото" VerticalAlignment="Center"/>
+									</StackPanel>
+								</Button>
+
+								<Button Classes="InfoPanelItem">
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<PathIcon Data="{StaticResource Document}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+										<TextBlock Text="Файлы" VerticalAlignment="Center"/>
+									</StackPanel>
+								</Button>
+
+								<Button Classes="InfoPanelItem" IsVisible="{Binding PollsCount}">
+									<Grid ColumnDefinitions="Auto,*,Auto">
+										<PathIcon Data="{StaticResource Poll}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+										<TextBlock Grid.Column="1" Text="Опросы" VerticalAlignment="Center" Margin="12,0,0,0"/>
+										<TextBlock Grid.Column="2" Text="{Binding PollsCount}"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+									</Grid>
+								</Button>
+							</StackPanel>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Участники -->
+							<StackPanel Spacing="8">
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Text="Участники" FontWeight="SemiBold" FontSize="14"/>
+									<TextBlock Grid.Column="1" Text="{Binding Members.Count}"
+                                               Foreground="{DynamicResource TextMuted}"/>
+								</Grid>
+
+								<ItemsControl ItemsSource="{Binding Members}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="shared:UserDTO">
+											<Button Classes="MemberItem"
+                                                    Command="{Binding DataContext.OpenProfileCommand, ElementName=InfoPanelRoot}"
+                                                    CommandParameter="{Binding Id}">
+												<Grid ColumnDefinitions="Auto,*">
+													<!-- Аватар -->
+													<controls:AvatarControl Classes="Medium"
+                                                                            Source="{Binding Avatar}"
+                                                                            DisplayName="{Binding DisplayName}"
+                                                                            IsOnline="{Binding IsOnline}"/>
+
+													<!-- Имя -->
+													<StackPanel Grid.Column="1"
+                                                                VerticalAlignment="Center"
+                                                                Margin="12,0,0,0"
+                                                                Spacing="2">
+														<TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}"
+                                                                   FontSize="14"/>
+														<TextBlock Text="{Binding Department}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextMuted}"
+                                                                   IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+													</StackPanel>
+												</Grid>
+											</Button>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
+
+							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+							<!-- Покинуть группу -->
+							<Button Command="{Binding LeaveChatCommand}"
+                                    Classes="InfoPanelItem">
+								<StackPanel Orientation="Horizontal" Spacing="12">
+									<PathIcon Data="{StaticResource SignOut}" Width="18" Height="18"
+                                              Foreground="{DynamicResource DangerBrush}"/>
+									<TextBlock Text="Покинуть группу" Foreground="{DynamicResource DangerBrush}"/>
+								</StackPanel>
+							</Button>
+						</StackPanel>
+
 					</StackPanel>
-
-					<!-- Уведомления -->
-					<StackPanel Spacing="8">
-						<TextBlock Text="Уведомления"
-                                   FontWeight="Bold"
-                                   FontSize="14"/>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<TextBlock Text="Включить уведомления"
-                                       VerticalAlignment="Center"/>
-							<ToggleSwitch Grid.Column="1" />
-						</Grid>
-					</StackPanel>
-
-					<!-- Участники -->
-					<StackPanel Spacing="8">
-						<TextBlock Text="Участники"
-                                   FontWeight="Bold"
-                                   FontSize="14"/>
-
-						<ItemsControl ItemsSource="{Binding Members}">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="shared:UserDTO">
-									<Button Background="{DynamicResource TransparentBrush}"
-                                            BorderThickness="0"
-                                            Padding="8,6"
-                                            Margin="0,2"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            Command="{Binding DataContext.OpenProfileCommand, ElementName=InfoPanelRoot}"
-                                            CommandParameter="{Binding Id}">
-										<Grid ColumnDefinitions="Auto,*">
-											<Border Classes="Avatar Small">
-												<Panel>
-													<TextBlock FontSize="14"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextSecondary}"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
-													<Image Stretch="UniformToFill"
-                                                           asyncImageLoader:ImageLoader.Source="{Binding Avatar}"/>
-												</Panel>
-											</Border>
-
-											<TextBlock Grid.Column="1"
-                                                       Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}"
-                                                       VerticalAlignment="Center"
-                                                       Margin="12,0,0,0"/>
-										</Grid>
-									</Button>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</StackPanel>
-				</StackPanel>
-			</ScrollViewer>
+				</ScrollViewer>
+			</Grid>
 		</Grid>
 	</Border>
 </UserControl>

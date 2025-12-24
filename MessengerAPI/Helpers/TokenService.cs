@@ -1,62 +1,91 @@
+using MessengerShared.Enum;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
 
 namespace MessengerAPI.Helpers
 {
     public interface ITokenService
     {
-        string GenerateToken(int userId, string? role = null);
+        string GenerateToken(int userId, UserRole? role = null);
         bool ValidateToken(string token, out int userId);
+        TokenValidationParameters GetValidationParameters();
     }
 
-    public class TokenService(IConfiguration config) : ITokenService
+    public class JwtSettings
     {
-        private readonly string _secretKey = config["Jwt:Secret"] ?? throw new ArgumentNullException("Jwt:Secret not found");
-        private readonly int _lifetimeHours = int.TryParse(config["Jwt:LifetimeHours"], out var hours) ? hours : 24;
-        private readonly string _issuer = config["Jwt:Issuer"] ?? "MessengerAPI";
-        private readonly string _audience = config["Jwt:Audience"] ?? "MessengerClient";
+        public const string SectionName = "Jwt";
 
-        public string GenerateToken(int userId, string? role = null)
+        public string Secret { get; set; } = string.Empty;
+        public int LifetimeHours { get; set; } = 24;
+        public string Issuer { get; set; } = "MessengerAPI";
+        public string Audience { get; set; } = "MessengerClient";
+    }
+
+    public class TokenService : ITokenService
+    {
+        private readonly JwtSettings _settings;
+        private readonly SymmetricSecurityKey _signingKey;
+
+        public TokenService(IOptions<JwtSettings> settings)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            _settings = settings.Value;
 
+            if (string.IsNullOrEmpty(_settings.Secret))
+                throw new InvalidOperationException("JWT Secret is not configured");
+
+            if (_settings.Secret.Length < 32)
+                throw new InvalidOperationException("JWT Secret must be at least 32 characters");
+
+            _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
+        }
+
+        public string GenerateToken(int userId, UserRole? role = null)
+        {
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, userId.ToString()),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new(JwtRegisteredClaimNames.Iat, DateTimeOffset.Now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+                new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
             };
 
-            if (!string.IsNullOrEmpty(role))
+            if (role.HasValue)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim(ClaimTypes.Role, role.Value.ToString()));
             }
+
+            var credentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddHours(_lifetimeHours),
-                Issuer = _issuer,
-                Audience = _audience,
-                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature)
+                Expires = DateTime.UtcNow.AddHours(_settings.LifetimeHours),
+                Issuer = _settings.Issuer,
+                Audience = _settings.Audience,
+                SigningCredentials = credentials,
+                NotBefore = DateTime.UtcNow
             };
 
+            var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
+
             return tokenHandler.WriteToken(token);
         }
 
         public bool ValidateToken(string token, out int userId)
         {
             userId = 0;
+
+            if (string.IsNullOrWhiteSpace(token))
+                return false;
+
             try
             {
                 var handler = new JwtSecurityTokenHandler();
-                var parameters = GetValidationParameters();
+                var principal = handler.ValidateToken(token, GetValidationParameters(), out _);
 
-                var principal = handler.ValidateToken(token, parameters, out _);
                 var idClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
                 return int.TryParse(idClaim?.Value, out userId);
             }
@@ -68,32 +97,33 @@ namespace MessengerAPI.Helpers
 
         public TokenValidationParameters GetValidationParameters()
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
-
             return new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = key,
+                IssuerSigningKey = _signingKey,
                 ValidateIssuer = true,
-                ValidIssuer = _issuer,
+                ValidIssuer = _settings.Issuer,
                 ValidateAudience = true,
-                ValidAudience = _audience,
+                ValidAudience = _settings.Audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
         }
 
-        public static TokenValidationParameters GetValidationParameters(IConfiguration config)
+        /// <summary>
+        /// Статический метод для конфигурации при старте приложения
+        /// </summary>
+        public static TokenValidationParameters CreateValidationParameters(IConfiguration config)
         {
-            var secret = config["Jwt:Secret"] ?? throw new ArgumentNullException("Jwt:Secret");
+            var secret = config["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret configuration is required");
+
             var issuer = config["Jwt:Issuer"] ?? "MessengerAPI";
             var audience = config["Jwt:Audience"] ?? "MessengerClient";
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
             return new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = key,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
                 ValidateIssuer = true,
                 ValidIssuer = issuer,
                 ValidateAudience = true,

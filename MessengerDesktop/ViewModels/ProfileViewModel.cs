@@ -1,3 +1,4 @@
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,7 +7,7 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO;
 using System;
-using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
@@ -16,245 +17,360 @@ namespace MessengerDesktop.ViewModels
         private readonly IApiClientService _apiClient;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AvatarUrl))]
+        [NotifyPropertyChangedFor(nameof(FullName))]
         private UserDTO? _user;
 
+        [ObservableProperty] private int _userId;
+
+        // Режимы редактирования
+        [ObservableProperty] private bool _isEditingProfile;
+        [ObservableProperty] private bool _isEditingUsername;
+        [ObservableProperty] private bool _isEditingPassword;
+
+        // Поля для редактирования профиля (ФИО)
         [ObservableProperty]
-        private int _userId;
+        [NotifyPropertyChangedFor(nameof(TempFullName))]
+        private string _tempSurname = string.Empty;
 
         [ObservableProperty]
-        private bool _isEditing;
+        [NotifyPropertyChangedFor(nameof(TempFullName))]
+        private string _tempName = string.Empty;
 
         [ObservableProperty]
-        private string _tempDisplayName = string.Empty;
+        [NotifyPropertyChangedFor(nameof(TempFullName))]
+        private string _tempMidname = string.Empty;
+
+        // Поля для редактирования Username
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanSaveUsername))]
+        [NotifyPropertyChangedFor(nameof(UsernameValidationMessage))]
+        [NotifyPropertyChangedFor(nameof(IsUsernameValid))]
+        private string _tempUsername = string.Empty;
+
+        // Поля для смены пароля
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanSavePassword))]
+        private string _currentPassword = string.Empty;
 
         [ObservableProperty]
-        private Bitmap? _avatarBitmap;
+        [NotifyPropertyChangedFor(nameof(CanSavePassword))]
+        [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
+        [NotifyPropertyChangedFor(nameof(IsNewPasswordValid))]
+        [NotifyPropertyChangedFor(nameof(NewPasswordValidationMessage))]
+        private string _newPassword = string.Empty;
 
-        private bool _hasUnsavedChanges;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanSavePassword))]
+        [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
+        [NotifyPropertyChangedFor(nameof(ShowPasswordMatchIndicator))]
+        private string _confirmPassword = string.Empty;
 
-        public string? AvatarUrl
+        [ObservableProperty] private Bitmap? _avatarBitmap;
+
+        public string? AvatarUrl => GetAbsoluteUrl(User?.Avatar);
+
+        public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname)
+                                  ?? User?.Username ?? "Пользователь";
+
+        public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "—";
+
+        // Валидация Username
+        public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
+            System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), @"^[a-zA-Z0-9_]{3,30}$");
+
+        public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername)
+                                       && TempUsername.Trim().Length >= 3
+                                       && IsUsernameValid;
+
+        public string? UsernameValidationMessage
         {
             get
             {
-                if (string.IsNullOrEmpty(User?.Avatar))
-                    return null;
-
-                var avatar = User.Avatar.Trim();
-
-                if (avatar.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                    return avatar;
-
-                var baseUrl = App.ApiUrl.TrimEnd('/');
-                var avatarPath = avatar.TrimStart('/');
-                return $"{baseUrl}/{avatarPath}";
+                if (string.IsNullOrEmpty(TempUsername)) return null;
+                if (TempUsername.Trim().Length < 3) return "Минимум 3 символа";
+                if (!IsUsernameValid) return "Только латинские буквы, цифры и _";
+                return null;
             }
         }
 
-        public ProfileViewModel(IApiClientService apiClient, IAuthService authService)
+        // Валидация пароля
+        public bool IsNewPasswordValid => string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
+
+        public string? NewPasswordValidationMessage
         {
-            _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            get
+            {
+                if (string.IsNullOrEmpty(NewPassword)) return null;
+                if (NewPassword.Length < 6) return $"Ещё {6 - NewPassword.Length} символов";
+                return null;
+            }
+        }
 
-            ArgumentNullException.ThrowIfNull(authService);
+        public bool PasswordsMatch => NewPassword == ConfirmPassword;
 
-            if (!authService.UserId.HasValue)
-                throw new InvalidOperationException("User not authenticated");
+        public bool ShowPasswordMatchIndicator => !string.IsNullOrEmpty(ConfirmPassword);
 
-            UserId = authService.UserId.Value;
+        public bool CanSavePassword => !string.IsNullOrWhiteSpace(CurrentPassword)
+                                       && !string.IsNullOrWhiteSpace(NewPassword)
+                                       && NewPassword.Length >= 6
+                                       && PasswordsMatch;
+
+        public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager)
+        {
+            _apiClient = apiClient;
+            UserId = authManager.Session.UserId ?? throw new Exception("Not auth");
             _ = LoadUser();
         }
 
-        partial void OnUserChanged(UserDTO? value) => OnPropertyChanged(nameof(AvatarUrl));
-
-        private async Task LoadUser()
+        private static string? FormatFullName(string? surname, string? name, string? midname)
         {
-            await SafeExecuteAsync(async () =>
-            {
-                var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
-                if (result.Success && result.Data != null)
-                {
-                    User = result.Data;
-                    TempDisplayName = result.Data.DisplayName ?? string.Empty;
-
-                    await LoadAvatarAsync();
-                }
-                else
-                {
-                    ErrorMessage = $"Ошибка загрузки профиля: {result.Error}";
-                }
-            });
+            var parts = new[] { surname, name, midname };
+            var filtered = parts.Where(s => !string.IsNullOrWhiteSpace(s));
+            return filtered.Any() ? string.Join(" ", filtered) : null;
         }
+
+        private async Task LoadUser() => await SafeExecuteAsync(async () =>
+        {
+            var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
+            if (result.Success)
+            {
+                User = result.Data;
+                await LoadAvatarAsync();
+            }
+        });
+
         private async Task LoadAvatarAsync()
         {
-            if (string.IsNullOrWhiteSpace(AvatarUrl))
-            {
-                AvatarBitmap = null;
-                return;
-            }
-
+            if (string.IsNullOrEmpty(AvatarUrl)) { AvatarBitmap = null; return; }
             try
             {
                 var stream = await _apiClient.GetStreamAsync(AvatarUrl);
-                if (stream == null)
-                {
-                    ErrorMessage = "Не удалось загрузить аватар (stream == null)";
-                    return;
-                }
-
-                AvatarBitmap = new Bitmap(stream);
+                if (stream != null) AvatarBitmap = new Bitmap(stream);
             }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Ошибка загрузки аватара: {ex.Message}";
-                AvatarBitmap = null;
-            }
+            catch { AvatarBitmap = null; }
         }
 
+        #region Редактирование профиля (ФИО)
 
         [RelayCommand]
-        private void StartEdit()
+        private void StartEditProfile()
+        {
+            CancelAllEditing();
+            TempSurname = User?.Surname ?? "";
+            TempName = User?.Name ?? "";
+            TempMidname = User?.Midname ?? "";
+            IsEditingProfile = true;
+        }
+
+        [RelayCommand]
+        private void CancelEditProfile() => IsEditingProfile = false;
+
+        [RelayCommand]
+        private async Task SaveProfile()
         {
             if (User == null) return;
-            TempDisplayName = User.DisplayName ?? string.Empty;
-            IsEditing = true;
-            _hasUnsavedChanges = false;
-            ClearMessages(); 
-        }
 
-        [RelayCommand]
-        private void CancelEdit()
-        {
-            if (!_hasUnsavedChanges || User == null)
+            if (string.IsNullOrWhiteSpace(TempSurname) && string.IsNullOrWhiteSpace(TempName))
             {
-                IsEditing = false;
+                ErrorMessage = "Укажите хотя бы имя или фамилию";
                 return;
             }
-            TempDisplayName = User.DisplayName ?? string.Empty;
-            IsEditing = false;
-            _hasUnsavedChanges = false;
-            ClearMessages(); 
-        }
-
-        [RelayCommand]
-        private async Task SaveChanges()
-        {
-            if (User == null) return;
 
             await SafeExecuteAsync(async () =>
             {
-                if (string.IsNullOrWhiteSpace(TempDisplayName))
-                {
-                    ErrorMessage = "Введите отображаемое имя";
-                    return;
-                }
-
-                var updatedUser = new UserDTO
+                var update = new UserDTO
                 {
                     Id = User.Id,
                     Username = User.Username,
-                    DisplayName = TempDisplayName.Trim(),
-                    Avatar = User.Avatar
+                    Surname = TempSurname.Trim(),
+                    Name = TempName.Trim(),
+                    Midname = TempMidname.Trim(),
+                    Avatar = User.Avatar,
+                    Department = User.Department
                 };
 
-                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{User.Id}", updatedUser);
+                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{User.Id}", update);
+
                 if (result.Success)
                 {
-                    User.DisplayName = TempDisplayName.Trim();
-                    IsEditing = false;
-                    _hasUnsavedChanges = false;
-                    SuccessMessage = "Данные обновлены";
+                    User.Surname = TempSurname.Trim();
+                    User.Name = TempName.Trim();
+                    User.Midname = TempMidname.Trim();
+                    OnPropertyChanged(nameof(FullName));
+                    IsEditingProfile = false;
+                    SuccessMessage = "Профиль обновлён";
                 }
                 else
-                    ErrorMessage = $"Ошибка обновления: {result.Error}";
+                {
+                    ErrorMessage = result.Error;
+                }
             });
         }
+
+        #endregion
+
+        #region Редактирование Username
+
         [RelayCommand]
-        private async Task Logout()
+        private void StartEditUsername()
         {
-            
+            CancelAllEditing();
+            TempUsername = User?.Username ?? "";
+            IsEditingUsername = true;
         }
+
         [RelayCommand]
-        private async Task UploadAvatar()
+        private void CancelEditUsername()
         {
-            if (User == null) return;
+            IsEditingUsername = false;
+            TempUsername = "";
+        }
+
+        [RelayCommand]
+        private async Task SaveUsername()
+        {
+            if (User == null || !CanSaveUsername) return;
+
+            var newUsername = TempUsername.Trim().ToLower();
+
+            if (newUsername == User.Username?.ToLower())
+            {
+                IsEditingUsername = false;
+                return;
+            }
 
             await SafeExecuteAsync(async () =>
             {
-                var window = App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                    ? desktop.MainWindow
-                    : null;
+                var dto = new ChangeUsernameDTO { NewUsername = newUsername };
+                var result = await _apiClient.PutAsync<object>($"api/user/{User.Id}/username", dto);
 
-                if (window?.StorageProvider == null)
+                if (result.Success)
                 {
-                    ErrorMessage = "Ошибка доступа к файловой системе";
-                    return;
-                }
-
-                var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-                {
-                    Title = "Выберите изображение",
-                    AllowMultiple = false,
-                    FileTypeFilter =
-                    [
-                        new FilePickerFileType("Изображения")
-                        {
-                            Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif"]
-                        }
-                    ]
-                });
-
-                if (files == null || files.Count == 0)
-                    return;
-
-                var file = files[0];
-
-                await using var fileStream = await file.OpenReadAsync();
-
-                if (fileStream.Length > 5 * 1024 * 1024)
-                {
-                    ErrorMessage = "Файл слишком большой. Максимальный размер: 5MB";
-                    return;
-                }
-
-                var uploadResult = await _apiClient.UploadFileAsync<UserDTO>(
-                    $"api/user/{User.Id}/avatar",
-                    fileStream,
-                    file.Name,
-                    GetMimeType(Path.GetExtension(file.Name)));
-
-                if (uploadResult.Success)
-                {
-                    if (uploadResult.Data != null && !string.IsNullOrEmpty(uploadResult.Data.Avatar))
-                        User.Avatar = uploadResult.Data.Avatar;
-                    else
-                    {
-                        var refreshed = await _apiClient.GetAsync<UserDTO>($"api/user/{User.Id}");
-                        if (refreshed.Success && refreshed.Data != null) User = refreshed.Data;
-                    }
-
-                    OnPropertyChanged(nameof(AvatarUrl));
-                    await LoadAvatarAsync();
-                    SuccessMessage = "Аватар успешно загружен";
+                    User.Username = newUsername;
+                    OnPropertyChanged(nameof(User));
+                    IsEditingUsername = false;
+                    SuccessMessage = "Username успешно изменён";
                 }
                 else
                 {
-                    ErrorMessage = $"Ошибка загрузки: {uploadResult.Error}";
+                    ErrorMessage = result.Error;
                 }
             });
         }
 
-        private static string GetMimeType(string extension) => extension.ToLower() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            _ => "application/octet-stream"
-        };
+        #endregion
 
-        partial void OnTempDisplayNameChanged(string value)
+        #region Смена пароля
+
+        [RelayCommand]
+        private void StartEditPassword()
         {
-            _hasUnsavedChanges = true;
-            if (!string.IsNullOrEmpty(ErrorMessage) && !string.IsNullOrWhiteSpace(value))
-                ErrorMessage = null;
+            CancelAllEditing();
+            CurrentPassword = "";
+            NewPassword = "";
+            ConfirmPassword = "";
+            IsEditingPassword = true;
         }
+
+        [RelayCommand]
+        private void CancelEditPassword()
+        {
+            IsEditingPassword = false;
+            CurrentPassword = "";
+            NewPassword = "";
+            ConfirmPassword = "";
+        }
+
+        [RelayCommand]
+        private async Task SavePassword()
+        {
+            if (User == null || !CanSavePassword) return;
+
+            await SafeExecuteAsync(async () =>
+            {
+                var dto = new ChangePasswordDTO
+                {
+                    CurrentPassword = CurrentPassword,
+                    NewPassword = NewPassword
+                };
+
+                var result = await _apiClient.PutAsync<object>($"api/user/{User.Id}/password", dto);
+
+                if (result.Success)
+                {
+                    IsEditingPassword = false;
+                    CurrentPassword = "";
+                    NewPassword = "";
+                    ConfirmPassword = "";
+                    SuccessMessage = "Пароль успешно изменён";
+                }
+                else
+                {
+                    ErrorMessage = result.Error;
+                }
+            });
+        }
+
+        #endregion
+
+        #region Аватар
+
+        [RelayCommand]
+        private async Task UploadAvatar()
+        {
+            var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?
+                .MainWindow?.StorageProvider;
+
+            if (storage == null) return;
+
+            var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                FileTypeFilter = [FilePickerFileTypes.ImageAll]
+            });
+
+            if (files.Count == 0) return;
+
+            await SafeExecuteAsync(async () =>
+            {
+                await using var stream = await files[0].OpenReadAsync();
+                var result = await _apiClient.UploadFileAsync<UserDTO>(
+                    $"api/user/{User!.Id}/avatar", stream, files[0].Name, "image/png");
+
+                if (result.Success)
+                {
+                    User.Avatar = result.Data!.Avatar;
+                    OnPropertyChanged(nameof(AvatarUrl));
+                    await LoadAvatarAsync();
+                    SuccessMessage = "Аватар обновлён";
+                }
+            });
+        }
+
+        #endregion
+
+        #region Вспомогательные методы
+
+        private void CancelAllEditing()
+        {
+            IsEditingProfile = false;
+            IsEditingUsername = false;
+            IsEditingPassword = false;
+            ErrorMessage = null;
+        }
+
+        [RelayCommand]
+        private static async Task Logout()
+        {
+            if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+                desktop.MainWindow?.DataContext is MainWindowViewModel main)
+                await main.Logout();
+        }
+        [RelayCommand]
+        protected void ClearError() => ErrorMessage = null;
+
+        [RelayCommand]
+        protected void ClearSuccess() => SuccessMessage = null;
+        #endregion
     }
 }

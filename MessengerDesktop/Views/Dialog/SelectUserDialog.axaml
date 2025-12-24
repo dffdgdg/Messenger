@@ -1,0 +1,164 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
+             x:Class="MessengerDesktop.Views.Dialogs.SelectUserDialog"
+             x:DataType="vm:SelectUserDialogViewModel">
+
+	<Border Classes="DialogContainer" Width="420" MaxHeight="550">
+		<Grid RowDefinitions="Auto,Auto,*,Auto">
+
+			<!-- Заголовок -->
+			<StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+				<TextBlock Text="{Binding Title}"
+                           FontSize="20"
+                           FontWeight="Bold"/>
+				<TextBlock Text="Выберите пользователя из списка"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextSecondary}"/>
+			</StackPanel>
+
+			<!-- Поиск -->
+			<TextBox Grid.Row="1"
+                     Text="{Binding SearchQuery}"
+                     Watermark="Поиск по имени или логину..."
+                     Classes="DialogInput SearchInput"
+                     Margin="0,0,0,12">
+				<TextBox.InnerLeftContent>
+					<PathIcon Data="{StaticResource search_regular}"
+                              Width="16" Height="16"
+                              Margin="12,0,8,0"
+                              Opacity="0.5"/>
+				</TextBox.InnerLeftContent>
+			</TextBox>
+
+			<!-- Список пользователей -->
+			<Border Grid.Row="2"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    CornerRadius="8"
+                    ClipToBounds="True">
+				<Grid>
+					<!-- Пустой список -->
+					<StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Spacing="12"
+                                IsVisible="{Binding !FilteredUsers.Count}">
+						<PathIcon Data="{StaticResource person_regular}"
+                                  Width="48" Height="48"
+                                  Foreground="{DynamicResource TextMuted}"
+                                  HorizontalAlignment="Center"/>
+						<TextBlock Text="Пользователи не найдены"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   HorizontalAlignment="Center"/>
+					</StackPanel>
+
+					<!-- Список -->
+					<ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  IsVisible="{Binding FilteredUsers.Count}">
+						<ItemsControl ItemsSource="{Binding FilteredUsers}"
+                                      Margin="4">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="shared:UserDTO">
+    <Border Padding="10,8"
+            Margin="0,2"
+            CornerRadius="6"
+            Cursor="Hand"
+            Background="Transparent"
+            PointerPressed="OnUserItemPressed">
+        <Border.Styles>
+            <Style Selector="Border:pointerover">
+                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
+            </Style>
+        </Border.Styles>
+        
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <!-- Аватар -->
+			<controls:AvatarControl Classes="Medium"
+									Source="{Binding Avatar}"
+									DisplayName="{Binding DisplayName}"
+									IsOnline="{Binding IsOnline}"
+									HorizontalAlignment="Center"/>
+			
+            <!-- Информация -->
+            <StackPanel Grid.Column="1" 
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontWeight="Medium"
+                           FontSize="14"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <!-- Онлайн статус -->
+            <Ellipse Grid.Column="2"
+                     Width="10" Height="10"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding IsOnline}">
+                <Ellipse.Fill>
+                    <SolidColorBrush Color="#22C55E"/>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Grid>
+    </Border>
+</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</ScrollViewer>
+				</Grid>
+			</Border>
+
+			<!-- Нижняя панель -->
+			<StackPanel Grid.Row="3" Margin="0,16,0,0" Spacing="12">
+				<!-- Выбранный пользователь -->
+				<Border Background="{DynamicResource SurfaceVariant}"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        IsVisible="{Binding SelectedUser, Converter={x:Static ObjectConverters.IsNotNull}}">
+					<Grid ColumnDefinitions="Auto,*,Auto">
+						<TextBlock Grid.Column="0"
+                                   Text="Выбран:"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+						<TextBlock Grid.Column="1"
+                                   Text="{Binding SelectedUser.DisplayName}"
+                                   FontWeight="Medium"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+						<Button Grid.Column="2"
+                                Classes="IconButton Small"
+                                Command="{Binding SelectUserCommand}"
+                                CommandParameter="{x:Null}"
+                                ToolTip.Tip="Отменить выбор">
+							<PathIcon Data="{StaticResource dismiss_regular}"
+                                      Width="12" Height="12"
+                                      Foreground="{DynamicResource TextSecondary}"/>
+						</Button>
+					</Grid>
+				</Border>
+
+				<StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Spacing="12">
+					<Button Content="Отмена"
+                            Classes="DialogOutline"
+                            Command="{Binding CancelCommand}"
+                            MinWidth="100"/>
+					<Button Content="Добавить"
+                            Classes="DialogAccent"
+                            Command="{Binding ConfirmCommand}"
+                            IsEnabled="{Binding CanConfirm}"
+                            MinWidth="100"/>
+				</StackPanel>
+			</StackPanel>
+		</Grid>
+	</Border>
+</UserControl>

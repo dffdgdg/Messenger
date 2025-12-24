@@ -21,8 +21,6 @@ public partial class MessengerDbContext : DbContext
 
     public virtual DbSet<Department> Departments { get; set; }
 
-    public virtual DbSet<Draft> Drafts { get; set; }
-
     public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<MessageFile> MessageFiles { get; set; }
@@ -37,21 +35,24 @@ public partial class MessengerDbContext : DbContext
 
     public virtual DbSet<UserSetting> UserSettings { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=MessengerDB;Username=postgres;Password=123");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .HasPostgresEnum("chat_role", ["member", "admin", "owner"])
-            .HasPostgresEnum("theme", ["light", "dark", "system"]);
+            .HasPostgresEnum("chat_role", new[] { "member", "admin", "owner" })
+            .HasPostgresEnum("chat_type", new[] { "Chat", "Department", "Contact", "contact" })
+            .HasPostgresEnum("theme", new[] { "light", "dark", "system" });
 
         modelBuilder.Entity<Chat>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Chats_pkey");
 
-            entity.Property(e => e.Avatar).HasColumnType("character varying");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.IsGroup).HasDefaultValue(false);
             entity.Property(e => e.LastMessageTime).HasColumnType("timestamp without time zone");
             entity.Property(e => e.Name).HasMaxLength(100);
 
@@ -67,15 +68,24 @@ public partial class MessengerDbContext : DbContext
 
             entity.HasIndex(e => new { e.ChatId, e.UserId }, "UQ_Chat_User").IsUnique();
 
+            entity.HasIndex(e => e.LastReadMessageId, "idx_chatmembers_lastreadmessageid");
+
             entity.HasIndex(e => e.UserId, "idx_chatmembers_userid");
 
             entity.Property(e => e.JoinedAt)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.LastReadAt).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.NotificationsEnabled).HasDefaultValue(true);
 
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatMembers)
                 .HasForeignKey(d => d.ChatId)
                 .HasConstraintName("ChatMembers_ChatId_fkey");
+
+            entity.HasOne(d => d.LastReadMessage).WithMany(p => p.ChatMembers)
+                .HasForeignKey(d => d.LastReadMessageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("ChatMembers_LastReadMessageId_fkey");
 
             entity.HasOne(d => d.User).WithMany(p => p.ChatMembers)
                 .HasForeignKey(d => d.UserId)
@@ -88,6 +98,8 @@ public partial class MessengerDbContext : DbContext
 
             entity.HasIndex(e => e.ChatId, "Departments_ChatId_key").IsUnique();
 
+            entity.HasIndex(e => e.Head, "idx_departments_head");
+
             entity.Property(e => e.Name).HasMaxLength(100);
 
             entity.HasOne(d => d.Chat).WithOne(p => p.Department)
@@ -95,29 +107,15 @@ public partial class MessengerDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Departments_ChatId_fkey");
 
+            entity.HasOne(d => d.HeadNavigation).WithMany(p => p.Departments)
+                .HasForeignKey(d => d.Head)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("Departments_Head_fkey");
+
             entity.HasOne(d => d.ParentDepartment).WithMany(p => p.InverseParentDepartment)
                 .HasForeignKey(d => d.ParentDepartmentId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Departments_Parent_fkey");
-        });
-
-        modelBuilder.Entity<Draft>(entity =>
-        {
-            entity.HasKey(e => new { e.UserId, e.ChatId }).HasName("Drafts_pkey");
-
-            entity.HasIndex(e => new { e.UserId, e.ChatId }, "UQ_User_Chat_Draft").IsUnique();
-
-            entity.Property(e => e.LastUpdated)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
-
-            entity.HasOne(d => d.Chat).WithMany(p => p.Drafts)
-                .HasForeignKey(d => d.ChatId)
-                .HasConstraintName("Drafts_ChatId_fkey");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Drafts)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("Drafts_UserId_fkey");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -146,9 +144,8 @@ public partial class MessengerDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("MessageFiles_pkey");
 
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.ContentType).HasMaxLength(255);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
             entity.Property(e => e.FileName).HasMaxLength(255);
-            entity.Property(e => e.Path).HasColumnType("character varying");
 
             entity.HasOne(d => d.Message).WithMany(p => p.MessageFiles)
                 .HasForeignKey(d => d.MessageId)
@@ -163,10 +160,8 @@ public partial class MessengerDbContext : DbContext
 
             entity.Property(e => e.AllowsMultipleAnswers).HasDefaultValue(false);
             entity.Property(e => e.ClosesAt).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
             entity.Property(e => e.IsAnonymous).HasDefaultValue(true);
+            entity.Property(e => e.Question).HasMaxLength(75);
 
             entity.HasOne(d => d.Message).WithMany(p => p.Polls)
                 .HasForeignKey(d => d.MessageId)
@@ -176,6 +171,8 @@ public partial class MessengerDbContext : DbContext
         modelBuilder.Entity<PollOption>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PollOptions_pkey");
+
+            entity.Property(e => e.OptionText).HasMaxLength(50);
 
             entity.HasOne(d => d.Poll).WithMany(p => p.PollOptions)
                 .HasForeignKey(d => d.PollId)
@@ -213,13 +210,17 @@ public partial class MessengerDbContext : DbContext
 
             entity.HasIndex(e => e.Username, "Users_Username_key").IsUnique();
 
-            entity.Property(e => e.Avatar).HasColumnType("character varying");
+            entity.HasIndex(e => e.Department, "idx_users_department");
+
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.DisplayName).HasMaxLength(100);
+            entity.Property(e => e.IsBanned).HasDefaultValue(false);
             entity.Property(e => e.LastOnline).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.Username).HasMaxLength(50);
+            entity.Property(e => e.Midname).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(50);
+            entity.Property(e => e.Surname).HasMaxLength(50);
+            entity.Property(e => e.Username).HasMaxLength(32);
 
             entity.HasOne(d => d.DepartmentNavigation).WithMany(p => p.Users)
                 .HasForeignKey(d => d.Department)

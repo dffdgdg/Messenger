@@ -125,7 +125,7 @@
 
                 <!-- Индикатор загрузки -->
         <StackPanel Grid.Row="2"
-            IsVisible="{Binding IsLoading}"
+            IsVisible="{Binding IsBusy}"
             VerticalAlignment="Center"
             HorizontalAlignment="Center">
     <ProgressBar IsIndeterminate="True"
@@ -140,7 +140,7 @@
                         BorderThickness="1"
                         BorderBrush="{DynamicResource BorderBrush}"
                         CornerRadius="8"
-                        IsVisible="{Binding !IsLoading}">
+                        IsVisible="{Binding !IsBusy}">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding FilteredUsers}"

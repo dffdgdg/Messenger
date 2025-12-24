@@ -17,7 +17,7 @@ public class DateTimeFormatConverter : ValueConverterBase<System.DateTime, strin
 
         culture = DefaultCulture;
 
-        if (parameter is string formatStr && Enum.TryParse<DateTimeFormat>(formatStr, true, out var format))
+        if (parameter is string formatStr && System.Enum.TryParse<DateTimeFormat>(formatStr, true, out var format))
             return FormatDateTime(value, format, culture);
 
         if (!string.IsNullOrEmpty(CustomFormat))

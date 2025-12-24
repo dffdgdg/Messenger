@@ -1,74 +1,45 @@
 <UserControl x:Name="Root"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="MessengerDesktop.Views.PollDialog"
              xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
+             x:Class="MessengerDesktop.Views.PollDialog"
              x:DataType="vm:PollDialogViewModel">
 
-	<Border Classes="DialogContainer" Width="420"
-			Background="{DynamicResource SecondaryBG}"
-            CornerRadius="16"
-			BorderThickness="1"
-			BorderBrush="{DynamicResource BorderDefault}"
-            BoxShadow="0 8 32 #50000000">
+	<Border Classes="DialogContainer" Width="420">
 		<StackPanel Spacing="16">
-			<TextBlock Text="Создать опрос"
-                       FontWeight="Bold"
-                       FontSize="20"/>
+			<TextBlock Text="Создать опрос" FontWeight="Bold" FontSize="20"/>
 
-			<TextBox Watermark="Вопрос"
-                     Text="{Binding Question}"
-                     Classes="DialogInput"/>
+			<TextBox Watermark="Вопрос" Text="{Binding Question}" Classes="DialogInput"/>
 
-			<TextBlock Text="Варианты ответа"
-                       FontWeight="DemiBold"/>
+			<TextBlock Text="Варианты ответа" FontWeight="DemiBold"/>
 
 			<ItemsControl ItemsSource="{Binding Options}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate x:DataType="vm:PollDialogViewModel+OptionItem">
 						<Grid ColumnDefinitions="*,Auto" Margin="0,4">
-							<TextBox Grid.Column="0"
-                                     Text="{Binding Text}"
-                                     Classes="DialogInput"/>
-							<Button Grid.Column="1"
-                                    Classes="IconButton"
-                                    Width="32" Height="32"
-                                    Margin="8,0,0,0"
-                                    Click="RemoveOption_Click"
-                                    Tag="{Binding}">
-								<Path Data="{StaticResource Close}"
-                                      Fill="{DynamicResource TextSecondary}"
-                                      Width="10" Height="10"
-                                      Stretch="Uniform"/>
+							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="DialogInput"/>
+							<Button Grid.Column="1" Classes="IconButton Small" Margin="8,0,0,0"
+                                    Click="RemoveOption_Click" Tag="{Binding}">
+								<Path Data="{StaticResource Close}" Fill="{DynamicResource TextSecondary}"
+                                      Width="10" Height="10" Stretch="Uniform"/>
 							</Button>
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 
-			<Button Content="+ Добавить вариант"
-                    Command="{Binding AddOptionCommand}"
-                    Classes="DialogOutline"
-                    HorizontalAlignment="Left"/>
+			<Button Content="+ Добавить вариант" Command="{Binding AddOptionCommand}"
+                    Classes="DialogOutline" HorizontalAlignment="Left"/>
 
 			<StackPanel Spacing="10" Margin="0,8,0,0">
 				<TextBlock Text="Настройки" FontWeight="DemiBold"/>
-				<CheckBox Content="Выбор нескольких ответов"
-                          IsChecked="{Binding AllowsMultipleAnswers}"/>
-				<CheckBox Content="Анонимное голосование"
-                          IsChecked="{Binding IsAnonymous}"/>
+				<CheckBox Content="Выбор нескольких ответов" IsChecked="{Binding AllowsMultipleAnswers}"/>
+				<CheckBox Content="Анонимное голосование" IsChecked="{Binding IsAnonymous}"/>
 			</StackPanel>
 
-			<StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Spacing="12"
-                        Margin="0,8,0,0">
-				<Button Content="Отмена"
-                        Classes="DialogOutline"
-                        Command="{Binding CancelCommand}"/>
-				<Button Content="Создать"
-                        Classes="DialogAccent"
-                        Command="{Binding CreateCommand}"
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
+				<Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
+				<Button Content="Создать" Classes="DialogAccent" Command="{Binding CreateCommand}"
                         IsEnabled="{Binding CanCreate}"/>
 			</StackPanel>
 		</StackPanel>

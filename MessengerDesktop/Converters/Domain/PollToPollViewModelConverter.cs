@@ -1,10 +1,11 @@
 using Avalonia.Data.Converters;
-using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
-using MessengerDesktop.ViewModels;
+using MessengerDesktop.Services.Auth;
+using MessengerDesktop.ViewModels.Chat;
 using MessengerShared.DTO;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Domain;
@@ -12,7 +13,7 @@ namespace MessengerDesktop.Converters.Domain;
 public class PollToPollViewModelConverter : IValueConverter
 {
     private static IApiClientService? _apiClientService;
-    private static AuthService? _authService;
+    private static IAuthManager? _authManager;
 
     public static IApiClientService ApiClientService
     {
@@ -23,12 +24,12 @@ public class PollToPollViewModelConverter : IValueConverter
         }
     }
 
-    public static AuthService AuthService
+    public static IAuthManager AuthManager
     {
         get
         {
-            _authService ??= App.Current.Services.GetRequiredService<AuthService>();
-            return _authService;
+            _authManager ??= App.Current.Services.GetRequiredService<IAuthManager>();
+            return App.Current.Services.GetRequiredService<IAuthManager>();
         }
     }
 
@@ -39,15 +40,15 @@ public class PollToPollViewModelConverter : IValueConverter
             return null;
         }
 
-        var userId = AuthService.UserId ?? 0;
+        var userId = AuthManager.Session.UserId ?? 0;
         if (userId == 0)
         {
-            System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: UserId is 0 - user not authenticated");
+            Debug.WriteLine($"PollToPollViewModelConverter: UserId is 0 - user not authenticated");
             return null;
         }
 
         poll.Options ??= [];
-        System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: Converting PollDTO Id={poll.Id}, UserId={userId}");
+        Debug.WriteLine($"PollToPollViewModelConverter: Converting PollDTO Id={poll.Id}, UserId={userId}");
 
         try
         {
@@ -55,7 +56,7 @@ public class PollToPollViewModelConverter : IValueConverter
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"PollToPollViewModelConverter: exception creating PollViewModel: {ex}");
+            Debug.WriteLine($"PollToPollViewModelConverter: exception creating PollViewModel: {ex}");
             return null;
         }
     }

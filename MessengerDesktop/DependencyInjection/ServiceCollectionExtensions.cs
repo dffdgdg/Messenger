@@ -1,92 +1,91 @@
-﻿using MessengerAPI.Services;
-using MessengerDesktop.Services;
+﻿using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Storage;
+using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels;
+using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Net.Http;
 
-namespace MessengerDesktop.DependencyInjection;
-
-public static class ServiceCollectionExtensions
+namespace MessengerDesktop.DependencyInjection
 {
-    public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
+    public static class ServiceCollectionExtensions
     {
-        // Platform & Storage
-        services.AddSingleton<IPlatformService, PlatformService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<ISecureStorageService, SecureStorageService>();
-        services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
-
-        services.AddSingleton<IFileDownloadService>(sp =>
+        public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
         {
-            var httpClient = sp.GetRequiredService<HttpClient>();
-            return new FileDownloadService(httpClient);
-        });
+            services.AddSingleton<IPlatformService, PlatformService>();
+            services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
+            services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
+            services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
 
-        // Notification Service
-        services.AddSingleton<INotificationService, NotificationService>();
-
-        // HTTP Client
-        services.AddSingleton<HttpClient>(sp =>
-        {
-            var handler = new HttpClientHandler
+            services.AddSingleton<HttpClient>(sp =>
             {
+                var handler = new HttpClientHandler
+                {
 #if DEBUG
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
 #endif
-                CheckCertificateRevocationList = false,
-                UseProxy = false
-            };
+                    CheckCertificateRevocationList = false,
+                    UseProxy = false
+                };
 
-            return new HttpClient(handler)
+                return new HttpClient(handler)
+                {
+                    BaseAddress = new Uri(apiBaseUrl),
+                    Timeout = TimeSpan.FromSeconds(30)
+                };
+            });
+
+            services.AddSingleton<IAuthService, AuthService>();
+            services.AddSingleton<ISessionStore, SessionStore>();
+            services.AddSingleton<ISecureStorageService, SecureStorageService>();
+            services.AddSingleton<IAuthManager, AuthManager>();
+
+            services.AddSingleton<IApiClientService>(sp =>
             {
-                BaseAddress = new Uri(apiBaseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
-            };
-        });
+                var httpClient = sp.GetRequiredService<HttpClient>();
+                var sessionStore = sp.GetRequiredService<ISessionStore>();
+                return new ApiClientService(httpClient, sessionStore);
+            });
 
-        // Auth
-        services.AddSingleton<Services.AuthService>();
-        services.AddSingleton<Services.Auth.IAuthService>(sp => sp.GetRequiredService<Services.AuthService>());
+            services.AddSingleton<INavigationService, NavigationService>();
+            services.AddSingleton<IDialogService, DialogService>();
 
-        // API
-        services.AddSingleton<IApiClientService, ApiClientService>();
-        services.AddSingleton<IOnlineUserService, OnlineUserService>();
+            services.AddSingleton<INotificationService, NotificationService>();
 
-        // Navigation & Dialogs
-        services.AddSingleton<INavigationService, NavigationService>();
-        services.AddSingleton<IDialogService, DialogService>();
+            services.AddSingleton<IFileDownloadService>(sp =>
+            {
+                var httpClient = sp.GetRequiredService<HttpClient>();
+                return new FileDownloadService(httpClient);
+            });
 
-        return services;
-    }
+            return services;
+        }
 
-    public static IServiceCollection AddMessengerViewModels(this IServiceCollection services)
-    {
-        // ViewModel Factories
-        services.AddSingleton<IChatViewModelFactory, ChatViewModelFactory>();
-        services.AddSingleton<IChatsViewModelFactory, ChatsViewModelFactory>();
+        public static IServiceCollection AddMessengerViewModels(this IServiceCollection services)
+        {
+            services.AddSingleton<IChatViewModelFactory, ChatViewModelFactory>();
+            services.AddSingleton<IChatsViewModelFactory, ChatsViewModelFactory>();
 
-        // Main Window ViewModel
-        services.AddSingleton<MainWindowViewModel>();
+            services.AddSingleton<MainWindowViewModel>();
 
-        // Transient ViewModels
-        services.AddTransient<LoginViewModel>();
-        services.AddTransient<MainMenuViewModel>();
-        services.AddTransient<AdminViewModel>();
-        services.AddTransient<ProfileViewModel>();
-        services.AddTransient<SettingsViewModel>();
+            services.AddTransient<UsersTabViewModel>();
+            services.AddTransient<DepartmentsTabViewModel>();
 
-        return services;
-    }
+            services.AddTransient<LoginViewModel>();
+            services.AddTransient<MainMenuViewModel>();
+            services.AddTransient<AdminViewModel>();
+            services.AddTransient<ProfileViewModel>();
+            services.AddTransient<DepartmentManagementViewModel>();
+            services.AddTransient<SettingsViewModel>();
 
-    public static IServiceCollection AddMessengerTestServices(this IServiceCollection services)
-    {
-        return services;
+            return services;
+        }
     }
 }

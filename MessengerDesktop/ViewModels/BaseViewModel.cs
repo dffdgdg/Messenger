@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,9 +21,6 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private string? _successMessage;
 
-        /// <summary>
-        /// Получает новый CancellationToken, отменяя предыдущий
-        /// </summary>
         protected CancellationToken GetCancellationToken()
         {
             _cts?.Cancel();
@@ -31,31 +29,20 @@ namespace MessengerDesktop.ViewModels
             return _cts.Token;
         }
 
-        /// <summary>
-        /// Безопасное выполнение асинхронной операции с обработкой ошибок
-        /// </summary>
-        protected async Task SafeExecuteAsync(
-            Func<Task> operation,
-            string? successMessage = null,
-            Action? finallyAction = null)
+        protected async Task SafeExecuteAsync(Func<Task> operation, string? successMessage = null, Action? finallyAction = null)
         {
             try
             {
                 IsBusy = true;
                 ErrorMessage = null;
                 await operation();
-
-                if (!string.IsNullOrEmpty(successMessage))
-                    SuccessMessage = successMessage;
+                if (!string.IsNullOrEmpty(successMessage)) SuccessMessage = successMessage;
             }
-            catch (OperationCanceledException)
-            {
-                // Операция отменена - не показываем ошибку
-            }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
-                System.Diagnostics.Debug.WriteLine($"Error in {GetType().Name}: {ex}");
+                Debug.WriteLine($"Error in {GetType().Name}: {ex}");
             }
             finally
             {
@@ -64,35 +51,23 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
-        /// <summary>
-        /// Безопасное выполнение с CancellationToken
-        /// </summary>
-        protected async Task SafeExecuteAsync(
-            Func<CancellationToken, Task> operation,
-            string? successMessage = null,
-            Action? finallyAction = null)
+        protected async Task SafeExecuteAsync(Func<CancellationToken, Task> operation, string? successMessage = null, Action? finallyAction = null)
         {
             var ct = GetCancellationToken();
-
             try
             {
                 IsBusy = true;
                 ErrorMessage = null;
                 await operation(ct);
-
-                if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
-                    SuccessMessage = successMessage;
+                if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested) SuccessMessage = successMessage;
             }
-            catch (OperationCanceledException)
-            {
-                // Операция отменена - не показываем ошибку
-            }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 if (!ct.IsCancellationRequested)
                 {
                     ErrorMessage = ex.Message;
-                    System.Diagnostics.Debug.WriteLine($"Error in {GetType().Name}: {ex}");
+                    Debug.WriteLine($"Error in {GetType().Name}: {ex}");
                 }
             }
             finally
@@ -102,6 +77,14 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
+        protected static string? GetAbsoluteUrl(string? url)
+        {
+            if (string.IsNullOrEmpty(url)) return null;
+            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+
+            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}"; 
+        }
+
         [RelayCommand]
         protected virtual void ClearMessages()
         {
@@ -109,24 +92,22 @@ namespace MessengerDesktop.ViewModels
             SuccessMessage = null;
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
-
             if (disposing)
             {
                 _cts?.Cancel();
                 _cts?.Dispose();
                 _cts = null;
             }
-
             _disposed = true;
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
     }
 }

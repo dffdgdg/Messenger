@@ -1,0 +1,310 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="450"
+             x:Class="MessengerDesktop.Controls.ChatMessagesSkeleton">
+
+	<ScrollViewer VerticalScrollBarVisibility="Auto"
+	              Margin="0,8"
+	              Padding="16,0">
+		<StackPanel Spacing="2">
+
+			<!-- ===== СООБЩЕНИЕ 1: С аватаром и именем ===== -->
+			<Grid Margin="0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Аватар -->
+				<Panel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,0,0,2">
+					<Border Classes="Skeleton"
+					        Width="36" Height="36"
+					        CornerRadius="18"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0"
+				            MaxWidth="560">
+
+					<!-- Имя и время -->
+					<StackPanel Orientation="Horizontal"
+					            Spacing="10"
+					            Margin="14,0,14,4">
+						<Border Classes="Skeleton"
+						        Width="80" Height="13"
+						        CornerRadius="3"/>
+						<Border Classes="Skeleton"
+						        Width="40" Height="12"
+						        CornerRadius="3"/>
+					</StackPanel>
+
+					<!-- Пузырь -->
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<StackPanel Spacing="8">
+							<Border Classes="Skeleton" Width="220" Height="15" CornerRadius="4"/>
+							<Border Classes="Skeleton" Width="180" Height="15" CornerRadius="4"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 2: Без аватара (продолжение) ===== -->
+			<Grid Margin="0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Время слева вместо аватара -->
+				<Panel Grid.Column="0" VerticalAlignment="Top" Margin="0,6,0,0">
+					<Border Classes="Skeleton"
+					        Width="28" Height="10"
+					        CornerRadius="2"
+					        HorizontalAlignment="Center"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0">
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<Border Classes="Skeleton" Width="140" Height="15" CornerRadius="4"/>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 3: Длинное с аватаром ===== -->
+			<Grid Margin="0,8,0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Аватар -->
+				<Panel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,0,0,2">
+					<Border Classes="Skeleton"
+					        Width="36" Height="36"
+					        CornerRadius="18"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0"
+				            MaxWidth="560">
+
+					<!-- Имя и время -->
+					<StackPanel Orientation="Horizontal"
+					            Spacing="10"
+					            Margin="14,0,14,4">
+						<Border Classes="Skeleton"
+						        Width="100" Height="13"
+						        CornerRadius="3"/>
+						<Border Classes="Skeleton"
+						        Width="45" Height="12"
+						        CornerRadius="3"/>
+					</StackPanel>
+
+					<!-- Пузырь -->
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<StackPanel Spacing="8">
+							<Border Classes="Skeleton" Width="320" Height="15" CornerRadius="4"/>
+							<Border Classes="Skeleton" Width="280" Height="15" CornerRadius="4"/>
+							<Border Classes="Skeleton" Width="200" Height="15" CornerRadius="4"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 4: Короткое без аватара ===== -->
+			<Grid Margin="0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Время слева -->
+				<Panel Grid.Column="0" VerticalAlignment="Top" Margin="0,6,0,0">
+					<Border Classes="Skeleton"
+					        Width="28" Height="10"
+					        CornerRadius="2"
+					        HorizontalAlignment="Center"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0">
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<Border Classes="Skeleton" Width="100" Height="15" CornerRadius="4"/>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 5: С аватаром ===== -->
+			<Grid Margin="0,8,0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Аватар -->
+				<Panel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,0,0,2">
+					<Border Classes="Skeleton"
+					        Width="36" Height="36"
+					        CornerRadius="18"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0"
+				            MaxWidth="560">
+
+					<!-- Имя и время -->
+					<StackPanel Orientation="Horizontal"
+					            Spacing="10"
+					            Margin="14,0,14,4">
+						<Border Classes="Skeleton"
+						        Width="90" Height="13"
+						        CornerRadius="3"/>
+						<Border Classes="Skeleton"
+						        Width="35" Height="12"
+						        CornerRadius="3"/>
+					</StackPanel>
+
+					<!-- Пузырь -->
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<StackPanel Spacing="8">
+							<Border Classes="Skeleton" Width="260" Height="15" CornerRadius="4"/>
+							<Border Classes="Skeleton" Width="180" Height="15" CornerRadius="4"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 6: Без аватара ===== -->
+			<Grid Margin="0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Время слева -->
+				<Panel Grid.Column="0" VerticalAlignment="Top" Margin="0,6,0,0">
+					<Border Classes="Skeleton"
+					        Width="28" Height="10"
+					        CornerRadius="2"
+					        HorizontalAlignment="Center"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0">
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<StackPanel Spacing="8">
+							<Border Classes="Skeleton" Width="200" Height="15" CornerRadius="4"/>
+							<Border Classes="Skeleton" Width="160" Height="15" CornerRadius="4"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+			<!-- ===== СООБЩЕНИЕ 7: Ещё с аватаром ===== -->
+			<Grid Margin="0,8,0,1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="44"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="60"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Аватар -->
+				<Panel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,0,0,2">
+					<Border Classes="Skeleton"
+					        Width="36" Height="36"
+					        CornerRadius="18"/>
+				</Panel>
+
+				<!-- Контент -->
+				<StackPanel Grid.Column="1"
+				            HorizontalAlignment="Left"
+				            Margin="6,0,0,0"
+				            MaxWidth="560">
+
+					<!-- Имя и время -->
+					<StackPanel Orientation="Horizontal"
+					            Spacing="10"
+					            Margin="14,0,14,4">
+						<Border Classes="Skeleton"
+						        Width="70" Height="13"
+						        CornerRadius="3"/>
+						<Border Classes="Skeleton"
+						        Width="40" Height="12"
+						        CornerRadius="3"/>
+					</StackPanel>
+
+					<!-- Пузырь -->
+					<Border Background="{DynamicResource PrimaryBG}"
+					        CornerRadius="4,16,16,16"
+					        Padding="14,10"
+					        MinWidth="48">
+						<Border.BoxShadow>
+							<BoxShadows>0 1 4 0 #12000000</BoxShadows>
+						</Border.BoxShadow>
+						<Border Classes="Skeleton" Width="150" Height="15" CornerRadius="4"/>
+					</Border>
+				</StackPanel>
+			</Grid>
+
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

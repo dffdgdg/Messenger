@@ -10,35 +10,29 @@ namespace MessengerDesktop.Services
 {
     public interface IFileDownloadService
     {
-        Task<string?> DownloadFileAsync(
-            string url,
-            string fileName,
-            IProgress<double>? progress = null,
-            CancellationToken ct = default);
-
+        Task<string?> DownloadFileAsync(string url, string fileName, IProgress<double>? progress = null, CancellationToken ct = default);
         string GetDownloadsFolder();
         Task OpenFileAsync(string filePath);
         Task OpenFolderAsync(string folderPath);
     }
+
     public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
     {
+        private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+
         public string GetDownloadsFolder()
         {
             string downloadsPath;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                downloadsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "Downloads");
+                downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                downloadsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "Downloads");
+                downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
             }
-            else 
+            else
             {
                 var xdgDownload = Environment.GetEnvironmentVariable("XDG_DOWNLOAD_DIR");
                 if (!string.IsNullOrEmpty(xdgDownload) && Directory.Exists(xdgDownload))
@@ -47,9 +41,7 @@ namespace MessengerDesktop.Services
                 }
                 else
                 {
-                    downloadsPath = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                        "Downloads");
+                    downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                 }
             }
 
@@ -59,19 +51,17 @@ namespace MessengerDesktop.Services
             return downloadsPath;
         }
 
-        public async Task<string?> DownloadFileAsync(
-            string url,
-            string fileName,
-            IProgress<double>? progress = null,
-            CancellationToken ct = default)
+        public async Task<string?> DownloadFileAsync(string url,string fileName,IProgress<double>? progress = null,CancellationToken ct = default)
         {
+            if (string.IsNullOrEmpty(url))
+                throw new ArgumentException("URL cannot be null or empty", nameof(url));
+
+            if (string.IsNullOrEmpty(fileName))
+                throw new ArgumentException("FileName cannot be null or empty", nameof(fileName));
+
             try
             {
-                using var response = await httpClient.GetAsync(
-                    url,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    ct);
-
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
                 response.EnsureSuccessStatusCode();
 
                 var totalBytes = response.Content.Headers.ContentLength ?? -1;
@@ -98,13 +88,13 @@ namespace MessengerDesktop.Services
                     await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
                     downloadedBytes += bytesRead;
 
-                    if (totalBytes > 0)
+                    if (totalBytes > 0 && progress != null)
                     {
                         var currentProgress = (double)downloadedBytes / totalBytes * 100;
 
                         if (currentProgress - lastReportedProgress >= 1 || currentProgress >= 100)
                         {
-                            progress?.Report(currentProgress);
+                            progress.Report(currentProgress);
                             lastReportedProgress = currentProgress;
                         }
                     }
@@ -113,15 +103,19 @@ namespace MessengerDesktop.Services
                 progress?.Report(100);
                 return filePath;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (HttpRequestException ex)
             {
                 Debug.WriteLine($"HTTP error downloading file: {ex.Message}");
-                throw new Exception($"Ошибка сети: {ex.Message}", ex);
+                throw new InvalidOperationException($"Ошибка сети: {ex.Message}", ex);
             }
             catch (IOException ex)
             {
                 Debug.WriteLine($"IO error downloading file: {ex.Message}");
-                throw new Exception($"Ошибка записи файла: {ex.Message}", ex);
+                throw new InvalidOperationException($"Ошибка записи файла: {ex.Message}", ex);
             }
         }
 
@@ -147,6 +141,9 @@ namespace MessengerDesktop.Services
             {
                 filePath = Path.Combine(folder, $"{nameWithoutExt} ({counter}){extension}");
                 counter++;
+
+                if (counter > 10000)
+                    throw new InvalidOperationException("Too many files with the same name");
             }
 
             return filePath;
@@ -154,10 +151,13 @@ namespace MessengerDesktop.Services
 
         public Task OpenFileAsync(string filePath)
         {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("FilePath cannot be null or empty", nameof(filePath));
+
             if (!File.Exists(filePath))
             {
                 Debug.WriteLine($"File not found: {filePath}");
-                return Task.CompletedTask;
+                throw new FileNotFoundException("Файл не найден", filePath);
             }
 
             try
@@ -171,7 +171,7 @@ namespace MessengerDesktop.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error opening file: {ex.Message}");
-                throw new Exception($"Не удалось открыть файл: {ex.Message}", ex);
+                throw new InvalidOperationException($"Не удалось открыть файл: {ex.Message}", ex);
             }
 
             return Task.CompletedTask;
@@ -179,6 +179,9 @@ namespace MessengerDesktop.Services
 
         public Task OpenFolderAsync(string folderPath)
         {
+            if (string.IsNullOrEmpty(folderPath))
+                throw new ArgumentException("FolderPath cannot be null or empty", nameof(folderPath));
+
             try
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -189,16 +192,19 @@ namespace MessengerDesktop.Services
                 {
                     Process.Start("open", $"-R \"{folderPath}\"");
                 }
-                else 
+                else
                 {
                     var directory = Path.GetDirectoryName(folderPath);
-                    if (directory != null)
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                    {
                         Process.Start("xdg-open", directory);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error opening folder: {ex.Message}");
+                throw new InvalidOperationException($"Не удалось открыть папку: {ex.Message}", ex);
             }
 
             return Task.CompletedTask;

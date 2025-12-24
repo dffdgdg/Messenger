@@ -13,7 +13,11 @@ public partial class Department
 
     public int? ChatId { get; set; }
 
+    public int? Head { get; set; }
+
     public virtual Chat? Chat { get; set; }
+
+    public virtual User? HeadNavigation { get; set; }
 
     public virtual ICollection<Department> InverseParentDepartment { get; set; } = new List<Department>();
 

@@ -100,12 +100,7 @@ public partial class AdminViewModel : BaseViewModel
     /// Заблокировать/разблокировать пользователя
     /// </summary>
     [RelayCommand]
-    private async Task ToggleBan(UserDTO user)
-    {
-        // Реализуйте логику блокировки в UsersTabViewModel
-        // и вызывайте её здесь:
-        await UsersTab.ToggleBanCommand.ExecuteAsync(user);
-    }
+    private async Task ToggleBan(UserDTO user) => await UsersTab.ToggleBanCommand.ExecuteAsync(user);
 
     /// <summary>
     /// Открыть диалог редактирования отдела

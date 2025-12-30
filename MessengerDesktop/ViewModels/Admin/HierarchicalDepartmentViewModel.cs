@@ -6,12 +6,12 @@ using System.Collections.ObjectModel;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class HierarchicalDepartmentViewModel : ObservableObject
+public partial class HierarchicalDepartmentViewModel(DepartmentDTO department, int level) : ObservableObject
 {
-    public DepartmentDTO Department { get; }
+    public DepartmentDTO Department { get; } = department;
     public int Id => Department.Id;
     public string Name => Department.Name;
-    public int Level { get; }
+    public int Level { get; } = level;
     public int UserCount => Department.UserCount;
     public string? HeadName => Department.HeadName;
     public bool HasHead => Department.Head.HasValue;
@@ -50,17 +50,8 @@ public partial class HierarchicalDepartmentViewModel : ObservableObject
         }
     }
 
-    public HierarchicalDepartmentViewModel(DepartmentDTO department, int level)
-    {
-        Department = department;
-        Level = level;
-    }
-
     [RelayCommand]
-    private void ToggleExpand()
-    {
-        IsExpanded = !IsExpanded;
-    }
+    private void ToggleExpand() => IsExpanded = !IsExpanded;
 
     private static string GetInitials(string? name)
     {

@@ -21,7 +21,7 @@
 					<StackPanel Spacing="4">
 						<TextBlock Text="Мой отдел" Classes="PageTitle"/>
 						<StackPanel Orientation="Horizontal" Spacing="8">
-							<PathIcon Data="{StaticResource organization_regular}"
+							<PathIcon Data="{StaticResource OrganizationIcon}"
                                       Width="14" Height="14"
                                       Foreground="{DynamicResource TextSecondary}"/>
 							<TextBlock Text="{Binding DepartmentName}"
@@ -49,14 +49,14 @@
                                 Command="{Binding RefreshCommand}"
                                 IsEnabled="{Binding !IsLoading}"
                                 ToolTip.Tip="Обновить">
-							<PathIcon Data="{StaticResource refresh_regular}"
+							<PathIcon Data="{StaticResource RefreshIcon}"
                                       Width="18" Height="18"
                                       Foreground="{DynamicResource Icon}"/>
 						</Button>
 						<Button Classes="Primary"
                                 Command="{Binding AddMemberCommand}">
 							<StackPanel Orientation="Horizontal" Spacing="8">
-								<PathIcon Data="{StaticResource add_regular}"
+								<PathIcon Data="{StaticResource AddIcon}"
                                           Width="14" Height="14"
                                           Foreground="{DynamicResource TextOnAccent}"/>
 								<TextBlock Text="Добавить сотрудника"
@@ -90,7 +90,7 @@
                             HorizontalAlignment="Center"
                             Spacing="16"
                             MaxWidth="400">
-					<PathIcon Data="{StaticResource organization_regular}"
+					<PathIcon Data="{StaticResource OrganizationIcon}"
                               Width="64" Height="64"
                               Foreground="{DynamicResource TextMuted}"
                               HorizontalAlignment="Center"/>
@@ -111,7 +111,7 @@
                             HorizontalAlignment="Center"
                             Spacing="16"
                             MaxWidth="400">
-					<PathIcon Data="{StaticResource warning_regular}"
+					<PathIcon Data="{StaticResource WarningIcon}"
                               Width="48" Height="48"
                               Foreground="{DynamicResource WarningBrush}"
                               HorizontalAlignment="Center"/>
@@ -138,7 +138,7 @@
 						<StackPanel Spacing="16">
 							<Grid ColumnDefinitions="*,Auto">
 								<StackPanel Orientation="Horizontal" Spacing="10">
-									<PathIcon Data="{StaticResource person_regular}"
+									<PathIcon Data="{StaticResource PersonIcon}"
                                               Width="18" Height="18"
                                               Foreground="{DynamicResource TextSecondary}"/>
 									<TextBlock Text="Сотрудники"
@@ -161,7 +161,7 @@
                                         Height="36">
 									<Grid ColumnDefinitions="Auto,*">
 										<PathIcon Grid.Column="0"
-                                                  Data="{StaticResource search_regular}"
+                                                  Data="{StaticResource SearchIcon}"
                                                   Width="14" Height="14"
                                                   Foreground="{DynamicResource TextMuted}"
                                                   Margin="10,0,8,0"/>
@@ -180,7 +180,7 @@
                                     Padding="40"
                                     HorizontalAlignment="Center">
 								<StackPanel Spacing="12" HorizontalAlignment="Center">
-									<PathIcon Data="{StaticResource person_regular}"
+									<PathIcon Data="{StaticResource PersonIcon}"
                                               Width="48" Height="48"
                                               Foreground="{DynamicResource TextMuted}"/>
 									<TextBlock Text="Сотрудники не найдены"
@@ -255,7 +255,7 @@
                                                             Command="{Binding #Root.((vm:DepartmentManagementViewModel)DataContext).RemoveMemberCommand}"
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="Удалить из отдела">
-														<PathIcon Data="{StaticResource dismiss_regular}"
+														<PathIcon Data="{StaticResource DismissIcon}"
                                                                   Width="14" Height="14"
                                                                   Foreground="{DynamicResource Icon}"/>
 													</Button>

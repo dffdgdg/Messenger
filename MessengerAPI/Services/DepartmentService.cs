@@ -32,14 +32,11 @@ namespace MessengerAPI.Services
 
         public async Task<List<DepartmentDTO>> GetDepartmentsAsync()
         {
-            var departments = await _context.Departments
-                .Include(d => d.HeadNavigation)
-                .AsNoTracking()
-                .ToListAsync();
+            var departments = await _context.Departments.Include(d => d.Head).AsNoTracking().ToListAsync();
 
             var userCounts = await _context.Users
                 .Where(u => u.Department != null)
-                .GroupBy(u => u.Department)
+                .GroupBy(u => u.DepartmentId)
                 .Select(g => new { DepartmentId = g.Key!.Value, Count = g.Count() })
                 .ToDictionaryAsync(x => x.DepartmentId, x => x.Count);
 
@@ -48,8 +45,8 @@ namespace MessengerAPI.Services
                 Id = d.Id,
                 Name = d.Name,
                 ParentDepartmentId = d.ParentDepartmentId,
-                Head = d.Head,
-                HeadName = d.HeadNavigation?.FormatDisplayName(),
+                Head = d.HeadId,
+                HeadName = d.Head?.FormatDisplayName(),
                 UserCount = userCounts.GetValueOrDefault(d.Id, 0)
             })];
         }
@@ -57,22 +54,22 @@ namespace MessengerAPI.Services
         public async Task<DepartmentDTO?> GetDepartmentAsync(int id)
         {
             var department = await _context.Departments
-                .Include(d => d.HeadNavigation)
+                .Include(d => d.Head)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.Id == id);
 
             if (department is null)
                 return null;
 
-            var userCount = await _context.Users.CountAsync(u => u.Department == id);
+            var userCount = await _context.Users.CountAsync(u => u.DepartmentId == id);
 
             return new DepartmentDTO
             {
                 Id = department.Id,
                 Name = department.Name,
                 ParentDepartmentId = department.ParentDepartmentId,
-                Head = department.Head,
-                HeadName = department.HeadNavigation?.FormatDisplayName(),
+                Head = department.HeadId,
+                HeadName = department.Head?.FormatDisplayName(),
                 UserCount = userCount
             };
         }
@@ -89,7 +86,7 @@ namespace MessengerAPI.Services
             {
                 Name = dto.Name.Trim(),
                 ParentDepartmentId = dto.ParentDepartmentId,
-                Head = dto.Head
+                HeadId = dto.Head
             };
 
             _context.Departments.Add(entity);
@@ -126,7 +123,7 @@ namespace MessengerAPI.Services
 
             entity!.Name = dto.Name.Trim();
             entity.ParentDepartmentId = dto.ParentDepartmentId;
-            entity.Head = dto.Head;
+            entity.HeadId = dto.Head;
 
             await SaveChangesAsync();
 
@@ -141,7 +138,7 @@ namespace MessengerAPI.Services
             if (await _context.Departments.AnyAsync(d => d.ParentDepartmentId == id))
                 throw new InvalidOperationException("Нельзя удалить отдел с дочерними отделами");
 
-            if (await _context.Users.AnyAsync(u => u.Department == id))
+            if (await _context.Users.AnyAsync(u => u.DepartmentId == id))
                 throw new InvalidOperationException("Нельзя удалить отдел с сотрудниками");
 
             _context.Departments.Remove(entity!);
@@ -160,7 +157,7 @@ namespace MessengerAPI.Services
             if (!exists)
                 throw new KeyNotFoundException($"Отдел с ID {departmentId} не найден");
 
-            var users = await _context.Users.Where(u => u.Department == departmentId).Include(u => u.DepartmentNavigation).AsNoTracking().ToListAsync();
+            var users = await _context.Users.Where(u => u.DepartmentId == departmentId).Include(u => u.Department).AsNoTracking().ToListAsync();
 
             return [.. users.Select(u => new UserDTO
             {
@@ -171,8 +168,8 @@ namespace MessengerAPI.Services
                 Name = u.Name,
                 Midname = u.Midname,
                 Avatar = u.Avatar,
-                DepartmentId = u.Department,
-                Department = u.DepartmentNavigation?.Name
+                DepartmentId = u.DepartmentId,
+                Department = u.Department?.Name
             })];
         }
 
@@ -187,13 +184,13 @@ namespace MessengerAPI.Services
             var user = await _context.Users.FindAsync(userId)
                 ?? throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
 
-            if (user.Department == departmentId)
+            if (user.DepartmentId == departmentId)
                 throw new InvalidOperationException("Пользователь уже в этом отделе");
 
-            if (user.Department.HasValue && !await IsAdminAsync(requesterId))
+            if (user.DepartmentId.HasValue && !await IsAdminAsync(requesterId))
                 throw new InvalidOperationException("Только администратор может перемещать между отделами");
 
-            user.Department = departmentId;
+            user.DepartmentId = departmentId;
             await SaveChangesAsync();
 
             _logger.LogInformation(
@@ -209,11 +206,11 @@ namespace MessengerAPI.Services
             var user = await _context.Users.FindAsync(userId)
                 ?? throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
 
-            if (user.Department != departmentId)
+            if (user.DepartmentId != departmentId)
                 throw new InvalidOperationException("Пользователь не в этом отделе");
 
             var department = await _context.Departments.FindAsync(departmentId);
-            if (department?.Head == userId)
+            if (department?.HeadId == userId)
                 throw new InvalidOperationException("Сначала назначьте другого начальника");
 
             user.Department = null;
@@ -229,7 +226,7 @@ namespace MessengerAPI.Services
         #region Permissions
 
         public async Task<bool> IsDepartmentHeadAsync(int userId, int departmentId)
-            => await _context.Departments.AnyAsync(d => d.Id == departmentId && d.Head == userId);
+            => await _context.Departments.AnyAsync(d => d.Id == departmentId && d.HeadId == userId);
 
         public async Task<bool> CanManageDepartmentAsync(int userId, int departmentId)
         {
@@ -240,7 +237,7 @@ namespace MessengerAPI.Services
         }
 
         private async Task<bool> IsAdminAsync(int userId)
-            => await _context.Users.AnyAsync(u => u.Id == userId && u.Department == _settings.AdminDepartmentId);
+            => await _context.Users.AnyAsync(u => u.Id == userId && u.DepartmentId == _settings.AdminDepartmentId);
 
         #endregion
 

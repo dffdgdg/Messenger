@@ -62,7 +62,7 @@
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
 									<Border Width="40" Height="40"
                                             CornerRadius="10">
-										<PathIcon Data="{DynamicResource Notifications}"
+										<PathIcon Data="{DynamicResource NotificationsIcon}"
                                                   Width="18" Height="18"
                                                   Foreground="{DynamicResource WarningBrush}"/>
 									</Border>

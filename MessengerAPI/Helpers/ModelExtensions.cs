@@ -18,8 +18,8 @@ namespace MessengerAPI.Helpers
                 Name = user.Name,
                 Surname = user.Surname,
                 Midname = user.Midname,
-                Department = user.DepartmentNavigation?.Name,
-                DepartmentId = user.DepartmentNavigation?.Id,
+                Department = user.Department?.Name,
+                DepartmentId = user.Department?.Id,
                 Avatar = BuildFullUrl(user.Avatar, request),
                 Theme = user.UserSetting?.Theme,
                 NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
@@ -60,7 +60,7 @@ namespace MessengerAPI.Helpers
                 user.Midname = dto.Midname.Trim();
 
             if (dto.DepartmentId.HasValue)
-                user.Department = dto.DepartmentId;
+                user.DepartmentId = dto.DepartmentId;
 
             user.UpdateSettings(dto);
         }

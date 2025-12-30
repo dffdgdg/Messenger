@@ -129,9 +129,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     {
         var groups = Users.GroupBy(u => u.DepartmentId).Select(g =>
         {
-            var deptName = g.Key.HasValue
-                ? _departments.FirstOrDefault(d => d.Id == g.Key)?.Name ?? "Неизвестный отдел"
-                : "Без отдела";
+            var deptName = g.Key.HasValue ? _departments.FirstOrDefault(d => d.Id == g.Key)?.Name ?? "Неизвестный отдел" : "Без отдела";
 
             return new DepartmentGroup(deptName, g.Key, new ObservableCollection<UserDTO>(g));
         }).OrderBy(g => g.DepartmentName);
@@ -180,12 +178,8 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
         var query = SearchQuery.ToLowerInvariant();
 
-        return GroupedUsers
-            .Select(g => new DepartmentGroup(
-                g.DepartmentName,
-                g.DepartmentId,
-                new ObservableCollection<UserDTO>(g.Users.Where(u => MatchesSearch(u, query)))))
-            .Where(g => g.Users.Count > 0);
+        return GroupedUsers.Select(g => new DepartmentGroup(g.DepartmentName,g.DepartmentId,
+            new ObservableCollection<UserDTO>(g.Users.Where(u => MatchesSearch(u, query))))).Where(g => g.Users.Count > 0);
     }
 
     private static bool MatchesSearch(UserDTO user, string query) =>

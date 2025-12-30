@@ -82,7 +82,7 @@
 						 Command="{Binding SetItemCommand}"
 						 CommandParameter="{StaticResource Index5}"/>
 			<RadioButton Classes="NavButton" Height="58"
-						 Tag="{DynamicResource organization_regular}"
+						 Tag="{DynamicResource OrganizationIcon}"
 						 Content="Отдел"
 						 Command="{Binding SetItemCommand}"
 						 CommandParameter="{StaticResource Index6}" IsVisible="{Binding '', 

@@ -76,10 +76,10 @@ namespace MessengerAPI.Services
 
         private async Task<UserRole> DetermineUserRoleAsync(User user)
         {
-            if (user.Department == _settings.AdminDepartmentId) 
+            if (user.DepartmentId == _settings.AdminDepartmentId) 
                 return UserRole.Admin;
 
-            var isHead = await _context.Departments.AnyAsync(d => d.Head == user.Id);
+            var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id);
 
             return isHead ? UserRole.Head : UserRole.User;
         }

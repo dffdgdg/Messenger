@@ -27,7 +27,7 @@
                      Classes="DialogInput SearchInput"
                      Margin="0,0,0,12">
 				<TextBox.InnerLeftContent>
-					<PathIcon Data="{StaticResource search_regular}"
+					<PathIcon Data="{StaticResource SearchIcon}"
                               Width="16" Height="16"
                               Margin="12,0,8,0"
                               Opacity="0.5"/>
@@ -46,7 +46,7 @@
                                 HorizontalAlignment="Center"
                                 Spacing="12"
                                 IsVisible="{Binding !FilteredUsers.Count}">
-						<PathIcon Data="{StaticResource person_regular}"
+						<PathIcon Data="{StaticResource PersonIcon}"
                                   Width="48" Height="48"
                                   Foreground="{DynamicResource TextMuted}"
                                   HorizontalAlignment="Center"/>
@@ -138,7 +138,7 @@
                                 Command="{Binding SelectUserCommand}"
                                 CommandParameter="{x:Null}"
                                 ToolTip.Tip="Отменить выбор">
-							<PathIcon Data="{StaticResource dismiss_regular}"
+							<PathIcon Data="{StaticResource DismissIcon}"
                                       Width="12" Height="12"
                                       Foreground="{DynamicResource TextSecondary}"/>
 						</Button>

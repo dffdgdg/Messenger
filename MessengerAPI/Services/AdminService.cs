@@ -18,7 +18,7 @@ namespace MessengerAPI.Services
         {
             _logger.LogDebug("Получение списка всех пользователей");
 
-            var users = await _context.Users.Include(u => u.DepartmentNavigation).Include(u => u.UserSetting)
+            var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting)
                 .AsNoTracking().ToListAsync(ct);
 
             var result = users.Select(MapToDto).ToList();
@@ -79,7 +79,7 @@ namespace MessengerAPI.Services
                 Surname = dto.Surname.Trim(),
                 Name = dto.Name.Trim(),
                 Midname = dto.Midname?.Trim(),
-                Department = dto.DepartmentId,
+                DepartmentId = dto.DepartmentId,
                 CreatedAt = DateTime.UtcNow,
                 IsBanned = false
             };
@@ -102,7 +102,7 @@ namespace MessengerAPI.Services
 
             // Перезагружаем с навигационными свойствами
             var createdUser = await _context.Users
-                .Include(u => u.DepartmentNavigation)
+                .Include(u => u.Departments)
                 .Include(u => u.UserSetting)
                 .FirstAsync(u => u.Id == user.Id, ct);
 
@@ -132,8 +132,8 @@ namespace MessengerAPI.Services
             Name = user.Name,
             Surname = user.Surname,
             Midname = user.Midname,
-            Department = user.DepartmentNavigation?.Name,
-            DepartmentId = user.Department,
+            Department = user.Department?.Name,
+            DepartmentId = user.DepartmentId,
             Avatar = user.Avatar,
             IsBanned = user.IsBanned,
             NotificationsEnabled = user.UserSetting?.NotificationsEnabled ?? true,

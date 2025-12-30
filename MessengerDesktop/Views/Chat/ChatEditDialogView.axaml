@@ -70,7 +70,7 @@
                                 Command="{Binding ClearAvatarCommand}"
                                 IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
                                 ToolTip.Tip="Удалить аватар">
-                            <Path Data="{StaticResource Close}"
+                            <Path Data="{StaticResource CloseIcon}"
                                   Width="8" Height="8"
                                   Stretch="Uniform"
                                   Fill="{DynamicResource TextSecondary}"/>

@@ -8,7 +8,7 @@
 		<StackPanel Spacing="16">
 			<StackPanel Orientation="Horizontal" Spacing="12">
 				<Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource WarningBgBrush}">
-					<PathIcon Data="{StaticResource warning_regular}" Width="20" Height="20"
+					<PathIcon Data="{StaticResource WarningIcon}" Width="20" Height="20"
                               Foreground="{DynamicResource WarningBrush}"/>
 				</Border>
 				<TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>

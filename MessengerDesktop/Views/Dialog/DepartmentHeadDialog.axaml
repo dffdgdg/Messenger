@@ -16,7 +16,7 @@
                         Width="44" Height="44"
                         CornerRadius="12"
                         Margin="0,0,14,0">
-					<PathIcon Data="{StaticResource organization_regular}"
+					<PathIcon Data="{StaticResource OrganizationIcon}"
                               Width="22" Height="22"
                               Foreground="{DynamicResource TextOnAccent}"/>
 				</Border>
@@ -34,7 +34,7 @@
                         Classes="IconButton"
                         Command="{Binding CancelCommand}"
                         ToolTip.Tip="Закрыть">
-					<PathIcon Data="{StaticResource dismiss_regular}"
+					<PathIcon Data="{StaticResource DismissIcon}"
                               Width="14" Height="14"
                               Foreground="{DynamicResource TextSecondary}"/>
 				</Button>
@@ -75,7 +75,7 @@
 					<ComboBox.ItemTemplate>
 						<DataTemplate x:DataType="shared:DepartmentDTO">
 							<StackPanel Orientation="Horizontal" Spacing="8">
-								<PathIcon Data="{StaticResource organization_regular}"
+								<PathIcon Data="{StaticResource OrganizationIcon}"
                                           Width="14" Height="14"
                                           Foreground="{DynamicResource TextSecondary}"/>
 								<TextBlock Text="{Binding Name}"/>
@@ -114,7 +114,7 @@
                                 Background="{DynamicResource SurfaceBrush}"
                                 IsVisible="{Binding !HasHead}"
                                 Margin="0,0,12,0">
-							<PathIcon Data="{StaticResource person_regular}"
+							<PathIcon Data="{StaticResource PersonIcon}"
                                       Width="18" Height="18"
                                       Foreground="{DynamicResource TextTertiary}"/>
 						</Border>
@@ -147,7 +147,7 @@
                                 Classes="IconButton"
                                 Command="{Binding SelectHeadCommand}"
                                 ToolTip.Tip="Выбрать руководителя">
-							<PathIcon Data="{StaticResource person_add_regular}"
+							<PathIcon Data="{StaticResource person_AddIcon}"
                                       Width="18" Height="18"
                                       Foreground="{DynamicResource AccentBrush}"/>
 						</Button>
@@ -164,7 +164,7 @@
 					<!-- Количество сотрудников -->
 					<Grid ColumnDefinitions="Auto,*,Auto">
 						<PathIcon Grid.Column="0"
-                                  Data="{StaticResource person_regular}"
+                                  Data="{StaticResource PersonIcon}"
                                   Width="14" Height="14"
                                   Foreground="{DynamicResource TextSecondary}"
                                   Margin="0,0,8,0"/>
@@ -181,7 +181,7 @@
 					<!-- Предупреждение о дочерних отделах -->
 					<Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasChildren}">
 						<PathIcon Grid.Column="0"
-                                  Data="{StaticResource warning_regular}"
+                                  Data="{StaticResource WarningIcon}"
                                   Width="14" Height="14"
                                   Foreground="{DynamicResource WarningBrush}"
                                   Margin="0,0,8,0"/>
@@ -267,7 +267,7 @@
                         Command="{Binding SaveCommand}"
                         IsEnabled="{Binding CanSave}">
 					<StackPanel Orientation="Horizontal" Spacing="6">
-						<PathIcon Data="{StaticResource checkmark_regular}"
+						<PathIcon Data="{StaticResource CheckmarkIcon}"
                                   Width="14" Height="14"
                                   Foreground="{DynamicResource TextOnAccent}"/>
 						<TextBlock Text="Сохранить"

@@ -22,7 +22,7 @@ namespace MessengerAPI.Services
     {
         public async Task<List<UserDTO>> GetAllUsersAsync(HttpRequest? request = null)
         {
-            var users = await _context.Users.Include(u => u.DepartmentNavigation).Include(u => u.UserSetting).AsNoTracking().ToListAsync();
+            var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync();
 
             var onlineIds = onlineService.GetOnlineUserIds();
 
@@ -31,7 +31,7 @@ namespace MessengerAPI.Services
 
         public async Task<UserDTO?> GetUserAsync(int id, HttpRequest? request = null)
         {
-            var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.DepartmentNavigation).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.Department).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
                 return null;

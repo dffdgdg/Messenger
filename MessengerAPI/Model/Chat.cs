@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace MessengerAPI.Model;
+﻿namespace MessengerAPI.Model;
 
 public partial class Chat
 {
@@ -17,11 +14,11 @@ public partial class Chat
 
     public string? Avatar { get; set; }
 
-    public virtual ICollection<ChatMember> ChatMembers { get; set; } = new List<ChatMember>();
+    public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
 
     public virtual User? CreatedBy { get; set; }
 
     public virtual Department? Department { get; set; }
 
-    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+    public virtual ICollection<Message> Messages { get; set; } = [];
 }

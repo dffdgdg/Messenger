@@ -103,10 +103,7 @@ public partial class ChatsViewModel : BaseViewModel, IDisposable
 
     #region Unread Count Handlers
 
-    private void OnTotalUnreadChanged(int total)
-    {
-        TotalUnreadCount = total;
-    }
+    private void OnTotalUnreadChanged(int total) => TotalUnreadCount = total;
 
     private void OnUnreadCountChanged(int chatId, int unreadCount)
     {

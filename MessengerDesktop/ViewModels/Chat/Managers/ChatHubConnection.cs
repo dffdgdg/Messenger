@@ -29,13 +29,10 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     {
         try
         {
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{App.ApiUrl}chatHub", options =>
+            _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options =>
                 {
                     options.AccessTokenProvider = () => Task.FromResult(_authManager.Session.Token);
-                })
-                .WithAutomaticReconnect()
-                .Build();
+                }).WithAutomaticReconnect().Build();
 
             _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnMessageReceived);
             _hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageRead);

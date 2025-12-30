@@ -32,7 +32,7 @@
                             Background="Transparent"
                             Padding="4"
                             CornerRadius="6">
-						<PathIcon Data="M18 6L6 18M6 6l12 12"
+						<PathIcon Data="{StaticResource CloseIcon}"
                                   Width="16" Height="16"
                                   Foreground="{DynamicResource TextSecondary}"/>
 					</Button>

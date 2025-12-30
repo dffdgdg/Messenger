@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class DepartmentsTabViewModel : BaseViewModel
+public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialogService dialogService) : BaseViewModel
 {
-    private readonly IApiClientService _apiClient;
-    private readonly IDialogService _dialogService;
+    private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+    private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
     [ObservableProperty]
     private ObservableCollection<DepartmentDTO> _departments = [];
@@ -30,12 +30,6 @@ public partial class DepartmentsTabViewModel : BaseViewModel
     private string _searchQuery = string.Empty;
 
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredDepartments => ApplyFilter();
-
-    public DepartmentsTabViewModel(IApiClientService apiClient, IDialogService dialogService)
-    {
-        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-    }
 
     public async Task LoadAsync()
     {
@@ -210,10 +204,8 @@ public partial class DepartmentsTabViewModel : BaseViewModel
     {
         var vm = new HierarchicalDepartmentViewModel(dept, level);
 
-        var children = Departments
-            .Where(d => d.ParentDepartmentId == dept.Id)
-            .Select(d => CreateHierarchicalItem(d, level + 1))
-            .OrderBy(d => d.Name);
+        var children = Departments.Where(d => d.ParentDepartmentId == dept.Id).
+            Select(d => CreateHierarchicalItem(d, level + 1)).OrderBy(d => d.Name);
 
         foreach (var child in children)
         {
@@ -241,16 +233,12 @@ public partial class DepartmentsTabViewModel : BaseViewModel
         return results;
     }
 
-    private static HierarchicalDepartmentViewModel? FilterHierarchy(
-        HierarchicalDepartmentViewModel item, string query)
+    private static HierarchicalDepartmentViewModel? FilterHierarchy(HierarchicalDepartmentViewModel item, string query)
     {
         var nameMatches = item.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
         var headMatches = item.HeadName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false;
 
-        var filteredChildren = item.Children
-            .Select(c => FilterHierarchy(c, query))
-            .Where(c => c is not null)
-            .ToList();
+        var filteredChildren = item.Children.Select(c => FilterHierarchy(c, query)).Where(c => c is not null).ToList();
 
         if (!nameMatches && !headMatches && filteredChildren.Count == 0)
             return null;

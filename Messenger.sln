@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessengerShared", "MessengerShared\MessengerShared.csproj", "{B4A82D10-22FD-47AA-997E-1DC674B50E8D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}"
+	ProjectSection(SolutionItems) = preProject
+		Architecture.md = Architecture.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

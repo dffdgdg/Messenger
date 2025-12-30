@@ -27,7 +27,7 @@
 					<Button Grid.Column="1"
                             Command="{Binding ToggleInfoPanelCommand}"
                             Classes="IconButton Small">
-						<PathIcon Data="{StaticResource Close}"
+						<PathIcon Data="{StaticResource CloseIcon}"
                                   Width="12" Height="12"/>
 					</Button>
 				</Grid>
@@ -113,7 +113,7 @@
 
 							<!-- Уведомления -->
 							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource Notifications}"
+								<PathIcon Data="{StaticResource NotificationsIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource TextSecondary}"
                                           Margin="0,0,12,0"/>
@@ -151,7 +151,7 @@
 
 							<!-- Уведомления -->
 							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource Notifications}"
+								<PathIcon Data="{StaticResource NotificationsIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource TextSecondary}"
                                           Margin="0,0,12,0"/>
@@ -244,7 +244,7 @@
 							<Button Command="{Binding LeaveChatCommand}"
                                     Classes="InfoPanelItem">
 								<StackPanel Orientation="Horizontal" Spacing="12">
-									<PathIcon Data="{StaticResource SignOut}" Width="18" Height="18"
+									<PathIcon Data="{StaticResource SignOutIcon}" Width="18" Height="18"
                                               Foreground="{DynamicResource DangerBrush}"/>
 									<TextBlock Text="Покинуть группу" Foreground="{DynamicResource DangerBrush}"/>
 								</StackPanel>

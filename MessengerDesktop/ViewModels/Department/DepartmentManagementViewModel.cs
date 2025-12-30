@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.UI;
@@ -29,10 +28,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     public Func<DepartmentMemberViewModel, Task<bool>>? ShowRemoveConfirmAction { get; set; }
     public Func<ObservableCollection<UserDTO>, Task<UserDTO?>>? ShowSelectUserAction { get; set; }
 
-    public DepartmentManagementViewModel(
-        IApiClientService apiClient,
-        IAuthManager authManager,
-        INotificationService notificationService)
+    public DepartmentManagementViewModel(IApiClientService apiClient,IAuthManager authManager,INotificationService notificationService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
@@ -201,9 +197,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         if (usersResult is { Success: true, Data: not null })
         {
-            var available = usersResult.Data
-                .Where(u => u.DepartmentId == null && !u.IsBanned && u.Id != CurrentUserId)
-                .ToList();
+            var available = usersResult.Data.Where(u => u.DepartmentId == null && !u.IsBanned && u.Id != CurrentUserId).ToList();
 
             AvailableUsers = new ObservableCollection<UserDTO>(available);
         }

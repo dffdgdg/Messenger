@@ -65,7 +65,7 @@
 								<GradientStop Color="{DynamicResource LoginLogoEnd}" Offset="1"/>
 							</LinearGradientBrush>
 						</Border.Background>
-						<Path Data="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18"
+						<Path Data="{StaticResource Icon}"
                               Width="28" Height="28" Stretch="Uniform" Fill="{DynamicResource TextOnAccent}"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
 					</Border>

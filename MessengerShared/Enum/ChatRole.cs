@@ -1,4 +1,15 @@
-﻿namespace MessengerShared.Enum
+﻿using NpgsqlTypes;
+
+namespace MessengerShared.Enum;
+
+public enum ChatRole
 {
-    public enum ChatRole { Member, Admin, Owner }
+    [PgName("member")]
+    Member,
+
+    [PgName("admin")]
+    Admin,
+
+    [PgName("owner")]
+    Owner
 }

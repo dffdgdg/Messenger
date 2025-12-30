@@ -67,7 +67,7 @@
 													<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
 												</Transitions>
 											</Border.Transitions>
-											<PathIcon Data="{StaticResource camera_regular}"
+											<PathIcon Data="{StaticResource CameraIcon}"
                                                       Width="24" Height="24"
                                                       Foreground="White"/>
 										</Border>
@@ -118,7 +118,7 @@
                                             Command="{Binding StartEditProfileCommand}"
                                             IsVisible="{Binding !IsEditingProfile}"
                                             ToolTip.Tip="Редактировать">
-										<PathIcon Data="{StaticResource edit_regular}"
+										<PathIcon Data="{StaticResource EditIcon}"
                                                   Width="16" Height="16"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
@@ -231,7 +231,7 @@
 								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10">
-										<PathIcon Data="{StaticResource mention_regular}"
+										<PathIcon Data="{StaticResource MentionIcon}"
                                                   Width="18" Height="18"
                                                   Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Имя пользователя"
@@ -244,7 +244,7 @@
                                             Command="{Binding StartEditUsernameCommand}"
                                             IsVisible="{Binding !IsEditingUsername}"
                                             ToolTip.Tip="Изменить">
-										<PathIcon Data="{StaticResource edit_regular}"
+										<PathIcon Data="{StaticResource EditIcon}"
                                                   Width="16" Height="16"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
@@ -328,7 +328,7 @@
 								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10">
-										<PathIcon Data="{StaticResource lock_closed_regular}"
+										<PathIcon Data="{StaticResource LockClosedIcon}"
                                                   Width="18" Height="18"
                                                   Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Безопасность"
@@ -341,7 +341,7 @@
                                             Command="{Binding StartEditPasswordCommand}"
                                             IsVisible="{Binding !IsEditingPassword}"
                                             ToolTip.Tip="Изменить пароль">
-										<PathIcon Data="{StaticResource edit_regular}"
+										<PathIcon Data="{StaticResource EditIcon}"
                                                   Width="16" Height="16"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
@@ -414,7 +414,7 @@
 												<StackPanel Orientation="Horizontal"
                                                             Spacing="5"
                                                             IsVisible="{Binding PasswordsMatch}">
-													<PathIcon Data="{StaticResource checkmark_regular}"
+													<PathIcon Data="{StaticResource CheckmarkIcon}"
                                                               Width="12" Height="12"
                                                               Foreground="{DynamicResource SuccessBrush}"/>
 													<TextBlock Text="Пароли совпадают"
@@ -426,7 +426,7 @@
 												<StackPanel Orientation="Horizontal"
                                                             Spacing="5"
                                                             IsVisible="{Binding !PasswordsMatch}">
-													<PathIcon Data="{StaticResource dismiss_regular}"
+													<PathIcon Data="{StaticResource DismissIcon}"
                                                               Width="12" Height="12"
                                                               Foreground="{DynamicResource ErrorBrush}"/>
 													<TextBlock Text="Пароли не совпадают"
@@ -458,7 +458,7 @@
 						<Border Classes="ProfileSection"
                                 IsVisible="{Binding User.Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
-								<PathIcon Data="{StaticResource organization_regular}"
+								<PathIcon Data="{StaticResource OrganizationIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource Accent}"
                                           VerticalAlignment="Center"/>
@@ -478,7 +478,7 @@
 						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource SignOut}"
+								<PathIcon Data="{StaticResource SignOutIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource DangerBrush}"
                                           VerticalAlignment="Center"/>
@@ -510,7 +510,7 @@
 						<Border Classes="AlertError"
                                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource warning_regular}"
+								<PathIcon Data="{StaticResource WarningIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource ErrorBrush}"
                                           VerticalAlignment="Center"/>
@@ -524,7 +524,7 @@
                                         Classes="IconButton Small"
                                         Command="{Binding ClearErrorCommand}"
                                         ToolTip.Tip="Закрыть">
-									<PathIcon Data="{StaticResource close_regular}"
+									<PathIcon Data="{StaticResource CloseIcon}"
                                               Width="14" Height="14"
                                               Foreground="{DynamicResource ErrorBrush}"/>
 								</Button>
@@ -535,7 +535,7 @@
 						<Border Classes="AlertSuccess"
                                 IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource checkmark_regular}"
+								<PathIcon Data="{StaticResource CheckmarkIcon}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource SuccessBrush}"
                                           VerticalAlignment="Center"/>
@@ -549,7 +549,7 @@
                                         Classes="IconButton Small"
                                         Command="{Binding ClearSuccessCommand}"
                                         ToolTip.Tip="Закрыть">
-									<PathIcon Data="{StaticResource close_regular}"
+									<PathIcon Data="{StaticResource CloseIcon}"
                                               Width="14" Height="14"
                                               Foreground="{DynamicResource SuccessBrush}"/>
 								</Button>

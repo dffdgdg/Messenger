@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace MessengerAPI.Model;
+﻿namespace MessengerAPI.Model;
 
 public partial class ChatMember
 {

@@ -745,7 +745,7 @@
                                         Height="44"
                                         CornerRadius="10"
                                         Command="{Binding AttachFileCommand}">
-									<Path Data="{StaticResource ChatAttach}"
+									<Path Data="{StaticResource AttachIcon}"
                                           Fill="{DynamicResource TextSecondary}"
                                           Width="20"
                                           Height="20"

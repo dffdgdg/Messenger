@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace MessengerAPI.Model;
+﻿namespace MessengerAPI.Model;
 
 public partial class User
 {
@@ -17,7 +14,7 @@ public partial class User
 
     public DateTime? LastOnline { get; set; }
 
-    public int? Department { get; set; }
+    public int? DepartmentId { get; set; }
 
     public string? Avatar { get; set; }
 
@@ -27,17 +24,17 @@ public partial class User
 
     public bool IsBanned { get; set; }
 
-    public virtual ICollection<ChatMember> ChatMembers { get; set; } = new List<ChatMember>();
+    public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
 
-    public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
+    public virtual ICollection<Chat> Chats { get; set; } = [];
 
-    public virtual Department? DepartmentNavigation { get; set; }
+    public virtual Department? Department { get; set; }
 
-    public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
+    public virtual ICollection<Department> Departments { get; set; } = [];
 
-    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+    public virtual ICollection<Message> Messages { get; set; } = [];
 
-    public virtual ICollection<PollVote> PollVotes { get; set; } = new List<PollVote>();
+    public virtual ICollection<PollVote> PollVotes { get; set; } = [];
 
     public virtual UserSetting? UserSetting { get; set; }
 }

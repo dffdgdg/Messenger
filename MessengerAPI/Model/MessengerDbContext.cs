@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Model;
@@ -31,30 +30,44 @@ public partial class MessengerDbContext : DbContext
 
     public virtual DbSet<PollVote> PollVotes { get; set; }
 
+    public virtual DbSet<SystemSetting> SystemSettings { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserSetting> UserSettings { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=MessengerDB;Username=postgres;Password=123");
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .HasPostgresEnum("chat_role", new[] { "member", "admin", "owner" })
-            .HasPostgresEnum("chat_type", new[] { "Chat", "Department", "Contact", "contact" })
-            .HasPostgresEnum("theme", new[] { "light", "dark", "system" });
+            .HasPostgresEnum<ChatRole>("chat_role")
+            .HasPostgresEnum<ChatType>("chat_type")
+            .HasPostgresEnum<Theme>("theme");
 
         modelBuilder.Entity<Chat>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Chats_pkey");
+            entity.HasKey(e => e.Id).HasName("chats_pkey");
 
+            entity.ToTable("chats");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"Chats_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.Avatar).HasColumnName("avatar");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.LastMessageTime).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.Name).HasMaxLength(100);
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.CreatedById).HasColumnName("created_by_id");
+            entity.Property(e => e.LastMessageTime)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("last_message_time");
+            entity.Property(e => e.Name)
+                .HasMaxLength(100)
+                .HasColumnName("name");
+
+            entity.Property(e => e.Type)
+                .HasColumnName("type")
+                .HasColumnType("chat_type");
 
             entity.HasOne(d => d.CreatedBy).WithMany(p => p.Chats)
                 .HasForeignKey(d => d.CreatedById)
@@ -64,19 +77,33 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<ChatMember>(entity =>
         {
-            entity.HasKey(e => new { e.ChatId, e.UserId }).HasName("ChatMembers_pkey");
+            entity.HasKey(e => new { e.ChatId, e.UserId }).HasName("chat_members_pkey");
+
+            entity.ToTable("chat_members");
 
             entity.HasIndex(e => new { e.ChatId, e.UserId }, "UQ_Chat_User").IsUnique();
 
-            entity.HasIndex(e => e.LastReadMessageId, "idx_chatmembers_lastreadmessageid");
+            entity.HasIndex(e => e.LastReadMessageId, "idx_chat_members_last_read_message_id");
 
-            entity.HasIndex(e => e.UserId, "idx_chatmembers_userid");
+            entity.HasIndex(e => e.UserId, "idx_chat_members_user_id");
 
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.JoinedAt)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.LastReadAt).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.NotificationsEnabled).HasDefaultValue(true);
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("joined_at");
+            entity.Property(e => e.LastReadAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("last_read_at");
+            entity.Property(e => e.LastReadMessageId).HasColumnName("last_read_message_id");
+            entity.Property(e => e.NotificationsEnabled)
+                .HasDefaultValue(true)
+                .HasColumnName("notifications_enabled");
+
+            entity.Property(e => e.Role)
+                .HasColumnName("role")
+                .HasColumnType("chat_role");
 
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatMembers)
                 .HasForeignKey(d => d.ChatId)
@@ -94,21 +121,31 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<Department>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Departments_pkey");
+            entity.HasKey(e => e.Id).HasName("departments_pkey");
+
+            entity.ToTable("departments");
 
             entity.HasIndex(e => e.ChatId, "Departments_ChatId_key").IsUnique();
 
-            entity.HasIndex(e => e.Head, "idx_departments_head");
+            entity.HasIndex(e => e.HeadId, "idx_departments_head_id");
 
-            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"Departments_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.HeadId).HasColumnName("head_id");
+            entity.Property(e => e.Name)
+                .HasMaxLength(100)
+                .HasColumnName("name");
+            entity.Property(e => e.ParentDepartmentId).HasColumnName("parent_department_id");
 
             entity.HasOne(d => d.Chat).WithOne(p => p.Department)
                 .HasForeignKey<Department>(d => d.ChatId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Departments_ChatId_fkey");
 
-            entity.HasOne(d => d.HeadNavigation).WithMany(p => p.Departments)
-                .HasForeignKey(d => d.Head)
+            entity.HasOne(d => d.Head).WithMany(p => p.Departments)
+                .HasForeignKey(d => d.HeadId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Departments_Head_fkey");
 
@@ -120,15 +157,28 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<Message>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Messages_pkey");
+            entity.HasKey(e => e.Id).HasName("messages_pkey");
+
+            entity.ToTable("messages");
 
             entity.HasIndex(e => new { e.ChatId, e.CreatedAt }, "idx_messages_chatid_createdat");
 
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"Messages_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.Content).HasColumnName("content");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.EditedAt).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.EditedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("edited_at");
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValue(false)
+                .HasColumnName("is_deleted");
+            entity.Property(e => e.SenderId).HasColumnName("sender_id");
 
             entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ChatId)
@@ -141,11 +191,21 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<MessageFile>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("MessageFiles_pkey");
+            entity.HasKey(e => e.Id).HasName("message_files_pkey");
 
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.ContentType).HasMaxLength(100);
-            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.ToTable("message_files");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"MessageFiles_id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.ContentType)
+                .HasMaxLength(100)
+                .HasColumnName("content_type");
+            entity.Property(e => e.FileName)
+                .HasMaxLength(255)
+                .HasColumnName("file_name");
+            entity.Property(e => e.MessageId).HasColumnName("message_id");
+            entity.Property(e => e.Path).HasColumnName("path");
 
             entity.HasOne(d => d.Message).WithMany(p => p.MessageFiles)
                 .HasForeignKey(d => d.MessageId)
@@ -154,14 +214,28 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<Poll>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Polls_pkey");
+            entity.HasKey(e => e.Id).HasName("polls_pkey");
 
-            entity.HasIndex(e => e.MessageId, "idx_polls_chatid");
+            entity.ToTable("polls");
 
-            entity.Property(e => e.AllowsMultipleAnswers).HasDefaultValue(false);
-            entity.Property(e => e.ClosesAt).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.IsAnonymous).HasDefaultValue(true);
-            entity.Property(e => e.Question).HasMaxLength(75);
+            entity.HasIndex(e => e.MessageId, "idx_polls_message_id");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"Polls_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.AllowsMultipleAnswers)
+                .HasDefaultValue(false)
+                .HasColumnName("allows_multiple_answers");
+            entity.Property(e => e.ClosesAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("closes_at");
+            entity.Property(e => e.IsAnonymous)
+                .HasDefaultValue(true)
+                .HasColumnName("is_anonymous");
+            entity.Property(e => e.MessageId).HasColumnName("message_id");
+            entity.Property(e => e.Question)
+                .HasMaxLength(75)
+                .HasColumnName("question");
 
             entity.HasOne(d => d.Message).WithMany(p => p.Polls)
                 .HasForeignKey(d => d.MessageId)
@@ -170,9 +244,18 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<PollOption>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PollOptions_pkey");
+            entity.HasKey(e => e.Id).HasName("poll_options_pkey");
 
-            entity.Property(e => e.OptionText).HasMaxLength(50);
+            entity.ToTable("poll_options");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"PollOptions_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.OptionText)
+                .HasMaxLength(50)
+                .HasColumnName("option_text");
+            entity.Property(e => e.PollId).HasColumnName("poll_id");
+            entity.Property(e => e.Position).HasColumnName("position");
 
             entity.HasOne(d => d.Poll).WithMany(p => p.PollOptions)
                 .HasForeignKey(d => d.PollId)
@@ -181,15 +264,24 @@ public partial class MessengerDbContext : DbContext
 
         modelBuilder.Entity<PollVote>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PollVotes_pkey");
+            entity.HasKey(e => e.Id).HasName("poll_votes_pkey");
+
+            entity.ToTable("poll_votes");
 
             entity.HasIndex(e => new { e.PollId, e.UserId, e.OptionId }, "UQ_Poll_User_Option_Vote").IsUnique();
 
-            entity.HasIndex(e => e.UserId, "idx_pollvotes_userid");
+            entity.HasIndex(e => e.UserId, "idx_poll_votes_user_id");
 
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"PollVotes_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.OptionId).HasColumnName("option_id");
+            entity.Property(e => e.PollId).HasColumnName("poll_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.VotedAt)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("voted_at");
 
             entity.HasOne(d => d.Option).WithMany(p => p.PollVotes)
                 .HasForeignKey(d => d.OptionId)
@@ -204,36 +296,80 @@ public partial class MessengerDbContext : DbContext
                 .HasConstraintName("PollVotes_UserId_fkey");
         });
 
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasKey(e => e.Key).HasName("system_settings_pkey");
+
+            entity.ToTable("system_settings");
+
+            entity.Property(e => e.Key)
+                .HasMaxLength(50)
+                .HasColumnName("key");
+            entity.Property(e => e.Value).HasColumnName("value");
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Users_pkey");
+            entity.HasKey(e => e.Id).HasName("users_pkey");
 
-            entity.HasIndex(e => e.Username, "Users_Username_key").IsUnique();
+            entity.ToTable("users");
 
-            entity.HasIndex(e => e.Department, "idx_users_department");
+            entity.HasIndex(e => e.DepartmentId, "idx_users_department_id");
 
+            entity.HasIndex(e => e.Username, "users_username_key").IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"Users_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+            entity.Property(e => e.Avatar).HasColumnName("avatar");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.IsBanned).HasDefaultValue(false);
-            entity.Property(e => e.LastOnline).HasColumnType("timestamp without time zone");
-            entity.Property(e => e.Midname).HasMaxLength(50);
-            entity.Property(e => e.Name).HasMaxLength(50);
-            entity.Property(e => e.Surname).HasMaxLength(50);
-            entity.Property(e => e.Username).HasMaxLength(32);
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DepartmentId).HasColumnName("department_id");
+            entity.Property(e => e.IsBanned)
+                .HasDefaultValue(false)
+                .HasColumnName("is_banned");
+            entity.Property(e => e.LastOnline)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("last_online");
+            entity.Property(e => e.Midname)
+                .HasMaxLength(50)
+                .HasColumnName("midname");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasColumnName("name");
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
+            entity.Property(e => e.Surname)
+                .HasMaxLength(50)
+                .HasColumnName("surname");
+            entity.Property(e => e.Username)
+                .HasMaxLength(32)
+                .HasColumnName("username");
 
-            entity.HasOne(d => d.DepartmentNavigation).WithMany(p => p.Users)
-                .HasForeignKey(d => d.Department)
+            entity.HasOne(d => d.Department).WithMany(p => p.Users)
+                .HasForeignKey(d => d.DepartmentId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Users_DepartmentId_fkey");
         });
 
         modelBuilder.Entity<UserSetting>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("UserSettings_pkey");
+            entity.HasKey(e => e.UserId).HasName("user_settings_pkey");
 
-            entity.Property(e => e.UserId).ValueGeneratedNever();
-            entity.Property(e => e.NotificationsEnabled).HasDefaultValue(true);
+            entity.ToTable("user_settings");
+
+            entity.Property(e => e.UserId)
+                .ValueGeneratedNever()
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.Theme)
+                .HasColumnName("theme")
+                .HasColumnType("theme");
+
+            entity.Property(e => e.NotificationsEnabled)
+                .HasDefaultValue(true)
+                .HasColumnName("notifications_enabled");
 
             entity.HasOne(d => d.User).WithOne(p => p.UserSetting)
                 .HasForeignKey<UserSetting>(d => d.UserId)

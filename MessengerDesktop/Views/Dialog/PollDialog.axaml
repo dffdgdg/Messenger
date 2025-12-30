@@ -20,7 +20,7 @@
 							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="DialogInput"/>
 							<Button Grid.Column="1" Classes="IconButton Small" Margin="8,0,0,0"
                                     Click="RemoveOption_Click" Tag="{Binding}">
-								<Path Data="{StaticResource Close}" Fill="{DynamicResource TextSecondary}"
+								<Path Data="{StaticResource CloseIcon}" Fill="{DynamicResource TextSecondary}"
                                       Width="10" Height="10" Stretch="Uniform"/>
 							</Button>
 						</Grid>

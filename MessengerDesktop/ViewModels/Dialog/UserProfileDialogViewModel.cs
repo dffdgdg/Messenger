@@ -110,7 +110,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
         Title = $"Профиль: {value.DisplayName ?? value.Username}";
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void Dispose(bool disposing) 
     {
         if (disposing)
         {

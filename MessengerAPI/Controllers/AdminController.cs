@@ -31,9 +31,6 @@ namespace MessengerAPI.Controllers
 
         [HttpPost("users/{id}/toggle-ban")]
         public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)
-            => await ExecuteAsync(async () =>
-            {
-                await adminService.ToggleBanAsync(id, ct);
-            }, "Статус блокировки изменён");
+            => await ExecuteAsync(async () => await adminService.ToggleBanAsync(id, ct), "Статус блокировки изменён");
     }
 }

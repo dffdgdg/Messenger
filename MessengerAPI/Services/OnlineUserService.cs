@@ -7,7 +7,7 @@ namespace MessengerAPI.Services
         void UserConnected(int userId, string connectionId);
         void UserDisconnected(int userId, string connectionId);
         bool IsUserOnline(int userId);
-        bool IsOnline(int userId); 
+        bool IsOnline(int userId);
         HashSet<int> GetOnlineUserIds();
         HashSet<int> FilterOnlineUserIds(IEnumerable<int> userIds);
         HashSet<int> FilterOnline(IEnumerable<int> userIds);

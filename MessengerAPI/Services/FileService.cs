@@ -16,7 +16,7 @@ namespace MessengerAPI.Services
         bool IsValidImage(IFormFile file);
     }
 
-    public class FileService(MessengerDbContext context,IWebHostEnvironment env,IOptions<MessengerSettings> settings, ILogger<FileService> logger) 
+    public class FileService(MessengerDbContext context,IWebHostEnvironment env,IOptions<MessengerSettings> settings, ILogger<FileService> logger)
         : BaseService<FileService>(context, logger), IFileService
     {
         private readonly MessengerSettings _settings = settings.Value;
@@ -68,7 +68,7 @@ namespace MessengerAPI.Services
 
             if (file.Length > _settings.MaxFileSizeBytes)
                 throw new ArgumentException($"Файл слишком большой. Максимум: {_settings.MaxFileSizeBytes / 1024 / 1024} MB");
-    
+
             var ext = Path.GetExtension(file.FileName) ?? string.Empty;
             var fileName = $"{Guid.NewGuid()}{ext}";
             var relativePath = Path.Combine("uploads", "chats", chatId.ToString(), fileName);

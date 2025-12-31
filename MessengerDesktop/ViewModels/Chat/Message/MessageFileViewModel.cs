@@ -89,10 +89,7 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
 
         try
         {
-            var progress = new Progress<double>(p =>
-            {
-                Dispatcher.UIThread.Post(() => DownloadProgress = p);
-            });
+            var progress = new Progress<double>(p => Dispatcher.UIThread.Post(() => DownloadProgress = p));
 
             var filePath = await downloadService.DownloadFileAsync(
                 Url,

@@ -21,7 +21,7 @@ namespace MessengerAPI.Services
             var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting)
                 .AsNoTracking().ToListAsync(ct);
 
-            var result = users.Select(MapToDto).ToList();
+            var result = users.ConvertAll(MapToDto);
 
             _logger.LogDebug("Получено {Count} пользователей", result.Count);
 
@@ -56,7 +56,7 @@ namespace MessengerAPI.Services
 
             // Проверка уникальности
             var exists = await _context.Users
-                .AnyAsync(u => u.Username.ToLower() == username, ct);
+                .AnyAsync(u => u.Username.Equals(username, StringComparison.CurrentCultureIgnoreCase), ct);
 
             if (exists)
                 throw new ArgumentException("Пользователь с таким логином уже существует");
@@ -111,11 +111,7 @@ namespace MessengerAPI.Services
 
         public async Task ToggleBanAsync(int userId, CancellationToken ct = default)
         {
-            var user = await _context.Users.FindAsync([userId], ct);
-
-            if (user == null)
-                throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
-
+            var user = await _context.Users.FindAsync([userId], ct) ?? throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
             user.IsBanned = !user.IsBanned;
 
             await _context.SaveChangesAsync(ct);

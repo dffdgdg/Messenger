@@ -131,9 +131,6 @@ namespace MessengerDesktop.Views.Chat
             }, DispatcherPriority.Background);
         }
 
-        /// <summary>
-        /// ���������� ��������� � ���������� ���������
-        /// </summary>
         private void OnScrollToMessageRequested(MessageViewModel message)
         {
             if (message == null || _currentVm == null) return;
@@ -157,9 +154,6 @@ namespace MessengerDesktop.Views.Chat
             }, DispatcherPriority.Background);
         }
 
-        /// <summary>
-        /// ������������ � ���������� ���������
-        /// </summary>
         private void ScrollToMessage(MessageViewModel message)
         {
             if (_scrollViewer == null || _currentVm == null || _messagesList == null) return;
@@ -192,19 +186,16 @@ namespace MessengerDesktop.Views.Chat
             {
                 Debug.WriteLine($"[ChatView] Container for index {index} not found, trying manual scroll");
 
-                var approximateItemHeight = 80.0;
+                const double approximateItemHeight = 80.0;
                 var targetOffset = index * approximateItemHeight;
 
                 _scrollViewer.Offset = new Avalonia.Vector(
                     _scrollViewer.Offset.X,
-                    Math.Max(0, targetOffset - _scrollViewer.Viewport.Height / 2)
+                    Math.Max(0, targetOffset - (_scrollViewer.Viewport.Height / 2))
                 );
             }
         }
 
-        /// <summary>
-        /// ������ � ����� � ��������� ���������� ���������
-        /// </summary>
         private void ScrollToEndAfterRender()
         {
             Dispatcher.UIThread.Post(async () =>
@@ -242,14 +233,11 @@ namespace MessengerDesktop.Views.Chat
         {
             if (_scrollViewer == null || DataContext is not ChatViewModel vm) return;
 
-            // ��������� ������ ��� �������� ������� ��������� (debounce)
             _visibilityCheckTimer.Stop();
             _visibilityCheckTimer.Start();
 
-            // �� ��������� ������ ��������� � ������ ������
             if (vm.IsSearchMode) return;
 
-            // �������� ������ ��������� ��� ������� �����
             if (_scrollViewer.Offset.Y < 100 && !vm.IsLoadingOlderMessages && !vm.IsInitialLoading)
             {
                 var previousExtentHeight = _scrollViewer.Extent.Height;
@@ -274,7 +262,6 @@ namespace MessengerDesktop.Views.Chat
                 }, DispatcherPriority.Loaded);
             }
 
-            // �������� ����� ��������� ��� ������� ����
             var distanceFromBottom = _scrollViewer.Extent.Height
                 - _scrollViewer.Viewport.Height
                 - _scrollViewer.Offset.Y;
@@ -284,23 +271,16 @@ namespace MessengerDesktop.Views.Chat
                 await vm.LoadNewerMessagesCommand.ExecuteAsync(null);
             }
 
-            // ��������� ���� IsScrolledToBottom
             var isAtBottom = distanceFromBottom < 50;
             vm.IsScrolledToBottom = isAtBottom;
         }
 
-        /// <summary>
-        /// Tick ������� - ��������� ������� ��������� ��� ������� ������������
-        /// </summary>
         private void OnVisibilityCheckTick(object? sender, EventArgs e)
         {
             _visibilityCheckTimer.Stop();
             CheckVisibleMessages();
         }
 
-        /// <summary>
-        /// ��������� ����� ��������� ����� � �������� �� ��� �����������
-        /// </summary>
         private void CheckVisibleMessages()
         {
             if (_currentVm == null || _scrollViewer == null || _messagesList == null)
@@ -310,14 +290,12 @@ namespace MessengerDesktop.Views.Chat
 
             foreach (var message in _currentVm.Messages)
             {
-                // ���������� ��� ������������, ����������� ��� ���� ���������
                 if (!message.IsUnread || message.SenderId == _currentVm.UserId)
                     continue;
 
                 if (_processedMessageIds.Contains(message.Id))
                     continue;
 
-                // ������� ��������� ���������
                 var index = _currentVm.Messages.IndexOf(message);
                 if (index < 0) continue;
 
@@ -325,7 +303,6 @@ namespace MessengerDesktop.Views.Chat
                 if (container is not Control control)
                     continue;
 
-                // �������� ������� ������������ ScrollViewer
                 var transform = control.TransformToVisual(_scrollViewer);
                 if (transform == null)
                     continue;
@@ -334,7 +311,6 @@ namespace MessengerDesktop.Views.Chat
                 var bottomRight = transform.Value.Transform(new Avalonia.Point(
                     control.Bounds.Width, control.Bounds.Height));
 
-                // ��������� ��������� (���� �� ���������)
                 var isVisible = bottomRight.Y > 0 && topLeft.Y < viewportHeight;
 
                 if (isVisible)

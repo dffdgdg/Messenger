@@ -35,8 +35,6 @@ namespace MessengerAPI.Services
         IOnlineUserService onlineService,IReadReceiptService readReceiptService,IOptions<MessengerSettings> settings,
         ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
     {
-        private readonly MessengerSettings _settings = settings.Value;
-
         #region Access Control Delegation
 
         public Task EnsureUserHasChatAccessAsync(int userId, int chatId)=> accessControl.EnsureIsMemberAsync(userId, chatId);
@@ -195,7 +193,7 @@ namespace MessengerAPI.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            var memberIds = members.Select(m => m.UserId).ToList();
+            var memberIds = members.ConvertAll(m => m.UserId);
             var onlineIds = onlineService.FilterOnline(memberIds);
 
             return [.. members.Select(m => new UserDTO

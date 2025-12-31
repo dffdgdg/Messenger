@@ -10,8 +10,7 @@ namespace MessengerDesktop.Views
 
         private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (sender is Border border &&
-                border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
+            if (sender is Border border && border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
             {
                 user.IsSelected = !user.IsSelected;
                 e.Handled = true;

@@ -66,7 +66,7 @@ public partial class MainMenuViewModel : BaseViewModel
         _globalHub = globalHub;
         _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-        _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager)); 
+        _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _chatsViewModelFactory = chatsViewModelFactory ?? throw new ArgumentNullException(nameof(chatsViewModelFactory));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
@@ -310,7 +310,7 @@ public partial class MainMenuViewModel : BaseViewModel
     {
         pollDto.CreatedById = UserId;
         pollDto.MessageId = 0;
-        
+
         var result = await _apiClient.PostAsync<PollDTO, MessageDTO>("api/poll", pollDto);
         if (result.Success) SuccessMessage = "Опрос создан";
         else ErrorMessage = $"Ошибка создания опроса: {result.Error}";
@@ -342,10 +342,8 @@ public partial class MainMenuViewModel : BaseViewModel
         {
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
             {
-                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName) =>
-                {
-                    return await CreateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupCreated);
-                }
+                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName)
+                => await CreateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupCreated)
             };
 
             await _mainWindowViewModel.ShowDialogAsync(dialog);
@@ -377,10 +375,8 @@ public partial class MainMenuViewModel : BaseViewModel
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
             {
-                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName) =>
-                {
-                    return await UpdateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupUpdated);
-                }
+                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName)
+                => await UpdateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupUpdated)
             };
 
             await _mainWindowViewModel.ShowDialogAsync(dialog);
@@ -530,37 +526,4 @@ public partial class MainMenuViewModel : BaseViewModel
         SelectedMenuIndex = index;
         SetItemCommand.Execute(index);
     }
-
-    private async Task SendDirectMessageAsync(int userId, string message) => await SafeExecuteAsync(async () =>
-    {
-        var chatResult = await _apiClient.PostAsync<ChatDTO, ChatDTO>("api/chats", new ChatDTO
-        {
-            Name = userId.ToString(),
-            Type = ChatType.Contact,
-            CreatedById = UserId
-        });
-        
-        if (!chatResult.Success || chatResult.Data == null)
-        {
-            ErrorMessage = $"Ошибка создания чата: {chatResult.Error}";
-            return;
-        }
-        
-        var messageResult = await _apiClient.PostAsync<MessageDTO, MessageDTO>("api/messages", new MessageDTO
-        {
-            ChatId = chatResult.Data.Id,
-            Content = message,
-            SenderId = UserId
-        });
-        
-        if (messageResult.Success)
-        {
-            await OpenChatAsync(chatResult.Data);
-            SuccessMessage = "Сообщение отправлено";
-        }
-        else
-        {
-            ErrorMessage = $"Ошибка отправки: {messageResult.Error}";
-        }
-    });
 }

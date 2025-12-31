@@ -80,12 +80,16 @@ public partial class PollDialogViewModel : DialogBaseViewModel
     private void OnOptionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.OldItems != null)
+        {
             foreach (OptionItem item in e.OldItems)
                 item.PropertyChanged -= OnOptionPropertyChanged;
+        }
 
         if (e.NewItems != null)
+        {
             foreach (OptionItem item in e.NewItems)
                 item.PropertyChanged += OnOptionPropertyChanged;
+        }
 
         NotifyStateChanged();
     }

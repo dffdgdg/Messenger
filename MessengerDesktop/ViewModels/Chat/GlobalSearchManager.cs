@@ -21,7 +21,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
     [ObservableProperty]
     private bool isSearchMode;
 
-    [ObservableProperty]    
+    [ObservableProperty]
     private int totalMessagesCount;
 
     [ObservableProperty]

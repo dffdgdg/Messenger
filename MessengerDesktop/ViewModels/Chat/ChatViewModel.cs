@@ -176,8 +176,8 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     public ChatViewModel(int chatId,ChatsViewModel parent,IApiClientService apiClient,IAuthManager authManager,IChatInfoPanelStateStore chatInfoPanelStateStore,
-    INotificationService notificationService,IChatNotificationApiService notificationApiService,IGlobalHubConnection globalHub,IFileDownloadService fileDownloadService,  
-    IStorageProvider? storageProvider = null)  
+    INotificationService notificationService,IChatNotificationApiService notificationApiService,IGlobalHubConnection globalHub,IFileDownloadService fileDownloadService,
+    IStorageProvider? storageProvider = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));

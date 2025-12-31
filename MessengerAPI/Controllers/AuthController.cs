@@ -10,7 +10,7 @@ namespace MessengerAPI.Controllers
     {
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Login([FromBody] LoginRequest request) => 
+        public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Login([FromBody] LoginRequest request) =>
             await ExecuteAsync(async () =>
             {
                 ValidateModel();

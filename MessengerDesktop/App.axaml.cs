@@ -5,7 +5,7 @@ using Avalonia.Styling;
 using MessengerDesktop.DependencyInjection;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Auth;  
+using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Storage;
@@ -151,8 +151,7 @@ namespace MessengerDesktop
             }
         }
 
-        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) 
-            => Debug.WriteLine("[App] Shutdown requested");
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) => Debug.WriteLine("[App] Shutdown requested");
 
         private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {

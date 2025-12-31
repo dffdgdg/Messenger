@@ -25,7 +25,7 @@ namespace MessengerAPI.Services
         {
             var entity = await _context.FindAsync<TEntity>([id], ct);
 
-            return entity is null ? throw new KeyNotFoundException($"{typeof(TEntity).Name} с ID {id} не найден") : entity;
+            return (TEntity?)entity ?? throw new KeyNotFoundException($"{typeof(TEntity).Name} с ID {id} не найден");
         }
 
         protected static void EnsureNotNull<TEntity>(TEntity? entity, int id) where TEntity : class
@@ -36,10 +36,10 @@ namespace MessengerAPI.Services
             }
         }
 
-        protected IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize) 
+        protected IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize)
             => query.Skip((page - 1) * pageSize).Take(pageSize);
 
-        protected (int Page, int PageSize) NormalizePagination(int page, int pageSize, int defaultSize = 50, int maxSize = 100) => (
+        protected (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxSize = 100) => (
                 Page: Math.Max(1, page),
                 PageSize: Math.Clamp(pageSize, 1, maxSize)
             );

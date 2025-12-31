@@ -196,9 +196,9 @@ public partial class PollViewModel : BaseViewModel
             UserId = UserId,
             OptionIds = []
         };
-        
+
         var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>("api/poll/vote", voteDto);
-        
+
         if (result is { Success: true, Data: not null })
         {
             ApplyDto(result.Data);

@@ -32,7 +32,7 @@ namespace MessengerAPI.Controllers
 
         #region Success Responses
 
-        protected ActionResult SuccessWithData<TData>(TData data, string? message = null) 
+        protected ActionResult SuccessWithData<TData>(TData data, string? message = null)
             => Ok(new ApiResponse<TData>
             {
                 Success = true,
@@ -41,7 +41,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null) => 
+        protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null) =>
             Ok(new ApiResponse<TData>
             {
                 Success = true,
@@ -50,7 +50,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<object>> Success(string? message = null) 
+        protected ActionResult<ApiResponse<object>> Success(string? message = null)
             => Ok(new ApiResponse<object>
             {
                 Success = true,
@@ -58,7 +58,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<TData>> Created<TData>(TData data, string message = "Ресурс успешно создан") 
+        protected ActionResult<ApiResponse<TData>> Created<TData>(TData data, string message = "Ресурс успешно создан")
             => StatusCode(StatusCodes.Status201Created, new ApiResponse<TData>
             {
                 Success = true,
@@ -70,7 +70,7 @@ namespace MessengerAPI.Controllers
 
         #region Error Responses
 
-        protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null) 
+        protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null)
             => BadRequest(new ApiResponse<TData>
             {
                 Success = false,
@@ -79,7 +79,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult BadRequestMessage(string error, string? details = null) 
+        protected ActionResult BadRequestMessage(string error, string? details = null)
             => BadRequest(new ApiResponse<object>
             {
                 Success = false,
@@ -88,7 +88,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден") 
+        protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден")
             => NotFound(new ApiResponse<TData>
             {
                 Success = false,
@@ -96,7 +96,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ") 
+        protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ")
             => Unauthorized(new ApiResponse<TData>
             {
                 Success = false,
@@ -104,7 +104,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён") 
+        protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
             => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
             {
                 Success = false,
@@ -112,7 +112,7 @@ namespace MessengerAPI.Controllers
                 Timestamp = DateTime.Now
             });
 
-        protected ActionResult Forbidden(string error = "Доступ запрещён") 
+        protected ActionResult Forbidden(string error = "Доступ запрещён")
             => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
             {
                 Success = false,

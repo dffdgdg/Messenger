@@ -59,10 +59,7 @@ namespace MessengerAPI.Controllers
         public async Task<IActionResult> DeleteMessage(int id)
         {
             var currentUserId = GetCurrentUserId();
-            return await ExecuteAsync(async () =>
-            {
-                await messageService.DeleteMessageAsync(id, currentUserId);
-            }, "Сообщение успешно удалено");
+            return await ExecuteAsync(async () => await messageService.DeleteMessageAsync(id, currentUserId), "Сообщение успешно удалено");
         }
 
         [HttpGet("chat/{chatId}")]

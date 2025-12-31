@@ -14,10 +14,9 @@ namespace MessengerDesktop.Views
         private readonly Grid? _mainGrid;
         private bool _isDragging = false;
 
-        // ��������� ��� �������
         private const double COMPACT_WIDTH = 72;
-        private const double ENTER_COMPACT_THRESHOLD = 120;  // ����� ����� � ���������� ����
-        private const double EXIT_COMPACT_THRESHOLD = 160;   // ����� ������ �� ����������� ������
+        private const double ENTER_COMPACT_THRESHOLD = 120;
+        private const double EXIT_COMPACT_THRESHOLD = 160;
         private const double NORMAL_DEFAULT_WIDTH = 280;
         private const double MIN_WIDTH = 72;
         private const double MAX_WIDTH = 400;
@@ -49,7 +48,6 @@ namespace MessengerDesktop.Views
 
                 if (column != null)
                 {
-                    // ������������� ������� ����������� - �� ������ �� �����������!
                     column.MinWidth = MIN_WIDTH;
                     column.MaxWidth = MAX_WIDTH;
 
@@ -104,22 +102,17 @@ namespace MessengerDesktop.Views
             {
                 double currentWidth = column.Width.Value;
 
-                // ��� ���������� �������������� - ��������� � "�����������"
                 if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
                 {
-                    // ����� � ���������� ����� - ����������� �� �������
                     column.Width = new GridLength(COMPACT_WIDTH);
                     IsCompactMode = true;
                 }
                 else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
                 {
-                    // ����� �� ����������� ������
                     IsCompactMode = false;
-                    // ������ ������� ��� ���� ����� ��������������
                 }
                 else if (IsCompactMode && currentWidth < EXIT_COMPACT_THRESHOLD)
                 {
-                    // �� ��� � ���������� ������, �� �� �������� �� ������ - ���������� �� �����
                     column.Width = new GridLength(COMPACT_WIDTH);
                 }
             }
@@ -132,8 +125,6 @@ namespace MessengerDesktop.Views
 
             double currentWidth = column.Width.Value;
 
-            // �� ����� �������������� - ������ ��������� ���������� ����� ��� preview
-            // ����������� "������������" ���������� � DragCompleted
             if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
             {
                 IsCompactMode = true;
@@ -144,31 +135,23 @@ namespace MessengerDesktop.Views
             }
         }
 
-        /// <summary>
-        /// ����������� ������������ ����������� ������ (��� ������)
-        /// </summary>
         public void ToggleCompactMode()
         {
             if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
             {
                 if (IsCompactMode)
                 {
-                    // ����� �� ����������� ������
                     column.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
                     IsCompactMode = false;
                 }
                 else
                 {
-                    // ���� � ���������� �����
                     column.Width = new GridLength(COMPACT_WIDTH);
                     IsCompactMode = true;
                 }
             }
         }
 
-        /// <summary>
-        /// �������� ������ �� ����������� ������
-        /// </summary>
         public void ExpandFromCompact()
         {
             if (IsCompactMode)

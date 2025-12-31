@@ -1,106 +1,106 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Configuration;
-using MessengerAPI.Helpers;
-using MessengerAPI.Model;
-using MessengerShared.DTO.Auth;
-using MessengerShared.Enum;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+﻿    using MessengerAPI.Common;
+    using MessengerAPI.Configuration;
+    using MessengerAPI.Helpers;
+    using MessengerAPI.Model;
+    using MessengerShared.DTO.Auth;
+    using MessengerShared.Enum;
+    using Microsoft.EntityFrameworkCore;
+    using Microsoft.Extensions.Options;
 
-namespace MessengerAPI.Services
-{
-    public interface IAuthService
+    namespace MessengerAPI.Services
     {
-        Task<Result<AuthResponseDTO>> LoginAsync(string username, string password);
-    }
-
-    public class AuthService : BaseService<AuthService>, IAuthService
-    {
-        private readonly ITokenService _tokenService;
-        private readonly MessengerSettings _settings;
-        private readonly string _dummyHash;
-
-        public AuthService(MessengerDbContext context,ITokenService tokenService,IOptions<MessengerSettings> settings,ILogger<AuthService> logger) : base(context, logger)
+        public interface IAuthService
         {
-            _tokenService = tokenService;
-            _settings = settings.Value;
-            _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
+            Task<Result<AuthResponseDTO>> LoginAsync(string username, string password);
         }
 
-        public async Task<Result<AuthResponseDTO>> LoginAsync(string username, string password)
+        public class AuthService : BaseService<AuthService>, IAuthService
         {
-            try
+            private readonly ITokenService _tokenService;
+            private readonly MessengerSettings _settings;
+            private readonly string _dummyHash;
+
+            public AuthService(MessengerDbContext context,ITokenService tokenService,IOptions<MessengerSettings> settings,ILogger<AuthService> logger) : base(context, logger)
             {
-                if (string.IsNullOrWhiteSpace(username))
-                    return Result<AuthResponseDTO>.Failure("Имя пользователя обязательно");
+                _tokenService = tokenService;
+                _settings = settings.Value;
+                _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
+            }
 
-                if (string.IsNullOrWhiteSpace(password))
-                    return Result<AuthResponseDTO>.Failure("Пароль обязателен");
-
-                var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == username.Trim());
-
-                if (user is null)
+            public async Task<Result<AuthResponseDTO>> LoginAsync(string username, string password)
+            {
+                try
                 {
-                    BCrypt.Net.BCrypt.Verify(password, _dummyHash);
-                    return Result<AuthResponseDTO>.Failure("Неверное имя пользователя или пароль");
+                    if (string.IsNullOrWhiteSpace(username))
+                        return Result<AuthResponseDTO>.Failure("Имя пользователя обязательно");
+
+                    if (string.IsNullOrWhiteSpace(password))
+                        return Result<AuthResponseDTO>.Failure("Пароль обязателен");
+
+                    var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == username.Trim());
+
+                    if (user is null)
+                    {
+                        BCrypt.Net.BCrypt.Verify(password, _dummyHash);
+                        return Result<AuthResponseDTO>.Failure("Неверное имя пользователя или пароль");
+                    }
+
+                    if (!VerifyPassword(password, user.PasswordHash))
+                    {
+                        _logger.LogWarning("Неудачная попытка входа: {Username}", username);
+                        return Result<AuthResponseDTO>.Failure("Неверное имя пользователя или пароль");
+                    }
+
+                    var role = await DetermineUserRoleAsync(user);
+                    var token = _tokenService.GenerateToken(user.Id, role);
+
+                    var response = new AuthResponseDTO
+                    {
+                        Id = user.Id,
+                        Username = user.Username,
+                        DisplayName = FormatDisplayName(user),
+                        Token = token,
+                        Role = role
+                    };
+
+                    _logger.LogInformation("Успешный вход: {Username} (роль: {Role})", username, role);
+
+                    return Result<AuthResponseDTO>.Success(response);
                 }
-
-                if (!VerifyPassword(password, user.PasswordHash))
+                catch (Exception ex)
                 {
-                    _logger.LogWarning("Неудачная попытка входа: {Username}", username);
-                    return Result<AuthResponseDTO>.Failure("Неверное имя пользователя или пароль");
+                    _logger.LogError(ex, "Ошибка авторизации: {Username}", username);
+                    return Result<AuthResponseDTO>.Failure("Произошла ошибка при входе в систему");
                 }
+            }
 
-                var role = await DetermineUserRoleAsync(user);
-                var token = _tokenService.GenerateToken(user.Id, role);
+            private async Task<UserRole> DetermineUserRoleAsync(User user)
+            {
+                if (user.DepartmentId == _settings.AdminDepartmentId)
+                    return UserRole.Admin;
 
-                var response = new AuthResponseDTO
+                var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id);
+
+                return isHead ? UserRole.Head : UserRole.User;
+            }
+
+            private static bool VerifyPassword(string password, string hash)
+            {
+                try
                 {
-                    Id = user.Id,
-                    Username = user.Username,
-                    DisplayName = FormatDisplayName(user),
-                    Token = token,
-                    Role = role
-                };
-
-                _logger.LogInformation("Успешный вход: {Username} (роль: {Role})", username, role);
-
-                return Result<AuthResponseDTO>.Success(response);
+                    return BCrypt.Net.BCrypt.Verify(password, hash);
+                }
+                catch
+                {
+                    return false;
+                }
             }
-            catch (Exception ex)
+
+            private static string FormatDisplayName(User user)
             {
-                _logger.LogError(ex, "Ошибка авторизации: {Username}", username);
-                return Result<AuthResponseDTO>.Failure("Произошла ошибка при входе в систему");
+                var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
+
+                return string.Join(" ", parts);
             }
-        }
-
-        private async Task<UserRole> DetermineUserRoleAsync(User user)
-        {
-            if (user.DepartmentId == _settings.AdminDepartmentId) 
-                return UserRole.Admin;
-
-            var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id);
-
-            return isHead ? UserRole.Head : UserRole.User;
-        }
-
-        private static bool VerifyPassword(string password, string hash)
-        {
-            try
-            {
-                return BCrypt.Net.BCrypt.Verify(password, hash);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string FormatDisplayName(User user)
-        {
-            var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
-
-            return string.Join(" ", parts);
         }
     }
-}

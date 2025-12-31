@@ -45,7 +45,7 @@ public class ChatSearchManager(int chatId,int userId,IApiClientService apiClient
             {
                 TotalCount = result.Data.TotalCount;
 
-                var viewModels = result.Data.Messages.Select(msg => new MessageViewModel(msg)).ToList();
+                var viewModels = result.Data.Messages.ConvertAll(msg => new MessageViewModel(msg));
 
                 ProcessSearchResults(result.Data.Messages, viewModels);
 

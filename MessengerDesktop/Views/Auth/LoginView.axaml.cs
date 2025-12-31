@@ -4,7 +4,6 @@ namespace MessengerDesktop.Views
 {
     public partial class LoginView : UserControl
     {
-        public LoginView() 
-            => InitializeComponent();
+        public LoginView() => InitializeComponent();
     }
 }

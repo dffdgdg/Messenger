@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
-using MessengerDesktop.Services.Auth;  
+using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.ViewModels.Dialog;
 using System;
@@ -14,7 +14,7 @@ namespace MessengerDesktop.ViewModels
     {
         private readonly INavigationService _navigation;
         private readonly IDialogService _dialogService;
-        private readonly IAuthManager _authManager;  
+        private readonly IAuthManager _authManager;
 
         [ObservableProperty]
         private BaseViewModel? _currentViewModel;
@@ -28,7 +28,7 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private bool _isDialogVisible;
 
-        public MainWindowViewModel(INavigationService navigation,IDialogService dialogService,IAuthManager authManager)  
+        public MainWindowViewModel(INavigationService navigation,IDialogService dialogService,IAuthManager authManager)
         {
             _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -104,7 +104,7 @@ namespace MessengerDesktop.ViewModels
             {
                 OnPropertyChanged(nameof(CurrentViewModel));
             }
-            
+
             SuccessMessage = "Данные обновлены";
         });
 

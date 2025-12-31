@@ -15,7 +15,7 @@ namespace MessengerDesktop.ViewModels;
 public partial class SettingsViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
-    private readonly ISettingsService _settingsService;  
+    private readonly ISettingsService _settingsService;
     private readonly Timer _autoSaveTimer;
     private readonly int _userId;
     private bool _isSaving;
@@ -32,7 +32,7 @@ public partial class SettingsViewModel : BaseViewModel
     public SettingsViewModel(
         MainMenuViewModel mainMenuViewModel,
         IApiClientService apiClient,
-        ISettingsService settingsService) 
+        ISettingsService settingsService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));

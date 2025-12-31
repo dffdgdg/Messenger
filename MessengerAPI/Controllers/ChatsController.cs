@@ -13,10 +13,7 @@ namespace MessengerAPI.Controllers
             if (!IsCurrentUser(userId))
                 return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-            return await ExecuteAsync(async () =>
-            {
-                return await chatService.GetUserDialogsAsync(userId, Request);
-            }, "Диалоги пользователя получены успешно");
+            return await ExecuteAsync(async () => await chatService.GetUserDialogsAsync(userId, Request), "Диалоги пользователя получены успешно");
         }
 
         [HttpGet("user/{userId}/contact/{contactUserId}")]
@@ -27,10 +24,7 @@ namespace MessengerAPI.Controllers
             if (currentUserId != userId)
                 return Forbidden<ChatDTO?>();
 
-            return await ExecuteAsync(async () =>
-            {
-                return await chatService.GetContactChatAsync(userId, contactUserId, Request);
-            });
+            return await ExecuteAsync(async () => await chatService.GetContactChatAsync(userId, contactUserId, Request));
         }
 
         [HttpGet("user/{userId}/groups")]
@@ -39,10 +33,7 @@ namespace MessengerAPI.Controllers
             if (!IsCurrentUser(userId))
                 return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-            return await ExecuteAsync(async () =>
-            {
-                return await chatService.GetUserGroupsAsync(userId, Request);
-            }, "Групповые чаты пользователя получены успешно");
+            return await ExecuteAsync(async () => await chatService.GetUserGroupsAsync(userId, Request), "Групповые чаты пользователя получены успешно");
         }
 
         [HttpGet("user/{userId}")]
@@ -124,10 +115,7 @@ namespace MessengerAPI.Controllers
         {
             var currentUserId = GetCurrentUserId();
 
-            return await ExecuteAsync(async () =>
-            {
-                await chatService.DeleteChatAsync(id, currentUserId);
-            }, "Чат успешно удалён");
+            return await ExecuteAsync(async () => await chatService.DeleteChatAsync(id, currentUserId), "Чат успешно удалён");
         }
 
         [HttpPost("{id}/avatar")]

@@ -79,9 +79,7 @@ namespace MessengerDesktop.ViewModels
         public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
             System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), @"^[a-zA-Z0-9_]{3,30}$");
 
-        public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername)
-                                       && TempUsername.Trim().Length >= 3
-                                       && IsUsernameValid;
+        public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
 
         public string? UsernameValidationMessage
         {
@@ -319,8 +317,7 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         private async Task UploadAvatar()
         {
-            var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?
-                .MainWindow?.StorageProvider;
+            var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.StorageProvider;
 
             if (storage == null) return;
 
@@ -362,9 +359,10 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         private static async Task Logout()
         {
-            if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-                desktop.MainWindow?.DataContext is MainWindowViewModel main)
+            if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow?.DataContext is MainWindowViewModel main)
+            {
                 await main.Logout();
+            }
         }
         [RelayCommand]
         protected void ClearError() => ErrorMessage = null;

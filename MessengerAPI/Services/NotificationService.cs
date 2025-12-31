@@ -98,7 +98,7 @@ namespace MessengerAPI.Services
 
         private async Task<List<int>> GetUsersToNotifyAsync(int chatId, int excludeUserId) => await context.ChatMembers
             .Where(cm => cm.ChatId == chatId && cm.UserId != excludeUserId).Where(cm => cm.NotificationsEnabled)
-            .Where(cm => cm.User.UserSetting == null || cm.User.UserSetting.NotificationsEnabled == true)
+            .Where(cm => cm.User.UserSetting == null || cm.User.UserSetting.NotificationsEnabled)
             .Select(cm => cm.UserId).ToListAsync();
 
         private async Task<NotificationDTO> BuildNotificationAsync(MessageDTO message, HttpRequest request)

@@ -184,7 +184,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             await using var stream = await _apiClient.GetStreamAsync(fullUrl);
             if (stream == null) return;
 
-            using var memoryStream = new MemoryStream();
+            await using var memoryStream = new MemoryStream();
             await stream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
 

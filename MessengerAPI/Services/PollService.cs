@@ -14,16 +14,13 @@ namespace MessengerAPI.Services
         Task<PollDTO> VoteAsync(PollVoteDTO voteDto);
     }
 
-    public class PollService(MessengerDbContext context,IHubContext<ChatHub> hubContext,ILogger<PollService> logger) 
+    public class PollService(MessengerDbContext context,IHubContext<ChatHub> hubContext,ILogger<PollService> logger)
         : BaseService<PollService>(context, logger), IPollService
     {
         public async Task<PollDTO?> GetPollAsync(int pollId, int userId)
         {
-            var poll = await _context.Polls
-                .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-                .Include(p => p.Message)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == pollId);
+            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message)
+                .AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
 
             return poll?.ToDto(userId);
         }

@@ -28,10 +28,10 @@ namespace MessengerDesktop.Views
 
             _platformService = App.Current.Services.GetRequiredService<IPlatformService>();
             _dialogService = App.Current.Services.GetRequiredService<IDialogService>();
-            _notificationService = App.Current.Services.GetRequiredService<INotificationService>(); 
+            _notificationService = App.Current.Services.GetRequiredService<INotificationService>();
 
             _platformService.Initialize(this);
-            _notificationService.Initialize(this); 
+            _notificationService.Initialize(this);
 
             _dialogService.OnDialogAnimationRequested += OnDialogAnimationRequested;
         }
@@ -139,7 +139,7 @@ namespace MessengerDesktop.Views
             }
 
             _platformService.Cleanup();
-            _notificationService.Dispose(); 
+            _notificationService.Dispose();
 
             base.OnClosed(e);
         }

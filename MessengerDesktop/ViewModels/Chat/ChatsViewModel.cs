@@ -285,7 +285,7 @@ public partial class ChatsViewModel : BaseViewModel, IDisposable
             OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
     }
 
-    public bool CombinedIsInfoPanelVisible => CurrentChatViewModel != null && CurrentChatViewModel.IsInfoPanelOpen;
+    public bool CombinedIsInfoPanelVisible => CurrentChatViewModel?.IsInfoPanelOpen == true;
 
     public async Task OpenOrCreateDialogWithUserAsync(UserDTO user)
     {

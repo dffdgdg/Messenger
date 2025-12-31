@@ -80,7 +80,7 @@ namespace MessengerDesktop.Services.Platform
                     return null;
                 }
 
-                return await ClipboardExtensions.TryGetTextAsync(clipboard);
+                return await clipboard.TryGetTextAsync();
             }
             catch (Exception ex)
             {

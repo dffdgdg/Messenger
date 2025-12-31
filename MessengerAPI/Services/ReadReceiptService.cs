@@ -11,8 +11,6 @@ namespace MessengerAPI.Services
         Task<AllUnreadCountsDTO> GetAllUnreadCountsAsync(int userId);
         Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(int userId, IEnumerable<int> chatIds);
         Task MarkAllAsReadAsync(int userId, int chatId);
-
-        // Новые методы
         Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId);
         Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId);
     }
@@ -68,8 +66,7 @@ namespace MessengerAPI.Services
             if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
             {
                 // Проверяем что сообщение существует
-                var messageExists = await context.Messages
-                    .AnyAsync(m => m.Id == messageId && m.ChatId == chatId && m.IsDeleted != true);
+                var messageExists = await context.Messages.AnyAsync(m => m.Id == messageId && m.ChatId == chatId && m.IsDeleted != true);
 
                 if (messageExists)
                 {
@@ -92,8 +89,7 @@ namespace MessengerAPI.Services
         /// </summary>
         public async Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers
-                .AsNoTracking()
+            var member = await context.ChatMembers.AsNoTracking()
                 .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
             if (member == null)
@@ -161,7 +157,7 @@ namespace MessengerAPI.Services
                 return new AllUnreadCountsDTO { Chats = [], TotalUnread = 0 };
             }
 
-            var chatIds = memberData.Select(m => m.ChatId).ToList();
+            var chatIds = memberData.ConvertAll(m => m.ChatId);
 
             var unreadData = await context.Messages
                 .Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && m.SenderId != userId)

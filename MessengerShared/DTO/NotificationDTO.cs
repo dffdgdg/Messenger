@@ -7,7 +7,7 @@
     }
     public class NotificationDTO
     {
-        public string Type { get; set; } = "message"; 
+        public string Type { get; set; } = "message";
         public int ChatId { get; set; }
         public string? ChatName { get; set; }
         public string? ChatAvatar { get; set; }

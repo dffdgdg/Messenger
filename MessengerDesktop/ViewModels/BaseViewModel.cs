@@ -82,7 +82,7 @@ namespace MessengerDesktop.ViewModels
             if (string.IsNullOrEmpty(url)) return null;
             if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
 
-            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}"; 
+            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
         }
 
         [RelayCommand]

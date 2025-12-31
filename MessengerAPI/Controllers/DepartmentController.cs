@@ -12,11 +12,11 @@ namespace MessengerAPI.Controllers
         : BaseController<DepartmentController>(logger)
     {
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<DepartmentDTO>>>> GetDepartments() 
+        public async Task<ActionResult<ApiResponse<List<DepartmentDTO>>>> GetDepartments()
             => await ExecuteAsync(() => departmentService.GetDepartmentsAsync(), "Список отделов получен");
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<DepartmentDTO>>> GetDepartment(int id) 
+        public async Task<ActionResult<ApiResponse<DepartmentDTO>>> GetDepartment(int id)
             => await ExecuteAsync(async () =>
             {
                 var department = await departmentService.GetDepartmentAsync(id);
@@ -25,11 +25,11 @@ namespace MessengerAPI.Controllers
 
         [HttpPost]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<ActionResult<ApiResponse<DepartmentDTO>>> CreateDepartment([FromBody] DepartmentDTO dto) 
-            => await ExecuteAsync(async () => 
-            { 
+        public async Task<ActionResult<ApiResponse<DepartmentDTO>>> CreateDepartment([FromBody] DepartmentDTO dto)
+            => await ExecuteAsync(async () =>
+            {
                 ValidateModel();
-                return await departmentService.CreateDepartmentAsync(dto); 
+                return await departmentService.CreateDepartmentAsync(dto);
             }, "Отдел успешно создан");
 
         /// <summary>
@@ -37,19 +37,19 @@ namespace MessengerAPI.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDTO dto) 
-            => await ExecuteAsync(async () => 
+        public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDTO dto)
+            => await ExecuteAsync(async () =>
             {
                 ValidateModel(); await departmentService.UpdateDepartmentAsync(id, dto);
             }, "Отдел успешно обновлён");
 
         [HttpDelete("{id}")]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> DeleteDepartment(int id) 
+        public async Task<IActionResult> DeleteDepartment(int id)
             => await ExecuteAsync( () => departmentService.DeleteDepartmentAsync(id), "Отдел успешно удалён");
 
         [HttpGet("{id}/members")]
-        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetDepartmentMembers(int id) 
+        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetDepartmentMembers(int id)
             => await ExecuteAsync(() => departmentService.GetDepartmentMembersAsync(id),"Список сотрудников получен");
 
         /// <summary>

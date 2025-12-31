@@ -107,11 +107,10 @@ namespace MessengerAPI.Services
 
         #region Get Messages Methods
 
-        public async Task<PagedMessagesDTO> GetChatMessagesAsync(
-            int chatId, int? userId, int page, int pageSize, HttpRequest request)
+        public async Task<PagedMessagesDTO> GetChatMessagesAsync(int chatId, int? userId, int page, int pageSize, HttpRequest request)
         {
             var (normalizedPage, normalizedPageSize) = NormalizePagination(
-                page, pageSize, _settings.DefaultPageSize, _settings.MaxPageSize);
+                page, _settings.DefaultPageSize, _settings.MaxPageSize);
 
             var query = _context.Messages
                 .Where(m => m.ChatId == chatId && m.IsDeleted != true)
@@ -321,7 +320,7 @@ namespace MessengerAPI.Services
                 };
             }
 
-            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, 20, _settings.MaxPageSize);
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, 20, _settings.MaxPageSize);
             var escapedQuery = EscapeLikePattern(query);
 
             var baseQuery = _context.Messages
@@ -342,7 +341,7 @@ namespace MessengerAPI.Services
                 Messages = [.. messages.Select(m => m.ToDto(userId, request)).Reverse()],
                 TotalCount = totalCount,
                 CurrentPage = normalizedPage,
-                HasMoreMessages = totalCount > (normalizedPage - 1) * normalizedPageSize + normalizedPageSize
+                HasMoreMessages = totalCount > ((normalizedPage - 1) * normalizedPageSize) + normalizedPageSize
             };
         }
 
@@ -359,7 +358,7 @@ namespace MessengerAPI.Services
                 };
             }
 
-            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, 20, 50);
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, 20, 50);
             var escapedQuery = EscapeLikePattern(query);
 
             var userChatIds = await _context.ChatMembers
@@ -467,10 +466,10 @@ namespace MessengerAPI.Services
             var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId, request);
 
             var result = messages
-                .Select(m => CreateGlobalSearchMessageDto(m, query, dialogPartners, request))
-                .ToList();
+                .ConvertAll(m => CreateGlobalSearchMessageDto(m, query, dialogPartners, request))
+;
 
-            return (result, totalCount, totalCount > (page - 1) * pageSize + pageSize);
+            return (result, totalCount, totalCount > ((page - 1) * pageSize) + pageSize);
         }
 
         private async Task<Dictionary<int, (string Name, string? Avatar)>> GetDialogPartnersAsync(

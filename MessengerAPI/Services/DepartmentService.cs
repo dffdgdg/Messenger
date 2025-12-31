@@ -23,7 +23,7 @@ namespace MessengerAPI.Services
         Task<bool> CanManageDepartmentAsync(int userId, int departmentId);
     }
 
-    public class DepartmentService(MessengerDbContext context,IOptions<MessengerSettings> settings,ILogger<DepartmentService> logger) 
+    public class DepartmentService(MessengerDbContext context,IOptions<MessengerSettings> settings,ILogger<DepartmentService> logger)
         : BaseService<DepartmentService>(context, logger), IDepartmentService
     {
         private readonly MessengerSettings _settings = settings.Value;

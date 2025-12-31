@@ -9,29 +9,21 @@ public class CircularProgress : Control
 {
     private double _animationAngle;
 
-    public static readonly StyledProperty<double> ValueProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Value));
+    public static readonly StyledProperty<double> ValueProperty = AvaloniaProperty.Register<CircularProgress, double>(nameof(Value));
 
-    public static readonly StyledProperty<double> MaximumProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Maximum), 100);
+    public static readonly StyledProperty<double> MaximumProperty = AvaloniaProperty.Register<CircularProgress, double>(nameof(Maximum), 100);
 
-    public static readonly StyledProperty<double> MinimumProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Minimum));
+    public static readonly StyledProperty<double> MinimumProperty = AvaloniaProperty.Register<CircularProgress, double>(nameof(Minimum));
 
-    public static readonly StyledProperty<double> StrokeWidthProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(StrokeWidth), 4);
+    public static readonly StyledProperty<double> StrokeWidthProperty = AvaloniaProperty.Register<CircularProgress, double>(nameof(StrokeWidth), 4);
 
-    public static readonly StyledProperty<double> SizeProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Size), 32);
+    public static readonly StyledProperty<double> SizeProperty = AvaloniaProperty.Register<CircularProgress, double>(nameof(Size), 32);
 
-    public static readonly StyledProperty<IBrush?> ForegroundProperty =
-        AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(Foreground), Brushes.DodgerBlue);
+    public static readonly StyledProperty<IBrush?> ForegroundProperty = AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(Foreground), Brushes.DodgerBlue);
 
-    public static readonly StyledProperty<IBrush?> BackgroundTrackProperty =
-        AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(BackgroundTrack));
+    public static readonly StyledProperty<IBrush?> BackgroundTrackProperty = AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(BackgroundTrack));
 
-    public static readonly StyledProperty<bool> IsIndeterminateProperty =
-        AvaloniaProperty.Register<CircularProgress, bool>(nameof(IsIndeterminate));
+    public static readonly StyledProperty<bool> IsIndeterminateProperty = AvaloniaProperty.Register<CircularProgress, bool>(nameof(IsIndeterminate));
 
     public double Value
     {
@@ -148,7 +140,7 @@ public class CircularProgress : Control
             _animationAngle = (_animationAngle + 6) % 360;
             InvalidateVisual();
             return true;
-        },TimeSpan.FromMilliseconds(16)); // ~60 FPS
+        },TimeSpan.FromMilliseconds(16));
     }
 
     private void StopAnimation()
@@ -208,7 +200,7 @@ public class CircularProgress : Control
     private void DrawIndeterminateArc(DrawingContext context, Point center, double radius, Pen pen)
     {
         var startAngle = _animationAngle - 90;
-        var sweepAngle = 90.0;
+        const double sweepAngle = 90.0;
 
         DrawArc(context, center, radius, startAngle, sweepAngle, pen);
     }
@@ -224,9 +216,9 @@ public class CircularProgress : Control
         var startRad = startAngle * Math.PI / 180;
         var endRad = (startAngle + sweepAngle) * Math.PI / 180;
 
-        var startPoint = new Point(center.X + radius * Math.Cos(startRad),center.Y + radius * Math.Sin(startRad));
+        var startPoint = new Point(center.X + (radius * Math.Cos(startRad)), center.Y + (radius * Math.Sin(startRad)));
 
-        var endPoint = new Point(center.X + radius * Math.Cos(endRad), center.Y + radius * Math.Sin(endRad));
+        var endPoint = new Point(center.X + (radius * Math.Cos(endRad)), center.Y + (radius * Math.Sin(endRad)));
 
         var isLargeArc = sweepAngle > 180;
 

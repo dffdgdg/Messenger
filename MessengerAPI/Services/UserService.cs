@@ -17,7 +17,7 @@ namespace MessengerAPI.Services
         Task ChangeUsernameAsync(int id, ChangeUsernameDTO dto);
         Task ChangePasswordAsync(int id, ChangePasswordDTO dto);
     }
-    public class UserService(MessengerDbContext context,IFileService fileService,IOnlineUserService onlineService, ILogger<UserService> logger) 
+    public class UserService(MessengerDbContext context,IFileService fileService,IOnlineUserService onlineService, ILogger<UserService> logger)
         : BaseService<UserService>(context, logger), IUserService
     {
         public async Task<List<UserDTO>> GetAllUsersAsync(HttpRequest? request = null)
@@ -33,8 +33,7 @@ namespace MessengerAPI.Services
         {
             var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.Department).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
 
-            if (user == null)
-                return null;
+            if (user == null) return null;
 
             return user.ToDto(request, onlineService.IsOnline(id));
         }

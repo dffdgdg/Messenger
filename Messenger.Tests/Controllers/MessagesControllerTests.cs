@@ -20,9 +20,7 @@ public class MessagesControllerTests
     public async Task GetChatMessages_ReturnsUnauthorized_WhenNoAccess()
     {
         // Arrange
-        _chatServiceMock
-            .Setup(s => s.EnsureUserHasChatAccessAsync(1, 1))
-            .ThrowsAsync(new UnauthorizedAccessException("Нет доступа"));
+        _chatServiceMock.Setup(s => s.EnsureUserHasChatAccessAsync(1, 1)).ThrowsAsync(new UnauthorizedAccessException("Нет доступа"));
 
         // Act
         var result = await _controller.GetChatMessages(chatId: 1);

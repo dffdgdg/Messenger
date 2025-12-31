@@ -36,12 +36,9 @@ namespace MessengerAPI.Services
             }
         }
 
-        protected IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize)
-            => query.Skip((page - 1) * pageSize).Take(pageSize);
+        protected IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize) => query.Skip((page - 1) * pageSize).Take(pageSize);
 
-        protected (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxSize = 100) => (
-                Page: Math.Max(1, page),
-                PageSize: Math.Clamp(pageSize, 1, maxSize)
-            );
+        protected (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxSize = 100) =>
+            (Page: Math.Max(1, page), PageSize: Math.Clamp(pageSize, 1, maxSize));
     }
 }

@@ -511,7 +511,7 @@ namespace MessengerAPI.Services
                 Content = message.Content,
                 CreatedAt = message.CreatedAt,
                 HighlightedContent = CreateHighlightedContent(message.Content, searchTerm),
-                HasFiles = message.MessageFiles?.Any() ?? false
+                HasFiles = message.MessageFiles?.Count > 0
             };
 
             if (message.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(message.ChatId, out var partner))

@@ -75,7 +75,7 @@ public partial class PollViewModel : BaseViewModel
         {
             new MenuItem
             {
-                Header = "�������� �����",
+                Header = "Отменить голос",
                 Command = CancelVoteCommand,
                 IsEnabled = hasVotes
             }
@@ -142,7 +142,7 @@ public partial class PollViewModel : BaseViewModel
 
     private void UpdateContextMenuState(bool hasVotes)
     {
-        if (PollContextMenu.Items.FirstOrDefault() is MenuItem cancelItem)
+        if (PollContextMenu.Items.Count > 0 && PollContextMenu.Items[0] is MenuItem cancelItem)
         {
             cancelItem.IsEnabled = hasVotes;
         }

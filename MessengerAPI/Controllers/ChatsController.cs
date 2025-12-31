@@ -10,8 +10,7 @@ namespace MessengerAPI.Controllers
         [HttpGet("user/{userId}/dialogs")]
         public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserDialogs(int userId)
         {
-            if (!IsCurrentUser(userId))
-                return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            if (!IsCurrentUser(userId)) return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
             return await ExecuteAsync(async () => await chatService.GetUserDialogsAsync(userId, Request), "Диалоги пользователя получены успешно");
         }
@@ -21,8 +20,7 @@ namespace MessengerAPI.Controllers
         {
             var currentUserId = GetCurrentUserId();
 
-            if (currentUserId != userId)
-                return Forbidden<ChatDTO?>();
+            if (currentUserId != userId) return Forbidden<ChatDTO?>();
 
             return await ExecuteAsync(async () => await chatService.GetContactChatAsync(userId, contactUserId, Request));
         }
@@ -30,8 +28,7 @@ namespace MessengerAPI.Controllers
         [HttpGet("user/{userId}/groups")]
         public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserGroups(int userId)
         {
-            if (!IsCurrentUser(userId))
-                return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            if (!IsCurrentUser(userId)) return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
             return await ExecuteAsync(async () => await chatService.GetUserGroupsAsync(userId, Request), "Групповые чаты пользователя получены успешно");
         }
@@ -39,14 +36,9 @@ namespace MessengerAPI.Controllers
         [HttpGet("user/{userId}")]
         public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserChats(int userId)
         {
-            if (!IsCurrentUser(userId))
-                return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            if (!IsCurrentUser(userId)) return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-            return await ExecuteAsync(async () =>
-            {
-                var chats = await chatService.GetUserChatsAsync(userId, Request);
-                return chats;
-            }, "Чаты пользователя получены успешно");
+            return await ExecuteAsync(async () => await chatService.GetUserChatsAsync(userId, Request), "Чаты пользователя получены успешно");
         }
 
         [HttpGet("{chatId}")]
@@ -71,8 +63,8 @@ namespace MessengerAPI.Controllers
             return await ExecuteAsync(async () =>
             {
                 await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                var members = await chatService.GetChatMembersAsync(chatId, Request);
-                return members;
+
+                return await chatService.GetChatMembersAsync(chatId, Request);
             }, "Участники чата получены успешно");
         }
 
@@ -85,11 +77,9 @@ namespace MessengerAPI.Controllers
             {
                 ValidateModel();
 
-                if (chatDto.CreatedById != currentUserId)
-                    throw new UnauthorizedAccessException("Нельзя создать чат от имени другого пользователя");
+                if (chatDto.CreatedById != currentUserId) throw new UnauthorizedAccessException("Нельзя создать чат от имени другого пользователя");
 
-                var chat = await chatService.CreateChatAsync(chatDto);
-                return chat;
+                return await chatService.CreateChatAsync(chatDto);
             }, "Чат успешно создан");
         }
 
@@ -102,11 +92,9 @@ namespace MessengerAPI.Controllers
             {
                 ValidateModel();
 
-                if (id != updateDto.Id)
-                    throw new ArgumentException("Несоответствие ID чата");
+                if (id != updateDto.Id) throw new ArgumentException("Несоответствие ID чата");
 
-                var chat = await chatService.UpdateChatAsync(id, currentUserId, updateDto, Request);
-                return chat;
+                return await chatService.UpdateChatAsync(id, currentUserId, updateDto, Request);
             }, "Чат успешно обновлён");
         }
 
@@ -125,8 +113,7 @@ namespace MessengerAPI.Controllers
 
             return await ExecuteAsync(async () =>
             {
-                if (file == null || file.Length == 0)
-                    throw new ArgumentException("Файл не предоставлен");
+                if (file == null || file.Length == 0) throw new ArgumentException("Файл не предоставлен");
 
                 await chatService.EnsureUserIsChatAdminAsync(currentUserId, id);
 

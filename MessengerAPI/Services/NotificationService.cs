@@ -50,9 +50,7 @@ namespace MessengerAPI.Services
 
         public async Task<ChatNotificationSettingsDTO?> GetChatSettingsAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
             if (member == null)
                 return null;
@@ -114,7 +112,7 @@ namespace MessengerAPI.Services
                 ChatName = chat?.Type == ChatType.Contact ? message.SenderName : chat?.Name,
                 ChatAvatar = chat?.Type == ChatType.Contact
                     ? message.SenderAvatarUrl
-                    : ModelExtensions.BuildFullUrl(chat?.Avatar, request),
+                    : (chat?.Avatar).BuildFullUrl(request),
                 MessageId = message.Id,
                 SenderId = message.SenderId,
                 SenderName = message.SenderName,

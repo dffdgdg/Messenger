@@ -23,8 +23,7 @@ namespace MessengerAPI.Model
         {
             get
             {
-                var parts = new[] { Surname, Name, Midname }
-                    .Where(s => !string.IsNullOrWhiteSpace(s));
+                var parts = new[] { Surname, Name, Midname }.Where(s => !string.IsNullOrWhiteSpace(s));
                 return parts.Any() ? string.Join(" ", parts) : null;
             }
         }

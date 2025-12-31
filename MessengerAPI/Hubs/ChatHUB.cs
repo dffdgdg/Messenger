@@ -32,10 +32,7 @@ namespace MessengerAPI.Hubs
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-                var chatIds = await context.ChatMembers
-                    .Where(cm => cm.UserId == userId.Value)
-                    .Select(cm => cm.ChatId)
-                    .ToListAsync();
+                var chatIds = await context.ChatMembers.Where(cm => cm.UserId == userId.Value).Select(cm => cm.ChatId).ToListAsync();
 
                 foreach (var chatId in chatIds)
                 {
@@ -44,8 +41,7 @@ namespace MessengerAPI.Hubs
 
                 await Clients.Others.SendAsync("UserOnline", userId.Value);
 
-                _logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
-                    userId.Value, chatIds.Count);
+                _logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
             }
 
             await base.OnConnectedAsync();
@@ -91,21 +87,16 @@ namespace MessengerAPI.Hubs
         {
             var userId = GetCurrentUserId();
 
-            if (!userId.HasValue)
-            {
-                throw new UnauthorizedAccessException("User not authenticated");
-            }
+            if (!userId.HasValue) throw new UnauthorizedAccessException("User not authenticated");
 
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-            var isMember = await context.ChatMembers
-                .AnyAsync(cm => cm.UserId == userId.Value && cm.ChatId == chatId);
+            var isMember = await context.ChatMembers.AnyAsync(cm => cm.UserId == userId.Value && cm.ChatId == chatId);
 
             if (!isMember)
             {
-                _logger.LogWarning("Попытка присоединиться к чату без доступа: UserId={UserId}, ChatId={ChatId}",
-                    userId.Value, chatId);
+                _logger.LogWarning("Попытка присоединиться к чату без доступа: UserId={UserId}, ChatId={ChatId}", userId.Value, chatId);
                 throw new UnauthorizedAccessException($"User {userId.Value} is not a member of chat {chatId}");
             }
 
@@ -139,8 +130,7 @@ namespace MessengerAPI.Hubs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка GetReadInfo для user={UserId}, chat={ChatId}",
-                    userId.Value, chatId);
+                _logger.LogError(ex, "Ошибка GetReadInfo для user={UserId}, chat={ChatId}", userId.Value, chatId);
                 return null;
             }
         }
@@ -175,21 +165,13 @@ namespace MessengerAPI.Hubs
                 await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
 
                 // Уведомляем других участников чата о прочтении
-                await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
-                    "MessageRead",
-                    chatId,
-                    userId.Value,
-                    result.LastReadMessageId,
-                    result.LastReadAt);
+                await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value, result.LastReadMessageId, result.LastReadAt);
 
-                _logger.LogDebug(
-                    "Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
-                    userId.Value, chatId, result.UnreadCount);
+                _logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}", userId.Value, chatId, result.UnreadCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка MarkAsRead для пользователя {UserId} в чате {ChatId}",
-                    userId.Value, chatId);
+                _logger.LogError(ex, "Ошибка MarkAsRead для пользователя {UserId} в чате {ChatId}", userId.Value, chatId);
             }
         }
 
@@ -212,21 +194,13 @@ namespace MessengerAPI.Hubs
                 await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
 
                 // Уведомляем других участников чата о прочтении
-                await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
-                    "MessageRead",
-                    chatId,
-                    userId.Value,
-                    result.LastReadMessageId,
-                    result.LastReadAt);
+                await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead",chatId,userId.Value,result.LastReadMessageId,result.LastReadAt);
 
-                _logger.LogDebug(
-                    "Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-                    userId.Value, messageId, chatId);
+                _logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",userId.Value, messageId, chatId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка MarkMessageAsRead для user={UserId}, chat={ChatId}, msg={MessageId}",
-                    userId.Value, chatId, messageId);
+                _logger.LogError(ex, "Ошибка MarkMessageAsRead для user={UserId}, chat={ChatId}, msg={MessageId}", userId.Value, chatId, messageId);
             }
         }
 
@@ -236,8 +210,7 @@ namespace MessengerAPI.Hubs
         public async Task<AllUnreadCountsDTO> GetUnreadCounts()
         {
             var userId = GetCurrentUserId();
-            if (!userId.HasValue)
-                return new AllUnreadCountsDTO { Chats = [], TotalUnread = 0 };
+            if (!userId.HasValue) return new AllUnreadCountsDTO { Chats = [], TotalUnread = 0 };
 
             try
             {
@@ -261,8 +234,7 @@ namespace MessengerAPI.Hubs
             var userId = GetCurrentUserId();
             if (userId.HasValue)
             {
-                await Clients.OthersInGroup($"chat_{chatId}")
-                    .SendAsync("UserTyping", chatId, userId.Value);
+                await Clients.OthersInGroup($"chat_{chatId}").SendAsync("UserTyping", chatId, userId.Value);
             }
         }
 
@@ -271,10 +243,7 @@ namespace MessengerAPI.Hubs
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-            var memberIds = await context.ChatMembers
-                .Where(cm => cm.ChatId == chatId)
-                .Select(cm => cm.UserId)
-                .ToListAsync();
+            var memberIds = await context.ChatMembers.Where(cm => cm.ChatId == chatId).Select(cm => cm.UserId).ToListAsync();
 
             var onlineMembers = _onlineUserService.FilterOnlineUserIds(memberIds);
             return [.. onlineMembers];

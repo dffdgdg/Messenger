@@ -9,38 +9,27 @@ public partial class AvatarControl : UserControl
 {
     #region Styled Properties
 
-    public static readonly StyledProperty<double> SizeProperty =
-        AvaloniaProperty.Register<AvatarControl, double>(nameof(Size), 40);
+    public static readonly StyledProperty<double> SizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(Size), 40);
 
-    public new static readonly StyledProperty<double> FontSizeProperty =
-        AvaloniaProperty.Register<AvatarControl, double>(nameof(FontSize), 14);
+    public new static readonly StyledProperty<double> FontSizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(FontSize), 14);
 
-    public static readonly StyledProperty<double> IconSizeProperty =
-        AvaloniaProperty.Register<AvatarControl, double>(nameof(IconSize), 18);
+    public static readonly StyledProperty<double> IconSizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(IconSize), 18);
 
-    public static readonly StyledProperty<string?> SourceProperty =
-        AvaloniaProperty.Register<AvatarControl, string?>(nameof(Source));
+    public static readonly StyledProperty<string?> SourceProperty = AvaloniaProperty.Register<AvatarControl, string?>(nameof(Source));
 
-    public static readonly StyledProperty<string?> DisplayNameProperty =
-        AvaloniaProperty.Register<AvatarControl, string?>(nameof(DisplayName));
+    public static readonly StyledProperty<string?> DisplayNameProperty = AvaloniaProperty.Register<AvatarControl, string?>(nameof(DisplayName));
 
-    public static readonly StyledProperty<bool> IsOnlineProperty =
-        AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsOnline));
+    public static readonly StyledProperty<bool> IsOnlineProperty = AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsOnline));
 
-    public static readonly StyledProperty<bool> ShowOnlineIndicatorProperty =
-        AvaloniaProperty.Register<AvatarControl, bool>(nameof(ShowOnlineIndicator), true);
+    public static readonly StyledProperty<bool> ShowOnlineIndicatorProperty = AvaloniaProperty.Register<AvatarControl, bool>(nameof(ShowOnlineIndicator), true);
 
-    public static readonly StyledProperty<Geometry?> FallbackIconProperty =
-        AvaloniaProperty.Register<AvatarControl, Geometry?>(nameof(FallbackIcon));
+    public static readonly StyledProperty<Geometry?> FallbackIconProperty = AvaloniaProperty.Register<AvatarControl, Geometry?>(nameof(FallbackIcon));
 
-    public static readonly StyledProperty<IBrush?> PlaceholderBackgroundProperty =
-        AvaloniaProperty.Register<AvatarControl, IBrush?>(nameof(PlaceholderBackground));
+    public static readonly StyledProperty<IBrush?> PlaceholderBackgroundProperty = AvaloniaProperty.Register<AvatarControl, IBrush?>(nameof(PlaceholderBackground));
 
-    public static readonly StyledProperty<IBrush?> PlaceholderForegroundProperty =
-        AvaloniaProperty.Register<AvatarControl, IBrush?>(nameof(PlaceholderForeground));
+    public static readonly StyledProperty<IBrush?> PlaceholderForegroundProperty = AvaloniaProperty.Register<AvatarControl, IBrush?>(nameof(PlaceholderForeground));
 
-    public static readonly StyledProperty<bool> IsCircularProperty =
-        AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsCircular), true);
+    public static readonly StyledProperty<bool> IsCircularProperty = AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsCircular), true);
 
     #endregion
 
@@ -48,51 +37,35 @@ public partial class AvatarControl : UserControl
 
     private string? _imageSource;
     public static readonly DirectProperty<AvatarControl, string?> ImageSourceProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, string?>(
-            nameof(ImageSource),
-            o => o.ImageSource);
+        AvaloniaProperty.RegisterDirect<AvatarControl, string?>(nameof(ImageSource),o => o.ImageSource);
 
     private bool _hasImage;
     public static readonly DirectProperty<AvatarControl, bool> HasImageProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-            nameof(HasImage),
-            o => o.HasImage);
+        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(HasImage), o => o.HasImage);
 
     private bool _showInitials;
     public static readonly DirectProperty<AvatarControl, bool> ShowInitialsProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-            nameof(ShowInitials),
-            o => o.ShowInitials);
+        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowInitials),o => o.ShowInitials);
 
     private bool _showIcon;
     public static readonly DirectProperty<AvatarControl, bool> ShowIconProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-            nameof(ShowIcon),
-            o => o.ShowIcon);
+        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowIcon),o => o.ShowIcon);
 
     private string _initials = "?";
     public static readonly DirectProperty<AvatarControl, string> InitialsProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, string>(
-            nameof(Initials),
-            o => o.Initials);
+        AvaloniaProperty.RegisterDirect<AvatarControl, string>(nameof(Initials),o => o.Initials);
 
     private Geometry? _iconData;
     public static readonly DirectProperty<AvatarControl, Geometry?> IconDataProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>(
-            nameof(IconData),
-            o => o.IconData);
+        AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>(nameof(IconData),o => o.IconData);
 
     private double _onlineIndicatorSize = 10;
     public static readonly DirectProperty<AvatarControl, double> OnlineIndicatorSizeProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, double>(
-            nameof(OnlineIndicatorSize),
-            o => o.OnlineIndicatorSize);
+        AvaloniaProperty.RegisterDirect<AvatarControl, double>(nameof(OnlineIndicatorSize),o => o.OnlineIndicatorSize);
 
     private bool _showOnlineStatus;
     public static readonly DirectProperty<AvatarControl, bool> ShowOnlineStatusProperty =
-        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-            nameof(ShowOnlineStatus),
-            o => o.ShowOnlineStatus);
+        AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowOnlineStatus),o => o.ShowOnlineStatus);
 
     #endregion
 
@@ -228,7 +201,6 @@ public partial class AvatarControl : UserControl
     {
         base.OnAttachedToVisualTree(e);
 
-        // ������������� ��������� ����� �� ��������
         PlaceholderBackground ??= this.FindResource("AccentLight") as IBrush
                                    ?? new SolidColorBrush(Color.Parse("#5B5FC7"));
         PlaceholderForeground ??= this.FindResource("AccentForeground") as IBrush
@@ -256,16 +228,12 @@ public partial class AvatarControl : UserControl
         Initials = GetInitials(DisplayName);
         IconData = FallbackIcon ?? GetDefaultIcon();
 
-        // ������ ����������� ������������
         var hasFallbackIcon = FallbackIcon != null;
         ShowInitials = !HasImage && !string.IsNullOrEmpty(DisplayName) && !hasFallbackIcon;
         ShowIcon = !HasImage && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);
     }
 
-    private void UpdateOnlineStatus()
-    {
-        ShowOnlineStatus = IsOnline && ShowOnlineIndicator;
-    }
+    private void UpdateOnlineStatus() => ShowOnlineStatus = IsOnline && ShowOnlineIndicator;
 
     private void OnSizeChanged()
     {
@@ -284,11 +252,7 @@ public partial class AvatarControl : UserControl
     private void UpdateCornerRadius()
     {
         if (this.FindControl<Border>("AvatarBorder") is { } border)
-        {
-            border.CornerRadius = IsCircular
-                ? new CornerRadius(Size / 2)
-                : new CornerRadius(8);
-        }
+            border.CornerRadius = IsCircular ? new CornerRadius(Size / 2) : new CornerRadius(8);
     }
 
     #region Helper Methods
@@ -319,10 +283,7 @@ public partial class AvatarControl : UserControl
         return "?";
     }
 
-    private Geometry? GetDefaultIcon()
-    {
-        return this.FindResource("PersonIcon") as Geometry;
-    }
+    private Geometry? GetDefaultIcon() => this.FindResource("PersonIcon") as Geometry;
 
     #endregion
 }

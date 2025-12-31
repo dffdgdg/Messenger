@@ -3,20 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.Boolean;
-
-public class BooleanAndConverter : IMultiValueConverter
+namespace MessengerDesktop.Converters.Boolean
 {
-    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    public class BooleanAndConverter : IMultiValueConverter
     {
-        foreach (var value in values)
+        public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is bool boolValue && !boolValue)
-                return false;
+            foreach (var value in values)
+            {
+                if (value is bool boolValue && !boolValue)
+                    return false;
+            }
+            return true;
         }
-        return true;
     }
-
-    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) 
-        => [];
 }

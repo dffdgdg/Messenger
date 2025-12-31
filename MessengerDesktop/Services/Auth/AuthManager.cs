@@ -23,7 +23,6 @@ public class AuthManager : IAuthManager, IDisposable
 {
     private readonly IAuthService _authService;
     private readonly ISecureStorageService _secureStorage;
-    private readonly ISessionStore _sessionStore;
     private readonly TaskCompletionSource _initializationTcs = new();
     private readonly SemaphoreSlim _operationLock = new(1, 1);
 
@@ -35,13 +34,13 @@ public class AuthManager : IAuthManager, IDisposable
     private bool _disposed;
 
     public bool IsInitialized { get; private set; }
-    public ISessionStore Session => _sessionStore;
+    public ISessionStore Session { get; }
 
     public AuthManager(IAuthService authService,ISecureStorageService secureStorage,ISessionStore sessionStore)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
-        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        Session = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _initializationTask = InitializeInternalAsync();
 
         _ = InitializeInternalAsync();
@@ -104,7 +103,7 @@ public class AuthManager : IAuthManager, IDisposable
             if (isValid)
             {
                 Debug.WriteLine("AuthManager: Токен действителен, устанавливаю сессию");
-                _sessionStore.SetSession(storedToken, storedUserId.Value, storedUserRole);
+                Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
             }
             else
             {
@@ -134,7 +133,7 @@ public class AuthManager : IAuthManager, IDisposable
             {
                 Debug.WriteLine($"AuthManager: Login successful for user {result.Data.Id}");
                 await SaveAuthAsync(result.Data.Token, result.Data.Id, result.Data.Role);
-                _sessionStore.SetSession(result.Data.Token, result.Data.Id, result.Data.Role);
+                Session.SetSession(result.Data.Token, result.Data.Id, result.Data.Role);
             }
             else
             {
@@ -166,17 +165,17 @@ public class AuthManager : IAuthManager, IDisposable
         await _operationLock.WaitAsync();
         try
         {
-            Debug.WriteLine($"AuthManager: Logout requested for user {_sessionStore.UserId}");
+            Debug.WriteLine($"AuthManager: Logout requested for user {Session.UserId}");
 
-            var token = _sessionStore.Token;
+            var token = Session.Token;
 
             if (!string.IsNullOrEmpty(token))
             {
-                var result = await _authService.LogoutAsync(token); 
+                var result = await _authService.LogoutAsync(token);
             }
 
             await ClearStoredAuthAsync();
-            _sessionStore.ClearSession();
+            Session.ClearSession();
 
             return new ApiResponse
             {
@@ -226,8 +225,7 @@ public class AuthManager : IAuthManager, IDisposable
         return completedTask == _initializationTcs.Task;
     }
 
-    private void ThrowIfDisposed() 
-        => ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
 
     public void Dispose()
     {

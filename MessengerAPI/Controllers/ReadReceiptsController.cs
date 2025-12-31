@@ -19,8 +19,7 @@ namespace MessengerAPI.Controllers
             return await ExecuteAsync(async () =>
             {
                 await chatService.EnsureUserHasChatAccessAsync(userId, request.ChatId);
-                var result = await readReceiptService.MarkAsReadAsync(userId, request);
-                return result;
+                return await readReceiptService.MarkAsReadAsync(userId, request);
             }, "Сообщения отмечены как прочитанные");
         }
 
@@ -48,11 +47,7 @@ namespace MessengerAPI.Controllers
         {
             var userId = GetCurrentUserId();
 
-            return await ExecuteAsync(async () =>
-            {
-                var result = await readReceiptService.GetAllUnreadCountsAsync(userId);
-                return result;
-            }, "Количество непрочитанных получено");
+            return await ExecuteAsync(async () => await readReceiptService.GetAllUnreadCountsAsync(userId), "Количество непрочитанных получено");
         }
     }
 }

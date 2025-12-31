@@ -234,10 +234,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         }
     }
 
-    public IEnumerable<MessageViewModel> GetUnreadMessages()
-    {
-        return Messages.Where(m => m.IsUnread && m.SenderId != userId);
-    }
+    public IEnumerable<MessageViewModel> GetUnreadMessages() => Messages.Where(m => m.IsUnread && m.SenderId != userId);
 
     public int GetPollsCount() => Messages.Count(m => m.Poll != null);
 

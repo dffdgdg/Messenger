@@ -1,34 +1,24 @@
-﻿using Avalonia.Data.Converters;
+﻿using MessengerDesktop.Converters.Base;
 using MessengerDesktop.Services.Auth;
 using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.Enum
+namespace MessengerDesktop.Converters.Enum;
+
+public class UserRoleToVisibilityConverter : ConverterBase
 {
-    public class UserRoleToVisibilityConverter : IValueConverter
+    protected override object? DefaultValue => false;
+
+    protected override object? ConvertCore(object? value, object? parameter, CultureInfo culture)
     {
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (parameter is not string roleName || App.Current?.Services == null)
-                return false;
+        if (parameter is not string roleName || App.Current?.Services == null)
+            return false;
 
-            try
-            {
-                if (!System.Enum.TryParse<UserRole>(roleName, out var requiredRole))
-                    return false;
+        if (!System.Enum.TryParse<UserRole>(roleName, out var requiredRole))
+            return false;
 
-                var authManager = App.Current.Services.GetRequiredService<IAuthManager>();
-                return authManager.Session.HasRole(requiredRole); 
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+        var authManager = App.Current.Services.GetRequiredService<IAuthManager>();
+        return authManager.Session.HasRole(requiredRole);
     }
 }

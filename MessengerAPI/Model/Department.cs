@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Model;
 
-public partial class Department
+public class Department
 {
     public int Id { get; set; }
 
@@ -16,9 +16,9 @@ public partial class Department
 
     public virtual User? Head { get; set; }
 
-    public virtual ICollection<Department> InverseParentDepartment { get; set; } = new List<Department>();
+    public virtual ICollection<Department> InverseParentDepartment { get; set; } = [];
 
     public virtual Department? ParentDepartment { get; set; }
 
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<User> Users { get; set; } = [];
 }

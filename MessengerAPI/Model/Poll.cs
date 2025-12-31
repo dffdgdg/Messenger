@@ -16,7 +16,7 @@ public partial class Poll
 
     public virtual Message Message { get; set; } = null!;
 
-    public virtual ICollection<PollOption> PollOptions { get; set; } = new List<PollOption>();
+    public virtual ICollection<PollOption> PollOptions { get; set; } = [];
 
-    public virtual ICollection<PollVote> PollVotes { get; set; } = new List<PollVote>();
+    public virtual ICollection<PollVote> PollVotes { get; set; } = [];
 }

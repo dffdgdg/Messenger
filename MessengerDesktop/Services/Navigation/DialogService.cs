@@ -272,11 +272,9 @@ namespace MessengerDesktop.Services
             }
         }
 
-        private async void OnDialogClosed()
-            => await CloseAsync();
+        private async void OnDialogClosed() => await CloseAsync();
 
-        private void ThrowIfDisposed() 
-            => ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
+        private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
 
         public void Dispose()
         {

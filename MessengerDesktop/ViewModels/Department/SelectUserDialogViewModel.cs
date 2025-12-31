@@ -62,8 +62,5 @@ public partial class SelectUserDialogViewModel : DialogBaseViewModel
         RequestClose();
     }
 
-    partial void OnSearchQueryChanged(string value)
-    {
-        OnPropertyChanged(nameof(FilteredUsers));
-    }
+    partial void OnSearchQueryChanged(string value) => OnPropertyChanged(nameof(FilteredUsers));
 }

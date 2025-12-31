@@ -173,11 +173,8 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         if (membersResult is { Success: true, Data: not null })
         {
-            var memberVms = membersResult.Data
-                .Where(u => u.Id != CurrentUserId) // Исключаем себя
-                .Select(u => new DepartmentMemberViewModel(u))
-                .OrderByDescending(m => m.IsOnline)
-                .ThenBy(m => m.DisplayName);
+            var memberVms = membersResult.Data.Where(u => u.Id != CurrentUserId) // Исключаем себя
+                .Select(u => new DepartmentMemberViewModel(u)).OrderByDescending(m => m.IsOnline).ThenBy(m => m.DisplayName);
 
             Members = new ObservableCollection<DepartmentMemberViewModel>(memberVms);
 
@@ -306,10 +303,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
         member.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
         member.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
 
-    partial void OnSearchQueryChanged(string value)
-    {
-        OnPropertyChanged(nameof(FilteredMembers));
-    }
+    partial void OnSearchQueryChanged(string value) => OnPropertyChanged(nameof(FilteredMembers));
 
     private new void ClearMessages()
     {

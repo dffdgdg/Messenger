@@ -227,8 +227,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             };
 
             var files = await storageProvider.OpenFilePickerAsync(options);
-            var file = files.FirstOrDefault();
-            if (file == null) return;
+            if (files.Count == 0) return;
+            var file = files[0];
 
             var path = file.TryGetLocalPath();
             if (path == null) return;

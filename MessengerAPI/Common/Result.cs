@@ -12,7 +12,7 @@
         public static Result Failure(string error) => new() { IsSuccess = false, Error = error };
     }
 
-    public class Result<T> : Result
+    public sealed class Result<T> : Result
     {
         public T? Value { get; private init; }
 

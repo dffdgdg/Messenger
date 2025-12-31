@@ -30,8 +30,7 @@ namespace MessengerAPI.Helpers
 
         public static string FormatDisplayName(this User user)
         {
-            var parts = new[] { user.Surname, user.Name, user.Midname }
-                .Where(p => !string.IsNullOrWhiteSpace(p));
+            var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
 
             var formatted = string.Join(" ", parts);
             return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;
@@ -154,13 +153,9 @@ namespace MessengerAPI.Helpers
 
         public static PollDTO ToDto(this Poll poll, int? currentUserId = null)
         {
-            var selectedOptionIds = currentUserId.HasValue
-                ? poll.PollOptions?
-                    .SelectMany(o => o.PollVotes ?? [])
-                    .Where(v => v.UserId == currentUserId)
-                    .Select(v => v.OptionId)
-                    .ToList() ?? []
-                : [];
+            var selectedOptionIds = currentUserId.HasValue ? poll.PollOptions?
+                .SelectMany(o => o.PollVotes ?? []).Where(v => v.UserId == currentUserId)
+                .Select(v => v.OptionId).ToList() ?? [] : [];
 
             return new PollDTO
             {
@@ -171,10 +166,8 @@ namespace MessengerAPI.Helpers
                 IsAnonymous = poll.IsAnonymous ?? false,
                 AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
                 ClosesAt = poll.ClosesAt,
-                Options = poll.PollOptions?
-                    .OrderBy(o => o.Position)
-                    .Select(o => o.ToDto(poll.IsAnonymous ?? false))
-                    .ToList() ?? [],
+                Options = poll.PollOptions?.OrderBy(o => o.Position)
+                .Select(o => o.ToDto(poll.IsAnonymous ?? false)).ToList() ?? [],
                 SelectedOptionIds = selectedOptionIds,
                 CanVote = selectedOptionIds.Count == 0
             };
@@ -199,7 +192,7 @@ namespace MessengerAPI.Helpers
 
         #region Helpers
 
-        public static string? BuildFullUrl(string? path, HttpRequest? request)
+        public static string? BuildFullUrl(this string? path, HttpRequest? request)
         {
             if (string.IsNullOrEmpty(path) || request == null)
                 return path;

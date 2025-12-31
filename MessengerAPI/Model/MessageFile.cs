@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Model;
 
-public partial class MessageFile
+public class MessageFile
 {
     public int Id { get; set; }
 

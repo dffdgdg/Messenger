@@ -12,5 +12,5 @@ public partial class PollOption
 
     public virtual Poll Poll { get; set; } = null!;
 
-    public virtual ICollection<PollVote> PollVotes { get; set; } = new List<PollVote>();
+    public virtual ICollection<PollVote> PollVotes { get; set; } = [];
 }

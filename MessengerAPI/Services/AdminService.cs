@@ -1,6 +1,7 @@
 ﻿using MessengerAPI.Model;
 using MessengerShared.DTO;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace MessengerAPI.Services
 {
@@ -11,8 +12,7 @@ namespace MessengerAPI.Services
         Task ToggleBanAsync(int userId, CancellationToken ct = default);
     }
 
-    public class AdminService(MessengerDbContext context, ILogger<AdminService> logger)
-        : BaseService<AdminService>(context, logger), IAdminService
+    public class AdminService(MessengerDbContext context, ILogger<AdminService> logger) : BaseService<AdminService>(context, logger), IAdminService
     {
         public async Task<List<UserDTO>> GetUsersAsync(CancellationToken ct = default)
         {
@@ -51,12 +51,11 @@ namespace MessengerAPI.Services
             var username = dto.Username.Trim().ToLower();
 
             // Проверка формата username
-            if (!System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-z0-9_]{3,30}$"))
+            if (!Regex.IsMatch(username, @"^[a-z0-9_]{3,30}$"))
                 throw new ArgumentException("Логин должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
 
             // Проверка уникальности
-            var exists = await _context.Users
-                .AnyAsync(u => u.Username.Equals(username, StringComparison.CurrentCultureIgnoreCase), ct);
+            var exists = await _context.Users.AnyAsync(u => u.Username.Equals(username, StringComparison.CurrentCultureIgnoreCase), ct);
 
             if (exists)
                 throw new ArgumentException("Пользователь с таким логином уже существует");
@@ -101,10 +100,7 @@ namespace MessengerAPI.Services
             _logger.LogInformation("Создан пользователь {Username} с ID {UserId}", username, user.Id);
 
             // Перезагружаем с навигационными свойствами
-            var createdUser = await _context.Users
-                .Include(u => u.Departments)
-                .Include(u => u.UserSetting)
-                .FirstAsync(u => u.Id == user.Id, ct);
+            var createdUser = await _context.Users.Include(u => u.Departments).Include(u => u.UserSetting).FirstAsync(u => u.Id == user.Id, ct);
 
             return MapToDto(createdUser);
         }
@@ -138,8 +134,7 @@ namespace MessengerAPI.Services
 
         private static string FormatDisplayName(User user)
         {
-            var parts = new[] { user.Surname, user.Name, user.Midname }
-                .Where(p => !string.IsNullOrWhiteSpace(p));
+            var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
 
             return string.Join(" ", parts);
         }

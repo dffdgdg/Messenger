@@ -7,27 +7,19 @@ using Microsoft.AspNetCore.Mvc;
 namespace MessengerAPI.Controllers
 {
     [Authorize(Roles = "Admin")]
-    public class AdminController(IAdminService adminService, ILogger<AdminController> logger)
-        : BaseController<AdminController>(logger)
+    public class AdminController(IAdminService adminService, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
     {
         [HttpGet("users")]
         public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetUsers(CancellationToken ct)
-            => await ExecuteAsync(async () =>
-            {
-                var users = await adminService.GetUsersAsync(ct);
-                return users;
-            }, "Пользователи получены успешно");
+            => await ExecuteAsync(async () => await adminService.GetUsersAsync(ct), "Пользователи получены успешно");
 
         [HttpPost("users")]
-        public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser(
-            [FromBody] CreateUserDTO dto,
-            CancellationToken ct)
-            => await ExecuteAsync(async () =>
-            {
-                ValidateModel();
-                var user = await adminService.CreateUserAsync(dto, ct);
-                return user;
-            }, "Пользователь создан успешно");
+        public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto,CancellationToken ct) => await ExecuteAsync(async () =>
+        {
+            ValidateModel();
+
+            return await adminService.CreateUserAsync(dto, ct);
+        }, "Пользователь создан успешно");
 
         [HttpPost("users/{id}/toggle-ban")]
         public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)

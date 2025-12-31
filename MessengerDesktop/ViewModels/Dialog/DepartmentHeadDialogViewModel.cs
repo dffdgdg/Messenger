@@ -155,10 +155,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     }
 
     [RelayCommand]
-    private void ClearHead()
-    {
-        SelectedHead = null;
-    }
+    private void ClearHead() => SelectedHead = null;
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()

@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Model;
 
-public partial class MessageStatus
+public class MessageStatus
 {
     public int Id { get; set; }
 

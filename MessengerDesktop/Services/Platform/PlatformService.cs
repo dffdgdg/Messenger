@@ -12,7 +12,6 @@ namespace MessengerDesktop.Services.Platform
     {
         Window? MainWindow { get; }
         IClipboard? Clipboard { get; }
-
         Task<bool> CopyToClipboardAsync(string text);
         Task<string?> GetFromClipboardAsync();
         Task<bool> ClearClipboardAsync();

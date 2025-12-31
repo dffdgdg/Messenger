@@ -74,10 +74,8 @@
 
             try
             {
-                _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options =>
-                {
-                    options.AccessTokenProvider = () => Task.FromResult(_authManager.Session.Token);
-                }).WithAutomaticReconnect().Build();
+                _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options => options.AccessTokenProvider = ()
+                => Task.FromResult(_authManager.Session.Token)).WithAutomaticReconnect().Build();
 
                 // Уведомления
                 _hubConnection.On<NotificationDTO>("ReceiveNotification", OnNotificationReceived);
@@ -240,7 +238,7 @@
             }
 
             // Не показываем уведомление для текущего чата
-            if (_currentChatId.HasValue && _currentChatId.Value == notification.ChatId)
+            if (_currentChatId == notification.ChatId)
             {
                 Debug.WriteLine("[GlobalHub] Skipping notification for current chat");
                 return;
@@ -265,7 +263,7 @@
         private void OnNewMessageReceived(MessageDTO message)
         {
             // Если сообщение в текущем чате или наше собственное - игнорируем
-            if (_currentChatId.HasValue && _currentChatId.Value == message.ChatId)
+            if (_currentChatId == message.ChatId)
                 return;
 
             if (message.SenderId == _authManager.Session.UserId)
@@ -318,11 +316,11 @@
             });
         }
 
-        private static string FormatNotificationMessage(NotificationDTO notification) 
-            => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
+        private static string FormatNotificationMessage(NotificationDTO notification)
+        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
 
-        private void OnUserStatusChanged(int userId, bool isOnline) 
-            => Dispatcher.UIThread.Post(() => UserStatusChanged?.Invoke(userId, isOnline));
+        private void OnUserStatusChanged(int userId, bool isOnline)
+        => Dispatcher.UIThread.Post(() => UserStatusChanged?.Invoke(userId, isOnline));
 
         public void SetCurrentChat(int? chatId)
         {

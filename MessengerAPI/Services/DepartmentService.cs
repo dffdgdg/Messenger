@@ -53,10 +53,7 @@ namespace MessengerAPI.Services
 
         public async Task<DepartmentDTO?> GetDepartmentAsync(int id)
         {
-            var department = await _context.Departments
-                .Include(d => d.Head)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.Id == id);
+            var department = await _context.Departments.Include(d => d.Head).AsNoTracking().FirstOrDefaultAsync(d => d.Id == id);
 
             if (department is null)
                 return null;
@@ -76,8 +73,7 @@ namespace MessengerAPI.Services
 
         public async Task<DepartmentDTO> CreateDepartmentAsync(DepartmentDTO dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Name))
-                throw new ArgumentException("Название обязательно");
+            if (string.IsNullOrWhiteSpace(dto.Name)) throw new ArgumentException("Название обязательно");
 
             await ValidateParentDepartmentAsync(dto.ParentDepartmentId);
             await ValidateHeadAsync(dto.Head);
@@ -154,8 +150,7 @@ namespace MessengerAPI.Services
         public async Task<List<UserDTO>> GetDepartmentMembersAsync(int departmentId)
         {
             var exists = await _context.Departments.AnyAsync(d => d.Id == departmentId);
-            if (!exists)
-                throw new KeyNotFoundException($"Отдел с ID {departmentId} не найден");
+            if (!exists) throw new KeyNotFoundException($"Отдел с ID {departmentId} не найден");
 
             var users = await _context.Users.Where(u => u.DepartmentId == departmentId).Include(u => u.Department).AsNoTracking().ToListAsync();
 
@@ -193,9 +188,7 @@ namespace MessengerAPI.Services
             user.DepartmentId = departmentId;
             await SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Пользователь {UserId} добавлен в отдел {DepartmentId} пользователем {RequesterId}",
-                userId, departmentId, requesterId);
+            _logger.LogInformation("Пользователь {UserId} добавлен в отдел {DepartmentId} пользователем {RequesterId}", userId, departmentId, requesterId);
         }
 
         public async Task RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId)
@@ -216,9 +209,7 @@ namespace MessengerAPI.Services
             user.Department = null;
             await SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Пользователь {UserId} удалён из отдела {DepartmentId} пользователем {RequesterId}",
-                userId, departmentId, requesterId);
+            _logger.LogInformation("Пользователь {UserId} удалён из отдела {DepartmentId} пользователем {RequesterId}", userId, departmentId, requesterId);
         }
 
         #endregion

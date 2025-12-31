@@ -273,7 +273,7 @@ namespace MessengerDesktop.Services.Api
 
                 var contentLength = response.Content.Headers.ContentLength;
 
-                if (contentLength.HasValue && contentLength.Value > LargeFileThreshold)
+                if (contentLength > LargeFileThreshold)
                 {
                     return await CreateTempFileStreamAsync(response, ct);
                 }

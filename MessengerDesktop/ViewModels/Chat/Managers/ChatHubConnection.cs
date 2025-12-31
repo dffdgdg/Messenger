@@ -15,7 +15,6 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     private HubConnection? _hubConnection;
     private bool _disposed;
 
-    // Debounce для MarkMessageAsRead
     private int _lastSentReadMessageId;
     private DateTime _lastSentReadTime = DateTime.MinValue;
 

@@ -76,8 +76,7 @@
 
             private async Task<UserRole> DetermineUserRoleAsync(User user)
             {
-                if (user.DepartmentId == _settings.AdminDepartmentId)
-                    return UserRole.Admin;
+                if (user.DepartmentId == _settings.AdminDepartmentId) return UserRole.Admin;
 
                 var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id);
 

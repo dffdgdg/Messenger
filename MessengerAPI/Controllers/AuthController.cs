@@ -10,13 +10,14 @@ namespace MessengerAPI.Controllers
     {
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Login([FromBody] LoginRequest request) =>
-            await ExecuteAsync(async () =>
-            {
-                ValidateModel();
-                (bool success, AuthResponseDTO? data, string? error) = await authService.LoginAsync(request.Username, request.Password);
-                if (!success) throw new ArgumentException(error);
-                return data!;
-            }, "Авторизация прошла успешно");
+        public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Login([FromBody] LoginRequest request) => await ExecuteAsync(async () =>
+        {
+            ValidateModel();
+
+            (bool success, AuthResponseDTO? data, string? error) = await authService.LoginAsync(request.Username, request.Password);
+
+            if (!success) throw new ArgumentException(error);
+            return data!;
+        }, "Авторизация прошла успешно");
     }
 }

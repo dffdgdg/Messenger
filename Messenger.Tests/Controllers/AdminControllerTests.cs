@@ -155,9 +155,7 @@ public class AdminControllerTests
     public async Task ToggleBan_ReturnsOk_WhenUserExists()
     {
         // Arrange
-        _adminServiceMock
-            .Setup(s => s.ToggleBanAsync(1, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        _adminServiceMock.Setup(s => s.ToggleBanAsync(1, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
         var result = await _controller.ToggleBan(1, CancellationToken.None);

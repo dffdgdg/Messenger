@@ -1,22 +1,11 @@
-using Avalonia.Data.Converters;
+using MessengerDesktop.Converters.Base;
 using MessengerShared.DTO;
-using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.Domain
-{
-    public class DisplayOrUsernameConverter : IValueConverter
-    {
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (value is UserDTO user)
-            {
-                return !string.IsNullOrEmpty(user.DisplayName) ? user.DisplayName : user.Username;
-            }
-            return null;
-        }
+namespace MessengerDesktop.Converters.Domain;
 
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) 
-            => throw new NotImplementedException();
-    }
+public class DisplayOrUsernameConverter : ConverterBase<UserDTO, string>
+{
+    protected override string? ConvertCore(UserDTO user, object? parameter, CultureInfo culture)
+        => !string.IsNullOrEmpty(user.DisplayName) ? user.DisplayName : user.Username;
 }

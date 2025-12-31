@@ -1,6 +1,7 @@
 using Avalonia.Data.Converters;
+using Avalonia.Media;
 using MessengerDesktop.Converters.Boolean;
-using MessengerDesktop.Converters.Comparsion;
+using MessengerDesktop.Converters.Comparison;
 using MessengerDesktop.Converters.DateTime;
 using MessengerDesktop.Converters.Domain;
 using MessengerDesktop.Converters.Enum;
@@ -14,103 +15,89 @@ namespace MessengerDesktop.Converters;
 
 public sealed class ConverterLocator
 {
-    private static readonly Lazy<ConverterLocator> LazyInstance = new(() => new ConverterLocator());
-    public static ConverterLocator Instance => LazyInstance.Value;
+    public static ConverterLocator Instance { get; } = new();
 
     private readonly Dictionary<string, IValueConverter> _converters = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IMultiValueConverter> _multiConverters = new(StringComparer.OrdinalIgnoreCase);
 
-    public ConverterLocator() 
-        => RegisterConverters();
+    // Публичный конструктор для XAML
+    public ConverterLocator() => RegisterAll();
 
-    private void RegisterConverters()
+    private void RegisterAll()
     {
-        Register<ThemeToDisplayConverter>("ThemeToDisplay");
-        Register<BoolToStringConverter>("BoolToString");
-        Register<ZeroToTrueConverter>("ZeroToTrue");
-        Register<BoolToOnlineColorConverter>("BoolToOnline");
-        Register<BoolToOpacityConverter>("BoolToOpacity");
-        Register<BoolToRotationConverter>("BoolToRotation", "BooleanToRotateTransform");
-        Register<BoolToRotationConverter>("Initials", "InitialsConverter");
+        // Boolean converters
+        Add(new BoolToStringConverter { TrueValue = "True", FalseValue = "False" }, "BoolToString");
+        Add(new BoolToDoubleConverter { TrueValue = 90, FalseValue = 0 }, "BoolToRotation", "BooleanToRotateTransform");
+        Add(new BoolToDoubleConverter { TrueValue = 1.0, FalseValue = 0.5 }, "BoolToOpacity");
+        Add(new BoolToColorConverter
+        {
+            TrueValue = Color.Parse("#22C55E"),
+            FalseValue = Color.Parse("#6B7280")
+        }, "BoolToOnline");
 
-        Register<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");
+        // Comparison converters
+        Add(new ComparisonConverter { Mode = ComparisonMode.Equal }, "Equality", "Equals");
+        Add(new ComparisonConverter { Mode = ComparisonMode.NotEqual }, "NotEquals", "NotEquality");
+        Add(new ComparisonConverter { Mode = ComparisonMode.GreaterThanZero }, "GreaterThanZero");
+        Add(new ComparisonConverter { Mode = ComparisonMode.Zero }, "ZeroToTrue");
 
-        Register<EqualityConverter>("Equality", "Equals");
-        Register<NotEqualityConverter>("NotEquals", "NotEquality");
-        Register<GreaterThanZeroConverter>("GreaterThanZero", "GreaterThanZero");
+        // DateTime converters
+        Add(new DateTimeFormatConverter { Format = DateTimeFormat.Chat }, "MessageTime", "ChatTime");
+        Add(new DateTimeFormatConverter { Format = DateTimeFormat.DateTime }, "FullDateTime");
+        Add(new DateTimeFormatConverter { Format = DateTimeFormat.Relative }, "RelativeTime");
+        Add(new DateTimeFormatConverter { Format = DateTimeFormat.Time }, "TimeOnly");
+        Add<LastMessageDateConverter>("LastMessageDate");
 
-        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Chat }, "MessageTime", "ChatTime");
-        Register(new DateTimeFormatConverter { Format = DateTimeFormat.DateTime }, "FullDateTime");
-        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Relative }, "RelativeTime");
-        Register(new DateTimeFormatConverter { Format = DateTimeFormat.Time }, "TimeOnly");
-        Register<LastMessageDateConverter>("LastMessageDate");
+        // Domain converters
+        Add<ThemeToDisplayConverter>("ThemeToDisplay");
+        Add<DisplayOrUsernameConverter>("DisplayOrUsername");
+        Add<PollToPollViewModelConverter>("PollToPollViewModel");
+        Add<InitialsConverter>("Initials", "InitialsConverter");
 
-        Register<LevelToMarginConverter>("LevelToMargin");
-        Register<LevelToVisibilityConverter>("LevelToVisibility");
+        // Enum converters
+        Add<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");
 
-        Register<MessageAlignmentConverter>("MessageAlignment");
-        Register<MessageMarginConverter>("MessageToMargin", "MessageMargin");
-        Register<HasContentConverter>("HasContent");
+        // Hierarchy converters
+        Add<LevelToMarginConverter>("LevelToMargin");
+        Add<LevelToVisibilityConverter>("LevelToVisibility");
 
-        Register<DisplayOrUsernameConverter>("DisplayOrUsername");
-        Register<PollToPollViewModelConverter>("PollToPollViewModel");
+        // Message converters
+        Add<MessageAlignmentConverter>("MessageAlignment");
+        Add<MessageMarginConverter>("MessageToMargin", "MessageMargin");
+        Add<HasContentConverter>("HasContent");
 
-        Register<IndexToTextConverter>("IndexToText");
+        // Generic converters
+        Add<IndexToTextConverter>("IndexToText");
 
-        RegisterMulti<BooleanAndConverter>("BooleanAnd");
-        RegisterMulti<LastSeenTextConverter>("LastSeen");
-        RegisterMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
+        // Multi converters
+        AddMulti<BooleanAndConverter>("BooleanAnd");
+        AddMulti<LastSeenTextConverter>("LastSeen");
+        AddMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
     }
 
-    #region Registration helpers
+    private void Add<T>(params string[] names) where T : IValueConverter, new()
+        => Add(new T(), names);
 
-    private void Register<T>(params string[] names) where T : IValueConverter, new()
+    private void Add(IValueConverter converter, params string[] names)
     {
-        var converter = new T();
         foreach (var name in names)
             _converters[name] = converter;
     }
 
-    private void Register(IValueConverter converter, params string[] names)
-    {
-        foreach (var name in names)
-            _converters[name] = converter;
-    }
-
-    private void RegisterMulti<T>(params string[] names) where T : IMultiValueConverter, new()
+    private void AddMulti<T>(params string[] names) where T : IMultiValueConverter, new()
     {
         var converter = new T();
         foreach (var name in names)
             _multiConverters[name] = converter;
     }
 
-    #endregion
+    public IValueConverter Get(string name)
+        => _converters.TryGetValue(name, out var converter)
+            ? converter
+            : throw new KeyNotFoundException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
 
-    #region Public access
-
-    public IValueConverter GetConverter(string name)
-    {
-        if (_converters.TryGetValue(name, out var converter))
-            return converter;
-
-        throw new InvalidOperationException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
-    }
-
-    public IMultiValueConverter GetMultiConverter(string name)
-    {
-        if (_multiConverters.TryGetValue(name, out var converter))
-            return converter;
-
-        throw new InvalidOperationException($"MultiConverter '{name}' not found.");
-    }
-
-    public IValueConverter InvertedVisibility => GetConverter("InvertedVisibility");
-    public IValueConverter Equality => GetConverter("Equality");
-    public IValueConverter MessageTime => GetConverter("MessageTime");
-    public IValueConverter DisplayOrUsername => GetConverter("DisplayOrUsername");
-
-    public IValueConverter GetConverterByName(string name) => GetConverter(name);
-    public IMultiValueConverter GetMultiConverterByName(string name) => GetMultiConverter(name);
-
-    #endregion
+    public IMultiValueConverter GetMulti(string name)
+        => _multiConverters.TryGetValue(name, out var converter)
+            ? converter
+            : throw new KeyNotFoundException($"MultiConverter '{name}' not found. Available: {string.Join(", ", _multiConverters.Keys)}");
 }

@@ -23,8 +23,7 @@ public class SettingsService : ISettingsService
     private readonly string _filePath;
     private Dictionary<string, JsonElement> _localStorage = [];
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {WriteIndented = true};
+    private static readonly JsonSerializerOptions _jsonOptions = new() {WriteIndented = true};
 
     private bool _notificationsEnabled = true;
     private bool _canBeFoundInSearch = true;
@@ -92,8 +91,7 @@ public class SettingsService : ISettingsService
 
     public void Set<T>(string key, T value)
     {
-        var json = JsonSerializer.SerializeToElement(value);
-        _localStorage[key] = json;
+        _localStorage[key] = JsonSerializer.SerializeToElement(value);
         SaveLocalStorage();
     }
 

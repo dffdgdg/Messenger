@@ -19,8 +19,7 @@ namespace MessengerAPI.Services
     {
         public async Task<ReadReceiptResponseDTO> MarkAsReadAsync(int userId, MarkAsReadDTO request)
         {
-            var member = await context.ChatMembers
-                .FirstOrDefaultAsync(cm => cm.ChatId == request.ChatId && cm.UserId == userId)
+            var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == request.ChatId && cm.UserId == userId)
                 ?? throw new KeyNotFoundException($"Пользователь {userId} не является участником чата {request.ChatId}");
 
             var targetMessageId = await DetermineTargetMessageIdAsync(request);
@@ -36,9 +35,7 @@ namespace MessengerAPI.Services
                 member.LastReadAt = DateTime.Now;
                 await context.SaveChangesAsync();
 
-                logger.LogDebug(
-                    "Пользователь {UserId} прочитал до сообщения {MessageId} в чате {ChatId}",
-                    userId, targetMessageId, request.ChatId);
+                logger.LogDebug("Пользователь {UserId} прочитал до сообщения {MessageId} в чате {ChatId}", userId, targetMessageId, request.ChatId);
             }
 
             var unreadCount = await GetUnreadCountAsync(userId, request.ChatId);
@@ -50,8 +47,7 @@ namespace MessengerAPI.Services
         /// </summary>
         public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
         {
-            var member = await context.ChatMembers
-                .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+            var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
             if (member == null)
             {
@@ -74,9 +70,7 @@ namespace MessengerAPI.Services
                     member.LastReadAt = DateTime.Now;
                     await context.SaveChangesAsync();
 
-                    logger.LogDebug(
-                        "Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-                        userId, messageId, chatId);
+                    logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}", userId, messageId, chatId);
                 }
             }
 
@@ -89,8 +83,7 @@ namespace MessengerAPI.Services
         /// </summary>
         public async Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers.AsNoTracking()
-                .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
             if (member == null)
                 return null;
@@ -98,11 +91,7 @@ namespace MessengerAPI.Services
             var lastReadId = member.LastReadMessageId ?? 0;
 
             // Запрос непрочитанных сообщений (не свои)
-            var unreadQuery = context.Messages
-                .Where(m => m.ChatId == chatId
-                    && m.Id > lastReadId
-                    && m.IsDeleted != true
-                    && m.SenderId != userId);
+            var unreadQuery = context.Messages.Where(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId);
 
             var unreadCount = await unreadQuery.CountAsync();
 
@@ -110,10 +99,7 @@ namespace MessengerAPI.Services
             int? firstUnreadId = null;
             if (unreadCount > 0)
             {
-                firstUnreadId = await unreadQuery
-                    .OrderBy(m => m.Id)
-                    .Select(m => m.Id)
-                    .FirstOrDefaultAsync();
+                firstUnreadId = await unreadQuery.OrderBy(m => m.Id).Select(m => m.Id).FirstOrDefaultAsync();
             }
 
             return new ChatReadInfoDTO
@@ -128,9 +114,7 @@ namespace MessengerAPI.Services
 
         public async Task<int> GetUnreadCountAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
             if (member == null)
                 return 0;
@@ -146,8 +130,7 @@ namespace MessengerAPI.Services
 
         public async Task<AllUnreadCountsDTO> GetAllUnreadCountsAsync(int userId)
         {
-            var memberData = await context.ChatMembers
-                .Where(cm => cm.UserId == userId)
+            var memberData = await context.ChatMembers.Where(cm => cm.UserId == userId)
                 .Select(cm => new { cm.ChatId, LastReadMessageId = cm.LastReadMessageId ?? 0 })
                 .AsNoTracking()
                 .ToListAsync();

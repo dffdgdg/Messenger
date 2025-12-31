@@ -110,9 +110,7 @@ namespace MessengerAPI.Services
 
         public async Task<ChatDTO?> GetChatAsync(int chatId, int userId, HttpRequest request)
         {
-            var chat = await _context.Chats
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == chatId);
+            var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
 
             if (chat is null)
             {
@@ -187,11 +185,7 @@ namespace MessengerAPI.Services
 
         public async Task<List<UserDTO>> GetChatMembersAsync(int chatId, HttpRequest request)
         {
-            var members = await _context.ChatMembers
-                .Where(cm => cm.ChatId == chatId)
-                .Include(cm => cm.User)
-                .AsNoTracking()
-                .ToListAsync();
+            var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 
             var memberIds = members.ConvertAll(m => m.UserId);
             var onlineIds = onlineService.FilterOnline(memberIds);
@@ -414,7 +408,7 @@ namespace MessengerAPI.Services
 
         #endregion
 
-        private record struct DialogPartnerInfo
+        private readonly record struct DialogPartnerInfo
         {
             public int UserId { get; init; }
             public string DisplayName { get; init; }

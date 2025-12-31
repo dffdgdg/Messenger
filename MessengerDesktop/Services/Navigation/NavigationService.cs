@@ -43,7 +43,7 @@ public class NavigationService(IServiceProvider serviceProvider, IAuthManager au
     {
         if (!CanGoBack) return;
 
-        _navigationHistory.Pop(); 
+        _navigationHistory.Pop();
         var previousType = _navigationHistory.Peek();
         CurrentViewModel = (BaseViewModel)_serviceProvider.GetRequiredService(previousType);
         CurrentViewModelChanged?.Invoke(CurrentViewModel);

@@ -9,8 +9,7 @@ public partial class MessengerDbContext : DbContext
     {
     }
 
-    public MessengerDbContext(DbContextOptions<MessengerDbContext> options)
-        : base(options)
+    public MessengerDbContext(DbContextOptions<MessengerDbContext> options) : base(options)
     {
     }
 
@@ -38,6 +37,7 @@ public partial class MessengerDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder
             .HasPostgresEnum<ChatRole>("chat_role")
             .HasPostgresEnum<ChatType>("chat_type")
@@ -376,8 +376,5 @@ public partial class MessengerDbContext : DbContext
                 .HasConstraintName("UserSettings_UserId_fkey");
         });
 
-        OnModelCreatingPartial(modelBuilder);
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

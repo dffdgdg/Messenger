@@ -19,8 +19,7 @@ namespace MessengerAPI.Services
     {
         public async Task<PollDTO?> GetPollAsync(int pollId, int userId)
         {
-            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message)
-                .AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
+            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
 
             return poll?.ToDto(userId);
         }
@@ -68,10 +67,7 @@ namespace MessengerAPI.Services
             }
 
             // Загружаем полное сообщение
-            var createdMessage = await _context.Messages
-                .Include(m => m.Sender)
-                .Include(m => m.Polls).ThenInclude(p => p.PollOptions)
-                .FirstOrDefaultAsync(m => m.Id == message.Id);
+            var createdMessage = await _context.Messages.Include(m => m.Sender).Include(m => m.Polls).ThenInclude(p => p.PollOptions).FirstOrDefaultAsync(m => m.Id == message.Id);
 
             EnsureNotNull(createdMessage, message.Id);
 
@@ -87,23 +83,17 @@ namespace MessengerAPI.Services
 
         public async Task<PollDTO> VoteAsync(PollVoteDTO voteDto)
         {
-            var poll = await _context.Polls
-                .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-                .FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
+            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
 
             EnsureNotNull(poll, voteDto.PollId);
 
             // Удаляем старые голоса пользователя
-            var oldVotes = await _context.PollVotes
-                .Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId)
-                .ToListAsync();
+            var oldVotes = await _context.PollVotes.Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId).ToListAsync();
 
             _context.PollVotes.RemoveRange(oldVotes);
 
             // Добавляем новые голоса
-            var optionIds = voteDto.OptionIds?.Count > 0
-                ? voteDto.OptionIds
-                : voteDto.OptionId.HasValue ? [voteDto.OptionId.Value] : [];
+            var optionIds = voteDto.OptionIds?.Count > 0 ? voteDto.OptionIds : voteDto.OptionId.HasValue ? [voteDto.OptionId.Value] : [];
 
             foreach (var optionId in optionIds)
             {
@@ -118,8 +108,7 @@ namespace MessengerAPI.Services
             await SaveChangesAsync();
 
             // Получаем обновлённый опрос
-            var updatedPoll = await GetPollAsync(voteDto.PollId, voteDto.UserId)
-                ?? throw new InvalidOperationException("Не удалось получить обновлённый опрос");
+            var updatedPoll = await GetPollAsync(voteDto.PollId, voteDto.UserId) ?? throw new InvalidOperationException("Не удалось получить обновлённый опрос");
 
             // Отправляем обновление через SignalR
             var message = await _context.Messages.FindAsync(updatedPoll.MessageId);
@@ -128,9 +117,7 @@ namespace MessengerAPI.Services
                 await SendToGroupSafeAsync(message.ChatId, "ReceivePollUpdate", updatedPoll);
             }
 
-            _logger.LogInformation(
-                "Пользователь {UserId} проголосовал в опросе {PollId}",
-                voteDto.UserId, voteDto.PollId);
+            _logger.LogInformation("Пользователь {UserId} проголосовал в опросе {PollId}",voteDto.UserId, voteDto.PollId);
 
             return updatedPoll;
         }

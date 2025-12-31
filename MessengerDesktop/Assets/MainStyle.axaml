@@ -1150,4 +1150,33 @@
 		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
 		<Setter Property="VerticalAlignment" Value="Center"/>
 	</Style>
+
+
+	<!-- ==================== КОМПАКТНЫЙ РЕЖИМ ==================== -->
+
+	<!-- Стиль для компактной кнопки поиска -->
+	<Style Selector="Button.CompactSearchButton">
+		<Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+		<Setter Property="CornerRadius" Value="20"/>
+	</Style>
+
+	<Style Selector="Button.CompactSearchButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+	</Style>
+
+	<!-- Стиль для компактного бейджа непрочитанных -->
+	<Style Selector="Border.CompactBadge">
+		<Setter Property="CornerRadius" Value="9"/>
+		<Setter Property="Padding" Value="4,0"/>
+	</Style>
+
+	<!-- Стили ListBoxItem в компактном режиме -->
+	<Style Selector="views|ChatsView[IsCompactMode=True] ListBoxItem">
+		<Setter Property="Padding" Value="4"/>
+		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+	</Style>
+
+	<Style Selector="views|ChatsView[IsCompactMode=True] ListBox">
+		<Setter Property="Margin" Value="4"/>
+	</Style>	
 </Styles>

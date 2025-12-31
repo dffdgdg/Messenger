@@ -1,5 +1,4 @@
-﻿using MessengerDesktop.Services.Api;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
@@ -243,10 +242,7 @@ namespace MessengerDesktop.Services.Auth
 
             _lock.Dispose();
 
-            if (_key != null)
-            {
-                Array.Clear(_key, 0, _key.Length);
-            }
+            Array.Clear(_key, 0, _key.Length);
 
             GC.SuppressFinalize(this);
         }

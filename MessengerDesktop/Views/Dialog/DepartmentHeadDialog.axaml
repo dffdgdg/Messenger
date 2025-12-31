@@ -53,7 +53,7 @@
                          Classes="DialogInput"
                          Watermark="Введите название отдела...">
 					<TextBox.InnerLeftContent>
-						<PathIcon Data="{StaticResource folder_regular}"
+						<PathIcon Data="{StaticResource FolderIcon}"
                                   Width="16" Height="16"
                                   Margin="12,0,8,0"
                                   Foreground="{DynamicResource TextSecondary}"/>
@@ -137,7 +137,7 @@
                                 IsVisible="{Binding HasHead}"
                                 ToolTip.Tip="Убрать руководителя"
                                 Margin="8,0,4,0">
-							<PathIcon Data="{StaticResource dismiss_circle_regular}"
+							<PathIcon Data="{StaticResource DismissIcon}"
                                       Width="16" Height="16"
                                       Foreground="{DynamicResource DangerBrush}"/>
 						</Button>
@@ -147,7 +147,7 @@
                                 Classes="IconButton"
                                 Command="{Binding SelectHeadCommand}"
                                 ToolTip.Tip="Выбрать руководителя">
-							<PathIcon Data="{StaticResource person_AddIcon}"
+							<PathIcon Data="{StaticResource AddIcon}"
                                       Width="18" Height="18"
                                       Foreground="{DynamicResource AccentBrush}"/>
 						</Button>
@@ -200,7 +200,7 @@
                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
 					<PathIcon Grid.Column="0"
-                              Data="{StaticResource error_circle_regular}"
+                              Data="{StaticResource ErrorIcon}"
                               Width="16" Height="16"
                               Foreground="{DynamicResource DangerBrush}"
                               Margin="0,0,10,0"/>
@@ -219,7 +219,7 @@
                     IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
 					<PathIcon Grid.Column="0"
-                              Data="{StaticResource checkmark_circle_regular}"
+                              Data="{StaticResource CheckmarkIcon}"
                               Width="16" Height="16"
                               Foreground="{DynamicResource SuccessBrush}"
                               Margin="0,0,10,0"/>
@@ -245,7 +245,7 @@
                         IsEnabled="{Binding CanDelete}"
                         ToolTip.Tip="{Binding DeleteTooltip}">
 					<StackPanel Orientation="Horizontal" Spacing="6">
-						<PathIcon Data="{StaticResource delete_regular}"
+						<PathIcon Data="{StaticResource DeleteIcon}"
                                   Width="14" Height="14"/>
 						<TextBlock Text="Удалить"/>
 					</StackPanel>

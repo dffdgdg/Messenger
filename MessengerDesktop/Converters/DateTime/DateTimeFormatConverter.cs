@@ -64,7 +64,7 @@ public class DateTimeFormatConverter : ValueConverterBase<System.DateTime, strin
         {
             < 1 => "только что",
             < 60 => $"{(int)diff.TotalMinutes} мин назад",
-            < 1440 => $"{(int)diff.TotalHours} ч назад", 
+            < 1440 => $"{(int)diff.TotalHours} ч назад",
             < 10080 => $"{(int)diff.TotalDays} д назад",
             _ => dateTime.ToString("dd.MM.yy")
         };

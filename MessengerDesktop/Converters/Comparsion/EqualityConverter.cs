@@ -14,7 +14,7 @@ public class EqualityConverter : ValueConverterBase
 
         return Invert ? !areEqual : areEqual;
     }
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) 
+    public new object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) 
         => throw new NotSupportedException("EqualityToBoolConverter does not support ConvertBack");
 }
 

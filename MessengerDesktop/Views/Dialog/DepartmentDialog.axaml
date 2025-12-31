@@ -11,7 +11,7 @@
 
 			<TextBox Text="{Binding Name}" Classes="DialogInput" Watermark="Название отдела">
 				<TextBox.InnerLeftContent>
-					<PathIcon Data="{StaticResource folder_regular}" Width="16" Height="16"
+					<PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16"
                               Margin="12,0,8,0" Opacity="0.5"/>
 				</TextBox.InnerLeftContent>
 			</TextBox>

@@ -46,7 +46,7 @@ namespace MessengerAPI.Controllers
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId != userId)
-                return Forbidden<GlobalSearchResponseDTO>("Доступ запрещён");
+                return Forbidden<GlobalSearchResponseDTO>();
 
             return await ExecuteAsync(async () =>
             {

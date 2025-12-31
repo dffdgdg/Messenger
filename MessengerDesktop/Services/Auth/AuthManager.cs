@@ -1,5 +1,4 @@
-﻿using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Auth;
+﻿using MessengerShared.DTO.Auth;
 using MessengerShared.Enum;
 using MessengerShared.Response;
 using System;

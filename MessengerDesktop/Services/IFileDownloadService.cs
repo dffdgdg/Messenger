@@ -103,10 +103,6 @@ namespace MessengerDesktop.Services
                 progress?.Report(100);
                 return filePath;
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
             catch (HttpRequestException ex)
             {
                 Debug.WriteLine($"HTTP error downloading file: {ex.Message}");

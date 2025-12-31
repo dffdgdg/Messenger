@@ -51,9 +51,9 @@
 
 								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
 									<Button Classes="IconButton Small"
-                                            Command="{Binding DataContext.OpenEditDepartmentCommand, ElementName=Root}"
-                                            CommandParameter="{Binding Department}"
-                                            ToolTip.Tip="Редактировать отдел">
+									        Command="{Binding DataContext.OpenEditDepartmentCommand, ElementName=Root}"
+									        CommandParameter="{Binding Department}"
+									        ToolTip.Tip="Редактировать отдел">
 										<PathIcon Data="{StaticResource EditIcon}" Width="14" Height="14"
                                                   Foreground="{DynamicResource Icon}"/>
 									</Button>

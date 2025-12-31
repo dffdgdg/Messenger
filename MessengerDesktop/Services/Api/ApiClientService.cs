@@ -78,7 +78,7 @@ namespace MessengerDesktop.Services.Api
                 if (!string.IsNullOrEmpty(_sessionStore.Token))
                 {
                     _httpClient.DefaultRequestHeaders.Authorization =
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _sessionStore.Token);
+                        new AuthenticationHeaderValue("Bearer", _sessionStore.Token);
                 }
                 else
                 {
@@ -259,7 +259,7 @@ namespace MessengerDesktop.Services.Api
                 if (!string.IsNullOrEmpty(_sessionStore.Token))
                 {
                     request.Headers.Authorization =
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _sessionStore.Token);
+                        new AuthenticationHeaderValue("Bearer", _sessionStore.Token);
                 }
 
                 var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -339,7 +339,7 @@ namespace MessengerDesktop.Services.Api
             {
                 using var content = new MultipartFormDataContent();
                 var streamContent = new StreamContent(fileStream);
-                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
                 content.Add(streamContent, "file", fileName);
 
                 var response = await _httpClient.PostAsync(url, content, ct);

@@ -6,7 +6,6 @@
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450" 
 			 x:Class="MessengerDesktop.Views.MainMenuView" x:Name="Root" 
 			 x:DataType="vm:MainMenuViewModel" xmlns:vm="using:MessengerDesktop.ViewModels" 
-			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" 
 			 Background="{DynamicResource PrimaryBG}">
 
 
@@ -109,8 +108,8 @@
 						 Tag="{DynamicResource SettingsIcon}"
 						 Content="Админ"
 						 IsVisible="{Binding '', 
-					 Converter={conv:Converter Name=HasRole}, 
-					 ConverterParameter=Admin}"/>
+						 Converter={conv:Converter Name=HasRole}, 
+						 ConverterParameter=Admin}"/>
 		</StackPanel>
 	</Grid>
 

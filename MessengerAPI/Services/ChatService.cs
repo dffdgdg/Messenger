@@ -306,7 +306,7 @@ namespace MessengerAPI.Services
                 if (!await accessControl.IsOwnerAsync(userId, chatId))
                     throw new UnauthorizedAccessException("Только владелец может изменить тип чата");
 
-                chat.Type = (ChatType)dto.ChatType.Value;
+                chat.Type = dto.ChatType.Value;
             }
 
             await SaveChangesAsync();

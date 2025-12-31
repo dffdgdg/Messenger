@@ -4,7 +4,6 @@
              xmlns:conv="using:MessengerDesktop.Converters"
              xmlns:shared="using:MessengerShared.DTO"
              xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:skeleton="using:MessengerDesktop.Views.Controls"
              x:Class="MessengerDesktop.Views.ChatInfoPanel"
              x:DataType="vm:ChatViewModel"
              x:Name="InfoPanelRoot"
@@ -37,7 +36,7 @@
 			<Grid Grid.Row="1">
 
 				<!-- Skeleton Loading -->
-				<!--<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>-->
+				<controls:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
 				<!-- Основной контент -->
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
@@ -171,7 +170,7 @@
 
 								<Button Classes="InfoPanelItem">
 									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource Image}" Width="18" Height="18"
+										<PathIcon Data="{StaticResource ImageIcon}" Width="18" Height="18"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Text="Фото" VerticalAlignment="Center"/>
 									</StackPanel>
@@ -179,7 +178,7 @@
 
 								<Button Classes="InfoPanelItem">
 									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource Document}" Width="18" Height="18"
+										<PathIcon Data="{StaticResource DocumentIcon}" Width="18" Height="18"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Text="Файлы" VerticalAlignment="Center"/>
 									</StackPanel>
@@ -187,7 +186,7 @@
 
 								<Button Classes="InfoPanelItem" IsVisible="{Binding PollsCount}">
 									<Grid ColumnDefinitions="Auto,*,Auto">
-										<PathIcon Data="{StaticResource Poll}" Width="18" Height="18"
+										<PathIcon Data="{StaticResource PollIcon}" Width="18" Height="18"
                                                   Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Grid.Column="1" Text="Опросы" VerticalAlignment="Center" Margin="12,0,0,0"/>
 										<TextBlock Grid.Column="2" Text="{Binding PollsCount}"

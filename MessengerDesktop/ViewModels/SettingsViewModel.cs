@@ -67,7 +67,7 @@ public partial class SettingsViewModel : BaseViewModel
             try
             {
                 var data = result.Data;
-                var serverTheme = (Theme)data.Theme;
+                var serverTheme = (Theme)data.Theme!;
 
                 if (SelectedTheme != serverTheme)
                 {
@@ -128,8 +128,6 @@ public partial class SettingsViewModel : BaseViewModel
 
     private void ApplyTheme(Theme theme)
     {
-        if (App.Current == null) return;
-
         App.Current.ThemeVariant = theme switch
         {
             Theme.dark => ThemeVariant.Dark,

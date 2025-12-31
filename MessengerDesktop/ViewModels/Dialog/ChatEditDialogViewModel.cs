@@ -51,7 +51,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public Func<ChatDTO, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null, null) { }
+    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null) { }
 
     public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDTO? chat,List<UserDTO>? existingMembers = null)
     {

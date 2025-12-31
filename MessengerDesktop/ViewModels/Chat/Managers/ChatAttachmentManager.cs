@@ -1,10 +1,4 @@
-﻿using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
-using MessengerDesktop.Helpers;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Platform;
-using MessengerShared.DTO;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,6 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
+using MessengerDesktop.Helpers;
+using MessengerDesktop.Services.Api;
+using MessengerShared.DTO;
 
 namespace MessengerDesktop.ViewModels.Chat;
 

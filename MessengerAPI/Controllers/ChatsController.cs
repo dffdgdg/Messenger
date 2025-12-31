@@ -25,7 +25,7 @@ namespace MessengerAPI.Controllers
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId != userId)
-                return Forbidden<ChatDTO?>("Доступ запрещён");
+                return Forbidden<ChatDTO?>();
 
             return await ExecuteAsync(async () =>
             {

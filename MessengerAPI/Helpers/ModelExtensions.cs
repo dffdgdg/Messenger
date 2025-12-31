@@ -23,7 +23,7 @@ namespace MessengerAPI.Helpers
                 Avatar = BuildFullUrl(user.Avatar, request),
                 Theme = user.UserSetting?.Theme,
                 NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
-                IsOnline = (bool)isOnline,
+                IsOnline = (bool)isOnline!,
                 LastOnline = user.LastOnline
             };
         }

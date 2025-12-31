@@ -100,7 +100,7 @@ public partial class SessionStore : ObservableObject, ISessionStore
 
     public bool HasAnyRole(params UserRole[] roles)
     {
-        if (roles == null || roles.Length == 0)
+        if (roles.Length == 0)
             return false;
 
         if (!IsAuthenticated)

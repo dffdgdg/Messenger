@@ -24,7 +24,7 @@
 			<TextBox Grid.Row="1"
                      Text="{Binding SearchQuery}"
                      Watermark="Поиск по имени или логину..."
-                     Classes="DialogInput SearchInput"
+                     Classes="DialogInput Search"
                      Margin="0,0,0,12">
 				<TextBox.InnerLeftContent>
 					<PathIcon Data="{StaticResource SearchIcon}"

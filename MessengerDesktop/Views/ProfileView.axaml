@@ -103,7 +103,7 @@
 
 								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
-									<StackPanel Orientation="Horizontal" Spacing="10">
+									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource ProfileIcon}"
                                                   Width="18" Height="18"
                                                   Foreground="{DynamicResource Accent}"/>
@@ -230,10 +230,11 @@
 
 								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
-									<StackPanel Orientation="Horizontal" Spacing="10">
+									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource MentionIcon}"
                                                   Width="18" Height="18"
-                                                  Foreground="{DynamicResource Accent}"/>
+                                                  Foreground="{DynamicResource Accent}"
+												  />
 										<TextBlock Text="Имя пользователя"
                                                    FontSize="15"
                                                    FontWeight="SemiBold"/>
@@ -327,7 +328,7 @@
 
 								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
-									<StackPanel Orientation="Horizontal" Spacing="10">
+									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource LockClosedIcon}"
                                                   Width="18" Height="18"
                                                   Foreground="{DynamicResource Accent}"/>

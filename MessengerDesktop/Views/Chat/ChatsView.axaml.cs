@@ -1,29 +1,43 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.VisualTree;
+using Avalonia.Threading;
 using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace MessengerDesktop.Views
 {
     public partial class ChatsView : UserControl
     {
-        private readonly Grid? _chatListGrid;
         private readonly Grid? _mainGrid;
         private bool _isDragging = false;
-        private const double COMPACT_WIDTH = 75;
-        private const double COMPACT_THRESHOLD = 200;
+
+        // ��������� ��� �������
+        private const double COMPACT_WIDTH = 72;
+        private const double ENTER_COMPACT_THRESHOLD = 120;  // ����� ����� � ���������� ����
+        private const double EXIT_COMPACT_THRESHOLD = 160;   // ����� ������ �� ����������� ������
+        private const double NORMAL_DEFAULT_WIDTH = 280;
+        private const double MIN_WIDTH = 72;
+        private const double MAX_WIDTH = 400;
+
         private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
+
+        public static readonly StyledProperty<bool> IsCompactModeProperty =
+            AvaloniaProperty.Register<ChatsView, bool>(nameof(IsCompactMode));
+
+        public bool IsCompactMode
+        {
+            get => GetValue(IsCompactModeProperty);
+            set => SetValue(IsCompactModeProperty, value);
+        }
 
         public ChatsView()
         {
             InitializeComponent();
 
             _chatInfoPanelStateStore = App.Current.Services.GetRequiredService<IChatInfoPanelStateStore>();
-            _chatListGrid = this.FindControl<Grid>("ChatListGrid");
             _mainGrid = this.FindControl<Grid>("MainGrid");
 
             this.DataContextChanged += ChatsView_DataContextChanged;
@@ -32,9 +46,13 @@ namespace MessengerDesktop.Views
             {
                 var column = _mainGrid.ColumnDefinitions[0];
                 var splitter = this.FindControl<GridSplitter>("GridSplitter");
-                
+
                 if (column != null)
                 {
+                    // ������������� ������� ����������� - �� ������ �� �����������!
+                    column.MinWidth = MIN_WIDTH;
+                    column.MaxWidth = MAX_WIDTH;
+
                     column.PropertyChanged += ChatListColumn_PropertyChanged;
                 }
 
@@ -58,7 +76,8 @@ namespace MessengerDesktop.Views
         private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (DataContext is not ChatsViewModel vm) return;
-            if (e.PropertyName == nameof(ChatsViewModel.CurrentChatViewModel) || e.PropertyName == nameof(ChatsViewModel.CombinedIsInfoPanelVisible))
+            if (e.PropertyName == nameof(ChatsViewModel.CurrentChatViewModel) ||
+                e.PropertyName == nameof(ChatsViewModel.CombinedIsInfoPanelVisible))
             {
                 UpdateInfoPanelVisibility(vm);
             }
@@ -77,7 +96,34 @@ namespace MessengerDesktop.Views
 
         private void Splitter_DragStarted(object? sender, VectorEventArgs e) => _isDragging = true;
 
-        private void Splitter_DragCompleted(object? sender, VectorEventArgs e) => _isDragging = false;
+        private void Splitter_DragCompleted(object? sender, VectorEventArgs e)
+        {
+            _isDragging = false;
+
+            if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
+            {
+                double currentWidth = column.Width.Value;
+
+                // ��� ���������� �������������� - ��������� � "�����������"
+                if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
+                {
+                    // ����� � ���������� ����� - ����������� �� �������
+                    column.Width = new GridLength(COMPACT_WIDTH);
+                    IsCompactMode = true;
+                }
+                else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
+                {
+                    // ����� �� ����������� ������
+                    IsCompactMode = false;
+                    // ������ ������� ��� ���� ����� ��������������
+                }
+                else if (IsCompactMode && currentWidth < EXIT_COMPACT_THRESHOLD)
+                {
+                    // �� ��� � ���������� ������, �� �� �������� �� ������ - ���������� �� �����
+                    column.Width = new GridLength(COMPACT_WIDTH);
+                }
+            }
+        }
 
         private void ChatListColumn_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
         {
@@ -86,29 +132,62 @@ namespace MessengerDesktop.Views
 
             double currentWidth = column.Width.Value;
 
-            if (currentWidth < COMPACT_THRESHOLD)
+            // �� ����� �������������� - ������ ��������� ���������� ����� ��� preview
+            // ����������� "������������" ���������� � DragCompleted
+            if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
             {
-                column.Width = new GridLength(COMPACT_WIDTH);
-                UpdateChatItemsOpacity(0);
+                IsCompactMode = true;
             }
-            else
+            else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
             {
-                UpdateChatItemsOpacity(1);
+                IsCompactMode = false;
             }
         }
 
-        private void UpdateChatItemsOpacity(double opacity)
+        /// <summary>
+        /// ����������� ������������ ����������� ������ (��� ������)
+        /// </summary>
+        public void ToggleCompactMode()
         {
-            if (_chatListGrid == null) return;
-
-            foreach (var item in _chatListGrid.GetVisualDescendants())
+            if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
             {
-                if (item is Grid grid && grid.Name == "ChatDetails")
+                if (IsCompactMode)
                 {
-                    grid.Opacity = opacity;
-                    grid.IsVisible = opacity > 0;
+                    // ����� �� ����������� ������
+                    column.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
+                    IsCompactMode = false;
+                }
+                else
+                {
+                    // ���� � ���������� �����
+                    column.Width = new GridLength(COMPACT_WIDTH);
+                    IsCompactMode = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// �������� ������ �� ����������� ������
+        /// </summary>
+        public void ExpandFromCompact()
+        {
+            if (IsCompactMode)
+            {
+                ToggleCompactMode();
+            }
+        }
+
+        private void OnExpandButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ToggleCompactMode();
+
+        private void OnSearchButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            ExpandFromCompact();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                var searchBox = this.FindControl<TextBox>("SearchTextBox");
+                searchBox?.Focus();
+            }, DispatcherPriority.Background);
         }
 
         private void OnProfileBackgroundPressed(object? sender, PointerPressedEventArgs e)
@@ -123,11 +202,11 @@ namespace MessengerDesktop.Views
         protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
         {
             base.OnAttachedToVisualTree(e);
-            
+
             if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
             {
-                double currentWidth = column.Width.Value;
-                UpdateChatItemsOpacity(currentWidth < COMPACT_THRESHOLD ? 0 : 1);
+                double width = column.Width.Value;
+                IsCompactMode = width <= ENTER_COMPACT_THRESHOLD;
             }
         }
     }

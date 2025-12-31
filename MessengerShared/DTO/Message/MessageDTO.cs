@@ -29,7 +29,6 @@ namespace MessengerShared.DTO
                 var timeDiff = CreatedAt - PreviousMessage.CreatedAt;
                 return timeDiff.TotalMinutes > 5;
             }
-            set { } 
         }
 
         public List<MessageFileDTO> Files { get; set; } = [];

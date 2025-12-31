@@ -432,7 +432,7 @@ namespace MessengerAPI.Services
             var groupChats = await _context.Chats
                 .Where(c => userChatIds.Contains(c.Id))
                 .Where(c => c.Type != ChatType.Contact)
-                .Where(c => EF.Functions.ILike(c.Name, $"%{query}%"))
+                .Where(c => EF.Functions.ILike(c.Name ?? string.Empty, $"%{query}%"))
                 .Take(maxResults)
                 .AsNoTracking()
                 .ToListAsync();
@@ -492,7 +492,7 @@ namespace MessengerAPI.Services
                         Name: p.User!.FormatDisplayName(),
                         Avatar: !string.IsNullOrEmpty(p.User.Avatar)
                             ? $"{request.Scheme}://{request.Host}{p.User.Avatar}"
-                            : (string?)null
+                            : null
                     ));
         }
 

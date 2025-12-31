@@ -10,13 +10,13 @@ public class CircularProgress : Control
     private double _animationAngle;
 
     public static readonly StyledProperty<double> ValueProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Value), 0);
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Value));
 
     public static readonly StyledProperty<double> MaximumProperty =
         AvaloniaProperty.Register<CircularProgress, double>(nameof(Maximum), 100);
 
     public static readonly StyledProperty<double> MinimumProperty =
-        AvaloniaProperty.Register<CircularProgress, double>(nameof(Minimum), 0);
+        AvaloniaProperty.Register<CircularProgress, double>(nameof(Minimum));
 
     public static readonly StyledProperty<double> StrokeWidthProperty =
         AvaloniaProperty.Register<CircularProgress, double>(nameof(StrokeWidth), 4);
@@ -31,7 +31,7 @@ public class CircularProgress : Control
         AvaloniaProperty.Register<CircularProgress, IBrush?>(nameof(BackgroundTrack));
 
     public static readonly StyledProperty<bool> IsIndeterminateProperty =
-        AvaloniaProperty.Register<CircularProgress, bool>(nameof(IsIndeterminate), false);
+        AvaloniaProperty.Register<CircularProgress, bool>(nameof(IsIndeterminate));
 
     public double Value
     {

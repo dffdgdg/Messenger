@@ -1,15 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MessengerDesktop.ViewModels.Chat;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
 
 namespace MessengerDesktop.Views.Chat
 {
@@ -20,7 +19,7 @@ namespace MessengerDesktop.Views.Chat
         private ChatViewModel? _currentVm;
         private bool _pendingScrollToEnd;
 
-        // Для отслеживания видимых сообщений
+        // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         private readonly HashSet<int> _processedMessageIds = [];
         private readonly DispatcherTimer _visibilityCheckTimer;
 
@@ -29,7 +28,7 @@ namespace MessengerDesktop.Views.Chat
             InitializeComponent();
             DataContextChanged += OnDataContextChanged;
 
-            // Таймер для debounce проверки видимости
+            // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ debounce пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             _visibilityCheckTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(250)
@@ -39,7 +38,7 @@ namespace MessengerDesktop.Views.Chat
 
         private void OnDataContextChanged(object? sender, EventArgs e)
         {
-            // Отписываемся от старой VM
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ VM
             if (_currentVm != null)
             {
                 _currentVm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -55,7 +54,7 @@ namespace MessengerDesktop.Views.Chat
             _currentVm = DataContext as ChatViewModel;
             _processedMessageIds.Clear();
 
-            // Подписываемся на новую VM
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ VM
             if (_currentVm != null)
             {
                 _currentVm.PropertyChanged += OnViewModelPropertyChanged;
@@ -88,7 +87,7 @@ namespace MessengerDesktop.Views.Chat
                 !_currentVm.IsInitialLoading && _pendingScrollToEnd)
             {
                 _pendingScrollToEnd = false;
-                // Не скроллим к концу автоматически - это делает VM через ScrollToIndexRequested
+                // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ VM пїЅпїЅпїЅпїЅпїЅ ScrollToIndexRequested
             }
         }
 
@@ -103,7 +102,7 @@ namespace MessengerDesktop.Views.Chat
         }
 
         /// <summary>
-        /// Обработчик скролла к индексу (для непрочитанных)
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
         /// </summary>
         private void OnScrollToIndexRequested(int index)
         {
@@ -133,7 +132,7 @@ namespace MessengerDesktop.Views.Chat
         }
 
         /// <summary>
-        /// Обработчик прокрутки к найденному сообщению
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void OnScrollToMessageRequested(MessageViewModel message)
         {
@@ -159,7 +158,7 @@ namespace MessengerDesktop.Views.Chat
         }
 
         /// <summary>
-        /// Прокручивает к указанному сообщению
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void ScrollToMessage(MessageViewModel message)
         {
@@ -204,7 +203,7 @@ namespace MessengerDesktop.Views.Chat
         }
 
         /// <summary>
-        /// Скролл к концу с ожиданием рендеринга элементов
+        /// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void ScrollToEndAfterRender()
         {
@@ -243,14 +242,14 @@ namespace MessengerDesktop.Views.Chat
         {
             if (_scrollViewer == null || DataContext is not ChatViewModel vm) return;
 
-            // Запускаем таймер для проверки видимых сообщений (debounce)
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (debounce)
             _visibilityCheckTimer.Stop();
             _visibilityCheckTimer.Start();
 
-            // Не загружаем старые сообщения в режиме поиска
+            // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
             if (vm.IsSearchMode) return;
 
-            // Загрузка старых сообщений при скролле вверх
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             if (_scrollViewer.Offset.Y < 100 && !vm.IsLoadingOlderMessages && !vm.IsInitialLoading)
             {
                 var previousExtentHeight = _scrollViewer.Extent.Height;
@@ -275,7 +274,7 @@ namespace MessengerDesktop.Views.Chat
                 }, DispatcherPriority.Loaded);
             }
 
-            // Загрузка новых сообщений при скролле вниз
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
             var distanceFromBottom = _scrollViewer.Extent.Height
                 - _scrollViewer.Viewport.Height
                 - _scrollViewer.Offset.Y;
@@ -285,13 +284,13 @@ namespace MessengerDesktop.Views.Chat
                 await vm.LoadNewerMessagesCommand.ExecuteAsync(null);
             }
 
-            // Обновляем флаг IsScrolledToBottom
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ IsScrolledToBottom
             var isAtBottom = distanceFromBottom < 50;
             vm.IsScrolledToBottom = isAtBottom;
         }
 
         /// <summary>
-        /// Tick таймера - проверяем видимые сообщения для отметки прочитанными
+        /// Tick пїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void OnVisibilityCheckTick(object? sender, EventArgs e)
         {
@@ -300,7 +299,7 @@ namespace MessengerDesktop.Views.Chat
         }
 
         /// <summary>
-        /// Проверяет какие сообщения видны и отмечает их как прочитанные
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void CheckVisibleMessages()
         {
@@ -311,14 +310,14 @@ namespace MessengerDesktop.Views.Chat
 
             foreach (var message in _currentVm.Messages)
             {
-                // Пропускаем уже обработанные, прочитанные или свои сообщения
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 if (!message.IsUnread || message.SenderId == _currentVm.UserId)
                     continue;
 
                 if (_processedMessageIds.Contains(message.Id))
                     continue;
 
-                // Находим контейнер сообщения
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 var index = _currentVm.Messages.IndexOf(message);
                 if (index < 0) continue;
 
@@ -326,7 +325,7 @@ namespace MessengerDesktop.Views.Chat
                 if (container is not Control control)
                     continue;
 
-                // Получаем позицию относительно ScrollViewer
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ScrollViewer
                 var transform = control.TransformToVisual(_scrollViewer);
                 if (transform == null)
                     continue;
@@ -335,7 +334,7 @@ namespace MessengerDesktop.Views.Chat
                 var bottomRight = transform.Value.Transform(new Avalonia.Point(
                     control.Bounds.Width, control.Bounds.Height));
 
-                // Проверяем видимость (хотя бы частичную)
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
                 var isVisible = bottomRight.Y > 0 && topLeft.Y < viewportHeight;
 
                 if (isVisible)

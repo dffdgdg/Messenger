@@ -1,12 +1,10 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Notifications;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Platform;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Notifications;
+using MessengerDesktop.Services.Platform;
 using AvaloniaNotification = Avalonia.Controls.Notifications.Notification;
 using AvaloniaNotificationType = Avalonia.Controls.Notifications.NotificationType;
 
@@ -72,11 +70,7 @@ public class NotificationService(IPlatformService platformService) : INotificati
         _notificationManager.Show(notification);
     }
 
-    public async Task ShowBothAsync(
-        string title,
-        string message,
-        AvaloniaNotificationType type = AvaloniaNotificationType.Information,
-        bool copyToClipboard = false)
+    public async Task ShowBothAsync( string title, string message, AvaloniaNotificationType type = AvaloniaNotificationType.Information, bool copyToClipboard = false)
     {
         ThrowIfDisposed();
 
@@ -88,17 +82,13 @@ public class NotificationService(IPlatformService platformService) : INotificati
         }
     }
 
-    public Task ShowErrorAsync(string message, bool copyToClipboard = false)
-        => ShowBothAsync("Ошибка", message, AvaloniaNotificationType.Error, copyToClipboard);
+    public Task ShowErrorAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Ошибка", message, AvaloniaNotificationType.Error, copyToClipboard);
 
-    public Task ShowSuccessAsync(string message, bool copyToClipboard = false)
-        => ShowBothAsync("Успех", message, AvaloniaNotificationType.Success, copyToClipboard);
+    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Успех", message, AvaloniaNotificationType.Success, copyToClipboard);
 
-    public Task ShowWarningAsync(string message, bool copyToClipboard = false)
-        => ShowBothAsync("Предупреждение", message, AvaloniaNotificationType.Warning, copyToClipboard);
+    public Task ShowWarningAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Предупреждение", message, AvaloniaNotificationType.Warning, copyToClipboard);
 
-    public Task ShowInfoAsync(string message, bool copyToClipboard = false)
-        => ShowBothAsync("Messenger", message, AvaloniaNotificationType.Information, copyToClipboard);
+    public Task ShowInfoAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Messenger", message, AvaloniaNotificationType.Information, copyToClipboard);
 
     public async Task ShowCopyableErrorAsync(string message)
     {

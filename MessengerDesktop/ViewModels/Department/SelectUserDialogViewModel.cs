@@ -19,7 +19,7 @@ public partial class SelectUserDialogViewModel : DialogBaseViewModel
         Title = title;
     }
 
-    public string Title { get; }
+    public new string Title { get; }
 
     [ObservableProperty]
     private ObservableCollection<UserDTO> _allUsers = [];

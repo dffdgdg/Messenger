@@ -166,7 +166,7 @@
                                                   Foreground="{DynamicResource TextMuted}"
                                                   Margin="10,0,8,0"/>
 										<TextBox Grid.Column="1"
-                                                 Classes="Borderless"
+                                                 Classes="Borderlesses"
                                                  Text="{Binding SearchQuery}"
                                                  Watermark="Поиск..."
                                                  FontSize="13"
@@ -273,7 +273,7 @@
 							Width="500">
 						<StackPanel Spacing="16">
 							<StackPanel Orientation="Horizontal" Spacing="10">
-								<PathIcon Data="{StaticResource options_regular}"
+								<PathIcon Data="{StaticResource Options}"
                                           Width="18" Height="18"
                                           Foreground="{DynamicResource TextSecondary}"/>
 								<TextBlock Text="Действия"
@@ -291,7 +291,7 @@
 										<Border Width="44" Height="44"
                                                 CornerRadius="12"
                                                 Background="{DynamicResource WarningBgBrush}">
-											<PathIcon Data="{StaticResource send_regular}"
+											<PathIcon Data="{StaticResource SendIcon}"
                                                       Width="18" Height="18"
                                                       Foreground="{DynamicResource WarningBrush}"/>
 										</Border>

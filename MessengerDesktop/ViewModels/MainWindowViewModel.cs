@@ -30,8 +30,8 @@ namespace MessengerDesktop.ViewModels
 
         public MainWindowViewModel(INavigationService navigation,IDialogService dialogService,IAuthManager authManager)  
         {
-            _navigation = navigation ?? throw new System.ArgumentNullException(nameof(navigation));
-            _dialogService = dialogService ?? throw new System.ArgumentNullException(nameof(dialogService));
+            _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
             _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
 
             _navigation.CurrentViewModelChanged += OnNavigationViewModelChanged;
@@ -130,7 +130,7 @@ namespace MessengerDesktop.ViewModels
                     notifyPropertyChanged.PropertyChanged -= OnDialogServicePropertyChanged;
                 }
 
-                (CurrentViewModel as System.IDisposable)?.Dispose();
+                (CurrentViewModel as IDisposable)?.Dispose();
             }
 
             base.Dispose(disposing);

@@ -22,47 +22,47 @@
 		<DataTemplate x:Key="ChatSearchResultTemplate" x:DataType="shared:ChatDTO">
 			<Grid Height="52" ColumnDefinitions="Auto,*,50">
 				<controls:AvatarControl Grid.Column="0"
-										Classes="Medium"
-										Source="{Binding Avatar}"
-										DisplayName="{Binding Name}"
-										FallbackIcon="{StaticResource GroupIcon}"
-										ShowOnlineIndicator="False"
-										VerticalAlignment="Center"/>
+                                        Classes="Medium"
+                                        Source="{Binding Avatar}"
+                                        DisplayName="{Binding Name}"
+                                        FallbackIcon="{StaticResource GroupIcon}"
+                                        ShowOnlineIndicator="False"
+                                        VerticalAlignment="Center"/>
 
 				<StackPanel Grid.Column="1"
-							VerticalAlignment="Center"
-							Margin="12,0,8,0">
+                            VerticalAlignment="Center"
+                            Margin="12,0,8,0">
 					<TextBlock Text="{Binding Name}"
-							   FontWeight="SemiBold"
-							   FontSize="14"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"/>
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"/>
 
 					<TextBlock Foreground="{DynamicResource TextSecondary}"
-							   FontSize="13"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 						<Run Text="{Binding LastMessageSenderName}"/>
 						<Run Text=": "/>
 						<Run Text="{Binding LastMessagePreview}"/>
 					</TextBlock>
 
 					<TextBlock Text="Нет сообщений"
-							   Foreground="{DynamicResource TextMuted}"
-							   FontSize="13"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="13"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 				</StackPanel>
 
 				<TextBlock Grid.Column="2"
-						   Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
-						   Foreground="{DynamicResource TextMuted}"
-						   FontSize="11"
-						   VerticalAlignment="Top"
-						   HorizontalAlignment="Right"
-						   Margin="0,4,0,0"/>
+                           Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
+                           Foreground="{DynamicResource TextMuted}"
+                           FontSize="11"
+                           VerticalAlignment="Top"
+                           HorizontalAlignment="Right"
+                           Margin="0,4,0,0"/>
 			</Grid>
 		</DataTemplate>
 
@@ -70,107 +70,106 @@
 		<DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="shared:GlobalSearchMessageDTO">
 			<Grid Height="52" ColumnDefinitions="Auto,*,50">
 				<controls:AvatarControl Grid.Column="0"
-										Classes="Medium"
-										Source="{Binding ChatAvatar}"
-										DisplayName="{Binding ChatName}"
-										FallbackIcon="{StaticResource GroupIcon}"
-										ShowOnlineIndicator="False"
-										VerticalAlignment="Center"/>
+                                        Classes="Medium"
+                                        Source="{Binding ChatAvatar}"
+                                        DisplayName="{Binding ChatName}"
+                                        FallbackIcon="{StaticResource GroupIcon}"
+                                        ShowOnlineIndicator="False"
+                                        VerticalAlignment="Center"/>
 
 				<StackPanel Grid.Column="1"
-							VerticalAlignment="Center"
-							Margin="12,0,8,0">
+                            VerticalAlignment="Center"
+                            Margin="12,0,8,0">
 					<TextBlock Text="{Binding ChatName}"
-							   FontWeight="SemiBold"
-							   FontSize="14"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"/>
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"/>
 
 					<TextBlock Foreground="{DynamicResource TextSecondary}"
-							   FontSize="13"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 						<Run Text="{Binding SenderName}" Foreground="{DynamicResource Accent}"/>
 						<Run Text=": "/>
 						<Run Text="{Binding HighlightedContent}"/>
 					</TextBlock>
 
 					<TextBlock Text="Нет сообщений"
-							   Foreground="{DynamicResource TextMuted}"
-							   FontSize="13"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="13"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 				</StackPanel>
 
 				<TextBlock Grid.Column="2"
-						   Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}"
-						   Foreground="{DynamicResource TextMuted}"
-						   FontSize="11"
-						   VerticalAlignment="Top"
-						   HorizontalAlignment="Right"
-						   Margin="0,4,0,0"/>
+                           Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}"
+                           Foreground="{DynamicResource TextMuted}"
+                           FontSize="11"
+                           VerticalAlignment="Top"
+                           HorizontalAlignment="Right"
+                           Margin="0,4,0,0"/>
 			</Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="ChatListItemTemplate" x:DataType="shared:ChatDTO">
 			<Grid Height="52" ColumnDefinitions="Auto,*,50">
 				<controls:AvatarControl Grid.Column="0"
-										Classes="Medium"
-										Source="{Binding Avatar}"
-										DisplayName="{Binding Name}"
-										FallbackIcon="{StaticResource GroupIcon}"
-										ShowOnlineIndicator="False"
-										VerticalAlignment="Center"/>
+                                        Classes="Medium"
+                                        Source="{Binding Avatar}"
+                                        DisplayName="{Binding Name}"
+                                        FallbackIcon="{StaticResource GroupIcon}"
+                                        ShowOnlineIndicator="False"
+                                        VerticalAlignment="Center"/>
 
 				<StackPanel Grid.Column="1"
-							VerticalAlignment="Center"
-							Margin="12,0,8,0">
+                            VerticalAlignment="Center"
+                            Margin="12,0,8,0">
 					<TextBlock Text="{Binding Name}"
-							   FontWeight="SemiBold"
-							   FontSize="14"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"/>
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"/>
 
 					<TextBlock Foreground="{DynamicResource TextSecondary}"
-							   FontSize="13"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 						<Run Text="{Binding LastMessageSenderName}"/>
 						<Run Text=": "/>
 						<Run Text="{Binding LastMessagePreview}"/>
 					</TextBlock>
 
 					<TextBlock Text="Нет сообщений"
-							   Foreground="{DynamicResource TextMuted}"
-							   FontSize="13"
-							   Margin="0,2,0,0"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="13"
+                               Margin="0,2,0,0"
+                               IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 				</StackPanel>
 
 				<StackPanel Grid.Column="2"
-							VerticalAlignment="Top"
-							HorizontalAlignment="Right"
-							Margin="0,4,0,0">
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Right"
+                            Margin="0,4,0,0">
 					<TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
-							   Foreground="{DynamicResource TextMuted}"
-							   FontSize="11"
-							   HorizontalAlignment="Right"/>
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="11"
+                               HorizontalAlignment="Right"/>
 
 					<Border Classes="UnreadBadge"
-                    Margin="0,4,0,0"
-                    HorizontalAlignment="Right"
-                    IsVisible="{Binding UnreadCount, 
-                               Converter={conv:Converter Name=GreaterThanZero}}">
+                            Margin="0,4,0,0"
+                            HorizontalAlignment="Right"
+                            IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
 						<TextBlock Text="{Binding UnreadCount}"
-								   FontSize="11"
-								   FontWeight="SemiBold"
-								   Foreground="White"
-								   HorizontalAlignment="Center"
-								   VerticalAlignment="Center"/>
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
 					</Border>
 				</StackPanel>
 			</Grid>
@@ -179,7 +178,7 @@
 
 	<Grid x:Name="MainGrid">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="280" MinWidth="220" MaxWidth="400"/>
+			<ColumnDefinition Width="280" MaxWidth="400"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition MinWidth="400"/>
 			<ColumnDefinition Width="Auto"/>
@@ -189,88 +188,125 @@
 		<Grid x:Name="ChatListPanel" Grid.Column="0">
 			<DockPanel>
 
-				<!-- Заголовок -->
+				<!-- ==================== ЗАГОЛОВОК ==================== -->
 				<Border DockPanel.Dock="Top"
-				        Classes="PanelHeader"
-				        BorderThickness="0,0,0,1"
-				        BorderBrush="{DynamicResource BorderDefault}">
-					<Grid ColumnDefinitions="*,Auto">
-						<Panel Grid.Column="0">
-							<TextBlock Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, 
-							           ConverterParameter='Чаты|Контакты'}"
-							           Classes="PanelTitle"
-							           VerticalAlignment="Center"
-							           IsVisible="{Binding !IsSearchMode}"/>
-							<TextBlock Text="Поиск"
-							           Classes="PanelTitle"
-							           VerticalAlignment="Center"
-							           IsVisible="{Binding IsSearchMode}"/>
-						</Panel>
+						Classes="PanelHeader"
+						BorderThickness="0,0,0,1"
+						BorderBrush="{DynamicResource BorderDefault}">
 
-						<!-- Кнопка создания чата -->
-						<Button Grid.Column="1"
-						        Classes="IconButton"
-						        Command="{Binding CreateGroupCommand}"
-						        ToolTip.Tip="Новый чат">
-							<Button.IsVisible>
-								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-									<Binding Path="IsGroupMode"/>
-									<Binding Path="!IsSearchMode"/>
-								</MultiBinding>
-							</Button.IsVisible>
-							<PathIcon Data="{StaticResource AddIcon}"
-							          Width="18" Height="18"
-							          Foreground="{DynamicResource Icon}"/>
-						</Button>
+					<!-- Обёртка для нескольких элементов -->
+					<Panel>
+						<!-- Обычный режим - полный заголовок -->
+						<Grid ColumnDefinitions="*,Auto"
+							  IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+							<Panel Grid.Column="0">
+								<TextBlock Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, 
+								ConverterParameter='Чаты|Контакты'}"
+								Classes="PanelTitle"
+								VerticalAlignment="Center"
+								IsVisible="{Binding !IsSearchMode}"/>
+								<TextBlock Text="Поиск"
+										   Classes="PanelTitle"
+										   VerticalAlignment="Center"
+										   IsVisible="{Binding IsSearchMode}"/>
+							</Panel>
 
-						<!-- Кнопка закрытия поиска -->
-						<Button Grid.Column="1"
-						        Classes="IconButton"
-						        Command="{Binding CloseSearchCommand}"
-						        ToolTip.Tip="Закрыть поиск"
-						        IsVisible="{Binding IsSearchMode}">
-							<PathIcon Data="{StaticResource CloseIcon}"
-							          Width="16" Height="16"
-							          Foreground="{DynamicResource Icon}"/>
+							<!-- Кнопка создания чата -->
+							<Button Grid.Column="1"
+									Classes="IconButton"
+									Command="{Binding CreateGroupCommand}"
+									ToolTip.Tip="Новый чат">
+								<Button.IsVisible>
+									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+										<Binding Path="IsGroupMode"/>
+										<Binding Path="!IsSearchMode"/>
+									</MultiBinding>
+								</Button.IsVisible>
+								<PathIcon Data="{StaticResource AddIcon}"
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource Icon}"/>
+							</Button>
+
+							<!-- Кнопка закрытия поиска -->
+							<Button Grid.Column="1"
+									Classes="IconButton"
+									Command="{Binding CloseSearchCommand}"
+									ToolTip.Tip="Закрыть поиск"
+									IsVisible="{Binding IsSearchMode}">
+								<PathIcon Data="{StaticResource CloseIcon}"
+										  Width="16" Height="16"
+										  Foreground="{DynamicResource Icon}"/>
+							</Button>
+						</Grid>
+
+						<!-- Компактный режим - кнопка меню/разворота -->
+						<Button Classes="IconButton"
+								IsVisible="{Binding IsCompactMode, ElementName=Root}"
+								Click="OnExpandButtonClick"
+								ToolTip.Tip="Развернуть панель"
+								HorizontalAlignment="Center">
+							<PathIcon Data="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"
+									  Width="20" Height="20"
+									  Foreground="{DynamicResource Icon}"/>
 						</Button>
-					</Grid>
+					</Panel>
 				</Border>
 
-				<!-- Поле поиска -->
+				<!-- ==================== ПОЛЕ ПОИСКА / КНОПКА ПОИСКА ==================== -->
 				<Border DockPanel.Dock="Top"
-				        Classes="SearchContainer"
-				        Margin="12,8,12,8"
-				        Height="36">
-					<Grid ColumnDefinitions="Auto,*">
-						<PathIcon Grid.Column="0"
-						          Data="{StaticResource SearchIcon}"
-						          Width="16" Height="16"
-						          Foreground="{DynamicResource TextMuted}"
-						          Margin="10,0,8,0"/>
+                        Margin="8,8,8,8"
+                        Height="40">
+					<Panel>
+						<!-- Обычный режим - поле поиска -->
+						<Border Classes="SearchContainer"
+                                IsVisible="{Binding !IsCompactMode, ElementName=Root}"
+                                CornerRadius="8"
+                                Height="36">
+							<Grid ColumnDefinitions="Auto,*">
+								<PathIcon Grid.Column="0"
+                                          Data="{StaticResource SearchIcon}"
+                                          Width="16" Height="16"
+                                          Foreground="{DynamicResource TextMuted}"
+                                          Margin="10,0,8,0"/>
 
-						<TextBox Grid.Column="1"
-						         Classes="Borderlesses"
-						         Text="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
-						         Watermark="Поиск по чатам и сообщениям..."
-						         Background="Transparent"
-						         BorderThickness="0"
-						         VerticalContentAlignment="Center"
-						         VerticalAlignment="Center"
-						         Padding="0,0,10,0"
-						         FontSize="13"/>
-					</Grid>
+								<TextBox x:Name="SearchTextBox"
+                                         Grid.Column="1"
+                                         Classes="Borderlesses"
+                                         Text="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
+                                         Watermark="Поиск..."
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         VerticalContentAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Padding="0,0,10,0"
+                                         FontSize="13"/>
+							</Grid>
+						</Border>
+
+						<!-- Компактный режим - кнопка поиска -->
+						<Button Classes="IconButton CompactSearchButton"
+                                IsVisible="{Binding IsCompactMode, ElementName=Root}"
+                                Click="OnSearchButtonClick"
+                                ToolTip.Tip="Поиск"
+                                HorizontalAlignment="Center"
+                                Width="40" Height="40">
+							<PathIcon Data="{StaticResource SearchIcon}"
+                                      Width="20" Height="20"
+                                      Foreground="{DynamicResource Icon}"/>
+						</Button>
+					</Panel>
 				</Border>
 
 				<!-- ==================== ОБЫЧНЫЙ СПИСОК ЧАТОВ ==================== -->
 				<ListBox DockPanel.Dock="Top"
-						 ItemsSource="{Binding Chats}"
-						 SelectedItem="{Binding SelectedChat}"
-						 Background="Transparent"
-						 Margin="8,4,8,8"
-						 BorderThickness="0"
-						 HorizontalAlignment="Stretch"
-						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-						 IsVisible="{Binding !IsSearchMode}">
+                         ItemsSource="{Binding Chats}"
+                         SelectedItem="{Binding SelectedChat}"
+                         Background="Transparent"
+                         Margin="4,4,4,8"
+                         BorderThickness="0"
+                         HorizontalAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         IsVisible="{Binding !IsSearchMode}">
 
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
@@ -309,93 +345,144 @@
 
 					<ListBox.ItemTemplate>
 						<DataTemplate x:DataType="shared:ChatDTO">
-							<!-- Убрал фиксированную ширину 50 у последней колонки, сделал Auto -->
-							<Grid Height="52" ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
-								<controls:AvatarControl Grid.Column="0"
-														Classes="Medium"
-														Source="{Binding Avatar}"
-														DisplayName="{Binding Name}"
-														FallbackIcon="{StaticResource GroupIcon}"
-														ShowOnlineIndicator="False"
-														VerticalAlignment="Center"/>
+							<Panel>
+								<!-- Обычный режим - полный элемент -->
+								<Grid Height="52"
+									  ColumnDefinitions="Auto,*,Auto"
+									  HorizontalAlignment="Stretch"
+									  IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+									<controls:AvatarControl Grid.Column="0"
+															Classes="Medium"
+															Source="{Binding Avatar}"
+															DisplayName="{Binding Name}"
+															FallbackIcon="{StaticResource GroupIcon}"
+															ShowOnlineIndicator="False"
+															VerticalAlignment="Center"/>
 
-								<StackPanel Grid.Column="1"
-											VerticalAlignment="Center"
-											Margin="12,0,8,0"
-											HorizontalAlignment="Stretch">
-									<TextBlock Text="{Binding Name}"
-											   FontWeight="SemiBold"
-											   FontSize="14"
-											   TextTrimming="CharacterEllipsis"
-											   MaxLines="1"/>
-
-									<TextBlock Classes="ChatPreview"
-											   FontSize="13"
-											   TextTrimming="CharacterEllipsis"
-											   MaxLines="1"
-											   Margin="0,2,0,0"
-											   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-										<Run Text="{Binding LastMessageSenderName}"/>
-										<Run Text=": "/>
-										<Run Text="{Binding LastMessagePreview}"/>
-									</TextBlock>
-
-									<TextBlock Text="Нет сообщений"
-											   Foreground="{DynamicResource TextMuted}"
-											   FontSize="13"
-											   Margin="0,2,0,0"
-											   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-								</StackPanel>
-
-								<StackPanel Grid.Column="2"
-											VerticalAlignment="Top"
-											HorizontalAlignment="Right"
-											Margin="0,4,0,0"
-											MinWidth="40">
-									<TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
-											   Foreground="{DynamicResource TextMuted}"
-											   FontSize="11"
-											   HorizontalAlignment="Right"/>
-
-									<Border Classes="UnreadBadge"
-											Margin="0,4,0,0"
-											HorizontalAlignment="Right"
-											IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
-										<TextBlock Text="{Binding UnreadCount}"
-												   FontSize="11"
+									<StackPanel Grid.Column="1"
+												VerticalAlignment="Center"
+												Margin="12,0,8,0"
+												HorizontalAlignment="Stretch">
+										<TextBlock Text="{Binding Name}"
 												   FontWeight="SemiBold"
-												   Foreground="White"
-												   HorizontalAlignment="Center"
-												   VerticalAlignment="Center"/>
-									</Border>
-								</StackPanel>
-							</Grid>
+												   FontSize="14"
+												   TextTrimming="CharacterEllipsis"
+												   MaxLines="1"/>
+
+										<TextBlock Classes="ChatPreview"
+												   FontSize="13"
+												   TextTrimming="CharacterEllipsis"
+												   MaxLines="1"
+												   Margin="0,2,0,0"
+												   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+											<Run Text="{Binding LastMessageSenderName}"/>
+											<Run Text=": "/>
+											<Run Text="{Binding LastMessagePreview}"/>
+										</TextBlock>
+
+										<TextBlock Text="Нет сообщений"
+												   Foreground="{DynamicResource TextMuted}"
+												   FontSize="13"
+												   Margin="0,2,0,0"
+												   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+									</StackPanel>
+
+									<StackPanel Grid.Column="2"
+												VerticalAlignment="Top"
+												HorizontalAlignment="Right"
+												Margin="0,4,0,0"
+												MinWidth="40">
+										<TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
+												   Foreground="{DynamicResource TextMuted}"
+												   FontSize="11"
+												   HorizontalAlignment="Right"/>
+
+										<Border Classes="UnreadBadge"
+												Margin="0,4,0,0"
+												HorizontalAlignment="Right"
+												IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+											<TextBlock Text="{Binding UnreadCount}"
+													   FontSize="11"
+													   FontWeight="SemiBold"
+													   Foreground="White"
+													   HorizontalAlignment="Center"
+													   VerticalAlignment="Center"/>
+										</Border>
+									</StackPanel>
+								</Grid>
+
+								<!-- Компактный режим - только аватар с tooltip -->
+								<Grid Height="52"
+									  IsVisible="{Binding IsCompactMode, ElementName=Root}"
+									  HorizontalAlignment="Center"
+									  ToolTip.Tip="{Binding Name}">
+									<Panel>
+										<controls:AvatarControl Classes="Medium"
+																Source="{Binding Avatar}"
+																DisplayName="{Binding Name}"
+																FallbackIcon="{StaticResource GroupIcon}"
+																ShowOnlineIndicator="False"
+																VerticalAlignment="Center"
+																HorizontalAlignment="Center"/>
+
+										<!-- Бейдж непрочитанных в компактном режиме -->
+										<Border Classes="UnreadBadge CompactBadge"
+												HorizontalAlignment="Right"
+												VerticalAlignment="Top"
+												Margin="0,-2,-6,0"
+												MinWidth="18"
+												Height="18"
+												IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+											<TextBlock Text="{Binding UnreadCount}"
+													   FontSize="10"
+													   FontWeight="SemiBold"
+													   Foreground="White"
+													   HorizontalAlignment="Center"
+													   VerticalAlignment="Center"/>
+										</Border>
+									</Panel>
+								</Grid>
+							</Panel>
 						</DataTemplate>
 					</ListBox.ItemTemplate>
 				</ListBox>
-				
+
 				<!-- ==================== РЕЗУЛЬТАТЫ ПОИСКА ==================== -->
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
-							  IsVisible="{Binding IsSearchMode}"
-							  VerticalScrollBarVisibility="Auto"
-							  HorizontalScrollBarVisibility="Disabled">
+                              IsVisible="{Binding IsSearchMode}"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
 					<StackPanel Margin="8,4,8,8"
-					            Width="{Binding $parent[ScrollViewer].Bounds.Width}">
+                                Width="{Binding $parent[ScrollViewer].Bounds.Width}">
 
 						<!-- Найденные чаты -->
 						<StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
-							<TextBlock Classes="SectionHeader" Text="Чаты"/>
+							<TextBlock Classes="SectionHeader"
+                                       Text="Чаты"
+                                       IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
 							<ItemsControl Classes="ChatList"
-							              ItemsSource="{Binding SearchManager.ChatResults}">
+                                          ItemsSource="{Binding SearchManager.ChatResults}">
 								<ItemsControl.ItemTemplate>
 									<DataTemplate x:DataType="shared:ChatDTO">
 										<Button Classes="ChatListItem"
-										        Margin="0,1"
-										        Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"
-										        CommandParameter="{Binding}">
-											<ContentPresenter Content="{Binding}"
-											                  ContentTemplate="{StaticResource ChatSearchResultTemplate}"/>
+                                                Margin="0,1"
+                                                Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"
+                                                CommandParameter="{Binding}">
+											<Panel>
+												<!-- Обычный режим -->
+												<ContentPresenter Content="{Binding}"
+                                                                  ContentTemplate="{StaticResource ChatSearchResultTemplate}"
+                                                                  IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+												<!-- Компактный режим -->
+												<controls:AvatarControl Classes="Medium"
+                                                                        Source="{Binding Avatar}"
+                                                                        DisplayName="{Binding Name}"
+                                                                        FallbackIcon="{StaticResource GroupIcon}"
+                                                                        ShowOnlineIndicator="False"
+                                                                        HorizontalAlignment="Center"
+                                                                        IsVisible="{Binding IsCompactMode, ElementName=Root}"/>
+											</Panel>
 										</Button>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
@@ -404,24 +491,33 @@
 
 						<!-- Разделитель -->
 						<Border Height="1"
-						        Background="{DynamicResource BorderDefault}"
-						        Margin="0,12,0,8">
+                                Background="{DynamicResource BorderDefault}"
+                                Margin="0,12,0,8"
+                                >
 							<Border.IsVisible>
 								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
 									<Binding Path="SearchManager.HasChatResults"/>
 									<Binding Path="SearchManager.HasMessageResults"/>
+									<Binding Path="!IsCompactMode" ElementName="Root"/>
 								</MultiBinding>
 							</Border.IsVisible>
 						</Border>
 
-						<!-- Найденные сообщения -->
-						<StackPanel IsVisible="{Binding SearchManager.HasMessageResults}">
+						<!-- Найденные сообщения (только в обычном режиме) -->
+						<StackPanel>
+							<StackPanel.IsVisible>
+								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+									<Binding Path="SearchManager.HasMessageResults"/>
+									<Binding Path="!IsCompactMode" ElementName="Root"/>
+								</MultiBinding>
+							</StackPanel.IsVisible>
+
 							<StackPanel Orientation="Horizontal">
 								<TextBlock Classes="SectionHeader" Text="Сообщения"/>
 								<TextBlock FontSize="12"
-								           Foreground="{DynamicResource TextMuted}"
-								           Margin="4,8,0,6"
-								           VerticalAlignment="Center">
+                                           Foreground="{DynamicResource TextMuted}"
+                                           Margin="4,8,0,6"
+                                           VerticalAlignment="Center">
 									<Run Text="("/>
 									<Run Text="{Binding SearchManager.TotalMessagesCount}"/>
 									<Run Text=")"/>
@@ -429,15 +525,15 @@
 							</StackPanel>
 
 							<ItemsControl Classes="ChatList"
-							              ItemsSource="{Binding SearchManager.MessageResults}">
+                                          ItemsSource="{Binding SearchManager.MessageResults}">
 								<ItemsControl.ItemTemplate>
 									<DataTemplate x:DataType="shared:GlobalSearchMessageDTO">
 										<Button Classes="ChatListItem"
-										        Margin="0,1"
-										        Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"
-										        CommandParameter="{Binding}">
+                                                Margin="0,1"
+                                                Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"
+                                                CommandParameter="{Binding}">
 											<ContentPresenter Content="{Binding}"
-											                  ContentTemplate="{StaticResource MessageSearchResultTemplate}"/>
+                                                              ContentTemplate="{StaticResource MessageSearchResultTemplate}"/>
 										</Button>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
@@ -445,43 +541,43 @@
 
 							<!-- Кнопка "Показать ещё" -->
 							<Button Content="Показать ещё..."
-							        HorizontalAlignment="Center"
-							        Margin="0,16,0,8"
-							        Padding="20,10"
-							        Background="{DynamicResource SecondaryBG}"
-							        Foreground="{DynamicResource TextSecondary}"
-							        CornerRadius="8"
-							        FontSize="13"
-							        Cursor="Hand"
-							        IsVisible="{Binding SearchManager.HasMoreMessages}"
-							        Command="{Binding LoadMoreSearchResultsCommand}"/>
+                                    HorizontalAlignment="Center"
+                                    Margin="0,16,0,8"
+                                    Padding="20,10"
+                                    Background="{DynamicResource SecondaryBG}"
+                                    Foreground="{DynamicResource TextSecondary}"
+                                    CornerRadius="8"
+                                    FontSize="13"
+                                    Cursor="Hand"
+                                    IsVisible="{Binding SearchManager.HasMoreMessages}"
+                                    Command="{Binding LoadMoreSearchResultsCommand}"/>
 						</StackPanel>
 
 						<!-- ==================== ПУСТОЕ СОСТОЯНИЕ / ЗАГРУЗКА ==================== -->
 						<StackPanel HorizontalAlignment="Center"
-						            VerticalAlignment="Center"
-						            Margin="0,48"
-						            IsVisible="{Binding !SearchManager.HasResults}">
+                                    VerticalAlignment="Center"
+                                    Margin="0,48"
+                                    IsVisible="{Binding !SearchManager.HasResults}">
 
 							<!-- Индикатор загрузки (круговой) -->
 							<StackPanel Spacing="12"
-							            HorizontalAlignment="Center"
-							            IsVisible="{Binding SearchManager.IsSearching}">
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding SearchManager.IsSearching}">
 								<controls:CircularProgress IsIndeterminate="True"
-								                           Size="48"
-								                           StrokeWidth="4"
-								                           Foreground="{DynamicResource Accent}"
-								                           HorizontalAlignment="Center"/>
+                                                           Size="48"
+                                                           StrokeWidth="4"
+                                                           Foreground="{DynamicResource Accent}"
+                                                           HorizontalAlignment="Center"/>
 								<TextBlock Text="Поиск..."
-								           FontSize="14"
-								           Foreground="{DynamicResource TextSecondary}"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 							</StackPanel>
 
 							<!-- Когда поле пустое -->
 							<StackPanel Spacing="8"
-							            HorizontalAlignment="Center"
-							            IsVisible="{Binding !SearchManager.IsSearching}">
+                                        HorizontalAlignment="Center">
 								<StackPanel.IsVisible>
 									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
 										<Binding Path="!SearchManager.IsSearching"/>
@@ -489,23 +585,25 @@
 									</MultiBinding>
 								</StackPanel.IsVisible>
 								<PathIcon Data="{StaticResource SearchIcon}"
-								          Width="48" Height="48"
-								          Foreground="{DynamicResource TextMuted}"
-								          Opacity="0.3"
-								          HorizontalAlignment="Center"/>
+                                          Width="48" Height="48"
+                                          Foreground="{DynamicResource TextMuted}"
+                                          Opacity="0.3"
+                                          HorizontalAlignment="Center"/>
 								<TextBlock Text="Введите запрос"
-								           FontSize="14"
-								           Foreground="{DynamicResource TextSecondary}"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 								<TextBlock Text="Поиск по названиям чатов и сообщениям"
-								           FontSize="12"
-								           Foreground="{DynamicResource TextMuted}"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMuted}"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 							</StackPanel>
 
 							<!-- Когда ничего не найдено -->
 							<StackPanel Spacing="8"
-							            HorizontalAlignment="Center">
+                                        HorizontalAlignment="Center">
 								<StackPanel.IsVisible>
 									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
 										<Binding Path="!SearchManager.IsSearching"/>
@@ -513,27 +611,30 @@
 									</MultiBinding>
 								</StackPanel.IsVisible>
 								<TextBlock Text="😔"
-								           FontSize="48"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="48"
+                                           HorizontalAlignment="Center"/>
 								<TextBlock Text="Ничего не найдено"
-								           FontSize="14"
-								           Foreground="{DynamicResource TextSecondary}"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 								<TextBlock Text="Попробуйте изменить запрос"
-								           FontSize="12"
-								           Foreground="{DynamicResource TextMuted}"
-								           HorizontalAlignment="Center"/>
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMuted}"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 							</StackPanel>
 						</StackPanel>
 
 						<!-- Ошибка -->
 						<Border Classes="AlertError"
-						        Margin="0,8"
-						        IsVisible="{Binding SearchManager.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                Margin="0,8"
+                                IsVisible="{Binding SearchManager.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<TextBlock Text="{Binding SearchManager.ErrorMessage}"
-							           Foreground="{DynamicResource ErrorBrush}"
-							           FontSize="13"
-							           TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource ErrorBrush}"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 						</Border>
 					</StackPanel>
 				</ScrollViewer>
@@ -542,52 +643,52 @@
 
 		<!-- ==================== РАЗДЕЛИТЕЛЬ ==================== -->
 		<GridSplitter x:Name="GridSplitter"
-		              Grid.Column="1"
-		              Width="4"
-		              ResizeDirection="Columns"
-		              Background="Transparent"
-		              ResizeBehavior="PreviousAndNext"/>
+                      Grid.Column="1"
+                      Width="4"
+                      ResizeDirection="Columns"
+                      Background="Transparent"
+                      ResizeBehavior="PreviousAndNext"/>
 
 		<!-- ==================== ОБЛАСТЬ ЧАТА ==================== -->
 		<Border Grid.Column="2"
-		        CornerRadius="16"
-		        Background="{DynamicResource SecondaryBG}"
-		        BorderBrush="{DynamicResource BorderDefault}"
-		        BorderThickness="1"
-		        ClipToBounds="True">
+                CornerRadius="16"
+                Background="{DynamicResource SecondaryBG}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="1"
+                ClipToBounds="True">
 
 			<Panel>
 				<ContentControl Content="{Binding CurrentChatViewModel}"/>
 
 				<StackPanel VerticalAlignment="Center"
-				            HorizontalAlignment="Center"
-				            IsVisible="{Binding SelectedChat, Converter={x:Static ObjectConverters.IsNull}}">
+                            HorizontalAlignment="Center"
+                            IsVisible="{Binding SelectedChat, Converter={x:Static ObjectConverters.IsNull}}">
 
 					<PathIcon Data="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-					          Width="64" Height="64"
-					          Foreground="{DynamicResource TextMuted}"
-					          Opacity="0.5"/>
+                              Width="64" Height="64"
+                              Foreground="{DynamicResource TextMuted}"
+                              Opacity="0.5"/>
 
 					<TextBlock Text="Выберите чат"
-					           FontSize="18"
-					           FontWeight="Medium"
-					           Foreground="{DynamicResource TextMuted}"
-					           HorizontalAlignment="Center"
-					           Margin="0,16,0,0"/>
+                               FontSize="18"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource TextMuted}"
+                               HorizontalAlignment="Center"
+                               Margin="0,16,0,0"/>
 
 					<TextBlock Text="или начните новый диалог"
-					           FontSize="14"
-					           Foreground="{DynamicResource TextMuted}"
-					           Opacity="0.7"
-					           HorizontalAlignment="Center"
-					           Margin="0,4,0,0"/>
+                               FontSize="14"
+                               Foreground="{DynamicResource TextMuted}"
+                               Opacity="0.7"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0"/>
 				</StackPanel>
 			</Panel>
 		</Border>
 
 		<!-- ==================== ПАНЕЛЬ ИНФОРМАЦИИ ==================== -->
 		<views:ChatInfoPanel x:Name="InfoPanel"
-		                     Grid.Column="3"
-		                     DataContext="{Binding CurrentChatViewModel}"/>
+                             Grid.Column="3"
+                             DataContext="{Binding CurrentChatViewModel}"/>
 	</Grid>
 </UserControl>

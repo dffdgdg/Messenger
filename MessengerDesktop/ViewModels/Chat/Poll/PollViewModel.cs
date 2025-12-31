@@ -75,7 +75,7 @@ public partial class PollViewModel : BaseViewModel
         {
             new MenuItem
             {
-                Header = "Отменить голос",
+                Header = "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ",
                 Command = CancelVoteCommand,
                 IsEnabled = hasVotes
             }
@@ -101,8 +101,6 @@ public partial class PollViewModel : BaseViewModel
 
     public void ApplyDto(PollDTO dto)
     {
-        if (dto == null) return;
-
         Question = dto.Question;
         AllowsMultipleAnswers = dto.AllowsMultipleAnswers;
         TotalVotes = dto.Options.Sum(o => o.VotesCount);
@@ -157,7 +155,7 @@ public partial class PollViewModel : BaseViewModel
 
         if (selectedIds.Count == 0)
         {
-            ErrorMessage = "Необходимо выбрать хотя бы один вариант";
+            ErrorMessage = "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ";
             return;
         }
 
@@ -178,12 +176,12 @@ public partial class PollViewModel : BaseViewModel
             {
                 Debug.WriteLine($"Vote successful, options count: {result.Data.Options.Count}");
                 ApplyDto(result.Data);
-                SuccessMessage = "Голос учтён";
+                SuccessMessage = "пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ";
             }
             else
             {
                 Debug.WriteLine($"Vote failed: {result.Error}");
-                ErrorMessage = $"Ошибка голосования: {result.Error}";
+                ErrorMessage = $"пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {result.Error}";
             }
         });
     }
@@ -204,11 +202,11 @@ public partial class PollViewModel : BaseViewModel
         if (result is { Success: true, Data: not null })
         {
             ApplyDto(result.Data);
-            SuccessMessage = "Голос отменён";
+            SuccessMessage = "пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ";
         }
         else
         {
-            ErrorMessage = $"Ошибка отмены голоса: {result.Error}";
+            ErrorMessage = $"пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ: {result.Error}";
         }
     });
 }

@@ -12,7 +12,7 @@ public partial class AvatarControl : UserControl
     public static readonly StyledProperty<double> SizeProperty =
         AvaloniaProperty.Register<AvatarControl, double>(nameof(Size), 40);
 
-    public static readonly StyledProperty<double> FontSizeProperty =
+    public new static readonly StyledProperty<double> FontSizeProperty =
         AvaloniaProperty.Register<AvatarControl, double>(nameof(FontSize), 14);
 
     public static readonly StyledProperty<double> IconSizeProperty =
@@ -228,7 +228,7 @@ public partial class AvatarControl : UserControl
     {
         base.OnAttachedToVisualTree(e);
 
-        // Устанавливаем дефолтные цвета из ресурсов
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         PlaceholderBackground ??= this.FindResource("AccentLight") as IBrush
                                    ?? new SolidColorBrush(Color.Parse("#5B5FC7"));
         PlaceholderForeground ??= this.FindResource("AccentForeground") as IBrush
@@ -256,7 +256,7 @@ public partial class AvatarControl : UserControl
         Initials = GetInitials(DisplayName);
         IconData = FallbackIcon ?? GetDefaultIcon();
 
-        // Логика отображения плейсхолдера
+        // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         var hasFallbackIcon = FallbackIcon != null;
         ShowInitials = !HasImage && !string.IsNullOrEmpty(DisplayName) && !hasFallbackIcon;
         ShowIcon = !HasImage && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);

@@ -311,7 +311,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
         OnPropertyChanged(nameof(FilteredMembers));
     }
 
-    private void ClearMessages()
+    private new void ClearMessages()
     {
         ErrorMessage = null;
         SuccessMessage = null;

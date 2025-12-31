@@ -6,6 +6,7 @@ using MessengerDesktop.Services.Auth;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class ChatsViewModel : BaseViewModel, IDisposable
+public partial class ChatsViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
     private readonly IAuthManager _authManager;
@@ -396,7 +397,7 @@ public partial class ChatsViewModel : BaseViewModel, IDisposable
 
     #region IDisposable
 
-    protected virtual void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
         if (_disposed) return;
 
@@ -417,6 +418,8 @@ public partial class ChatsViewModel : BaseViewModel, IDisposable
         }
 
         _disposed = true;
+
+        base.Dispose(disposing);
     }
 
     #endregion

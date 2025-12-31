@@ -2,6 +2,8 @@
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.UI;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
+using MessengerShared.DTO.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -81,8 +83,6 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
             IsLoading = false;
         }
     }
-
-
 
     /// <summary>
     /// Публичный метод для загрузки сообщений вокруг указанного (например, для поиска)

@@ -1,7 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Department;
+using MessengerShared.DTO.User;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;

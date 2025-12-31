@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat.Poll;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;

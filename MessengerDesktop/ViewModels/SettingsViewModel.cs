@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Storage;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using System;
 using System.Threading;

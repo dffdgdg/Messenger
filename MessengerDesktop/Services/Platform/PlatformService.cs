@@ -24,7 +24,6 @@ namespace MessengerDesktop.Services.Platform
     public class PlatformService : IPlatformService
     {
         private Window? _mainWindow;
-        private bool _initialized;
 
         public Window? MainWindow => _mainWindow ?? GetMainWindowFromLifetime();
 
@@ -33,13 +32,11 @@ namespace MessengerDesktop.Services.Platform
         public void Initialize(Window mainWindow)
         {
             _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-            _initialized = true;
         }
 
         public void Cleanup()
         {
             _mainWindow = null;
-            _initialized = false;
         }
 
         public bool IsClipboardAvailable() => Clipboard is not null;

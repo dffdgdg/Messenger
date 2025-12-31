@@ -1,5 +1,5 @@
 ﻿using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 

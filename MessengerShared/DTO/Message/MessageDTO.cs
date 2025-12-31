@@ -1,4 +1,6 @@
-namespace MessengerShared.DTO
+using MessengerShared.DTO.Chat.Poll;
+
+namespace MessengerShared.DTO.Message
 {
     public class MessageDTO
     {

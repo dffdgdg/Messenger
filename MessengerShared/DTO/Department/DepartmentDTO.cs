@@ -1,4 +1,4 @@
-namespace MessengerShared.DTO
+namespace MessengerShared.DTO.Department
 {
     public class DepartmentDTO
     {

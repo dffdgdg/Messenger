@@ -7,8 +7,9 @@
              xmlns:conv="using:MessengerDesktop.Converters"
              xmlns:sys="using:System"
              x:Class="MessengerDesktop.Views.Chat.ChatView"
-             xmlns:vm="clr-namespace:MessengerDesktop.ViewModels.Chat"
-             x:DataType="vm:ChatViewModel"
+             xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
+             xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
+             x:DataType="vmChat:ChatViewModel"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Name="Root"
              Design.Width="1280" Design.Height="720"
@@ -238,7 +239,7 @@
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
 							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="vm:MessageViewModel">
+								<DataTemplate x:DataType="vmChat:MessageViewModel">
 									<!-- Обёртка с подсветкой -->
 									<Border Classes="MessageHighlight"
                                             Classes.Highlighted="{Binding IsHighlighted}"
@@ -258,7 +259,7 @@
 												<!-- Аватар -->
 												<Button VerticalAlignment="Bottom"
 														IsVisible="{Binding ShowSenderName}"
-														Command="{Binding DataContext.OpenProfileCommand, ElementName=Root}"
+														Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
 														CommandParameter="{Binding SenderId}"
 														Height="36" Width="36"
 														Padding="0"
@@ -293,7 +294,7 @@
                                                         BorderThickness="0"
                                                         Padding="14,0,14,4"
                                                         IsVisible="{Binding ShowSenderName}"
-                                                        Command="{Binding DataContext.OpenProfileCommand, ElementName=Root}"
+                                                        Command="{ReflectionBinding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
                                                         CommandParameter="{Binding SenderId}"
                                                         HorizontalAlignment="Left"
                                                         Cursor="Hand">
@@ -338,7 +339,7 @@
 																</ItemsPanelTemplate>
 															</ItemsControl.ItemsPanel>
 															<ItemsControl.ItemTemplate>
-																<DataTemplate x:DataType="vm:MessageFileViewModel">
+																<DataTemplate x:DataType="vmChat:MessageFileViewModel">
 																	<Grid>
 																		<!-- ===== ИЗОБРАЖЕНИЕ ===== -->
 																		<Border CornerRadius="10"
@@ -558,7 +559,7 @@
                                                                         IsVisible="{Binding Poll, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                                         HorizontalAlignment="Left">
 															<ContentControl.ContentTemplate>
-																<DataTemplate x:DataType="vm:PollViewModel">
+																<DataTemplate x:DataType="vmChat:PollViewModel">
 																	<Border Background="{DynamicResource SecondaryBG}"
                                                                             CornerRadius="12"
                                                                             Padding="14"
@@ -586,7 +587,7 @@
 																			<!-- Варианты ответов -->
 																			<ItemsControl ItemsSource="{Binding Options}">
 																				<ItemsControl.ItemTemplate>
-																					<DataTemplate x:DataType="vm:PollOptionViewModel">
+																					<DataTemplate x:DataType="vmChat:PollOptionViewModel">
 																						<Border Background="{DynamicResource PrimaryBG}"
                                                                                                 CornerRadius="8"
                                                                                                 Padding="12,10"
@@ -677,7 +678,7 @@
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
 							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="vm:LocalFileAttachment">
+								<DataTemplate x:DataType="vmChat:LocalFileAttachment">
 									<Border Background="{DynamicResource PrimaryBG}"
                                             CornerRadius="10"
                                             Padding="10">
@@ -710,7 +711,7 @@
                                                     Width="32" Height="32"
                                                     CornerRadius="8"
                                                     ToolTip.Tip="Удалить"
-                                                    Command="{Binding DataContext.RemoveAttachmentCommand, ElementName=Root}"
+                                                    Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RemoveAttachmentCommand}"
                                                     CommandParameter="{Binding}">
 												<TextBlock Text="✕"
                                                            FontSize="14"
@@ -811,7 +812,7 @@
 														<DataTemplate>
 															<Button Classes="EmojiButton"
                                                                     Content="{Binding}"
-                                                                    Command="{Binding DataContext.InsertEmojiCommand, ElementName=Root}"
+                                                                    Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).InsertEmojiCommand}"
                                                                     CommandParameter="{Binding}"/>
 														</DataTemplate>
 													</ItemsControl.ItemTemplate>

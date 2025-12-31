@@ -350,7 +350,7 @@
 								<Grid Height="52"
 									  ColumnDefinitions="Auto,*,Auto"
 									  HorizontalAlignment="Stretch"
-									  IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+									  IsVisible="{ReflectionBinding !IsCompactMode, ElementName=Root}">
 									<controls:AvatarControl Grid.Column="0"
 															Classes="Medium"
 															Source="{Binding Avatar}"
@@ -413,7 +413,7 @@
 
 								<!-- Компактный режим - только аватар с tooltip -->
 								<Grid Height="52"
-									  IsVisible="{Binding IsCompactMode, ElementName=Root}"
+									  IsVisible="{ReflectionBinding IsCompactMode, ElementName=Root}"
 									  HorizontalAlignment="Center"
 									  ToolTip.Tip="{Binding Name}">
 									<Panel>
@@ -473,7 +473,7 @@
 												<!-- Обычный режим -->
 												<ContentPresenter Content="{Binding}"
                                                                   ContentTemplate="{StaticResource ChatSearchResultTemplate}"
-                                                                  IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+                                                                  IsVisible="{ReflectionBinding !IsCompactMode, ElementName=Root}"/>
 												<!-- Компактный режим -->
 												<controls:AvatarControl Classes="Medium"
                                                                         Source="{Binding Avatar}"
@@ -481,7 +481,7 @@
                                                                         FallbackIcon="{StaticResource GroupIcon}"
                                                                         ShowOnlineIndicator="False"
                                                                         HorizontalAlignment="Center"
-                                                                        IsVisible="{Binding IsCompactMode, ElementName=Root}"/>
+                                                                        IsVisible="{ReflectionBinding IsCompactMode, ElementName=Root}"/>
 											</Panel>
 										</Button>
 									</DataTemplate>
@@ -490,9 +490,7 @@
 						</StackPanel>
 
 						<!-- Разделитель -->
-						<Border Height="1"
-                                Background="{DynamicResource BorderDefault}"
-                                Margin="0,12,0,8"
+						<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="0,12,0,8"
                                 >
 							<Border.IsVisible>
 								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">

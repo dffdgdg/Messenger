@@ -1,4 +1,4 @@
-namespace MessengerShared.DTO
+namespace MessengerShared.DTO.Message
 {
     public class MessageFileDTO
     {

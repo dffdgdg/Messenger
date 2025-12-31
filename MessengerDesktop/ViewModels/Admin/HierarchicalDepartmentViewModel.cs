@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Department;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 

@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

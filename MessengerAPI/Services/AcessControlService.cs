@@ -14,14 +14,24 @@ namespace MessengerAPI.Services
         Task EnsureIsMemberAsync(int userId, int chatId);
         Task EnsureIsOwnerAsync(int userId, int chatId);
         Task EnsureIsAdminAsync(int userId, int chatId);
+
+        Task<List<int>> GetUserChatIdsAsync(int userId);
     }
 
-    /// <summary>
-    /// Scoped сервис с кешированием запросов членства в рамках одного HTTP-запроса
-    /// </summary>
-    public class AccessControlService(MessengerDbContext context, ILogger<AccessControlService> logger) : IAccessControlService
+    public class AccessControlService(MessengerDbContext context, ICacheService cache,ILogger<AccessControlService> logger) : IAccessControlService
     {
-        private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _membershipCache = [];
+        private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _requestCache = [];
+
+        public async Task<List<int>> GetUserChatIdsAsync(int userId)
+        {
+            return await cache.GetUserChatIdsAsync(userId, async () =>
+            {
+                return await context.ChatMembers
+                    .Where(cm => cm.UserId == userId)
+                    .Select(cm => cm.ChatId)
+                    .ToListAsync();
+            });
+        }
 
         public async Task<bool> IsMemberAsync(int userId, int chatId)
         {
@@ -78,16 +88,22 @@ namespace MessengerAPI.Services
         {
             var key = (userId, chatId);
 
-            if (_membershipCache.TryGetValue(key, out var cached))
+            if (_requestCache.TryGetValue(key, out var requestCached))
             {
-                return cached;
+                return requestCached;
             }
 
-            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+            var member = await cache.GetMembershipAsync(userId, chatId, async () =>
+            {
+                return await context.ChatMembers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+            });
 
-            _membershipCache[key] = member;
+            _requestCache[key] = member;
 
-            logger.LogDebug("Членство пользователя {UserId} в чате {ChatId}: {Role}",userId, chatId, member?.Role.ToString() ?? "не состоит");
+            logger.LogDebug("Членство пользователя {UserId} в чате {ChatId}: {Role}",
+                userId, chatId, member?.Role.ToString() ?? "не состоит");
 
             return member;
         }

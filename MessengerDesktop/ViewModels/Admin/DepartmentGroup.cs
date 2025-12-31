@@ -1,4 +1,4 @@
-﻿using MessengerShared.DTO;
+﻿using MessengerShared.DTO.User;
 using System.Collections.ObjectModel;
 using System.Linq;
 

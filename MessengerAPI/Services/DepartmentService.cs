@@ -1,7 +1,8 @@
 ﻿using MessengerAPI.Configuration;
 using MessengerAPI.Helpers;
 using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Department;
+using MessengerShared.DTO.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

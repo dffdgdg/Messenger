@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat.Poll;
 using System;
 
 namespace MessengerDesktop.ViewModels.Chat

@@ -2,7 +2,8 @@
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Department;
+using MessengerShared.DTO.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -157,7 +158,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.PostAsync<object>($"api/admin/users/{user.Id}/toggle-ban", null);
+            var result = await _apiClient.PostAsync<object>($"api/admin/users/{user.Id}/toggle-ban", null!);
 
             if (result.Success)
             {

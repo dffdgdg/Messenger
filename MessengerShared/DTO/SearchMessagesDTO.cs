@@ -1,3 +1,5 @@
+using MessengerShared.DTO.Message;
+
 namespace MessengerShared.DTO
 {
     public class SearchMessagesResponseDTO

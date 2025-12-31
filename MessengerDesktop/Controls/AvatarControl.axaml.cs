@@ -35,6 +35,12 @@ public partial class AvatarControl : UserControl
 
     #region Direct Properties for computed values
 
+    private CornerRadius _onlineIndicatorCornerRadius = new(5);
+    public static readonly DirectProperty<AvatarControl, CornerRadius> OnlineIndicatorCornerRadiusProperty =
+        AvaloniaProperty.RegisterDirect<AvatarControl, CornerRadius>(
+            nameof(OnlineIndicatorCornerRadius),
+            o => o.OnlineIndicatorCornerRadius);
+
     private string? _imageSource;
     public static readonly DirectProperty<AvatarControl, string?> ImageSourceProperty =
         AvaloniaProperty.RegisterDirect<AvatarControl, string?>(nameof(ImageSource),o => o.ImageSource);
@@ -141,6 +147,12 @@ public partial class AvatarControl : UserControl
 
     #region Computed Properties
 
+    public CornerRadius OnlineIndicatorCornerRadius
+    {
+        get => _onlineIndicatorCornerRadius;
+        private set => SetAndRaise(OnlineIndicatorCornerRadiusProperty, ref _onlineIndicatorCornerRadius, value);
+    }
+
     public string? ImageSource
     {
         get => _imageSource;
@@ -245,6 +257,8 @@ public partial class AvatarControl : UserControl
             <= 80 => 14,
             _ => 16
         };
+
+        OnlineIndicatorCornerRadius = new CornerRadius(OnlineIndicatorSize / 2);
 
         UpdateCornerRadius();
     }

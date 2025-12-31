@@ -1,14 +1,14 @@
-    using CommunityToolkit.Mvvm.ComponentModel;
-    using CommunityToolkit.Mvvm.Input;
-    using MessengerDesktop.ViewModels.Dialog;
-    using MessengerShared.DTO;
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Linq;
-    using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.ViewModels.Dialog;
+using MessengerShared.DTO.Department;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 
-    namespace MessengerDesktop.ViewModels;
+namespace MessengerDesktop.ViewModels;
 
     public partial class DepartmentDialogViewModel : DialogBaseViewModel
     {

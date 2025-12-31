@@ -2,6 +2,8 @@
 using MessengerAPI.Helpers;
 using MessengerAPI.Model;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -31,9 +33,9 @@ namespace MessengerAPI.Services
         Task EnsureUserIsChatAdminAsync(int userId, int chatId);
         Task EnsureUserIsChatOwnerAsync(int userId, int chatId);
     }
-    public class ChatService(MessengerDbContext context,IAccessControlService accessControl,IFileService fileService,
-        IOnlineUserService onlineService,IReadReceiptService readReceiptService,IOptions<MessengerSettings> settings,
-        ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
+    public class ChatService(MessengerDbContext context, IAccessControlService accessControl, IFileService fileService,
+        IOnlineUserService onlineService, IReadReceiptService readReceiptService, IOptions<MessengerSettings> settings,
+        ILogger<ChatService> logger, ICacheService cacheService) : BaseService<ChatService>(context, logger), IChatService
     {
         #region Access Control Delegation
 
@@ -46,10 +48,9 @@ namespace MessengerAPI.Services
         #endregion
 
         #region Get Chats
-
         public async Task<List<ChatDTO>> GetUserChatsAsync(int userId, HttpRequest request)
         {
-            var chatIds = await _context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync();
+            var chatIds = await accessControl.GetUserChatIdsAsync(userId);
 
             if (chatIds.Count == 0)
                 return [];
@@ -244,6 +245,7 @@ namespace MessengerAPI.Services
             _context.Chats.Add(chat);
             await SaveChangesAsync();
 
+
             // Добавляем создателя
             _context.ChatMembers.Add(new ChatMember
             {
@@ -266,6 +268,13 @@ namespace MessengerAPI.Services
             }
 
             await SaveChangesAsync();
+
+            cacheService.InvalidateUserChats(dto.CreatedById);
+
+            if (dto.Type == ChatType.Contact && contactUserId.HasValue)
+            {
+                cacheService.InvalidateUserChats(contactUserId.Value);
+            }
 
             _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
 
@@ -320,14 +329,25 @@ namespace MessengerAPI.Services
         {
             await accessControl.EnsureIsOwnerAsync(userId, chatId);
 
-            var chat = await _context.Chats.Include(c => c.ChatMembers).Include(c => c.Messages).FirstOrDefaultAsync(c => c.Id == chatId)
+            var chat = await _context.Chats
+                .Include(c => c.ChatMembers)
+                .Include(c => c.Messages)
+                .FirstOrDefaultAsync(c => c.Id == chatId)
                 ?? throw new KeyNotFoundException($"Чат с ID {chatId} не найден");
+
+            var memberIds = chat.ChatMembers.Select(cm => cm.UserId).ToList();
 
             _context.ChatMembers.RemoveRange(chat.ChatMembers);
             _context.Messages.RemoveRange(chat.Messages);
             _context.Chats.Remove(chat);
 
             await SaveChangesAsync();
+
+            foreach (var memberId in memberIds)
+            {
+                cacheService.InvalidateUserChats(memberId);
+                cacheService.InvalidateMembership(memberId, chatId);
+            }
 
             _logger.LogInformation("Чат {ChatId} удалён пользователем {UserId}", chatId, userId);
         }

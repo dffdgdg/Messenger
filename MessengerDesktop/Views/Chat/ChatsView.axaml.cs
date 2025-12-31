@@ -1,4 +1,3 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -6,13 +5,14 @@ using Avalonia.Threading;
 using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 
 namespace MessengerDesktop.Views
 {
     public partial class ChatsView : UserControl
     {
         private readonly Grid? _mainGrid;
-        private bool _isDragging = false;
+        private bool _isDragging;
 
         private const double COMPACT_WIDTH = 72;
         private const double ENTER_COMPACT_THRESHOLD = 120;

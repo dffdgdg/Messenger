@@ -8,6 +8,8 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.UI;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -33,7 +35,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private readonly ChatMessageManager _messageManager;
     private readonly ChatAttachmentManager _attachmentManager;
-    private readonly ChatSearchManager _searchManager;
     private ChatHubConnection? _hubConnection;
     private readonly ChatMemberLoader _memberLoader;
 
@@ -118,19 +119,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private UserProfileDialogViewModel? userProfileDialog;
 
     [ObservableProperty]
-    private string searchQuery = string.Empty;
-
-    [ObservableProperty]
-    private bool isSearching;
-
-    [ObservableProperty]
-    private int searchResultsCount;
-
-    [ObservableProperty]
     private bool isSearchMode;
-
-    [ObservableProperty]
-    private string? searchError;
 
     [ObservableProperty]
     private int? highlightedMessageId;
@@ -141,7 +130,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     public ObservableCollection<MessageViewModel> Messages => _messageManager.Messages;
     public ObservableCollection<LocalFileAttachment> LocalAttachments => _attachmentManager.Attachments;
-    public ObservableCollection<MessageViewModel> SearchResults => _searchManager.Results;
 
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
 
@@ -199,7 +187,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _attachmentManager = new ChatAttachmentManager(
             chatId, apiClient, storageProvider);
 
-        _searchManager = new ChatSearchManager(chatId, UserId, apiClient, () => Members);
         _memberLoader = new ChatMemberLoader(chatId, UserId, apiClient);
 
         Chat = new ChatDTO
@@ -215,7 +202,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public Task WaitForInitializationAsync() => _initTcs.Task;
 
     #region Initialization
-
 
     private async Task InitializeChatAsync()
     {
@@ -369,13 +355,13 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         if (IsContactChat)
         {
-            await LoadContactUserAsync(ct);
+            await LoadContactUserAsync();
         }
 
         OnPropertyChanged(nameof(InfoPanelSubtitle));
     }
 
-    private async Task LoadContactUserAsync(CancellationToken ct)
+    private async Task LoadContactUserAsync()
     {
         try
         {
@@ -634,87 +620,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Search Commands & Methods
 
-    [RelayCommand]
-    private void ToggleSearch()
-    {
-        IsSearchMode = !IsSearchMode;
-
-        if (!IsSearchMode)
-        {
-            ClearSearch();
-        }
-    }
-
-    [RelayCommand]
-    private void CloseSearch()
-    {
-        IsSearchMode = false;
-        ClearSearch();
-    }
-
-    private void ClearSearch()
-    {
-        SearchQuery = string.Empty;
-        SearchResults.Clear();
-        SearchResultsCount = 0;
-        SearchError = null;
-        _searchCts?.Cancel();
-    }
-
-    partial void OnSearchQueryChanged(string value)
-    {
-        _ = PerformSearchWithDebounceAsync(value);
-    }
-
-    private async Task PerformSearchWithDebounceAsync(string query)
-    {
-        _searchCts?.Cancel();
-        _searchCts = new CancellationTokenSource();
-        var token = _searchCts.Token;
-
-        SearchError = null;
-
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            SearchResults.Clear();
-            SearchResultsCount = 0;
-            return;
-        }
-
-        try
-        {
-            await Task.Delay(300, token);
-
-            if (token.IsCancellationRequested) return;
-
-            IsSearching = true;
-
-            var (success, error) = await _searchManager.SearchAsync(query, token);
-
-            if (token.IsCancellationRequested) return;
-
-            if (success)
-            {
-                SearchResultsCount = _searchManager.TotalCount;
-            }
-            else
-            {
-                SearchError = error ?? "Ошибка поиска";
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            SearchError = $"Ошибка: {ex.Message}";
-        }
-        finally
-        {
-            IsSearching = false;
-        }
-    }
-
     public async Task ScrollToMessageAsync(int messageId)
     {
         try
@@ -782,8 +687,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         IsSearchMode = false;
 
         await ScrollToMessageAsync(searchResult.Id);
-
-        ClearSearch();
     }
 
     #endregion
@@ -827,8 +730,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Messages.Clear();
         Members.Clear();
         LocalAttachments.Clear();
-        SearchResults.Clear();
-
         _attachmentManager.Dispose();
 
         Dispose();

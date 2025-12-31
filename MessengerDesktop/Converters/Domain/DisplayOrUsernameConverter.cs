@@ -1,5 +1,5 @@
 using MessengerDesktop.Converters.Base;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Domain;

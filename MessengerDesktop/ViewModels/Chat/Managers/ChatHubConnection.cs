@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Diagnostics;
@@ -103,11 +104,9 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         if (_hubConnection?.State != HubConnectionState.Connected)
             return;
 
-        // Debounce: не отправляем если это же или более раннее сообщение
         if (messageId <= _lastSentReadMessageId)
             return;
 
-        // Debounce по времени: не чаще раза в 300мс
         var now = DateTime.UtcNow;
         if ((now - _lastSentReadTime).TotalMilliseconds < 300)
             return;

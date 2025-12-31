@@ -6,6 +6,7 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using System;

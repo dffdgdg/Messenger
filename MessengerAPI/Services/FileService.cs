@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Configuration;
 using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;

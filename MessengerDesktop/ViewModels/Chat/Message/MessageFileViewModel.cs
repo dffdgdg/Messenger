@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

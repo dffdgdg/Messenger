@@ -1,4 +1,4 @@
-﻿namespace MessengerShared.DTO
+﻿namespace MessengerShared.DTO.User
 {
     public class ChangeUsernameDTO
     {

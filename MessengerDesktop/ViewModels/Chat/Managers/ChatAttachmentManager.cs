@@ -10,7 +10,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using MessengerDesktop.Helpers;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Message;
 
 namespace MessengerDesktop.ViewModels.Chat;
 

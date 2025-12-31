@@ -1,6 +1,6 @@
 ﻿using MessengerShared.Enum;
 
-namespace MessengerShared.DTO
+namespace MessengerShared.DTO.Chat
 {
     public class UpdateChatDTO
     {

@@ -16,7 +16,6 @@ using System.Text.Json.Serialization;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
-
 #region Configuration
 
 builder.Services.Configure<MessengerSettings>(builder.Configuration.GetSection(MessengerSettings.SectionName));
@@ -33,10 +32,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
 });
 
-builder.Services.Configure<JsonOptions>(options =>
-{
-    options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-});
+builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -67,9 +63,10 @@ builder.Services.AddDbContext<MessengerDbContext>(options =>
 #endregion
 
 #region Services
-
+builder.Services.AddMemoryCache();
 // Singleton
 builder.Services.AddSingleton<IOnlineUserService, OnlineUserService>();
+builder.Services.AddSingleton<ICacheService, CacheService>();
 
 // Scoped
 builder.Services.AddScoped<ITokenService, TokenService>();

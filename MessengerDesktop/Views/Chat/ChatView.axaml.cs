@@ -38,7 +38,6 @@ namespace MessengerDesktop.Views.Chat
 
         private void OnDataContextChanged(object? sender, EventArgs e)
         {
-            // ������������ �� ������ VM
             if (_currentVm != null)
             {
                 _currentVm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -54,7 +53,6 @@ namespace MessengerDesktop.Views.Chat
             _currentVm = DataContext as ChatViewModel;
             _processedMessageIds.Clear();
 
-            // ������������� �� ����� VM
             if (_currentVm != null)
             {
                 _currentVm.PropertyChanged += OnViewModelPropertyChanged;
@@ -87,7 +85,6 @@ namespace MessengerDesktop.Views.Chat
                 !_currentVm.IsInitialLoading && _pendingScrollToEnd)
             {
                 _pendingScrollToEnd = false;
-                // �� �������� � ����� ������������� - ��� ������ VM ����� ScrollToIndexRequested
             }
         }
 
@@ -101,9 +98,6 @@ namespace MessengerDesktop.Views.Chat
             }
         }
 
-        /// <summary>
-        /// ���������� ������� � ������� (��� �������������)
-        /// </summary>
         private void OnScrollToIndexRequested(int index)
         {
             Dispatcher.UIThread.Post(async () =>

@@ -3,6 +3,7 @@
              xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:controls="using:MessengerDesktop.Controls"
              xmlns:shared="using:MessengerShared.DTO"
+             xmlns:user="using:MessengerShared.DTO.User"
              xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
              x:Class="MessengerDesktop.Views.Dialogs.SelectUserDialog"
              x:DataType="vm:SelectUserDialogViewModel">
@@ -62,7 +63,7 @@
 						<ItemsControl ItemsSource="{Binding FilteredUsers}"
                                       Margin="4">
 							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="shared:UserDTO">
+								<DataTemplate x:DataType="user:UserDTO">
     <Border Padding="10,8"
             Margin="0,2"
             CornerRadius="6"

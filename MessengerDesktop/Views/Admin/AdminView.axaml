@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:shared="using:MessengerShared.DTO"
+             xmlns:userShared="using:MessengerShared.DTO.User"
              xmlns:conv="using:MessengerDesktop.Converters"
              x:Class="MessengerDesktop.Views.AdminView"
              x:DataType="vm:AdminViewModel"
@@ -51,7 +52,7 @@
 
 								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
 									<Button Classes="IconButton Small"
-									        Command="{Binding DataContext.OpenEditDepartmentCommand, ElementName=Root}"
+									        Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditDepartmentCommand}"
 									        CommandParameter="{Binding Department}"
 									        ToolTip.Tip="Редактировать отдел">
 										<PathIcon Data="{StaticResource EditIcon}" Width="14" Height="14"
@@ -226,7 +227,7 @@
 														</ItemsPanelTemplate>
 													</ItemsControl.ItemsPanel>
 													<ItemsControl.ItemTemplate>
-														<DataTemplate DataType="shared:UserDTO">
+														<DataTemplate DataType="userShared:UserDTO">
 															<Border Classes="Hoverable HoverActions"
                                                                     Background="{DynamicResource ItemBgBrush}"
                                                                     CornerRadius="8" Padding="12,10">
@@ -245,13 +246,13 @@
 
 																	<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Classes="Actions">
 																		<Button Classes="IconButton Small"
-                                                                                Command="{Binding DataContext.OpenEditUserDialogCommand, ElementName=Root}"
+                                                                                Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditUserDialogCommand}"
                                                                                 CommandParameter="{Binding .}" ToolTip.Tip="Редактировать">
 																			<PathIcon Data="{StaticResource EditIcon}" Width="14" Height="14"
                                                                                       Foreground="{DynamicResource Icon}"/>
 																		</Button>
 																		<Button Classes="IconButton Small Danger"
-                                                                                Command="{Binding DataContext.ToggleBanCommand, ElementName=Root}"
+                                                                                Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).ToggleBanCommand}"
                                                                                 CommandParameter="{Binding .}" ToolTip.Tip="Заблокировать">
 																			<PathIcon Data="{StaticResource BlockIcon}" Width="14" Height="14"
                                                                                       Foreground="{DynamicResource Icon}"/>

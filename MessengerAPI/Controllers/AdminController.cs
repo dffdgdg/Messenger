@@ -1,5 +1,5 @@
 using MessengerAPI.Services;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

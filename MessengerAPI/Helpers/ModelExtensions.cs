@@ -1,5 +1,8 @@
 ﻿using MessengerAPI.Model;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Chat.Poll;
+using MessengerShared.DTO.Message;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 
 namespace MessengerAPI.Helpers

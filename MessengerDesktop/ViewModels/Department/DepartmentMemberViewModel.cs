@@ -1,5 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using System;
 
 namespace MessengerDesktop.ViewModels.Department;

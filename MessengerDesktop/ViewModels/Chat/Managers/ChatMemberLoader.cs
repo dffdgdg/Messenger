@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

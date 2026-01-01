@@ -1,4 +1,6 @@
-﻿using Avalonia.Platform.Storage;
+﻿using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -522,6 +524,13 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [RelayCommand]
     private async Task SendMessage()
     {
+        // Если в режиме редактирования - сохраняем редактирование
+        if (IsEditMode)
+        {
+            await SaveEditMessage();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(NewMessage) && LocalAttachments.Count == 0)
             return;
 
@@ -735,6 +744,150 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Edit/Delete Message
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditMode))]
+    private MessageViewModel? _editingMessage;
+
+    [ObservableProperty]
+    private string _editMessageContent = string.Empty;
+
+    /// <summary>
+    /// Находится ли в режиме редактирования
+    /// </summary>
+    public bool IsEditMode => EditingMessage != null;
+
+    /// <summary>
+    /// Начать редактирование сообщения
+    /// </summary>
+    [RelayCommand]
+    private void StartEditMessage(MessageViewModel? message)
+    {
+        if (message?.CanEdit != true) return;
+
+        // Отменяем предыдущее редактирование если было
+        CancelEditMessage();
+
+        EditingMessage = message;
+        EditMessageContent = message.Content ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Сохранить отредактированное сообщение
+    /// </summary>
+    [RelayCommand]
+    private async Task SaveEditMessage()
+    {
+        if (EditingMessage == null) return;
+
+        var newContent = EditMessageContent?.Trim();
+
+        // Если контент не изменился - просто закрываем
+        if (newContent == EditingMessage.Content)
+        {
+            CancelEditMessage();
+            return;
+        }
+
+        // Если пустой - предлагаем удалить
+        if (string.IsNullOrWhiteSpace(newContent))
+        {
+            await DeleteMessage(EditingMessage);
+            CancelEditMessage();
+            return;
+        }
+
+        await SafeExecuteAsync(async ct =>
+        {
+            var updateDto = new UpdateMessageDTO
+            {
+                Id = EditingMessage.Id,
+                Content = newContent
+            };
+
+            var result = await _apiClient.PutAsync<UpdateMessageDTO, MessageDTO>(
+                $"api/messages/{EditingMessage.Id}",
+                updateDto,
+                ct);
+
+            if (result.Success && result.Data != null)
+            {
+                EditingMessage.ApplyUpdate(result.Data);
+                CancelEditMessage();
+
+                await _notificationService.ShowSuccessAsync("Сообщение отредактировано");
+            }
+            else
+            {
+                await _notificationService.ShowErrorAsync($"Ошибка редактирования: {result.Error}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Отменить редактирование
+    /// </summary>
+    [RelayCommand]
+    private void CancelEditMessage()
+    {
+        EditingMessage = null;
+        EditMessageContent = string.Empty;
+    }
+
+    /// <summary>
+    /// Удалить сообщение
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteMessage(MessageViewModel? message)
+    {
+        if (message?.CanDelete != true) return;
+
+        // Можно добавить диалог подтверждения
+        await SafeExecuteAsync(async ct =>
+        {
+            var result = await _apiClient.DeleteAsync($"api/messages/{message.Id}", ct);
+
+            if (result.Success)
+            {
+                message.MarkAsDeleted();
+                await _notificationService.ShowSuccessAsync("Сообщение удалено");
+            }
+            else
+            {
+                await _notificationService.ShowErrorAsync($"Ошибка удаления: {result.Error}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Копировать текст сообщения в буфер обмена
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyMessageText(MessageViewModel? message)
+    {
+        if (message == null || string.IsNullOrEmpty(message.Content)) return;
+
+        try
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                var clipboard = desktop.MainWindow?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(message.Content);
+                    await _notificationService.ShowInfoAsync("Текст скопирован");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _notificationService.ShowErrorAsync($"Ошибка копирования: {ex.Message}");
+        }
     }
 
     #endregion

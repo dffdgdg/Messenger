@@ -18,8 +18,7 @@ namespace MessengerAPI.Services
         {
             _logger.LogDebug("Получение списка всех пользователей");
 
-            var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting)
-                .AsNoTracking().ToListAsync(ct);
+            var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync(ct);
 
             var result = users.ConvertAll(MapToDto);
 
@@ -63,8 +62,7 @@ namespace MessengerAPI.Services
             // Проверка отдела
             if (dto.DepartmentId.HasValue)
             {
-                var departmentExists = await _context.Departments
-                    .AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
+                var departmentExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
 
                 if (!departmentExists)
                     throw new ArgumentException("Указанный отдел не существует");
@@ -112,8 +110,7 @@ namespace MessengerAPI.Services
 
             await _context.SaveChangesAsync(ct);
 
-            _logger.LogInformation("Пользователь {UserId} {Action}",
-                userId, user.IsBanned ? "заблокирован" : "разблокирован");
+            _logger.LogInformation("Пользователь {UserId} {Action}",userId, user.IsBanned ? "заблокирован" : "разблокирован");
         }
 
         private static UserDTO MapToDto(User user) => new()

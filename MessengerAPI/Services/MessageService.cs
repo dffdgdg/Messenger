@@ -88,10 +88,7 @@ namespace MessengerAPI.Services
         {
             try
             {
-                var memberIds = await _context.ChatMembers
-                    .Where(cm => cm.ChatId == chatId && cm.UserId != senderId)
-                    .Select(cm => cm.UserId)
-                    .ToListAsync();
+                var memberIds = await _context.ChatMembers.Where(cm => cm.ChatId == chatId && cm.UserId != senderId).Select(cm => cm.UserId).ToListAsync();
 
                 foreach (var memberId in memberIds)
                 {

@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:shared="using:MessengerShared.DTO"
@@ -344,7 +345,7 @@
 										</ItemsPanelTemplate>
 									</ItemsControl.ItemsPanel>
 									<ItemsControl.ItemTemplate>
-										<DataTemplate DataType="vm:DepartmentGroup">
+										<DataTemplate DataType="admin:DepartmentGroup">
 											<StackPanel>
 												<Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
 													<Border Background="{DynamicResource CardBgBrush}" CornerRadius="6" Padding="12,6">

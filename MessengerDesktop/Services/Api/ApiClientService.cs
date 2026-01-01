@@ -64,8 +64,7 @@ namespace MessengerDesktop.Services.Api
 
         private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(ISessionStore.Token)
-                or nameof(ISessionStore.IsAuthenticated))
+            if (e.PropertyName is nameof(ISessionStore.Token) or nameof(ISessionStore.IsAuthenticated))
             {
                 UpdateAuthorizationHeader();
             }
@@ -115,8 +114,7 @@ namespace MessengerDesktop.Services.Api
             var token = _sessionStore.Token;
             if (!string.IsNullOrEmpty(token))
             {
-                request.Headers.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
             return request;
         }
@@ -299,7 +297,7 @@ namespace MessengerDesktop.Services.Api
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"GetStreamAsync error for {url}: {ex}");
+                Debug.WriteLine($"GetStreamAsync ошибка для {url}: {ex}");
                 return null;
             }
         }
@@ -389,7 +387,7 @@ namespace MessengerDesktop.Services.Api
                 return new ApiResponse<T>
                 {
                     Success = false,
-                    Error = $"Deserialization error: {ex.Message}",
+                    Error = $"Ошибка десериализации: {ex.Message}",
                     Details = json,
                     Timestamp = DateTime.Now
                 };
@@ -421,7 +419,7 @@ namespace MessengerDesktop.Services.Api
                 return new ApiResponse
                 {
                     Success = false,
-                    Error = $"Deserialization error: {ex.Message}",
+                    Error = $"Ошибка десериализации: {ex.Message}",
                     Details = json,
                     Timestamp = DateTime.Now
                 };

@@ -98,20 +98,14 @@ namespace MessengerAPI.Services
             // Инвалидируем кэш членства
             cache.InvalidateMembership(userId, chatId);
 
-            _logger.LogInformation(
-                "Роль пользователя {UserId} в чате {ChatId} изменена на {Role}",
-                userId, chatId, newRole);
+            _logger.LogInformation("Роль пользователя {UserId} в чате {ChatId} изменена на {Role}",userId, chatId, newRole);
 
             return MapToDto(member);
         }
 
         public async Task<List<ChatMemberDTO>> GetMembersAsync(int chatId)
         {
-            var members = await _context.ChatMembers
-                .Where(cm => cm.ChatId == chatId)
-                .Include(cm => cm.User)
-                .AsNoTracking()
-                .ToListAsync();
+            var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 
             return members.ConvertAll(MapToDto);
         }

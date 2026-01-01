@@ -9,7 +9,8 @@ namespace MessengerAPI.Controllers
     public class UserController(IUserService userService, ILogger<UserController> logger) : BaseController<UserController>(logger)
     {
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetAllUsers() => await ExecuteAsync(async () => await userService.GetAllUsersAsync(), "Пользователи получены успешно");
+        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetAllUsers()
+            => await ExecuteAsync(async () => await userService.GetAllUsersAsync(), "Пользователи получены успешно");
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<UserDTO>>> GetUser(int id) => await ExecuteAsync(async () =>

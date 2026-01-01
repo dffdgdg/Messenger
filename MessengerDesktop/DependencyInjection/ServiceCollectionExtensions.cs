@@ -24,13 +24,10 @@ namespace MessengerDesktop.DependencyInjection
             services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
             services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
 
-            services.AddSingleton<HttpClient>(sp =>
+            services.AddSingleton<HttpClient>(_ =>
             {
                 var handler = new HttpClientHandler
                 {
-#if DEBUG
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-#endif
                     CheckCertificateRevocationList = false,
                     UseProxy = false
                 };

@@ -9,10 +9,7 @@ using System.Security.Claims;
 namespace MessengerAPI.Hubs
 {
     [Authorize]
-    public class ChatHub(
-        IServiceScopeFactory scopeFactory,
-        IOnlineUserService onlineUserService,
-        ILogger<ChatHub> logger) : Hub
+    public class ChatHub(IServiceScopeFactory scopeFactory,IOnlineUserService onlineUserService,ILogger<ChatHub> logger) : Hub
     {
         private readonly IServiceScopeFactory _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         private readonly IOnlineUserService _onlineUserService = onlineUserService ?? throw new ArgumentNullException(nameof(onlineUserService));

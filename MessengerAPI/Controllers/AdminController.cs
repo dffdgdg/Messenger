@@ -14,7 +14,7 @@ namespace MessengerAPI.Controllers
             => await ExecuteAsync(async () => await adminService.GetUsersAsync(ct), "Пользователи получены успешно");
 
         [HttpPost("users")]
-        public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto,CancellationToken ct) => await ExecuteAsync(async () =>
+        public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto, CancellationToken ct) => await ExecuteAsync(async () =>
         {
             ValidateModel();
 

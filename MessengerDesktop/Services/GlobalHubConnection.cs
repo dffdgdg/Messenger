@@ -226,7 +226,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     {
         if (!_settingsService.NotificationsEnabled)
         {
-            Debug.WriteLine("[GlobalHub] Notifications disabled globally");
+            Debug.WriteLine("[GlobalHub] Уведомления глобально выключены");
             return;
         }
 
@@ -237,7 +237,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
         if (_currentChatId == notification.ChatId)
         {
-            Debug.WriteLine("[GlobalHub] Skipping notification for current chat");
+            Debug.WriteLine("[GlobalHub] Пропуск уведомления для текущего чата");
             return;
         }
 
@@ -252,7 +252,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[GlobalHub] Error showing notification: {ex.Message}");
+                Debug.WriteLine($"[GlobalHub] Ошибка отображения уведомления: {ex.Message}");
             }
         });
     }
@@ -336,7 +336,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[GlobalHub] Disconnect error: {ex.Message}");
+            Debug.WriteLine($"[GlobalHub] Ошибка отключения: {ex.Message}");
         }
     }
 

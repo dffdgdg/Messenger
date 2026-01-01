@@ -50,9 +50,7 @@ namespace MessengerAPI.Services
             if (id != dto.Id)
                 throw new ArgumentException("ID mismatch");
 
-            var user = await _context.Users
-                .Include(u => u.UserSetting)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users.Include(u => u.UserSetting).FirstOrDefaultAsync(u => u.Id == id);
 
             EnsureNotNull(user, id);
 

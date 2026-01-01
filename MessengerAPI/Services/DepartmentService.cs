@@ -264,9 +264,7 @@ namespace MessengerAPI.Services
             while (queue.Count > 0)
             {
                 var parentId = queue.Dequeue();
-                var directChildren = allDepartments.Where(d => d.ParentDepartmentId == parentId).Select(d => d.Id);
-
-                foreach (var childId in directChildren)
+                foreach (var childId in allDepartments.Where(d => d.ParentDepartmentId == parentId).Select(d => d.Id))
                 {
                     if (children.Add(childId))
                     {

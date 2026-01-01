@@ -1,4 +1,5 @@
 ﻿using NpgsqlTypes;
+using System.Runtime.Serialization;
 
 namespace MessengerShared.Enum
 {
@@ -10,6 +11,8 @@ namespace MessengerShared.Enum
         [PgName("Department")]
         Department,
         [PgName("Contact")]
-        Contact
+        Contact,
+        [EnumMember(Value = "department_heads")]
+        DepartmentHeads
     }
 }

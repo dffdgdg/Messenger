@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.Comparison;
+namespace MessengerDesktop.Converters.Comparsion;
 
 public enum ComparisonMode
 {

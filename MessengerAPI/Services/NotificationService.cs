@@ -39,9 +39,7 @@ namespace MessengerAPI.Services
                     await SendNotificationToUserAsync(userId, notification, message.ChatId);
                 }
 
-                logger.LogDebug(
-                    "Уведомления отправлены {Count} пользователям о сообщении {MessageId}",
-                    usersToNotify.Count, message.Id);
+                logger.LogDebug("Уведомления отправлены {Count} пользователям о сообщении {MessageId}",usersToNotify.Count, message.Id);
             }
             catch (Exception ex)
             {
@@ -102,9 +100,7 @@ namespace MessengerAPI.Services
 
         private async Task<NotificationDTO> BuildNotificationAsync(MessageDTO message, HttpRequest request)
         {
-            var chat = await context.Chats
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == message.ChatId);
+            var chat = await context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
 
             return new NotificationDTO
             {
@@ -151,9 +147,7 @@ namespace MessengerAPI.Services
         }
         public async Task<ChatNotificationSettingsDTO?> GetChatNotificationSettingsAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
             if (member == null)
                 return null;

@@ -116,12 +116,7 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
             try
             {
                 local.Data.Position = 0;
-                var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>(
-                    $"api/files/upload?chatId={chatId}",
-                    local.Data,
-                    local.FileName,
-                    local.ContentType,
-                    ct);
+                var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>($"api/files/upload?chatId={chatId}",local.Data,local.FileName,local.ContentType,ct);
 
                 if (uploadResult is { Success: true, Data: not null })
                 {

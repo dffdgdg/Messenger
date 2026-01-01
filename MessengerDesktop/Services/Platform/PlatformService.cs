@@ -29,15 +29,9 @@ namespace MessengerDesktop.Services.Platform
 
         public IClipboard? Clipboard => MainWindow is not null ? TopLevel.GetTopLevel(MainWindow)?.Clipboard : null;
 
-        public void Initialize(Window mainWindow)
-        {
-            _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-        }
+        public void Initialize(Window mainWindow) => _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
 
-        public void Cleanup()
-        {
-            _mainWindow = null;
-        }
+        public void Cleanup() => _mainWindow = null;
 
         public bool IsClipboardAvailable() => Clipboard is not null;
 
@@ -51,7 +45,7 @@ namespace MessengerDesktop.Services.Platform
                 var clipboard = Clipboard;
                 if (clipboard is null)
                 {
-                    Debug.WriteLine("Clipboard is not available");
+                    Debug.WriteLine("Буфер обмена недоступен");
                     return false;
                 }
 
@@ -60,7 +54,7 @@ namespace MessengerDesktop.Services.Platform
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Clipboard copy error: {ex.Message}");
+                Debug.WriteLine($"Ошибка копирования в буфер обмена: {ex.Message}");
                 return false;
             }
         }
@@ -72,7 +66,7 @@ namespace MessengerDesktop.Services.Platform
                 var clipboard = Clipboard;
                 if (clipboard is null)
                 {
-                    Debug.WriteLine("Clipboard is not available");
+                    Debug.WriteLine("Буфер обмена недоступен");
                     return null;
                 }
 
@@ -80,7 +74,7 @@ namespace MessengerDesktop.Services.Platform
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Clipboard read error: {ex.Message}");
+                Debug.WriteLine($"Ошибка чтения из буфера обмена: {ex.Message}");
                 return null;
             }
         }
@@ -92,7 +86,7 @@ namespace MessengerDesktop.Services.Platform
                 var clipboard = Clipboard;
                 if (clipboard is null)
                 {
-                    Debug.WriteLine("Clipboard is not available");
+                    Debug.WriteLine("Буфер обмена недоступен");
                     return false;
                 }
 
@@ -101,7 +95,7 @@ namespace MessengerDesktop.Services.Platform
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Clipboard clear error: {ex.Message}");
+                Debug.WriteLine($"Ошибка очистки буфера обмена: {ex.Message}");
                 return false;
             }
         }

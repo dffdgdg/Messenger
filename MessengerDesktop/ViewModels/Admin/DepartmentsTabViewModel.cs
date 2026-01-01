@@ -55,10 +55,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Create()
     {
-        var departmentDialog = new DepartmentHeadDialogViewModel(
-            [.. Departments],
-            Users,
-            _dialogService)
+        var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments],Users,_dialogService)
         {
             SaveAction = async dialogVm =>
             {
@@ -89,8 +86,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Edit(HierarchicalDepartmentViewModel item)
     {
-        var departmentDialog = new DepartmentHeadDialogViewModel(
-            [.. Departments.Where(d => d.Id != item.Id)],
+        var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)],
             Users,_dialogService,item.Department,item.HasChildren)  // Передаем информацию о дочерних отделах
         {
             SaveAction = async dialogVm =>
@@ -151,11 +147,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             return;
         }
 
-        var confirmDialog = new ConfirmDialogViewModel(
-            "Удаление отдела",
-            $"Вы уверены, что хотите удалить отдел «{item.Name}»?\n\nЭто действие нельзя отменить.",
-            "Удалить",
-            "Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела",$"Вы уверены, что хотите удалить отдел «{item.Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
         var confirmed = await confirmDialog.Result;

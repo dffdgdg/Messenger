@@ -32,6 +32,6 @@ public class BoolToStringConverter : BoolToValueConverter<string>
     }
 }
 
-public class BoolToDoubleConverter : BoolToValueConverter<double> { }
+public class BoolToDoubleConverter : BoolToValueConverter<double>;
 
-public class BoolToColorConverter : BoolToValueConverter<Color> { }
+public class BoolToColorConverter : BoolToValueConverter<Color>;

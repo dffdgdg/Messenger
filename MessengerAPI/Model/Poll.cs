@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Model;
 
-public partial class Poll
+public class Poll
 {
     public int Id { get; set; }
 

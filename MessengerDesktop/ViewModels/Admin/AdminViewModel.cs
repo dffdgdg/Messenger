@@ -65,10 +65,7 @@ public partial class AdminViewModel : BaseViewModel
 
     private async Task InitializeAsync()
     {
-        await Task.WhenAll(
-            UsersTab.LoadAsync(),
-            DepartmentsTab.LoadAsync()
-        );
+        await Task.WhenAll(UsersTab.LoadAsync(), DepartmentsTab.LoadAsync());
 
         UsersTab.SetDepartments(DepartmentsTab.Departments);
 

@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
+using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.DTO.Department;
 using MessengerShared.DTO.User;
 using System;

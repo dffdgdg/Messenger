@@ -7,6 +7,7 @@ using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.User;

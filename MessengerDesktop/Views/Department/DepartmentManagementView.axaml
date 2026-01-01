@@ -81,27 +81,6 @@
 				</StackPanel>
 			</Border>
 
-			<!-- НЕТ ОТДЕЛА -->
-			<Border Grid.Row="1"
-                    IsVisible="{Binding HasNoDepartment}"
-                    Background="{DynamicResource PrimaryBG}"
-                    Padding="24">
-				<StackPanel VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Spacing="16"
-                            MaxWidth="400">
-					<PathIcon Data="{StaticResource OrganizationIcon}"
-                              Width="64" Height="64"
-                              Foreground="{DynamicResource TextMuted}"
-                              HorizontalAlignment="Center"/>
-					<TextBlock Text="{Binding NoDepartmentMessage}"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               FontSize="16"
-                               Foreground="{DynamicResource TextSecondary}"/>
-				</StackPanel>
-			</Border>
-
 			<!-- ОШИБКА ДОСТУПА -->
 			<Border Grid.Row="1"
                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -131,10 +110,10 @@
                           Classes="ThinScrollbar"
                           Padding="24,20"
                           IsVisible="{Binding CanManage}">
-				<StackPanel Spacing="24" MaxWidth="900" HorizontalAlignment="Center">
+				<StackPanel Spacing="24" MaxWidth="1200" HorizontalAlignment="Center">
 
 					<!-- СПИСОК СОТРУДНИКОВ -->
-					<Border Classes="ProfileSection" Width="500">
+					<Border Classes="ProfileSection" Width="600">
 						<StackPanel Spacing="16">
 							<Grid ColumnDefinitions="*,Auto">
 								<StackPanel Orientation="Horizontal" Spacing="10">
@@ -145,14 +124,11 @@
 											   VerticalAlignment="Center"
                                                FontSize="16"
                                                FontWeight="SemiBold"/>
-									<Border Background="{DynamicResource AccentMuted}"
-                                            CornerRadius="10"
-                                            Padding="8,2">
-										<TextBlock Text="{Binding TotalCount}"
-                                                   FontSize="12"
+								
+									<TextBlock Text="{Binding TotalCount}"
+												   FontSize="12"
 												   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource Accent}"/>
-									</Border>
 								</StackPanel>
 
 								<Border Grid.Column="1"
@@ -169,7 +145,7 @@
                                                  Classes="Borderlesses"
                                                  Text="{Binding SearchQuery}"
                                                  Watermark="Поиск..."
-                                                 FontSize="13"
+                                                 FontSize="13"	
                                                  VerticalContentAlignment="Center"/>
 									</Grid>
 								</Border>
@@ -270,7 +246,7 @@
 
 					<!-- БЫСТРЫЕ ДЕЙСТВИЯ -->
 					<Border Classes="ProfileSection"
-							Width="500">
+							Width="600">
 						<StackPanel Spacing="16">
 							<StackPanel Orientation="Horizontal" Spacing="10">
 								<PathIcon Data="{StaticResource Options}"

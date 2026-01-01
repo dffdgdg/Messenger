@@ -7,7 +7,7 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.ViewModels.Chat.Managers;
 
 public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService apiClient)
 {

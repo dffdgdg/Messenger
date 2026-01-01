@@ -2,7 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace MessengerDesktop.ViewModels;
+namespace MessengerDesktop.ViewModels.Admin;
 
 public class DepartmentGroup(string departmentName, int? departmentId, ObservableCollection<UserDTO> users)
 {

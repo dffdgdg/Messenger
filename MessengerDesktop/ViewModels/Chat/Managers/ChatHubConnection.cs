@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.ViewModels.Chat.Managers;
 
 public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IAsyncDisposable
 {

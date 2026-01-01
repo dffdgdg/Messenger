@@ -1179,4 +1179,41 @@
 	<Style Selector="views|ChatsView[IsCompactMode=True] ListBox">
 		<Setter Property="Margin" Value="4"/>
 	</Style>	
+
+	<!-- ==================== DEPARTMENT TREEVIEW ==================== -->
+
+<!-- Карточка отдела -->
+<Style Selector="Border.DepartmentCard">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.DepartmentCard:pointerover">
+    <Setter Property="Background" Value="{DynamicResource FourthBG}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+</Style>
+
+<!-- Кнопки действий - скрыты по умолчанию -->
+<Style Selector="StackPanel.DepartmentActions">
+    <Setter Property="Opacity" Value="0"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<!-- Показываем кнопки при наведении на карточку -->
+<Style Selector="Border.DepartmentCard:pointerover StackPanel.DepartmentActions">
+    <Setter Property="Opacity" Value="1"/>
+</Style>
 </Styles>

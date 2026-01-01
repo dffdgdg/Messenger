@@ -69,10 +69,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     public bool IsNewUser => _originalUser == null;
 
-    public bool CanSave =>
-        !string.IsNullOrWhiteSpace(Username) &&
-        !string.IsNullOrWhiteSpace(Surname) &&
-        !string.IsNullOrWhiteSpace(Name) &&
+    public bool CanSave => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name) &&
         (!IsNewUser || (!string.IsNullOrWhiteSpace(Password) && Password == ConfirmPassword));
 
     /// <summary>
@@ -82,8 +79,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     {
         get
         {
-            var parts = new[] { Surname, Name, Midname }
-                .Where(p => !string.IsNullOrWhiteSpace(p));
+            var parts = new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
             return string.Join(" ", parts);
         }
     }

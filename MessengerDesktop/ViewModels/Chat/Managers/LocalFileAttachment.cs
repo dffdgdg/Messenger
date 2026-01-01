@@ -2,7 +2,7 @@ using Avalonia.Media.Imaging;
 using System;
 using System.IO;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.ViewModels.Chat.Managers;
 
 public sealed class LocalFileAttachment : IDisposable
 {

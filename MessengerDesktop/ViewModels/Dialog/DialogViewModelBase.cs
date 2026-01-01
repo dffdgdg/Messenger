@@ -38,7 +38,7 @@ public abstract partial class DialogBaseViewModel : BaseViewModel
     protected virtual void Cancel() => RequestClose();
 
     [RelayCommand]
-    public void CloseOnBackgroundClick()
+    protected virtual void CloseOnBackgroundClick()
     {
         if (CanCloseOnBackgroundClick)
             RequestClose();

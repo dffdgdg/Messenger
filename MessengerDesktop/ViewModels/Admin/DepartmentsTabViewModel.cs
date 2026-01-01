@@ -50,10 +50,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
         });
     }
 
-    public void SetUsers(IEnumerable<UserDTO> users)
-    {
-        Users = new ObservableCollection<UserDTO>(users);
-    }
+    public void SetUsers(IEnumerable<UserDTO> users) => Users = new ObservableCollection<UserDTO>(users);
 
     [RelayCommand]
     private async Task Create()
@@ -94,10 +91,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     {
         var departmentDialog = new DepartmentHeadDialogViewModel(
             [.. Departments.Where(d => d.Id != item.Id)],
-            Users,
-            _dialogService,
-            item.Department,
-            item.HasChildren)  // Передаем информацию о дочерних отделах
+            Users,_dialogService,item.Department,item.HasChildren)  // Передаем информацию о дочерних отделах
         {
             SaveAction = async dialogVm =>
             {
@@ -192,10 +186,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
     private void BuildHierarchy()
     {
-        var roots = Departments
-            .Where(d => !d.ParentDepartmentId.HasValue)
-            .Select(d => CreateHierarchicalItem(d, 0))
-            .OrderBy(d => d.Name);
+        var roots = Departments.Where(d => !d.ParentDepartmentId.HasValue).Select(d => CreateHierarchicalItem(d, 0)).OrderBy(d => d.Name);
 
         HierarchicalDepartments = new ObservableCollection<HierarchicalDepartmentViewModel>(roots);
         OnPropertyChanged(nameof(FilteredDepartments));
@@ -205,10 +196,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     {
         var vm = new HierarchicalDepartmentViewModel(dept, level);
 
-        var children = Departments.Where(d => d.ParentDepartmentId == dept.Id).
-            Select(d => CreateHierarchicalItem(d, level + 1)).OrderBy(d => d.Name);
-
-        foreach (var child in children)
+        foreach (var child in Departments.Where(d => d.ParentDepartmentId == dept.Id).Select(d => CreateHierarchicalItem(d, level + 1)).OrderBy(d => d.Name))
         {
             vm.Children.Add(child);
         }

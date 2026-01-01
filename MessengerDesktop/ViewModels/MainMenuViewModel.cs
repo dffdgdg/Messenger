@@ -415,11 +415,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>(
-                    $"api/chats/{createdChat.Id}/avatar",
-                    avatarStream,
-                    avatarFileName,
-                    contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>($"api/chats/{createdChat.Id}/avatar",avatarStream,avatarFileName,contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -455,8 +451,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 ChatType = ChatType.Chat
             };
 
-            var updateResult = await _apiClient.PutAsync<UpdateChatDTO, ChatDTO>(
-                $"api/chats/{chatDto.Id}", updateDto);
+            var updateResult = await _apiClient.PutAsync<UpdateChatDTO, ChatDTO>($"api/chats/{chatDto.Id}", updateDto);
 
             if (!updateResult.Success || updateResult.Data == null)
             {

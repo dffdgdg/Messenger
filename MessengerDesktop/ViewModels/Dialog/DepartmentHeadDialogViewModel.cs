@@ -66,12 +66,8 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     public Func<DepartmentHeadDialogViewModel, Task>? SaveAction { get; set; }
     public Func<DepartmentHeadDialogViewModel, Task>? DeleteAction { get; set; }
 
-    public DepartmentHeadDialogViewModel(
-        List<DepartmentDTO> departments,
-        ObservableCollection<UserDTO> users,
-        IDialogService dialogService,
-        DepartmentDTO? department = null,
-        bool hasChildren = false)
+    public DepartmentHeadDialogViewModel(List<DepartmentDTO> departments,ObservableCollection<UserDTO> users,
+        IDialogService dialogService,DepartmentDTO? department = null, bool hasChildren = false)
     {
         _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
         _allUsers = users ?? throw new ArgumentNullException(nameof(users));
@@ -100,14 +96,9 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
 
     private void BuildAvailableParents(DepartmentDTO? current)
     {
-        var excludedIds = current != null
-            ? GetDescendantIds(current.Id).Append(current.Id).ToHashSet()
-            : [];
+        var excludedIds = current != null ? GetDescendantIds(current.Id).Append(current.Id).ToHashSet() : [];
 
-        var parents = _allDepartments
-            .Where(d => d.Id > 0 && !excludedIds.Contains(d.Id))
-            .OrderBy(d => d.Name)
-            .Prepend(NoParentPlaceholder);
+        var parents = _allDepartments.Where(d => d.Id > 0 && !excludedIds.Contains(d.Id)).OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
 
         AvailableParents = new ObservableCollection<DepartmentDTO>(parents);
 
@@ -141,8 +132,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private async Task SelectHead()
     {
-        var availableUsers = new ObservableCollection<UserDTO>(
-            _allUsers.Where(u => !u.IsBanned));
+        var availableUsers = new ObservableCollection<UserDTO>(_allUsers.Where(u => !u.IsBanned));
 
         var selectDialog = new SelectUserDialogViewModel(availableUsers, "Выбрать руководителя");
 

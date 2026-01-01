@@ -29,10 +29,7 @@ public partial class SettingsViewModel : BaseViewModel
     public Theme[] AvailableThemes { get; } = Enum.GetValues<Theme>();
     public string CurrentThemeDisplay => SelectedTheme.ToString();
 
-    public SettingsViewModel(
-        MainMenuViewModel mainMenuViewModel,
-        IApiClientService apiClient,
-        ISettingsService settingsService)
+    public SettingsViewModel(MainMenuViewModel mainMenuViewModel,IApiClientService apiClient,ISettingsService settingsService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));

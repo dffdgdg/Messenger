@@ -12,7 +12,7 @@ using MessengerDesktop.Helpers;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO.Message;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.ViewModels.Chat.Managers;
 
 public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStorageProvider? storageProvider = null) : IDisposable
 {

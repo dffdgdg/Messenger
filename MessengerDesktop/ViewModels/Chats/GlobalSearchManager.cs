@@ -8,27 +8,17 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = 300) : ObservableObject
+public partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
+    : ObservableObject
 {
-    private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private CancellationTokenSource? _searchCts;
-    [ObservableProperty]
-    private string searchQuery = string.Empty;
 
-    [ObservableProperty]
-    private bool isSearching;
-
-    [ObservableProperty]
-    private bool isSearchMode;
-
-    [ObservableProperty]
-    private int totalMessagesCount;
-
-    [ObservableProperty]
-    private bool hasMoreMessages;
-
-    [ObservableProperty]
-    private string? errorMessage;
+    [ObservableProperty] private string _searchQuery = string.Empty;
+    [ObservableProperty] private bool _isSearching;
+    [ObservableProperty] private bool _isSearchMode;
+    [ObservableProperty] private int _totalMessagesCount;
+    [ObservableProperty] private bool _hasMoreMessages;
+    [ObservableProperty] private string? _errorMessage;
 
     public ObservableCollection<ChatDTO> ChatResults { get; } = [];
     public ObservableCollection<GlobalSearchMessageDTO> MessageResults { get; } = [];
@@ -58,14 +48,11 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         try
         {
             await Task.Delay(debounceMs, ct);
-
             if (ct.IsCancellationRequested) return;
-
             await ExecuteSearchAsync(query, ct);
         }
         catch (OperationCanceledException)
         {
-
         }
     }
 
@@ -82,10 +69,8 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
             IsSearching = true;
             ErrorMessage = null;
 
-            var url = $"api/messages/user/{userId}/search" +
-                      $"?query={Uri.EscapeDataString(query)}&page=1&pageSize=20";
-
-            var result = await _apiClient.GetAsync<GlobalSearchResponseDTO>(url, ct);
+            var url = ApiEndpoints.Message.Search(userId, query, 1, AppConstants.SearchPageSize);
+            var result = await apiClient.GetAsync<GlobalSearchResponseDTO>(url, ct);
 
             if (ct.IsCancellationRequested) return;
 
@@ -95,21 +80,15 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
                 MessageResults.Clear();
 
                 foreach (var chat in result.Data.Chats)
-                {
                     ChatResults.Add(chat);
-                }
 
                 foreach (var msg in result.Data.Messages)
-                {
                     MessageResults.Add(msg);
-                }
 
                 TotalMessagesCount = result.Data.TotalMessagesCount;
                 HasMoreMessages = result.Data.HasMoreMessages;
 
-                OnPropertyChanged(nameof(HasResults));
-                OnPropertyChanged(nameof(HasChatResults));
-                OnPropertyChanged(nameof(HasMessageResults));
+                NotifyResultsChanged();
             }
             else
             {
@@ -138,19 +117,15 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         try
         {
             IsSearching = true;
-            var nextPage = (MessageResults.Count / 20) + 1;
+            var nextPage = (MessageResults.Count / AppConstants.SearchPageSize) + 1;
 
-            var url = $"api/messages/user/{userId}/search" +
-                      $"?query={Uri.EscapeDataString(SearchQuery)}&page={nextPage}&pageSize=20";
-
-            var result = await _apiClient.GetAsync<GlobalSearchResponseDTO>(url);
+            var url = ApiEndpoints.Message.Search(userId, SearchQuery, nextPage, AppConstants.SearchPageSize);
+            var result = await apiClient.GetAsync<GlobalSearchResponseDTO>(url);
 
             if (result.Success && result.Data != null)
             {
                 foreach (var msg in result.Data.Messages)
-                {
                     MessageResults.Add(msg);
-                }
 
                 HasMoreMessages = result.Data.HasMoreMessages;
                 OnPropertyChanged(nameof(HasMessageResults));
@@ -169,9 +144,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         TotalMessagesCount = 0;
         HasMoreMessages = false;
         ErrorMessage = null;
-        OnPropertyChanged(nameof(HasResults));
-        OnPropertyChanged(nameof(HasChatResults));
-        OnPropertyChanged(nameof(HasMessageResults));
+        NotifyResultsChanged();
     }
 
     public void ExitSearch()
@@ -179,5 +152,12 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         SearchQuery = string.Empty;
         IsSearchMode = false;
         Clear();
+    }
+
+    private void NotifyResultsChanged()
+    {
+        OnPropertyChanged(nameof(HasResults));
+        OnPropertyChanged(nameof(HasChatResults));
+        OnPropertyChanged(nameof(HasMessageResults));
     }
 }

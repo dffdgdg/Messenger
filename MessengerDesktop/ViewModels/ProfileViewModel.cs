@@ -130,7 +130,7 @@ namespace MessengerDesktop.ViewModels
 
         private async Task LoadUser() => await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<UserDTO>($"api/user/{UserId}");
+            var result = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(UserId));
             if (result.Success)
             {
                 User = result.Data;
@@ -188,7 +188,7 @@ namespace MessengerDesktop.ViewModels
                     Department = User.Department
                 };
 
-                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{User.Id}", update);
+                var result = await _apiClient.PutAsync<UserDTO>(ApiEndpoints.User.ById(User.Id), update);
 
                 if (result.Success)
                 {
@@ -241,7 +241,7 @@ namespace MessengerDesktop.ViewModels
             await SafeExecuteAsync(async () =>
             {
                 var dto = new ChangeUsernameDTO { NewUsername = newUsername };
-                var result = await _apiClient.PutAsync<object>($"api/user/{User.Id}/username", dto);
+                var result = await _apiClient.PutAsync<object>(ApiEndpoints.User.Username(User.Id), dto);
 
                 if (result.Success)
                 {
@@ -293,7 +293,7 @@ namespace MessengerDesktop.ViewModels
                     NewPassword = NewPassword
                 };
 
-                var result = await _apiClient.PutAsync<object>($"api/user/{User.Id}/password", dto);
+                var result = await _apiClient.PutAsync<object>(ApiEndpoints.User.Password(User.Id), dto);
 
                 if (result.Success)
                 {
@@ -332,7 +332,7 @@ namespace MessengerDesktop.ViewModels
             {
                 await using var stream = await files[0].OpenReadAsync();
                 var result = await _apiClient.UploadFileAsync<UserDTO>(
-                    $"api/user/{User!.Id}/avatar", stream, files[0].Name, "image/png");
+                    ApiEndpoints.User.Avatar(User!.Id), stream, files[0].Name, "image/png");
 
                 if (result.Success)
                 {

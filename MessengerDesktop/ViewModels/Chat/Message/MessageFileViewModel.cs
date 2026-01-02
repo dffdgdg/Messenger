@@ -17,32 +17,13 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
 
     public MessageFileDTO File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
-    #region Observable Properties
-
-    [ObservableProperty]
-    private bool isDownloading;
-
-    [ObservableProperty]
-    private double downloadProgress;
-
-    [ObservableProperty]
-    private bool isDownloaded;
-
-    [ObservableProperty]
-    private string? downloadedFilePath;
-
-    [ObservableProperty]
-    private string? errorMessage;
-
-    [ObservableProperty]
-    private bool hasError;
-
-    [ObservableProperty]
-    private DownloadState state = DownloadState.NotStarted;
-
-    #endregion
-
-    #region Computed Properties
+    [ObservableProperty] private bool _isDownloading;
+    [ObservableProperty] private double _downloadProgress;
+    [ObservableProperty] private bool _isDownloaded;
+    [ObservableProperty] private string? _downloadedFilePath;
+    [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private bool _hasError;
+    [ObservableProperty] private DownloadState _state = DownloadState.NotStarted;
 
     public int Id => File.Id;
     public string FileName => File.FileName;
@@ -69,10 +50,6 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
 
     public string FileSizeFormatted => FormatFileSize(File.FileSize);
 
-    #endregion
-
-    #region Commands
-
     [RelayCommand]
     private async Task DownloadAsync()
     {
@@ -91,21 +68,14 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         {
             var progress = new Progress<double>(p => Dispatcher.UIThread.Post(() => DownloadProgress = p));
 
-            var filePath = await downloadService.DownloadFileAsync(
-                Url,
-                FileName,
-                progress,
-                _downloadCts.Token);
+            var filePath = await downloadService.DownloadFileAsync(Url, FileName, progress, _downloadCts.Token);
 
             if (filePath != null)
             {
                 DownloadedFilePath = filePath;
                 IsDownloaded = true;
                 State = DownloadState.Completed;
-
-                notificationService?.ShowSuccessAsync(
-                    $"Файл сохранён: {FileName}",
-                    copyToClipboard: false);
+                notificationService?.ShowSuccessAsync($"Файл сохранён: {FileName}", copyToClipboard: false);
             }
         }
         catch (OperationCanceledException)
@@ -118,10 +88,7 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
             ErrorMessage = ex.Message;
             HasError = true;
             State = DownloadState.Failed;
-
-            notificationService?.ShowErrorAsync(
-                $"Ошибка загрузки: {ex.Message}",
-                copyToClipboard: false);
+            notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
         }
         finally
         {
@@ -137,8 +104,7 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
     [RelayCommand]
     private async Task OpenFileAsync()
     {
-        if (downloadService == null)
-            return;
+        if (downloadService == null) return;
 
         try
         {
@@ -149,7 +115,6 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
             else if (!IsDownloaded && !IsDownloading)
             {
                 await DownloadAsync();
-
                 if (IsDownloaded && !string.IsNullOrEmpty(DownloadedFilePath))
                 {
                     await downloadService.OpenFileAsync(DownloadedFilePath);
@@ -181,10 +146,6 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         _ = DownloadAsync();
     }
 
-    #endregion
-
-    #region Helpers
-
     private static string FormatFileSize(long bytes)
     {
         if (bytes <= 0) return "";
@@ -193,8 +154,6 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):F1} MB";
         return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
     }
-
-    #endregion
 }
 
 public enum DownloadState

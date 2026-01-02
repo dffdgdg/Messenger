@@ -269,7 +269,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
     public async Task ShowUserProfileAsync(int userId) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDTO>($"api/user/{userId}");
+        var result = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(userId));
         if (result.Success && result.Data != null)
         {
             var currentUserId = _authManager.Session.UserId;
@@ -315,15 +315,15 @@ public partial class MainMenuViewModel : BaseViewModel
         pollDto.CreatedById = UserId;
         pollDto.MessageId = 0;
 
-        var result = await _apiClient.PostAsync<PollDTO, MessageDTO>("api/poll", pollDto);
+        var result = await _apiClient.PostAsync<PollDTO, MessageDTO>(ApiEndpoints.Poll.Create, pollDto);
         if (result.Success) SuccessMessage = "Опрос создан";
         else ErrorMessage = $"Ошибка создания опроса: {result.Error}";
     });
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
-        var usersTask = _apiClient.GetAsync<List<UserDTO>>("api/user");
-        var chatsTask = _apiClient.GetAsync<List<ChatDTO>>($"api/chats/user/{UserId}");
+        var usersTask = _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll);
+        var chatsTask = _apiClient.GetAsync<List<ChatDTO>>(ApiEndpoints.Chat.UserChats(UserId));
         await Task.WhenAll(usersTask, chatsTask);
         var usersResult = await usersTask;
         var chatsResult = await chatsTask;
@@ -374,7 +374,7 @@ public partial class MainMenuViewModel : BaseViewModel
     {
         try
         {
-            var membersResult = await _apiClient.GetAsync<List<UserDTO>>($"api/chats/{chat.Id}/members");
+            var membersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chat.Id));
             var members = membersResult.Success ? membersResult.Data : null;
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
@@ -395,7 +395,7 @@ public partial class MainMenuViewModel : BaseViewModel
     {
         try
         {
-            var createResult = await _apiClient.PostAsync<ChatDTO, ChatDTO>("api/chats", chatDto);
+            var createResult = await _apiClient.PostAsync<ChatDTO, ChatDTO>(ApiEndpoints.Chat.Create, chatDto);
 
             if (!createResult.Success || createResult.Data == null)
             {
@@ -407,7 +407,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds)
             {
-                await _apiClient.PostAsync($"api/chats/{createdChat.Id}/members", new { userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new { userId });
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -415,7 +415,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>($"api/chats/{createdChat.Id}/avatar",avatarStream,avatarFileName,contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>(ApiEndpoints.Chat.Avatar(createdChat.Id),avatarStream,avatarFileName,contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -451,7 +451,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 ChatType = ChatType.Chat
             };
 
-            var updateResult = await _apiClient.PutAsync<UpdateChatDTO, ChatDTO>($"api/chats/{chatDto.Id}", updateDto);
+            var updateResult = await _apiClient.PutAsync<UpdateChatDTO, ChatDTO>(ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
 
             if (!updateResult.Success || updateResult.Data == null)
             {
@@ -461,17 +461,17 @@ public partial class MainMenuViewModel : BaseViewModel
 
             var updatedChat = updateResult.Data;
 
-            var currentMembersResult = await _apiClient.GetAsync<List<UserDTO>>($"api/chats/{chatDto.Id}/members");
+            var currentMembersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chatDto.Id));
             var currentMemberIds = currentMembersResult.Data?.Select(m => m.Id).ToHashSet() ?? [];
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
             {
-                await _apiClient.PostAsync($"api/chats/{chatDto.Id}/members", new { userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new { userId });
             }
 
             foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))
             {
-                await _apiClient.DeleteAsync($"api/chats/{chatDto.Id}/members/{userId}");
+                await _apiClient.DeleteAsync(ApiEndpoints.Chat.RemoveMember(chatDto.Id, userId));
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -479,7 +479,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>($"api/chats/{chatDto.Id}/avatar",avatarStream,
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>(ApiEndpoints.Chat.Avatar(chatDto.Id),avatarStream,
                     avatarFileName,contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)

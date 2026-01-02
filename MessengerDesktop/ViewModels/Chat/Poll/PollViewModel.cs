@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO.Chat.Poll;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -15,23 +17,12 @@ public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
 
-    [ObservableProperty]
-    private string question = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<PollOptionViewModel> options = [];
-
-    [ObservableProperty]
-    private bool? allowsMultipleAnswers;
-
-    [ObservableProperty]
-    private bool canVote = true;
-
-    [ObservableProperty]
-    private bool isAnonymous;
-
-    [ObservableProperty]
-    private int totalVotes;
+    [ObservableProperty] private string _question = string.Empty;
+    [ObservableProperty] private ObservableCollection<PollOptionViewModel> _options = [];
+    [ObservableProperty] private bool? _allowsMultipleAnswers;
+    [ObservableProperty] private bool _canVote = true;
+    [ObservableProperty] private bool _isAnonymous;
+    [ObservableProperty] private int _totalVotes;
 
     public int PollId { get; }
     public int UserId { get; }
@@ -39,7 +30,7 @@ public partial class PollViewModel : BaseViewModel
 
     public PollViewModel(PollDTO poll, int userId, IApiClientService apiClient)
     {
-        _apiClient = apiClient;
+        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
 
         PollId = poll.Id;
         UserId = userId;
@@ -56,14 +47,7 @@ public partial class PollViewModel : BaseViewModel
             opt.PropertyChanged += OnOptionPropertyChanged;
         }
 
-        if (poll.SelectedOptionIds is { Count: > 0 })
-        {
-            foreach (var opt in Options.Where(o => poll.SelectedOptionIds.Contains(o.Id)))
-            {
-                opt.IsSelected = true;
-            }
-        }
-
+        ApplySelectedOptions(poll.SelectedOptionIds);
         CanVote = poll.CanVote;
 
         PollContextMenu = CreateContextMenu(poll.SelectedOptionIds?.Count > 0);
@@ -105,7 +89,16 @@ public partial class PollViewModel : BaseViewModel
         AllowsMultipleAnswers = dto.AllowsMultipleAnswers;
         TotalVotes = dto.Options.Sum(o => o.VotesCount);
 
-        foreach (var optDto in dto.Options)
+        UpdateOptions(dto.Options);
+        ApplySelectedOptions(dto.SelectedOptionIds);
+
+        CanVote = dto.CanVote;
+        UpdateContextMenuState(dto.SelectedOptionIds?.Count > 0);
+    }
+
+    private void UpdateOptions(List<PollOptionDTO> optionDtos)
+    {
+        foreach (var optDto in optionDtos)
         {
             var vm = Options.FirstOrDefault(o => o.Id == optDto.Id);
             if (vm != null)
@@ -120,7 +113,7 @@ public partial class PollViewModel : BaseViewModel
             }
         }
 
-        var validIds = dto.Options.Select(o => o.Id).ToHashSet();
+        var validIds = optionDtos.Select(o => o.Id).ToHashSet();
         for (int i = Options.Count - 1; i >= 0; i--)
         {
             if (!validIds.Contains(Options[i].Id))
@@ -129,15 +122,15 @@ public partial class PollViewModel : BaseViewModel
                 Options.RemoveAt(i);
             }
         }
+    }
 
-        var selected = dto.SelectedOptionIds ?? [];
+    private void ApplySelectedOptions(List<int>? selectedIds)
+    {
+        var selected = selectedIds ?? [];
         foreach (var opt in Options)
         {
             opt.IsSelected = selected.Contains(opt.Id);
         }
-
-        CanVote = dto.CanVote;
-        UpdateContextMenuState(selected.Count > 0);
     }
 
     private void UpdateContextMenuState(bool hasVotes)
@@ -155,13 +148,13 @@ public partial class PollViewModel : BaseViewModel
 
         if (selectedIds.Count == 0)
         {
-            ErrorMessage = "���������� ������� ���� �� ���� �������";
+            ErrorMessage = "Необходимо выбрать хотя бы один вариант";
             return;
         }
 
         await SafeExecuteAsync(async () =>
         {
-            Debug.WriteLine($"=== SENDING VOTE === PollId: {PollId}, UserId: {UserId}, Options: [{string.Join(", ", selectedIds)}]");
+            Debug.WriteLine($"[Poll] Voting: PollId={PollId}, Options=[{string.Join(", ", selectedIds)}]");
 
             var voteDto = new PollVoteDTO
             {
@@ -170,43 +163,45 @@ public partial class PollViewModel : BaseViewModel
                 OptionIds = selectedIds
             };
 
-            var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>("api/poll/vote", voteDto);
+            var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>(ApiEndpoints.Poll.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
             {
-                Debug.WriteLine($"Vote successful, options count: {result.Data.Options.Count}");
                 ApplyDto(result.Data);
-                SuccessMessage = "����� ����";
+                SuccessMessage = "Голос учтён";
             }
             else
             {
-                Debug.WriteLine($"Vote failed: {result.Error}");
-                ErrorMessage = $"������ �����������: {result.Error}";
+                ErrorMessage = $"Ошибка голосования: {result.Error}";
             }
         });
     }
 
     [RelayCommand]
-    private async Task CancelVote() => await SafeExecuteAsync(async () =>
+    private async Task CancelVote()
     {
-        Debug.WriteLine($"=== CANCELLING VOTE === PollId: {PollId}, UserId: {UserId}");
-        var voteDto = new PollVoteDTO
+        await SafeExecuteAsync(async () =>
         {
-            PollId = PollId,
-            UserId = UserId,
-            OptionIds = []
-        };
+            Debug.WriteLine($"[Poll] Cancelling vote: PollId={PollId}");
 
-        var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>("api/poll/vote", voteDto);
+            var voteDto = new PollVoteDTO
+            {
+                PollId = PollId,
+                UserId = UserId,
+                OptionIds = []
+            };
 
-        if (result is { Success: true, Data: not null })
-        {
-            ApplyDto(result.Data);
-            SuccessMessage = "����� ������";
-        }
-        else
-        {
-            ErrorMessage = $"������ ������ ������: {result.Error}";
-        }
-    });
+            var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>(ApiEndpoints.Poll.Vote, voteDto);
+
+            if (result is { Success: true, Data: not null })
+            {
+                ApplyDto(result.Data);
+                SuccessMessage = "Голос отменён";
+            }
+            else
+            {
+                ErrorMessage = $"Ошибка отмены голоса: {result.Error}";
+            }
+        });
+    }
 }

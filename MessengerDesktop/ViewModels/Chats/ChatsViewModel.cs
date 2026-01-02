@@ -189,7 +189,7 @@ public partial class ChatsViewModel : BaseViewModel
 
         if (chat == null)
         {
-            var result = await _apiClient.GetAsync<ChatDTO>($"api/chats/{chatId}");
+            var result = await _apiClient.GetAsync<ChatDTO>(ApiEndpoints.Chat.ById(chatId));
             if (result.Success && result.Data != null)
             {
                 chat = result.Data;
@@ -304,7 +304,7 @@ public partial class ChatsViewModel : BaseViewModel
 
             var userId = _authManager.Session.UserId ?? 0;
 
-            var result = await _apiClient.PostAsync<ChatDTO, ChatDTO>("api/chats", new ChatDTO
+            var result = await _apiClient.PostAsync<ChatDTO, ChatDTO>(ApiEndpoints.Chat.Create, new ChatDTO
             {
                 Name = user.Id.ToString(),
                 Type = ChatType.Contact,
@@ -326,12 +326,11 @@ public partial class ChatsViewModel : BaseViewModel
         });
     }
 
-    private async Task<ChatDTO?> FindDialogWithUser(int otherUserId)
+    private async Task<ChatDTO?> FindDialogWithUser(int contactUserId)
     {
         var currentUserId = _authManager.Session.UserId ?? 0;
 
-        var result = await _apiClient.GetAsync<ChatDTO?>(
-            $"api/chats/user/{currentUserId}/contact/{otherUserId}");
+        var result = await _apiClient.GetAsync<ChatDTO?>(ApiEndpoints.Chat.UserContact(currentUserId,contactUserId));
 
         return result.Success ? result.Data : null;
     }
@@ -361,8 +360,8 @@ public partial class ChatsViewModel : BaseViewModel
                 var userId = _authManager.Session.UserId.Value;
 
                 var endpoint = IsGroupMode
-                    ? $"api/chats/user/{userId}/groups"
-                    : $"api/chats/user/{userId}/dialogs";
+                    ? ApiEndpoints.Chat.UserGroups(userId)
+                    : ApiEndpoints.Chat.UserDialogs(userId);
 
                 var result = await _apiClient.GetAsync<List<ChatDTO>>(endpoint);
 

@@ -28,7 +28,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
             var loginDto = new LoginRequest(username, password.Trim());
 
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginDto, ct);
+            var response = await _httpClient.PostAsJsonAsync(ApiEndpoints.Auth.Login, loginDto, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -76,7 +76,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
         {
             if (string.IsNullOrEmpty(token)) return ApiResponseHelper.Error("Токен не предоставлен");
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/validate");
+            using var request = new HttpRequestMessage(HttpMethod.Get, ApiEndpoints.Auth.Validate);
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.SendAsync(request, ct);
@@ -99,7 +99,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/logout");
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiEndpoints.Auth.Logout);
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.SendAsync(request, ct);

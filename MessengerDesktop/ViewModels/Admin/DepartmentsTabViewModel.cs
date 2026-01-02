@@ -32,11 +32,10 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredDepartments => ApplyFilter();
 
-    public async Task LoadAsync()
-    {
+    public async Task LoadAsync() =>
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<List<DepartmentDTO>>("api/department");
+            var result = await _apiClient.GetAsync<List<DepartmentDTO>>(ApiEndpoints.Department.GetAll);
 
             if (result is { Success: true, Data: not null })
             {
@@ -48,7 +47,6 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                 ErrorMessage = $"Ошибка загрузки отделов: {result.Error}";
             }
         });
-    }
 
     public void SetUsers(IEnumerable<UserDTO> users) => Users = new ObservableCollection<UserDTO>(users);
 
@@ -66,7 +64,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PostAsync<DepartmentDTO>("api/department", dto);
+                var result = await _apiClient.PostAsync<DepartmentDTO>(ApiEndpoints.Department.Create, dto);
 
                 if (result.Success)
                 {
@@ -99,9 +97,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PutAsync<DepartmentDTO>(
-                    $"api/department/{item.Id}",
-                    dto);
+                var result = await _apiClient.PutAsync<DepartmentDTO>(ApiEndpoints.Department.ById(item.Id),dto);
 
                 if (result.Success)
                 {
@@ -115,7 +111,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             },
             DeleteAction = async dialogVm =>
             {
-                var result = await _apiClient.DeleteAsync($"api/department/{dialogVm.EditId}");
+                var result = await _apiClient.DeleteAsync(ApiEndpoints.Department.ById((int)dialogVm.EditId));
 
                 if (result.Success)
                 {
@@ -156,7 +152,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.DeleteAsync($"api/department/{item.Id}");
+            var result = await _apiClient.DeleteAsync(ApiEndpoints.Department.ById(item.Id));
 
             if (result.Success)
             {

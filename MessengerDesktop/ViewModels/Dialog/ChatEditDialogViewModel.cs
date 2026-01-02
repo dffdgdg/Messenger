@@ -81,7 +81,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private async Task LoadUsersAsync()
     {
-        var result = await _apiClient.GetAsync<List<UserDTO>>("api/user");
+        var result = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll);
 
         if (!result.Success || result.Data == null)
         {

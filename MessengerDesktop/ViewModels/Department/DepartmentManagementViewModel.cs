@@ -107,7 +107,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             ClearMessages();
 
             // Получаем информацию о текущем пользователе
-            var userResult = await _apiClient.GetAsync<UserDTO>($"api/user/{CurrentUserId}", ct);
+            var userResult = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(CurrentUserId), ct);
 
             if (!userResult.Success || userResult.Data == null)
             {
@@ -129,7 +129,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             HasNoDepartment = false;
 
             // Проверяем права на управление
-            var canManageResult = await _apiClient.GetAsync<bool>($"api/department/{_departmentId}/can-manage", ct);
+            var canManageResult = await _apiClient.GetAsync<bool>(ApiEndpoints.Department.CanManage((int)_departmentId), ct);
             CanManage = canManageResult is { Success: true, Data: true };
 
             if (!CanManage)
@@ -139,7 +139,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             }
 
             // Загружаем информацию об отделе
-            var departmentResult = await _apiClient.GetAsync<DepartmentDTO>($"api/department/{_departmentId}", ct);
+            var departmentResult = await _apiClient.GetAsync<DepartmentDTO>(ApiEndpoints.Department.ById((int)_departmentId), ct);
             if (departmentResult is { Success: true, Data: not null })
             {
                 Department = departmentResult.Data;
@@ -169,7 +169,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     {
         if (_departmentId == null) return;
 
-        var membersResult = await _apiClient.GetAsync<List<UserDTO>>($"api/department/{_departmentId}/members", ct);
+        var membersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Department.Members((int)_departmentId), ct);
 
         if (membersResult is { Success: true, Data: not null })
         {
@@ -190,7 +190,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
     private async Task LoadAvailableUsersAsync(CancellationToken ct)
     {
-        var usersResult = await _apiClient.GetAsync<List<UserDTO>>("api/user", ct);
+        var usersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll, ct);
 
         if (usersResult is { Success: true, Data: not null })
         {
@@ -233,7 +233,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
         await SafeExecuteAsync(async ct =>
         {
             var dto = new UpdateDepartmentMemberDTO { UserId = selectedUser.Id };
-            var result = await _apiClient.PostAsync($"api/department/{_departmentId}/members", dto, ct);
+            var result = await _apiClient.PostAsync(ApiEndpoints.Department.Members((int)_departmentId), dto, ct);
 
             if (result.Success)
             {
@@ -258,7 +258,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         await SafeExecuteAsync(async ct =>
         {
-            var result = await _apiClient.DeleteAsync($"api/department/{_departmentId}/members/{member.UserId}", ct);
+            var result = await _apiClient.DeleteAsync(ApiEndpoints.Department.RemoveMember((int)_departmentId, member.UserId), ct);
 
             if (result.Success)
             {

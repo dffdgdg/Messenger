@@ -12,10 +12,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public class ChatMessageManager(int chatId,int userId,IApiClientService apiClient,
-    Func<ObservableCollection<UserDTO>> getMembersFunc,IFileDownloadService? downloadService = null,INotificationService? notificationService = null)
+public class ChatMessageManager(
+    int chatId,
+    int userId,
+    IApiClientService apiClient,
+    Func<ObservableCollection<UserDTO>> getMembersFunc,
+    IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null)
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly Func<ObservableCollection<UserDTO>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
@@ -28,7 +33,6 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
     public bool IsLoading { get; private set; }
     public bool HasMoreOlder => _hasMoreOlder;
     public bool HasMoreNewer => _hasMoreNewer;
-
     public int? LastReadMessageId { get; private set; }
     public int? FirstUnreadMessageId { get; private set; }
 
@@ -39,7 +43,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         LastReadMessageId = info.LastReadMessageId;
         FirstUnreadMessageId = info.FirstUnreadMessageId;
 
-        Debug.WriteLine($"[MessageManager] ReadInfo: lastRead={LastReadMessageId}, firstUnread={FirstUnreadMessageId}, unreadCount={info.UnreadCount}");
+        Debug.WriteLine($"[MessageManager] ReadInfo: lastRead={LastReadMessageId}, firstUnread={FirstUnreadMessageId}");
     }
 
     public async Task<int?> LoadInitialMessagesAsync(CancellationToken ct = default)
@@ -51,11 +55,10 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         {
             if (FirstUnreadMessageId.HasValue)
             {
-                // Вызываем внутреннюю версию без проверки IsLoading
                 return await LoadMessagesAroundInternalAsync(FirstUnreadMessageId.Value, ct);
             }
 
-            var url = $"api/messages/chat/{chatId}?userId={userId}&page=1&pageSize=50";
+            var url = ApiEndpoints.Message.ForChat(chatId, userId, 1, AppConstants.DefaultPageSize);
             var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
 
             if (result is { Success: true, Data: not null })
@@ -65,8 +68,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
                 var members = _getMembersFunc();
                 foreach (var msg in result.Data.Messages)
                 {
-                    var vm = CreateMessageViewModel(msg, members);
-                    Messages.Add(vm);
+                    Messages.Add(CreateMessageViewModel(msg, members));
                 }
 
                 UpdateBounds();
@@ -84,9 +86,6 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         }
     }
 
-    /// <summary>
-    /// Публичный метод для загрузки сообщений вокруг указанного (например, для поиска)
-    /// </summary>
     public async Task<int?> LoadMessagesAroundAsync(int messageId, CancellationToken ct = default)
     {
         if (IsLoading) return null;
@@ -102,12 +101,9 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         }
     }
 
-    /// <summary>
-    /// Внутренняя реализация без проверки IsLoading
-    /// </summary>
     private async Task<int?> LoadMessagesAroundInternalAsync(int messageId, CancellationToken ct = default)
     {
-        var url = $"api/messages/chat/{chatId}/around/{messageId}?userId={userId}&count=50";
+        var url = ApiEndpoints.Message.Around(chatId, messageId, userId, AppConstants.DefaultPageSize);
         var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
 
         if (result is { Success: true, Data: not null })
@@ -120,8 +116,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
             for (int i = 0; i < result.Data.Messages.Count; i++)
             {
                 var msg = result.Data.Messages[i];
-                var vm = CreateMessageViewModel(msg, members);
-                Messages.Add(vm);
+                Messages.Add(CreateMessageViewModel(msg, members));
 
                 if (msg.Id == messageId)
                 {
@@ -134,7 +129,6 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
             _hasMoreNewer = result.Data.HasNewerMessages;
 
             Debug.WriteLine($"[MessageManager] Loaded {Messages.Count} messages around {messageId}, targetIndex={targetIndex}");
-
             return targetIndex;
         }
 
@@ -149,7 +143,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
 
         try
         {
-            var url = $"api/messages/chat/{chatId}/before/{_oldestLoadedMessageId}?userId={userId}&count=30";
+            var url = ApiEndpoints.Message.Before(chatId, _oldestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
             var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
 
             if (result is { Success: true, Data: not null })
@@ -158,9 +152,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
 
                 for (int i = result.Data.Messages.Count - 1; i >= 0; i--)
                 {
-                    var msg = result.Data.Messages[i];
-                    var vm = CreateMessageViewModel(msg, members);
-                    Messages.Insert(0, vm);
+                    Messages.Insert(0, CreateMessageViewModel(result.Data.Messages[i], members));
                 }
 
                 UpdateBounds();
@@ -180,7 +172,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
 
         try
         {
-            var url = $"api/messages/chat/{chatId}/after/{_newestLoadedMessageId}?userId={userId}&count=30";
+            var url = ApiEndpoints.Message.After(chatId, _newestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
             var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
 
             if (result is { Success: true, Data: not null })
@@ -189,8 +181,7 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
 
                 foreach (var msg in result.Data.Messages)
                 {
-                    var vm = CreateMessageViewModel(msg, members);
-                    Messages.Add(vm);
+                    Messages.Add(CreateMessageViewModel(msg, members));
                 }
 
                 UpdateBounds();
@@ -234,7 +225,8 @@ public class ChatMessageManager(int chatId,int userId,IApiClientService apiClien
         }
     }
 
-    public IEnumerable<MessageViewModel> GetUnreadMessages() => Messages.Where(m => m.IsUnread && m.SenderId != userId);
+    public IEnumerable<MessageViewModel> GetUnreadMessages()
+        => Messages.Where(m => m.IsUnread && m.SenderId != userId);
 
     public int GetPollsCount() => Messages.Count(m => m.Poll != null);
 

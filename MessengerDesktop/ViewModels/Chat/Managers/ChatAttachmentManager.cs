@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
+using MessengerDesktop.Helpers;
+using MessengerDesktop.Services.Api;
+using MessengerShared.DTO.Message;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -6,18 +11,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
-using MessengerDesktop.Helpers;
-using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Message;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStorageProvider? storageProvider = null) : IDisposable
+public class ChatAttachmentManager(int chatId, IApiClientService apiClient, IStorageProvider? storageProvider = null) : IDisposable
 {
-    private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-    private const long MaxFileSizeBytes = 20 * 1024 * 1024;
     private bool _disposed;
 
     public ObservableCollection<LocalFileAttachment> Attachments { get; } = [];
@@ -26,7 +24,7 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
     {
         if (storageProvider is null)
         {
-            Debug.WriteLine("StorageProvider is not available");
+            Debug.WriteLine("[ChatAttachmentManager] StorageProvider не доступен");
             return false;
         }
 
@@ -53,57 +51,78 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"File picker error: {ex.Message}");
+            Debug.WriteLine($"[ChatAttachmentManager] File picker error: {ex.Message}");
             return false;
         }
     }
 
     public async Task AddFileAsync(string filePath)
     {
+        MemoryStream? memoryStream = null;
+        Bitmap? thumbnail = null;
+
         try
         {
             var fileInfo = new FileInfo(filePath);
-            if (fileInfo.Length > MaxFileSizeBytes)
+            if (fileInfo.Length > AppConstants.MaxFileSizeBytes)
             {
-                Debug.WriteLine($"File too large: {fileInfo.Name}");
+                Debug.WriteLine($"[ChatAttachmentManager] файл слишком большой: {fileInfo.Name}");
                 return;
             }
 
             var fileName = Path.GetFileName(filePath);
             var contentType = MimeTypeHelper.GetMimeType(filePath);
 
-            await using var fileStream = File.OpenRead(filePath);
-            var memoryStream = new MemoryStream();
-            await fileStream.CopyToAsync(memoryStream);
+            memoryStream = new MemoryStream();
+            await using (var fileStream = File.OpenRead(filePath))
+            {
+                await fileStream.CopyToAsync(memoryStream);
+            }
             memoryStream.Position = 0;
+
+            if (contentType.StartsWith("image/"))
+            {
+                thumbnail = TryCreateThumbnail(memoryStream);
+            }
 
             var attachment = new LocalFileAttachment
             {
                 FileName = fileName,
                 ContentType = contentType,
                 FilePath = filePath,
-                Data = memoryStream
+                Data = memoryStream,
+                Thumbnail = thumbnail
             };
 
-            if (contentType.StartsWith("image/"))
-            {
-                try
-                {
-                    memoryStream.Position = 0;
-                    attachment.Thumbnail = new Bitmap(memoryStream);
-                    memoryStream.Position = 0;
-                }
-                catch
-                {
-                    // Игнорируем ошибку создания превью
-                }
-            }
-
             Attachments.Add(attachment);
+
+            // Передали владение
+            memoryStream = null;
+            thumbnail = null;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error processing file {filePath}: {ex.Message}");
+            Debug.WriteLine($"[ChatAttachmentManager] Error processing file {filePath}: {ex.Message}");
+        }
+        finally
+        {
+            memoryStream?.Dispose();
+            thumbnail?.Dispose();
+        }
+    }
+
+    private static Bitmap? TryCreateThumbnail(MemoryStream stream)
+    {
+        try
+        {
+            stream.Position = 0;
+            var bitmap = new Bitmap(stream);
+            stream.Position = 0;
+            return bitmap;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -116,7 +135,12 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
             try
             {
                 local.Data.Position = 0;
-                var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>($"api/files/upload?chatId={chatId}",local.Data,local.FileName,local.ContentType,ct);
+                var uploadResult = await apiClient.UploadFileAsync<MessageFileDTO>(
+                    ApiEndpoints.File.Upload(chatId),
+                    local.Data,
+                    local.FileName,
+                    local.ContentType,
+                    ct);
 
                 if (uploadResult is { Success: true, Data: not null })
                 {
@@ -125,7 +149,7 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Upload error: {ex.Message}");
+                Debug.WriteLine($"[ChatAttachmentManager] ошибка загрузки: {ex.Message}");
             }
         }
 
@@ -156,5 +180,6 @@ public class ChatAttachmentManager(int chatId,IApiClientService apiClient,IStora
         if (_disposed) return;
         _disposed = true;
         Clear();
+        GC.SuppressFinalize(this);
     }
 }

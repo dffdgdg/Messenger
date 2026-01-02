@@ -40,7 +40,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
     public async Task LoadAsync() => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<List<UserDTO>>("api/admin/users");
+        var result = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Admin.Users);
 
         if (result is { Success: true, Data: not null })
         {
@@ -64,7 +64,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var apiResult = await _apiClient.PostAsync<UserDTO>("api/admin/users", createDto);
+                var apiResult = await _apiClient.PostAsync<UserDTO>(ApiEndpoints.Admin.Users, createDto);
 
                 if (apiResult.Success)
                 {
@@ -101,7 +101,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var result = await _apiClient.PutAsync<UserDTO>($"api/user/{user.Id}", updateDto);
+                var result = await _apiClient.PutAsync<UserDTO>(ApiEndpoints.User.ById(user.Id), updateDto);
 
                 if (result.Success)
                 {
@@ -156,7 +156,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.PostAsync<object>($"api/admin/users/{user.Id}/toggle-ban", null!);
+            var result = await _apiClient.PostAsync<object>(ApiEndpoints.Admin.ToggleBan(user.Id), null!);
 
             if (result.Success)
             {

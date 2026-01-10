@@ -119,19 +119,16 @@ ASP.NET Core приложение с использованием SignalR.
 ### Авторизация
 <img src="Assets/Screenshots/Login.jpg" width="500">
 
-### Добавление сотрудника в отделл
-<img src="Assets/Screenshots/AddDepartmentUser.jpg" width="500">
-
 ### Список контактов
-<img src="Assets/Screenshots/DialogList.jpg" width="500">
+<img src="Assets/Screenshots/DialogList.png" width="500">
 
 ### Переписка с контактом
 <img src="Assets/Screenshots/Dialog.jpg" width="500">
 
-### Авторизация
+### Список чатов
 <img src="Assets/Screenshots/Chat.jpg" width="500">
 
-### Список чатов
+### Чат
 <img src="Assets/Screenshots/ChatList.jpg" width="500">
 
 ### Поиск в чате
@@ -140,8 +137,26 @@ ASP.NET Core приложение с использованием SignalR.
 ### Создание опроса
 <img src="Assets/Screenshots/CreatePoll.jpg" width="500">
 
+### Создание чата
+<img src="Assets/Screenshots/CreateChat.jpg" width="500">
+
+### Профиль
+<img src="Assets/Screenshots/Profile.jpg" width="500">
+
 ### Настройки
 <img src="Assets/Screenshots/Settings.jpg" width="500">
+
+### Тёмная тема
+<img src="Assets/Screenshots/DarkTheme.jpg" width="500">
+
+### Страница руководителя отдела
+<img src="Assets/Screenshots/DepartmentHead.jpg" width="500">
+
+### Добавление сотрудника в отдел
+<img src="Assets/Screenshots/AddDepartmentUser.jpg" width="500">
+
+### Список сотрудников
+<img src="Assets/Screenshots/AdminUser.jpg" width="500">
 
 ### Список отделов
 <img src="Assets/Screenshots/AdminDepartmentList.jpg" width="500">

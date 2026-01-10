@@ -115,30 +115,43 @@ ASP.NET Core приложение с использованием SignalR.
 
 Скриншоты
 ====================
+
 ### Авторизация
 <img src="Assets/Screenshots/Login.jpg" width="500">
+
 ### Добавление сотрудника в отделл
 <img src="Assets/Screenshots/AddDepartmentUser.jpg" width="500">
+
 ### Список контактов
 <img src="Assets/Screenshots/DialogList.jpg" width="500">
+
 ### Переписка с контактом
 <img src="Assets/Screenshots/Dialog.jpg" width="500">
+
 ### Авторизация
 <img src="Assets/Screenshots/Chat.jpg" width="500">
+
 ### Список чатов
 <img src="Assets/Screenshots/ChatList.jpg" width="500">
+
 ### Поиск в чате
 <img src="Assets/Screenshots/ChatSearch.jpg" width="500">
+
 ### Создание опроса
 <img src="Assets/Screenshots/CreatePoll.jpg" width="500">
+
 ### Настройки
 <img src="Assets/Screenshots/Settings.jpg" width="500">
+
 ### Список отделов
 <img src="Assets/Screenshots/AdminDepartmentList.jpg" width="500">
+
 ### Создание отдела
 <img src="Assets/Screenshots/CreateDepartment.jpg" width="500">
+
 ### Создание сотрудника
 <img src="Assets/Screenshots/CreateUser.jpg" width="500">
+
 Термины и сокращения
 ====================
 

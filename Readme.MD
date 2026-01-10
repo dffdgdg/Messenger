@@ -209,8 +209,6 @@ dotnet run --configuration Release
 |:---------------------:|:------------------:|
 | <img src="Assets/Screenshots/DepartmentHead.jpg" width="300"> | <img src="Assets/Screenshots/AddDepartmentUser.jpg" width="300"> |
 
-<details>
-
 ---
 
 ## Тестирование

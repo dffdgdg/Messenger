@@ -11,25 +11,22 @@ namespace MessengerAPI.Helpers
     {
         #region User Extensions
 
-        public static UserDTO ToDto(this User user, HttpRequest? request = null, bool? isOnline = null)
+        public static UserDTO ToDto(this User user, HttpRequest? request = null, bool? isOnline = null) => new()
         {
-            return new UserDTO
-            {
-                Id = user.Id,
-                Username = user.Username,
-                DisplayName = user.FormatDisplayName(),
-                Name = user.Name,
-                Surname = user.Surname,
-                Midname = user.Midname,
-                Department = user.Department?.Name,
-                DepartmentId = user.Department?.Id,
-                Avatar = BuildFullUrl(user.Avatar, request),
-                Theme = user.UserSetting?.Theme,
-                NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
-                IsOnline = (bool)isOnline!,
-                LastOnline = user.LastOnline
-            };
-        }
+            Id = user.Id,
+            Username = user.Username,
+            DisplayName = user.FormatDisplayName(),
+            Name = user.Name,
+            Surname = user.Surname,
+            Midname = user.Midname,
+            Department = user.Department?.Name,
+            DepartmentId = user.Department?.Id,
+            Avatar = BuildFullUrl(user.Avatar, request),
+            Theme = user.UserSetting?.Theme,
+            NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
+            IsOnline = (bool)isOnline!,
+            LastOnline = user.LastOnline
+        };
 
         public static string FormatDisplayName(this User user)
         {

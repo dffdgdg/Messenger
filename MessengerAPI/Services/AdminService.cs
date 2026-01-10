@@ -98,7 +98,7 @@ namespace MessengerAPI.Services
             _logger.LogInformation("Создан пользователь {Username} с ID {UserId}", username, user.Id);
 
             // Перезагружаем с навигационными свойствами
-            var createdUser = await _context.Users.Include(u => u.Departments).Include(u => u.UserSetting).FirstAsync(u => u.Id == user.Id, ct);
+            var createdUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).FirstAsync(u => u.Id == user.Id, ct);
 
             return MapToDto(createdUser);
         }

@@ -228,7 +228,8 @@ public class ChatMessageManager(
     public IEnumerable<MessageViewModel> GetUnreadMessages()
         => Messages.Where(m => m.IsUnread && m.SenderId != userId);
 
-    public int GetPollsCount() => Messages.Count(m => m.Poll != null);
+    public int GetPollsCount()
+        => Messages.Count(m => m.Poll != null);
 
     private MessageViewModel CreateMessageViewModel(MessageDTO msg, ObservableCollection<UserDTO> members)
     {

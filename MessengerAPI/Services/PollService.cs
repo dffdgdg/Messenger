@@ -94,9 +94,8 @@ namespace MessengerAPI.Services
             _context.PollVotes.RemoveRange(oldVotes);
 
             // Добавляем новые голоса
-            var optionIds = voteDto.OptionIds?.Count > 0 ? voteDto.OptionIds : voteDto.OptionId.HasValue ? [voteDto.OptionId.Value] : [];
-
-            foreach (var optionId in optionIds)
+            foreach (var optionId in voteDto.OptionIds?.Count > 0 ? voteDto.OptionIds : voteDto.OptionId.HasValue
+                ? [voteDto.OptionId.Value] : [])
             {
                 _context.PollVotes.Add(new PollVote
                 {
@@ -127,7 +126,7 @@ namespace MessengerAPI.Services
         {
             try
             {
-                await hubContext.Clients.Group(chatId.ToString()).SendAsync(method, data);
+                await hubContext.Clients.Group($"chat_{chatId}").SendAsync(method, data);
             }
             catch (Exception ex)
             {

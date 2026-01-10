@@ -82,14 +82,11 @@ namespace MessengerAPI.Services
             };
         }
 
-        public async Task<List<ChatNotificationSettingsDTO>> GetAllChatSettingsAsync(int userId)
+        public async Task<List<ChatNotificationSettingsDTO>> GetAllChatSettingsAsync(int userId) => await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new ChatNotificationSettingsDTO
         {
-            return await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new ChatNotificationSettingsDTO
-            {
-                ChatId = cm.ChatId,
-                NotificationsEnabled = cm.NotificationsEnabled
-            }).AsNoTracking().ToListAsync();
-        }
+            ChatId = cm.ChatId,
+            NotificationsEnabled = cm.NotificationsEnabled
+        }).AsNoTracking().ToListAsync();
 
         #region Private Methods
 

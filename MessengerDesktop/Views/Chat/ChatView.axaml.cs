@@ -19,7 +19,6 @@ namespace MessengerDesktop.Views.Chat
         private ChatViewModel? _currentVm;
         private bool _pendingScrollToEnd;
 
-        // ��� ������������ ������� ���������
         private readonly HashSet<int> _processedMessageIds = [];
         private readonly DispatcherTimer _visibilityCheckTimer;
 
@@ -28,7 +27,6 @@ namespace MessengerDesktop.Views.Chat
             InitializeComponent();
             DataContextChanged += OnDataContextChanged;
 
-            // ������ ��� debounce �������� ���������
             _visibilityCheckTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(250)

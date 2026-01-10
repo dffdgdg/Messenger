@@ -51,32 +51,40 @@ namespace MessengerAPI.Services
         public async Task<List<ChatDTO>> GetUserChatsAsync(int userId, HttpRequest request)
         {
             var chatIds = await accessControl.GetUserChatIdsAsync(userId);
+            if (chatIds.Count == 0) return [];
 
-            if (chatIds.Count == 0)
-                return [];
-
-            var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id)).Select(c => new
-            {
-                Chat = c, LastMessage = c.Messages.Where(m => m.IsDeleted != true).OrderByDescending(m => m.CreatedAt)
-                .Select(m => new
-                {
-                    m.Content,
-                    m.CreatedAt,
-                    SenderName = m.Sender != null ? m.Sender.Name ?? m.Sender.Username : null
-                })
-                .FirstOrDefault()
-            }).AsNoTracking().ToListAsync();
+            var chatsData = await _context.Chats
+                .Where(c => chatIds.Contains(c.Id))
+                .GroupJoin(
+                    _context.Messages.Where(m => m.IsDeleted != true),
+                    chat => chat.Id,
+                    msg => msg.ChatId,
+                    (chat, msgs) => new
+                    {
+                        Chat = chat,
+                        LastMessage = msgs
+                            .OrderByDescending(m => m.CreatedAt)
+                            .Select(m => new
+                            {
+                                m.Content,
+                                m.CreatedAt,
+                                SenderName = m.Sender!.FormatDisplayName()
+                            })
+                            .FirstOrDefault()
+                    })
+                .AsNoTracking()
+                .ToListAsync();
 
             var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
-            // Получаем информацию о собеседниках для диалогов
-            var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact).Select(c => c.Chat.Id).ToList();
+            var dialogChatIds = chatsData
+                .Where(c => c.Chat.Type == ChatType.Contact)
+                .Select(c => c.Chat.Id)
+                .ToList();
 
             var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId, request);
 
-            var result = new List<ChatDTO>();
-
-            foreach (var item in chatsData)
+            var result = chatsData.ConvertAll(item =>
             {
                 var dto = new ChatDTO
                 {
@@ -89,9 +97,7 @@ namespace MessengerAPI.Services
                     UnreadCount = unreadCounts.GetValueOrDefault(item.Chat.Id, 0)
                 };
 
-                // Для диалогов подставляем данные собеседника
-                if (item.Chat.Type == ChatType.Contact &&
-                    dialogPartners.TryGetValue(item.Chat.Id, out var partner))
+                if (item.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
                 {
                     dto.Name = partner.DisplayName;
                     dto.Avatar = partner.AvatarUrl;
@@ -101,11 +107,9 @@ namespace MessengerAPI.Services
                     dto.Name = item.Chat.Name;
                     dto.Avatar = BuildAvatarUrl(item.Chat.Avatar, request);
                 }
+                return dto;
+            });
 
-                result.Add(dto);
-            }
-
-            // Сортировка: сначала непрочитанные, затем по дате
             return [.. result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate)];
         }
 

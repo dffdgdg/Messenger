@@ -32,7 +32,7 @@ namespace MessengerAPI.Services
             if (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value)
             {
                 member.LastReadMessageId = targetMessageId;
-                member.LastReadAt = DateTime.Now;
+                member.LastReadAt = DateTime.UtcNow;
                 await context.SaveChangesAsync();
 
                 logger.LogDebug("Пользователь {UserId} прочитал до сообщения {MessageId} в чате {ChatId}", userId, targetMessageId, request.ChatId);
@@ -191,13 +191,11 @@ namespace MessengerAPI.Services
                     continue;
                 }
 
-                var count = await context.Messages.CountAsync(m =>
+                result[chatId] = await context.Messages.CountAsync(m =>
                     m.ChatId == chatId &&
                     m.Id > lastReadId &&
                     m.IsDeleted != true &&
                     m.SenderId != userId);
-
-                result[chatId] = count;
             }
 
             return result;
@@ -233,16 +231,13 @@ namespace MessengerAPI.Services
                 .FirstOrDefaultAsync();
         }
 
-        private static ReadReceiptResponseDTO CreateResponse(ChatMember member, int unreadCount)
+        private static ReadReceiptResponseDTO CreateResponse(ChatMember member, int unreadCount) => new()
         {
-            return new ReadReceiptResponseDTO
-            {
-                ChatId = member.ChatId,
-                LastReadMessageId = member.LastReadMessageId,
-                LastReadAt = member.LastReadAt,
-                UnreadCount = unreadCount
-            };
-        }
+            ChatId = member.ChatId,
+            LastReadMessageId = member.LastReadMessageId,
+            LastReadAt = member.LastReadAt,
+            UnreadCount = unreadCount
+        };
 
         #endregion
     }

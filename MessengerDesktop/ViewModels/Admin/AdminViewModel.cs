@@ -116,8 +116,7 @@ public partial class AdminViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task Refresh()
-    {
+    private async Task Refresh() =>
         await SafeExecuteAsync(async () =>
         {
             await Task.WhenAll(UsersTab.LoadAsync(), DepartmentsTab.LoadAsync());
@@ -130,7 +129,6 @@ public partial class AdminViewModel : BaseViewModel
 
             SuccessMessage = "Данные обновлены";
         });
-    }
 
     [RelayCommand]
     private async Task Create()
@@ -143,12 +141,11 @@ public partial class AdminViewModel : BaseViewModel
     {
         foreach (var item in items)
         {
-            if (item.Id == departmentId)
-                return item;
+            if (item.Id == departmentId) return item;
 
             var found = FindDepartmentItem(item.Children, departmentId);
-            if (found != null)
-                return found;
+
+            if (found != null) return found;
         }
         return null;
     }

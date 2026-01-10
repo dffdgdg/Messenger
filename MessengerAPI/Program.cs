@@ -87,19 +87,17 @@ builder.Services.AddScoped<IReadReceiptService, ReadReceiptService>();
 
 #region Authentication & Authorization
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = TokenService.CreateValidationParameters(builder.Configuration);
+
+    options.Events = new JwtBearerEvents
     {
-        options.TokenValidationParameters = TokenService.CreateValidationParameters(builder.Configuration);
-
-        options.Events = new JwtBearerEvents
+        OnMessageReceived = context =>
         {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
+            var accessToken = context.Request.Query["access_token"];
 
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    context.HttpContext.Request.Path.StartsWithSegments("/chatHub"))
+            if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/chatHub"))
                 {
                     context.Token = accessToken;
                 }

@@ -10,19 +10,16 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
-    private void OnMessageReceived(MessageDTO messageDto)
+    private void OnMessageReceived(MessageDTO messageDto) => Dispatcher.UIThread.Post(async () =>
     {
-        Dispatcher.UIThread.Post(async () =>
-        {
-            _messageManager.AddReceivedMessage(messageDto);
-            UpdatePollsCount();
+        _messageManager.AddReceivedMessage(messageDto);
+        UpdatePollsCount();
 
-            if (!IsScrolledToBottom)
-                HasNewMessages = true;
-            else
-                await MarkMessagesAsReadAsync();
-        });
-    }
+        if (!IsScrolledToBottom)
+            HasNewMessages = true;
+        else
+            await MarkMessagesAsReadAsync();
+    });
 
     private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt) =>
         Dispatcher.UIThread.Post(() =>

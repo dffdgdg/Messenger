@@ -139,8 +139,8 @@ namespace MessengerAPI.Services
         /// <summary>
         /// Получить сообщения вокруг указанного ID (для скролла к непрочитанным)
         /// </summary>
-        public async Task<PagedMessagesDTO> GetMessagesAroundAsync(
-            int chatId, int messageId, int userId, int count, HttpRequest request)
+        public async Task<PagedMessagesDTO> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count,
+            HttpRequest request)
         {
             var halfCount = count / 2;
 
@@ -482,8 +482,7 @@ namespace MessengerAPI.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            return partners
-                .Where(p => p.User != null)
+            return partners.Where(p => p.User != null)
                 .ToDictionary(
                     p => p.ChatId,
                     p => (

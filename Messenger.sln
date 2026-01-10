@@ -12,9 +12,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}"
 	ProjectSection(SolutionItems) = preProject
 		Architecture.md = Architecture.md
+		Readme.MD = Readme.MD
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messenger.Tests", "Messenger.Tests\Messenger.Tests.csproj", "{6EFD8E44-1287-4C24-A202-996790BD901A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{ABC5CEB3-D286-47B5-BFCA-AFE5B5C4A372}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +44,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ABC5CEB3-D286-47B5-BFCA-AFE5B5C4A372} = {F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A20C657B-CE0E-4948-9F14-6811BF438ABC}

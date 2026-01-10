@@ -76,7 +76,7 @@ namespace MessengerDesktop.Services.Auth
             }
             catch
             {
-                // Ignore - not critical
+
             }
         }
 

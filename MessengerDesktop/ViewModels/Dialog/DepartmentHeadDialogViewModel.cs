@@ -176,11 +176,8 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var confirmDialog = new ConfirmDialogViewModel(
-            "Удаление отдела",
-            $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.",
-            "Удалить",
-            "Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела",
+            $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
         var confirmed = await confirmDialog.Result;

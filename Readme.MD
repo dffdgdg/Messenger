@@ -110,7 +110,7 @@ dotnet run --configuration Release
 ## Структура проекта
 
 ```
-📦 corporate-messenger
+📦 Messenger
 ├── 📂 MessengerShared/          # Общие компоненты
 │   ├── 📂 DTO/                  # Объекты передачи данных
 │   ├── 📂 Enum/                 # Перечисления
@@ -208,6 +208,7 @@ dotnet run --configuration Release
 | Страница руководителя | Добавление в отдел |
 |:---------------------:|:------------------:|
 | <img src="Assets/Screenshots/DepartmentHead.jpg" width="300"> | <img src="Assets/Screenshots/AddDepartmentUser.jpg" width="300"> |
+</details>
 
 ---
 

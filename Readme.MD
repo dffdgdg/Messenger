@@ -43,7 +43,7 @@
 
 ---
 
-## 📦 Установка
+## Установка
 
 ### Системные требования
 
@@ -151,6 +151,15 @@ dotnet run --configuration Release
 ## Скриншоты
 
 <details>
+<summary><b>Темы оформления</b></summary>
+
+| Светлая тема | Тёмная тема |
+|:------------:|:-----------:|
+| <img src="Assets/Screenshots/Settings.jpg" width="350"> | <img src="Assets/Screenshots/DarkTheme.jpg" width="350"> |
+
+</details>
+
+<details>
 <summary><b>Авторизация и профиль</b></summary>
 
 | Авторизация | Профиль | Настройки |
@@ -166,9 +175,9 @@ dotnet run --configuration Release
 |:---------------:|:---------:|:------------:|
 | <img src="Assets/Screenshots/DialogList.png" width="250"> | <img src="Assets/Screenshots/Dialog.jpg" width="250"> | <img src="Assets/Screenshots/ChatSearch.jpg" width="250"> |
 
-| Список чатов | Групповой чат | Создание чата |
+| Список чатов | Переписка | Создание чата |
 |:------------:|:-------------:|:-------------:|
-| <img src="Assets/Screenshots/ChatList.jpg" width="250"> | <img src="Assets/Screenshots/Chat.jpg" width="250"> | <img src="Assets/Screenshots/CreateChat.jpg" width="250"> |
+| <img src="Assets/Screenshots/Chat.jpg" width="250"> | <img src="Assets/Screenshots/ChatList.jpg" width="250"> | <img src="Assets/Screenshots/CreateChat.jpg" width="250"> |
 
 </details>
 
@@ -192,20 +201,15 @@ dotnet run --configuration Release
 |:--------------:|:---------------:|
 | <img src="Assets/Screenshots/AdminDepartmentList.jpg" width="300"> | <img src="Assets/Screenshots/CreateDepartment.jpg" width="300"> |
 
+</details>
+<details>
+<summary><b>Руководитель отдела</b></summary>
+
 | Страница руководителя | Добавление в отдел |
 |:---------------------:|:------------------:|
 | <img src="Assets/Screenshots/DepartmentHead.jpg" width="300"> | <img src="Assets/Screenshots/AddDepartmentUser.jpg" width="300"> |
 
-</details>
-
 <details>
-<summary><b>Темы оформления</b></summary>
-
-| Светлая тема | Тёмная тема |
-|:------------:|:-----------:|
-| <img src="Assets/Screenshots/Dialog.jpg" width="350"> | <img src="Assets/Screenshots/DarkTheme.jpg" width="350"> |
-
-</details>
 
 ---
 
@@ -262,8 +266,6 @@ dotnet test --filter "Category=Controllers"
 ---
 
 ## Контакты
-
-<div align="center">
 
 | Канал | Контакт |
 |-------|---------|

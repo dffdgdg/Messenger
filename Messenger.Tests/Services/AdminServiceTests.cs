@@ -1,4 +1,5 @@
 ﻿using Messenger.Tests.Helpers;
+using MessengerShared.DTO.User;
 
 namespace Messenger.Tests.Services;
 

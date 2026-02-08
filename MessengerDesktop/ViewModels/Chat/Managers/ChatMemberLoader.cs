@@ -16,14 +16,10 @@ public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService a
         var result = await apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chatId), ct);
 
         if (result.Success && result.Data is { Count: > 0 })
-        {
             return new ObservableCollection<UserDTO>(result.Data);
-        }
 
         if (chat?.Type == ChatType.Contact)
-        {
             return await LoadContactMembersAsync(chat, ct);
-        }
 
         return [];
     }

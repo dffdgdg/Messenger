@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MessengerDesktop.ViewModels.Dialog;
 using System;
 using System.Collections.Generic;
@@ -94,7 +94,8 @@ namespace MessengerDesktop.Services
             }
         }
 
-        public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel) where TViewModel : DialogBaseViewModel
+        public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel)
+            where TViewModel : DialogBaseViewModel
         {
             ThrowIfDisposed();
             ArgumentNullException.ThrowIfNull(dialogViewModel);
@@ -112,11 +113,9 @@ namespace MessengerDesktop.Services
                 CurrentDialog = dialogViewModel;
                 dialogViewModel.CloseRequested += OnDialogClosed;
 
-                OnDialogStackChanged?.Invoke();
-
                 IsDialogVisible = true;
 
-                await Task.Delay(16);
+                OnDialogStackChanged?.Invoke();
 
                 await RequestAnimationAsync(isOpening: true);
             }
@@ -272,9 +271,20 @@ namespace MessengerDesktop.Services
             }
         }
 
-        private async void OnDialogClosed() => await CloseAsync();
+        private async void OnDialogClosed()
+        {
+            try
+            {
+                await CloseAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Сервис уже освобождён
+            }
+        }
 
-        private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
+        private void ThrowIfDisposed() =>
+            ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
 
         public void Dispose()
         {

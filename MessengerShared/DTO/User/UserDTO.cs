@@ -18,6 +18,7 @@ namespace MessengerShared.DTO.User
         public DateTime? LastOnline { get; set; }
         public Theme? Theme { get; set; }
         public bool? NotificationsEnabled { get; set; }
+        public bool? SoundsEnabled { get; set; }
 
     }
 }

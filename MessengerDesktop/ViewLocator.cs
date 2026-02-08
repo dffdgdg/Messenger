@@ -14,8 +14,7 @@ namespace MessengerDesktop
             var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
             var type = Type.GetType(name);
 
-            if (type != null)
-                return (Control)Activator.CreateInstance(type)!;
+            if (type != null) return (Control)Activator.CreateInstance(type)!;
 
             return new TextBlock { Text = "Not Found: " + name };
         }

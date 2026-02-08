@@ -30,7 +30,7 @@ public class AuthManager : IAuthManager, IDisposable
     private const string UserIdKey = "user_id";
     private const string UserRoleKey = "user_role";
 
-    private Task? _initializationTask;
+    private readonly Task? _initializationTask;
     private bool _disposed;
 
     public bool IsInitialized { get; private set; }

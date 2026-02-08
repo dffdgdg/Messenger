@@ -1,4 +1,5 @@
 using Avalonia.Data.Converters;
+using Avalonia.Layout;
 using Avalonia.Media;
 using MessengerDesktop.Converters.Boolean;
 using MessengerDesktop.Converters.Comparsion;
@@ -20,7 +21,6 @@ public sealed class ConverterLocator
     private readonly Dictionary<string, IValueConverter> _converters = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IMultiValueConverter> _multiConverters = new(StringComparer.OrdinalIgnoreCase);
 
-    // Публичный конструктор для XAML
     public ConverterLocator() => RegisterAll();
 
     private void RegisterAll()
@@ -29,11 +29,9 @@ public sealed class ConverterLocator
         Add(new BoolToStringConverter { TrueValue = "True", FalseValue = "False" }, "BoolToString");
         Add(new BoolToDoubleConverter { TrueValue = 90, FalseValue = 0 }, "BoolToRotation", "BooleanToRotateTransform");
         Add(new BoolToDoubleConverter { TrueValue = 1.0, FalseValue = 0.5 }, "BoolToOpacity");
-        Add(new BoolToColorConverter
-        {
-            TrueValue = Color.Parse("#22C55E"),
-            FalseValue = Color.Parse("#6B7280")
-        }, "BoolToOnline");
+        Add(new BoolToColorConverter { TrueValue = Color.Parse("#22C55E"), FalseValue = Color.Parse("#6B7280") }, "BoolToOnline");
+        Add(new BoolToHAlignmentConverter { TrueValue = HorizontalAlignment.Right, FalseValue = HorizontalAlignment.Left }, "BoolToHAlignment");
+        Add<BoolToBrushConverter>("BoolToBrush");
 
         // Comparison converters
         Add(new ComparisonConverter { Mode = ComparisonMode.Equal }, "Equality", "Equals");
@@ -68,15 +66,16 @@ public sealed class ConverterLocator
 
         // Generic converters
         Add<IndexToTextConverter>("IndexToText");
+        Add<PluralizeConverter>("Pluralize");
 
         // Multi converters
         AddMulti<BooleanAndConverter>("BooleanAnd");
         AddMulti<LastSeenTextConverter>("LastSeen");
         AddMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
+        AddMulti<PercentToWidthConverter>("PercentToWidth");
     }
 
-    private void Add<T>(params string[] names) where T : IValueConverter, new()
-        => Add(new T(), names);
+    private void Add<T>(params string[] names) where T : IValueConverter, new() => Add(new T(), names);
 
     private void Add(IValueConverter converter, params string[] names)
     {
@@ -91,13 +90,9 @@ public sealed class ConverterLocator
             _multiConverters[name] = converter;
     }
 
-    public IValueConverter Get(string name)
-        => _converters.TryGetValue(name, out var converter)
-            ? converter
-            : throw new KeyNotFoundException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
+    public IValueConverter Get(string name) => _converters.TryGetValue(name, out var converter)
+        ? converter : throw new KeyNotFoundException($"Converter '{name}' not found. Available: {string.Join(", ", _converters.Keys)}");
 
-    public IMultiValueConverter GetMulti(string name)
-        => _multiConverters.TryGetValue(name, out var converter)
-            ? converter
-            : throw new KeyNotFoundException($"MultiConverter '{name}' not found. Available: {string.Join(", ", _multiConverters.Keys)}");
+    public IMultiValueConverter GetMulti(string name) => _multiConverters.TryGetValue(name, out var converter)
+        ? converter : throw new KeyNotFoundException($"MultiConverter '{name}' not found. Available: {string.Join(", ", _multiConverters.Keys)}");
 }

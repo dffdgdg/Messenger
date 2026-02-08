@@ -1,0 +1,301 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:chat="using:MessengerDesktop.Views.Chat"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageControl"
+             x:DataType="vmChat:MessageViewModel"
+             x:Name="BubbleRoot">
+
+    <UserControl.Styles>
+        <Style Selector="Border.DeletedMessage">
+            <Setter Property="Opacity" Value="0.6"/>
+        </Style>
+
+        <Style Selector="TextBlock.DeletedText">
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        </Style>
+
+        <Style Selector="TextBlock.MessageMeta">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+        </Style>
+
+        <Style Selector="TextBlock.EditedMeta">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+        </Style>
+
+        <Style Selector="Border.PollBubble">
+            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+            <Setter Property="CornerRadius" Value="18,18,18,4"/>
+            <Setter Property="Padding" Value="14,10,14,10"/>
+            <Setter Property="MaxWidth" Value="360"/>
+            <Setter Property="MinWidth" Value="280"/>
+        </Style>
+
+        <!-- PollBubble для своих -->
+        <Style Selector="Border.PollBubble.Own">
+            <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+            <Setter Property="CornerRadius" Value="18,18,4,18"/>
+        </Style>
+
+        <!-- Иконка статуса доставки -->
+        <Style Selector="Path.DeliveryStatus">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="2,0,0,1"/>
+        </Style>
+
+        <Style Selector="Path.DeliveryStatus.Read">
+            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+        </Style>
+
+        <Style Selector="Path.DeliveryStatus.Unread">
+            <Setter Property="Fill" Value="{DynamicResource TextMuted}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel>
+        <!-- ===== РАЗДЕЛИТЕЛЬ ДАТ ===== -->
+        <Border IsVisible="{Binding ShowDateSeparator}"
+                HorizontalAlignment="Center"
+                Margin="0,12,0,8">
+            <Border Background="{DynamicResource PrimaryBG}"
+                    CornerRadius="12"
+                    Padding="16,6"
+                    BoxShadow="0 1 3 0 #20000000">
+                <TextBlock Text="{Binding DateSeparatorText}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondary}"
+                           HorizontalAlignment="Center"/>
+            </Border>
+        </Border>
+
+        <!-- ===== ОБЁРТКА СООБЩЕНИЯ ===== -->
+        <Border Classes="MessageHighlight"
+                Classes.Highlighted="{Binding IsHighlighted}"
+                Classes.DeletedMessage="{Binding IsDeleted}"
+                Padding="4,2"
+                AutomationProperties.Name="{Binding SenderName}"
+                AutomationProperties.HelpText="{Binding DisplayContent}">
+
+            <Border.ContextFlyout>
+                <MenuFlyout>
+                    <MenuItem Header="Редактировать"
+                              Command="{Binding #BubbleRoot.EditMessageCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding CanEdit}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource EditIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <MenuItem Header="Копировать текст"
+                              Command="{Binding #BubbleRoot.CopyTextCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding Content, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource CopyIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <MenuItem Header="Отменить голос"
+                              Command="{Binding Poll.CancelVoteCommand}"
+                              IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
+                        <MenuItem.Icon>
+                            <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <Separator IsVisible="{Binding CanDelete}"/>
+
+                    <MenuItem Header="Удалить"
+                              Command="{Binding #BubbleRoot.DeleteMessageCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding CanDelete}"
+                              Foreground="{DynamicResource DangerBrush}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource DeleteIcon}"
+                                  Fill="{DynamicResource DangerBrush}"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuFlyout>
+            </Border.ContextFlyout>
+
+            <!-- 3-я колонка: Auto (не тратит место когда пустая) -->
+            <Grid Margin="0,1" ColumnDefinitions="44,*,Auto">
+
+                <!-- ===== АВАТАР (только чужие) ===== -->
+                <Panel Grid.Column="0"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,0,2"
+                       IsVisible="{Binding !IsOwn}">
+                    <Button Classes="AvatarButton"
+                            VerticalAlignment="Bottom"
+                            IsVisible="{Binding ShowSenderName}"
+                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
+                            CommandParameter="{Binding SenderId}"
+                            Height="36" Width="36"
+                            ToolTip.Tip="{Binding SenderName}"
+                            AutomationProperties.Name="{Binding SenderName, StringFormat='Профиль {0}'}">
+                        <controls:AvatarControl Classes="Small"
+                                                Source="{Binding SenderAvatarUrl}"
+                                                DisplayName="{Binding SenderName}"
+                                                ShowOnlineIndicator="False"/>
+                    </Button>
+                </Panel>
+
+                <!-- ===== КОНТЕНТ ===== -->
+                <StackPanel Grid.Column="1"
+                            HorizontalAlignment="{Binding IsOwn,
+                                Converter={conv:Converter Name=BoolToHAlignment},
+                                ConverterParameter='Right|Left'}"
+                            Margin="6,0,0,0"
+                            MaxWidth="560">
+
+                    <!-- Имя отправителя (только чужие) -->
+                    <Button Classes="SenderNameButton"
+                            IsVisible="{Binding !IsOwn}"
+                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
+                            CommandParameter="{Binding SenderId}">
+                        <TextBlock Text="{Binding SenderName}"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Accent}"/>
+                    </Button>
+
+                    <!-- ===== ОБЫЧНОЕ СООБЩЕНИЕ (не опрос) ===== -->
+                    <Border Classes="MessageBubble"
+                            Classes.Own="{Binding IsOwn}"
+                            Classes.Other="{Binding !IsOwn}"
+                            IsVisible="{Binding !HasPoll}">
+                        <StackPanel Spacing="8">
+
+                            <!-- Текстовый контент (HasTextContent уже исключает IsDeleted) -->
+                            <Panel IsVisible="{Binding HasTextContent}">
+                                <SelectableTextBlock Text="{Binding DisplayContent}"
+                                                     TextWrapping="Wrap"
+                                                     FontSize="15"
+                                                     LineHeight="22"
+                                                     Margin="0,0,70,0"/>
+
+                                <!-- Мета: время + изм. + статус доставки -->
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="4"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Bottom">
+                                    <TextBlock Text="изм."
+                                               Classes="EditedMeta"
+                                               IsVisible="{Binding IsEdited}"/>
+                                    <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                                               Classes="MessageMeta"/>
+                                    <!-- Статус доставки (только для своих) -->
+                                    <Path Data="{StaticResource CheckIcon}"
+                                          Classes="DeliveryStatus"
+                                          Classes.Read="{Binding IsRead}"
+                                          Classes.Unread="{Binding !IsRead}"
+                                          IsVisible="{Binding ShowDeliveryStatus}"/>
+                                </StackPanel>
+                            </Panel>
+
+                            <!-- Удалённое сообщение -->
+                            <Panel IsVisible="{Binding IsDeleted}">
+                                <TextBlock Text="{Binding DisplayContent}"
+                                           Classes="DeletedText"
+                                           TextWrapping="Wrap"
+                                           FontSize="15"
+                                           LineHeight="22"
+                                           Margin="0,0,50,0"/>
+
+                                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                                           Classes="MessageMeta"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Bottom"/>
+                            </Panel>
+
+                            <!-- Файлы -->
+                            <ItemsControl ItemsSource="{Binding FileViewModels}"
+                                          IsVisible="{Binding HasFiles}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="6"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmChat:MessageFileViewModel">
+                                        <chat:FileAttachmentControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Мета без текста (файлы-only) -->
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="4"
+                                        HorizontalAlignment="Right"
+                                        IsVisible="{Binding ShowFilesOnlyMeta}">
+                                <TextBlock Text="изм."
+                                           Classes="EditedMeta"
+                                           IsVisible="{Binding IsEdited}"/>
+                                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                                           Classes="MessageMeta"/>
+                                <Path Data="{StaticResource CheckIcon}"
+                                      Classes="DeliveryStatus"
+                                      Classes.Read="{Binding IsRead}"
+                                      Classes.Unread="{Binding !IsRead}"
+                                      IsVisible="{Binding ShowDeliveryStatus}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== ОПРОС ===== -->
+                    <Border Classes="PollBubble"
+                            Classes.Own="{Binding IsOwn}"
+                            IsVisible="{Binding HasPoll}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding Content}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       LineHeight="20"
+                                       Margin="0,2,0,4"/>
+
+                            <chat:PollView DataContext="{Binding Poll}"/>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="4"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,2,0,0">
+                                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                                           Classes="MessageMeta"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

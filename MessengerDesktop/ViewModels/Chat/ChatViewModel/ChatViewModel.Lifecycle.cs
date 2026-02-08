@@ -36,10 +36,20 @@ public partial class ChatViewModel
             UpdatePollsCount();
             _initTcs.TrySetResult();
 
-            if (scrollToIndex.HasValue)
+            // Скролл к нужной позиции БЕЗ подсветки
+            if (scrollToIndex < Messages.Count - 1)
             {
+                // Есть непрочитанные - скроллим к первому непрочитанному
                 await Task.Delay(150, ct);
-                ScrollToIndexRequested?.Invoke(scrollToIndex.Value);
+                ScrollToIndexRequested?.Invoke(scrollToIndex.Value, false); // false = без подсветки
+                Debug.WriteLine($"[ChatViewModel] Scrolling to first unread at index {scrollToIndex.Value}");
+            }
+            else
+            {
+                // Нет непрочитанных или индекс в конце - скроллим вниз
+                await Task.Delay(150, ct);
+                ScrollToBottomRequested?.Invoke();
+                Debug.WriteLine("[ChatViewModel] Scrolling to bottom (no unread or at end)");
             }
         }
         catch (OperationCanceledException)

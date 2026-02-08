@@ -1,14 +1,12 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Styling;
 using MessengerDesktop.DependencyInjection;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
-using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views;
@@ -49,6 +47,8 @@ namespace MessengerDesktop
             services.AddMessengerCoreServices(ApiUrl);
             services.AddMessengerViewModels();
 
+            services.AddSingleton<IThemeService, ThemeService>();
+
             return services.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateScopes = true,
@@ -66,10 +66,11 @@ namespace MessengerDesktop
                 desktop.MainWindow = mainWindow;
 
                 InitializePlatformServices(mainWindow);
-                LoadThemeFromSettings();
 
-                var mainWindowViewModel = Services.GetRequiredService<MainWindowViewModel>();
-                mainWindow.DataContext = mainWindowViewModel;
+                var themeService = Services.GetRequiredService<IThemeService>();
+                themeService.LoadFromSettings();
+
+                mainWindow.DataContext = Services.GetRequiredService<MainWindowViewModel>();
 
                 desktop.Exit += OnApplicationExit;
                 desktop.ShutdownRequested += OnShutdownRequested;
@@ -91,67 +92,8 @@ namespace MessengerDesktop
             Debug.WriteLine("[App] Platform services initialized");
         }
 
-        private void LoadThemeFromSettings()
-        {
-            try
-            {
-                var settingsService = Services.GetRequiredService<ISettingsService>();
-                var isDarkTheme = settingsService.Get<bool?>("IsDarkTheme") ?? true;
-                RequestedThemeVariant = isDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
-
-                Debug.WriteLine($"[App] Theme loaded: {(isDarkTheme ? "Dark" : "Light")}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[App] Error loading theme: {ex.Message}");
-                RequestedThemeVariant = ThemeVariant.Dark;
-            }
-        }
-
-        public void ToggleTheme()
-        {
-            var newTheme = RequestedThemeVariant == ThemeVariant.Dark
-                ? ThemeVariant.Light
-                : ThemeVariant.Dark;
-
-            RequestedThemeVariant = newTheme;
-
-            try
-            {
-                var settingsService = Services.GetRequiredService<ISettingsService>();
-                settingsService.Set("IsDarkTheme", newTheme == ThemeVariant.Dark);
-
-                Debug.WriteLine($"[App] Theme toggled to: {newTheme}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[App] Error saving theme: {ex.Message}");
-            }
-        }
-
-        public ThemeVariant ThemeVariant
-        {
-            get => RequestedThemeVariant ?? ThemeVariant.Dark;
-            set
-            {
-                if (RequestedThemeVariant != value)
-                {
-                    RequestedThemeVariant = value;
-
-                    try
-                    {
-                        var settingsService = Services.GetRequiredService<ISettingsService>();
-                        settingsService.Set("IsDarkTheme", value == ThemeVariant.Dark);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[App] Error saving theme variant: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) => Debug.WriteLine("[App] Shutdown requested");
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+            => Debug.WriteLine("[App] Shutdown requested");
 
         private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {

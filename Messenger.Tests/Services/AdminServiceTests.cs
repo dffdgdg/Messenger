@@ -8,7 +8,6 @@ public class AdminServiceTests
     [Fact]
     public async Task CreateUser_Success_WhenValidData()
     {
-        // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AdminService(context, TestHelpers.CreateLogger<AdminService>().Object);
 
@@ -21,14 +20,11 @@ public class AdminServiceTests
             DepartmentId = 1
         };
 
-        // Act
         var result = await service.CreateUserAsync(dto);
 
-        // Assert
         result.Should().NotBeNull();
         result.Username.Should().Be("newuser");
 
-        // Проверяем что пользователь создан в БД
         var userInDb = await context.Users.FindAsync(result.Id);
         userInDb.Should().NotBeNull();
     }
@@ -36,19 +32,15 @@ public class AdminServiceTests
     [Fact]
     public async Task CreateUser_Failure_WhenUsernameExists()
     {
-        // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AdminService(context, TestHelpers.CreateLogger<AdminService>().Object);
-
         var dto = new CreateUserDTO
         {
-            Username = "user1", // Уже существует
+            Username = "user1",
             Password = "password123",
             Name = "Test",
             Surname = "User"
         };
-
-        // Act & Assert
         var act = () => service.CreateUserAsync(dto);
         await act.Should().ThrowAsync<ArgumentException>().WithMessage("*уже существует*");
     }
@@ -80,19 +72,16 @@ public class AdminServiceTests
     [Fact]
     public async Task CreateUser_Failure_WhenPasswordTooShort()
     {
-        // Arrange
         await using var context = TestHelpers.CreateDbContext();
         var service = new AdminService(context, TestHelpers.CreateLogger<AdminService>().Object);
 
         var dto = new CreateUserDTO
         {
             Username = "validuser",
-            Password = "123", // Слишком короткий
+            Password = "123", 
             Name = "Test",
             Surname = "User"
         };
-
-        // Act & Assert
         var act = () => service.CreateUserAsync(dto);
         await act.Should().ThrowAsync<ArgumentException>().WithMessage("*минимум 6*");
     }
@@ -103,15 +92,9 @@ public class AdminServiceTests
         // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AdminService(context, TestHelpers.CreateLogger<AdminService>().Object);
-
-        // Act
         await service.ToggleBanAsync(2);
-
-        // Assert
         var user = await context.Users.FindAsync(2);
         user!.IsBanned.Should().BeTrue();
-
-        // Повторный вызов снимает бан
         await service.ToggleBanAsync(2);
         user = await context.Users.FindAsync(2);
         user!.IsBanned.Should().BeFalse();

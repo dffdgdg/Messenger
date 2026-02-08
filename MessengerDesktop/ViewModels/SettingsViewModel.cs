@@ -5,10 +5,11 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Storage;
 using MessengerShared.DTO.User;
-using MessengerShared.Enum;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
+using AppTheme = MessengerShared.Enum.Theme;
 
 namespace MessengerDesktop.ViewModels;
 
@@ -22,14 +23,14 @@ public partial class SettingsViewModel : BaseViewModel
     private bool _hasPendingChanges;
     private bool _isLoaded;
 
-    [ObservableProperty] private Theme _selectedTheme;
+    [ObservableProperty] private AppTheme _selectedTheme;
     [ObservableProperty] private bool _notificationsEnabled = true;
     [ObservableProperty] private bool _canBeFoundInSearch = true;
 
-    public Theme[] AvailableThemes { get; } = Enum.GetValues<Theme>();
-    public string CurrentThemeDisplay => SelectedTheme.ToString();
-
-    public SettingsViewModel(MainMenuViewModel mainMenuViewModel,IApiClientService apiClient,ISettingsService settingsService)
+    public SettingsViewModel(
+        MainMenuViewModel mainMenuViewModel,
+        IApiClientService apiClient,
+        ISettingsService settingsService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -41,11 +42,15 @@ public partial class SettingsViewModel : BaseViewModel
         _ = LoadSettingsAsync();
     }
 
-    private static Theme GetCurrentAppTheme()
+    private static AppTheme GetCurrentAppTheme()
     {
         var app = Application.Current;
-        var themeVariant = app?.RequestedThemeVariant ?? app?.ActualThemeVariant;
-        return themeVariant == ThemeVariant.Dark ? Theme.dark : Theme.light;
+        var themeVariant = app?.RequestedThemeVariant;
+
+        if (themeVariant == null || themeVariant == ThemeVariant.Default)
+            return AppTheme.system;
+
+        return themeVariant == ThemeVariant.Dark ? AppTheme.dark : AppTheme.light;
     }
 
     private async Task LoadSettingsAsync()
@@ -64,7 +69,7 @@ public partial class SettingsViewModel : BaseViewModel
             try
             {
                 var data = result.Data;
-                var serverTheme = (Theme)data.Theme!;
+                var serverTheme = (AppTheme)data.Theme!;
 
                 if (SelectedTheme != serverTheme)
                 {
@@ -73,9 +78,7 @@ public partial class SettingsViewModel : BaseViewModel
                 }
 
                 NotificationsEnabled = data.NotificationsEnabled ?? true;
-
                 _settingsService.NotificationsEnabled = NotificationsEnabled;
-                _settingsService.CanBeFoundInSearch = CanBeFoundInSearch;
             }
             finally
             {
@@ -104,8 +107,6 @@ public partial class SettingsViewModel : BaseViewModel
             if (result.Success)
             {
                 _settingsService.NotificationsEnabled = NotificationsEnabled;
-                _settingsService.CanBeFoundInSearch = CanBeFoundInSearch;
-
                 SuccessMessage = "Настройки сохранены";
             }
             else
@@ -123,25 +124,27 @@ public partial class SettingsViewModel : BaseViewModel
         }
     }
 
-    private void ApplyTheme(Theme theme)
+    private static void ApplyTheme(AppTheme theme)
     {
-        App.Current.ThemeVariant = theme switch
+        if (Application.Current == null) return;
+
+        Application.Current.RequestedThemeVariant = theme switch
         {
-            Theme.dark => ThemeVariant.Dark,
-            Theme.light => ThemeVariant.Light,
+            AppTheme.dark => ThemeVariant.Dark,
+            AppTheme.light => ThemeVariant.Light,
+            AppTheme.system => ThemeVariant.Default,
             _ => ThemeVariant.Default
         };
-        OnPropertyChanged(nameof(CurrentThemeDisplay));
     }
 
     private void ScheduleAutoSave()
     {
         if (_isSaving || !_isLoaded) return;
         _hasPendingChanges = true;
-        _autoSaveTimer.Change(1000, Timeout.Infinite);
+        _autoSaveTimer.Change(800, Timeout.Infinite);
     }
 
-    partial void OnSelectedThemeChanged(Theme value)
+    partial void OnSelectedThemeChanged(AppTheme value)
     {
         if (_isSaving || !_isLoaded) return;
         ApplyTheme(value);
@@ -152,15 +155,12 @@ public partial class SettingsViewModel : BaseViewModel
     partial void OnCanBeFoundInSearchChanged(bool value) => ScheduleAutoSave();
 
     [RelayCommand]
-    private void ToggleTheme() => SelectedTheme = SelectedTheme == Theme.light ? Theme.dark : Theme.light;
-
-    [RelayCommand]
     private async Task SaveNow() => await SaveSettingsAsync();
 
     [RelayCommand]
     private void ResetToDefaults()
     {
-        SelectedTheme = Theme.light;
+        SelectedTheme = AppTheme.light;
         NotificationsEnabled = true;
         CanBeFoundInSearch = true;
         SuccessMessage = "Настройки сброшены";

@@ -1,0 +1,270 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             x:Class="MessengerDesktop.Views.Chat.PollView"
+             x:DataType="vmChat:PollViewModel"
+             x:Name="PollRoot">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="PollProgressFill" Color="#332196F3"/>
+        <SolidColorBrush x:Key="PollProgressFillSelected" Color="#552196F3"/>
+        <SolidColorBrush x:Key="PollOptionHover" Color="#18000000"/>
+        <SolidColorBrush x:Key="PollCheckmark" Color="#2196F3"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+
+        <!-- Кнопка-обёртка варианта (замена Tapped) -->
+        <Style Selector="Button.PollOptionButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+
+        <Style Selector="Button.PollOptionButton /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource PollOptionHover}"/>
+        </Style>
+
+        <Style Selector="Button.PollOptionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource PollOptionHover}"/>
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+
+        <Style Selector="Border.PollOptionContainer">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+
+        <Style Selector="Border.PollProgressBar">
+            <Setter Property="Background" Value="{StaticResource PollProgressFill}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Opacity" Value="1"/>
+            <Style.Animations>
+                <Animation Duration="0:0:0.4" Easing="CubicEaseOut" FillMode="Forward">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <Style Selector="Border.PollProgressBar.Selected">
+            <Setter Property="Background" Value="{StaticResource PollProgressFillSelected}"/>
+        </Style>
+
+        <Style Selector="Border.PollOptionBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.PollOptionBorder.Selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        </Style>
+
+        <Style Selector="Ellipse.PollRadio">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="Stroke" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="Fill" Value="Transparent"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Stroke" Duration="0:0:0.15"/>
+                    <BrushTransition Property="Fill" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Ellipse.PollRadio.Selected">
+            <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+        </Style>
+
+        <Style Selector="Path.PollCheck">
+            <Setter Property="Data" Value="M9.5 16.5L4.5 11.5L5.91 10.09L9.5 13.67L18.09 5.09L19.5 6.5L9.5 16.5Z"/>
+            <Setter Property="Fill" Value="{StaticResource PollCheckmark}"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="TextBlock.PollType">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+
+        <Style Selector="TextBlock.PollSubtype">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Opacity" Value="0.7"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- MaxWidth убран — управляется родительским PollBubble -->
+    <StackPanel Spacing="6"
+                MinWidth="250"
+                AutomationProperties.Name="Опрос">
+
+        <!-- Тип опроса -->
+        <StackPanel Spacing="1" Margin="2,0,0,2">
+            <TextBlock Classes="PollType"
+                       Text="{Binding IsAnonymous,
+                              Converter={conv:Converter Name=BoolToString},
+                              ConverterParameter='Анонимный опрос|Опрос'}"/>
+
+            <TextBlock Classes="PollSubtype"
+                       Text="{Binding AllowsMultipleAnswers,
+                              Converter={conv:Converter Name=BoolToString},
+                              ConverterParameter='Можно выбрать несколько|Один вариант'}"
+                       IsVisible="{Binding AllowsMultipleAnswers}"/>
+        </StackPanel>
+
+        <!-- ===== ВАРИАНТЫ (ДО ГОЛОСОВАНИЯ) ===== -->
+        <ItemsControl ItemsSource="{Binding Options}"
+                      IsVisible="{Binding CanVote}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vmChat:PollOptionViewModel">
+                    <Button Classes="PollOptionButton"
+                            Command="{Binding ToggleSelectionCommand}"
+                            AutomationProperties.Name="{Binding OptionText}">
+                        <Border Classes="PollOptionBorder"
+                                Classes.Selected="{Binding IsSelected}">
+                            <Grid ColumnDefinitions="Auto,*">
+
+                                <Panel Grid.Column="0"
+                                       Width="20" Height="20"
+                                       Margin="0,0,10,0"
+                                       VerticalAlignment="Center">
+                                    <Ellipse Classes="PollRadio"
+                                             Classes.Selected="{Binding IsSelected}"/>
+                                    <Ellipse Width="10" Height="10"
+                                             Fill="White"
+                                             IsVisible="{Binding IsSelected}"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"/>
+                                </Panel>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding OptionText}"
+                                           FontSize="14"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- ===== ВАРИАНТЫ (ПОСЛЕ ГОЛОСОВАНИЯ) ===== -->
+        <ItemsControl ItemsSource="{Binding Options}"
+                      IsVisible="{Binding !CanVote}"
+                      x:Name="ResultsItemsControl">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vmChat:PollOptionViewModel">
+                    <Border Classes="PollOptionContainer"
+                            Height="42"
+                            Margin="0,2"
+                            AutomationProperties.Name="{Binding OptionText}"
+                            AutomationProperties.HelpText="{Binding VotesPercentage, StringFormat='{}{0:0}%'}">
+                        <Panel>
+                            <Border Classes="PollProgressBar"
+                                    Classes.Selected="{Binding IsSelected}"
+                                    Height="42"
+                                    CornerRadius="10"
+                                    HorizontalAlignment="Left">
+                                <Border.Width>
+                                    <MultiBinding Converter="{conv:MultiConverter Name=PercentToWidth}">
+                                        <Binding Path="VotesPercentage"/>
+                                        <Binding Path="$parent[ItemsControl].Bounds.Width"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
+
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  Margin="12,0"
+                                  VerticalAlignment="Center">
+
+                                <Path Grid.Column="0"
+                                      Classes="PollCheck"
+                                      IsVisible="{Binding IsSelected}"
+                                      Margin="0,0,8,0"/>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding OptionText}"
+                                           FontSize="14"
+                                           TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding VotesPercentage, StringFormat={}{0:0}%}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{Binding IsSelected,
+                                                        Converter={conv:Converter Name=BoolToBrush},
+                                                        ConverterParameter='Accent|TextSecondary'}"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Panel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- ===== ФУТЕР ===== -->
+        <Grid ColumnDefinitions="*,Auto" Margin="2,2,2,0">
+
+            <TextBlock Grid.Column="0"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Opacity="0.7"
+                       VerticalAlignment="Center">
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} {1}">
+                        <Binding Path="TotalVotes"/>
+                        <Binding Path="TotalVotes"
+                                 Converter="{conv:Converter Name=Pluralize}"
+                                 ConverterParameter="голос|голоса|голосов"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+
+            <Button Grid.Column="1"
+                    Classes="Accent Compact"
+                    Content="Голосовать"
+                    Command="{Binding VoteCommand}"
+                    IsVisible="{Binding CanVote}"
+                    IsEnabled="{Binding HasSelection}"
+                    AutomationProperties.Name="Голосовать в опросе"/>
+        </Grid>
+    </StackPanel>
+</UserControl>

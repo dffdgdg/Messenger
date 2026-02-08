@@ -295,9 +295,9 @@ public partial class MainMenuViewModel : BaseViewModel
         {
             var pollDialog = new PollDialogViewModel(chatId)
             {
-                CreateAction = async pollDto =>
+                CreateAction = async createPollDto =>
                 {
-                    await CreatePollAsync(pollDto);
+                    await CreatePollAsync(createPollDto);
                     onPollCreated?.Invoke();
                 }
             };
@@ -310,14 +310,14 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
 
-    private async Task CreatePollAsync(PollDTO pollDto) => await SafeExecuteAsync(async () =>
+    private async Task CreatePollAsync(CreatePollDTO dto) => await SafeExecuteAsync(async () =>
     {
-        pollDto.CreatedById = UserId;
-        pollDto.MessageId = 0;
+        var result = await _apiClient.PostAsync<CreatePollDTO, MessageDTO>(ApiEndpoints.Poll.Create, dto);
 
-        var result = await _apiClient.PostAsync<PollDTO, MessageDTO>(ApiEndpoints.Poll.Create, pollDto);
-        if (result.Success) SuccessMessage = "Опрос создан";
-        else ErrorMessage = $"Ошибка создания опроса: {result.Error}";
+        if (result.Success)
+            SuccessMessage = "Опрос создан";
+        else
+            ErrorMessage = $"Ошибка создания опроса: {result.Error}";
     });
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>

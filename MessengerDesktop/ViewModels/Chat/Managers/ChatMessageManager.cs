@@ -72,6 +72,7 @@ public class ChatMessageManager(
                 }
 
                 UpdateBounds();
+                UpdateDateSeparators(); // <-- ДОБАВЛЕНО
                 _hasMoreOlder = result.Data.HasMoreMessages;
                 _hasMoreNewer = false;
 
@@ -125,6 +126,7 @@ public class ChatMessageManager(
             }
 
             UpdateBounds();
+            UpdateDateSeparators(); // <-- ДОБАВЛЕНО
             _hasMoreOlder = result.Data.HasMoreMessages;
             _hasMoreNewer = result.Data.HasNewerMessages;
 
@@ -156,6 +158,7 @@ public class ChatMessageManager(
                 }
 
                 UpdateBounds();
+                UpdateDateSeparators();
                 _hasMoreOlder = result.Data.HasMoreMessages;
             }
         }
@@ -185,6 +188,7 @@ public class ChatMessageManager(
                 }
 
                 UpdateBounds();
+                UpdateDateSeparators();
                 _hasMoreNewer = result.Data.HasNewerMessages;
             }
         }
@@ -209,6 +213,7 @@ public class ChatMessageManager(
 
         Messages.Add(vm);
         UpdateBounds();
+        UpdateDateSeparatorForNewMessage(vm);
         _hasMoreNewer = false;
     }
 
@@ -255,5 +260,85 @@ public class ChatMessageManager(
             _oldestLoadedMessageId = Messages.Min(m => m.Id);
             _newestLoadedMessageId = Messages.Max(m => m.Id);
         }
+    }
+
+    /// <summary>
+    /// Пересчитывает разделители дат для всех сообщений
+    /// </summary>
+    private void UpdateDateSeparators()
+    {
+        DateTime? previousDate = null;
+
+        foreach (var message in Messages)
+        {
+            var messageDate = message.CreatedAt.Date;
+
+            if (previousDate == null || messageDate != previousDate.Value)
+            {
+                message.ShowDateSeparator = true;
+                message.DateSeparatorText = FormatDateSeparator(messageDate);
+            }
+            else
+            {
+                message.ShowDateSeparator = false;
+                message.DateSeparatorText = null;
+            }
+
+            previousDate = messageDate;
+        }
+    }
+
+    /// <summary>
+    /// Обновляет разделитель только для нового сообщения (оптимизация)
+    /// </summary>
+    private void UpdateDateSeparatorForNewMessage(MessageViewModel newMessage)
+    {
+        var messageDate = newMessage.CreatedAt.Date;
+
+        // Находим предыдущее сообщение
+        var index = Messages.IndexOf(newMessage);
+        if (index <= 0)
+        {
+            // Первое сообщение — всегда показываем разделитель
+            newMessage.ShowDateSeparator = true;
+            newMessage.DateSeparatorText = FormatDateSeparator(messageDate);
+            return;
+        }
+
+        var previousMessage = Messages[index - 1];
+        var previousDate = previousMessage.CreatedAt.Date;
+
+        if (messageDate != previousDate)
+        {
+            newMessage.ShowDateSeparator = true;
+            newMessage.DateSeparatorText = FormatDateSeparator(messageDate);
+        }
+        else
+        {
+            newMessage.ShowDateSeparator = false;
+            newMessage.DateSeparatorText = null;
+        }
+    }
+
+    /// <summary>
+    /// Форматирует дату для разделителя
+    /// </summary>
+    private static string FormatDateSeparator(DateTime date)
+    {
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+
+        if (date == today)
+            return "Сегодня";
+
+        if (date == yesterday)
+            return "Вчера";
+
+        // В этом году — без года
+        if (date.Year == today.Year)
+            return date.ToString("d MMMM", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"));
+
+        // Другой год — с годом
+        return date.ToString("d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"));
     }
 }

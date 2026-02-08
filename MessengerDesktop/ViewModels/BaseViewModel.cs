@@ -21,6 +21,37 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private string? _successMessage;
 
+        // ========== Хуки для подклассов ==========
+        // CommunityToolkit генерирует partial void OnXxxChanged в ЭТОМ классе.
+        // Мы пробрасываем их в виртуальные методы,
+        // чтобы подклассы могли реагировать через override.
+
+        partial void OnIsBusyChanged(bool value) => OnIsBusyUpdated(value);
+
+        partial void OnErrorMessageChanged(string? value) => OnErrorMessageUpdated(value);
+
+        partial void OnSuccessMessageChanged(string? value) => OnSuccessMessageUpdated(value);
+
+        /// <summary>
+        /// Вызывается при изменении IsBusy. 
+        /// Переопределите для обновления CanExecute команд.
+        /// </summary>
+        protected virtual void OnIsBusyUpdated(bool value) { }
+
+        /// <summary>
+        /// Вызывается при изменении ErrorMessage.
+        /// Переопределите для взаимоисключения сообщений и т.д.
+        /// </summary>
+        protected virtual void OnErrorMessageUpdated(string? value) { }
+
+        /// <summary>
+        /// Вызывается при изменении SuccessMessage.
+        /// Переопределите для взаимоисключения сообщений и т.д.
+        /// </summary>
+        protected virtual void OnSuccessMessageUpdated(string? value) { }
+
+        // ========== Cancellation ==========
+
         protected CancellationToken GetCancellationToken()
         {
             _cts?.Cancel();
@@ -29,14 +60,20 @@ namespace MessengerDesktop.ViewModels
             return _cts.Token;
         }
 
-        protected async Task SafeExecuteAsync(Func<Task> operation, string? successMessage = null, Action? finallyAction = null)
+        // ========== Safe Execute ==========
+
+        protected async Task SafeExecuteAsync(
+            Func<Task> operation,
+            string? successMessage = null,
+            Action? finallyAction = null)
         {
             try
             {
                 IsBusy = true;
                 ErrorMessage = null;
                 await operation();
-                if (!string.IsNullOrEmpty(successMessage)) SuccessMessage = successMessage;
+                if (!string.IsNullOrEmpty(successMessage))
+                    SuccessMessage = successMessage;
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -51,7 +88,10 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
-        protected async Task SafeExecuteAsync(Func<CancellationToken, Task> operation, string? successMessage = null, Action? finallyAction = null)
+        protected async Task SafeExecuteAsync(
+            Func<CancellationToken, Task> operation,
+            string? successMessage = null,
+            Action? finallyAction = null)
         {
             var ct = GetCancellationToken();
             try
@@ -59,7 +99,8 @@ namespace MessengerDesktop.ViewModels
                 IsBusy = true;
                 ErrorMessage = null;
                 await operation(ct);
-                if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested) SuccessMessage = successMessage;
+                if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
+                    SuccessMessage = successMessage;
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -77,11 +118,12 @@ namespace MessengerDesktop.ViewModels
             }
         }
 
+        // ========== Helpers ==========
+
         protected static string? GetAbsoluteUrl(string? url)
         {
             if (string.IsNullOrEmpty(url)) return null;
             if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
-
             return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
         }
 
@@ -91,6 +133,8 @@ namespace MessengerDesktop.ViewModels
             ErrorMessage = null;
             SuccessMessage = null;
         }
+
+        // ========== Dispose ==========
 
         public void Dispose()
         {

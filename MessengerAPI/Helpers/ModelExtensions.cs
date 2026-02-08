@@ -30,7 +30,8 @@ namespace MessengerAPI.Helpers
 
         public static string FormatDisplayName(this User user)
         {
-            var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
+            var parts = new[] { user.Surname, user.Name, user.Midname }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
 
             var formatted = string.Join(" ", parts);
             return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;
@@ -68,9 +69,6 @@ namespace MessengerAPI.Helpers
 
         #region Chat Extensions
 
-        /// <summary>
-        /// Базовая конвертация Chat в DTO
-        /// </summary>
         public static ChatDTO ToDto(this Chat chat, HttpRequest? request = null) => new()
         {
             Id = chat.Id,
@@ -81,9 +79,6 @@ namespace MessengerAPI.Helpers
             Avatar = BuildFullUrl(chat.Avatar, request)
         };
 
-        /// <summary>
-        /// Конвертация Chat в DTO с подстановкой данных собеседника для диалогов
-        /// </summary>
         public static ChatDTO ToDto(this Chat chat, User? dialogPartner, HttpRequest? request = null)
         {
             var dto = chat.ToDto(request);
@@ -100,6 +95,7 @@ namespace MessengerAPI.Helpers
         #endregion
 
         #region Message Extensions
+
 
         public static MessageDTO ToDto(this Message message, int? currentUserId = null, HttpRequest? request = null)
         {
@@ -153,20 +149,25 @@ namespace MessengerAPI.Helpers
 
         public static PollDTO ToDto(this Poll poll, int? currentUserId = null)
         {
-            var selectedOptionIds = currentUserId.HasValue ? poll.PollOptions?.
-                SelectMany(o => o.PollVotes ?? []).Where(v => v.UserId == currentUserId)
-                .Select(v => v.OptionId).ToList() ?? [] : [];
+            var selectedOptionIds = currentUserId.HasValue
+                ? poll.PollOptions?
+                    .SelectMany(o => o.PollVotes ?? [])
+                    .Where(v => v.UserId == currentUserId)
+                    .Select(v => v.OptionId)
+                    .ToList() ?? []
+                : [];
 
             return new PollDTO
             {
                 Id = poll.Id,
                 MessageId = poll.MessageId,
-                ChatId = poll.Message?.ChatId ?? 0,
-                Question = poll.Question,
                 IsAnonymous = poll.IsAnonymous ?? false,
                 AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
                 ClosesAt = poll.ClosesAt,
-                Options = poll.PollOptions?.OrderBy(o => o.Position).Select(o => o.ToDto(poll.IsAnonymous ?? false)).ToList() ?? [],
+                Options = poll.PollOptions?
+                    .OrderBy(o => o.Position)
+                    .Select(o => o.ToDto(poll.IsAnonymous ?? false))
+                    .ToList() ?? [],
                 SelectedOptionIds = selectedOptionIds,
                 CanVote = selectedOptionIds.Count == 0
             };
@@ -179,12 +180,14 @@ namespace MessengerAPI.Helpers
             Text = option.OptionText,
             Position = option.Position,
             VotesCount = option.PollVotes?.Count ?? 0,
-            Votes = isAnonymous ? [] : option.PollVotes?.Select(v => new PollVoteDTO
-            {
-                PollId = v.PollId,
-                UserId = v.UserId,
-                OptionId = v.OptionId
-            }).ToList() ?? []
+            Votes = isAnonymous
+                ? []
+                : option.PollVotes?.Select(v => new PollVoteDTO
+                {
+                    PollId = v.PollId,
+                    UserId = v.UserId,
+                    OptionId = v.OptionId
+                }).ToList() ?? []
         };
 
         #endregion
@@ -196,7 +199,6 @@ namespace MessengerAPI.Helpers
             if (string.IsNullOrEmpty(path) || request == null)
                 return path;
 
-            // Если уже полный URL
             if (path.StartsWith("http://") || path.StartsWith("https://"))
                 return path;
 

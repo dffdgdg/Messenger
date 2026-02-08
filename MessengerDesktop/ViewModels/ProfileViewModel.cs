@@ -1,4 +1,4 @@
-using Avalonia.Controls.ApplicationLifetimes;
+п»їusing Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
 {
-    public partial class ProfileViewModel : BaseViewModel
+    public partial class ProfileViewModel : BaseViewModel, IRefreshable
     {
         private readonly IApiClientService _apiClient;
 
@@ -23,12 +23,10 @@ namespace MessengerDesktop.ViewModels
 
         [ObservableProperty] private int _userId;
 
-        // Режимы редактирования
         [ObservableProperty] private bool _isEditingProfile;
         [ObservableProperty] private bool _isEditingUsername;
         [ObservableProperty] private bool _isEditingPassword;
 
-        // Поля для редактирования профиля (ФИО)
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(TempFullName))]
         private string _tempSurname = string.Empty;
@@ -41,14 +39,12 @@ namespace MessengerDesktop.ViewModels
         [NotifyPropertyChangedFor(nameof(TempFullName))]
         private string _tempMidname = string.Empty;
 
-        // Поля для редактирования Username
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(CanSaveUsername))]
         [NotifyPropertyChangedFor(nameof(UsernameValidationMessage))]
         [NotifyPropertyChangedFor(nameof(IsUsernameValid))]
         private string _tempUsername = string.Empty;
 
-        // Поля для смены пароля
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(CanSavePassword))]
         private string _currentPassword = string.Empty;
@@ -71,28 +67,28 @@ namespace MessengerDesktop.ViewModels
         public string? AvatarUrl => GetAbsoluteUrl(User?.Avatar);
 
         public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname)
-                                  ?? User?.Username ?? "Пользователь";
+                                  ?? User?.Username ?? "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ";
 
-        public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "—";
+        public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "вЂ”";
 
-        // Валидация Username
         public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
-            System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), @"^[a-zA-Z0-9_]{3,30}$");
+            System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), "^[a-zA-Z0-9_]{3,30}$");
 
-        public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
+        public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername)
+                                       && TempUsername.Trim().Length >= 3
+                                       && IsUsernameValid;
 
         public string? UsernameValidationMessage
         {
             get
             {
                 if (string.IsNullOrEmpty(TempUsername)) return null;
-                if (TempUsername.Trim().Length < 3) return "Минимум 3 символа";
-                if (!IsUsernameValid) return "Только латинские буквы, цифры и _";
+                if (TempUsername.Trim().Length < 3) return "РњРёРЅРёРјСѓРј 3 СЃРёРјРІРѕР»Р°";
+                if (!IsUsernameValid) return "РўРѕР»СЊРєРѕ Р»Р°С‚РёРЅСЃРєРёРµ Р±СѓРєРІС‹, С†РёС„СЂС‹ Рё _";
                 return null;
             }
         }
 
-        // Валидация пароля
         public bool IsNewPasswordValid => string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
 
         public string? NewPasswordValidationMessage
@@ -100,19 +96,20 @@ namespace MessengerDesktop.ViewModels
             get
             {
                 if (string.IsNullOrEmpty(NewPassword)) return null;
-                if (NewPassword.Length < 6) return $"Ещё {6 - NewPassword.Length} символов";
+                if (NewPassword.Length < 6) return $"Р•С‰С‘ {6 - NewPassword.Length} СЃРёРјРІРѕР»РѕРІ";
                 return null;
             }
         }
 
         public bool PasswordsMatch => NewPassword == ConfirmPassword;
-
         public bool ShowPasswordMatchIndicator => !string.IsNullOrEmpty(ConfirmPassword);
 
         public bool CanSavePassword => !string.IsNullOrWhiteSpace(CurrentPassword)
                                        && !string.IsNullOrWhiteSpace(NewPassword)
                                        && NewPassword.Length >= 6
                                        && PasswordsMatch;
+
+        IAsyncRelayCommand IRefreshable.RefreshCommand => RefreshCommand;
 
         public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager)
         {
@@ -127,6 +124,9 @@ namespace MessengerDesktop.ViewModels
             var filtered = parts.Where(s => !string.IsNullOrWhiteSpace(s));
             return filtered.Any() ? string.Join(" ", filtered) : null;
         }
+
+        [RelayCommand]
+        private async Task Refresh() => await LoadUser();
 
         private async Task LoadUser() => await SafeExecuteAsync(async () =>
         {
@@ -149,7 +149,7 @@ namespace MessengerDesktop.ViewModels
             catch { AvatarBitmap = null; }
         }
 
-        #region Редактирование профиля (ФИО)
+        #region Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїСЂРѕС„РёР»СЏ (Р¤РРћ)
 
         [RelayCommand]
         private void StartEditProfile()
@@ -171,7 +171,7 @@ namespace MessengerDesktop.ViewModels
 
             if (string.IsNullOrWhiteSpace(TempSurname) && string.IsNullOrWhiteSpace(TempName))
             {
-                ErrorMessage = "Укажите хотя бы имя или фамилию";
+                ErrorMessage = "РЈРєР°Р¶РёС‚Рµ С…РѕС‚СЏ Р±С‹ РёРјСЏ РёР»Рё С„Р°РјРёР»РёСЋ";
                 return;
             }
 
@@ -188,7 +188,8 @@ namespace MessengerDesktop.ViewModels
                     Department = User.Department
                 };
 
-                var result = await _apiClient.PutAsync<UserDTO>(ApiEndpoints.User.ById(User.Id), update);
+                var result = await _apiClient.PutAsync<UserDTO>(
+                    ApiEndpoints.User.ById(User.Id), update);
 
                 if (result.Success)
                 {
@@ -197,7 +198,7 @@ namespace MessengerDesktop.ViewModels
                     User.Midname = TempMidname.Trim();
                     OnPropertyChanged(nameof(FullName));
                     IsEditingProfile = false;
-                    SuccessMessage = "Профиль обновлён";
+                    SuccessMessage = "РџСЂРѕС„РёР»СЊ РѕР±РЅРѕРІР»С‘РЅ";
                 }
                 else
                 {
@@ -208,7 +209,7 @@ namespace MessengerDesktop.ViewModels
 
         #endregion
 
-        #region Редактирование Username
+        #region Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ Username
 
         [RelayCommand]
         private void StartEditUsername()
@@ -241,14 +242,15 @@ namespace MessengerDesktop.ViewModels
             await SafeExecuteAsync(async () =>
             {
                 var dto = new ChangeUsernameDTO { NewUsername = newUsername };
-                var result = await _apiClient.PutAsync<object>(ApiEndpoints.User.Username(User.Id), dto);
+                var result = await _apiClient.PutAsync<object>(
+                    ApiEndpoints.User.Username(User.Id), dto);
 
                 if (result.Success)
                 {
                     User.Username = newUsername;
                     OnPropertyChanged(nameof(User));
                     IsEditingUsername = false;
-                    SuccessMessage = "Username успешно изменён";
+                    SuccessMessage = "Username СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅС‘РЅ";
                 }
                 else
                 {
@@ -259,7 +261,7 @@ namespace MessengerDesktop.ViewModels
 
         #endregion
 
-        #region Смена пароля
+        #region РЎРјРµРЅР° РїР°СЂРѕР»СЏ
 
         [RelayCommand]
         private void StartEditPassword()
@@ -293,7 +295,8 @@ namespace MessengerDesktop.ViewModels
                     NewPassword = NewPassword
                 };
 
-                var result = await _apiClient.PutAsync<object>(ApiEndpoints.User.Password(User.Id), dto);
+                var result = await _apiClient.PutAsync<object>(
+                    ApiEndpoints.User.Password(User.Id), dto);
 
                 if (result.Success)
                 {
@@ -301,7 +304,7 @@ namespace MessengerDesktop.ViewModels
                     CurrentPassword = "";
                     NewPassword = "";
                     ConfirmPassword = "";
-                    SuccessMessage = "Пароль успешно изменён";
+                    SuccessMessage = "РџР°СЂРѕР»СЊ СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅС‘РЅ";
                 }
                 else
                 {
@@ -312,12 +315,13 @@ namespace MessengerDesktop.ViewModels
 
         #endregion
 
-        #region Аватар
+        #region РђРІР°С‚Р°СЂ
 
         [RelayCommand]
         private async Task UploadAvatar()
         {
-            var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.StorageProvider;
+            var storage = (App.Current?.ApplicationLifetime
+                as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.StorageProvider;
 
             if (storage == null) return;
 
@@ -339,14 +343,14 @@ namespace MessengerDesktop.ViewModels
                     User.Avatar = result.Data!.Avatar;
                     OnPropertyChanged(nameof(AvatarUrl));
                     await LoadAvatarAsync();
-                    SuccessMessage = "Аватар обновлён";
+                    SuccessMessage = "РђРІР°С‚Р°СЂ РѕР±РЅРѕРІР»С‘РЅ";
                 }
             });
         }
 
         #endregion
 
-        #region Вспомогательные методы
+        #region Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РјРµС‚РѕРґС‹
 
         private void CancelAllEditing()
         {
@@ -359,16 +363,19 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         private static async Task Logout()
         {
-            if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow?.DataContext is MainWindowViewModel main)
+            if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                && desktop.MainWindow?.DataContext is MainWindowViewModel main)
             {
                 await main.Logout();
             }
         }
+
         [RelayCommand]
         protected void ClearError() => ErrorMessage = null;
 
         [RelayCommand]
         protected void ClearSuccess() => SuccessMessage = null;
+
         #endregion
     }
 }

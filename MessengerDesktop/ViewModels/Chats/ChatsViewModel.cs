@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class ChatsViewModel : BaseViewModel
+public partial class ChatsViewModel : BaseViewModel, IRefreshable
 {
     private readonly IApiClientService _apiClient;
     private readonly IAuthManager _authManager;
@@ -27,6 +27,8 @@ public partial class ChatsViewModel : BaseViewModel
     private ChatViewModel? _subscribedChatVm;
     private bool _isFirstLoad = true;
     private bool _disposed;
+
+    IAsyncRelayCommand IRefreshable.RefreshCommand => LoadChatsCommand;
 
     public UserProfileDialogViewModel? UserProfileDialog
     {
@@ -205,7 +207,6 @@ public partial class ChatsViewModel : BaseViewModel
             if (scrollToMessageId.HasValue && CurrentChatViewModel != null)
             {
                 await CurrentChatViewModel.WaitForInitializationAsync();
-
                 await CurrentChatViewModel.ScrollToMessageAsync(scrollToMessageId.Value);
             }
         }
@@ -233,7 +234,6 @@ public partial class ChatsViewModel : BaseViewModel
     {
         if (value != null)
         {
-            // Сразу обнуляем локально для мгновенного UI отклика
             if (value.UnreadCount > 0)
             {
                 value.UnreadCount = 0;
@@ -330,7 +330,8 @@ public partial class ChatsViewModel : BaseViewModel
     {
         var currentUserId = _authManager.Session.UserId ?? 0;
 
-        var result = await _apiClient.GetAsync<ChatDTO?>(ApiEndpoints.Chat.UserContact(currentUserId,contactUserId));
+        var result = await _apiClient.GetAsync<ChatDTO?>(
+            ApiEndpoints.Chat.UserContact(currentUserId, contactUserId));
 
         return result.Success ? result.Data : null;
     }
@@ -369,7 +370,6 @@ public partial class ChatsViewModel : BaseViewModel
                 {
                     var orderedChats = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
 
-                    // Применяем счётчики из глобального хаба
                     foreach (var chat in orderedChats)
                     {
                         chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);

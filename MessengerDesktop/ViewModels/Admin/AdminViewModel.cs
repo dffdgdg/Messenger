@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+п»їusing CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.DTO.Department;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class AdminViewModel : BaseViewModel
+public partial class AdminViewModel : BaseViewModel, IRefreshable
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentTab))]
@@ -22,14 +22,8 @@ public partial class AdminViewModel : BaseViewModel
 
     public BaseViewModel CurrentTab => SelectedTabIndex == 0 ? UsersTab : DepartmentsTab;
 
-    /// <summary>
-    /// Отфильтрованные пользователи, сгруппированные по отделам
-    /// </summary>
     public IEnumerable<DepartmentGroup> FilteredGroupedUsers => UsersTab.FilteredGroups;
 
-    /// <summary>
-    /// Отфильтрованная иерархия отделов
-    /// </summary>
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments => DepartmentsTab.FilteredDepartments;
 
     public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab)
@@ -37,7 +31,6 @@ public partial class AdminViewModel : BaseViewModel
         UsersTab = usersTab;
         DepartmentsTab = departmentsTab;
 
-        // Подписка на изменения дочерних VM для обновления UI
         UsersTab.PropertyChanged += (_, e) =>
         {
             PropagateMessages(e.PropertyName, UsersTab);
@@ -68,13 +61,11 @@ public partial class AdminViewModel : BaseViewModel
         await Task.WhenAll(UsersTab.LoadAsync(), DepartmentsTab.LoadAsync());
 
         UsersTab.SetDepartments(DepartmentsTab.Departments);
-
         DepartmentsTab.SetUsers(UsersTab.Users);
 
         OnPropertyChanged(nameof(FilteredGroupedUsers));
         OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
     }
-
 
     partial void OnSearchQueryChanged(string value)
     {
@@ -87,27 +78,17 @@ public partial class AdminViewModel : BaseViewModel
 
     partial void OnSelectedTabIndexChanged(int value) => ClearMessages();
 
-    // ===== ПРОКСИРУЮЩИЕ КОМАНДЫ =====
-
-    /// <summary>
-    /// Открыть диалог редактирования пользователя
-    /// </summary>
     [RelayCommand]
     private async Task OpenEditUserDialog(UserDTO user) => await UsersTab.EditCommand.ExecuteAsync(user);
 
-    /// <summary>
-    /// Заблокировать/разблокировать пользователя
-    /// </summary>
     [RelayCommand]
     private async Task ToggleBan(UserDTO user) => await UsersTab.ToggleBanCommand.ExecuteAsync(user);
 
-    /// <summary>
-    /// Открыть диалог редактирования отдела
-    /// </summary>
     [RelayCommand]
     private async Task OpenEditDepartment(DepartmentDTO department)
     {
-        var hierarchicalItem = FindDepartmentItem(DepartmentsTab.HierarchicalDepartments, department.Id);
+        var hierarchicalItem = FindDepartmentItem(
+            DepartmentsTab.HierarchicalDepartments, department.Id);
 
         if (hierarchicalItem != null)
         {
@@ -127,7 +108,7 @@ public partial class AdminViewModel : BaseViewModel
             OnPropertyChanged(nameof(FilteredGroupedUsers));
             OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
 
-            SuccessMessage = "Данные обновлены";
+            SuccessMessage = "Р”Р°РЅРЅС‹Рµ РѕР±РЅРѕРІР»РµРЅС‹";
         });
 
     [RelayCommand]
@@ -144,7 +125,6 @@ public partial class AdminViewModel : BaseViewModel
             if (item.Id == departmentId) return item;
 
             var found = FindDepartmentItem(item.Children, departmentId);
-
             if (found != null) return found;
         }
         return null;
@@ -152,9 +132,7 @@ public partial class AdminViewModel : BaseViewModel
 
     private void PropagateMessages(string? propertyName, BaseViewModel source)
     {
-        if (propertyName == nameof(ErrorMessage) && !string.IsNullOrEmpty(source.ErrorMessage))
-            ErrorMessage = source.ErrorMessage;
-        else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage))
-            SuccessMessage = source.SuccessMessage;
+        if (propertyName == nameof(ErrorMessage) && !string.IsNullOrEmpty(source.ErrorMessage)) ErrorMessage = source.ErrorMessage;
+        else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage)) SuccessMessage = source.SuccessMessage;
     }
 }

@@ -17,10 +17,8 @@ public class ChatsControllerTests
     [Fact]
     public async Task GetUserChats_ReturnsForbidden_WhenAccessingOtherUserChats()
     {
-        // Act - пользователь 1 пытается получить чаты пользователя 999
         var result = await _controller.GetUserChats(userId: 999);
 
-        // Assert
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(403);
     }

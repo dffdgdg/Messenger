@@ -11,38 +11,44 @@ namespace MessengerAPI.Services
     public interface IPollService
     {
         Task<PollDTO?> GetPollAsync(int pollId, int userId);
-        Task<MessageDTO> CreatePollAsync(PollDTO dto);
+        Task<MessageDTO> CreatePollAsync(CreatePollDTO dto, int createdByUserId);
         Task<PollDTO> VoteAsync(PollVoteDTO voteDto);
     }
 
-    public class PollService(MessengerDbContext context,IHubContext<ChatHub> hubContext,ILogger<PollService> logger)
+    public class PollService(
+        MessengerDbContext context,
+        IHubContext<ChatHub> hubContext,
+        ILogger<PollService> logger)
         : BaseService<PollService>(context, logger), IPollService
     {
         public async Task<PollDTO?> GetPollAsync(int pollId, int userId)
         {
-            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
+            var poll = await _context.Polls
+                .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .Include(p => p.Message)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == pollId);
 
             return poll?.ToDto(userId);
         }
 
-        public async Task<MessageDTO> CreatePollAsync(PollDTO dto)
+        public async Task<MessageDTO> CreatePollAsync(CreatePollDTO dto, int createdByUserId)
         {
-            // Создаём сообщение
+            // Вопрос опроса хранится ТОЛЬКО в Message.Content
             var message = new Message
             {
                 ChatId = dto.ChatId,
-                SenderId = dto.CreatedById,
-                Content = dto.Question
+                SenderId = createdByUserId,
+                Content = dto.Question.Trim()
             };
 
             _context.Messages.Add(message);
             await SaveChangesAsync();
 
-            // Создаём опрос
+            // Poll без Question — вопрос уже в сообщении
             var poll = new Poll
             {
                 MessageId = message.Id,
-                Question = dto.Question,
                 IsAnonymous = dto.IsAnonymous,
                 AllowsMultipleAnswers = dto.AllowsMultipleAnswers,
                 ClosesAt = dto.ClosesAt
@@ -51,30 +57,30 @@ namespace MessengerAPI.Services
             _context.Polls.Add(poll);
             await SaveChangesAsync();
 
-            // Добавляем варианты ответов
-            if (dto.Options?.Count > 0)
+            if (dto.Options.Count > 0)
             {
-                var position = 0;
-                foreach (var optionDto in dto.Options)
+                for (int i = 0; i < dto.Options.Count; i++)
                 {
+                    var opt = dto.Options[i];
                     _context.PollOptions.Add(new PollOption
                     {
                         PollId = poll.Id,
-                        OptionText = optionDto.Text,
-                        Position = position++
+                        OptionText = opt.Text.Trim(),
+                        Position = opt.Position > 0 ? opt.Position : i
                     });
                 }
                 await SaveChangesAsync();
             }
 
-            // Загружаем полное сообщение
-            var createdMessage = await _context.Messages.Include(m => m.Sender).Include(m => m.Polls).ThenInclude(p => p.PollOptions).FirstOrDefaultAsync(m => m.Id == message.Id);
+            var createdMessage = await _context.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Polls).ThenInclude(p => p.PollOptions)
+                .FirstOrDefaultAsync(m => m.Id == message.Id);
 
             EnsureNotNull(createdMessage, message.Id);
 
-            var messageDto = createdMessage!.ToDto(dto.CreatedById);
+            var messageDto = createdMessage!.ToDto(createdByUserId);
 
-            // Отправляем через SignalR
             await SendToGroupSafeAsync(dto.ChatId, "ReceiveMessageDTO", messageDto);
 
             _logger.LogInformation("Опрос создан в чате {ChatId}", dto.ChatId);
@@ -84,18 +90,26 @@ namespace MessengerAPI.Services
 
         public async Task<PollDTO> VoteAsync(PollVoteDTO voteDto)
         {
-            var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
+            var poll = await _context.Polls
+                .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+                .Include(p => p.Message)
+                .FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
 
             EnsureNotNull(poll, voteDto.PollId);
 
-            // Удаляем старые голоса пользователя
-            var oldVotes = await _context.PollVotes.Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId).ToListAsync();
+            var oldVotes = await _context.PollVotes
+                .Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId)
+                .ToListAsync();
 
             _context.PollVotes.RemoveRange(oldVotes);
 
-            // Добавляем новые голоса
-            foreach (var optionId in voteDto.OptionIds?.Count > 0 ? voteDto.OptionIds : voteDto.OptionId.HasValue
-                ? [voteDto.OptionId.Value] : [])
+            var optionIds = voteDto.OptionIds?.Count > 0
+                ? voteDto.OptionIds
+                : voteDto.OptionId.HasValue
+                    ? [voteDto.OptionId.Value]
+                    : [];
+
+            foreach (var optionId in optionIds)
             {
                 _context.PollVotes.Add(new PollVote
                 {
@@ -107,17 +121,17 @@ namespace MessengerAPI.Services
 
             await SaveChangesAsync();
 
-            // Получаем обновлённый опрос
-            var updatedPoll = await GetPollAsync(voteDto.PollId, voteDto.UserId) ?? throw new InvalidOperationException("Не удалось получить обновлённый опрос");
+            var updatedPoll = await GetPollAsync(voteDto.PollId, voteDto.UserId)
+                ?? throw new InvalidOperationException("Не удалось получить обновлённый опрос");
 
-            // Отправляем обновление через SignalR
             var message = await _context.Messages.FindAsync(updatedPoll.MessageId);
             if (message != null)
             {
                 await SendToGroupSafeAsync(message.ChatId, "ReceivePollUpdate", updatedPoll);
             }
 
-            _logger.LogInformation("Пользователь {UserId} проголосовал в опросе {PollId}",voteDto.UserId, voteDto.PollId);
+            _logger.LogInformation("Пользователь {UserId} проголосовал в опросе {PollId}",
+                voteDto.UserId, voteDto.PollId);
 
             return updatedPoll;
         }

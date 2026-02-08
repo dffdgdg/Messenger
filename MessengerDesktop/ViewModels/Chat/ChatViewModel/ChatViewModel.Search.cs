@@ -18,7 +18,7 @@ public partial class ChatViewModel
             if (existingMessage != null)
             {
                 var index = Messages.IndexOf(existingMessage);
-                ScrollToIndexRequested?.Invoke(index);
+                ScrollToIndexRequested?.Invoke(index, false);
                 HighlightMessage(existingMessage);
                 return;
             }
@@ -28,7 +28,7 @@ public partial class ChatViewModel
             if (targetIndex.HasValue)
             {
                 await Task.Delay(100);
-                ScrollToIndexRequested?.Invoke(targetIndex.Value);
+                ScrollToIndexRequested?.Invoke(targetIndex.Value, false);
 
                 var targetMessage = Messages.FirstOrDefault(m => m.Id == messageId);
                 if (targetMessage != null)

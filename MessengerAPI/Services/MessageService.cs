@@ -49,11 +49,6 @@ namespace MessengerAPI.Services
                 IsDeleted = false
             };
 
-            if (dto.Poll != null)
-            {
-                message.Polls.Add(CreatePollFromDto(dto.Poll));
-            }
-
             _context.Messages.Add(message);
             await SaveChangesAsync();
 
@@ -67,13 +62,8 @@ namespace MessengerAPI.Services
             var createdMessage = await LoadFullMessageAsync(message.Id);
             var messageDto = createdMessage.ToDto(dto.SenderId, request);
 
-            // Отправляем через SignalR
             await SendToGroupSafeAsync(dto.ChatId, "ReceiveMessageDTO", messageDto);
-
-            // Обновляем счётчики непрочитанных для всех участников
             await UpdateUnreadCountsForChatAsync(dto.ChatId, dto.SenderId);
-
-            // Отправляем уведомления
             await NotifyNewMessageSafeAsync(messageDto, request);
 
             _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}", message.Id, dto.ChatId);
@@ -81,14 +71,15 @@ namespace MessengerAPI.Services
             return messageDto;
         }
 
-        /// <summary>
-        /// Обновить счётчики непрочитанных для всех участников чата (кроме отправителя)
-        /// </summary>
+
         private async Task UpdateUnreadCountsForChatAsync(int chatId, int senderId)
         {
             try
             {
-                var memberIds = await _context.ChatMembers.Where(cm => cm.ChatId == chatId && cm.UserId != senderId).Select(cm => cm.UserId).ToListAsync();
+                var memberIds = await _context.ChatMembers
+                    .Where(cm => cm.ChatId == chatId && cm.UserId != senderId)
+                    .Select(cm => cm.UserId)
+                    .ToListAsync();
 
                 foreach (var memberId in memberIds)
                 {
@@ -132,19 +123,15 @@ namespace MessengerAPI.Services
                 CurrentPage = normalizedPage,
                 TotalCount = totalCount,
                 HasMoreMessages = totalCount > skipCount + normalizedPageSize,
-                HasNewerMessages = false // При загрузке последних - новее нет
+                HasNewerMessages = false
             };
         }
 
-        /// <summary>
-        /// Получить сообщения вокруг указанного ID (для скролла к непрочитанным)
-        /// </summary>
         public async Task<PagedMessagesDTO> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count,
             HttpRequest request)
         {
             var halfCount = count / 2;
 
-            // Сообщения ДО целевого (включая целевое)
             var beforeAndTarget = await _context.Messages
                 .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
                 .OrderByDescending(m => m.Id)
@@ -155,7 +142,6 @@ namespace MessengerAPI.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Сообщения ПОСЛЕ целевого
             var after = await _context.Messages
                 .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
                 .OrderBy(m => m.Id)
@@ -166,19 +152,16 @@ namespace MessengerAPI.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Собираем в правильном порядке
             var messages = beforeAndTarget
                 .OrderBy(m => m.Id)
                 .Concat(after)
                 .Select(m => m.ToDto(userId, request))
                 .ToList();
 
-            // Проверяем есть ли ещё старые
             var oldestLoadedId = beforeAndTarget.Count > 0 ? beforeAndTarget.Min(m => m.Id) : messageId;
             var hasOlder = await _context.Messages
                 .AnyAsync(m => m.ChatId == chatId && m.Id < oldestLoadedId && m.IsDeleted != true);
 
-            // Проверяем есть ли ещё новые
             var newestLoadedId = after.Count > 0 ? after.Max(m => m.Id) : messageId;
             var hasNewer = await _context.Messages
                 .AnyAsync(m => m.ChatId == chatId && m.Id > newestLoadedId && m.IsDeleted != true);
@@ -193,9 +176,6 @@ namespace MessengerAPI.Services
             };
         }
 
-        /// <summary>
-        /// Получить сообщения до указанного ID (для подгрузки старых)
-        /// </summary>
         public async Task<PagedMessagesDTO> GetMessagesBeforeAsync(
             int chatId, int messageId, int userId, int count, HttpRequest request)
         {
@@ -223,9 +203,6 @@ namespace MessengerAPI.Services
             };
         }
 
-        /// <summary>
-        /// Получить сообщения после указанного ID (для подгрузки новых)
-        /// </summary>
         public async Task<PagedMessagesDTO> GetMessagesAfterAsync(
             int chatId, int messageId, int userId, int count, HttpRequest request)
         {
@@ -254,6 +231,7 @@ namespace MessengerAPI.Services
         }
 
         #endregion
+
         public async Task<MessageDTO> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO dto, HttpRequest request)
         {
             var message = await LoadFullMessageAsync(messageId);
@@ -465,8 +443,7 @@ namespace MessengerAPI.Services
             var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId, request);
 
             var result = messages
-                .ConvertAll(m => CreateGlobalSearchMessageDto(m, query, dialogPartners, request))
-;
+                .ConvertAll(m => CreateGlobalSearchMessageDto(m, query, dialogPartners, request));
 
             return (result, totalCount, totalCount > ((page - 1) * pageSize) + pageSize);
         }
@@ -562,18 +539,6 @@ namespace MessengerAPI.Services
 
         #region Private Methods
 
-        private static Poll CreatePollFromDto(PollDTO pollDto) => new()
-        {
-            Question = pollDto.Question,
-            IsAnonymous = pollDto.IsAnonymous,
-            AllowsMultipleAnswers = pollDto.AllowsMultipleAnswers,
-            PollOptions = pollDto.Options?.Select((o, index) => new PollOption
-            {
-                OptionText = o.Text,
-                Position = o.Position > 0 ? o.Position : index
-            }).ToList() ?? []
-        };
-
         private async Task SaveMessageFilesAsync(int messageId, List<MessageFileDTO> files, HttpRequest request)
         {
             foreach (var f in files)
@@ -598,7 +563,6 @@ namespace MessengerAPI.Services
             if (chat != null)
             {
                 chat.LastMessageTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-
                 await _context.SaveChangesAsync();
             }
         }

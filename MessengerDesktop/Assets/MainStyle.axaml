@@ -304,62 +304,61 @@
 	</Style>
 
 	<!-- ==================== НАВИГАЦИЯ ==================== -->
+	<Style Selector="RadioButton.NavButton, RadioButton.IconButton">
+    <Setter Property="GroupName" Value="MainNavigation"/>
+    <Setter Property="Background" Value="{DynamicResource TransparentBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Icon}"/>
+    <Setter Property="Width" Value="64"/>
+    <Setter Property="Height" Value="58"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+            <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+    <Setter Property="Template">
+        <ControlTemplate TargetType="RadioButton">
+            <Border Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Padding="8">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Path Data="{TemplateBinding Tag}"
+                          Width="22" Height="22"
+                          Stretch="Uniform"
+                          Fill="{TemplateBinding Foreground}"
+                          HorizontalAlignment="Center"/>
+                    <TextBlock Text="{TemplateBinding Content}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{TemplateBinding Foreground}"
+                               HorizontalAlignment="Center"
+                               Margin="0,6,0,0"
+                               Opacity="0.85"/>
+                </StackPanel>
+            </Border>
+        </ControlTemplate>
+    </Setter>
+</Style>
 
-	<Style Selector="RadioButton.NavButton">
-		<Setter Property="GroupName" Value="MainNavigation"/>
-		<Setter Property="Background" Value="{DynamicResource TransparentBrush}"/>
-		<Setter Property="Foreground" Value="{DynamicResource Icon}"/>
-		<Setter Property="Width" Value="64"/>
-		<Setter Property="Height" Value="58"/>
-		<Setter Property="CornerRadius" Value="8"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				<BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
-		<Setter Property="Template">
-			<ControlTemplate TargetType="RadioButton">
-				<Border Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        Padding="8">
-					<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-						<Path Data="{TemplateBinding Tag}"
-                              Width="22" Height="22"
-                              Stretch="Uniform"
-                              Fill="{TemplateBinding Foreground}"
-                              HorizontalAlignment="Center"/>
-						<TextBlock Text="{TemplateBinding Content}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{TemplateBinding Foreground}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,6,0,0"
-                                   Opacity="0.85"/>
-					</StackPanel>
-				</Border>
-			</ControlTemplate>
-		</Setter>
-	</Style>
+<Style Selector="RadioButton.NavButton:pointerover, RadioButton.IconButton:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+</Style>
 
-	<Style Selector="RadioButton.NavButton:pointerover">
-		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-	</Style>
+<Style Selector="RadioButton.NavButton:checked, RadioButton.IconButton:checked">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+</Style>
 
-	<Style Selector="RadioButton.NavButton:checked">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-	</Style>
+<Style Selector="RadioButton.NavButton:pressed, RadioButton.IconButton:pressed">
+    <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+</Style>
 
-	<Style Selector="RadioButton.NavButton:pressed">
-		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-	</Style>
-
-	<Style Selector="RadioButton.NavButton:disabled">
-		<Setter Property="Opacity" Value="0.5"/>
-	</Style>
+<Style Selector="RadioButton.NavButton:disabled, RadioButton.IconButton:disabled">
+    <Setter Property="Opacity" Value="0.5"/>
+</Style>
 
 	<!-- ==================== ПОЛЯ ВВОДА ==================== -->
 
@@ -675,62 +674,7 @@
 	<Style Selector="views|ChatInfoPanel[IsVisible=true]">
 		<Setter Property="Margin" Value="0"/>
 	</Style>
-	<!-- ==================== RadioButton IconButton ==================== -->
-	<Style Selector="RadioButton.IconButton">
-		<Setter Property="GroupName" Value="MainNavigation"/>
-		<Setter Property="Background" Value="{DynamicResource TransparentBrush}"/>
-		<Setter Property="Foreground" Value="{DynamicResource Icon}"/>
-		<Setter Property="Width" Value="64"/>
-		<Setter Property="Height" Value="58"/>
-		<Setter Property="CornerRadius" Value="8"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				<BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
-		<Setter Property="Template">
-			<ControlTemplate TargetType="RadioButton">
-				<Border Background="{TemplateBinding Background}"
-						CornerRadius="{TemplateBinding CornerRadius}"
-						Padding="8">
-					<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-						<Path Data="{TemplateBinding Tag}"
-							  Width="22" Height="22"
-							  Stretch="Uniform"
-							  Fill="{TemplateBinding Foreground}"
-							  HorizontalAlignment="Center"/>
-						<TextBlock Text="{TemplateBinding Content}"
-								   FontSize="11"
-								   FontWeight="SemiBold"
-								   Foreground="{TemplateBinding Foreground}"
-								   HorizontalAlignment="Center"
-								   Margin="0,6,0,0"
-								   Opacity="0.85"/>
-					</StackPanel>
-				</Border>
-			</ControlTemplate>
-		</Setter>
-	</Style>
-
-	<Style Selector="RadioButton.IconButton:pointerover">
-		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-	</Style>
-
-	<Style Selector="RadioButton.IconButton:checked">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-	</Style>
-
-	<Style Selector="RadioButton.IconButton:pressed">
-		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-	</Style>
-
-	<Style Selector="RadioButton.IconButton:disabled">
-		<Setter Property="Opacity" Value="0.5"/>
-	</Style>
+	
 	<!-- ==================== CHECKBOX ==================== -->
 
 	<Style Selector="CheckBox.RememberMe">
@@ -1212,8 +1156,173 @@
     </Setter>
 </Style>
 
+	<Style Selector="RadioButton.ThemeCard">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Padding" Value="12"/>
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="BorderThickness" Value="2"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+    <Setter Property="Template">
+        <ControlTemplate TargetType="RadioButton">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Padding="{TemplateBinding Padding}">
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  HorizontalAlignment="Center"/>
+            </Border>
+        </ControlTemplate>
+    </Setter>
+</Style>
+
+<Style Selector="RadioButton.ThemeCard:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+</Style>
+
+<Style Selector="RadioButton.ThemeCard:checked">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+<Style Selector="RadioButton.ThemeCard:pressed">
+    <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+</Style>
+
+<!-- Превью темы -->
+<Style Selector="Border.ThemePreview">
+    <Setter Property="Height" Value="80"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+</Style>
+
+<Style Selector="Border.ThemePreview.Light">
+    <Setter Property="Background" Value="#F5F5F5"/>
+</Style>
+
+<Style Selector="Border.ThemePreview.Dark">
+    <Setter Property="Background" Value="#252525"/>
+</Style>
+
+<Style Selector="Border.ThemePreview.System">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
+
+<!-- Галочка выбора на карточке темы -->
+<Style Selector="RadioButton.ThemeCard:checked Border.ThemePreview">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+</Style>
+
 <!-- Показываем кнопки при наведении на карточку -->
 <Style Selector="Border.DepartmentCard:pointerover StackPanel.DepartmentActions">
     <Setter Property="Opacity" Value="1"/>
+</Style>
+
+	<!-- ==================== КНОПКА ПРОКРУТКИ ВНИЗ ==================== -->
+
+<Style Selector="Button.ScrollToBottomButton">
+    <Setter Property="Width" Value="44"/>
+    <Setter Property="Height" Value="44"/>
+    <Setter Property="CornerRadius" Value="22"/>
+    <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Opacity" Value="0"/>
+    <Setter Property="RenderTransform" Value="translateY(10px)"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Button.ScrollToBottomButton[IsVisible=True]">
+    <Setter Property="Opacity" Value="1"/>
+    <Setter Property="RenderTransform" Value="translateY(0)"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomButton:pointerover">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomButton:pressed">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="RenderTransform" Value="scale(0.95)"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomButton:pressed Path">
+    <Setter Property="Fill" Value="{DynamicResource TextOnAccent}"/>
+</Style>
+
+<!-- Анимация пульсации при новых сообщениях -->
+<Style Selector="Button.ScrollToBottomButton.HasNew">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+</Style>
+	<Style Selector="MenuFlyoutPresenter">
+    <Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="4"/>
+</Style>
+
+	<Style Selector="TextBox.LoginInput">
+    <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+    <Setter Property="Height" Value="44"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    <Setter Property="Padding" Value="14,0"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="MenuItem">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="CornerRadius" Value="4"/>
+</Style>
+
+<Style Selector="MenuItem:pointerover /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+</Style>
+
+<Style Selector="MenuItem:disabled">
+    <Setter Property="Opacity" Value="0.5"/>
+</Style>
+
+<Style Selector="MenuFlyoutPresenter Separator">
+    <Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="Height" Value="1"/>
+    <Setter Property="Margin" Value="8,4"/>
 </Style>
 </Styles>

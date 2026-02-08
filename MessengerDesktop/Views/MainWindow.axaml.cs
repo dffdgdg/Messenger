@@ -1,3 +1,4 @@
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -17,7 +18,9 @@ namespace MessengerDesktop.Views
         private readonly IDialogService _dialogService;
         private readonly IPlatformService _platformService;
         private readonly INotificationService _notificationService;
+
         private const int AnimationDurationMs = 250;
+        private const int FrameDelayMs = 16;
 
         private CancellationTokenSource? _animationCts;
         private readonly object _animationLock = new();
@@ -34,14 +37,43 @@ namespace MessengerDesktop.Views
             _notificationService.Initialize(this);
 
             _dialogService.OnDialogAnimationRequested += OnDialogAnimationRequested;
+
+            UpdateWindowPadding();
+        }
+
+        protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+        {
+            base.OnPropertyChanged(change);
+
+            if (change.Property == WindowStateProperty)
+            {
+                UpdateWindowPadding();
+            }
+        }
+
+        private void UpdateWindowPadding()
+        {
+            Padding = WindowState == WindowState.Maximized
+                ? new Thickness(7)
+                : new Thickness(0);
         }
 
         private void OnDialogAnimationRequested(bool isOpening)
         {
-            Dispatcher.UIThread.Post(async () =>
+            _ = Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                await RunAnimationAsync(isOpening);
-                _dialogService.NotifyAnimationComplete();
+                try
+                {
+                    await RunAnimationAsync(isOpening);
+                }
+                catch (Exception)
+                {
+                    ResetAnimationState();
+                }
+                finally
+                {
+                    _dialogService.NotifyAnimationComplete();
+                }
             });
         }
 
@@ -61,10 +93,9 @@ namespace MessengerDesktop.Views
 
             try
             {
-                ResetAnimationState();
-
                 if (isOpening)
                 {
+                    ResetAnimationState();
                     await PlayOpenAnimationAsync(newCts.Token);
                 }
                 else
@@ -88,7 +119,7 @@ namespace MessengerDesktop.Views
 
         private async Task PlayOpenAnimationAsync(CancellationToken cancellationToken)
         {
-            await Task.Delay(16, cancellationToken);
+            await Task.Delay(FrameDelayMs, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -100,6 +131,8 @@ namespace MessengerDesktop.Views
 
         private async Task PlayCloseAnimationAsync(CancellationToken cancellationToken)
         {
+            DialogOverlay.Classes.Remove("Open");
+            DialogAnimWrapper.Classes.Remove("Open");
             DialogAnimWrapper.Classes.Add("Closing");
 
             await Task.Delay(AnimationDurationMs, cancellationToken);

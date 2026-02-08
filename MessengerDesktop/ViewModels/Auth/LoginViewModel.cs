@@ -18,31 +18,68 @@ public partial class LoginViewModel : BaseViewModel
 
     private const string RememberMeKey = "remember_me";
     private const string UsernameKey = "saved_username";
+    private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);
 
     [ObservableProperty]
-    private string username = string.Empty;
+    private string _username = string.Empty;
 
     [ObservableProperty]
-    private string password = string.Empty;
+    private string _password = string.Empty;
 
     [ObservableProperty]
-    private bool rememberMe;
+    private bool _rememberMe;
 
-    public LoginViewModel(IAuthManager authManager,INavigationService navigation,ISecureStorageService secureStorage,INotificationService notificationService)
+    [ObservableProperty]
+    private bool _isInitializing = true;
+
+    public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage, INotificationService notificationService)
     {
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
-        _navigation = navigation;
-        _secureStorage = secureStorage;
-        _notificationService = notificationService;
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
-        _ = InitializeAsync();
+        InitializeAsync().ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                Debug.WriteLine($"Login init failed: {t.Exception?.Flatten().Message}");
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
+
+    // ========== Хуки из BaseViewModel ==========
+
+    protected override void OnIsBusyUpdated(bool value) => LoginCommand.NotifyCanExecuteChanged();
+
+    protected override void OnErrorMessageUpdated(string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            SuccessMessage = null;
+    }
+
+    protected override void OnSuccessMessageUpdated(string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            ErrorMessage = null;
+    }
+
+    partial void OnIsInitializingChanged(bool value) => LoginCommand.NotifyCanExecuteChanged();
+
+    // ========== Init ==========
 
     private async Task InitializeAsync()
     {
         try
         {
-            await _authManager.WaitForInitializationAsync();
+            var initTask = _authManager.WaitForInitializationAsync();
+            var completed = await Task.WhenAny(initTask, Task.Delay(InitTimeout));
+
+            if (completed != initTask)
+            {
+                ErrorMessage = "Сервер не отвечает. Попробуйте позже.";
+                return;
+            }
+
+            await initTask;
 
             if (_authManager.Session.IsAuthenticated)
             {
@@ -54,7 +91,12 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await _notificationService.ShowErrorAsync($"Ошибка инициализации: {ex.Message}");
+            ErrorMessage = $"Ошибка инициализации: {ex.Message}";
+            Debug.WriteLine($"Init error: {ex}");
+        }
+        finally
+        {
+            IsInitializing = false;
         }
     }
 
@@ -64,9 +106,7 @@ public partial class LoginViewModel : BaseViewModel
         {
             RememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
             if (RememberMe)
-            {
                 Username = await _secureStorage.GetAsync<string>(UsernameKey) ?? string.Empty;
-            }
         }
         catch (Exception ex)
         {
@@ -80,13 +120,9 @@ public partial class LoginViewModel : BaseViewModel
         {
             await _secureStorage.SaveAsync(RememberMeKey, RememberMe);
             if (RememberMe)
-            {
                 await _secureStorage.SaveAsync(UsernameKey, Username);
-            }
             else
-            {
                 await _secureStorage.RemoveAsync(UsernameKey);
-            }
         }
         catch (Exception ex)
         {
@@ -94,18 +130,36 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-    [RelayCommand]
-    public async Task Login()
+    // ========== Login ==========
+
+    private bool CanLogin() => !IsBusy && !IsInitializing;
+
+    [RelayCommand(CanExecute = nameof(CanLogin))]
+    private async Task LoginAsync()
     {
-        await SafeExecuteAsync(async () =>
+        ClearMessages();
+
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "Введите логин и пароль";
+            return;
+        }
+
+        IsBusy = true;
+        try
         {
             if (!_authManager.IsInitialized)
-                await _authManager.WaitForInitializationAsync();
-
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                ErrorMessage = "Введите логин и пароль";
-                return;
+                var initTask = _authManager.WaitForInitializationAsync();
+                var completed = await Task.WhenAny(initTask, Task.Delay(InitTimeout));
+
+                if (completed != initTask)
+                {
+                    ErrorMessage = "Сервер не отвечает. Попробуйте позже.";
+                    return;
+                }
+
+                await initTask;
             }
 
             var result = await _authManager.LoginAsync(Username, Password);
@@ -113,21 +167,40 @@ public partial class LoginViewModel : BaseViewModel
             if (result.Success)
             {
                 await SaveUsernameAsync();
-                SuccessMessage = "Успешный вход!";
                 _navigation.NavigateToMainMenu();
             }
             else
             {
                 ErrorMessage = result.Error ?? "Неверный логин или пароль";
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка входа: {ex.Message}";
+            Debug.WriteLine($"Login error: {ex}");
+        }
+        finally
+        {
+            Password = string.Empty;
+            IsBusy = false;
+        }
     }
 
+    // ========== Clear ==========
+
     [RelayCommand]
-    public async Task ClearCredentials()
+    private async Task ClearCredentialsAsync()
     {
-        await _secureStorage.RemoveAsync(RememberMeKey);
-        await _secureStorage.RemoveAsync(UsernameKey);
+        try
+        {
+            await _secureStorage.RemoveAsync(RememberMeKey);
+            await _secureStorage.RemoveAsync(UsernameKey);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Clear credentials error: {ex.Message}");
+        }
+
         Username = string.Empty;
         Password = string.Empty;
         RememberMe = false;

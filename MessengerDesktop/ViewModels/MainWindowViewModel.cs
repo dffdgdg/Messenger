@@ -5,7 +5,6 @@ using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.ViewModels.Dialog;
 using System;
-using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels
@@ -15,6 +14,7 @@ namespace MessengerDesktop.ViewModels
         private readonly INavigationService _navigation;
         private readonly IDialogService _dialogService;
         private readonly IAuthManager _authManager;
+        private readonly IThemeService _themeService;
 
         [ObservableProperty]
         private BaseViewModel? _currentViewModel;
@@ -28,19 +28,19 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         private bool _isDialogVisible;
 
-        public MainWindowViewModel(INavigationService navigation,IDialogService dialogService,IAuthManager authManager)
+        public MainWindowViewModel(
+            INavigationService navigation,
+            IDialogService dialogService,
+            IAuthManager authManager,
+            IThemeService themeService)
         {
             _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
             _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
+            _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             _navigation.CurrentViewModelChanged += OnNavigationViewModelChanged;
             _dialogService.OnDialogStackChanged += OnDialogStackChanged;
-
-            if (_dialogService is INotifyPropertyChanged notifyPropertyChanged)
-            {
-                notifyPropertyChanged.PropertyChanged += OnDialogServicePropertyChanged;
-            }
 
             _navigation.NavigateToLogin();
         }
@@ -54,18 +54,11 @@ namespace MessengerDesktop.ViewModels
             SuccessMessage = "Выход выполнен успешно";
         });
 
-        private void OnDialogServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnDialogStackChanged()
         {
-            switch (e.PropertyName)
-            {
-                case nameof(DialogService.IsDialogVisible):
-                    IsDialogVisible = _dialogService.IsDialogVisible;
-                    break;
-
-                case nameof(DialogService.CurrentDialog):
-                    CurrentDialog = _dialogService.CurrentDialog;
-                    break;
-            }
+            CurrentDialog = _dialogService.CurrentDialog;
+            HasOpenDialogs = _dialogService.HasOpenDialogs;
+            IsDialogVisible = _dialogService.IsDialogVisible;
         }
 
         private void OnNavigationViewModelChanged(BaseViewModel vm)
@@ -74,15 +67,8 @@ namespace MessengerDesktop.ViewModels
             ClearMessages();
         }
 
-        private void OnDialogStackChanged()
-        {
-            CurrentDialog = _dialogService.CurrentDialog;
-            HasOpenDialogs = _dialogService.HasOpenDialogs;
-            IsDialogVisible = _dialogService.IsDialogVisible;
-        }
-
         [RelayCommand]
-        public static void ToggleTheme() => App.Current.ToggleTheme();
+        public void ToggleTheme() => _themeService.Toggle();
 
         [RelayCommand]
         public void ClearNotifications() => ClearMessages();
@@ -90,19 +76,10 @@ namespace MessengerDesktop.ViewModels
         [RelayCommand]
         public async Task RefreshCurrentView() => await SafeExecuteAsync(async () =>
         {
-            if (CurrentViewModel is ChatsViewModel chatsViewModel)
+            if (CurrentViewModel is IRefreshable refreshable &&
+                refreshable.RefreshCommand.CanExecute(null))
             {
-                if (chatsViewModel.LoadChatsCommand?.CanExecute(null) == true)
-                    await chatsViewModel.LoadChatsCommand.ExecuteAsync(null);
-            }
-            else if (CurrentViewModel is AdminViewModel adminViewModel)
-            {
-                if (adminViewModel.RefreshCommand?.CanExecute(null) == true)
-                    await adminViewModel.RefreshCommand.ExecuteAsync(null);
-            }
-            else if (CurrentViewModel is ProfileViewModel)
-            {
-                OnPropertyChanged(nameof(CurrentViewModel));
+                await refreshable.RefreshCommand.ExecuteAsync(null);
             }
 
             SuccessMessage = "Данные обновлены";
@@ -124,11 +101,6 @@ namespace MessengerDesktop.ViewModels
             {
                 _navigation.CurrentViewModelChanged -= OnNavigationViewModelChanged;
                 _dialogService.OnDialogStackChanged -= OnDialogStackChanged;
-
-                if (_dialogService is INotifyPropertyChanged notifyPropertyChanged)
-                {
-                    notifyPropertyChanged.PropertyChanged -= OnDialogServicePropertyChanged;
-                }
 
                 (CurrentViewModel as IDisposable)?.Dispose();
             }

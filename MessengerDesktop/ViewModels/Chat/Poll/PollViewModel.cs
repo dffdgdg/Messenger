@@ -1,4 +1,3 @@
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
@@ -17,16 +16,16 @@ public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
 
-    [ObservableProperty] private string _question = string.Empty;
     [ObservableProperty] private ObservableCollection<PollOptionViewModel> _options = [];
-    [ObservableProperty] private bool? _allowsMultipleAnswers;
+    [ObservableProperty] private bool _allowsMultipleAnswers;
     [ObservableProperty] private bool _canVote = true;
     [ObservableProperty] private bool _isAnonymous;
     [ObservableProperty] private int _totalVotes;
+    [ObservableProperty] private bool _hasVoted;
 
     public int PollId { get; }
     public int UserId { get; }
-    public ContextMenu PollContextMenu { get; }
+    public bool HasSelection => Options.Any(o => o.IsSelected);
 
     public PollViewModel(PollDTO poll, int userId, IApiClientService apiClient)
     {
@@ -34,58 +33,64 @@ public partial class PollViewModel : BaseViewModel
 
         PollId = poll.Id;
         UserId = userId;
-        Question = poll.Question;
         AllowsMultipleAnswers = poll.AllowsMultipleAnswers;
-        IsAnonymous = poll.IsAnonymous ?? false;
+        IsAnonymous = poll.IsAnonymous;
         TotalVotes = poll.Options.Sum(o => o.VotesCount);
 
         Options = new ObservableCollection<PollOptionViewModel>(
             poll.Options.Select(o => new PollOptionViewModel(o, this)));
 
         foreach (var opt in Options)
-        {
             opt.PropertyChanged += OnOptionPropertyChanged;
-        }
 
         ApplySelectedOptions(poll.SelectedOptionIds);
         CanVote = poll.CanVote;
-
-        PollContextMenu = CreateContextMenu(poll.SelectedOptionIds?.Count > 0);
+        HasVoted = !poll.CanVote;
     }
-
-    private ContextMenu CreateContextMenu(bool hasVotes) => new()
-    {
-        Items =
-        {
-            new MenuItem
-            {
-                Header = "Отменить голос",
-                Command = CancelVoteCommand,
-                IsEnabled = hasVotes
-            }
-        }
-    };
 
     private void OnOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(PollOptionViewModel.IsSelected))
             return;
 
+        OnPropertyChanged(nameof(HasSelection));
+
         if (sender is not PollOptionViewModel { IsSelected: true } changed)
             return;
 
-        if (AllowsMultipleAnswers != true)
+        if (!AllowsMultipleAnswers)
         {
             foreach (var opt in Options.Where(o => o != changed && o.IsSelected))
-            {
                 opt.IsSelected = false;
-            }
+        }
+    }
+
+    /// <summary>
+    /// Команда выбора варианта из UI (замена Tapped event handler).
+    /// Вызывается по нажатию на вариант опроса до голосования.
+    /// </summary>
+    [RelayCommand]
+    private void SelectOption(PollOptionViewModel? option)
+    {
+        if (option == null || !CanVote)
+            return;
+
+        if (AllowsMultipleAnswers)
+        {
+            // Множественный выбор — переключаем
+            option.IsSelected = !option.IsSelected;
+        }
+        else
+        {
+            // Одиночный выбор — сбрасываем все, выбираем текущий
+            // (логика дублирована в OnOptionPropertyChanged,
+            //  но здесь toggle для удобства)
+            option.IsSelected = !option.IsSelected;
         }
     }
 
     public void ApplyDto(PollDTO dto)
     {
-        Question = dto.Question;
         AllowsMultipleAnswers = dto.AllowsMultipleAnswers;
         TotalVotes = dto.Options.Sum(o => o.VotesCount);
 
@@ -93,7 +98,7 @@ public partial class PollViewModel : BaseViewModel
         ApplySelectedOptions(dto.SelectedOptionIds);
 
         CanVote = dto.CanVote;
-        UpdateContextMenuState(dto.SelectedOptionIds?.Count > 0);
+        HasVoted = !dto.CanVote;
     }
 
     private void UpdateOptions(List<PollOptionDTO> optionDtos)
@@ -128,17 +133,7 @@ public partial class PollViewModel : BaseViewModel
     {
         var selected = selectedIds ?? [];
         foreach (var opt in Options)
-        {
             opt.IsSelected = selected.Contains(opt.Id);
-        }
-    }
-
-    private void UpdateContextMenuState(bool hasVotes)
-    {
-        if (PollContextMenu.Items.Count > 0 && PollContextMenu.Items[0] is MenuItem cancelItem)
-        {
-            cancelItem.IsEnabled = hasVotes;
-        }
     }
 
     [RelayCommand]
@@ -168,7 +163,6 @@ public partial class PollViewModel : BaseViewModel
             if (result is { Success: true, Data: not null })
             {
                 ApplyDto(result.Data);
-                SuccessMessage = "Голос учтён";
             }
             else
             {
@@ -196,7 +190,6 @@ public partial class PollViewModel : BaseViewModel
             if (result is { Success: true, Data: not null })
             {
                 ApplyDto(result.Data);
-                SuccessMessage = "Голос отменён";
             }
             else
             {

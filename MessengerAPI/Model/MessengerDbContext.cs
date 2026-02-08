@@ -233,9 +233,6 @@ public partial class MessengerDbContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("is_anonymous");
             entity.Property(e => e.MessageId).HasColumnName("message_id");
-            entity.Property(e => e.Question)
-                .HasMaxLength(75)
-                .HasColumnName("question");
 
             entity.HasOne(d => d.Message).WithMany(p => p.Polls)
                 .HasForeignKey(d => d.MessageId)

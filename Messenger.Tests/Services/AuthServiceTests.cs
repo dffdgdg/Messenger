@@ -25,15 +25,12 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_Success_WhenValidCredentials()
     {
-        // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AuthService(context, _tokenServiceMock.Object, _settings,
             TestHelpers.CreateLogger<AuthService>().Object);
 
-        // Act
         var result = await service.LoginAsync("user1", "user123");
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Username.Should().Be("user1");
@@ -43,15 +40,12 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_Failure_WhenWrongPassword()
     {
-        // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AuthService(context, _tokenServiceMock.Object, _settings,
             TestHelpers.CreateLogger<AuthService>().Object);
 
-        // Act
         var result = await service.LoginAsync("user1", "wrongpassword");
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Contain("Неверное");
     }
@@ -73,15 +67,12 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_ReturnsAdminRole_WhenUserInAdminDepartment()
     {
-        // Arrange
         await using var context = await TestHelpers.CreateSeededDbContext();
         var service = new AuthService(context, _tokenServiceMock.Object, _settings,
             TestHelpers.CreateLogger<AuthService>().Object);
 
-        // Act
         var result = await service.LoginAsync("admin", "admin123");
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value!.Role.Should().Be(UserRole.Admin);
     }

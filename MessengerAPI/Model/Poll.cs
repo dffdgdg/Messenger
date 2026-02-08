@@ -6,8 +6,6 @@ public class Poll
 
     public int MessageId { get; set; }
 
-    public string Question { get; set; } = null!;
-
     public bool? IsAnonymous { get; set; }
 
     public bool? AllowsMultipleAnswers { get; set; }

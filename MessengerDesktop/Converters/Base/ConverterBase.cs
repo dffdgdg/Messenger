@@ -51,8 +51,7 @@ public abstract class ConverterBase<TIn, TOut> : IValueConverter
 
     protected abstract TOut? ConvertCore(TIn value, object? parameter, CultureInfo culture);
 
-    protected virtual TIn? ConvertBackCore(TOut value, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    protected virtual TIn? ConvertBackCore(TOut value, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
 /// <summary>

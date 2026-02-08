@@ -1,12 +1,10 @@
-﻿using Avalonia.Media;
+﻿using Avalonia.Layout;
+using Avalonia.Media;
 using MessengerDesktop.Converters.Base;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Boolean;
 
-/// <summary>
-/// Универсальный конвертер bool -> T
-/// </summary>
 public abstract class BoolToValueConverter<T> : ConverterBase<bool, T>
 {
     public T? TrueValue { get; set; }
@@ -35,3 +33,5 @@ public class BoolToStringConverter : BoolToValueConverter<string>
 public class BoolToDoubleConverter : BoolToValueConverter<double>;
 
 public class BoolToColorConverter : BoolToValueConverter<Color>;
+
+public class BoolToHAlignmentConverter : BoolToValueConverter<HorizontalAlignment>;

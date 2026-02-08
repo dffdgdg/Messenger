@@ -29,7 +29,7 @@ public partial class PollDialogViewModel : DialogBaseViewModel
     [ObservableProperty]
     private bool _isAnonymous = true;
 
-    public Action<PollDTO>? CreateAction { get; set; }
+    public Action<CreatePollDTO>? CreateAction { get; set; }
 
     public bool CanAddOption => Options.Count < MaxOptions;
     public bool CanRemoveOption => Options.Count > MinOptions;
@@ -54,7 +54,9 @@ public partial class PollDialogViewModel : DialogBaseViewModel
         NotifyStateChanged();
     }
 
-    partial void OnOptionsChanged(ObservableCollection<OptionItem>? oldValue,ObservableCollection<OptionItem> newValue)
+    partial void OnOptionsChanged(
+        ObservableCollection<OptionItem>? oldValue,
+        ObservableCollection<OptionItem> newValue)
     {
         if (oldValue != null)
             UnsubscribeFromOptions(oldValue);
@@ -132,15 +134,15 @@ public partial class PollDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        CreateAction?.Invoke(new PollDTO
+        CreateAction?.Invoke(new CreatePollDTO
         {
             ChatId = _chatId,
             Question = Question.Trim(),
             AllowsMultipleAnswers = AllowsMultipleAnswers,
             IsAnonymous = IsAnonymous,
-            Options = [.. Options.Select((o, i) => new PollOptionDTO
+            Options = [.. Options.Select((o, i) => new CreatePollOptionDTO
             {
-                OptionText = o.Text.Trim(),
+                Text = o.Text.Trim(),
                 Position = i
             })]
         });

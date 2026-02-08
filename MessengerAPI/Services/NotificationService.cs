@@ -99,7 +99,9 @@ namespace MessengerAPI.Services
         {
             var chat = await context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
 
-            return new NotificationDTO
+            if (message.Poll != null)
+            {
+                return new NotificationDTO
             {
                 Type = message.Poll != null ? "poll" : "message",
                 ChatId = message.ChatId,
@@ -111,11 +113,28 @@ namespace MessengerAPI.Services
                 SenderId = message.SenderId,
                 SenderName = message.SenderName,
                 SenderAvatar = message.SenderAvatarUrl,
-                Preview = message.Poll != null
-                    ? $"📊 {message.Poll.Question}"
-                    : TruncateText(message.Content, 100),
+                Preview = $"📊 {message.Content}",
                 CreatedAt = message.CreatedAt
             };
+            }
+            else
+            {
+                return new NotificationDTO
+            {
+                Type = message.Poll != null ? "poll" : "message",
+                ChatId = message.ChatId,
+                ChatName = chat?.Type == ChatType.Contact ? message.SenderName : chat?.Name,
+                ChatAvatar = chat?.Type == ChatType.Contact
+                    ? message.SenderAvatarUrl
+                    : (chat?.Avatar).BuildFullUrl(request),
+                MessageId = message.Id,
+                SenderId = message.SenderId,
+                SenderName = message.SenderName,
+                SenderAvatar = message.SenderAvatarUrl,
+                Preview = TruncateText(message.Content, 100),
+                CreatedAt = message.CreatedAt
+            };
+            }
         }
 
         private async Task SendNotificationToUserAsync(int userId, NotificationDTO notification, int chatId)

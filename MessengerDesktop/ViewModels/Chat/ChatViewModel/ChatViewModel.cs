@@ -1,5 +1,6 @@
 ﻿using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
@@ -11,6 +12,7 @@ using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,7 +28,9 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private readonly IGlobalHubConnection _globalHub;
     private readonly int _chatId;
 
-    public event Action<MessageViewModel>? ScrollToMessageRequested;
+    public event Action<MessageViewModel, bool>? ScrollToMessageRequested; // bool = withHighlight
+    public event Action<int, bool>? ScrollToIndexRequested; // bool = withHighlight
+    public event Action? ScrollToBottomRequested;
 
     private readonly ChatMessageManager _messageManager;
     private readonly ChatAttachmentManager _attachmentManager;
@@ -39,8 +43,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private DateTime _lastMarkAsReadTime = DateTime.MinValue;
 
     public ChatsViewModel Parent { get; }
-
-    public event Action<int>? ScrollToIndexRequested;
 
     #region Observable Properties
 
@@ -61,6 +63,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [ObservableProperty] private UserProfileDialogViewModel? _userProfileDialog;
     [ObservableProperty] private bool _isSearchMode;
     [ObservableProperty] private int? _highlightedMessageId;
+    [ObservableProperty] private int _unreadCount;
 
     #endregion
 
@@ -78,6 +81,36 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public ObservableCollection<LocalFileAttachment> LocalAttachments => _attachmentManager.Attachments;
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
     public bool HasMoreNewer => _messageManager.HasMoreNewer;
+
+    public bool ShowScrollToBottom => !IsScrolledToBottom;
+
+    /// <summary>
+    /// Скролл к сообщению из поиска (с подсветкой)
+    /// </summary>
+    public void ScrollToMessageFromSearch(MessageViewModel message)
+    {
+        ScrollToMessageRequested?.Invoke(message, true); // withHighlight = true
+    }
+
+    /// <summary>
+    /// Скролл к индексу из поиска (с подсветкой)
+    /// </summary>
+    public void ScrollToIndexFromSearch(int index)
+    {
+        ScrollToIndexRequested?.Invoke(index, true); // withHighlight = true
+    }
+
+    /// <summary>
+    /// Скролл к сообщению БЕЗ подсветки (внутреннее использование)
+    /// </summary>
+    public void ScrollToMessageSilent(MessageViewModel message)
+        => ScrollToMessageRequested?.Invoke(message, false); // withHighlight = false
+
+    /// <summary>
+    /// Скролл к индексу БЕЗ подсветки (внутреннее использование)
+    /// </summary>
+    public void ScrollToIndexSilent(int index)
+        => ScrollToIndexRequested?.Invoke(index, false); // withHighlight = false
 
     public bool IsInfoPanelOpen
     {
@@ -150,10 +183,21 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
+        OnPropertyChanged(nameof(ShowScrollToBottom));
+
         if (value)
         {
             HasNewMessages = false;
+            UnreadCount = 0;
             _ = MarkMessagesAsReadAsync();
         }
+    }
+
+    [RelayCommand]
+    private void ScrollToBottom()
+    {
+        ScrollToBottomRequested?.Invoke();
+        HasNewMessages = false;
+        UnreadCount = 0;
     }
 }

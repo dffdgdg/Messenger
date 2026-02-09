@@ -2,6 +2,7 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Infrastructure.Configuration;
 using MessengerShared.DTO.Message;
 using System;
 using System.Threading.Tasks;

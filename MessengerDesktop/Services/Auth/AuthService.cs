@@ -1,4 +1,5 @@
-﻿using MessengerShared.DTO.Auth;
+﻿using MessengerDesktop.Infrastructure.Configuration;
+using MessengerShared.DTO.Auth;
 using MessengerShared.Response;
 using System;
 using System.Net.Http;

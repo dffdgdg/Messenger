@@ -1,6 +1,7 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using MessengerDesktop.Helpers;
+using MessengerDesktop.Infrastructure.Configuration;
+using MessengerDesktop.Infrastructure.Helpers;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO.Message;
 using System;

@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.Services.Auth;
+﻿using MessengerDesktop.Infrastructure.Configuration;
+using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -7,7 +8,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels.Chat.Managers;
+namespace MessengerDesktop.Services.Realtime;
 
 public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IAsyncDisposable
 {

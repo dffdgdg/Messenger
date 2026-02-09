@@ -17,6 +17,10 @@ namespace MessengerShared.DTO.Message
         public DateTime? EditedAt { get; set; }
         public bool IsEdited { get; set; }
         public bool IsDeleted { get; set; }
+        public int? ReplyToMessageId { get; set; }
+        public MessageReplyPreviewDTO? ReplyToMessage { get; set; }
+        public int? ForwardedFromMessageId { get; set; }
+        public MessageForwardInfoDTO? ForwardedFrom { get; set; }
         public MessageDTO? PreviousMessage { get; set; }
         public bool ShowSenderName
         {

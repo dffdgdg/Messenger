@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.Services;
+﻿using MessengerDesktop.Infrastructure.Configuration;
+using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.UI;
 using MessengerShared.DTO;

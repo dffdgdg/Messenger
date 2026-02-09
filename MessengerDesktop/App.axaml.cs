@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using MessengerDesktop.DependencyInjection;
+using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;

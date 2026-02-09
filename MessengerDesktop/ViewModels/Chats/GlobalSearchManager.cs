@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
 using System;

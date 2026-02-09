@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Services;
+namespace MessengerDesktop.Services.Realtime;
 
 public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
 {

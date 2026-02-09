@@ -1,4 +1,4 @@
-﻿namespace MessengerDesktop
+﻿namespace MessengerDesktop.Infrastructure.Configuration
 {
     public static class AppConstants
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MessengerDesktop;
+namespace MessengerDesktop.Infrastructure.Configuration;
 
 /// <summary>
 /// Все API endpoints приложения.

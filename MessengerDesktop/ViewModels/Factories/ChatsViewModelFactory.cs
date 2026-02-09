@@ -1,6 +1,6 @@
-﻿using MessengerDesktop.Services;
-using MessengerDesktop.Services.Api;
+﻿using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Realtime;
 
 namespace MessengerDesktop.ViewModels.Factories;
 

@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -22,7 +23,7 @@ public partial class ChatView : UserControl
 
     private bool _isInitialScrollDone;
     private int _scrollToEndRetryCount;
-    private const int MaxScrollRetries = 10; // Увеличено
+    private const int MaxScrollRetries = 10;
 
     private bool _isAdjustingScroll;
     private bool _isLoadingOlder;
@@ -597,28 +598,28 @@ public partial class ChatView : UserControl
 
         var viewportHeight = _scrollViewer.Viewport.Height;
 
-        foreach (var message in _currentVm.Messages)
+        var realizedItems = _messagesList
+            .GetVisualDescendants()
+            .OfType<ListBoxItem>();
+
+        foreach (var item in realizedItems)
         {
-            if (!message.IsUnread || message.SenderId == _currentVm.UserId)
+            if (item.DataContext is not MessageViewModel message)
                 continue;
 
             if (_processedMessageIds.Contains(message.Id))
                 continue;
 
-            var index = _currentVm.Messages.IndexOf(message);
-            if (index < 0) continue;
-
-            var container = _messagesList.ContainerFromIndex(index);
-            if (container is not Control control)
+            if (_processedMessageIds.Contains(message.Id))
                 continue;
 
-            var transform = control.TransformToVisual(_scrollViewer);
+            var transform = item.TransformToVisual(_scrollViewer);
             if (transform == null)
                 continue;
 
             var topLeft = transform.Value.Transform(new Point(0, 0));
             var bottomRight = transform.Value.Transform(new Point(
-                control.Bounds.Width, control.Bounds.Height));
+                item.Bounds.Width, item.Bounds.Height));
 
             var isVisible = bottomRight.Y > 0 && topLeft.Y < viewportHeight;
 

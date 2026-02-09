@@ -1,5 +1,6 @@
-﻿using MessengerDesktop.Helpers;
-using MessengerDesktop.Services;
+﻿using MessengerDesktop.Infrastructure.Configuration;
+using MessengerDesktop.Infrastructure.Helpers;
+using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerShared.DTO;
 using System;

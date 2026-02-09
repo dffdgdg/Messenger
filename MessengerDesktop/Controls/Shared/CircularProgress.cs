@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using System;
 
-namespace MessengerDesktop.Controls;
+namespace MessengerDesktop.Controls.Shared;
 
 public class CircularProgress : Control
 {

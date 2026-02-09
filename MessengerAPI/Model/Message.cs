@@ -16,11 +16,23 @@ public class Message
 
     public bool? IsDeleted { get; set; }
 
+    public int? ReplyToMessageId { get; set; }
+
+    public int? ForwardedFromMessageId { get; set; }
+
     public virtual Chat Chat { get; set; } = null!;
 
     public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
 
     public virtual ICollection<MessageFile> MessageFiles { get; set; } = [];
+
+    public virtual ICollection<Message> InverseReplyToMessage { get; set; } = [];
+
+    public virtual ICollection<Message> InverseForwardedFromMessage { get; set; } = [];
+
+    public virtual Message? ReplyToMessage { get; set; }
+
+    public virtual Message? ForwardedFromMessage { get; set; }
 
     public virtual ICollection<Poll> Polls { get; set; } = [];
 

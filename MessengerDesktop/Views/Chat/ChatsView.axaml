@@ -14,7 +14,8 @@
              xmlns:conv="using:MessengerDesktop.Converters"
              xmlns:views="using:MessengerDesktop.Views"
              xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:shared="using:MessengerDesktop.Controls.Shared"
+             xmlns:dto="using:MessengerShared.DTO"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia">
 
 	<UserControl.Resources>
@@ -29,7 +30,7 @@
 		<Thickness x:Key="BadgeMargin">0,4,0,0</Thickness>
 
 		<!-- ==================== ШАБЛОН: Полный элемент чата ==================== -->
-		<DataTemplate x:Key="ChatFullTemplate" x:DataType="shared:ChatDTO">
+		<DataTemplate x:Key="ChatFullTemplate" x:DataType="dto:ChatDTO">
 			<Grid Height="{StaticResource ChatItemHeight}"
 			      ColumnDefinitions="Auto,*,Auto"
 			      HorizontalAlignment="Stretch">
@@ -95,7 +96,7 @@
 		</DataTemplate>
 
 		<!-- ==================== ШАБЛОН: Компактный элемент чата (только аватар) ==================== -->
-		<DataTemplate x:Key="ChatCompactTemplate" x:DataType="shared:ChatDTO">
+		<DataTemplate x:Key="ChatCompactTemplate" x:DataType="dto:ChatDTO">
 			<Grid Height="{StaticResource ChatItemHeight}"
 			      HorizontalAlignment="Center"
 			      ToolTip.Tip="{Binding Name}">
@@ -127,7 +128,7 @@
 		</DataTemplate>
 
 		<!-- ==================== ШАБЛОН: Результат поиска сообщения ==================== -->
-		<DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="shared:GlobalSearchMessageDTO">
+		<DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="dto:GlobalSearchMessageDTO">
 			<Grid Height="{StaticResource ChatItemHeight}" ColumnDefinitions="Auto,*,50">
 				<controls:AvatarControl Grid.Column="0"
 				                        Classes="Medium"
@@ -347,7 +348,7 @@
 					</ListBox.Styles>
 
 					<ListBox.ItemTemplate>
-    <DataTemplate x:DataType="shared:ChatDTO">
+    <DataTemplate x:DataType="dto:ChatDTO">
         <Panel>
             <ContentPresenter Content="{Binding}"
                               ContentTemplate="{StaticResource ChatFullTemplate}"
@@ -396,7 +397,7 @@
 									</Style>
 								</ListBox.Styles>
 								<ListBox.ItemTemplate>
-    <DataTemplate x:DataType="shared:ChatDTO">
+    <DataTemplate x:DataType="dto:ChatDTO">
         <Button Classes="ChatListItem"
                 Margin="0,1"
                 Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"
@@ -474,7 +475,7 @@
 									</Style>
 								</ListBox.Styles>
 								<ListBox.ItemTemplate>
-									<DataTemplate x:DataType="shared:GlobalSearchMessageDTO">
+									<DataTemplate x:DataType="dto:GlobalSearchMessageDTO">
 										<Button Classes="ChatListItem"
 										        Margin="0,1"
 										        Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"
@@ -511,7 +512,7 @@
 							<StackPanel Spacing="12"
 							            HorizontalAlignment="Center"
 							            IsVisible="{Binding SearchManager.IsSearching}">
-								<controls:CircularProgress IsIndeterminate="True"
+								<shared:CircularProgress IsIndeterminate="True"
 								                           Size="48"
 								                           StrokeWidth="4"
 								                           Foreground="{DynamicResource Accent}"

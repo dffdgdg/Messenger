@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using System;
 using System.Threading.Tasks;

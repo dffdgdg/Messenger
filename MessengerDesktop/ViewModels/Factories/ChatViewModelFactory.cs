@@ -2,6 +2,7 @@
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Platform;
+using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat;
 

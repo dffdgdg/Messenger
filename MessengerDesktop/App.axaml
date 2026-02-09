@@ -13,12 +13,12 @@
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key='Dark'>
 					<ResourceDictionary.MergedDictionaries>
-						<ResourceInclude Source="Assets/DarkTheme.axaml" />
+						<ResourceInclude Source="Assets/Styles/Themes/DarkTheme.axaml" />
 					</ResourceDictionary.MergedDictionaries>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key='Light'>
 					<ResourceDictionary.MergedDictionaries>
-						<ResourceInclude Source="Assets/LightTheme.axaml" />
+						<ResourceInclude Source="Assets/Styles/Themes/LightTheme.axaml" />
 					</ResourceDictionary.MergedDictionaries>
 				</ResourceDictionary>
 			</ResourceDictionary.ThemeDictionaries>
@@ -27,7 +27,7 @@
 
 	<Application.Styles>
 		<FluentTheme/>
-		<StyleInclude Source="avares://MessengerDesktop/Assets/Styles/Animations.axaml"/>
-		<StyleInclude Source="avares://MessengerDesktop/Assets/MainStyle.axaml"/>
+		<StyleInclude Source="avares://MessengerDesktop/Assets/Styles/Base/Animations.axaml"/>
+		<StyleInclude Source="avares://MessengerDesktop/Assets/Styles/Base/MainStyle.axaml"/>
 	</Application.Styles>
 </Application>

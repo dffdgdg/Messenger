@@ -113,7 +113,11 @@ namespace MessengerAPI.Helpers
                 IsDeleted = isDeleted,
                 SenderName = message.Sender?.FormatDisplayName(),
                 SenderAvatarUrl = BuildFullUrl(message.Sender?.Avatar, request),
-                IsOwn = currentUserId.HasValue && message.SenderId == currentUserId
+                IsOwn = currentUserId.HasValue && message.SenderId == currentUserId,
+                ReplyToMessageId = message.ReplyToMessageId,
+                ForwardedFromMessageId = message.ForwardedFromMessageId,
+                ReplyToMessage = message.ReplyToMessage?.ToReplyPreviewDto(),
+                ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto()
             };
 
             if (!isDeleted)
@@ -129,6 +133,30 @@ namespace MessengerAPI.Helpers
             return dto;
         }
 
+        public static MessageReplyPreviewDTO ToReplyPreviewDto(this Message message)
+        {
+            var isDeleted = message.IsDeleted ?? false;
+
+            return new MessageReplyPreviewDTO
+            {
+                Id = message.Id,
+                ChatId = message.ChatId,
+                SenderId = message.SenderId,
+                SenderName = message.Sender?.FormatDisplayName(),
+                Content = isDeleted ? "[Сообщение удалено]" : message.Content,
+                CreatedAt = message.CreatedAt,
+                IsDeleted = isDeleted
+            };
+        }
+
+        public static MessageForwardInfoDTO ToForwardInfoDto(this Message message) => new()
+        {
+            OriginalMessageId = message.Id,
+            OriginalChatId = message.ChatId,
+            OriginalSenderId = message.SenderId,
+            OriginalSenderName = message.Sender?.FormatDisplayName(),
+            OriginalCreatedAt = message.CreatedAt
+        };
         #endregion
 
         #region MessageFile Extensions

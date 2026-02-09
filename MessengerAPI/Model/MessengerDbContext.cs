@@ -162,6 +162,8 @@ public partial class MessengerDbContext : DbContext
             entity.ToTable("messages");
 
             entity.HasIndex(e => new { e.ChatId, e.CreatedAt }, "idx_messages_chatid_createdat");
+            entity.HasIndex(e => e.ReplyToMessageId, "idx_messages_reply_to_message_id");
+            entity.HasIndex(e => e.ForwardedFromMessageId, "idx_messages_forwarded_from_message_id");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("nextval('\"Messages_Id_seq\"'::regclass)")
@@ -179,6 +181,8 @@ public partial class MessengerDbContext : DbContext
                 .HasDefaultValue(false)
                 .HasColumnName("is_deleted");
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
+            entity.Property(e => e.ReplyToMessageId).HasColumnName("reply_to_message_id");
+            entity.Property(e => e.ForwardedFromMessageId).HasColumnName("forwarded_from_message_id");
 
             entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ChatId)
@@ -187,6 +191,16 @@ public partial class MessengerDbContext : DbContext
             entity.HasOne(d => d.Sender).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.SenderId)
                 .HasConstraintName("Messages_SenderId_fkey");
+
+            entity.HasOne(d => d.ReplyToMessage).WithMany(p => p.InverseReplyToMessage)
+                .HasForeignKey(d => d.ReplyToMessageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("Messages_ReplyToMessageId_fkey");
+
+            entity.HasOne(d => d.ForwardedFromMessage).WithMany(p => p.InverseForwardedFromMessage)
+                .HasForeignKey(d => d.ForwardedFromMessageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("Messages_ForwardedFromMessageId_fkey");
         });
 
         modelBuilder.Entity<MessageFile>(entity =>

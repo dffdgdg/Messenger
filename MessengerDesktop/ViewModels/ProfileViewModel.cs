@@ -3,6 +3,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO.User;

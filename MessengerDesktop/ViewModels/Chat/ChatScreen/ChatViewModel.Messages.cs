@@ -1,5 +1,6 @@
 ﻿using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Infrastructure.Configuration;
 using MessengerShared.DTO.Message;
 using System;
 using System.Linq;

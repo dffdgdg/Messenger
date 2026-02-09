@@ -37,7 +37,6 @@
 	  <AvaloniaXaml Remove="Assets\Styles\ChatInfoSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\ChatListSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\ChatMessagesSkeleton.axaml" />
-	  <AvaloniaXaml Remove="Assets\Styles\Common.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\Controls.axaml" />
 	</ItemGroup>
 
@@ -72,19 +71,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AvaloniaResource Update="Assets/SegoeMDL2Assets.ttf">
+		<AvaloniaResource Update="Assets\Fonts\SegoeMDL2Assets.ttf">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\MainStyle.axaml">
+		<AvaloniaResource Update="Assets\Styles\Base\MainStyle.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\Styles\Animations.axaml">
+		<AvaloniaResource Update="Assets\Styles\Base\Animations.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\Styles\Common.axaml">
-		  <SubType>Designer</SubType>
-		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\Styles\Controls.axaml">
+		<AvaloniaResource Update="Assets\Styles\Controls\Controls.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
 	</ItemGroup>
@@ -96,11 +92,20 @@
 	  <Compile Update="Views\Department\DepartmentManagementView.axaml.cs">
 	    <DependentUpon>DepartmentManagementView.axaml</DependentUpon>
 	  </Compile>
-	  <Compile Update="Views\Dialog\ConfirmDialog.axaml.cs">
+	  <Compile Update="Views\Shared\ConfirmDialog.axaml.cs">
 	    <DependentUpon>ConfirmDialog.axaml</DependentUpon>
 	  </Compile>
 	  <Compile Update="Views\Dialog\SelectUserDialog.axaml.cs">
 	    <DependentUpon>SelectUserDialog.axaml</DependentUpon>
 	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Assets\Images\Icons\" />
+	  <Folder Include="Assets\Images\Avatars\" />
+	  <Folder Include="Assets\Images\Illustrations\" />
+	  <Folder Include="Infrastructure\Logging\" />
+	  <Folder Include="Infrastructure\DependencyInjection\" />
+	  <Folder Include="ViewModels\Chat\Attachments\" />
 	</ItemGroup>
 </Project>

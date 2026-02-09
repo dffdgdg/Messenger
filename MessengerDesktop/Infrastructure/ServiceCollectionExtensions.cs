@@ -13,77 +13,76 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Net.Http;
 
-namespace MessengerDesktop.Infrastructure
+namespace MessengerDesktop.Infrastructure;
+
+public static class ServiceCollectionExtensions
 {
-    public static class ServiceCollectionExtensions
+    public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
     {
-        public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
+        services.AddSingleton<IPlatformService, PlatformService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
+        services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
+        services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
+
+        services.AddSingleton(_ =>
         {
-            services.AddSingleton<IPlatformService, PlatformService>();
-            services.AddSingleton<ISettingsService, SettingsService>();
-            services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
-            services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
-            services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
-
-            services.AddSingleton(_ =>
+            var handler = new HttpClientHandler
             {
-                var handler = new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = false,
-                    UseProxy = false
-                };
+                CheckCertificateRevocationList = false,
+                UseProxy = false
+            };
 
-                return new HttpClient(handler)
-                {
-                    BaseAddress = new Uri(apiBaseUrl),
-                    Timeout = TimeSpan.FromSeconds(30)
-                };
-            });
-
-            services.AddSingleton<IAuthService, AuthService>();
-            services.AddSingleton<ISessionStore, SessionStore>();
-            services.AddSingleton<ISecureStorageService, SecureStorageService>();
-            services.AddSingleton<IAuthManager, AuthManager>();
-
-            services.AddSingleton<IApiClientService>(sp =>
+            return new HttpClient(handler)
             {
-                var httpClient = sp.GetRequiredService<HttpClient>();
-                var sessionStore = sp.GetRequiredService<ISessionStore>();
-                return new ApiClientService(httpClient, sessionStore);
-            });
+                BaseAddress = new Uri(apiBaseUrl),
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+        });
 
-            services.AddSingleton<INavigationService, NavigationService>();
-            services.AddSingleton<IDialogService, DialogService>();
+        services.AddSingleton<IAuthService, AuthService>();
+        services.AddSingleton<ISessionStore, SessionStore>();
+        services.AddSingleton<ISecureStorageService, SecureStorageService>();
+        services.AddSingleton<IAuthManager, AuthManager>();
 
-            services.AddSingleton<INotificationService, NotificationService>();
-
-            services.AddSingleton<IFileDownloadService>(sp =>
-            {
-                var httpClient = sp.GetRequiredService<HttpClient>();
-                return new FileDownloadService(httpClient);
-            });
-
-            return services;
-        }
-
-        public static IServiceCollection AddMessengerViewModels(this IServiceCollection services)
+        services.AddSingleton<IApiClientService>(sp =>
         {
-            services.AddSingleton<IChatViewModelFactory, ChatViewModelFactory>();
-            services.AddSingleton<IChatsViewModelFactory, ChatsViewModelFactory>();
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            var sessionStore = sp.GetRequiredService<ISessionStore>();
+            return new ApiClientService(httpClient, sessionStore);
+        });
 
-            services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IDialogService, DialogService>();
 
-            services.AddTransient<UsersTabViewModel>();
-            services.AddTransient<DepartmentsTabViewModel>();
+        services.AddSingleton<INotificationService, NotificationService>();
 
-            services.AddTransient<LoginViewModel>();
-            services.AddTransient<MainMenuViewModel>();
-            services.AddTransient<AdminViewModel>();
-            services.AddTransient<ProfileViewModel>();
-            services.AddTransient<DepartmentManagementViewModel>();
-            services.AddTransient<SettingsViewModel>();
+        services.AddSingleton<IFileDownloadService>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            return new FileDownloadService(httpClient);
+        });
 
-            return services;
-        }
+        return services;
+    }
+
+    public static IServiceCollection AddMessengerViewModels(this IServiceCollection services)
+    {
+        services.AddSingleton<IChatViewModelFactory, ChatViewModelFactory>();
+        services.AddSingleton<IChatsViewModelFactory, ChatsViewModelFactory>();
+
+        services.AddSingleton<MainWindowViewModel>();
+
+        services.AddTransient<UsersTabViewModel>();
+        services.AddTransient<DepartmentsTabViewModel>();
+
+        services.AddTransient<LoginViewModel>();
+        services.AddTransient<MainMenuViewModel>();
+        services.AddTransient<AdminViewModel>();
+        services.AddTransient<ProfileViewModel>();
+        services.AddTransient<DepartmentManagementViewModel>();
+        services.AddTransient<SettingsViewModel>();
+
+        return services;
     }
 }

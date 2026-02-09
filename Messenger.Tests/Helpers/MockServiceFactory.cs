@@ -1,5 +1,6 @@
 ﻿using MessengerAPI.Configuration;
-using MessengerAPI.Helpers;
+using MessengerAPI.Services.Auth;
+using MessengerAPI.Services.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace Messenger.Tests.Helpers;

@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;

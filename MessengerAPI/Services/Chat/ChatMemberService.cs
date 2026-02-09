@@ -1,9 +1,11 @@
 ﻿using MessengerAPI.Model;
+using MessengerAPI.Services.Base;
+using MessengerAPI.Services.Infrastructure;
 using MessengerShared.DTO.Chat;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 
-namespace MessengerAPI.Services
+namespace MessengerAPI.Services.Chat
 {
     public interface IChatMemberService
     {

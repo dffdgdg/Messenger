@@ -51,14 +51,11 @@ public class DateTimeFormatConverter : ConverterBase<System.DateTime, string>
     {
         var now = System.DateTime.Now;
 
-        if (dt.Date == now.Date)
-            return dt.ToString("HH:mm", RuCulture);
+        if (dt.Date == now.Date) return dt.ToString("HH:mm", RuCulture);
 
-        if (dt.Date == now.Date.AddDays(-1))
-            return "Вчера";
+        if (dt.Date == now.Date.AddDays(-1)) return "Вчера";
 
-        if (dt.Year == now.Year)
-            return dt.ToString("d MMMM", RuCulture);
+        if (dt.Year == now.Year) return dt.ToString("d MMMM", RuCulture);
 
         return dt.ToString("d MMMM yyyy", RuCulture);
     }

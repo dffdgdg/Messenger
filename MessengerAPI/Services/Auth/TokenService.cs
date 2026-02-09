@@ -1,3 +1,4 @@
+using MessengerAPI.Configuration;
 using MessengerShared.Enum;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -5,23 +6,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace MessengerAPI.Helpers
+namespace MessengerAPI.Services.Auth
 {
     public interface ITokenService
     {
         string GenerateToken(int userId, UserRole? role = null);
         bool ValidateToken(string token, out int userId);
         TokenValidationParameters GetValidationParameters();
-    }
-
-    public class JwtSettings
-    {
-        public const string SectionName = "Jwt";
-
-        public string Secret { get; set; } = string.Empty;
-        public int LifetimeHours { get; set; } = 24;
-        public string Issuer { get; set; } = "MessengerAPI";
-        public string Audience { get; set; } = "MessengerClient";
     }
 
     public class TokenService : ITokenService

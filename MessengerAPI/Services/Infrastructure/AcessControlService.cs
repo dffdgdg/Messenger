@@ -2,7 +2,7 @@
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 
-namespace MessengerAPI.Services
+namespace MessengerAPI.Services.Infrastructure
 {
     public interface IAccessControlService
     {

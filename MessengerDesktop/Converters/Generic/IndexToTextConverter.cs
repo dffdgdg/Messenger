@@ -11,8 +11,7 @@ public class IndexToTextConverter : ConverterBase<int, string>
 
     protected override string ConvertCore(int index, object? parameter, CultureInfo culture)
     {
-        if (parameter is not string options)
-            return string.Empty;
+        if (parameter is not string options) return string.Empty;
 
         var parts = options.Split(Separator);
         return index >= 0 && index < parts.Length ? parts[index] : string.Empty;

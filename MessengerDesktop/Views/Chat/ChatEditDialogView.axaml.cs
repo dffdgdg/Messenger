@@ -2,19 +2,18 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using MessengerDesktop.ViewModels;
 
-namespace MessengerDesktop.Views
-{
-    public partial class ChatEditDialog : UserControl
-    {
-        public ChatEditDialog() => InitializeComponent();
+namespace MessengerDesktop.Views;
 
-        private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
+public partial class ChatEditDialog : UserControl
+{
+    public ChatEditDialog() => InitializeComponent();
+
+    private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
         {
-            if (sender is Border border && border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
-            {
-                user.IsSelected = !user.IsSelected;
-                e.Handled = true;
-            }
+            user.IsSelected = !user.IsSelected;
+            e.Handled = true;
         }
     }
 }

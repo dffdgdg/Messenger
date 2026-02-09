@@ -2,15 +2,9 @@
 using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters.Comparsion;
+namespace MessengerDesktop.Converters.Comparison;
 
-public enum ComparisonMode
-{
-    Equal,
-    NotEqual,
-    GreaterThanZero,
-    Zero
-}
+public enum ComparisonMode { Equal, NotEqual, GreaterThanZero, Zero }
 
 public class ComparisonConverter : ConverterBase
 {
@@ -25,6 +19,5 @@ public class ComparisonConverter : ConverterBase
         _ => false
     };
 
-    private static bool StringEquals(string? a, string? b)
-        => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    private static bool StringEquals(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 }

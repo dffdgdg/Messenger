@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Model;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace MessengerAPI.Services
+namespace MessengerAPI.Services.Infrastructure
 {
     public interface ICacheService
     {

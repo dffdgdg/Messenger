@@ -1,108 +1,101 @@
-﻿using MessengerAPI.Services;
+﻿using MessengerAPI.Services.Chat;
+using MessengerAPI.Services.Messaging;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.Search;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MessengerAPI.Controllers
+namespace MessengerAPI.Controllers;
+
+public class MessagesController(IMessageService messageService,IChatService chatService,ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
-    public class MessagesController(IMessageService messageService,IChatService chatService,ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
+    [HttpPost]
+    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreateMessage([FromBody] MessageDTO messageDto) => await ExecuteAsync(async () =>
     {
-        [HttpPost]
-        public async Task<ActionResult<ApiResponse<MessageDTO>>> CreateMessage([FromBody] MessageDTO messageDto) => await ExecuteAsync(async () =>
+        ValidateModel();
+        return await messageService.CreateMessageAsync(messageDto);
+    }, "Сообщение успешно отправлено");
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<ApiResponse<MessageDTO>>> UpdateMessage(int id, [FromBody] UpdateMessageDTO updateDto)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
         {
             ValidateModel();
-            return await messageService.CreateMessageAsync(messageDto, Request);
-        }, "Сообщение успешно отправлено");
+            if (id != updateDto.Id) throw new ArgumentException("Несоответствие ID сообщения");
+            return await messageService.UpdateMessageAsync(id, currentUserId, updateDto);
+        }, "Сообщение успешно отредактировано");
+    }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<MessageDTO>>> UpdateMessage(int id, [FromBody] UpdateMessageDTO updateDto)
+    [HttpGet("user/{userId}/search")]
+    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDTO>>>GlobalSearch(int userId,[FromQuery] string query = "",
+        [FromQuery] int page = 1,[FromQuery] int pageSize = 20)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId != userId)
+            return Forbidden<GlobalSearchResponseDTO>();
+
+        return await ExecuteAsync(() => messageService.GlobalSearchAsync(userId, query, page, pageSize),"Поиск завершён");
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMessage(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        return await ExecuteAsync(() => messageService.DeleteMessageAsync(id, currentUserId),"Сообщение успешно удалено");
+    }
+
+    [HttpGet("chat/{chatId}")]
+    public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>>GetChatMessages(int chatId, [FromQuery] int? userId = null,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
         {
-            var currentUserId = GetCurrentUserId();
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await messageService.GetChatMessagesAsync(chatId, userId ?? currentUserId, page, pageSize);
+        }, "Сообщения получены успешно");
+    }
 
-            return await ExecuteAsync(async () =>
-            {
-                ValidateModel();
+    [HttpGet("chat/{chatId}/around/{messageId}")]
+    public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>>GetMessagesAround(int chatId, int messageId,
+        [FromQuery] int? userId = null,[FromQuery] int count = 50)
+    {
+        var currentUserId = GetCurrentUserId();
 
-                if (id != updateDto.Id) throw new ArgumentException("Несоответствие ID сообщения");
-
-                return await messageService.UpdateMessageAsync(id, currentUserId, updateDto, Request);
-            }, "Сообщение успешно отредактировано");
-        }
-
-        [HttpGet("user/{userId}/search")]
-        public async Task<ActionResult<ApiResponse<GlobalSearchResponseDTO>>> GlobalSearch(int userId,[FromQuery] string query = "",[FromQuery] int page = 1,[FromQuery] int pageSize = 20)
+        return await ExecuteAsync(async () =>
         {
-            var currentUserId = GetCurrentUserId();
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await messageService.GetMessagesAroundAsync(chatId, messageId, userId ?? currentUserId, count);
+        }, "Сообщения получены успешно");
+    }
 
-            if (currentUserId != userId)
-                return Forbidden<GlobalSearchResponseDTO>();
+    [HttpGet("chat/{chatId}/before/{messageId}")]
+    public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>>GetMessagesBefore(int chatId, int messageId,
+        [FromQuery] int? userId = null,[FromQuery] int count = 30)
+    {
+        var currentUserId = GetCurrentUserId();
 
-            return await ExecuteAsync(async () => await messageService.GlobalSearchAsync(userId, query, page, pageSize, Request), "Поиск завершён");
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMessage(int id)
+        return await ExecuteAsync(async () =>
         {
-            var currentUserId = GetCurrentUserId();
-            return await ExecuteAsync(async () => await messageService.DeleteMessageAsync(id, currentUserId), "Сообщение успешно удалено");
-        }
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await messageService.GetMessagesBeforeAsync(chatId, messageId, userId ?? currentUserId, count);
+        }, "Сообщения получены успешно");
+    }
 
-        [HttpGet("chat/{chatId}")]
-        public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>> GetChatMessages(int chatId,[FromQuery] int? userId = null,[FromQuery] int page = 1,[FromQuery] int pageSize = 15)
+    [HttpGet("chat/{chatId}/after/{messageId}")]
+    public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>>GetMessagesAfter(int chatId, int messageId,
+        [FromQuery] int? userId = null,[FromQuery] int count = 30)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
         {
-            var currentUserId = GetCurrentUserId();
-
-            return await ExecuteAsync(async () =>
-            {
-                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                return await messageService.GetChatMessagesAsync(chatId, userId ?? currentUserId, page, pageSize, Request);
-            }, "Сообщения получены успешно");
-        }
-
-        /// <summary>
-        /// Получить сообщения вокруг указанного ID (для скролла к непрочитанным)
-        /// </summary>
-        [HttpGet("chat/{chatId}/around/{messageId}")]
-        public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>> GetMessagesAround(int chatId,int messageId,[FromQuery] int? userId = null,[FromQuery] int count = 50)
-        {
-            var currentUserId = GetCurrentUserId();
-
-            return await ExecuteAsync(async () =>
-            {
-                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                return await messageService.GetMessagesAroundAsync(chatId, messageId, userId ?? currentUserId, count, Request);
-            }, "Сообщения получены успешно");
-        }
-
-        /// <summary>
-        /// Получить сообщения до указанного ID (для подгрузки старых)
-        /// </summary>
-        [HttpGet("chat/{chatId}/before/{messageId}")]
-        public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>> GetMessagesBefore(int chatId,int messageId,[FromQuery] int? userId = null,[FromQuery] int count = 30)
-        {
-            var currentUserId = GetCurrentUserId();
-
-            return await ExecuteAsync(async () =>
-            {
-                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                return await messageService.GetMessagesBeforeAsync(chatId, messageId, userId ?? currentUserId, count, Request);
-            }, "Сообщения получены успешно");
-        }
-
-        /// <summary>
-        /// Получить сообщения после указанного ID (для подгрузки новых)
-        /// </summary>
-        [HttpGet("chat/{chatId}/after/{messageId}")]
-        public async Task<ActionResult<ApiResponse<PagedMessagesDTO>>> GetMessagesAfter(int chatId,int messageId,[FromQuery] int? userId = null,[FromQuery] int count = 30)
-        {
-            var currentUserId = GetCurrentUserId();
-
-            return await ExecuteAsync(async () =>
-            {
-                await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-                return await messageService.GetMessagesAfterAsync(chatId, messageId, userId ?? currentUserId, count, Request);
-            }, "Сообщения получены успешно");
-        }
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await messageService.GetMessagesAfterAsync(chatId, messageId, userId ?? currentUserId, count);
+        }, "Сообщения получены успешно");
     }
 }

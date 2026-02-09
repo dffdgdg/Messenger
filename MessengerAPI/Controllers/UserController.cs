@@ -1,74 +1,64 @@
-﻿using MessengerAPI.Services;
+﻿using MessengerAPI.Services.User;
 using MessengerShared.DTO.Online;
 using MessengerShared.DTO.User;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MessengerAPI.Controllers
+namespace MessengerAPI.Controllers;
+
+public class UserController(IUserService userService,ILogger<UserController> logger) : BaseController<UserController>(logger)
 {
-    public class UserController(IUserService userService, ILogger<UserController> logger) : BaseController<UserController>(logger)
-    {
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetAllUsers()
-            => await ExecuteAsync(async () => await userService.GetAllUsersAsync(), "Пользователи получены успешно");
+    [HttpGet]
+    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetAllUsers(CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.GetAllUsersAsync(ct), "Пользователи получены успешно");
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<UserDTO>>> GetUser(int id) => await ExecuteAsync(async () =>
-        {
-            var user = await userService.GetUserAsync(id);
-            return user ?? throw new KeyNotFoundException($"Пользователь с ID {id} не найден");
-        });
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ApiResponse<UserDTO>>> GetUser(int id, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.GetUserAsync(id, ct));
 
-        [HttpGet("online")]
-        public async Task<ActionResult<ApiResponse<OnlineUsersResponseDTO>>> GetOnlineUsers() => await ExecuteAsync(async () =>
+    [HttpGet("online")]
+    public async Task<ActionResult<ApiResponse<OnlineUsersResponseDTO>>> GetOnlineUsers(CancellationToken ct)
+        => await ExecuteResultAsync(async () =>
         {
-            var onlineIds = await userService.GetOnlineUserIdsAsync();
-            return new OnlineUsersResponseDTO
+            var idsResult = await userService.GetOnlineUserIdsAsync(ct);
+            if (idsResult.IsFailure)
+                return Common.Result<OnlineUsersResponseDTO>.Failure(idsResult.Error!);
+
+            return Common.Result<OnlineUsersResponseDTO>.Success(new OnlineUsersResponseDTO
             {
-                OnlineUserIds = onlineIds,
-                TotalOnline = onlineIds.Count
-            };
+                OnlineUserIds = idsResult.Value!,
+                TotalOnline = idsResult.Value!.Count
+            });
         }, "Список онлайн пользователей получен");
 
-        [HttpGet("{id}/status")]
-        public async Task<ActionResult<ApiResponse<OnlineStatusDTO>>> GetUserOnlineStatus(int id)
-            => await ExecuteAsync(async () => await userService.GetOnlineStatusAsync(id));
+    [HttpGet("{id}/status")]
+    public async Task<ActionResult<ApiResponse<OnlineStatusDTO>>> GetUserOnlineStatus(int id, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.GetOnlineStatusAsync(id, ct));
 
-        [HttpPost("status/batch")]
-        public async Task<ActionResult<ApiResponse<List<OnlineStatusDTO>>>> GetUsersOnlineStatus([FromBody] List<int> userIds) => await ExecuteAsync(async () =>
-        {
-            if (userIds == null || userIds.Count == 0) throw new ArgumentException("Список ID пользователей не может быть пустым");
-            return await userService.GetOnlineStatusesAsync(userIds);
-        });
+    [HttpPost("status/batch")]
+    public async Task<ActionResult<ApiResponse<List<OnlineStatusDTO>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.GetOnlineStatusesAsync(userIds, ct));
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDTO userDto) => await ExecuteAsync(async () =>
-        {
-            ValidateModel();
-            if (id != userDto.Id) throw new ArgumentException("Несоответствие ID");
-            await userService.UpdateUserAsync(id, userDto);
-        }, "Пользователь обновлён успешно");
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDTO userDto, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.UpdateUserAsync(id, userDto, ct), "Пользователь обновлён успешно");
 
-        [HttpPost("{id}/avatar")]
-        public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(int id, IFormFile file) => await ExecuteAsync(async () =>
+    [HttpPost("{id}/avatar")]
+    public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(int id, IFormFile file, CancellationToken ct)
+        => await ExecuteResultAsync(async () =>
         {
-            if (file == null || file.Length == 0) throw new ArgumentException("Файл не предоставлен");
-            var avatarUrl = await userService.UploadAvatarAsync(id, file, Request);
-            return new AvatarResponseDTO { AvatarUrl = avatarUrl };
+            var result = await userService.UploadAvatarAsync(id, file, ct);
+            if (result.IsFailure)
+                return Common.Result<AvatarResponseDTO>.Failure(result.Error!);
+
+            return Common.Result<AvatarResponseDTO>.Success(new AvatarResponseDTO { AvatarUrl = result.Value! });
         }, "Аватар загружен успешно");
 
-        [HttpPut("{id}/username")]
-        public async Task<IActionResult> ChangeUsername(int id, [FromBody] ChangeUsernameDTO dto)=> await ExecuteAsync(async () =>
-        {
-            ValidateModel();
-            await userService.ChangeUsernameAsync(id, dto);
-        }, "Username успешно изменён");
+    [HttpPut("{id}/username")]
+    public async Task<IActionResult> ChangeUsername(int id, [FromBody] ChangeUsernameDTO dto, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.ChangeUsernameAsync(id, dto, ct), "Username успешно изменён");
 
-        [HttpPut("{id}/password")]
-        public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDTO dto) => await ExecuteAsync(async () =>
-        {
-            ValidateModel();
-            await userService.ChangePasswordAsync(id, dto);
-        }, "Пароль успешно изменён");
-    }
+    [HttpPut("{id}/password")]
+    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDTO dto, CancellationToken ct)
+        => await ExecuteResultAsync(() => userService.ChangePasswordAsync(id, dto, ct), "Пароль успешно изменён");
 }

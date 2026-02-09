@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace MessengerAPI.Services
+namespace MessengerAPI.Services.Infrastructure
 {
     public interface IOnlineUserService
     {

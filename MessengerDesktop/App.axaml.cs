@@ -16,7 +16,7 @@ using System.Diagnostics;
 
 namespace MessengerDesktop
 {
-    public partial class App : Application, IDisposable
+    public class App : Application, IDisposable
     {
         private bool _disposed;
         private INotificationService? _notificationService;
@@ -92,8 +92,7 @@ namespace MessengerDesktop
             Debug.WriteLine("[App] Platform services initialized");
         }
 
-        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
-            => Debug.WriteLine("[App] Shutdown requested");
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) => Debug.WriteLine("[App] Shutdown requested");
 
         private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {

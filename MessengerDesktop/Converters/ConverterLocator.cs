@@ -2,7 +2,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Avalonia.Media;
 using MessengerDesktop.Converters.Boolean;
-using MessengerDesktop.Converters.Comparsion;
+using MessengerDesktop.Converters.Comparison;
 using MessengerDesktop.Converters.DateTime;
 using MessengerDesktop.Converters.Domain;
 using MessengerDesktop.Converters.Enum;

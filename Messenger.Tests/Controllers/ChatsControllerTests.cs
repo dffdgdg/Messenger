@@ -1,4 +1,5 @@
 ﻿using Messenger.Tests.Helpers;
+using MessengerAPI.Services.Chat;
 
 namespace Messenger.Tests.Controllers;
 

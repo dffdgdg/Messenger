@@ -1,4 +1,6 @@
 ﻿using Messenger.Tests.Helpers;
+using MessengerAPI.Services.Chat;
+using MessengerAPI.Services.Messaging;
 using MessengerShared.DTO.Message;
 
 namespace Messenger.Tests.Controllers;

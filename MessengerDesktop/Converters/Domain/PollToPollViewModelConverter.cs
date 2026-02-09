@@ -14,11 +14,9 @@ public class PollToPollViewModelConverter : ConverterBase<PollDTO, PollViewModel
     private static IApiClientService? _apiClientService;
     private static IAuthManager? _authManager;
 
-    private static IApiClientService ApiClientService
-        => _apiClientService ??= App.Current.Services.GetRequiredService<IApiClientService>();
+    private static IApiClientService ApiClientService => _apiClientService ??= App.Current.Services.GetRequiredService<IApiClientService>();
 
-    private static IAuthManager AuthManager
-        => _authManager ??= App.Current.Services.GetRequiredService<IAuthManager>();
+    private static IAuthManager AuthManager => _authManager ??= App.Current.Services.GetRequiredService<IAuthManager>();
 
     protected override PollViewModel? ConvertCore(PollDTO poll, object? parameter, CultureInfo culture)
     {

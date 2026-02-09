@@ -1,13 +1,12 @@
 ﻿using Avalonia;
 using System;
 
-namespace MessengerDesktop
-{
-    internal sealed class Program
-    {
-        [STAThread]
-        public static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+namespace MessengerDesktop;
 
-        public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace();
-    }
+internal sealed class Program
+{
+    [STAThread]
+    public static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace();
 }

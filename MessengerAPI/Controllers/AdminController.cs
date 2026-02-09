@@ -1,28 +1,23 @@
-using MessengerAPI.Services;
+using MessengerAPI.Services.User;
 using MessengerShared.DTO.User;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MessengerAPI.Controllers
+namespace MessengerAPI.Controllers;
+
+[Authorize(Roles = "Admin")]
+public class AdminController(IAdminService adminService,ILogger<AdminController> logger) : BaseController<AdminController>(logger)
 {
-    [Authorize(Roles = "Admin")]
-    public class AdminController(IAdminService adminService, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
-    {
-        [HttpGet("users")]
-        public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetUsers(CancellationToken ct)
-            => await ExecuteAsync(async () => await adminService.GetUsersAsync(ct), "Пользователи получены успешно");
+    [HttpGet("users")]
+    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetUsers(CancellationToken ct)
+        => await ExecuteResultAsync(() => adminService.GetUsersAsync(ct),"Пользователи получены успешно");
 
-        [HttpPost("users")]
-        public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto, CancellationToken ct) => await ExecuteAsync(async () =>
-        {
-            ValidateModel();
+    [HttpPost("users")]
+    public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto, CancellationToken ct)
+        => await ExecuteResultAsync(() => adminService.CreateUserAsync(dto, ct),"Пользователь создан успешно");
 
-            return await adminService.CreateUserAsync(dto, ct);
-        }, "Пользователь создан успешно");
-
-        [HttpPost("users/{id}/toggle-ban")]
-        public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)
-            => await ExecuteAsync(async () => await adminService.ToggleBanAsync(id, ct), "Статус блокировки изменён");
-    }
+    [HttpPost("users/{id}/toggle-ban")]
+    public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)=> await ExecuteResultAsync(()
+        => adminService.ToggleBanAsync(id, ct),"Статус блокировки изменён");
 }

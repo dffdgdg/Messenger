@@ -1,12 +1,11 @@
-namespace MessengerShared.DTO.Department
+namespace MessengerShared.DTO.Department;
+
+public class DepartmentDTO
 {
-    public class DepartmentDTO
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int? ParentDepartmentId { get; set; }
-        public int? Head { get; set; }
-        public string? HeadName { get; set; }
-        public int UserCount { get; set; }
-    }
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int? ParentDepartmentId { get; set; }
+    public int? Head { get; set; }
+    public string? HeadName { get; set; }
+    public int UserCount { get; set; }
 }

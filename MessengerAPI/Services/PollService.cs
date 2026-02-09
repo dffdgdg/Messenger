@@ -1,8 +1,8 @@
 ﻿using MessengerAPI.Helpers;
 using MessengerAPI.Hubs;
 using MessengerAPI.Model;
-using MessengerShared.DTO.Chat.Poll;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.Poll;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 

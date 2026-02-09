@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Chat.Poll;
+using MessengerShared.DTO.Poll;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

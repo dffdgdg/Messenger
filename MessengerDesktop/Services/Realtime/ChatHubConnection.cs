@@ -1,7 +1,7 @@
 ﻿using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Auth;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.ReadReceipt;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Diagnostics;

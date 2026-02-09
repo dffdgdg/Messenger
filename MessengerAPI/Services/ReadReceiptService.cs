@@ -1,5 +1,5 @@
 ﻿using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.ReadReceipt;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services

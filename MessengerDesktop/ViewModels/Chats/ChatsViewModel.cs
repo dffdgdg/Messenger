@@ -7,6 +7,7 @@ using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Search;
 using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using System;

@@ -1,8 +1,8 @@
 ﻿using MessengerAPI.Helpers;
 using MessengerAPI.Hubs;
 using MessengerAPI.Model;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.Notification;
 using MessengerShared.Enum;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;

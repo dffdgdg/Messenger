@@ -2,8 +2,8 @@
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.ReadReceipt;
 using MessengerShared.DTO.User;
 using System;
 using System.Collections.Generic;

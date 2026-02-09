@@ -2,7 +2,7 @@ using MessengerDesktop.Converters.Base;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.ViewModels.Chat;
-using MessengerShared.DTO.Chat.Poll;
+using MessengerShared.DTO.Poll;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Globalization;

@@ -1,6 +1,6 @@
 using MessengerAPI.Services;
-using MessengerShared.DTO.Chat.Poll;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.Poll;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

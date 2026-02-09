@@ -2,6 +2,7 @@
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Search;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading;

@@ -1,5 +1,5 @@
 ﻿using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 

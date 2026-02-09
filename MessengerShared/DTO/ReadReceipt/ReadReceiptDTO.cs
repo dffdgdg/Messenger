@@ -1,4 +1,4 @@
-﻿namespace MessengerShared.DTO
+﻿namespace MessengerShared.DTO.ReadReceipt
 {
     public class MarkAsReadDTO
     {

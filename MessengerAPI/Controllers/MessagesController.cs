@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Services;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Message;
+using MessengerShared.DTO.Search;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 

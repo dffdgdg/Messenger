@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Helpers;
 using MessengerAPI.Model;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Online;
 using MessengerShared.DTO.User;
 using Microsoft.EntityFrameworkCore;
 

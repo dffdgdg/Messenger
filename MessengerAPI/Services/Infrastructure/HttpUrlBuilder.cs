@@ -1,6 +1,5 @@
 ﻿namespace MessengerAPI.Services.Infrastructure
 {
-
     public interface IUrlBuilder
     {
         string? BuildUrl(string? relativePath);
@@ -20,7 +19,8 @@
             if (request == null)
                 return relativePath;
 
-            return $"{request.Scheme}://{request.Host}{relativePath}";
+            var path = relativePath.TrimStart('/');
+            return $"{request.Scheme}://{request.Host}/{path}";
         }
     }
 }

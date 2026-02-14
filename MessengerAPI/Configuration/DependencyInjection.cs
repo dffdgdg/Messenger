@@ -76,7 +76,7 @@ public static class DependencyInjection
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IReadReceiptService, ReadReceiptService>();
         services.AddSingleton<TranscriptionQueue>();
-        services.AddScoped<ITranscriptionService, TranscriptionService>();
+        services.AddSingleton<ITranscriptionService, TranscriptionService>();
         services.AddHostedService<TranscriptionBackgroundService>();
 
         // Departments

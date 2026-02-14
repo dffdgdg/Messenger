@@ -34,10 +34,7 @@ public partial class ChatViewModel
     /// Отменить ответ
     /// </summary>
     [RelayCommand]
-    private void CancelReply()
-    {
-        ReplyingToMessage = null;
-    }
+    private void CancelReply() => ReplyingToMessage = null;
 
     /// <summary>
     /// Скролл к оригинальному сообщению, на которое дан ответ
@@ -68,7 +65,7 @@ public partial class ChatViewModel
             var ct = _loadingCts?.Token ?? System.Threading.CancellationToken.None;
             var targetIndex = await _messageManager.LoadMessagesAroundAsync(targetId, ct);
 
-            if (targetIndex.HasValue && targetIndex.Value < Messages.Count)
+            if (targetIndex < Messages.Count)
             {
                 var target = Messages[targetIndex.Value];
                 target.IsHighlighted = true;

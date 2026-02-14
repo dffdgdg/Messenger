@@ -16,10 +16,15 @@ public partial class ChatViewModel
         _messageManager.AddReceivedMessage(messageDto);
         UpdatePollsCount();
 
+        var addedMsg = Messages.LastOrDefault(m => m.Id == messageDto.Id);
+        if (addedMsg != null)
+        {
+            StartTranscriptionPollingIfNeeded(addedMsg);
+        }
+
         if (!IsScrolledToBottom)
             HasNewMessages = true;
-        else
-            await MarkMessagesAsReadAsync();
+        else await MarkMessagesAsReadAsync();
     });
 
     private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt) =>

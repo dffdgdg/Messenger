@@ -1,8 +1,10 @@
 ﻿using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Infrastructure.Helpers;
+using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerShared.DTO;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -36,6 +38,8 @@ public partial class ChatViewModel
 
             UpdatePollsCount();
             _initTcs.TrySetResult();
+            var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
+            InitializeVoice(audioRecorder);
 
             // Скролл к нужной позиции БЕЗ подсветки
             if (scrollToIndex < Messages.Count - 1)
@@ -188,6 +192,7 @@ public partial class ChatViewModel
             _hubConnection = null;
         }
 
+        DisposeVoice();
         Messages.Clear();
         Members.Clear();
         LocalAttachments.Clear();

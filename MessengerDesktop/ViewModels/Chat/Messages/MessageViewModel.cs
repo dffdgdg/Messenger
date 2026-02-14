@@ -26,26 +26,12 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private string? _replyToContent;
     [ObservableProperty] private bool _replyToIsDeleted;
     [ObservableProperty] private DateTime? _editedAt;
-
-    /// <summary>
-    /// true если предыдущее сообщение от того же автора и в пределах 2 минут.
-    /// </summary>
     [ObservableProperty] private bool _isContinuation;
-
-    /// <summary>
-    /// true если следующее сообщение от того же автора и в пределах 2 минут.
-    /// </summary>
     [ObservableProperty] private bool _hasNextFromSame;
-
-    /// <summary>
-    /// Позиция в группе — определяет радиусы пузыря (Alone/First/Middle/Last)
-    /// </summary>
     [ObservableProperty] private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
 
     public PollDTO? PollDto { get; set; }
-
     [ObservableProperty] private PollViewModel? _poll;
-
     public List<MessageFileDTO> Files { get; set; } = [];
 
     [ObservableProperty] private string? _senderAvatar, _senderName, _content;
@@ -54,28 +40,44 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private bool _showDateSeparator;
     [ObservableProperty] private string? _dateSeparatorText;
 
+    // Voice message
+    [ObservableProperty] private bool _isVoiceMessage;
+    [ObservableProperty] private string? _transcriptionStatus;
+    [ObservableProperty] private string? _transcriptionText;
+
     #region Computed Properties
 
     public bool HasFiles => Files.Count > 0;
     public bool HasPoll => Poll != null;
     public bool HasImages => Files.Any(f => f.PreviewType == "image");
     public bool HasReply => ReplyToMessageId.HasValue;
-    public bool HasTextContent => !IsDeleted && !string.IsNullOrWhiteSpace(Content) && !HasPoll;
-    public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles;
+    public bool HasTextContent => !IsDeleted && !string.IsNullOrWhiteSpace(Content) && !HasPoll && !IsVoiceMessage;
+    public bool ShowNonVoiceFiles => HasFiles && !IsVoiceMessage && !IsDeleted;
+    public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
     public bool ShowDeliveryStatus => IsOwn && !IsDeleted;
-    public bool CanEdit => IsOwn && !IsDeleted && Poll == null;
+    public bool CanEdit => IsOwn && !IsDeleted && Poll == null && !IsVoiceMessage;
     public bool CanDelete => IsOwn && !IsDeleted;
     public string DisplayContent => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
     public string EditedLabel => IsEdited ? "изм." : string.Empty;
-
     public string? EditedLabelFull => IsEdited && EditedAt.HasValue
-        ? $"изменено {EditedAt.Value:HH:mm}"
-        : null;
-
-    /// <summary>
-    /// Показывать имя: только для чужих, только первое в группе или одиночное
-    /// </summary>
+        ? $"изменено {EditedAt.Value:HH:mm}" : null;
     public bool ShowSenderName => !IsOwn && !IsContinuation;
+
+    // Voice computed
+    public bool ShowVoiceMessage => IsVoiceMessage && !IsDeleted;
+    public bool IsTranscriptionPending => TranscriptionStatus is "pending" or "processing";
+    public bool IsTranscriptionDone => TranscriptionStatus == "done";
+    public bool IsTranscriptionFailed => TranscriptionStatus == "failed";
+    public bool HasTranscriptionText => !string.IsNullOrWhiteSpace(TranscriptionText);
+
+    public string TranscriptionStatusDisplay => TranscriptionStatus switch
+    {
+        "pending" => "⏳ Ожидает расшифровки...",
+        "processing" => "🔄 Расшифровка...",
+        "done" => "✅ Расшифровано",
+        "failed" => "❌ Ошибка расшифровки",
+        _ => ""
+    };
 
     #endregion
 
@@ -105,6 +107,12 @@ public partial class MessageViewModel : ObservableObject
         SenderName = message.SenderName;
         SenderAvatar = message.SenderAvatarUrl;
 
+        // Voice message
+        IsVoiceMessage = message.IsVoiceMessage;
+        TranscriptionStatus = message.TranscriptionStatus;
+        // Расшифровка хранится в Content на сервере
+        TranscriptionText = message.IsVoiceMessage ? message.Content : null;
+
         ReplyToMessageId = message.ReplyToMessageId;
         if (message.ReplyToMessage != null)
         {
@@ -116,9 +124,7 @@ public partial class MessageViewModel : ObservableObject
         }
 
         if (message.Poll != null)
-        {
             Poll = CreatePollViewModel(message.Poll);
-        }
 
         if (message.Files?.Count > 0)
         {
@@ -127,15 +133,22 @@ public partial class MessageViewModel : ObservableObject
         }
     }
 
+    public void UpdateTranscription(string? status, string? transcription)
+    {
+        TranscriptionStatus = status;
+        TranscriptionText = transcription;
+
+        if (!string.IsNullOrWhiteSpace(transcription))
+        {
+            Content = transcription;
+        }
+    }
+
     public void UpdatePoll(PollDTO pollDto)
     {
         PollDto = pollDto;
-
-        if (Poll != null)
-            Poll.ApplyDto(pollDto);
-        else
-            Poll = CreatePollViewModel(pollDto);
-
+        if (Poll != null) Poll.ApplyDto(pollDto);
+        else Poll = CreatePollViewModel(pollDto);
         OnPropertyChanged(nameof(HasPoll));
         OnPropertyChanged(nameof(HasTextContent));
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
@@ -146,7 +159,6 @@ public partial class MessageViewModel : ObservableObject
         Content = updated.Content;
         IsEdited = updated.IsEdited;
         EditedAt = updated.EditedAt;
-
         OnPropertyChanged(nameof(DisplayContent));
         OnPropertyChanged(nameof(HasTextContent));
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
@@ -159,13 +171,14 @@ public partial class MessageViewModel : ObservableObject
     {
         IsDeleted = true;
         Content = null;
-
         OnPropertyChanged(nameof(DisplayContent));
         OnPropertyChanged(nameof(HasTextContent));
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
+        OnPropertyChanged(nameof(ShowNonVoiceFiles));
         OnPropertyChanged(nameof(ShowDeliveryStatus));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanDelete));
+        OnPropertyChanged(nameof(ShowVoiceMessage));
     }
 
     public void MarkAsRead() => IsRead = true;
@@ -177,16 +190,10 @@ public partial class MessageViewModel : ObservableObject
             var apiClient = App.Current.Services.GetRequiredService<IApiClientService>();
             var authManager = App.Current.Services.GetRequiredService<IAuthManager>();
             var userId = authManager.Session.UserId ?? 0;
-
-            if (userId == 0)
-                return null;
-
+            if (userId == 0) return null;
             return new PollViewModel(pollDto, userId, apiClient);
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
     #region Property Changed Handlers
@@ -236,9 +243,28 @@ public partial class MessageViewModel : ObservableObject
         UpdateGroupPosition();
     }
 
-    partial void OnHasNextFromSameChanged(bool value)
+    partial void OnHasNextFromSameChanged(bool value) => UpdateGroupPosition();
+
+    partial void OnIsVoiceMessageChanged(bool value)
     {
-        UpdateGroupPosition();
+        OnPropertyChanged(nameof(ShowVoiceMessage));
+        OnPropertyChanged(nameof(HasTextContent));
+        OnPropertyChanged(nameof(ShowFilesOnlyMeta));
+        OnPropertyChanged(nameof(ShowNonVoiceFiles));
+        OnPropertyChanged(nameof(CanEdit));
+    }
+
+    partial void OnTranscriptionStatusChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsTranscriptionPending));
+        OnPropertyChanged(nameof(IsTranscriptionDone));
+        OnPropertyChanged(nameof(IsTranscriptionFailed));
+        OnPropertyChanged(nameof(TranscriptionStatusDisplay));
+    }
+
+    partial void OnTranscriptionTextChanged(string? value)
+    {
+        OnPropertyChanged(nameof(HasTranscriptionText));
     }
 
     private void UpdateGroupPosition()
@@ -274,7 +300,6 @@ public partial class MessageViewModel : ObservableObject
             var current = messages[i];
             var prev = i > 0 ? messages[i - 1] : null;
             var next = i < messages.Count - 1 ? messages[i + 1] : null;
-
             current.IsContinuation = prev != null && CanGroup(prev, current);
             current.HasNextFromSame = next != null && CanGroup(current, next);
         }
@@ -284,13 +309,11 @@ public partial class MessageViewModel : ObservableObject
     {
         int start = Math.Max(0, index - 1);
         int end = Math.Min(messages.Count - 1, index + 1);
-
         for (int i = start; i <= end; i++)
         {
             var current = messages[i];
             var prev = i > 0 ? messages[i - 1] : null;
             var next = i < messages.Count - 1 ? messages[i + 1] : null;
-
             current.IsContinuation = prev != null && CanGroup(prev, current);
             current.HasNextFromSame = next != null && CanGroup(current, next);
         }

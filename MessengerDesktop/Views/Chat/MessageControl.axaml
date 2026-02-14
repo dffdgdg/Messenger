@@ -191,6 +191,14 @@
         <Style Selector="Button.QuickAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
         </Style>
+
+        <!-- ====== VOICE TRANSCRIPTION ====== -->
+        <Style Selector="Border.TranscriptionPanel">
+            <Setter Property="Background" Value="#08000000"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
     </UserControl.Styles>
 
     <StackPanel>
@@ -250,6 +258,18 @@
                               Command="{Binding #BubbleRoot.CopyTextCommand}"
                               CommandParameter="{Binding}"
                               IsVisible="{Binding Content, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource CopyIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <!-- Копировать расшифровку (для voice) -->
+                    <MenuItem Header="Копировать расшифровку"
+                              Command="{Binding #BubbleRoot.CopyTextCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding HasTranscriptionText}">
                         <MenuItem.Icon>
                             <Path Data="{StaticResource CopyIcon}"
                                   Fill="{DynamicResource TextPrimary}"
@@ -320,7 +340,7 @@
                                    Text="{Binding SenderName}"/>
                     </Button>
 
-                    <!-- ═══ ОБЫЧНОЕ СООБЩЕНИЕ ═══ -->
+                    <!-- ═══ ОБЫЧНОЕ СООБЩЕНИЕ (включая voice) ═══ -->
                     <Border Classes="MessageBubble"
                             Classes.Own="{Binding IsOwn}"
                             Classes.Other="{Binding !IsOwn}"
@@ -359,7 +379,83 @@
                                 </Border>
                             </Button>
 
-                            <!-- Текст -->
+                            <!-- ═══ ГОЛОСОВОЕ СООБЩЕНИЕ ═══ -->
+                            <!-- ═══ ГОЛОСОВОЕ СООБЩЕНИЕ ═══ -->
+<StackPanel IsVisible="{Binding ShowVoiceMessage}" Spacing="6">
+
+    <!-- Заголовок -->
+    <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="🎤"
+                   FontSize="20"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="Голосовое сообщение"
+                   FontSize="14"
+                   FontWeight="Medium"
+                   Foreground="{DynamicResource TextPrimary}"
+                   VerticalAlignment="Center"/>
+    </StackPanel>
+
+    <!-- Аудиофайл — через тот же контрол что и обычные файлы -->
+    <ItemsControl ItemsSource="{Binding FileViewModels}"
+                  IsVisible="{Binding HasFiles}">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Spacing="4"/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vmChat:MessageFileViewModel">
+                <chat:FileAttachmentControl/>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Мета: время + статус доставки -->
+    <StackPanel Orientation="Horizontal"
+                Spacing="3"
+                HorizontalAlignment="Right"
+                Margin="0,2,0,0">
+        <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                   Classes="MessageMeta"/>
+        <Path Data="{StaticResource CheckIcon}"
+              Classes="DeliveryStatus"
+              Classes.Read="{Binding IsRead}"
+              Classes.Unread="{Binding !IsRead}"
+              IsVisible="{Binding ShowDeliveryStatus}"/>
+    </StackPanel>
+
+    <!-- Панель транскрипции -->
+    <Border Classes="TranscriptionPanel">
+        <StackPanel Spacing="4">
+            <TextBlock Text="{Binding TranscriptionStatusDisplay}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondary}"/>
+
+            <SelectableTextBlock Text="{Binding TranscriptionText}"
+                                 FontSize="13"
+                                 Foreground="{DynamicResource TextPrimary}"
+                                 TextWrapping="Wrap"
+                                 LineHeight="18"
+                                 IsVisible="{Binding HasTranscriptionText}"/>
+
+            <Button IsVisible="{Binding IsTranscriptionFailed}"
+                    Classes="IconButton Small"
+                    HorizontalAlignment="Left"
+                    Command="{Binding #BubbleRoot.RetryTranscriptionCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="Повторить расшифровку">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="🔄" FontSize="12"/>
+                    <TextBlock Text="Повторить"
+                               FontSize="12"
+                               Foreground="{DynamicResource Accent}"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Border>
+</StackPanel>
+
+                            <!-- Текст (скрыт для voice) -->
                             <Panel IsVisible="{Binding HasTextContent}">
                                 <Grid>
                                     <SelectableTextBlock Classes="MessageText"
@@ -402,9 +498,9 @@
                                 </Grid>
                             </Panel>
 
-                            <!-- Файлы -->
+                            <!-- Файлы (НЕ для voice — у voice свой рендер выше) -->
                             <ItemsControl ItemsSource="{Binding FileViewModels}"
-                                          IsVisible="{Binding HasFiles}"
+                                          IsVisible="{Binding ShowNonVoiceFiles}"
                                           Margin="0,6,0,0">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -418,7 +514,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Мета без текста -->
+                            <!-- Мета без текста (НЕ для voice) -->
                             <StackPanel Orientation="Horizontal"
                                         Spacing="3"
                                         HorizontalAlignment="Right"

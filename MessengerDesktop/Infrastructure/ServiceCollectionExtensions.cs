@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
@@ -62,6 +63,7 @@ public static class ServiceCollectionExtensions
             var httpClient = sp.GetRequiredService<HttpClient>();
             return new FileDownloadService(httpClient);
         });
+        services.AddSingleton<IAudioRecorderService, NAudioRecorderService>();
 
         return services;
     }

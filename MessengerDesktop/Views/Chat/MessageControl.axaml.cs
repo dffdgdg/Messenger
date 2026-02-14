@@ -27,6 +27,9 @@ public partial class MessageControl : UserControl
     public static readonly StyledProperty<ICommand?> ScrollToReplyCommandProperty =
         AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ScrollToReplyCommand));
 
+    public static readonly StyledProperty<ICommand?> RetryTranscriptionCommandProperty =
+        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(RetryTranscriptionCommand));
+
     public ICommand? EditMessageCommand
     {
         get => GetValue(EditMessageCommandProperty);
@@ -61,5 +64,11 @@ public partial class MessageControl : UserControl
     {
         get => GetValue(ScrollToReplyCommandProperty);
         set => SetValue(ScrollToReplyCommandProperty, value);
+    }
+
+    public ICommand? RetryTranscriptionCommand
+    {
+        get => GetValue(RetryTranscriptionCommandProperty);
+        set => SetValue(RetryTranscriptionCommandProperty, value);
     }
 }

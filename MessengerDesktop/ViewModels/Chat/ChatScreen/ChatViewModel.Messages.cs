@@ -113,15 +113,18 @@ public partial class ChatViewModel
                 ChatId = _chatId,
                 Content = NewMessage,
                 SenderId = UserId,
-                Files = files
+                Files = files,
+                ReplyToMessageId = ReplyingToMessage?.Id
             };
 
-            var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>(ApiEndpoints.Message.Create, msg, ct);
+            var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>(
+                ApiEndpoints.Message.Create, msg, ct);
 
             if (result.Success)
             {
                 NewMessage = string.Empty;
                 _attachmentManager.Clear();
+                CancelReply();
             }
             else
             {

@@ -273,7 +273,7 @@
 
 								<TextBox x:Name="SearchTextBox"
 								         Grid.Column="1"
-								         Classes="Borderlesses"
+								         Classes="Borderless"
 								         Text="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
 								         Watermark="Поиск..."
 								         AutomationProperties.Name="Поиск по чатам и сообщениям"

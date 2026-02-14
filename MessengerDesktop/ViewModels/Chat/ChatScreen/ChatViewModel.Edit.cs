@@ -25,6 +25,7 @@ public partial class ChatViewModel
     {
         if (message?.CanEdit != true) return;
 
+        CancelReply();
         CancelEditMessage();
         EditingMessage = message;
         EditMessageContent = message.Content ?? string.Empty;

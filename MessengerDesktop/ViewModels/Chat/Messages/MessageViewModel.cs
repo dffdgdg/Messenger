@@ -21,68 +21,61 @@ public partial class MessageViewModel : ObservableObject
     public DateTime CreatedAt { get; set; }
     public bool IsOwn { get; set; }
 
-    [ObservableProperty]
-    private DateTime? _editedAt;
+    [ObservableProperty] private int? _replyToMessageId;
+    [ObservableProperty] private string? _replyToSenderName;
+    [ObservableProperty] private string? _replyToContent;
+    [ObservableProperty] private bool _replyToIsDeleted;
+    [ObservableProperty] private DateTime? _editedAt;
 
     /// <summary>
-    /// Сырые данные опроса (для обновлений через SignalR)
+    /// true если предыдущее сообщение от того же автора и в пределах 2 минут.
     /// </summary>
+    [ObservableProperty] private bool _isContinuation;
+
+    /// <summary>
+    /// true если следующее сообщение от того же автора и в пределах 2 минут.
+    /// </summary>
+    [ObservableProperty] private bool _hasNextFromSame;
+
+    /// <summary>
+    /// Позиция в группе — определяет радиусы пузыря (Alone/First/Middle/Last)
+    /// </summary>
+    [ObservableProperty] private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
+
     public PollDTO? PollDto { get; set; }
 
-    /// <summary>
-    /// ViewModel опроса для привязки в UI
-    /// </summary>
-    [ObservableProperty]
-    private PollViewModel? _poll;
+    [ObservableProperty] private PollViewModel? _poll;
 
     public List<MessageFileDTO> Files { get; set; } = [];
 
-    [ObservableProperty]
-    private string? _senderAvatar, _senderName, _content;
-
-    [ObservableProperty]
-    private bool _showSenderName, _isHighlighted, _isUnread, _isRead, _isEdited, _isDeleted;
-
-    [ObservableProperty]
-    private ObservableCollection<MessageFileViewModel> _fileViewModels = [];
-
-    [ObservableProperty]
-    private bool _showDateSeparator;
-
-    [ObservableProperty]
-    private string? _dateSeparatorText;
+    [ObservableProperty] private string? _senderAvatar, _senderName, _content;
+    [ObservableProperty] private bool _isHighlighted, _isUnread, _isRead, _isEdited, _isDeleted;
+    [ObservableProperty] private ObservableCollection<MessageFileViewModel> _fileViewModels = [];
+    [ObservableProperty] private bool _showDateSeparator;
+    [ObservableProperty] private string? _dateSeparatorText;
 
     #region Computed Properties
 
     public bool HasFiles => Files.Count > 0;
     public bool HasPoll => Poll != null;
     public bool HasImages => Files.Any(f => f.PreviewType == "image");
-
-    /// <summary>
-    /// Есть текстовый контент для отображения (не удалено, не пусто, не опрос)
-    /// </summary>
+    public bool HasReply => ReplyToMessageId.HasValue;
     public bool HasTextContent => !IsDeleted && !string.IsNullOrWhiteSpace(Content) && !HasPoll;
-
-    /// <summary>
-    /// Показывать мета-информацию только для файлов (когда нет текста и не удалено)
-    /// </summary>
     public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles;
-
-    /// <summary>
-    /// Показывать статус доставки (галочки) — только для своих не-удалённых сообщений
-    /// </summary>
     public bool ShowDeliveryStatus => IsOwn && !IsDeleted;
-
     public bool CanEdit => IsOwn && !IsDeleted && Poll == null;
     public bool CanDelete => IsOwn && !IsDeleted;
-
     public string DisplayContent => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
-
     public string EditedLabel => IsEdited ? "изм." : string.Empty;
 
     public string? EditedLabelFull => IsEdited && EditedAt.HasValue
         ? $"изменено {EditedAt.Value:HH:mm}"
         : null;
+
+    /// <summary>
+    /// Показывать имя: только для чужих, только первое в группе или одиночное
+    /// </summary>
+    public bool ShowSenderName => !IsOwn && !IsContinuation;
 
     #endregion
 
@@ -94,10 +87,7 @@ public partial class MessageViewModel : ObservableObject
         set => SenderAvatar = value;
     }
 
-    public MessageViewModel(
-        MessageDTO message,
-        IFileDownloadService? downloadService = null,
-        INotificationService? notificationService = null)
+    public MessageViewModel(MessageDTO message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
     {
         Message = message;
         Id = message.Id;
@@ -114,7 +104,16 @@ public partial class MessageViewModel : ObservableObject
 
         SenderName = message.SenderName;
         SenderAvatar = message.SenderAvatarUrl;
-        ShowSenderName = message.ShowSenderName;
+
+        ReplyToMessageId = message.ReplyToMessageId;
+        if (message.ReplyToMessage != null)
+        {
+            ReplyToSenderName = message.ReplyToMessage.SenderName;
+            ReplyToContent = message.ReplyToMessage.IsDeleted
+                ? "[Сообщение удалено]"
+                : message.ReplyToMessage.Content;
+            ReplyToIsDeleted = message.ReplyToMessage.IsDeleted;
+        }
 
         if (message.Poll != null)
         {
@@ -128,21 +127,14 @@ public partial class MessageViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Обновить опрос из DTO (например, после голосования через SignalR)
-    /// </summary>
     public void UpdatePoll(PollDTO pollDto)
     {
         PollDto = pollDto;
 
         if (Poll != null)
-        {
             Poll.ApplyDto(pollDto);
-        }
         else
-        {
             Poll = CreatePollViewModel(pollDto);
-        }
 
         OnPropertyChanged(nameof(HasPoll));
         OnPropertyChanged(nameof(HasTextContent));
@@ -176,9 +168,6 @@ public partial class MessageViewModel : ObservableObject
         OnPropertyChanged(nameof(CanDelete));
     }
 
-    /// <summary>
-    /// Обновить статус прочтения
-    /// </summary>
     public void MarkAsRead() => IsRead = true;
 
     private static PollViewModel? CreatePollViewModel(PollDTO pollDto)
@@ -240,6 +229,72 @@ public partial class MessageViewModel : ObservableObject
     }
 
     partial void OnIsReadChanged(bool value) => OnPropertyChanged(nameof(ShowDeliveryStatus));
+
+    partial void OnIsContinuationChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowSenderName));
+        UpdateGroupPosition();
+    }
+
+    partial void OnHasNextFromSameChanged(bool value)
+    {
+        UpdateGroupPosition();
+    }
+
+    private void UpdateGroupPosition()
+    {
+        GroupPosition = (IsContinuation, HasNextFromSame) switch
+        {
+            (false, false) => MessageGroupPosition.Alone,
+            (false, true) => MessageGroupPosition.First,
+            (true, true) => MessageGroupPosition.Middle,
+            (true, false) => MessageGroupPosition.Last,
+        };
+    }
+
+    #endregion
+
+    #region Grouping Logic
+
+    private static readonly TimeSpan GroupingThreshold = TimeSpan.FromMinutes(2);
+
+    public static bool CanGroup(MessageViewModel a, MessageViewModel b)
+    {
+        if (a.SenderId != b.SenderId) return false;
+        if (a.IsDeleted || b.IsDeleted) return false;
+        if (a.CreatedAt.Date != b.CreatedAt.Date) return false;
+        if ((b.CreatedAt - a.CreatedAt).Duration() > GroupingThreshold) return false;
+        return true;
+    }
+
+    public static void RecalculateGrouping(IList<MessageViewModel> messages)
+    {
+        for (int i = 0; i < messages.Count; i++)
+        {
+            var current = messages[i];
+            var prev = i > 0 ? messages[i - 1] : null;
+            var next = i < messages.Count - 1 ? messages[i + 1] : null;
+
+            current.IsContinuation = prev != null && CanGroup(prev, current);
+            current.HasNextFromSame = next != null && CanGroup(current, next);
+        }
+    }
+
+    public static void UpdateGroupingAround(IList<MessageViewModel> messages, int index)
+    {
+        int start = Math.Max(0, index - 1);
+        int end = Math.Min(messages.Count - 1, index + 1);
+
+        for (int i = start; i <= end; i++)
+        {
+            var current = messages[i];
+            var prev = i > 0 ? messages[i - 1] : null;
+            var next = i < messages.Count - 1 ? messages[i + 1] : null;
+
+            current.IsContinuation = prev != null && CanGroup(prev, current);
+            current.HasNextFromSame = next != null && CanGroup(current, next);
+        }
+    }
 
     #endregion
 }

@@ -32,6 +32,8 @@ public sealed class ConverterLocator
         Add(new BoolToColorConverter { TrueValue = Color.Parse("#22C55E"), FalseValue = Color.Parse("#6B7280") }, "BoolToOnline");
         Add(new BoolToHAlignmentConverter { TrueValue = HorizontalAlignment.Right, FalseValue = HorizontalAlignment.Left }, "BoolToHAlignment");
         Add<BoolToBrushConverter>("BoolToBrush");
+        Add<EnumEqualsConverter>("EnumEquals");
+        Add<BoolToThicknessConverter>("BoolToThickness");
 
         // Comparison converters
         Add(new ComparisonConverter { Mode = ComparisonMode.Equal }, "Equality", "Equals");

@@ -29,7 +29,8 @@ public class Message
     public virtual ICollection<Message> InverseReplyToMessage { get; set; } = [];
 
     public virtual ICollection<Message> InverseForwardedFromMessage { get; set; } = [];
-
+    public bool IsVoiceMessage { get; set; } = false;
+    public string? TranscriptionStatus { get; set; }
     public virtual Message? ReplyToMessage { get; set; }
 
     public virtual Message? ForwardedFromMessage { get; set; }

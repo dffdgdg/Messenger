@@ -53,12 +53,11 @@ namespace MessengerDesktop.Services
 
         public DialogService()
         {
-            _closeRequests = Channel.CreateBounded<CloseRequest>(
-                new BoundedChannelOptions(10)
-                {
-                    FullMode = BoundedChannelFullMode.DropOldest,
-                    SingleReader = true
-                });
+            _closeRequests = Channel.CreateBounded<CloseRequest>(new BoundedChannelOptions(10)
+            {
+                FullMode = BoundedChannelFullMode.DropOldest,
+                SingleReader = true
+            });
 
             _ = ProcessCloseRequestsAsync(_processingCts.Token);
         }

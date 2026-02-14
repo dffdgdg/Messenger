@@ -44,9 +44,8 @@ namespace MessengerAPI.Services.User
 
             var username = dto.Username.Trim().ToLower();
 
-            if (!Regex.IsMatch(username, @"^[a-z0-9_]{3,30}$"))
-                return Result<UserDTO>.Failure(
-                    "Логин должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
+            if (!Regex.IsMatch(username, "^[a-z0-9_]{3,30}$"))
+                return Result<UserDTO>.Failure("Логин должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
 
             var exists = await _context.Users.AnyAsync(u => u.Username == username, ct);
 

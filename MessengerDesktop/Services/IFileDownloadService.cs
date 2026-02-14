@@ -71,13 +71,8 @@ namespace MessengerDesktop.Services
                 var filePath = GetUniqueFilePath(downloadsFolder, SanitizeFileName(fileName));
 
                 await using var contentStream = await response.Content.ReadAsStreamAsync(ct);
-                await using var fileStream = new FileStream(
-                    filePath,
-                    FileMode.Create,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize: 81920,
-                    useAsync: true);
+                await using var fileStream = new FileStream(filePath,FileMode.Create, FileAccess.Write,
+                    FileShare.None, bufferSize: 81920, useAsync: true);
 
                 var buffer = new byte[81920];
                 int bytesRead;

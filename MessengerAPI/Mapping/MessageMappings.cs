@@ -6,7 +6,10 @@ namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {
-    public static MessageDTO ToDto(this Message message,int? currentUserId = null,IUrlBuilder? urlBuilder = null)
+    public static MessageDTO ToDto(
+    this Message message,
+    int? currentUserId = null,
+    IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
 
@@ -26,18 +29,16 @@ public static class MessageMappings
             ReplyToMessageId = message.ReplyToMessageId,
             ForwardedFromMessageId = message.ForwardedFromMessageId,
             ReplyToMessage = message.ReplyToMessage?.ToReplyPreviewDto(),
-            ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto()
+            ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto(),
+            IsVoiceMessage = message.IsVoiceMessage,
+            TranscriptionStatus = isDeleted ? null : message.TranscriptionStatus,
         };
 
         if (!isDeleted)
         {
-            dto.Files = message.MessageFiles?
-                .Select(f => f.ToDto(urlBuilder))
-                .ToList() ?? [];
+            dto.Files = message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [];
 
-            dto.Poll = message.Polls?
-                .FirstOrDefault()?
-                .ToDto(currentUserId);
+            dto.Poll = message.Polls?.FirstOrDefault()?.ToDto(currentUserId);
         }
         else
         {

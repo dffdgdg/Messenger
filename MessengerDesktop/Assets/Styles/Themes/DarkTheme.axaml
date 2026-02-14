@@ -62,7 +62,7 @@
 	<SolidColorBrush x:Key="WarningBrush" Color="#F5A623"/>
 	<SolidColorBrush x:Key="WarningBgBrush" Color="#2DF5A623"/>
 
-	<SolidColorBrush x:Key="MessageOwnBackground" Color="#3390EC"/>
+	<SolidColorBrush x:Key="MessageOwnBackground" Color="#2B5378"/>
 	<SolidColorBrush x:Key="MessageOwnText" Color="#FFFFFF"/>
 	<SolidColorBrush x:Key="MessageOwnTimestamp" Color="#FFFFFFB0"/>
 

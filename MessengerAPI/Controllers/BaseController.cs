@@ -99,8 +99,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         }
     }
 
-    protected async Task<IActionResult> ExecuteResultAsync(
-        Func<Task<Result>> action, string? successMessage = null)
+    protected async Task<IActionResult> ExecuteResultAsync(Func<Task<Result>> action, string? successMessage = null)
     {
         try
         {
@@ -167,8 +166,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         }
     }
 
-    protected async Task<IActionResult> ExecuteAsync(
-        Func<Task> action, string? successMessage = null)
+    protected async Task<IActionResult> ExecuteAsync(Func<Task> action, string? successMessage = null)
     {
         try
         {
@@ -220,85 +218,94 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
 
     #region Success Responses
 
-    protected ActionResult<ApiResponse<TData>> Success<TData>(
-        TData data, string? message = null)
-        => Ok(new ApiResponse<TData>
+    protected ActionResult<ApiResponse<TData>> Success<TData>(TData data, string? message = null)
+    {
+        return Ok(new ApiResponse<TData>
         {
             Success = true,
             Data = data,
             Message = message,
             Timestamp = DateTime.UtcNow
         });
+    }
 
     protected ActionResult<ApiResponse<object>> Success(string? message = null)
-        => Ok(new ApiResponse<object>
+    {
+        return Ok(new ApiResponse<object>
         {
             Success = true,
             Message = message,
             Timestamp = DateTime.UtcNow
         });
+    }
 
     #endregion
 
     #region Error Responses
 
-    protected ActionResult<ApiResponse<TData>> BadRequest<TData>(
-        string error, string? details = null)
-        => BadRequest(new ApiResponse<TData>
+    protected ActionResult<ApiResponse<TData>> BadRequest<TData>(string error, string? details = null)
+    {
+        return BadRequest(new ApiResponse<TData>
         {
             Success = false,
             Error = error,
             Details = details,
             Timestamp = DateTime.UtcNow
         });
+    }
 
-    protected ActionResult BadRequestMessage(
-        string error, string? details = null)
-        => BadRequest(new ApiResponse<object>
+    protected ActionResult BadRequestMessage(string error, string? details = null)
+    {
+        return BadRequest(new ApiResponse<object>
         {
             Success = false,
             Error = error,
             Details = details,
             Timestamp = DateTime.UtcNow
         });
+    }
 
-    protected ActionResult<ApiResponse<TData>> NotFound<TData>(
-        string error = "Ресурс не найден")
-        => NotFound(new ApiResponse<TData>
+    protected ActionResult<ApiResponse<TData>> NotFound<TData>(string error = "Ресурс не найден")
+    {
+        return NotFound(new ApiResponse<TData>
         {
             Success = false,
             Error = error,
             Timestamp = DateTime.UtcNow
         });
+    }
 
-    protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(
-        string error = "Неавторизованный доступ")
-        => Unauthorized(new ApiResponse<TData>
+    protected ActionResult<ApiResponse<TData>> Unauthorized<TData>(string error = "Неавторизованный доступ")
+    {
+        return Unauthorized(new ApiResponse<TData>
         {
             Success = false,
             Error = error,
             Timestamp = DateTime.UtcNow
         });
+    }
 
-    protected ActionResult<ApiResponse<TData>> Forbidden<TData>(
-        string error = "Доступ запрещён")
-        => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
+    protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
+    {
+        return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<TData>
         {
             Success = false,
             Error = error,
             Timestamp = DateTime.UtcNow
         });
+    }
 
     protected ActionResult Forbidden(string error = "Доступ запрещён")
-        => StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
+    {
+        return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
         {
             Success = false,
             Error = error,
             Timestamp = DateTime.UtcNow
         });
+    }
 
-    protected ActionResult InternalError(Exception ex,
-        string error = "Произошла внутренняя ошибка")
+    protected ActionResult InternalError(Exception ex,string error = "Произошла внутренняя ошибка")
     {
         _logger.LogError(ex, "Внутренняя ошибка: {Message}", ex.Message);
 
@@ -310,14 +317,12 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         };
 
         var env = HttpContext.RequestServices.GetService<IWebHostEnvironment>();
-        if (env?.IsDevelopment() == true)
-            response.Details = ex.ToString();
+        if (env?.IsDevelopment() == true) response.Details = ex.ToString();
 
         return StatusCode(StatusCodes.Status500InternalServerError, response);
     }
 
-    protected ActionResult<ApiResponse<TData>> InternalError<TData>(
-        Exception ex, string error = "Произошла внутренняя ошибка")
+    protected ActionResult<ApiResponse<TData>> InternalError<TData>(Exception ex, string error = "Произошла внутренняя ошибка")
     {
         _logger.LogError(ex, "Внутренняя ошибка: {Message}", ex.Message);
 
@@ -343,12 +348,8 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
     {
         if (!ModelState.IsValid)
         {
-            var errors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => e.ErrorMessage)
-                .ToArray();
-            throw new ArgumentException(
-                $"Некорректная модель: {string.Join(", ", errors)}");
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToArray();
+            throw new ArgumentException($"Некорректная модель: {string.Join(", ", errors)}");
         }
     }
 

@@ -5,8 +5,7 @@ namespace MessengerAPI.Configuration;
 
 public static class StaticFilesConfiguration
 {
-    public static WebApplication UseMessengerStaticFiles(
-        this WebApplication app)
+    public static WebApplication UseMessengerStaticFiles(this WebApplication app)
     {
         var webRootPath = app.Environment.WebRootPath ?? "wwwroot";
         var uploadsPath = Path.Combine(webRootPath, "uploads");
@@ -35,12 +34,9 @@ public static class StaticFilesConfiguration
             ContentTypeProvider = contentTypeProvider,
             OnPrepareResponse = ctx =>
             {
-                ctx.Context.Response.Headers.Append(
-                    "Cache-Control", "no-cache, no-store");
-                ctx.Context.Response.Headers.Append(
-                    "Pragma", "no-cache");
-                ctx.Context.Response.Headers.Append(
-                    "Expires", "-1");
+                ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store");
+                ctx.Context.Response.Headers.Append("Pragma", "no-cache");
+                ctx.Context.Response.Headers.Append("Expires", "-1");
             }
         });
 

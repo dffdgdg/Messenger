@@ -33,23 +33,35 @@
         </Style>
     </UserControl.Styles>
 
-    <!-- Внешний контейнер без ClipToBounds -->
     <Panel Width="{Binding Size, ElementName=Root}"
            Height="{Binding Size, ElementName=Root}">
-        
-        <!-- Border с аватаром (ClipToBounds только для изображения) -->
+
         <Border x:Name="AvatarBorder"
                 ClipToBounds="True"
                 Background="{Binding PlaceholderBackground, ElementName=Root}">
 
             <Panel>
-                <!-- Изображение аватара -->
-                <Image x:Name="AvatarImage"
-                       Stretch="UniformToFill"
-                       asyncImageLoader:ImageLoader.Source="{Binding ImageSource, ElementName=Root}"
-                       IsVisible="{Binding HasImage, ElementName=Root}"/>
+                <!--
+                    CRITICAL: Wrap Image in a Panel with IsVisible=HasImage.
+                    
+                    WHY: AsyncImageLoader evaluates its Source binding
+                    even when the Image itself has IsVisible=false.
+                    By collapsing the PARENT Panel, the Image control
+                    is removed from the visual tree entirely, and
+                    AsyncImageLoader never fires.
+                    
+                    Without this wrapper:
+                    - Source=null → AsyncImageLoader tries to load "" → error
+                    - Source="file.pptx" → tries to decode as bitmap → crash
+                    - Source="avatar.webp" but no token → 401 → log spam
+                -->
+                <Panel IsVisible="{Binding HasImage, ElementName=Root}">
+                    <Image x:Name="AvatarImage"
+                           Stretch="UniformToFill"
+                           asyncImageLoader:ImageLoader.Source="{Binding ImageSource, ElementName=Root}"/>
+                </Panel>
 
-                <!-- Плейсхолдер с инициалами -->
+                <!-- Initials placeholder -->
                 <TextBlock Text="{Binding Initials, ElementName=Root}"
                            FontSize="{Binding FontSize, ElementName=Root}"
                            FontWeight="SemiBold"
@@ -58,7 +70,7 @@
                            VerticalAlignment="Center"
                            IsVisible="{Binding ShowInitials, ElementName=Root}"/>
 
-                <!-- Плейсхолдер с иконкой -->
+                <!-- Icon placeholder -->
                 <PathIcon Data="{Binding IconData, ElementName=Root}"
                           Width="{Binding IconSize, ElementName=Root}"
                           Height="{Binding IconSize, ElementName=Root}"
@@ -69,7 +81,7 @@
             </Panel>
         </Border>
 
-        <!-- Индикатор онлайн - СНАРУЖИ Border, но внутри Panel -->
+        <!-- Online indicator -->
         <Border x:Name="OnlineIndicator"
                 IsVisible="{Binding ShowOnlineStatus, ElementName=Root}"
                 Width="{Binding OnlineIndicatorSize, ElementName=Root}"

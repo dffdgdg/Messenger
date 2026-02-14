@@ -34,9 +34,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct);
-                return ApiResponseHelper.Error<AuthResponseDTO>(
-                    $"Ошибка авторизации: {response.StatusCode}",
-                    errorContent);
+                return ApiResponseHelper.Error<AuthResponseDTO>($"Ошибка авторизации: {response.StatusCode}", errorContent);
             }
 
             var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDTO>>(ct);
@@ -83,8 +81,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             var response = await _httpClient.SendAsync(request, ct);
 
             return response.IsSuccessStatusCode
-                ? ApiResponseHelper.Success()
-                : ApiResponseHelper.Error($"Токен недействителен: {response.StatusCode}");
+                ? ApiResponseHelper.Success() : ApiResponseHelper.Error($"Токен недействителен: {response.StatusCode}");
         }
         catch (OperationCanceledException)
         {
@@ -105,8 +102,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
             var response = await _httpClient.SendAsync(request, ct);
 
-            return response.IsSuccessStatusCode
-                ? ApiResponseHelper.Success("Выход выполнен успешно")
+            return response.IsSuccessStatusCode ? ApiResponseHelper.Success("Выход выполнен успешно")
                 : ApiResponseHelper.Error($"Ошибка выхода: {response.StatusCode}");
         }
         catch (OperationCanceledException)

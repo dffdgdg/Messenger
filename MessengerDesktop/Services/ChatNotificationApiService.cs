@@ -19,8 +19,7 @@ public class ChatNotificationApiService(IApiClientService apiClient) : IChatNoti
 {
     public async Task<ChatNotificationSettingsDTO?> GetChatSettingsAsync(int chatId, CancellationToken ct = default)
     {
-        var result = await apiClient.GetAsync<ChatNotificationSettingsDTO>(
-            ApiEndpoints.Notification.ChatSettings(chatId), ct);
+        var result = await apiClient.GetAsync<ChatNotificationSettingsDTO>(ApiEndpoints.Notification.ChatSettings(chatId), ct);
 
         return result.Success ? result.Data : null;
     }

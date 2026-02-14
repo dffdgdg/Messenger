@@ -18,24 +18,17 @@ namespace MessengerDesktop.Services
         void LoadFromSettings();
     }
 
-    public class ThemeService : IThemeService
+    public class ThemeService(ISettingsService settings) : IThemeService
     {
-        private readonly ISettingsService _settings;
-        private readonly Application _app;
+        private readonly ISettingsService _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        private readonly Application _app = Application.Current ?? throw new InvalidOperationException("Application is not initialized");
 
         public bool IsDarkTheme => _app.RequestedThemeVariant == ThemeVariant.Dark;
-
-        public ThemeService(ISettingsService settings)
-        {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _app = Application.Current ?? throw new InvalidOperationException("Application is not initialized");
-        }
 
         public void Toggle()
         {
             var newTheme = _app.RequestedThemeVariant == ThemeVariant.Dark
-                ? ThemeVariant.Light
-                : ThemeVariant.Dark;
+                ? ThemeVariant.Light : ThemeVariant.Dark;
 
             _app.RequestedThemeVariant = newTheme;
             SaveTheme(newTheme);

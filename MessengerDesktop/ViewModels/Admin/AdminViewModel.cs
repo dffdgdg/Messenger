@@ -97,7 +97,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private async Task Refresh() =>
+    private async Task Refresh()
+    {
         await SafeExecuteAsync(async () =>
         {
             await Task.WhenAll(UsersTab.LoadAsync(), DepartmentsTab.LoadAsync());
@@ -110,6 +111,7 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
             SuccessMessage = "Данные обновлены";
         });
+    }
 
     [RelayCommand]
     private async Task Create()

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using System.Windows.Input;
 
 namespace MessengerDesktop.Views.Chat;
@@ -19,6 +20,12 @@ public partial class MessageControl : UserControl
 
     public static readonly StyledProperty<ICommand?> OpenProfileCommandProperty =
         AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(OpenProfileCommand));
+
+    public static readonly StyledProperty<ICommand?> ReplyCommandProperty =
+       AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ReplyCommand));
+
+    public static readonly StyledProperty<ICommand?> ScrollToReplyCommandProperty =
+        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ScrollToReplyCommand));
 
     public ICommand? EditMessageCommand
     {
@@ -42,5 +49,17 @@ public partial class MessageControl : UserControl
     {
         get => GetValue(OpenProfileCommandProperty);
         set => SetValue(OpenProfileCommandProperty, value);
+    }
+
+    public ICommand? ReplyCommand
+    {
+        get => GetValue(ReplyCommandProperty);
+        set => SetValue(ReplyCommandProperty, value);
+    }
+
+    public ICommand? ScrollToReplyCommand
+    {
+        get => GetValue(ScrollToReplyCommandProperty);
+        set => SetValue(ScrollToReplyCommandProperty, value);
     }
 }

@@ -6,37 +6,29 @@ namespace MessengerAPI.Configuration;
 
 public static class AuthConfiguration
 {
-    public static IServiceCollection AddMessengerAuth(this IServiceCollection services,IConfiguration configuration)
+    public static IServiceCollection AddMessengerAuth(this IServiceCollection services, IConfiguration configuration)
     {
-        services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = TokenService.CreateValidationParameters(configuration);
+
+            options.Events = new JwtBearerEvents
             {
-                options.TokenValidationParameters =
-                    TokenService.CreateValidationParameters(configuration);
-
-                options.Events = new JwtBearerEvents
+                OnMessageReceived = context =>
                 {
-                    OnMessageReceived = context =>
+                    var accessToken = context.Request.Query["access_token"];
+
+                    if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/chatHub"))
                     {
-                        var accessToken = context.Request.Query["access_token"];
-
-                        if (!string.IsNullOrEmpty(accessToken) &&
-                            context.HttpContext.Request.Path
-                                .StartsWithSegments("/chatHub"))
-                        {
-                            context.Token = accessToken;
-                        }
-
-                        return Task.CompletedTask;
+                        context.Token = accessToken;
                     }
-                };
-            });
 
-        services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-                .RequireAuthenticatedUser()
-                .Build());
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        services.AddAuthorizationBuilder().SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
         return services;
     }

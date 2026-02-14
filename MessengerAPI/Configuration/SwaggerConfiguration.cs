@@ -18,16 +18,14 @@ public static class SwaggerConfiguration
 
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
-                Description = "JWT Authorization header. Example: " +
-                              "\"Authorization: Bearer {token}\"",
+                Description = "JWT Authorization header. Example: \"Authorization: Bearer {token}\"",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.ApiKey,
                 Scheme = "Bearer"
             });
 
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement{
                 {
                     new OpenApiSecurityScheme
                     {
@@ -38,8 +36,7 @@ public static class SwaggerConfiguration
                         }
                     },
                     Array.Empty<string>()
-                }
-            });
+                }});
         });
 
         return services;

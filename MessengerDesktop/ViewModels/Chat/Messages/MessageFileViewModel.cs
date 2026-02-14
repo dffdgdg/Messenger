@@ -10,10 +10,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
+public partial class MessageFileViewModel(
+    MessageFileDTO file,
+    IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null)
     : ObservableObject
 {
     private CancellationTokenSource? _downloadCts;
+    private readonly object _ctsLock = new();
 
     public MessageFileDTO File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
@@ -41,10 +45,14 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         "image" => "🖼️",
         "video" => "🎬",
         "audio" => "🎵",
-        "file" when ContentType.Contains("pdf") => "📕",
-        "file" when ContentType.Contains("word") || ContentType.Contains("document") => "📘",
-        "file" when ContentType.Contains("excel") || ContentType.Contains("spreadsheet") => "📗",
-        "file" when ContentType.Contains("zip") || ContentType.Contains("rar") || ContentType.Contains("7z") => "📦",
+        "file" when ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) => "📕",
+        "file" when ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
+                     || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase) => "📘",
+        "file" when ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
+                     || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) => "📗",
+        "file" when ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+                     || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
+                     || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase) => "📦",
         _ => "📄"
     };
 
@@ -62,20 +70,29 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         DownloadProgress = 0;
         State = DownloadState.Downloading;
 
-        _downloadCts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
+
+        lock (_ctsLock)
+        {
+            _downloadCts?.Dispose();
+            _downloadCts = cts;
+        }
 
         try
         {
-            var progress = new Progress<double>(p => Dispatcher.UIThread.Post(() => DownloadProgress = p));
+            var progress = new Progress<double>(p =>
+                Dispatcher.UIThread.Post(() => DownloadProgress = p));
 
-            var filePath = await downloadService.DownloadFileAsync(Url, FileName, progress, _downloadCts.Token);
+            var filePath = await downloadService.DownloadFileAsync(
+                Url, FileName, progress, cts.Token);
 
             if (filePath != null)
             {
                 DownloadedFilePath = filePath;
                 IsDownloaded = true;
                 State = DownloadState.Completed;
-                notificationService?.ShowSuccessAsync($"Файл сохранён: {FileName}", copyToClipboard: false);
+                notificationService?.ShowSuccessAsync(
+                    $"Файл сохранён: {FileName}", copyToClipboard: false);
             }
         }
         catch (OperationCanceledException)
@@ -88,18 +105,40 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
             ErrorMessage = ex.Message;
             HasError = true;
             State = DownloadState.Failed;
-            notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
+            notificationService?.ShowErrorAsync(
+                $"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
         }
         finally
         {
             IsDownloading = false;
-            _downloadCts?.Dispose();
-            _downloadCts = null;
+
+            lock (_ctsLock)
+            {
+                if (_downloadCts == cts)
+                {
+                    _downloadCts = null;
+                }
+            }
+
+            cts.Dispose();
         }
     }
 
     [RelayCommand]
-    private void CancelDownload() => _downloadCts?.Cancel();
+    private void CancelDownload()
+    {
+        lock (_ctsLock)
+        {
+            try
+            {
+                _downloadCts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                
+            }
+        }
+    }
 
     [RelayCommand]
     private async Task OpenFileAsync()
@@ -146,14 +185,14 @@ public partial class MessageFileViewModel(MessageFileDTO file,IFileDownloadServi
         _ = DownloadAsync();
     }
 
-    private static string FormatFileSize(long bytes)
+    private static string FormatFileSize(long bytes) => bytes switch
     {
-        if (bytes <= 0) return "";
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
-        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):F1} MB";
-        return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
-    }
+        <= 0 => "",
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
+    };
 }
 
 public enum DownloadState

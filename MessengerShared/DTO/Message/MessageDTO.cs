@@ -4,6 +4,8 @@ namespace MessengerShared.DTO.Message;
 
 public class MessageDTO
 {
+    public bool IsVoiceMessage { get; set; }
+    public string? TranscriptionStatus { get; set; }
     public int Id { get; set; }
     public int ChatId { get; set; }
     public int SenderId { get; set; }

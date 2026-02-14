@@ -1,116 +1,231 @@
-<UserControl xmlns="https://github.com/avaloniaui" 
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:sys="using:System" xmlns:conv="using:MessengerDesktop.Converters" 
-			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450" 
-			 x:Class="MessengerDesktop.Views.MainMenuView" x:Name="Root" 
-			 x:DataType="vm:MainMenuViewModel" xmlns:vm="using:MessengerDesktop.ViewModels" 
-			 Background="{DynamicResource PrimaryBG}">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sys="using:System"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="MessengerDesktop.Views.MainMenuView"
+             x:Name="Root"
+             x:DataType="vm:MainMenuViewModel"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             Background="{DynamicResource PrimaryBG}">
 
+    <UserControl.Resources>
+        <sys:Int32 x:Key="Index0">0</sys:Int32>
+        <sys:Int32 x:Key="Index1">1</sys:Int32>
+        <sys:Int32 x:Key="Index2">2</sys:Int32>
+        <sys:Int32 x:Key="Index3">3</sys:Int32>
+        <sys:Int32 x:Key="Index4">4</sys:Int32>
+        <sys:Int32 x:Key="Index5">5</sys:Int32>
+        <sys:Int32 x:Key="Index6">6</sys:Int32>
+    </UserControl.Resources>
 
-	<UserControl.Resources>
-		<sys:Int32 x:Key="Index0">0</sys:Int32>
-		<sys:Int32 x:Key="Index1">1</sys:Int32>
-		<sys:Int32 x:Key="Index3">3</sys:Int32>
-		<sys:Int32 x:Key="Index4">4</sys:Int32>
-		<sys:Int32 x:Key="Index5">5</sys:Int32>
-		<sys:Int32 x:Key="Index6">6</sys:Int32>
-	</UserControl.Resources>
+    <UserControl.Styles>
+    <Style Selector="Button.ClearButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Button.ClearButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+    </Style>
 
-	<UserControl.Styles>
-		<Style Selector="Button.ClearButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="6"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="CornerRadius" Value="4"/>
-		</Style>
-		<Style Selector="Button.ClearButton:pointerover">
-			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-		</Style>
-	</UserControl.Styles>
+    <!-- ═══ Nav Arrow Buttons ═══ -->
+    <Style Selector="Button.NavArrowButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Opacity" Value="0.55"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+            </Transitions>
+        </Setter>
+    </Style>
 
-	<Grid ColumnDefinitions="73,*">
-		<Border Grid.Column="1" Background="{DynamicResource SecondaryBG}"
-                Margin="0,47,9,9" CornerRadius="8">
-			<ContentControl Content="{Binding CurrentMenuViewModel}"/>
-		</Border>
+    <!-- фон через ContentPresenter, чтобы Avalonia не перебивал -->
+    <Style Selector="Button.NavArrowButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.15"/>
+            </Transitions>
+        </Setter>
+    </Style>
 
-		<!-- Поиск -->
-		<Grid Grid.Column="1" ColumnDefinitions="*,Auto,*" Margin="0,-2.5,0,0" VerticalAlignment="Top" ZIndex="100">
-			<StackPanel Grid.Column="1" Width="400" MinWidth="200" MaxWidth="600">
-				<Border Classes="SearchContainer" Margin="0,8,0,0" Padding="4,0">
-					<Grid ColumnDefinitions="Auto,*,Auto">
-						<Path Grid.Column="0" Data="{StaticResource SearchIcon}"
-                              Width="16" Height="16" Fill="{DynamicResource TextMuted}"
-                              Stretch="Uniform" Margin="8,0,6,0" VerticalAlignment="Center"/>
-						<TextBox Grid.Column="1" Classes="Borderlesses"
-                                 Text="{Binding SearchText, Mode=TwoWay}"
-                                 Watermark="Поиск чатов и контактов..."
-                                 Padding="4,8" FontSize="14" VerticalContentAlignment="Center"
-								 />
-						<Button Grid.Column="2" Classes="ClearButton"
-                                IsVisible="{Binding HasSearchText}"
-                                Command="{Binding ClearSearchCommand}"
-                                ToolTip.Tip="Очистить" Margin="0,4,4,4">
-							<Path Data="{StaticResource CloseIcon}"
-                                  Fill="{DynamicResource TextMuted}" Width="10" Height="10" Stretch="Uniform"/>
-						</Button>
-					</Grid>
-				</Border>
-			</StackPanel>
-		</Grid>
-		<StackPanel Width="67" Orientation="Vertical" Spacing="4">
-			<StackPanel Orientation="Horizontal" Margin="10,10,10,5">
-				<TextBlock VerticalAlignment="Center"
-						   FontWeight="Bold"
-						   FontSize="14"
-						   Margin="0,5,5,5"
-						   HorizontalAlignment="Left">ВнутрьСеть</TextBlock>
-			</StackPanel>
-			<RadioButton Classes="NavButton" Height="58"
-						 Tag="{DynamicResource ChatsIcon}"
-						 Content="Чаты"
-						 IsChecked="True"
-						 Command="{Binding SetItemCommand}"
-						 CommandParameter="{StaticResource Index1}"/>
-			<RadioButton Classes="NavButton" Height="58"
-						 Tag="{DynamicResource ContactsIcon}"
-						 Content="Контакты"
-						 Command="{Binding SetItemCommand}"
-						 CommandParameter="{StaticResource Index5}"/>
-			<RadioButton Classes="NavButton" Height="58"
-						 Tag="{DynamicResource OrganizationIcon}"
-						 Content="Отдел"
-						 Command="{Binding SetItemCommand}"
-						 CommandParameter="{StaticResource Index6}" IsVisible="{Binding '', 
-					 Converter={conv:Converter Name=HasRole}, 
-					 ConverterParameter=Admin}"/>
-		</StackPanel>
+    <Style Selector="Button.NavArrowButton:pointerover">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.NavArrowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+    </Style>
 
-		<StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,10" Spacing="4">
-			<RadioButton Classes="NavButton" Height="58"
-						 Tag="{DynamicResource ProfileIcon}"
-						 Content="Профиль"
-						 Command="{Binding SetItemCommand}"
-						 CommandParameter="{StaticResource Index3}"/>
-			<RadioButton Classes="NavButton"
-						 Height="58" Width="64"
-						 Command="{Binding SetItemCommand}"
-						 Tag="{DynamicResource SettingsIcon}"
-						 Content="Настройки"
-						 CommandParameter="{StaticResource Index0}"/>
-			<RadioButton Classes="NavButton"
-						 Height="58" Width="64"
-						 Command="{Binding SetItemCommand}"
-						 CommandParameter="{StaticResource Index4}"
-						 Tag="{DynamicResource SettingsIcon}"
-						 Content="Админ"
-						 IsVisible="{Binding '', 
-						 Converter={conv:Converter Name=HasRole}, 
-						 ConverterParameter=Admin}"/>
-		</StackPanel>
-	</Grid>
+    <Style Selector="Button.NavArrowButton:pressed">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.NavArrowButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+    </Style>
+
+    <Style Selector="Button.NavArrowButton:disabled">
+        <Setter Property="Opacity" Value="0.2"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+</UserControl.Styles>
+
+    <Grid ColumnDefinitions="73,*">
+
+        <!-- Левая навигационная панель -->
+        <DockPanel Grid.Column="0" Width="67" LastChildFill="False">
+
+            <!-- Верхняя часть -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Spacing="4">
+				<TextBlock VerticalAlignment="Center" Width="150" 
+           Padding="10,15,0,15"
+           FontWeight="Bold"
+           FontSize="14"
+           HorizontalAlignment="Left">ВнутрьСеть</TextBlock>
+
+                <RadioButton Classes="NavButton" Height="58"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource ChatsIcon}"
+                             Content="Чаты"
+                             IsChecked="True"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index1}"/>
+
+                <RadioButton Classes="NavButton" Height="58"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource ContactsIcon}"
+                             Content="Контакты"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index5}"/>
+
+                <RadioButton Classes="NavButton" Height="58"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource OrganizationIcon}"
+                             Content="Отдел"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index6}"
+                             IsVisible="{Binding,
+                                 Converter={conv:Converter Name=HasRole},
+                                 ConverterParameter=Admin}"/>
+            </StackPanel>
+
+            <!-- Нижняя часть -->
+            <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,10"
+                        HorizontalAlignment="Center">
+
+                <RadioButton Classes="NavButton" Height="58"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource ProfileIcon}"
+                             Content="Профиль"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index3}"/>
+
+                <RadioButton Classes="NavButton" Height="58" Width="64"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource SettingsIcon}"
+                             Content="Настройки"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index0}"/>
+
+                <RadioButton Classes="NavButton" Height="58" Width="64"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource AdminIcon}"
+                             Content="Админ"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index4}"
+                             IsVisible="{Binding,
+                                 Converter={conv:Converter Name=HasRole},
+                                 ConverterParameter=Admin}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Правая часть: навигация + поиск + help + контент -->
+        <DockPanel Grid.Column="1">
+
+            <!-- Верхняя панель: навигация + поиск -->
+<StackPanel DockPanel.Dock="Top"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="6"
+            Margin="0,8,0,0">
+
+    <!-- ===== Назад ===== -->
+    <Button Classes="NavArrowButton"
+            ToolTip.Tip="Назад">
+        <Path Data="M15.707 4.293a1 1 0 0 1 0 1.414L9.414 12l6.293 6.293a1 1 0 0 1-1.414 1.414l-7-7a1 1 0 0 1 0-1.414l7-7a1 1 0 0 1 1.414 0Z"
+              Fill="{DynamicResource TextPrimary}"
+              Width="9" Height="15"
+              Stretch="Uniform"/>
+    </Button>
+
+    <!-- ===== Вперёд ===== -->
+    <Button Classes="NavArrowButton"
+            ToolTip.Tip="Вперёд">
+        <Path Data="M8.293 4.293a1 1 0 0 0 0 1.414L14.586 12l-6.293 6.293a1 1 0 1 0 1.414 1.414l7-7a1 1 0 0 0 0-1.414l-7-7a1 1 0 0 0-1.414 0Z"
+              Fill="{DynamicResource TextPrimary}"
+              Width="9" Height="15"
+              Stretch="Uniform"/>
+    </Button>
+
+    <!-- ===== Поиск ===== -->
+    <Border Classes="SearchContainer"
+            Width="420"
+            Padding="4,0">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <Path Grid.Column="0"
+                  Data="{StaticResource SearchIcon}"
+                  Width="16" Height="16"
+                  Fill="{DynamicResource TextMuted}"
+                  Stretch="Uniform"
+                  Margin="8,0,6,0"
+                  VerticalAlignment="Center"/>
+
+            <TextBox Grid.Column="1"
+                     Classes="Borderless"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     Watermark="Поиск чатов и контактов..."
+                     Padding="4,8"
+                     FontSize="14"
+                     VerticalContentAlignment="Center"/>
+
+            <Button Grid.Column="2"
+                    Classes="ClearButton"
+                    IsVisible="{Binding HasSearchText}"
+                    Command="{Binding ClearSearchCommand}"
+                    ToolTip.Tip="Очистить"
+                    Margin="0,4,4,4">
+                <Path Data="{StaticResource CloseIcon}"
+                      Fill="{DynamicResource TextMuted}"
+                      Width="10" Height="10"
+                      Stretch="Uniform"/>
+            </Button>
+        </Grid>
+    </Border>
+</StackPanel>
+
+            <!-- Контент -->
+            <Border Background="{DynamicResource SecondaryBG}"
+                    Margin="0,8,9,9"
+                    CornerRadius="8">
+                <ContentControl Content="{Binding CurrentMenuViewModel}"/>
+            </Border>
+        </DockPanel>
+    </Grid>
 
 </UserControl>

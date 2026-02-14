@@ -66,28 +66,12 @@ public partial class PollViewModel : BaseViewModel
         }
     }
 
-    /// <summary>
-    /// Команда выбора варианта из UI (замена Tapped event handler).
-    /// Вызывается по нажатию на вариант опроса до голосования.
-    /// </summary>
     [RelayCommand]
     private void SelectOption(PollOptionViewModel? option)
     {
         if (option == null || !CanVote)
             return;
-
-        if (AllowsMultipleAnswers)
-        {
-            // Множественный выбор — переключаем
-            option.IsSelected = !option.IsSelected;
-        }
-        else
-        {
-            // Одиночный выбор — сбрасываем все, выбираем текущий
-            // (логика дублирована в OnOptionPropertyChanged,
-            //  но здесь toggle для удобства)
-            option.IsSelected = !option.IsSelected;
-        }
+        option.IsSelected = !option.IsSelected;
     }
 
     public void ApplyDto(PollDTO dto)

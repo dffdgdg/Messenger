@@ -67,13 +67,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     public bool IsSearchMode => SearchManager?.IsSearchMode ?? false;
 
-    public ChatsViewModel(
-        MainMenuViewModel parent,
-        bool isGroupMode,
-        IApiClientService apiClient,
-        IAuthManager authManager,
-        IChatViewModelFactory chatViewModelFactory,
-        IGlobalHubConnection globalHub)
+    public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient,
+        IAuthManager authManager, IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _isGroupMode = isGroupMode;
@@ -332,8 +327,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         var currentUserId = _authManager.Session.UserId ?? 0;
 
-        var result = await _apiClient.GetAsync<ChatDTO?>(
-            ApiEndpoints.Chat.UserContact(currentUserId, contactUserId));
+        var result = await _apiClient.GetAsync<ChatDTO?>(ApiEndpoints.Chat.UserContact(currentUserId, contactUserId));
 
         return result.Success ? result.Data : null;
     }
@@ -362,8 +356,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
                 var userId = _authManager.Session.UserId.Value;
 
-                var endpoint = IsGroupMode
-                    ? ApiEndpoints.Chat.UserGroups(userId)
+                var endpoint = IsGroupMode ? ApiEndpoints.Chat.UserGroups(userId)
                     : ApiEndpoints.Chat.UserDialogs(userId);
 
                 var result = await _apiClient.GetAsync<List<ChatDTO>>(endpoint);

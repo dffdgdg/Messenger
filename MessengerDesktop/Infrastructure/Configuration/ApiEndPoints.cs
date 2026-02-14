@@ -107,6 +107,12 @@ public static class ApiEndpoints
         /// <summary>GET/PUT/DELETE api/messages/{id}</summary>
         public static string ById(int id) => $"{Base}/{id}";
 
+        /// <summary>GET api/messages/{id}/transcription</summary>
+        public static string Transcription(int id) => $"{Base}/{id}/transcription";
+
+        /// <summary>POST api/messages/{id}/transcription/retry</summary>
+        public static string TranscriptionRetry(int id) => $"{Base}/{id}/transcription/retry";
+
         /// <summary>GET api/messages/chat/{chatId}?userId={userId}&amp;page={page}&amp;pageSize={pageSize}</summary>
         public static string ForChat(int chatId, int userId, int page, int pageSize)
             => $"{Base}/chat/{chatId}?userId={userId}&page={page}&pageSize={pageSize}";

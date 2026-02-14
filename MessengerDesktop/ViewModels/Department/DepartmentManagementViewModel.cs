@@ -225,9 +225,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
         }
 
         // Показываем диалог выбора пользователя
-        var selectedUser = ShowSelectUserAction != null
-            ? await ShowSelectUserAction(AvailableUsers)
-            : null;
+        var selectedUser = ShowSelectUserAction != null ? await ShowSelectUserAction(AvailableUsers) : null;
 
         if (selectedUser == null) return;
 

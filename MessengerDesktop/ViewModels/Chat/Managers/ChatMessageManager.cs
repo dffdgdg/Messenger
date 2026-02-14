@@ -73,7 +73,8 @@ public class ChatMessageManager(
                 }
 
                 UpdateBounds();
-                UpdateDateSeparators(); // <-- ДОБАВЛЕНО
+                UpdateDateSeparators();
+                RecalculateGrouping();
                 _hasMoreOlder = result.Data.HasMoreMessages;
                 _hasMoreNewer = false;
 
@@ -127,7 +128,8 @@ public class ChatMessageManager(
             }
 
             UpdateBounds();
-            UpdateDateSeparators(); // <-- ДОБАВЛЕНО
+            UpdateDateSeparators();
+            RecalculateGrouping();
             _hasMoreOlder = result.Data.HasMoreMessages;
             _hasMoreNewer = result.Data.HasNewerMessages;
 
@@ -152,6 +154,7 @@ public class ChatMessageManager(
             if (result is { Success: true, Data: not null })
             {
                 var members = _getMembersFunc();
+                var insertedCount = result.Data.Messages.Count;
 
                 for (int i = result.Data.Messages.Count - 1; i >= 0; i--)
                 {
@@ -160,6 +163,11 @@ public class ChatMessageManager(
 
                 UpdateBounds();
                 UpdateDateSeparators();
+
+                // Пересчитываем группировку для вставленных + граница со старыми
+                // Проще пересчитать всё, т.к. вставка была в начало
+                RecalculateGrouping();
+
                 _hasMoreOlder = result.Data.HasMoreMessages;
             }
         }
@@ -182,6 +190,7 @@ public class ChatMessageManager(
             if (result is { Success: true, Data: not null })
             {
                 var members = _getMembersFunc();
+                var startIndex = Messages.Count;
 
                 foreach (var msg in result.Data.Messages)
                 {
@@ -190,6 +199,21 @@ public class ChatMessageManager(
 
                 UpdateBounds();
                 UpdateDateSeparators();
+
+                // Пересчёт группировки: от предыдущего последнего до конца
+                if (startIndex > 0)
+                {
+                    // Обновляем стык старых и новых + все новые
+                    for (int i = Math.Max(0, startIndex - 1); i < Messages.Count; i++)
+                    {
+                        UpdateGroupingForIndex(i);
+                    }
+                }
+                else
+                {
+                    RecalculateGrouping();
+                }
+
                 _hasMoreNewer = result.Data.HasNewerMessages;
             }
         }
@@ -215,7 +239,25 @@ public class ChatMessageManager(
         Messages.Add(vm);
         UpdateBounds();
         UpdateDateSeparatorForNewMessage(vm);
+
+        // Группировка: обновляем последний добавленный + предыдущий
+        var index = Messages.Count - 1;
+        MessageViewModel.UpdateGroupingAround(Messages, index);
+
         _hasMoreNewer = false;
+    }
+
+    public void HandleMessageDeleted(int messageId)
+    {
+        var msg = Messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg == null) return;
+
+        var index = Messages.IndexOf(msg);
+        msg.MarkAsDeleted();
+
+        // После удаления группировка могла измениться:
+        // удалённые сообщения разрывают группу
+        MessageViewModel.UpdateGroupingAround(Messages, index);
     }
 
     public void MarkAsReadLocally(int messageId)
@@ -254,6 +296,35 @@ public class ChatMessageManager(
         return vm;
     }
 
+    #region Grouping
+
+    /// <summary>
+    /// Полный пересчёт группировки для всех сообщений
+    /// </summary>
+    private void RecalculateGrouping()
+    {
+        MessageViewModel.RecalculateGrouping(Messages);
+    }
+
+    /// <summary>
+    /// Пересчёт группировки для одного индекса
+    /// </summary>
+    private void UpdateGroupingForIndex(int index)
+    {
+        if (index < 0 || index >= Messages.Count) return;
+
+        var current = Messages[index];
+        var prev = index > 0 ? Messages[index - 1] : null;
+        var next = index < Messages.Count - 1 ? Messages[index + 1] : null;
+
+        current.IsContinuation = prev != null && MessageViewModel.CanGroup(prev, current);
+        current.HasNextFromSame = next != null && MessageViewModel.CanGroup(current, next);
+    }
+
+    #endregion
+
+    #region Bounds & Date Separators
+
     private void UpdateBounds()
     {
         if (Messages.Count > 0)
@@ -263,9 +334,6 @@ public class ChatMessageManager(
         }
     }
 
-    /// <summary>
-    /// Пересчитывает разделители дат для всех сообщений
-    /// </summary>
     private void UpdateDateSeparators()
     {
         DateTime? previousDate = null;
@@ -289,18 +357,13 @@ public class ChatMessageManager(
         }
     }
 
-    /// <summary>
-    /// Обновляет разделитель только для нового сообщения (оптимизация)
-    /// </summary>
     private void UpdateDateSeparatorForNewMessage(MessageViewModel newMessage)
     {
         var messageDate = newMessage.CreatedAt.Date;
 
-        // Находим предыдущее сообщение
         var index = Messages.IndexOf(newMessage);
         if (index <= 0)
         {
-            // Первое сообщение — всегда показываем разделитель
             newMessage.ShowDateSeparator = true;
             newMessage.DateSeparatorText = FormatDateSeparator(messageDate);
             return;
@@ -321,9 +384,6 @@ public class ChatMessageManager(
         }
     }
 
-    /// <summary>
-    /// Форматирует дату для разделителя
-    /// </summary>
     private static string FormatDateSeparator(DateTime date)
     {
         var today = DateTime.Today;
@@ -335,11 +395,11 @@ public class ChatMessageManager(
         if (date == yesterday)
             return "Вчера";
 
-        // В этом году — без года
         if (date.Year == today.Year)
             return date.ToString("d MMMM", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"));
 
-        // Другой год — с годом
         return date.ToString("d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"));
     }
+
+    #endregion
 }

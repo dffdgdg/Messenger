@@ -84,8 +84,7 @@ namespace MessengerAPI.Services.Chat
         {
             await accessControl.EnsureIsOwnerAsync(updatedByUserId, chatId);
 
-            var member = await _context.ChatMembers
-                .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId)
+            var member = await _context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId)
                 ?? throw new KeyNotFoundException("Пользователь не является участником чата");
 
             if (member.Role == ChatRole.Owner)

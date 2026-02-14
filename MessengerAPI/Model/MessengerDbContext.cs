@@ -183,7 +183,11 @@ public partial class MessengerDbContext : DbContext
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
             entity.Property(e => e.ReplyToMessageId).HasColumnName("reply_to_message_id");
             entity.Property(e => e.ForwardedFromMessageId).HasColumnName("forwarded_from_message_id");
+            entity.Property(e => e.IsVoiceMessage).HasColumnName("is_voice_message").HasDefaultValue(false);
 
+            entity.Property(e => e.TranscriptionStatus)
+                .HasColumnName("transcription_status")
+                .HasMaxLength(20);
             entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ChatId)
                 .HasConstraintName("Messages_ChatId_fkey");

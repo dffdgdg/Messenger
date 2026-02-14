@@ -75,6 +75,9 @@ public static class DependencyInjection
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IReadReceiptService, ReadReceiptService>();
+        services.AddSingleton<TranscriptionQueue>();
+        services.AddScoped<ITranscriptionService, TranscriptionService>();
+        services.AddHostedService<TranscriptionBackgroundService>();
 
         // Departments
         services.AddScoped<IDepartmentService, DepartmentService>();
@@ -89,8 +92,7 @@ public static class DependencyInjection
     {
         void configureJson(System.Text.Json.JsonSerializerOptions options)
         {
-            options.ReferenceHandler =
-                System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            options.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             options.WriteIndented = environment.IsDevelopment();
         }
 

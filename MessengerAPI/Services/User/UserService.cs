@@ -153,7 +153,7 @@ namespace MessengerAPI.Services.User
 
             var username = dto.NewUsername.Trim().ToLower();
 
-            if (!Regex.IsMatch(username, @"^[a-z0-9_]{3,30}$"))
+            if (!Regex.IsMatch(username, "^[a-z0-9_]{3,30}$"))
                 return Result.Failure("Username должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
 
             var exists = await _context.Users

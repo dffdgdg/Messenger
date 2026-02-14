@@ -257,8 +257,7 @@ namespace MessengerAPI.Services.Chat
                 var existingChat = await FindExistingContactChatAsync(
                     dto.CreatedById, contactUserId.Value);
                 if (existingChat is not null)
-                    throw new InvalidOperationException(
-                        "Диалог с этим пользователем уже существует");
+                    throw new InvalidOperationException("Диалог с этим пользователем уже существует");
             }
             else if (dto.Type != ChatType.Contact && string.IsNullOrWhiteSpace(dto.Name))
             {
@@ -344,8 +343,7 @@ namespace MessengerAPI.Services.Chat
             if (dto.ChatType.HasValue)
             {
                 if (!await accessControl.IsOwnerAsync(userId, chatId))
-                    throw new UnauthorizedAccessException(
-                        "Только владелец может изменить тип чата");
+                    throw new UnauthorizedAccessException("Только владелец может изменить тип чата");
 
                 chat.Type = dto.ChatType.Value;
             }
@@ -405,8 +403,7 @@ namespace MessengerAPI.Services.Chat
             var chat = await GetRequiredEntityAsync<Model.Chat>(chatId);
 
             if (chat.Type == ChatType.Contact)
-                throw new InvalidOperationException(
-                    "Нельзя установить аватар для диалога");
+                throw new InvalidOperationException("Нельзя установить аватар для диалога");
 
             var avatarPath = await fileService.SaveImageAsync(
                 file, "chats", chat.Avatar);
@@ -423,8 +420,7 @@ namespace MessengerAPI.Services.Chat
 
         #region Private Helpers
 
-        private async Task<Model.Chat?> FindExistingContactChatAsync(
-            int userId, int contactUserId)
+        private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
         {
             return await _context.Chats
                 .Include(c => c.ChatMembers)
@@ -434,15 +430,13 @@ namespace MessengerAPI.Services.Chat
                 .FirstOrDefaultAsync();
         }
 
-        private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(
-            int chatId, int currentUserId)
+        private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
         {
             var partners = await GetDialogPartnersAsync([chatId], currentUserId);
             return partners.GetValueOrDefault(chatId);
         }
 
-        private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(
-            List<int> chatIds, int currentUserId)
+        private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(List<int> chatIds, int currentUserId)
         {
             if (chatIds.Count == 0)
                 return [];

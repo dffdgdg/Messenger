@@ -1,7 +1,9 @@
-﻿using Avalonia;
+﻿using AsyncImageLoader;
+using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MessengerDesktop.Infrastructure;
+using MessengerDesktop.Infrastructure.ImageLoading;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
@@ -13,6 +15,7 @@ using MessengerDesktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 
 namespace MessengerDesktop
 {
@@ -66,6 +69,7 @@ namespace MessengerDesktop
                 desktop.MainWindow = mainWindow;
 
                 InitializePlatformServices(mainWindow);
+                ConfigureImageLoader();
 
                 var themeService = Services.GetRequiredService<IThemeService>();
                 themeService.LoadFromSettings();
@@ -80,6 +84,20 @@ namespace MessengerDesktop
             base.OnFrameworkInitializationCompleted();
         }
 
+        private void ConfigureImageLoader()
+        {
+            var httpClient = Services.GetRequiredService<HttpClient>();
+            var sessionStore = Services.GetRequiredService<ISessionStore>();
+
+            ImageLoader.AsyncImageLoader = new AuthenticatedImageLoader(
+                httpClient,
+                sessionStore,
+                ApiUrl
+            );
+
+            Debug.WriteLine("[App] AuthenticatedImageLoader configured");
+        }
+
         private void InitializePlatformServices(MainWindow mainWindow)
         {
             var platformService = Services.GetRequiredService<IPlatformService>();
@@ -92,7 +110,8 @@ namespace MessengerDesktop
             Debug.WriteLine("[App] Platform services initialized");
         }
 
-        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) => Debug.WriteLine("[App] Shutdown requested");
+        private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) =>
+            Debug.WriteLine("[App] Shutdown requested");
 
         private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {

@@ -40,6 +40,8 @@ public partial class MessageFileViewModel(
     public bool IsAudio => PreviewType == "audio";
     public bool IsGenericFile => PreviewType == "file";
 
+    public string? ImageUrl => IsImage ? Url : null;
+
     public string FileIcon => PreviewType switch
     {
         "image" => "🖼️",
@@ -135,7 +137,6 @@ public partial class MessageFileViewModel(
             }
             catch (ObjectDisposedException)
             {
-                
             }
         }
     }

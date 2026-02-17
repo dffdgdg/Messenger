@@ -13,37 +13,63 @@ using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
+/// <summary>
+/// ViewModel экрана чата. Partial-класс, логика распределена по файлам:
+/// <list type="bullet">
+///   <item><description>ChatViewModel.cs — состояние и свойства</description></item>
+///   <item><description>ChatViewModel.Commands.cs — UI-команды (кнопки)</description></item>
+///   <item><description>ChatViewModel.Editing.cs — редактирование/удаление сообщений</description></item>
+///   <item><description>ChatViewModel.Init.cs — инициализация, загрузка, dispose</description></item>
+///   <item><description>ChatViewModel.Messaging.cs — отправка, приём, скролл</description></item>
+///   <item><description>ChatViewModel.Reply.cs — ответы на сообщения</description></item>
+///   <item><description>ChatViewModel.Search.cs — поиск и навигация по результатам</description></item>
+///   <item><description>ChatViewModel.Voice.cs — голосовые сообщения и транскрипция</description></item>
+/// </list>
+/// </summary>
 public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 {
+    // ── Зависимости ──────────────────────────────────────────────────
+
     private readonly IApiClientService _apiClient;
     private readonly IAuthManager _authManager;
     private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
     private readonly INotificationService _notificationService;
     private readonly IChatNotificationApiService _notificationApiService;
     private readonly IGlobalHubConnection _globalHub;
-    private readonly int _chatId;
 
-    public event Action<MessageViewModel, bool>? ScrollToMessageRequested; // bool = withHighlight
-    public event Action<int, bool>? ScrollToIndexRequested; // bool = withHighlight
-    public event Action? ScrollToBottomRequested;
+    // ── Внутреннее состояние ─────────────────────────────────────────
+
+    private readonly int _chatId;
+    private readonly TaskCompletionSource _initTcs = new();
+    private CancellationTokenSource? _loadingCts;
+    private bool _disposed;
+    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
+
+    // ── Менеджеры ────────────────────────────────────────────────────
 
     private readonly ChatMessageManager _messageManager;
     private readonly ChatAttachmentManager _attachmentManager;
     private readonly ChatMemberLoader _memberLoader;
     private ChatHubConnection? _hubConnection;
 
-    private CancellationTokenSource? _loadingCts;
-    private bool _disposed;
-    private readonly TaskCompletionSource _initTcs = new();
-    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
-
+    /// <summary>Родительская ViewModel списка чатов.</summary>
     public ChatsViewModel Parent { get; }
+
+    // ── События скролла ──────────────────────────────────────────────
+
+    /// <summary>Запрос скролла к конкретному сообщению. bool — нужна ли подсветка.</summary>
+    public event Action<MessageViewModel, bool>? ScrollToMessageRequested;
+
+    /// <summary>Запрос скролла к индексу в коллекции. bool — нужна ли подсветка.</summary>
+    public event Action<int, bool>? ScrollToIndexRequested;
+
+    /// <summary>Запрос скролла в самый низ.</summary>
+    public event Action? ScrollToBottomRequested;
 
     #region Observable Properties
 
@@ -70,49 +96,38 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Computed Properties
 
+    /// <summary>Является ли чат личной перепиской (1 на 1).</summary>
     public bool IsContactChat => Chat?.Type == ChatType.Contact;
-    public bool IsGroupChat => Chat?.Type == ChatType.Chat || Chat?.Type == ChatType.Department;
-    public string InfoPanelTitle => IsContactChat ? "Информация о пользователе" : "Информация о группе";
 
+    /// <summary>Является ли чат групповым или департаментным.</summary>
+    public bool IsGroupChat => Chat?.Type is ChatType.Chat or ChatType.Department;
+
+    /// <summary>Заголовок инфо-панели в зависимости от типа чата.</summary>
+    public string InfoPanelTitle => IsContactChat
+        ? "Информация о пользователе"
+        : "Информация о группе";
+
+    /// <summary>Подзаголовок: онлайн-статус для контакта, кол-во участников для группы.</summary>
     public string InfoPanelSubtitle => IsContactChat
         ? IsContactOnline ? "в сети" : ContactLastSeen ?? "не в сети"
         : $"{Members.Count} участников";
 
+    /// <summary>Коллекция сообщений (проксируется из менеджера).</summary>
     public ObservableCollection<MessageViewModel> Messages => _messageManager.Messages;
+
+    /// <summary>Локальные вложения, ожидающие отправки.</summary>
     public ObservableCollection<LocalFileAttachment> LocalAttachments => _attachmentManager.Attachments;
+
+    /// <summary>Содержит ли текст переноса строки (для адаптации высоты поля ввода).</summary>
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
+
+    /// <summary>Есть ли более новые сообщения, которые ещё не подгружены.</summary>
     public bool HasMoreNewer => _messageManager.HasMoreNewer;
 
+    /// <summary>Нужно ли показывать кнопку «вниз».</summary>
     public bool ShowScrollToBottom => !IsScrolledToBottom;
 
-    /// <summary>
-    /// Скролл к сообщению из поиска (с подсветкой)
-    /// </summary>
-    public void ScrollToMessageFromSearch(MessageViewModel message)
-    {
-        ScrollToMessageRequested?.Invoke(message, true); // withHighlight = true
-    }
-
-    /// <summary>
-    /// Скролл к индексу из поиска (с подсветкой)
-    /// </summary>
-    public void ScrollToIndexFromSearch(int index)
-    {
-        ScrollToIndexRequested?.Invoke(index, true); // withHighlight = true
-    }
-
-    /// <summary>
-    /// Скролл к сообщению БЕЗ подсветки (внутреннее использование)
-    /// </summary>
-    public void ScrollToMessageSilent(MessageViewModel message)
-        => ScrollToMessageRequested?.Invoke(message, false); // withHighlight = false
-
-    /// <summary>
-    /// Скролл к индексу БЕЗ подсветки (внутреннее использование)
-    /// </summary>
-    public void ScrollToIndexSilent(int index)
-        => ScrollToIndexRequested?.Invoke(index, false); // withHighlight = false
-
+    /// <summary>Состояние боковой инфо-панели (хранится в store для сохранения между чатами).</summary>
     public bool IsInfoPanelOpen
     {
         get => _chatInfoPanelStateStore.IsOpen;
@@ -124,6 +139,10 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Проперти-обёртка для toggle-кнопки уведомлений.
+    /// При установке запускает команду переключения.
+    /// </summary>
     public bool IsChatNotificationsEnabled
     {
         get => IsNotificationEnabled;
@@ -134,6 +153,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
+    /// <summary>Набор популярных эмодзи для быстрой вставки.</summary>
     public List<string> PopularEmojis { get; } =
     [
         "😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅", "😭", "😤",
@@ -142,6 +162,8 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     ];
 
     #endregion
+
+    #region Constructor
 
     public ChatViewModel(
         int chatId,
@@ -166,33 +188,73 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _chatId = chatId;
         UserId = _authManager.Session.UserId ?? 0;
 
+        // Уведомляем глобальный хаб о текущем активном чате
         _globalHub.SetCurrentChat(_chatId);
 
-        _messageManager = new ChatMessageManager(chatId, UserId, apiClient, () => Members, fileDownloadService, notificationService);
+        // Инициализация менеджеров
+        _messageManager = new ChatMessageManager(
+            chatId, UserId, apiClient, () => Members, fileDownloadService, notificationService);
         _attachmentManager = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         _memberLoader = new ChatMemberLoader(chatId, UserId, apiClient);
 
+        // Заглушка до загрузки реальных данных — предотвращает binding-ошибки
         Chat = new ChatDTO { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
+        // Запуск асинхронной инициализации (fire-and-forget)
         _ = InitializeChatAsync();
     }
 
+    #endregion
+
+    #region Public API
+
+    /// <summary>
+    /// Ожидание завершения инициализации чата.
+    /// Используется в тестах и при необходимости дождаться готовности.
+    /// </summary>
     public Task WaitForInitializationAsync() => _initTcs.Task;
 
-    partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
-    partial void OnIsNotificationEnabledChanged(bool value) => OnPropertyChanged(nameof(IsChatNotificationsEnabled));
+    /// <summary>Скролл к сообщению из поиска (с подсветкой).</summary>
+    public void ScrollToMessageFromSearch(MessageViewModel message)
+        => ScrollToMessageRequested?.Invoke(message, true);
+
+    /// <summary>Скролл к индексу из поиска (с подсветкой).</summary>
+    public void ScrollToIndexFromSearch(int index)
+        => ScrollToIndexRequested?.Invoke(index, true);
+
+    /// <summary>Скролл к сообщению без подсветки (внутреннее использование).</summary>
+    public void ScrollToMessageSilent(MessageViewModel message)
+        => ScrollToMessageRequested?.Invoke(message, false);
+
+    /// <summary>Скролл к индексу без подсветки (внутреннее использование).</summary>
+    public void ScrollToIndexSilent(int index)
+        => ScrollToIndexRequested?.Invoke(index, false);
+
+    #endregion
+
+    #region Property Change Handlers
+
+    partial void OnChatChanged(ChatDTO? value) =>
+        OnPropertyChanged(nameof(IsInfoPanelOpen));
+
+    partial void OnIsNotificationEnabledChanged(bool value) =>
+        OnPropertyChanged(nameof(IsChatNotificationsEnabled));
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowScrollToBottom));
 
-        if (value)
-        {
-            HasNewMessages = false;
-            UnreadCount = 0;
-            _ = MarkMessagesAsReadAsync();
-        }
+        if (!value) return;
+
+        // При достижении конца списка сбрасываем счётчик непрочитанных
+        HasNewMessages = false;
+        UnreadCount = 0;
+        _ = MarkMessagesAsReadAsync();
     }
+
+    #endregion
+
+    #region Scroll Command
 
     [RelayCommand]
     private void ScrollToBottom()
@@ -201,4 +263,6 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         HasNewMessages = false;
         UnreadCount = 0;
     }
+
+    #endregion
 }

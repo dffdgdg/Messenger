@@ -11,15 +11,22 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
+    /// <summary>Сообщение, находящееся в режиме редактирования (null — режим выключен).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEditMode))]
     private MessageViewModel? _editingMessage;
 
+    /// <summary>Текст редактируемого сообщения (привязан к TextBox).</summary>
     [ObservableProperty]
     private string _editMessageContent = string.Empty;
 
+    /// <summary>Активен ли режим редактирования.</summary>
     public bool IsEditMode => EditingMessage != null;
 
+    /// <summary>
+    /// Войти в режим редактирования сообщения.
+    /// Отменяет текущий ответ и предыдущее редактирование.
+    /// </summary>
     [RelayCommand]
     private void StartEditMessage(MessageViewModel? message)
     {
@@ -27,10 +34,16 @@ public partial class ChatViewModel
 
         CancelReply();
         CancelEditMessage();
+
         EditingMessage = message;
         EditMessageContent = message.Content ?? string.Empty;
     }
 
+    /// <summary>
+    /// Сохранить отредактированное сообщение.
+    /// Если текст не изменился — просто выходит из режима.
+    /// Если текст пустой — удаляет сообщение.
+    /// </summary>
     [RelayCommand]
     private async Task SaveEditMessage()
     {
@@ -38,12 +51,14 @@ public partial class ChatViewModel
 
         var newContent = EditMessageContent?.Trim();
 
+        // Текст не изменился — ничего не делаем
         if (newContent == EditingMessage.Content)
         {
             CancelEditMessage();
             return;
         }
 
+        // Пустой текст = удаление
         if (string.IsNullOrWhiteSpace(newContent))
         {
             await DeleteMessage(EditingMessage);
@@ -75,6 +90,7 @@ public partial class ChatViewModel
         });
     }
 
+    /// <summary>Выйти из режима редактирования без сохранения.</summary>
     [RelayCommand]
     private void CancelEditMessage()
     {
@@ -82,6 +98,7 @@ public partial class ChatViewModel
         EditMessageContent = string.Empty;
     }
 
+    /// <summary>Удалить сообщение (soft-delete на сервере).</summary>
     [RelayCommand]
     private async Task DeleteMessage(MessageViewModel? message)
     {
@@ -103,6 +120,7 @@ public partial class ChatViewModel
         });
     }
 
+    /// <summary>Скопировать текст сообщения в буфер обмена.</summary>
     [RelayCommand]
     private async Task CopyMessageText(MessageViewModel? message)
     {
@@ -110,7 +128,8 @@ public partial class ChatViewModel
 
         try
         {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            if (Application.Current?.ApplicationLifetime
+                is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var clipboard = desktop.MainWindow?.Clipboard;
                 if (clipboard != null)

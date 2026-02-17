@@ -2,8 +2,8 @@
 using MessengerDesktop.Infrastructure.Helpers;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Realtime;
-using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerShared.DTO;
+using MessengerShared.DTO.User;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
@@ -16,6 +16,11 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
+    /// <summary>
+    /// Главный метод инициализации. Вызывается из конструктора (fire-and-forget).
+    /// Последовательно загружает: чат → участников → хаб → сообщения → настройки.
+    /// После — определяет позицию скролла.
+    /// </summary>
     private async Task InitializeChatAsync()
     {
         _loadingCts = new CancellationTokenSource();
@@ -25,34 +30,47 @@ public partial class ChatViewModel
         {
             IsInitialLoading = true;
 
+            // 1. Загрузка метаданных чата
             await LoadChatAsync(ct);
+
+            // 2. Загрузка участников (и контактного пользователя для 1-на-1)
             await LoadMembersAsync(ct);
+
+            // 3. Подключение к SignalR-хабу чата
             await InitHubAsync(ct);
 
+            // 4. Получение информации о прочитанных сообщениях
             var readInfo = await _hubConnection!.GetReadInfoAsync();
             _messageManager.SetReadInfo(readInfo);
 
+            // 5. Загрузка начальной порции сообщений
             var scrollToIndex = await _messageManager.LoadInitialMessagesAsync(ct);
 
+            // 6. Настройки уведомлений (не критично — ошибки глотаются)
             await LoadNotificationSettingsAsync(ct);
 
+            // 7. Подсчёт опросов
             UpdatePollsCount();
-            _initTcs.TrySetResult();
+
+            // 8. Инициализация голосовых сообщений
             var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
             InitializeVoice(audioRecorder);
 
-            // Скролл к нужной позиции БЕЗ подсветки
+            // Инициализация завершена
+            _initTcs.TrySetResult();
+
+            // 9. Скролл к нужной позиции
+            await Task.Delay(150, ct);
+
             if (scrollToIndex < Messages.Count - 1)
             {
-                // Есть непрочитанные - скроллим к первому непрочитанному
-                await Task.Delay(150, ct);
-                ScrollToIndexRequested?.Invoke(scrollToIndex.Value, false); // false = без подсветки
+                // Есть непрочитанные — скроллим к первому из них
+                ScrollToIndexRequested?.Invoke(scrollToIndex.Value, false);
                 Debug.WriteLine($"[ChatViewModel] Scrolling to first unread at index {scrollToIndex.Value}");
             }
             else
             {
-                // Нет непрочитанных или индекс в конце - скроллим вниз
-                await Task.Delay(150, ct);
+                // Всё прочитано — скроллим вниз
                 ScrollToBottomRequested?.Invoke();
                 Debug.WriteLine("[ChatViewModel] Scrolling to bottom (no unread or at end)");
             }
@@ -73,12 +91,14 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>Загружает метаданные чата (название, аватар, тип).</summary>
     private async Task LoadChatAsync(CancellationToken ct)
     {
         var result = await _apiClient.GetAsync<ChatDTO>(ApiEndpoints.Chat.ById(_chatId), ct);
 
         if (result.Success && result.Data is not null)
         {
+            // Добавляем cache-buster к URL аватара
             if (!string.IsNullOrEmpty(result.Data.Avatar))
                 result.Data.Avatar = AvatarHelper.GetUrlWithCacheBuster(result.Data.Avatar);
 
@@ -90,18 +110,24 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>
+    /// Загружает участников чата.
+    /// Для контактных чатов дополнительно определяет собеседника.
+    /// </summary>
     private async Task LoadMembersAsync(CancellationToken ct)
     {
         Members = await _memberLoader.LoadMembersAsync(Chat, ct);
 
         if (IsContactChat)
-        {
             LoadContactUser();
-        }
 
         OnPropertyChanged(nameof(InfoPanelSubtitle));
     }
 
+    /// <summary>
+    /// Определяет собеседника в контактном чате (1-на-1).
+    /// Устанавливает аватар, имя и статус «последний раз в сети».
+    /// </summary>
     private void LoadContactUser()
     {
         try
@@ -111,29 +137,18 @@ public partial class ChatViewModel
 
             ContactUser = contact;
             IsContactOnline = contact.IsOnline;
+            ContactLastSeen = FormatLastSeen(contact);
 
-            if (!contact.IsOnline && contact.LastOnline.HasValue)
-            {
-                ContactLastSeen = (DateTime.Now - contact.LastOnline.Value).TotalMinutes switch
-                {
-                    < 1 => "был(а) только что",
-                    < 60 => $"был(а) {(int)(DateTime.Now - contact.LastOnline.Value).TotalMinutes} мин. назад",
-                    < 1440 => $"был(а) {(int)(DateTime.Now - contact.LastOnline.Value).TotalHours} ч. назад",
-                    < 2880 => "был(а) вчера",
-                    < 10080 => $"был(а) {(int)(DateTime.Now - contact.LastOnline.Value).TotalDays} дн. назад",
-                    _ => $"был(а) {contact.LastOnline.Value:dd.MM.yyyy}"
-                };
-            }
-
+            // Переопределяем название и аватар чата данными собеседника
             if (Chat != null)
             {
                 Chat.Name = contact.DisplayName ?? contact.Username ?? Chat.Name;
+
                 if (!string.IsNullOrEmpty(contact.Avatar))
-                {
                     Chat.Avatar = contact.Avatar;
-                }
             }
 
+            // Обновляем все зависимые свойства
             OnPropertyChanged(nameof(IsContactChat));
             OnPropertyChanged(nameof(IsGroupChat));
             OnPropertyChanged(nameof(InfoPanelTitle));
@@ -146,15 +161,33 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>Форматирует строку «последний раз в сети» для собеседника.</summary>
+    private static string? FormatLastSeen(UserDTO contact)
+    {
+        if (contact.IsOnline || !contact.LastOnline.HasValue)
+            return null;
+
+        var elapsed = DateTime.Now - contact.LastOnline.Value;
+
+        return elapsed.TotalMinutes switch
+        {
+            < 1 => "был(а) только что",
+            < 60 => $"был(а) {(int)elapsed.TotalMinutes} мин. назад",
+            < 1440 => $"был(а) {(int)elapsed.TotalHours} ч. назад",
+            < 2880 => "был(а) вчера",
+            < 10080 => $"был(а) {(int)elapsed.TotalDays} дн. назад",
+            _ => $"был(а) {contact.LastOnline.Value:dd.MM.yyyy}"
+        };
+    }
+
+    /// <summary>Загружает настройки уведомлений. Ошибки не критичны.</summary>
     private async Task LoadNotificationSettingsAsync(CancellationToken ct)
     {
         try
         {
             var settings = await _notificationApiService.GetChatSettingsAsync(_chatId, ct);
             if (settings != null)
-            {
                 IsNotificationEnabled = settings.NotificationsEnabled;
-            }
         }
         catch (Exception ex)
         {
@@ -162,6 +195,7 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>Создаёт и подключает SignalR-хаб для получения сообщений в реальном времени.</summary>
     private async Task InitHubAsync(CancellationToken ct)
     {
         _hubConnection = new ChatHubConnection(_chatId, _authManager);
@@ -170,20 +204,25 @@ public partial class ChatViewModel
         await _hubConnection.ConnectAsync(ct);
     }
 
+    /// <summary>
+    /// Освобождение ресурсов: отключение от хаба, отмена загрузок,
+    /// очистка коллекций, dispose менеджеров.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
+        // Сброс текущего чата в глобальном хабе
         if (_globalHub is GlobalHubConnection hub)
-        {
             hub.SetCurrentChat(null);
-        }
 
+        // Отмена текущих операций загрузки
         _loadingCts?.Cancel();
         _loadingCts?.Dispose();
         _loadingCts = null;
 
+        // Отключение от SignalR-хаба
         if (_hubConnection is not null)
         {
             _hubConnection.MessageReceived -= OnMessageReceived;
@@ -192,7 +231,10 @@ public partial class ChatViewModel
             _hubConnection = null;
         }
 
+        // Очистка голосовых ресурсов
         DisposeVoice();
+
+        // Очистка коллекций
         Messages.Clear();
         Members.Clear();
         LocalAttachments.Clear();

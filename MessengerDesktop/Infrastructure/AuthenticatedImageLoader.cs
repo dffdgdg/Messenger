@@ -1,6 +1,7 @@
 ﻿using AsyncImageLoader.Loaders;
 using MessengerDesktop.Services.Auth;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -8,16 +9,34 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.Infrastructure.ImageLoading;
 
-public sealed class AuthenticatedImageLoader(HttpClient httpClient,ISessionStore sessionStore, string apiBaseUrl) : RamCachedWebImageLoader
+public sealed class AuthenticatedImageLoader(
+    HttpClient httpClient,
+    ISessionStore sessionStore,
+    string apiBaseUrl) : RamCachedWebImageLoader
 {
-    private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    private readonly HttpClient _httpClient = httpClient
+        ?? throw new ArgumentNullException(nameof(httpClient));
     private readonly ISessionStore _sessionStore = sessionStore
-            ?? throw new ArgumentNullException(nameof(sessionStore));
+        ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly string _apiBaseUrl = apiBaseUrl?.TrimEnd('/')
-            ?? throw new ArgumentNullException(nameof(apiBaseUrl));
+        ?? throw new ArgumentNullException(nameof(apiBaseUrl));
+
+    // ✅ ДОБАВЛЕНО: белый список расширений изображений
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico", ".avif"
+    };
 
     protected override async Task<byte[]?> LoadDataFromExternalAsync(string url)
     {
+        // ✅ Ранний выход: не пытаемся декодировать не-картинки как Bitmap
+        var ext = GetExtension(url);
+        if (!string.IsNullOrEmpty(ext) && !ImageExtensions.Contains(ext))
+        {
+            Debug.WriteLine($"[AuthImageLoader] Skipping non-image: {GetFileName(url)}");
+            return null;
+        }
+
         // External URLs (CDN, gravatar, etc.) — use base loader
         if (!url.StartsWith(_apiBaseUrl, StringComparison.OrdinalIgnoreCase))
         {
@@ -34,10 +53,6 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient,ISessionStore
 
         try
         {
-            // Create a NEW request each time (headers are per-request).
-            // We do NOT set DefaultRequestHeaders on the shared HttpClient
-            // because ApiClientService already manages that,
-            // and concurrent requests could race.
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
@@ -50,6 +65,17 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient,ISessionStore
             {
                 Debug.WriteLine(
                     $"[AuthImageLoader] {(int)response.StatusCode} " +
+                    $"for: {GetFileName(url)}");
+                return null;
+            }
+
+            // ✅ ДОБАВЛЕНО: проверяем Content-Type ответа сервера
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+            if (!string.IsNullOrEmpty(contentType)
+                && !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.WriteLine(
+                    $"[AuthImageLoader] Non-image content-type '{contentType}' " +
                     $"for: {GetFileName(url)}");
                 return null;
             }
@@ -78,9 +104,30 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient,ISessionStore
     }
 
     /// <summary>
+    /// Extracts file extension from URL.
+    /// "https://localhost:7190/uploads/chats/4/abc.wav?v=123" → ".wav"
+    /// </summary>
+    private static string GetExtension(string url)
+    {
+        try
+        {
+            var path = new Uri(url).AbsolutePath;
+            var dot = path.LastIndexOf('.');
+            if (dot < 0) return "";
+            var ext = path[dot..];
+            // Отсекаем query-параметры, если они попали
+            var q = ext.IndexOf('?');
+            return q >= 0 ? ext[..q] : ext;
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    /// <summary>
     /// Extracts just the file name from URL for readable logs.
-    /// "https://localhost:7190/avatars/users/abc.webp?v=123"
-    /// → "abc.webp"
+    /// "https://localhost:7190/avatars/users/abc.webp?v=123" → "abc.webp"
     /// </summary>
     private static string GetFileName(string url)
     {

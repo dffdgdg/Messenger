@@ -10,10 +10,15 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
+    /// <summary>
+    /// Скроллит к сообщению по ID с подсветкой.
+    /// Если сообщение не загружено — подгружает окрестность через LoadMessagesAroundAsync.
+    /// </summary>
     public async Task ScrollToMessageAsync(int messageId)
     {
         try
         {
+            // Проверяем среди уже загруженных
             var existingMessage = Messages.FirstOrDefault(m => m.Id == messageId);
 
             if (existingMessage != null)
@@ -24,6 +29,7 @@ public partial class ChatViewModel
                 return;
             }
 
+            // Подгружаем окрестность
             var targetIndex = await _messageManager.LoadMessagesAroundAsync(messageId);
 
             if (targetIndex.HasValue)
@@ -33,9 +39,7 @@ public partial class ChatViewModel
 
                 var targetMessage = Messages.FirstOrDefault(m => m.Id == messageId);
                 if (targetMessage != null)
-                {
                     HighlightMessage(targetMessage);
-                }
             }
             else
             {
@@ -48,16 +52,21 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>
+    /// Подсвечивает сообщение и снимает подсветку через
+    /// <see cref="AppConstants.HighlightDurationMs"/> мс.
+    /// Сбрасывает подсветку у всех остальных сообщений.
+    /// </summary>
     private void HighlightMessage(MessageViewModel message)
     {
+        // Снимаем подсветку со всех
         foreach (var m in Messages)
-        {
             m.IsHighlighted = false;
-        }
 
         message.IsHighlighted = true;
         HighlightedMessageId = message.Id;
 
+        // Автоматический сброс через заданный интервал
         _ = Task.Run(async () =>
         {
             await Task.Delay(AppConstants.HighlightDurationMs);
@@ -69,6 +78,7 @@ public partial class ChatViewModel
         });
     }
 
+    /// <summary>Переход к результату поиска: выходит из режима поиска и скроллит.</summary>
     [RelayCommand]
     private async Task GoToSearchResult(MessageViewModel? searchResult)
     {

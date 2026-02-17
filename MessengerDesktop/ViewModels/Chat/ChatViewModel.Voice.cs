@@ -6,7 +6,6 @@ using MessengerDesktop.Services.Audio;
 using MessengerShared.DTO.Message;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,13 +13,25 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
+    // ── Зависимости ─────────────
+
     private IAudioRecorderService _audioRecorder = null!;
     private TranscriptionPoller _transcriptionPoller = null!;
+
+    // ── Внутреннее состояние ─────────────────────────────────────────
+
     private VoiceRecordingViewModel? _voiceRecording;
     private CancellationTokenSource? _voiceSendCts;
 
+    // ── Константы ────────────────────────────────────────────────────
+
+    /// <summary>Минимальная длительность голосового сообщения (сек).</summary>
     private const double MinVoiceDurationSeconds = 0.5;
+
+    /// <summary>Максимальная длительность голосового сообщения (сек). После — автостоп.</summary>
     private const double MaxVoiceDurationSeconds = 300;
+
+    // ── Observable Properties ────────────────────────────────────────
 
     [ObservableProperty] private bool _isVoiceRecording;
     [ObservableProperty] private bool _isVoiceSending;
@@ -28,12 +39,14 @@ public partial class ChatViewModel
     [ObservableProperty] private string? _voiceError;
     [ObservableProperty] private bool _isVoiceSupported;
 
+    /// <summary>Модель состояния текущей записи (таймер, визуализация).</summary>
     public VoiceRecordingViewModel? VoiceRecording
     {
         get => _voiceRecording;
         private set => SetProperty(ref _voiceRecording, value);
     }
 
+    /// <summary>Инициализация подсистемы голосовых сообщений.</summary>
     private void InitializeVoice(IAudioRecorderService audioRecorder)
     {
         _audioRecorder = audioRecorder;
@@ -41,6 +54,7 @@ public partial class ChatViewModel
         IsVoiceSupported = _audioRecorder.IsSupported;
     }
 
+    /// <summary>Освобождение ресурсов голосовой подсистемы.</summary>
     private void DisposeVoice()
     {
         _voiceRecording?.Dispose();
@@ -49,6 +63,7 @@ public partial class ChatViewModel
         _voiceSendCts?.Dispose();
     }
 
+    /// <summary>Начать запись голосового сообщения.</summary>
     [RelayCommand]
     private async Task StartVoiceRecording()
     {
@@ -70,6 +85,7 @@ public partial class ChatViewModel
             return;
         }
 
+        // Создаём модель записи для UI
         _voiceRecording?.Dispose();
         VoiceRecording = new VoiceRecordingViewModel(_audioRecorder);
         VoiceRecording.State = AudioRecordingState.Recording;
@@ -77,18 +93,20 @@ public partial class ChatViewModel
 
         IsVoiceRecording = true;
 
+        // Автоматическая остановка по достижении лимита
         _ = AutoStopAfterLimitAsync();
     }
 
+    /// <summary>
+    /// Автоматически останавливает запись после <see cref="MaxVoiceDurationSeconds"/>.
+    /// </summary>
     private async Task AutoStopAfterLimitAsync()
     {
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(MaxVoiceDurationSeconds));
             if (IsVoiceRecording)
-            {
                 await StopAndSendVoice();
-            }
         }
         catch (Exception ex)
         {
@@ -96,6 +114,7 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>Остановить запись и отправить голосовое сообщение.</summary>
     [RelayCommand]
     private async Task StopAndSendVoice()
     {
@@ -115,6 +134,7 @@ public partial class ChatViewModel
             return;
         }
 
+        // Валидация минимальной длительности
         if (result.Duration.TotalSeconds < MinVoiceDurationSeconds)
         {
             VoiceError = "Слишком короткое сообщение";
@@ -126,6 +146,7 @@ public partial class ChatViewModel
         await SendVoiceMessageAsync(result);
     }
 
+    /// <summary>Отменить запись или отправку голосового сообщения.</summary>
     [RelayCommand]
     private async Task CancelVoiceRecording()
     {
@@ -142,6 +163,10 @@ public partial class ChatViewModel
         ResetVoiceState();
     }
 
+    /// <summary>
+    /// Загружает аудиофайл на сервер и отправляет сообщение.
+    /// Поддерживает отмену через <see cref="_voiceSendCts"/>.
+    /// </summary>
     private async Task SendVoiceMessageAsync(AudioRecordingResult recording)
     {
         IsVoiceSending = true;
@@ -154,6 +179,7 @@ public partial class ChatViewModel
 
         try
         {
+            // 1. Загрузка аудиофайла
             recording.AudioStream.Position = 0;
             var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>(
                 ApiEndpoints.File.Upload(_chatId),
@@ -170,6 +196,7 @@ public partial class ChatViewModel
                 return;
             }
 
+            // 2. Отправка сообщения с прикреплённым файлом
             var msg = new MessageDTO
             {
                 ChatId = _chatId,
@@ -186,13 +213,9 @@ public partial class ChatViewModel
             if (ct.IsCancellationRequested) return;
 
             if (sendResult.Success)
-            {
                 CancelReply();
-            }
             else
-            {
                 VoiceError = $"Ошибка отправки: {sendResult.Error}";
-            }
         }
         catch (OperationCanceledException)
         {
@@ -209,6 +232,7 @@ public partial class ChatViewModel
         }
     }
 
+    /// <summary>Сбрасывает UI-состояние голосовой записи.</summary>
     private void ResetVoiceState()
     {
         IsVoiceRecording = false;
@@ -218,28 +242,27 @@ public partial class ChatViewModel
         VoiceRecording = null;
     }
 
+    /// <summary>
+    /// Запускает polling транскрипции для голосового сообщения,
+    /// если статус ещё не финальный (done/null).
+    /// </summary>
     public void StartTranscriptionPollingIfNeeded(MessageViewModel message)
     {
-        if (!message.IsVoiceMessage)
-            return;
-
-        if (message.TranscriptionStatus is "done" or null)
-            return;
+        if (!message.IsVoiceMessage) return;
+        if (message.TranscriptionStatus is "done" or null) return;
 
         _transcriptionPoller.StartPolling(message.Id, result =>
         {
             Dispatcher.UIThread.Post(() =>
-            {
-                message.UpdateTranscription(result.Status, result.Transcription);
-            });
+                message.UpdateTranscription(result.Status, result.Transcription));
         });
     }
 
+    /// <summary>Повторно запросить транскрипцию для голосового сообщения.</summary>
     [RelayCommand]
     private async Task RetryTranscription(MessageViewModel? message)
     {
-        if (message == null || !message.IsVoiceMessage)
-            return;
+        if (message == null || !message.IsVoiceMessage) return;
 
         message.UpdateTranscription("pending", null);
 
@@ -247,12 +270,8 @@ public partial class ChatViewModel
             ApiEndpoints.Message.TranscriptionRetry(message.Id), null);
 
         if (result.Success)
-        {
             StartTranscriptionPollingIfNeeded(message);
-        }
         else
-        {
             message.UpdateTranscription("failed", null);
-        }
     }
 }

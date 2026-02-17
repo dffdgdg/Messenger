@@ -72,10 +72,10 @@ public partial class MessageViewModel : ObservableObject
 
     public string TranscriptionStatusDisplay => TranscriptionStatus switch
     {
-        "pending" => "⏳ Ожидает расшифровки...",
-        "processing" => "🔄 Расшифровка...",
-        "done" => "✅ Расшифровано",
-        "failed" => "❌ Ошибка расшифровки",
+        "pending" => "Ожидает расшифровки...",
+        "processing" => "Расшифровка...",
+        "done" => "Расшифровано",
+        "failed" => "Ошибка расшифровки",
         _ => ""
     };
 

@@ -8,9 +8,9 @@
              x:DataType="vmChat:MessageFileViewModel">
 
     <UserControl.Styles>
-        <!-- ═════════════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════════
              ФАЙЛОВОЕ ВЛОЖЕНИЕ
-             ══════════════════════════════════════════════════════════ -->
+             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.FileAttachment">
             <Setter Property="Background" Value="#08000000"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -35,9 +35,9 @@
             <Setter Property="Background" Value="{DynamicResource Accent}"/>
         </Style>
 
-        <!-- ══════════════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════════
              ИЗОБРАЖЕНИЕ
-             ══════════════════════════════════════════════════════════ -->
+             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.ImageAttachment">
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="ClipToBounds" Value="True"/>
@@ -52,7 +52,6 @@
             <Setter Property="MinHeight" Value="120"/>
         </Style>
 
-        <!-- Оверлей при наведении на изображение -->
         <Style Selector="Border.ImageOverlay">
             <Setter Property="Background" Value="#66000000"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -68,7 +67,6 @@
             <Setter Property="Opacity" Value="1"/>
         </Style>
 
-        <!-- Кнопки оверлея изображения -->
         <Style Selector="Button.ImageOverlayButton">
             <Setter Property="Background" Value="#55000000"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -97,9 +95,9 @@
             <Setter Property="Background" Value="#AA000000"/>
         </Style>
 
-        <!-- ══════════════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════════
              КНОПКИ ДЕЙСТВИЙ ДЛЯ ФАЙЛА
-             ══════════════════════════════════════════════════════════ -->
+             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Button.FileActionButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -122,9 +120,9 @@
             <Setter Property="Background" Value="#18000000"/>
         </Style>
 
-        <!-- ══════════════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════════
              ОШИБКА
-             ══════════════════════════════════════════════════════════ -->
+             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.FileError">
             <Setter Property="Background" Value="#15FF4444"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -137,6 +135,19 @@
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════════
+             ПРОГРЕСС-БАР (стилизованный)
+             ═══════════════════════════════════════════════════════ -->
+        <Style Selector="ProgressBar.FileDownloadProgress">
+            <Setter Property="Height" Value="3"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="CornerRadius" Value="2"/>
         </Style>
     </UserControl.Styles>
 
@@ -166,13 +177,16 @@
                                    Foreground="{DynamicResource TextMuted}"
                                    Opacity="0.6"
                                    HorizontalAlignment="Center"
-                                   IsVisible="{Binding FileSizeFormatted, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                   IsVisible="{Binding FileSizeFormatted,
+                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Само изображение -->
+                <!-- ✅ ИСПРАВЛЕНО: Url → ImageUrl
+                     ImageUrl возвращает null для не-изображений,
+                     AsyncImageLoader НЕ пытается загрузить .wav/.rar -->
                 <Image Stretch="Uniform"
-                       asyncImageLoader:ImageLoader.Source="{Binding Url}"/>
+                       asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"/>
 
                 <!-- Overlay при наведении -->
                 <Border Classes="ImageOverlay">
@@ -243,11 +257,13 @@
                             <TextBlock Text="{Binding FileSizeFormatted}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextMuted}"
-                                       IsVisible="{Binding FileSizeFormatted, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                       IsVisible="{Binding FileSizeFormatted,
+                                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <TextBlock Text="·"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextMuted}"
-                                       IsVisible="{Binding FileSizeFormatted, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                       IsVisible="{Binding FileSizeFormatted,
+                                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <TextBlock Text="{Binding ContentType}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextMuted}"
@@ -261,11 +277,12 @@
                                 VerticalAlignment="Center"
                                 Spacing="2">
 
-                        <!-- Скачать / Скачано -->
                         <Button Classes="FileActionButton"
                                 Command="{Binding DownloadCommand}"
                                 IsVisible="{Binding !IsDownloading}"
-                                ToolTip.Tip="{Binding IsDownloaded, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue='Скачать'}"
+                                ToolTip.Tip="{Binding IsDownloaded,
+                                    Converter={x:Static StringConverters.IsNotNullOrEmpty},
+                                    FallbackValue='Скачать'}"
                                 AutomationProperties.Name="Скачать файл">
                             <Panel>
                                 <Path Data="{StaticResource DownloadIcon}"
@@ -323,24 +340,11 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Прогресс-бар -->
-                <Border Grid.Row="1"
-                        CornerRadius="2"
-                        ClipToBounds="True"
-                        Height="3"
-                        Margin="0,6,0,0"
-                        Background="{DynamicResource BorderDefault}"
-                        IsVisible="{Binding IsDownloading}">
-                    <Border Background="{DynamicResource Accent}"
-                            CornerRadius="2"
-                            HorizontalAlignment="Left">
-                        <Border.Width>
-                            <MultiBinding StringFormat="{}{0}%">
-                                <Binding Path="DownloadProgress"/>
-                            </MultiBinding>
-                        </Border.Width>
-                    </Border>
-                </Border>
+                <!-- ✅ ИСПРАВЛЕНО: ProgressBar вместо Border с процентной шириной -->
+                <ProgressBar Grid.Row="1"
+                             Classes="FileDownloadProgress"
+                             Value="{Binding DownloadProgress}"
+                             IsVisible="{Binding IsDownloading}"/>
 
                 <!-- Ошибка загрузки -->
                 <Border Grid.Row="1"

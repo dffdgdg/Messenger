@@ -29,8 +29,7 @@ namespace MessengerAPI.Services.Auth
             _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
         }
 
-        public async Task<Result<AuthResponseDTO>> LoginAsync(
-            string username, string password, CancellationToken ct = default)
+        public async Task<Result<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default)
         {
             try
             {

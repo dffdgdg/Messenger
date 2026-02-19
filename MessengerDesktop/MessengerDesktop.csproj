@@ -65,6 +65,8 @@
 		<PackageReference Include="Scrutor" Version="7.0.0" />
 		<PackageReference Include="SkiaSharp" Version="3.119.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
 	</ItemGroup>
 
 	<ItemGroup>

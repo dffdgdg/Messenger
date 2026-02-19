@@ -30,6 +30,10 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private bool _hasNextFromSame;
     [ObservableProperty] private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
 
+    // ── Forward ──
+    [ObservableProperty] private int? _forwardedFromMessageId;
+    [ObservableProperty] private string? _forwardedFromSenderName;
+
     public PollDTO? PollDto { get; set; }
     [ObservableProperty] private PollViewModel? _poll;
     public List<MessageFileDTO> Files { get; set; } = [];
@@ -55,13 +59,19 @@ public partial class MessageViewModel : ObservableObject
     public bool ShowNonVoiceFiles => HasFiles && !IsVoiceMessage && !IsDeleted;
     public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
     public bool ShowDeliveryStatus => IsOwn && !IsDeleted;
-    public bool CanEdit => IsOwn && !IsDeleted && Poll == null && !IsVoiceMessage;
     public bool CanDelete => IsOwn && !IsDeleted;
     public string DisplayContent => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
     public string EditedLabel => IsEdited ? "изм." : string.Empty;
     public string? EditedLabelFull => IsEdited && EditedAt.HasValue
         ? $"изменено {EditedAt.Value:HH:mm}" : null;
     public bool ShowSenderName => !IsOwn && !IsContinuation;
+
+    // ── Forward ──
+    public bool HasForward => ForwardedFromMessageId.HasValue;
+    public string ForwardedFromHeader => HasForward
+        ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}"
+        : string.Empty;
+    public bool CanEdit => IsOwn && !IsDeleted && Poll == null && !IsVoiceMessage && !HasForward;
 
     // Voice computed
     public bool ShowVoiceMessage => IsVoiceMessage && !IsDeleted;
@@ -110,9 +120,9 @@ public partial class MessageViewModel : ObservableObject
         // Voice message
         IsVoiceMessage = message.IsVoiceMessage;
         TranscriptionStatus = message.TranscriptionStatus;
-        // Расшифровка хранится в Content на сервере
         TranscriptionText = message.IsVoiceMessage ? message.Content : null;
 
+        // Reply
         ReplyToMessageId = message.ReplyToMessageId;
         if (message.ReplyToMessage != null)
         {
@@ -121,6 +131,13 @@ public partial class MessageViewModel : ObservableObject
                 ? "[Сообщение удалено]"
                 : message.ReplyToMessage.Content;
             ReplyToIsDeleted = message.ReplyToMessage.IsDeleted;
+        }
+
+        // Forward
+        ForwardedFromMessageId = message.ForwardedFromMessageId;
+        if (message.ForwardedFrom != null)
+        {
+            ForwardedFromSenderName = message.ForwardedFrom.OriginalSenderName;
         }
 
         if (message.Poll != null)
@@ -265,6 +282,18 @@ public partial class MessageViewModel : ObservableObject
     partial void OnTranscriptionTextChanged(string? value)
     {
         OnPropertyChanged(nameof(HasTranscriptionText));
+    }
+
+    partial void OnForwardedFromMessageIdChanged(int? value)
+    {
+        OnPropertyChanged(nameof(HasForward));
+        OnPropertyChanged(nameof(ForwardedFromHeader));
+        OnPropertyChanged(nameof(CanEdit));
+    }
+
+    partial void OnForwardedFromSenderNameChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ForwardedFromHeader));
     }
 
     private void UpdateGroupPosition()

@@ -17,14 +17,15 @@ public partial class ChatViewModel
 
     /// <summary>
     /// Начать ответ на сообщение.
-    /// Автоматически выходит из режима редактирования.
+    /// Автоматически выходит из режимов редактирования и пересылки.
     /// </summary>
     [RelayCommand]
     private void StartReply(MessageViewModel? message)
     {
-        if (message == null || message.IsDeleted) return;
+        if (message?.IsDeleted != false) return;
 
         CancelEditMessage();
+        CancelForward();
         ReplyingToMessage = message;
     }
 
@@ -83,6 +84,7 @@ public partial class ChatViewModel
     /// <summary>Снимает подсветку через 2 секунды.</summary>
     private static void ScheduleHighlightReset(MessageViewModel target)
     {
-        _ = Task.Delay(2000).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(() => target.IsHighlighted = false));
+        _ = Task.Delay(2000).ContinueWith(_ =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => target.IsHighlighted = false));
     }
 }

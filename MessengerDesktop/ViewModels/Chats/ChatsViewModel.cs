@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Factories;
@@ -14,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -25,6 +27,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     private readonly IAuthManager _authManager;
     private readonly IChatViewModelFactory _chatViewModelFactory;
     private readonly IGlobalHubConnection _globalHub;
+    private readonly ILocalCacheService _cacheService;
 
     private ChatViewModel? _subscribedChatVm;
     private bool _isFirstLoad = true;
@@ -68,7 +71,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     public bool IsSearchMode => SearchManager?.IsSearchMode ?? false;
 
     public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient,
-        IAuthManager authManager, IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub)
+        IAuthManager authManager, IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub,
+        ILocalCacheService cacheService)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _isGroupMode = isGroupMode;
@@ -76,6 +80,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _chatViewModelFactory = chatViewModelFactory ?? throw new ArgumentNullException(nameof(chatViewModelFactory));
         _globalHub = globalHub ?? throw new ArgumentNullException(nameof(globalHub));
+        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
 
         _globalHub.TotalUnreadChanged += OnTotalUnreadChanged;
         _globalHub.UnreadCountChanged += OnUnreadCountChanged;
@@ -341,6 +346,10 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  CACHE: Полностью переписанный LoadChats с stale-while-revalidate
+    // ═══════════════════════════════════════════════════════════════
+
     [RelayCommand]
     public async Task LoadChats()
     {
@@ -356,27 +365,14 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
                 var userId = _authManager.Session.UserId.Value;
 
-                var endpoint = IsGroupMode ? ApiEndpoints.Chat.UserGroups(userId)
-                    : ApiEndpoints.Chat.UserDialogs(userId);
-
-                var result = await _apiClient.GetAsync<List<ChatDTO>>(endpoint);
-
-                if (result.Success && result.Data != null)
+                // ═══ Phase 1: Показать кэш мгновенно (stale data) ═══
+                if (_isFirstLoad)
                 {
-                    var orderedChats = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
-
-                    foreach (var chat in orderedChats)
-                    {
-                        chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
-                    }
-
-                    Chats = new ObservableCollection<ChatDTO>(orderedChats);
-                    TotalUnreadCount = _globalHub.GetTotalUnread();
+                    await ShowCachedChatsAsync();
                 }
-                else
-                {
-                    ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
-                }
+
+                // ═══ Phase 2: Загрузить свежие данные с сервера ═══
+                await LoadFreshChatsFromServerAsync(userId);
             });
         }
         finally
@@ -385,6 +381,112 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             {
                 _isFirstLoad = false;
                 IsInitialLoading = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Мгновенно показывает чаты из локального кэша.
+    /// Если кэш пуст — ничего не делает (UI покажет loading).
+    /// </summary>
+    private async Task ShowCachedChatsAsync()
+    {
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            var cachedChats = await _cacheService.GetChatsAsync(IsGroupMode);
+
+            if (cachedChats.Count > 0)
+            {
+                // Проставляем актуальные unread counts из памяти (GlobalHubConnection)
+                foreach (var chat in cachedChats)
+                {
+                    chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
+                }
+
+                Chats = new ObservableCollection<ChatDTO>(cachedChats);
+                TotalUnreadCount = _globalHub.GetTotalUnread();
+
+                sw.Stop();
+                Debug.WriteLine(
+                    $"[ChatsVM] Showed {cachedChats.Count} cached {(IsGroupMode ? "groups" : "dialogs")} in {sw.ElapsedMilliseconds}ms");
+
+                // Скрываем loading сразу — данные уже на экране
+                IsInitialLoading = false;
+            }
+            else
+            {
+                Debug.WriteLine($"[ChatsVM] No cached {(IsGroupMode ? "groups" : "dialogs")}, waiting for server");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Ошибка кэша — не критично, продолжаем загрузку с сервера
+            Debug.WriteLine($"[ChatsVM] Cache read failed (non-critical): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Загружает свежий список чатов с сервера.
+    /// Обновляет UI и сохраняет в кэш.
+    /// </summary>
+    private async Task LoadFreshChatsFromServerAsync(int userId)
+    {
+        var endpoint = IsGroupMode
+            ? ApiEndpoints.Chat.UserGroups(userId)
+            : ApiEndpoints.Chat.UserDialogs(userId);
+
+        var result = await _apiClient.GetAsync<List<ChatDTO>>(endpoint);
+
+        if (result.Success && result.Data != null)
+        {
+            var orderedChats = result.Data
+                .OrderByDescending(c => c.LastMessageDate)
+                .ToList();
+
+            foreach (var chat in orderedChats)
+            {
+                chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
+            }
+
+            // ═══ Умное обновление: сохраняем выбранный чат ═══
+            var selectedId = SelectedChat?.Id;
+
+            Chats = new ObservableCollection<ChatDTO>(orderedChats);
+            TotalUnreadCount = _globalHub.GetTotalUnread();
+
+            // Восстанавливаем выбранный чат
+            if (selectedId.HasValue)
+            {
+                var restoredChat = Chats.FirstOrDefault(c => c.Id == selectedId.Value);
+                if (restoredChat != null && SelectedChat?.Id != restoredChat.Id)
+                {
+                    SelectedChat = restoredChat;
+                }
+            }
+
+            // ═══ CACHE: Сохраняем в кэш для следующего запуска ═══
+            try
+            {
+                await _cacheService.UpsertChatsAsync(orderedChats);
+                Debug.WriteLine(
+                    $"[ChatsVM] Cached {orderedChats.Count} {(IsGroupMode ? "groups" : "dialogs")}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatsVM] Cache write failed (non-critical): {ex.Message}");
+            }
+        }
+        else
+        {
+            // Сеть недоступна — если кэш уже показан, не показываем ошибку
+            if (Chats.Count == 0)
+            {
+                ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
+            }
+            else
+            {
+                Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
             }
         }
     }

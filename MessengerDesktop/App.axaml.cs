@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using MessengerDesktop.Data;
 using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Infrastructure.ImageLoading;
 using MessengerDesktop.Services;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace MessengerDesktop
 {
@@ -71,6 +73,9 @@ namespace MessengerDesktop
                 InitializePlatformServices(mainWindow);
                 ConfigureImageLoader();
 
+                // ═══ НОВОЕ: Инициализация локальной БД ═══
+                InitializeLocalDatabaseAsync().ConfigureAwait(false);
+
                 var themeService = Services.GetRequiredService<IThemeService>();
                 themeService.LoadFromSettings();
 
@@ -82,6 +87,26 @@ namespace MessengerDesktop
 
             Debug.WriteLine("[App] OnFrameworkInitializationCompleted completed");
             base.OnFrameworkInitializationCompleted();
+        }
+
+        /// <summary>
+        /// Инициализация локальной SQLite БД в фоне.
+        /// Не блокирует запуск UI — кэш будет готов к моменту
+        /// первого реального обращения (список чатов, открытие чата).
+        /// </summary>
+        private async Task InitializeLocalDatabaseAsync()
+        {
+            try
+            {
+                var localDb = Services.GetRequiredService<LocalDatabase>();
+                await localDb.InitializeAsync();
+                Debug.WriteLine("[App] Local database initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                // Не критично — приложение работает и без кэша
+                Debug.WriteLine($"[App] Local database init failed (non-critical): {ex.Message}");
+            }
         }
 
         private void ConfigureImageLoader()
@@ -151,6 +176,9 @@ namespace MessengerDesktop
 
                 var navigationService = Services.GetService<INavigationService>() as IDisposable;
                 navigationService?.Dispose();
+
+                var localDb = Services.GetService<LocalDatabase>();
+                localDb?.Dispose();
 
                 (Services as IDisposable)?.Dispose();
 

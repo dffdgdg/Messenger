@@ -11,17 +11,12 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
-    /// <summary>
-    /// Обработчик нового сообщения из SignalR.
-    /// Добавляет в коллекцию и, если нужно, запускает polling транскрипции.
-    /// </summary>
     private void OnMessageReceived(MessageDTO messageDto) =>
         Dispatcher.UIThread.Post(async () =>
         {
             _messageManager.AddReceivedMessage(messageDto);
             UpdatePollsCount();
 
-            // Запуск polling транскрипции для голосовых сообщений
             var addedMsg = Messages.LastOrDefault(m => m.Id == messageDto.Id);
             if (addedMsg != null)
                 StartTranscriptionPollingIfNeeded(addedMsg);
@@ -32,26 +27,17 @@ public partial class ChatViewModel
                 await MarkMessagesAsReadAsync();
         });
 
-    /// <summary>
-    /// Обработчик события «сообщение прочитано» из SignalR.
-    /// Обновляет статус доставки для исходящих сообщений.
-    /// </summary>
     private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt) =>
         Dispatcher.UIThread.Post(() =>
         {
             if (!lastReadMessageId.HasValue) return;
 
-            foreach (var msg in Messages
-                         .Where(m => m.Id <= lastReadMessageId.Value && m.SenderId == UserId))
+            foreach (var msg in Messages.Where(m => m.Id <= lastReadMessageId.Value && m.SenderId == UserId))
             {
                 msg.IsRead = true;
             }
         });
 
-    /// <summary>
-    /// Вызывается View при появлении сообщения в видимой области.
-    /// Отмечает сообщение как прочитанное (однократно).
-    /// </summary>
     public async Task OnMessageVisibleAsync(MessageViewModel message)
     {
         if (!message.IsUnread || message.SenderId == UserId)
@@ -64,11 +50,6 @@ public partial class ChatViewModel
             await _hubConnection.MarkMessageAsReadAsync(message.Id);
     }
 
-    /// <summary>
-    /// Отправляет серверу отметку о прочтении.
-    /// Защищено cooldown'ом (<see cref="AppConstants.MarkAsReadCooldownSeconds"/>),
-    /// чтобы не спамить при быстром скролле.
-    /// </summary>
     public async Task MarkMessagesAsReadAsync(int? messageId = null)
     {
         var now = DateTime.UtcNow;
@@ -81,10 +62,8 @@ public partial class ChatViewModel
             await _hubConnection.MarkAsReadAsync(messageId);
     }
 
-    /// <summary>Упрощённый вызов для View — отметить видимые сообщения как прочитанные.</summary>
     public async Task OnMessagesVisibleAsync() => await MarkMessagesAsReadAsync();
 
-    /// <summary>Подгрузка старых сообщений при скролле вверх.</summary>
     [RelayCommand]
     private async Task LoadOlderMessages()
     {
@@ -104,7 +83,6 @@ public partial class ChatViewModel
         }
     }
 
-    /// <summary>Подгрузка новых сообщений при скролле вниз (при наличии пропуска).</summary>
     [RelayCommand]
     private async Task LoadNewerMessages()
     {
@@ -117,36 +95,53 @@ public partial class ChatViewModel
 
     /// <summary>
     /// Отправка нового сообщения.
-    /// Если активен режим редактирования — сохраняет редактирование.
-    /// Поддерживает вложения и ответы.
+    /// При forward — копирует контент оригинала если пользователь не написал свой текст.
     /// </summary>
     [RelayCommand]
     private async Task SendMessage()
     {
-        // В режиме редактирования кнопка «Отправить» = «Сохранить»
         if (IsEditMode)
         {
             await SaveEditMessage();
             return;
         }
 
-        // Не отправляем пустые сообщения без вложений
-        if (string.IsNullOrWhiteSpace(NewMessage) && LocalAttachments.Count == 0)
+        var forwarding = ForwardingMessage;
+        var hasForward = forwarding != null;
+        var hasText = !string.IsNullOrWhiteSpace(NewMessage);
+        var hasAttachments = LocalAttachments.Count > 0;
+
+        if (!hasText && !hasAttachments && !hasForward)
             return;
 
         await SafeExecuteAsync(async ct =>
         {
-            // Загружаем вложения на сервер
             var files = await _attachmentManager.UploadAllAsync(ct);
+
+            // При forward: если пользователь не написал свой текст,
+            // копируем контент оригинального сообщения
+            var content = NewMessage;
+            if (hasForward && string.IsNullOrWhiteSpace(content))
+            {
+                content = forwarding!.Content;
+            }
 
             var msg = new MessageDTO
             {
                 ChatId = _chatId,
-                Content = NewMessage,
+                Content = content,
                 SenderId = UserId,
                 Files = files,
-                ReplyToMessageId = ReplyingToMessage?.Id
+                ReplyToMessageId = ReplyingToMessage?.Id,
+                ForwardedFromMessageId = forwarding?.Id
             };
+
+            // При forward: если оригинал имел файлы, а пользователь не добавил свои —
+            // копируем файлы оригинала
+            if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
+            {
+                msg.Files = forwarding.Files;
+            }
 
             var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>(
                 ApiEndpoints.Message.Create, msg, ct);
@@ -156,6 +151,7 @@ public partial class ChatViewModel
                 NewMessage = string.Empty;
                 _attachmentManager.Clear();
                 CancelReply();
+                CancelForward();
             }
             else
             {
@@ -164,7 +160,6 @@ public partial class ChatViewModel
         });
     }
 
-    /// <summary>Скролл к последним сообщениям и сброс счётчика непрочитанных.</summary>
     [RelayCommand]
     private async Task ScrollToLatest()
     {
@@ -173,6 +168,5 @@ public partial class ChatViewModel
         await MarkMessagesAsReadAsync();
     }
 
-    /// <summary>Пересчитывает количество опросов среди загруженных сообщений.</summary>
     private void UpdatePollsCount() => PollsCount = _messageManager.GetPollsCount();
 }

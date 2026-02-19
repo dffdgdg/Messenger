@@ -30,6 +30,9 @@ public partial class MessageControl : UserControl
     public static readonly StyledProperty<ICommand?> RetryTranscriptionCommandProperty =
         AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(RetryTranscriptionCommand));
 
+    public static readonly StyledProperty<ICommand?> ForwardCommandProperty =
+        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ForwardCommand));
+
     public ICommand? EditMessageCommand
     {
         get => GetValue(EditMessageCommandProperty);
@@ -70,5 +73,11 @@ public partial class MessageControl : UserControl
     {
         get => GetValue(RetryTranscriptionCommandProperty);
         set => SetValue(RetryTranscriptionCommandProperty, value);
+    }
+
+    public ICommand? ForwardCommand
+    {
+        get => GetValue(ForwardCommandProperty);
+        set => SetValue(ForwardCommandProperty, value);
     }
 }

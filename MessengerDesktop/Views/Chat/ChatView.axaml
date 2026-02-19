@@ -12,7 +12,6 @@
              Background="Transparent">
 
     <UserControl.Styles>
-        <!-- ═══ Поле ввода ═══ -->
         <Style Selector="TextBox.ChatInput">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -35,7 +34,6 @@
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
 
-        <!-- ═══ Панель редактирования / ответа ═══ -->
         <Style Selector="Border.EditModePanel">
             <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -43,14 +41,12 @@
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
-        <!-- ═══ Превью вложений ═══ -->
         <Style Selector="Border.AttachmentPreview">
             <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="10"/>
         </Style>
 
-        <!-- ═══ Список сообщений ═══ -->
         <Style Selector="ListBox.MessagesList">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -80,30 +76,24 @@
                 Background="{DynamicResource SecondaryBG}">
             <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-                <!-- ═══════════════════════════════════════════════════
-                     ШАПКА ЧАТА
-                     ═══════════════════════════════════════════════════ -->
+                <!-- ═══ ШАПКА ЧАТА ═══ -->
                 <Border Grid.Row="0"
                         BorderBrush="{DynamicResource BorderDefault}"
                         BorderThickness="0,0,0,1"
                         Padding="16,0"
                         ZIndex="10">
                     <Grid ColumnDefinitions="Auto,*,Auto">
-                        <!-- Название чата -->
                         <TextBlock Grid.Column="0"
                                    Text="{Binding Chat.Name}"
                                    FontWeight="SemiBold"
                                    FontSize="18"
                                    VerticalAlignment="Center"/>
-
-                        <!-- Кнопки управления -->
                         <Border Grid.Column="2"
                                 HorizontalAlignment="Right"
                                 Background="{DynamicResource PrimaryBG}"
                                 CornerRadius="4"
                                 Margin="8">
                             <StackPanel Orientation="Horizontal">
-                                <!-- Поиск -->
                                 <ToggleButton Classes="IconButton"
                                               ToolTip.Tip="Поиск"
                                               CornerRadius="4,0,0,4"
@@ -114,8 +104,6 @@
                                           Width="20" Height="20"
                                           Stretch="Uniform"/>
                                 </ToggleButton>
-
-                                <!-- Инфо-панель -->
                                 <ToggleButton Classes="IconButton"
                                               ToolTip.Tip="Информация о канале"
                                               CornerRadius="0"
@@ -126,8 +114,6 @@
                                           Width="20" Height="20"
                                           Stretch="Uniform"/>
                                 </ToggleButton>
-
-                                <!-- Меню -->
                                 <Button Classes="IconButton"
                                         ToolTip.Tip="Меню"
                                         CornerRadius="0,4,4,0">
@@ -160,9 +146,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ═══════════════════════════════════════════════════
-                     ДЕКОРАТИВНЫЙ ФОН
-                     ═══════════════════════════════════════════════════ -->
+                <!-- ═══ ДЕКОРАТИВНЫЙ ФОН ═══ -->
                 <Panel Grid.Row="2" Grid.RowSpan="2">
                     <Border Opacity="0.4">
                         <Border.Background>
@@ -192,14 +176,10 @@
                     </Canvas>
                 </Panel>
 
-                <!-- ═══════════════════════════════════════════════════
-                     ОБЛАСТЬ СООБЩЕНИЙ
-                     ═══════════════════════════════════════════════════ -->
+                <!-- ═══ ОБЛАСТЬ СООБЩЕНИЙ ═══ -->
                 <Panel Grid.Row="2">
-                    <!-- Skeleton-загрузка -->
                     <controls:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
-                    <!-- Список сообщений -->
                     <ListBox x:Name="MessagesList"
                              Classes="MessagesList"
                              ItemsSource="{Binding Messages}"
@@ -222,12 +202,12 @@
                                     OpenProfileCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
                                     ReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartReplyCommand}"
                                     ScrollToReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).ScrollToReplyOriginalCommand}"
-                                    RetryTranscriptionCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RetryTranscriptionCommand}"/>
+                                    RetryTranscriptionCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RetryTranscriptionCommand}"
+                                    ForwardCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartForwardCommand}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- Кнопка «вниз» -->
                     <Button Classes="ScrollToBottomButton"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom"
@@ -241,8 +221,6 @@
                                   Stretch="Uniform"
                                   HorizontalAlignment="Center"
                                   Margin="0,25"/>
-
-                            <!-- Бейдж непрочитанных -->
                             <Border Background="{DynamicResource Accent}"
                                     CornerRadius="10"
                                     MinWidth="20" Height="20"
@@ -262,13 +240,11 @@
                     </Button>
                 </Panel>
 
-                <!-- ═══════════════════════════════════════════════════
-                     ПАНЕЛЬ ВВОДА
-                     ═══════════════════════════════════════════════════ -->
+                <!-- ═══ ПАНЕЛЬ ВВОДА ═══ -->
                 <Border Grid.Row="3" VerticalAlignment="Bottom" Padding="16,0,16,20">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
 
-                        <!-- Row 0: Панель редактирования -->
+                        <!-- Row 0: Редактирование -->
                         <Border Grid.Row="0"
                                 Classes="EditModePanel"
                                 IsVisible="{Binding IsEditMode}">
@@ -307,7 +283,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Row 1: Панель ответа -->
+                        <!-- Row 1: Ответ -->
                         <Border Grid.Row="1"
                                 Classes="EditModePanel"
                                 IsVisible="{Binding IsReplyMode}">
@@ -348,8 +324,46 @@
                             </Grid>
                         </Border>
 
-                        <!-- Row 2: Вложения -->
-                        <ItemsControl Grid.Row="2"
+                        <!-- Row 2: Пересылка (Forward) -->
+                        <Border Grid.Row="2"
+                                Classes="EditModePanel"
+                                IsVisible="{Binding IsForwardMode}">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0"
+                                        Width="4"
+                                        Background="#FF9800"
+                                        CornerRadius="2"
+                                        Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock FontWeight="SemiBold" FontSize="12"
+                                               Foreground="#FF9800">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="Переслать от {0}">
+                                                <Binding Path="ForwardingMessage.SenderName"
+                                                         FallbackValue="..."/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding ForwardPreviewText}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="2"/>
+                                </StackPanel>
+                                <Button Grid.Column="2"
+                                        Classes="IconButton Small"
+                                        Command="{Binding CancelForwardCommand}"
+                                        ToolTip.Tip="Отменить пересылку">
+                                    <TextBlock Text="✕" FontSize="14"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <!-- Row 3: Вложения -->
+                        <ItemsControl Grid.Row="3"
                                       ItemsSource="{Binding LocalAttachments}"
                                       Margin="0,0,0,8"
                                       IsVisible="{Binding LocalAttachments.Count}">
@@ -402,15 +416,14 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- Row 3: Панель записи голоса -->
-                        <Border Grid.Row="3"
+                        <!-- Row 4: Голосовые панели -->
+                        <Border Grid.Row="4"
                                 Background="{DynamicResource PrimaryBG}"
                                 CornerRadius="12"
                                 Padding="12,10"
                                 Margin="0,0,0,8"
                                 IsVisible="{Binding IsVoiceRecording}">
                             <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                                <!-- Мигающий индикатор записи -->
                                 <Ellipse Grid.Column="0"
                                          Width="12" Height="12"
                                          Fill="#FF4444"
@@ -435,8 +448,6 @@
                                         </Style>
                                     </Ellipse.Styles>
                                 </Ellipse>
-
-                                <!-- Таймер записи -->
                                 <ContentControl Grid.Column="1"
                                                 Content="{Binding VoiceRecording}"
                                                 Padding="0" MinHeight="0" BorderThickness="0"
@@ -451,14 +462,11 @@
                                         </DataTemplate>
                                     </ContentControl.ContentTemplate>
                                 </ContentControl>
-
                                 <TextBlock Grid.Column="2"
                                            Text="Запись голосового сообщения..."
                                            FontSize="13"
                                            Foreground="{DynamicResource TextSecondary}"
                                            VerticalAlignment="Center"/>
-
-                                <!-- Отмена записи -->
                                 <Button Grid.Column="3"
                                         Classes="IconButton Small"
                                         Command="{Binding CancelVoiceRecordingCommand}"
@@ -471,8 +479,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Индикатор отправки голоса -->
-                        <Border Grid.Row="3"
+                        <Border Grid.Row="4"
                                 Background="{DynamicResource PrimaryBG}"
                                 CornerRadius="12"
                                 Padding="12,10"
@@ -493,8 +500,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Ошибка голоса -->
-                        <Border Grid.Row="3"
+                        <Border Grid.Row="4"
                                 Background="#33FF4444"
                                 CornerRadius="10"
                                 Padding="10,8"
@@ -507,13 +513,12 @@
                                        TextWrapping="Wrap"/>
                         </Border>
 
-                        <!-- Row 4: Основная панель ввода -->
-                        <Border Grid.Row="4"
+                        <!-- Row 5: Ввод -->
+                        <Border Grid.Row="5"
                                 Background="{DynamicResource PrimaryBG}"
                                 CornerRadius="14"
                                 IsVisible="{Binding !IsVoiceRecording}">
                             <Grid Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
-                                <!-- Кнопка вложений -->
                                 <Button Grid.Column="0"
                                         Classes="IconButton"
                                         ToolTip.Tip="Прикрепить файл"
@@ -526,22 +531,16 @@
                                           Width="20" Height="20"
                                           Stretch="Uniform"/>
                                 </Button>
-
-                                <!-- Поле ввода (обычный режим) -->
                                 <TextBox Grid.Column="1"
                                          Classes="ChatInput"
                                          Text="{Binding NewMessage, Mode=TwoWay}"
                                          Watermark="Сообщение..."
                                          IsVisible="{Binding !IsEditMode}"/>
-
-                                <!-- Поле ввода (режим редактирования) -->
                                 <TextBox Grid.Column="1"
                                          Classes="ChatInput"
                                          Text="{Binding EditMessageContent, Mode=TwoWay}"
                                          Watermark="Редактирование..."
                                          IsVisible="{Binding IsEditMode}"/>
-
-                                <!-- Кнопка эмодзи -->
                                 <Button Grid.Column="2"
                                         Classes="IconButton"
                                         ToolTip.Tip="Эмодзи"
@@ -579,8 +578,6 @@
                                           Width="20" Height="20"
                                           Stretch="Uniform"/>
                                 </Button>
-
-                                <!-- Кнопка записи голоса -->
                                 <Button Grid.Column="3"
                                         Classes="IconButton"
                                         ToolTip.Tip="Записать голосовое сообщение"
@@ -589,12 +586,11 @@
                                         VerticalAlignment="Bottom"
                                         Command="{Binding StartVoiceRecordingCommand}"
                                         IsVisible="{Binding IsVoiceSupported}">
-                                    <TextBlock Text="🎤" FontSize="20"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
+                                    <Path  Data="M18.25 11a.75.75 0 0 1 .743.648l.007.102v.5a6.75 6.75 0 0 1-6.249 6.732l-.001 2.268a.75.75 0 0 1-1.493.102l-.007-.102v-2.268a6.75 6.75 0 0 1-6.246-6.496L5 12.25v-.5a.75.75 0 0 1 1.493-.102l.007.102v.5a5.25 5.25 0 0 0 5.034 5.246l.216.004h.5a5.25 5.25 0 0 0 5.246-5.034l.004-.216v-.5a.75.75 0 0 1 .75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Zm0 1.5A2.5 2.5 0 0 0 9.5 6v6a2.5 2.5 0 0 0 5 0V6A2.5 2.5 0 0 0 12 3.5Z"
+                                           Fill="{DynamicResource TextSecondary}"
+                                          Width="20" Height="20"
+                                          Stretch="Uniform"/>
                                 </Button>
-
-                                <!-- Кнопка отправки / сохранения -->
                                 <Button Grid.Column="4"
                                         Classes="Primary"
                                         Margin="4"
@@ -620,8 +616,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Панель ввода во время записи -->
-                        <Border Grid.Row="4"
+                        <Border Grid.Row="5"
                                 Background="{DynamicResource PrimaryBG}"
                                 CornerRadius="14"
                                 IsVisible="{Binding IsVoiceRecording}">

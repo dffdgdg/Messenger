@@ -18,7 +18,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
         </Style>
 
-        <!-- ═══ Метаданные (время, статус) ═══ -->
+        <!-- ═══ Метаданные ═══ -->
         <Style Selector="TextBlock.MessageMeta">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
@@ -33,7 +33,7 @@
             <Setter Property="Margin" Value="0,0,0,1"/>
         </Style>
 
-        <!-- ═══ Статус доставки (галочки) ═══ -->
+        <!-- ═══ Статус доставки ═══ -->
         <Style Selector="Path.DeliveryStatus">
             <Setter Property="Width" Value="14"/>
             <Setter Property="Height" Value="14"/>
@@ -117,6 +117,16 @@
             <Setter Property="Opacity" Value="0.6"/>
         </Style>
 
+        <!-- ═══ Forward label ═══ -->
+        <Style Selector="TextBlock.ForwardLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="MaxLines" Value="1"/>
+        </Style>
+
         <!-- ═══ Имя отправителя ═══ -->
         <Style Selector="TextBlock.SenderName">
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -140,7 +150,7 @@
             <Setter Property="VerticalAlignment" Value="Top"/>
         </Style>
 
-        <!-- ═══ Quick Actions (появляются при наведении) ═══ -->
+        <!-- ═══ Quick Actions ═══ -->
         <Style Selector="Border.MessageWrapper StackPanel.QuickActions">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="Transitions">
@@ -173,7 +183,7 @@
             <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
         </Style>
 
-        <!-- ═══ Панель транскрипции ═══ -->
+        <!-- ═══ Транскрипция ═══ -->
         <Style Selector="Border.TranscriptionPanel">
             <Setter Property="Background" Value="#08000000"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -184,9 +194,7 @@
 
     <StackPanel>
 
-        <!-- ═══════════════════════════════════════════════════════════
-             РАЗДЕЛИТЕЛЬ ДАТ
-             ═══════════════════════════════════════════════════════════ -->
+        <!-- ═══ РАЗДЕЛИТЕЛЬ ДАТ ═══ -->
         <Border IsVisible="{Binding ShowDateSeparator}"
                 HorizontalAlignment="Center"
                 Margin="0,16,0,12">
@@ -203,9 +211,7 @@
             </Border>
         </Border>
 
-        <!-- ═══════════════════════════════════════════════════════════
-             ОБЁРТКА СООБЩЕНИЯ
-             ═══════════════════════════════════════════════════════════ -->
+        <!-- ═══ ОБЁРТКА СООБЩЕНИЯ ═══ -->
         <Border Classes="MessageHighlight MessageWrapper"
                 Classes.Highlighted="{Binding IsHighlighted}"
                 Classes.DeletedMessage="{Binding IsDeleted}"
@@ -225,6 +231,17 @@
                               IsVisible="{Binding !IsDeleted}">
                         <MenuItem.Icon>
                             <Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <MenuItem Header="Переслать"
+                              Command="{Binding #BubbleRoot.ForwardCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding !IsDeleted}">
+                        <MenuItem.Icon>
+                            <Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
                                   Fill="{DynamicResource TextPrimary}"
                                   Width="14" Height="14" Stretch="Uniform"/>
                         </MenuItem.Icon>
@@ -253,7 +270,7 @@
                         </MenuItem.Icon>
                     </MenuItem>
 
-                    <MenuItem Header="Копиров��ть расшифровку"
+                    <MenuItem Header="Копировать расшифровку"
                               Command="{Binding #BubbleRoot.CopyTextCommand}"
                               CommandParameter="{Binding}"
                               IsVisible="{Binding HasTranscriptionText}">
@@ -311,7 +328,7 @@
                     </Button>
                 </Panel>
 
-                <!-- ═══ КОНТЕНТ СООБЩЕНИЯ ═══ -->
+                <!-- ═══ КОНТЕНТ ═══ -->
                 <StackPanel Grid.Column="1"
                             HorizontalAlignment="{Binding IsOwn,
                                 Converter={conv:Converter Name=BoolToHAlignment},
@@ -346,6 +363,11 @@
                             IsVisible="{Binding !HasPoll}">
                         <StackPanel>
 
+                            <!-- ── «Переслано от ...» — одна строка, как в Telegram ── -->
+                            <TextBlock Classes="ForwardLabel"
+                                       Text="{Binding ForwardedFromHeader}"
+                                       IsVisible="{Binding HasForward}"/>
+
                             <!-- ── Превью ответа ── -->
                             <Button Classes="ReplyPreviewButton"
                                     IsVisible="{Binding HasReply}"
@@ -369,7 +391,6 @@
                             <!-- ── Голосовое сообщение ── -->
                             <StackPanel IsVisible="{Binding ShowVoiceMessage}" Spacing="6">
 
-                                <!-- Заголовок -->
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Text="Голосовое сообщение"
                                                FontSize="14" FontWeight="Medium"
@@ -377,7 +398,6 @@
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
 
-                                <!-- Аудиофайл -->
                                 <ItemsControl ItemsSource="{Binding FileViewModels}"
                                               IsVisible="{Binding HasFiles}">
                                     <ItemsControl.ItemsPanel>
@@ -392,7 +412,6 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- Время + статус доставки -->
                                 <StackPanel Orientation="Horizontal"
                                             Spacing="3"
                                             HorizontalAlignment="Right"
@@ -406,20 +425,17 @@
                                           IsVisible="{Binding ShowDeliveryStatus}"/>
                                 </StackPanel>
 
-                                <!-- Транскрипция -->
                                 <Border Classes="TranscriptionPanel">
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="{Binding TranscriptionStatusDisplay}"
                                                    FontSize="12"
                                                    Foreground="{DynamicResource TextSecondary}"/>
-
                                         <SelectableTextBlock Text="{Binding TranscriptionText}"
                                                              FontSize="13"
                                                              Foreground="{DynamicResource TextPrimary}"
                                                              TextWrapping="Wrap"
                                                              LineHeight="18"
                                                              IsVisible="{Binding HasTranscriptionText}"/>
-
                                         <Button IsVisible="{Binding IsTranscriptionFailed}"
                                                 Classes="IconButton Small"
                                                 HorizontalAlignment="Left"
@@ -437,13 +453,12 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- ── Текст сообщения (скрыт для voice) ── -->
+                            <!-- ── Текст ── -->
                             <Panel IsVisible="{Binding HasTextContent}">
                                 <Grid>
                                     <SelectableTextBlock Classes="MessageText"
                                                          Text="{Binding DisplayContent}"
                                                          Margin="0,0,60,0"/>
-
                                     <StackPanel Classes="InlineMeta"
                                                 Orientation="Horizontal"
                                                 Spacing="3"
@@ -463,7 +478,7 @@
                                 </Grid>
                             </Panel>
 
-                            <!-- ── Удалённое сообщение ── -->
+                            <!-- ── Удалённое ── -->
                             <Panel IsVisible="{Binding IsDeleted}">
                                 <Grid>
                                     <TextBlock Text="{Binding DisplayContent}"
@@ -472,7 +487,6 @@
                                                FontSize="15"
                                                LineHeight="22"
                                                Margin="0,0,50,0"/>
-
                                     <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
                                                Classes="MessageMeta"
                                                HorizontalAlignment="Right"
@@ -513,6 +527,7 @@
                                       Classes.Unread="{Binding !IsRead}"
                                       IsVisible="{Binding ShowDeliveryStatus}"/>
                             </StackPanel>
+
                         </StackPanel>
                     </Border>
 
@@ -527,9 +542,7 @@
                                        TextWrapping="Wrap"
                                        LineHeight="20"
                                        Margin="0,2,0,4"/>
-
                             <chat:PollView DataContext="{Binding Poll}"/>
-
                             <StackPanel Orientation="Horizontal"
                                         Spacing="3"
                                         HorizontalAlignment="Right"
@@ -554,6 +567,17 @@
                             CommandParameter="{Binding}"
                             ToolTip.Tip="Ответить">
                         <Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
+                              Fill="{DynamicResource TextSecondary}"
+                              Width="14" Height="14"
+                              Stretch="Uniform"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Classes="QuickAction"
+                            Command="{Binding #BubbleRoot.ForwardCommand}"
+                            CommandParameter="{Binding}"
+                            ToolTip.Tip="Переслать">
+                        <Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
                               Fill="{DynamicResource TextSecondary}"
                               Width="14" Height="14"
                               Stretch="Uniform"

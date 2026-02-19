@@ -15,8 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решен
 		Readme.MD = Readme.MD
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messenger.Tests", "Messenger.Tests\Messenger.Tests.csproj", "{6EFD8E44-1287-4C24-A202-996790BD901A}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{ABC5CEB3-D286-47B5-BFCA-AFE5B5C4A372}"
 EndProject
 Global
@@ -37,10 +35,6 @@ Global
 		{B4A82D10-22FD-47AA-997E-1DC674B50E8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4A82D10-22FD-47AA-997E-1DC674B50E8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4A82D10-22FD-47AA-997E-1DC674B50E8D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6EFD8E44-1287-4C24-A202-996790BD901A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6EFD8E44-1287-4C24-A202-996790BD901A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6EFD8E44-1287-4C24-A202-996790BD901A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6EFD8E44-1287-4C24-A202-996790BD901A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

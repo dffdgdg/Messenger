@@ -72,6 +72,7 @@ public sealed class ConverterLocator
 
         // Multi converters
         AddMulti<BooleanAndConverter>("BooleanAnd");
+        AddMulti<BooleanOrConverter>("BooleanOr");
         AddMulti<LastSeenTextConverter>("LastSeen");
         AddMulti<HasTextOrAttachmentsMultiConverter>("HasTextOrAttachments");
         AddMulti<PercentToWidthConverter>("PercentToWidth");

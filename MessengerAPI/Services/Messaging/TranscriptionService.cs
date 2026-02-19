@@ -5,8 +5,7 @@ using MessengerShared.DTO.Message;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NAudio.Wave;
-using Vosk;
-using System.Text.Json;
+using System.Diagnostics;
 
 namespace MessengerAPI.Services.Messaging;
 
@@ -21,7 +20,10 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<TranscriptionService> _logger;
-    private readonly Vosk.Model _model;
+
+    private readonly string _whisperPath;
+    private readonly string _modelPath;
+
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private bool _disposed;
 
@@ -38,11 +40,20 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         _env = env;
         _logger = logger;
 
-        var modelPath = FindModelPath();
-        Vosk.Vosk.SetLogLevel(-1);
-        _model = new Vosk.Model(modelPath);
+        _whisperPath = Path.Combine(
+            _env.ContentRootPath,
+            "whisper",
+            OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
 
-        _logger.LogInformation("Vosk инициализирован: {Path}", modelPath);
+        _modelPath = Path.Combine(_env.ContentRootPath,"whisper","models","ggml-small-q5_1.bin");
+
+        if (!File.Exists(_whisperPath))
+            throw new FileNotFoundException("whisper бинарник не найден");
+
+        if (!File.Exists(_modelPath))
+            throw new FileNotFoundException("whisper модель не найдена");
+
+        _logger.LogInformation("Whisper инициализирован: {Model}", _modelPath);
     }
 
     #region Public API
@@ -148,52 +159,55 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     private async Task<string?> RecognizeAsync(string audioFilePath, CancellationToken ct)
     {
-        return await Task.Run(() =>
+        await _semaphore.WaitAsync(ct);
+        try
         {
-            _semaphore.Wait(ct);
-            try
-            {
-                return ProcessAudio(audioFilePath, ct);
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }, ct);
+            return await ProcessAudioWithWhisper(audioFilePath, ct);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
-    private string? ProcessAudio(string audioFilePath, CancellationToken ct)
+    private async Task<string?> ProcessAudioWithWhisper(string audioFilePath, CancellationToken ct)
     {
         var pcmData = ConvertToPcm16Mono16K(audioFilePath, ct);
-
         if (pcmData.Length == 0)
-        {
-            _logger.LogWarning("Пустой аудиофайл: {Path}", audioFilePath);
             return null;
-        }
 
-        using var recognizer = new VoskRecognizer(_model, TargetSampleRate);
-        recognizer.SetMaxAlternatives(0);
-        recognizer.SetWords(false);
+        var tempWav = Path.GetTempFileName() + ".wav";
 
-        const int chunkSize = 4096;
-        var chunk = new byte[chunkSize];
-
-        for (var offset = 0; offset < pcmData.Length; offset += chunkSize)
+        using (var writer = new WaveFileWriter(
+            tempWav,
+            new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
         {
-            ct.ThrowIfCancellationRequested();
-
-            var count = Math.Min(chunkSize, pcmData.Length - offset);
-            Array.Copy(pcmData, offset, chunk, 0, count);
-            recognizer.AcceptWaveform(chunk, count);
+            writer.Write(pcmData, 0, pcmData.Length);
         }
 
-        var result = recognizer.FinalResult();
-        var text = ExtractText(result);
+        var psi = new ProcessStartInfo
+        {
+            FileName = _whisperPath,
+            Arguments = $"-m \"{_modelPath}\" -f \"{tempWav}\" -l ru -nt -of -",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
 
-        _logger.LogDebug("Vosk: '{Text}' ({Bytes} bytes PCM)", text, pcmData.Length);
+        using var process = Process.Start(psi);
+        if (process == null)
+            return null;
 
-        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync(ct);
+
+        try { File.Delete(tempWav); } catch { }
+
+        var text = output?.Trim();
+        _logger.LogDebug("Whisper: {Text}", text);
+
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 
     #endregion
@@ -202,38 +216,24 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     private byte[] ConvertToPcm16Mono16K(string audioFilePath, CancellationToken ct)
     {
-        using var reader = new WaveFileReader(audioFilePath);
-        var sourceFormat = reader.WaveFormat;
+        using var reader = new AudioFileReader(audioFilePath);
 
-        if (IsTargetFormat(sourceFormat))
-            return ReadAllBytes(reader, ct);
+        var targetFormat = new WaveFormat(
+            TargetSampleRate,
+            TargetBitsPerSample,
+            TargetChannels);
 
-        _logger.LogDebug(
-            "Конвертация: {Rate}Hz/{Bits}bit/{Ch}ch → 16000Hz/16bit/1ch",
-            sourceFormat.SampleRate, sourceFormat.BitsPerSample, sourceFormat.Channels);
+        using var resampler = new MediaFoundationResampler(reader, targetFormat)
+        {
+            ResamplerQuality = 60
+        };
 
-        var floatSamples = ReadAsFloatSamples(reader, ct);
-        var monoSamples = ConvertToMono(floatSamples, sourceFormat.Channels);
-        var resampledSamples = Resample(monoSamples, sourceFormat.SampleRate, TargetSampleRate);
-
-        return ConvertFloatToPcm16(resampledSamples);
-    }
-
-    private static bool IsTargetFormat(WaveFormat format)
-    {
-        return format.SampleRate == TargetSampleRate
-            && format.BitsPerSample == TargetBitsPerSample
-            && format.Channels == TargetChannels
-            && format.Encoding == WaveFormatEncoding.Pcm;
-    }
-
-    private static byte[] ReadAllBytes(WaveFileReader reader, CancellationToken ct)
-    {
         using var ms = new MemoryStream();
+
         var buffer = new byte[8192];
         int bytesRead;
 
-        while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0)
+        while ((bytesRead = resampler.Read(buffer, 0, buffer.Length)) > 0)
         {
             ct.ThrowIfCancellationRequested();
             ms.Write(buffer, 0, bytesRead);
@@ -241,111 +241,23 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
         return ms.ToArray();
     }
-
-    private static float[] ReadAsFloatSamples(WaveFileReader reader, CancellationToken ct)
-    {
-        var sampleProvider = reader.ToSampleProvider();
-        var samples = new List<float>();
-        var buffer = new float[8192];
-        int samplesRead;
-
-        while ((samplesRead = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            for (var i = 0; i < samplesRead; i++)
-                samples.Add(buffer[i]);
-        }
-
-        return samples.ToArray();
-    }
-
-    private static float[] ConvertToMono(float[] samples, int channels)
-    {
-        if (channels == 1) return samples;
-
-        var monoLength = samples.Length / channels;
-        var mono = new float[monoLength];
-
-        for (var i = 0; i < monoLength; i++)
-        {
-            var sum = 0f;
-            for (var ch = 0; ch < channels; ch++)
-                sum += samples[i * channels + ch];
-            mono[i] = sum / channels;
-        }
-
-        return mono;
-    }
-
-    private static float[] Resample(float[] samples, int sourceSampleRate, int targetSampleRate)
-    {
-        if (sourceSampleRate == targetSampleRate) return samples;
-
-        var ratio = (double)sourceSampleRate / targetSampleRate;
-        var newLength = (int)(samples.Length / ratio);
-        var resampled = new float[newLength];
-
-        for (var i = 0; i < newLength; i++)
-        {
-            var srcIndex = i * ratio;
-            var index = (int)srcIndex;
-            var fraction = (float)(srcIndex - index);
-
-            if (index + 1 < samples.Length)
-                resampled[i] = samples[index] * (1 - fraction) + samples[index + 1] * fraction;
-            else if (index < samples.Length)
-                resampled[i] = samples[index];
-        }
-
-        return resampled;
-    }
-
-    private static byte[] ConvertFloatToPcm16(float[] samples)
-    {
-        var bytes = new byte[samples.Length * 2];
-
-        for (var i = 0; i < samples.Length; i++)
-        {
-            var clamped = Math.Clamp(samples[i], -1f, 1f);
-            var value = (short)(clamped * short.MaxValue);
-            bytes[i * 2] = (byte)(value & 0xFF);
-            bytes[i * 2 + 1] = (byte)((value >> 8) & 0xFF);
-        }
-
-        return bytes;
-    }
-
-    #endregion
-
-    #region JSON
-
-    private static string? ExtractText(string jsonResult)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(jsonResult);
-            if (doc.RootElement.TryGetProperty("text", out var textElement))
-                return textElement.GetString();
-        }
-        catch { }
-
-        return null;
-    }
-
     #endregion
 
     #region Helpers
 
     private static async Task SetStatusAsync(
-        MessengerDbContext context, IHubNotifier hubNotifier,
-        Message message, string status, CancellationToken ct)
+        MessengerDbContext context,
+        IHubNotifier hubNotifier,
+        Message message,
+        string status,
+        CancellationToken ct)
     {
         message.TranscriptionStatus = status;
         await context.SaveChangesAsync(ct);
 
         await hubNotifier.SendToChatAsync(
-            message.ChatId, "TranscriptionStatusChanged",
+            message.ChatId,
+            "TranscriptionStatusChanged",
             new VoiceTranscriptionDTO
             {
                 MessageId = message.Id,
@@ -355,13 +267,16 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     }
 
     private static async Task SetFailedAsync(
-        MessengerDbContext context, IHubNotifier hubNotifier, Message message)
+        MessengerDbContext context,
+        IHubNotifier hubNotifier,
+        Message message)
     {
         message.TranscriptionStatus = "failed";
         await context.SaveChangesAsync(CancellationToken.None);
 
         await hubNotifier.SendToChatAsync(
-            message.ChatId, "TranscriptionStatusChanged",
+            message.ChatId,
+            "TranscriptionStatusChanged",
             new VoiceTranscriptionDTO
             {
                 MessageId = message.Id,
@@ -374,35 +289,10 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     {
         if (string.IsNullOrEmpty(relativePath))
             return string.Empty;
+
         return Path.Combine(
             _env.WebRootPath ?? "wwwroot",
             relativePath.TrimStart('/'));
-    }
-
-    private string FindModelPath()
-    {
-        var searchPaths = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "Models"),
-            Path.Combine(Directory.GetCurrentDirectory(), "Models"),
-            Path.Combine(_env.ContentRootPath, "Models"),
-            Path.Combine(_env.ContentRootPath, "Model")
-        };
-
-        foreach (var basePath in searchPaths)
-        {
-            if (!Directory.Exists(basePath)) continue;
-
-            var modelDir = Directory.GetDirectories(basePath, "vosk-model*")
-                .FirstOrDefault();
-
-            if (modelDir != null) return modelDir;
-        }
-
-        throw new FileNotFoundException(
-            "Vosk модель не найдена. Скачайте:\n" +
-            "https://alphacephei.com/vosk/models → vosk-model-small-ru-0.22.zip\n" +
-            "Распакуйте в папку Models/");
     }
 
     private static bool IsAudioFile(string? contentType)
@@ -414,7 +304,6 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _model.Dispose();
         _semaphore.Dispose();
         GC.SuppressFinalize(this);
     }

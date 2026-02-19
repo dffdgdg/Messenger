@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
@@ -8,18 +9,11 @@ using MessengerDesktop.ViewModels.Chat;
 
 namespace MessengerDesktop.ViewModels.Factories;
 
-/// <summary>Фабрика для создания <see cref="ChatViewModel"/>.</summary>
 public interface IChatViewModelFactory
 {
-    /// <summary>
-    /// Создаёт ViewModel для указанного чата.
-    /// </summary>
-    /// <param name="chatId">ID чата.</param>
-    /// <param name="parent">Родительская ViewModel списка чатов.</param>
     ChatViewModel Create(int chatId, ChatsViewModel parent);
 }
 
-/// <inheritdoc />
 public class ChatViewModelFactory(
     IApiClientService apiClient,
     IAuthManager authManager,
@@ -28,9 +22,9 @@ public class ChatViewModelFactory(
     IChatNotificationApiService notificationApiService,
     IGlobalHubConnection globalHub,
     IFileDownloadService fileDownloadService,
-    IPlatformService platformService) : IChatViewModelFactory
+    IPlatformService platformService,
+    ILocalCacheService cacheService) : IChatViewModelFactory
 {
-    /// <inheritdoc />
     public ChatViewModel Create(int chatId, ChatsViewModel parent)
     {
         var storageProvider = platformService.MainWindow?.StorageProvider;
@@ -45,6 +39,7 @@ public class ChatViewModelFactory(
             notificationApiService,
             globalHub,
             fileDownloadService,
-            storageProvider);
+            storageProvider,
+            cacheService);
     }
 }

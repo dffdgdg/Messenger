@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
@@ -175,7 +176,8 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         IChatNotificationApiService notificationApiService,
         IGlobalHubConnection globalHub,
         IFileDownloadService fileDownloadService,
-        IStorageProvider? storageProvider = null)
+        IStorageProvider? storageProvider = null,
+        ILocalCacheService? cacheService = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
@@ -193,7 +195,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         // Инициализация менеджеров
         _messageManager = new ChatMessageManager(
-            chatId, UserId, apiClient, () => Members, fileDownloadService, notificationService);
+            chatId, UserId, apiClient, () => Members, fileDownloadService, notificationService, cacheService);
         _attachmentManager = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         _memberLoader = new ChatMemberLoader(chatId, UserId, apiClient);
 

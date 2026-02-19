@@ -1,4 +1,5 @@
-﻿using MessengerShared.DTO.Auth;
+﻿using MessengerDesktop.Services.Cache;
+using MessengerShared.DTO.Auth;
 using MessengerShared.Enum;
 using MessengerShared.Response;
 using System;
@@ -23,12 +24,14 @@ public class AuthManager : IAuthManager, IDisposable
 {
     private readonly IAuthService _authService;
     private readonly ISecureStorageService _secureStorage;
+    private readonly ICacheMaintenanceService _cacheMaintenance;
     private readonly TaskCompletionSource _initializationTcs = new();
     private readonly SemaphoreSlim _operationLock = new(1, 1);
 
     private const string TokenKey = "auth_token";
     private const string UserIdKey = "user_id";
     private const string UserRoleKey = "user_role";
+    private const string CachedUserIdKey = "cached_user_id";
 
     private readonly Task? _initializationTask;
     private bool _disposed;
@@ -36,11 +39,12 @@ public class AuthManager : IAuthManager, IDisposable
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
 
-    public AuthManager(IAuthService authService,ISecureStorageService secureStorage,ISessionStore sessionStore)
+    public AuthManager(IAuthService authService,ISecureStorageService secureStorage,ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
         Session = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _cacheMaintenance = cacheMaintenance ?? throw new ArgumentNullException(nameof(cacheMaintenance));
         _initializationTask = InitializeInternalAsync();
 
         _ = InitializeInternalAsync();
@@ -132,6 +136,8 @@ public class AuthManager : IAuthManager, IDisposable
             if (result.Success && result.Data != null)
             {
                 Debug.WriteLine($"AuthManager: Login successful for user {result.Data.Id}");
+
+                await CheckAndClearCacheOnUserChangeAsync(result.Data.Id);
                 await SaveAuthAsync(result.Data.Token, result.Data.Id, result.Data.Role);
                 Session.SetSession(result.Data.Token, result.Data.Id, result.Data.Role);
             }
@@ -174,6 +180,7 @@ public class AuthManager : IAuthManager, IDisposable
                 var result = await _authService.LogoutAsync(token);
             }
 
+            await ClearCacheOnLogoutAsync();
             await ClearStoredAuthAsync();
             Session.ClearSession();
 
@@ -197,6 +204,39 @@ public class AuthManager : IAuthManager, IDisposable
         finally
         {
             _operationLock.Release();
+        }
+    }
+
+    private async Task CheckAndClearCacheOnUserChangeAsync(int newUserId)
+    {
+        try
+        {
+            var cachedUserId = await _secureStorage.GetAsync<int?>(CachedUserIdKey);
+
+            if (cachedUserId.HasValue && cachedUserId.Value != newUserId)
+            {
+                Debug.WriteLine($"AuthManager: User changed ({cachedUserId.Value} → {newUserId}), clearing cache");
+                await _cacheMaintenance.ClearAllDataAsync();
+            }
+
+            await _secureStorage.SaveAsync(CachedUserIdKey, newUserId);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"AuthManager: Cache user check error: {ex.Message}");
+        }
+    }
+
+    private async Task ClearCacheOnLogoutAsync()
+    {
+        try
+        {
+            await _cacheMaintenance.ClearAllDataAsync();
+            Debug.WriteLine("AuthManager: Cache cleared on logout");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"AuthManager: Cache clear on logout error: {ex.Message}");
         }
     }
 

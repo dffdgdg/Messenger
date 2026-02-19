@@ -27,6 +27,10 @@ public partial class ChatViewModel
                 await MarkMessagesAsReadAsync();
         });
 
+    private void OnMessageUpdatedInChat(MessageDTO messageDto) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageUpdated(messageDto));
+
+    private void OnMessageDeletedInChat(int messageId) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageDeleted(messageId));
+
     private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt) =>
         Dispatcher.UIThread.Post(() =>
         {

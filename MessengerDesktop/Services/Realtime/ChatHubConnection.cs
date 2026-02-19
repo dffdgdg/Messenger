@@ -18,8 +18,11 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     private DateTime _lastSentReadTime = DateTime.MinValue;
 
     public event Action<MessageDTO>? MessageReceived;
+    public event Action<MessageDTO>? MessageUpdated;
+    public event Action<int>? MessageDeleted;
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, int>? UnreadCountUpdated;
+    public event Action? Reconnected;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
@@ -31,6 +34,8 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
             options.AccessTokenProvider = () => Task.FromResult(authManager.Session.Token)).WithAutomaticReconnect().Build();
 
             _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnMessageReceived);
+            _hubConnection.On<MessageDTO>("MessageUpdated", OnMessageUpdated);
+            _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeletedEvent);
             _hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageRead);
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
 
@@ -55,6 +60,7 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     {
         Debug.WriteLine($"[ChatHub] Reconnected, rejoining chat {chatId}");
         await _hubConnection!.InvokeAsync("JoinChat", chatId);
+        Reconnected?.Invoke();
     }
 
     public async Task<ChatReadInfoDTO?> GetReadInfoAsync()
@@ -128,6 +134,18 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     {
         if (message.ChatId == chatId)
             MessageReceived?.Invoke(message);
+    }
+
+    private void OnMessageUpdated(MessageDTO message)
+    {
+        if (message.ChatId == chatId)
+            MessageUpdated?.Invoke(message);
+    }
+
+    private void OnMessageDeletedEvent(MessageDeletedEvent evt)
+    {
+        if (evt.ChatId == chatId)
+            MessageDeleted?.Invoke(evt.MessageId);
     }
 
     private void OnMessageRead(int cId, int userId, int? lastReadMessageId, DateTime? readAt)

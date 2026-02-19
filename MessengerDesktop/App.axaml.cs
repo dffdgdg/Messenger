@@ -8,6 +8,7 @@ using MessengerDesktop.Infrastructure.ImageLoading;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Navigation;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.UI;
@@ -73,8 +74,8 @@ namespace MessengerDesktop
                 InitializePlatformServices(mainWindow);
                 ConfigureImageLoader();
 
-                // ═══ НОВОЕ: Инициализация локальной БД ═══
-                InitializeLocalDatabaseAsync().ConfigureAwait(false);
+                // Инициализация БД + maintenance в фоне
+                _ = InitializeLocalDatabaseAndMaintenanceAsync();
 
                 var themeService = Services.GetRequiredService<IThemeService>();
                 themeService.LoadFromSettings();
@@ -89,23 +90,22 @@ namespace MessengerDesktop
             base.OnFrameworkInitializationCompleted();
         }
 
-        /// <summary>
-        /// Инициализация локальной SQLite БД в фоне.
-        /// Не блокирует запуск UI — кэш будет готов к моменту
-        /// первого реального обращения (список чатов, открытие чата).
-        /// </summary>
-        private async Task InitializeLocalDatabaseAsync()
+        private async Task InitializeLocalDatabaseAndMaintenanceAsync()
         {
             try
             {
+                // 1. Инициализация БД
                 var localDb = Services.GetRequiredService<LocalDatabase>();
                 await localDb.InitializeAsync();
                 Debug.WriteLine("[App] Local database initialized successfully");
+
+                // 2. Maintenance (очистка старых данных) — не блокирует UI
+                var maintenance = Services.GetRequiredService<ICacheMaintenanceService>();
+                await maintenance.RunMaintenanceAsync();
             }
             catch (Exception ex)
             {
-                // Не критично — приложение работает и без кэша
-                Debug.WriteLine($"[App] Local database init failed (non-critical): {ex.Message}");
+                Debug.WriteLine($"[App] Local database/maintenance failed (non-critical): {ex.Message}");
             }
         }
 
@@ -177,6 +177,7 @@ namespace MessengerDesktop
                 var navigationService = Services.GetService<INavigationService>() as IDisposable;
                 navigationService?.Dispose();
 
+                // Dispose локальной БД
                 var localDb = Services.GetService<LocalDatabase>();
                 localDb?.Dispose();
 

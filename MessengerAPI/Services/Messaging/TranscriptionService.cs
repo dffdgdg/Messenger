@@ -178,7 +178,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
         var tempWav = Path.GetTempFileName() + ".wav";
 
-        using (var writer = new WaveFileWriter(
+        await using (var writer = new WaveFileWriter(
             tempWav,
             new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
         {
@@ -199,7 +199,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         if (process == null)
             return null;
 
-        var output = await process.StandardOutput.ReadToEndAsync();
+        var output = await process.StandardOutput.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
 
         try { File.Delete(tempWav); } catch { }
@@ -214,7 +214,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Audio Conversion
 
-    private byte[] ConvertToPcm16Mono16K(string audioFilePath, CancellationToken ct)
+    private static byte[] ConvertToPcm16Mono16K(string audioFilePath, CancellationToken ct)
     {
         using var reader = new AudioFileReader(audioFilePath);
 

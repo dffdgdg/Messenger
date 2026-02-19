@@ -1,0 +1,43 @@
+﻿version: "3.9"
+
+services:
+  messenger-api:
+    build:
+      context: .
+      dockerfile: MessengerAPI/Dockerfile
+    container_name: messenger-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=MessengerDB;Username=postgres;Password=123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - messenger_uploads:/app/wwwroot/uploads
+      - messenger_avatars:/app/wwwroot/avatars
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: messenger-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: MessengerDB
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d MessengerDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  messenger_uploads:
+  messenger_avatars:

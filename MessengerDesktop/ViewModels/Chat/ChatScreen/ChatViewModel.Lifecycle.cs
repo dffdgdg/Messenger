@@ -200,8 +200,29 @@ public partial class ChatViewModel
     {
         _hubConnection = new ChatHubConnection(_chatId, _authManager);
         _hubConnection.MessageReceived += OnMessageReceived;
+        _hubConnection.MessageUpdated += OnMessageUpdatedInChat;
+        _hubConnection.MessageDeleted += OnMessageDeletedInChat;
         _hubConnection.MessageRead += OnMessageRead;
+        _hubConnection.Reconnected += OnChatHubReconnected;
         await _hubConnection.ConnectAsync(ct);
+    }
+
+    private void OnChatHubReconnected()
+    {
+        Debug.WriteLine($"[ChatViewModel] Chat hub reconnected, triggering gap fill for chat {_chatId}");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var ct = _loadingCts?.Token ?? CancellationToken.None;
+                await _messageManager.GapFillAfterReconnectAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatViewModel] Gap fill error: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>
@@ -213,28 +234,26 @@ public partial class ChatViewModel
         if (_disposed) return;
         _disposed = true;
 
-        // Сброс текущего чата в глобальном хабе
         if (_globalHub is GlobalHubConnection hub)
             hub.SetCurrentChat(null);
 
-        // Отмена текущих операций загрузки
         _loadingCts?.Cancel();
         _loadingCts?.Dispose();
         _loadingCts = null;
 
-        // Отключение от SignalR-хаба
         if (_hubConnection is not null)
         {
             _hubConnection.MessageReceived -= OnMessageReceived;
+            _hubConnection.MessageUpdated -= OnMessageUpdatedInChat;
+            _hubConnection.MessageDeleted -= OnMessageDeletedInChat;
             _hubConnection.MessageRead -= OnMessageRead;
+            _hubConnection.Reconnected -= OnChatHubReconnected;
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
 
-        // Очистка голосовых ресурсов
         DisposeVoice();
 
-        // Очистка коллекций
         Messages.Clear();
         Members.Clear();
         LocalAttachments.Clear();

@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using MessengerDesktop.Services.Auth;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
 using MessengerShared.DTO.Message;
@@ -21,6 +22,8 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, bool>? UserStatusChanged;
     event Action<int, int>? UnreadCountChanged;
     event Action<int>? TotalUnreadChanged;
+    event Action<MessageDTO>? MessageUpdatedGlobally;
+    event Action<int, int>? MessageDeletedGlobally;
 
     bool IsConnected { get; }
 
@@ -33,12 +36,16 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     int GetTotalUnread();
 }
 
-public sealed class GlobalHubConnection(IAuthManager authManager,INotificationService notificationService,ISettingsService settingsService)
-    : IGlobalHubConnection
+public sealed class GlobalHubConnection(
+    IAuthManager authManager,
+    INotificationService notificationService,
+    ISettingsService settingsService,
+    ILocalCacheService cacheService) : IGlobalHubConnection
 {
     private readonly IAuthManager _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
     private readonly INotificationService _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
     private readonly ISettingsService _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    private readonly ILocalCacheService _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
 
     private HubConnection? _hubConnection;
     private bool _disposed;
@@ -52,6 +59,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     public event Action<int, bool>? UserStatusChanged;
     public event Action<int, int>? UnreadCountChanged;
     public event Action<int>? TotalUnreadChanged;
+    public event Action<MessageDTO>? MessageUpdatedGlobally;
+    public event Action<int, int>? MessageDeletedGlobally;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
@@ -96,8 +105,12 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             // Новое сообщение в чате
             _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnNewMessageReceived);
 
+            _hubConnection.On<MessageDTO>("MessageUpdated", OnMessageUpdated);
+            _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeleted);
+
             // Кто-то печатает
-            _hubConnection.On<int, int>("UserTyping", (chatId, userId) => Debug.WriteLine($"[GlobalHub] User {userId} is typing in chat {chatId}"));
+            _hubConnection.On<int, int>("UserTyping", (chatId, userId) =>
+                Debug.WriteLine($"[GlobalHub] User {userId} is typing in chat {chatId}"));
 
             _hubConnection.Reconnecting += error =>
             {
@@ -109,6 +122,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             {
                 Debug.WriteLine("[GlobalHub] Reconnected");
                 await LoadUnreadCountsAsync();
+                await ReconcileAfterReconnectAsync();
             };
 
             await _hubConnection.StartAsync(ct);
@@ -191,6 +205,16 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         {
             SetUnreadCountLocally(chatId, 0);
             await _hubConnection.InvokeAsync("MarkAsRead", chatId, (int?)null);
+
+            try
+            {
+                await _cacheService.UpdateReadPointerAsync(chatId, null, 0);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GlobalHub] Cache read pointer update error: {ex.Message}");
+            }
+
             Debug.WriteLine($"[GlobalHub] MarkAsRead sent for chat {chatId}");
         }
         catch (Exception ex)
@@ -260,6 +284,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     private void OnNewMessageReceived(MessageDTO message)
     {
+        _ = CacheIncomingMessageAsync(message);
+
         if (_currentChatId == message.ChatId)
             return;
 
@@ -267,6 +293,98 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             return;
 
         IncrementUnreadCount(message.ChatId);
+    }
+
+    private void OnMessageUpdated(MessageDTO message)
+    {
+        Debug.WriteLine($"[GlobalHub] MessageUpdated: id={message.Id}, chat={message.ChatId}");
+
+        // Обновляем в кэше
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _cacheService.UpsertMessageAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GlobalHub] Cache update error: {ex.Message}");
+            }
+        });
+
+        // Пробрасываем событие (ChatViewModel подпишется)
+        Dispatcher.UIThread.Post(() => MessageUpdatedGlobally?.Invoke(message));
+    }
+
+    private void OnMessageDeleted(MessageDeletedEvent evt)
+    {
+        Debug.WriteLine($"[GlobalHub] MessageDeleted: id={evt.MessageId}, chat={evt.ChatId}");
+
+        // Помечаем в кэше
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _cacheService.MarkMessageDeletedAsync(evt.MessageId);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GlobalHub] Cache delete error: {ex.Message}");
+            }
+        });
+
+        // Пробрасываем событие
+        Dispatcher.UIThread.Post(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
+    }
+
+    /// <summary>
+    /// Записывает входящее сообщение в кэш + обновляет last message чата.
+    /// Fire-and-forget, ошибки не критичны.
+    /// </summary>
+    private async Task CacheIncomingMessageAsync(MessageDTO message)
+    {
+        try
+        {
+            await _cacheService.UpsertMessageAsync(message);
+
+            // Обновляем превью последнего сообщения в списке чатов
+            var preview = message.Content?.Length > 100
+                ? message.Content[..100] + "..."
+                : message.Content;
+            await _cacheService.UpdateChatLastMessageAsync(
+                message.ChatId, preview, message.SenderName, message.CreatedAt);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GlobalHub] Cache incoming message error: {ex.Message}");
+        }
+    }
+
+    private async Task ReconcileAfterReconnectAsync()
+    {
+        try
+        {
+            // Для текущего открытого чата проверяем gap
+            if (_currentChatId.HasValue)
+            {
+                var syncState = await _cacheService.GetSyncStateAsync(_currentChatId.Value);
+                if (syncState?.NewestLoadedId != null)
+                {
+                    Debug.WriteLine(
+                        $"[GlobalHub] Reconcile: checking gap for chat {_currentChatId.Value}, " +
+                        $"newestCached={syncState.NewestLoadedId}");
+
+                    // Gap fill делает сам ChatMessageManager через RevalidateNewestAsync
+                    // Здесь просто логируем, что reconciliation нужен
+                }
+            }
+
+            Debug.WriteLine("[GlobalHub] Reconciliation check completed");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GlobalHub] Reconciliation error: {ex.Message}");
+        }
     }
 
     private void IncrementUnreadCount(int chatId)
@@ -353,7 +471,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             try
             {
                 _hubConnection.StopAsync().GetAwaiter().GetResult();
-
                 _hubConnection.DisposeAsync().AsTask().GetAwaiter().GetResult();
             }
             catch (Exception ex)
@@ -390,3 +507,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     #endregion
 }
+
+/// <summary>DTO для десериализации события MessageDeleted с сервера</summary>
+public record MessageDeletedEvent(int MessageId, int ChatId);

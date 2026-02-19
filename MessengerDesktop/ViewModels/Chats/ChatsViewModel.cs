@@ -465,7 +465,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 }
             }
 
-            // ═══ CACHE: Сохраняем в кэш для следующего запуска ═══
             try
             {
                 await _cacheService.UpsertChatsAsync(orderedChats);

@@ -26,7 +26,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<LocalDatabase>(sp =>
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var appData = Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData);
             var dbDir = Path.Combine(appData, "MessengerDesktop");
             Directory.CreateDirectory(dbDir);
             var dbPath = Path.Combine(dbDir, "messenger_cache.db");
@@ -36,7 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMessageCacheRepository, MessageCacheRepository>();
         services.AddSingleton<IChatCacheRepository, ChatCacheRepository>();
         services.AddSingleton<ILocalCacheService, LocalCacheService>();
-
+        services.AddSingleton<ICacheMaintenanceService, CacheMaintenanceService>();
         services.AddSingleton<IPlatformService, PlatformService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
@@ -72,7 +73,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
-
         services.AddSingleton<INotificationService, NotificationService>();
 
         services.AddSingleton<IFileDownloadService>(sp =>
@@ -84,7 +84,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
 
     public static IServiceCollection AddMessengerViewModels(this IServiceCollection services)
     {

@@ -63,7 +63,7 @@ public partial class MainMenuViewModel : BaseViewModel
     [ObservableProperty]
     private int _selectedMenuIndex = 1;
     private readonly IGlobalHubConnection _globalHub;
-    public static bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool ShowNoResults => HasSearchText  && !IsSearching;
 
     public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,IApiClientService apiClient,IAuthManager authManager,
@@ -110,9 +110,6 @@ public partial class MainMenuViewModel : BaseViewModel
                 CurrentMenuViewModel = _settingsViewModel;
                 break;
             case 1:
-                _chatsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: true);
-                CurrentMenuViewModel = _chatsViewModel;
-                break;
             case 2:
                 _chatsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: true);
                 CurrentMenuViewModel = _chatsViewModel;
@@ -147,11 +144,9 @@ public partial class MainMenuViewModel : BaseViewModel
 
                     _departmentViewModel.ShowRemoveConfirmAction = async member =>
                     {
-                        var dialog = new ConfirmDialogViewModel(
-                            "Удаление из отдела",
+                        var dialog = new ConfirmDialogViewModel("Удаление из отдела",
                             $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?",
-                            "Удалить",
-                            "Отмена");
+                            "Удалить","Отмена");
                         await _mainWindowViewModel.ShowDialogAsync(dialog);
                         return await dialog.Result;
                     };
@@ -171,6 +166,7 @@ public partial class MainMenuViewModel : BaseViewModel
     partial void OnSearchTextChanged(string value)
     {
         _searchCts?.Cancel();
+        _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
 
         OnPropertyChanged(nameof(HasSearchText));
@@ -360,13 +356,32 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
 
-    protected override async void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
-        if (disposing && _globalHub is IAsyncDisposable disposable)
+        if (disposing)
+        {
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
+
+            if (_globalHub is IAsyncDisposable asyncDisposable)
+            {
+                _ = DisposeGlobalHubAsync(asyncDisposable);
+            }
+        }
+        base.Dispose(disposing);
+    }
+
+    private static async Task DisposeGlobalHubAsync(IAsyncDisposable disposable)
+    {
+        try
         {
             await disposable.DisposeAsync();
         }
-        base.Dispose(disposing);
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainMenuViewModel] Global hub dispose error: {ex.Message}");
+        }
     }
 
     /// <summary>

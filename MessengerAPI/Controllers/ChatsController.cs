@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ChatsController(IChatService chatService,ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
+public class ChatsController(IChatService chatService, IChatMemberService chatMemberService, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
     public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserDialogs(int userId)
@@ -68,6 +68,31 @@ public class ChatsController(IChatService chatService,ILogger<ChatsController> l
             await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
             return await chatService.GetChatMembersAsync(chatId);
         }, "Участники чата получены успешно");
+    }
+
+    [HttpPost("{chatId}/members")]
+    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDTO dto)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
+        {
+            ValidateModel();
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId);
+        }, "Участник чата добавлен успешно");
+    }
+
+    [HttpDelete("{chatId}/members/{userId}")]
+    public async Task<IActionResult> RemoveChatMember(int chatId, int userId)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
+        {
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            await chatMemberService.RemoveMemberAsync(chatId, userId, currentUserId);
+        }, "Участник чата удалён успешно");
     }
 
     [HttpPost]

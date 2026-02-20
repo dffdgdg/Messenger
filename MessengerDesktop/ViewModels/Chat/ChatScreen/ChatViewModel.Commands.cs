@@ -51,9 +51,7 @@ public partial class ChatViewModel
     {
         if (Parent?.Parent is MainMenuViewModel menu)
         {
-            await menu.ShowPollDialogAsync(
-                _chatId,
-                async () => await _messageManager.LoadInitialMessagesAsync());
+            await menu.ShowPollDialogAsync(_chatId, async () => await _messageManager.LoadInitialMessagesAsync());
             return;
         }
 

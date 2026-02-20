@@ -69,6 +69,7 @@ public static class DependencyInjection
 
         // Chats
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IChatMemberService, ChatMemberService>();
         services.AddScoped<INotificationService, NotificationService>();
 
         // Messaging

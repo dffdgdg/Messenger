@@ -424,7 +424,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds)
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new { userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new UpdateChatMemberDTO { UserId = userId });
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -483,7 +483,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new { userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new UpdateChatMemberDTO { UserId = userId });
             }
 
             foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))

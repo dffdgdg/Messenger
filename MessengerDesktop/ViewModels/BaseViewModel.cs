@@ -33,7 +33,7 @@ namespace MessengerDesktop.ViewModels
         partial void OnSuccessMessageChanged(string? value) => OnSuccessMessageUpdated(value);
 
         /// <summary>
-        /// Вызывается при изменении IsBusy. 
+        /// Вызывается при изменении IsBusy.
         /// Переопределите для обновления CanExecute команд.
         /// </summary>
         protected virtual void OnIsBusyUpdated(bool value) { }

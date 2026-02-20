@@ -167,7 +167,7 @@ public partial class ChatViewModel
         if (contact.IsOnline || !contact.LastOnline.HasValue)
             return null;
 
-        var elapsed = DateTime.Now - contact.LastOnline.Value;
+        var elapsed = DateTimeOffset.UtcNow - contact.LastOnline.Value;
 
         return elapsed.TotalMinutes switch
         {
@@ -237,9 +237,12 @@ public partial class ChatViewModel
         if (_globalHub is GlobalHubConnection hub)
             hub.SetCurrentChat(null);
 
-        _loadingCts?.Cancel();
-        _loadingCts?.Dispose();
-        _loadingCts = null;
+        if (_loadingCts is not null)
+        {
+            await _loadingCts.CancelAsync();
+            _loadingCts.Dispose();
+            _loadingCts = null;
+        }
 
         if (_hubConnection is not null)
         {

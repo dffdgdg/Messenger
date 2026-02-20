@@ -302,9 +302,18 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        _semaphore.Dispose();
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+            _semaphore.Dispose();
+
+        _disposed = true;
     }
 }

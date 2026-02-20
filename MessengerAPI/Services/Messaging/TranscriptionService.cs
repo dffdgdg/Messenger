@@ -115,9 +115,9 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
             return Result.Success();
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Транскрибация {Id} отменена", messageId);
+            _logger.LogWarning(ex, "Транскрибация {Id} отменена", messageId);
             await SetFailedAsync(context, hubNotifier, message);
             return Result.Failure("Транскрибация отменена");
         }
@@ -176,13 +176,13 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         if (pcmData.Length == 0)
             return null;
 
-        var tempWav = Path.GetTempFileName() + ".wav";
+        var tempWav = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
 
         await using (var writer = new WaveFileWriter(
             tempWav,
             new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
         {
-            writer.Write(pcmData, 0, pcmData.Length);
+            await writer.WriteAsync(pcmData, ct);
         }
 
         var psi = new ProcessStartInfo
@@ -195,19 +195,22 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(psi);
-        if (process == null)
-            return null;
-
-        var output = await process.StandardOutput.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-
-        try { File.Delete(tempWav); } catch { }
-
-        var text = output?.Trim();
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process == null)
+                return null;
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+            var text = output?.Trim();
         _logger.LogDebug("Whisper: {Text}", text);
 
-        return string.IsNullOrWhiteSpace(text) ? null : text;
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+        finally
+        {
+            try { File.Delete(tempWav); } catch { }
+        }
     }
 
     #endregion

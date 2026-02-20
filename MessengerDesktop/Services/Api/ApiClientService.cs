@@ -304,11 +304,11 @@ namespace MessengerDesktop.Services.Api
 
         private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
         {
-            var tempPath = Path.GetTempFileName();
+            var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
             try
             {
-                await using (var fileStream = new FileStream(tempPath, FileMode.Create,
+                await using (var fileStream = new FileStream(tempPath, FileMode.CreateNew,
                     FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
                 {
                     await response.Content.CopyToAsync(fileStream, ct);
@@ -442,17 +442,23 @@ namespace MessengerDesktop.Services.Api
 
         private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _sessionStore.SessionChanged -= OnSessionChanged;
+
+                if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
+                {
+                    notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
+                }
+            }
+            _disposed = true;
+        }
+
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-
-            _sessionStore.SessionChanged -= OnSessionChanged;
-
-            if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-            {
-                notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
-            }
+            Dispose(disposing: true);
 
             GC.SuppressFinalize(this);
         }

@@ -17,6 +17,7 @@ namespace MessengerAPI.Services.Auth
 
     public class TokenService : ITokenService
     {
+        private const string SecretPlaceholder = "vRQHb2XjyCqD7hZP9xjMwN5tF3gAS4Ue";
         private readonly JwtSettings _settings;
         private readonly SymmetricSecurityKey _signingKey;
 
@@ -24,13 +25,13 @@ namespace MessengerAPI.Services.Auth
         {
             _settings = settings.Value;
 
-            if (string.IsNullOrEmpty(_settings.Secret))
+            if (string.IsNullOrWhiteSpace(_settings.Secret) || _settings.Secret == SecretPlaceholder)
                 throw new InvalidOperationException("JWT Secret is not configured");
 
             if (_settings.Secret.Length < 32)
                 throw new InvalidOperationException("JWT Secret must be at least 32 characters");
 
-            _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
+            _signingKey = CreateSigningKey(_settings.Secret);
         }
 
         public string GenerateToken(int userId, UserRole? role = null)
@@ -101,12 +102,14 @@ namespace MessengerAPI.Services.Auth
             };
         }
 
-        /// <summary>
-        /// Статический метод для конфигурации при старте приложения
-        /// </summary>
         public static TokenValidationParameters CreateValidationParameters(IConfiguration config)
         {
-            var secret = config["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret configuration is required");
+            var keyMaterial = config["Jwt:Secret"];
+            if (string.IsNullOrWhiteSpace(keyMaterial) || keyMaterial == SecretPlaceholder)
+                throw new InvalidOperationException("Jwt:Secret configuration is required");
+
+            if (keyMaterial.Length < 32)
+                throw new InvalidOperationException("Jwt:Secret must be at least 32 characters");
 
             var issuer = config["Jwt:Issuer"] ?? "MessengerAPI";
             var audience = config["Jwt:Audience"] ?? "MessengerClient";
@@ -114,7 +117,7 @@ namespace MessengerAPI.Services.Auth
             return new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                IssuerSigningKey = CreateSigningKey(keyMaterial),
                 ValidateIssuer = true,
                 ValidIssuer = issuer,
                 ValidateAudience = true,
@@ -123,5 +126,7 @@ namespace MessengerAPI.Services.Auth
                 ClockSkew = TimeSpan.Zero
             };
         }
+        private static SymmetricSecurityKey CreateSigningKey(string keyMaterial)
+           => new(Encoding.UTF8.GetBytes(keyMaterial));
     }
 }

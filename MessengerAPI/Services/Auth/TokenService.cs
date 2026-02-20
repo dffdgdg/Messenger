@@ -111,8 +111,14 @@ namespace MessengerAPI.Services.Auth
         public static TokenValidationParameters CreateValidationParameters(IConfiguration config)
         {
             var keyMaterial = config["Jwt:Secret"];
-            if (string.IsNullOrWhiteSpace(keyMaterial) || keyMaterial == SecretPlaceholder)
-                throw new InvalidOperationException("Jwt:Secret configuration is required");
+            if (string.IsNullOrWhiteSpace(keyMaterial)
+                || keyMaterial.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase)
+                || keyMaterial == SecretPlaceholder)
+            {
+                throw new InvalidOperationException(
+                    "Jwt:Secret configuration is required. Set via environment " +
+                    "variable or user-secrets. Do NOT commit secrets to source control.");
+            }
 
             if (keyMaterial.Length < 32)
                 throw new InvalidOperationException("Jwt:Secret must be at least 32 characters");

@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
              xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
+             xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Views.ChatEditDialog"
              x:DataType="vm:ChatEditDialogViewModel"
              mc:Ignorable="d"
@@ -26,25 +27,13 @@
                     <Grid Grid.Column="0" 
                           Width="80" Height="80" 
                           Margin="0,0,16,0">
-                        <Ellipse Width="80" Height="80">
-                            <Ellipse.Fill>
-                                <ImageBrush Source="{Binding AvatarPreview}" 
-                                            Stretch="UniformToFill"/>
-                            </Ellipse.Fill>
-                        </Ellipse>
-                        
-                        <!-- Плейсхолдер если нет аватара -->
-                        <Border Width="80" Height="80"
-                                CornerRadius="40"
-                                Background="{DynamicResource SurfaceVariant}"
-                                IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNull}}">
-                            <Path Data="{StaticResource GroupIcon}"
-                                  Width="32" Height="32"
-                                  Stretch="Uniform"
-                                  Fill="{DynamicResource TextSecondary}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
-                        </Border>
+
+                       <controls:AvatarControl Classes="XLarge"
+                                                Source="{Binding AvatarPreview}"
+                                                FallbackIcon="{StaticResource GroupIcon}"
+                                                ShowOnlineIndicator="False"
+                                                PlaceholderBackground="{DynamicResource SurfaceVariant}"
+                                                PlaceholderForeground="{DynamicResource TextSecondary}"/>
 
                         <!-- Кнопка выбора аватара -->
                         <Button Classes="IconButton"
@@ -167,31 +156,16 @@
                                                       VerticalAlignment="Center"/>
 
                                             <!-- Аватар -->
-                                            <Grid Grid.Column="1" 
-                                                  Width="36" Height="36"
-                                                  Margin="0,0,12,0">
-                                                <Ellipse Width="36" Height="36"
-                                                         IsVisible="{Binding HasAvatar}">
-                                                    <Ellipse.Fill>
-                                                        <ImageBrush Source="{Binding AvatarUrl}"
-                                                                    Stretch="UniformToFill"/>
-                                                    </Ellipse.Fill>
-                                                </Ellipse>
-                                                
-                                                <!-- Плейсхолдер -->
-                                                <Border Width="36" Height="36"
-                                                        CornerRadius="18"
-                                                        Background="{DynamicResource AccentLight}"
-                                                        IsVisible="{Binding !HasAvatar}">
-                                                    <TextBlock Text="{Binding DisplayName, 
-                                                                   Converter={conv:Converter Name=Initials}}"
-                                                               FontWeight="SemiBold"
-                                                               FontSize="14"
-                                                               Foreground="{DynamicResource AccentForeground}"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
-                                                </Border>
-                                            </Grid>
+                                            <controls:AvatarControl Grid.Column="1"
+                                                                    Size="36"
+                                                                    FontSize="14"
+                                                                    IconSize="16"
+                                                                    Source="{Binding AvatarUrl}"
+                                                                    DisplayName="{Binding DisplayName}"
+                                                                    ShowOnlineIndicator="False"
+                                                                    PlaceholderBackground="{DynamicResource AccentLight}"
+                                                                    PlaceholderForeground="{DynamicResource AccentForeground}"
+                                                                    Margin="0,0,12,0"/>
 
                                             <StackPanel Grid.Column="2" 
                                                         VerticalAlignment="Center"

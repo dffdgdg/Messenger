@@ -60,6 +60,44 @@ public partial class ChatViewModel
         await _notificationService.ShowErrorAsync("Не удалось открыть диалог опроса", copyToClipboard: false);
     }
 
+    /// <summary>Открыть диалог редактирования текущего группового чата.</summary>
+    [RelayCommand]
+    private async Task OpenEditChat()
+    {
+        if (!IsGroupChat || Chat == null)
+            return;
+
+        if (Parent?.Parent is MainMenuViewModel menu)
+        {
+            await menu.ShowEditGroupDialogAsync(Chat, updatedChat =>
+            {
+                Chat = updatedChat;
+
+                for (var i = 0; i < Parent.Chats.Count; i++)
+                {
+                    if (Parent.Chats[i].Id != updatedChat.Id)
+                        continue;
+
+                    Parent.Chats[i] = updatedChat;
+                    break;
+                }
+
+                if (Parent.SelectedChat?.Id == updatedChat.Id)
+                {
+                    Parent.SelectedChat = updatedChat;
+                }
+
+                OnPropertyChanged(nameof(IsGroupChat));
+                OnPropertyChanged(nameof(IsContactChat));
+                OnPropertyChanged(nameof(InfoPanelTitle));
+                OnPropertyChanged(nameof(InfoPanelSubtitle));
+            });
+            return;
+        }
+
+        await _notificationService.ShowErrorAsync("Не удалось открыть редактирование чата", copyToClipboard: false);
+    }
+
     /// <summary>Открыть профиль пользователя по ID.</summary>
     [RelayCommand]
     public async Task OpenProfile(int userId)

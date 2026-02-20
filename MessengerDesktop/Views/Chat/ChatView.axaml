@@ -119,6 +119,17 @@
                                         CornerRadius="0,4,4,0">
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="Редактировать чат"
+                                                      Command="{Binding OpenEditChatCommand}">
+                                                <MenuItem.IsVisible>
+                                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                                                        <Binding Path="IsGroupChat"/>
+                                                        <Binding Path=""
+                                                                 Converter="{conv:Converter Name=HasRole}"
+                                                                 ConverterParameter="Admin"/>
+                                                    </MultiBinding>
+                                                </MenuItem.IsVisible>
+                                            </MenuItem>
                                             <MenuItem Header="Создать опрос"
                                                       Command="{Binding OpenCreatePollCommand}">
                                                 <MenuItem.IsVisible>

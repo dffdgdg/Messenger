@@ -18,6 +18,7 @@ public partial class LoginViewModel : BaseViewModel
 
     private const string RememberMeKey = "remember_me";
     private const string UsernameKey = "saved_username";
+    private const string PasswordKey = "saved_password";
     private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);
 
     [ObservableProperty]
@@ -87,7 +88,14 @@ public partial class LoginViewModel : BaseViewModel
                 return;
             }
 
-            await LoadSavedUsernameAsync();
+            await LoadSavedCredentialsAsync();
+
+            if (RememberMe &&
+                !string.IsNullOrWhiteSpace(Username) &&
+                !string.IsNullOrWhiteSpace(Password))
+            {
+                await TryAutoLoginAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -100,39 +108,70 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-    private async Task LoadSavedUsernameAsync()
+    private async Task LoadSavedCredentialsAsync()
     {
         try
         {
             RememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
             if (RememberMe)
+            {
                 Username = await _secureStorage.GetAsync<string>(UsernameKey) ?? string.Empty;
+                Password = await _secureStorage.GetAsync<string>(PasswordKey) ?? string.Empty;
+            }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Load username error: {ex.Message}");
+            Debug.WriteLine($"Load credentials error: {ex.Message}");
         }
     }
 
-    private async Task SaveUsernameAsync()
+    private async Task SaveCredentialsAsync()
     {
         try
         {
             await _secureStorage.SaveAsync(RememberMeKey, RememberMe);
             if (RememberMe)
+            {
                 await _secureStorage.SaveAsync(UsernameKey, Username);
+                await _secureStorage.SaveAsync(PasswordKey, Password);
+            }
             else
+            {
                 await _secureStorage.RemoveAsync(UsernameKey);
+                await _secureStorage.RemoveAsync(PasswordKey);
+            }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Save username error: {ex.Message}");
+            Debug.WriteLine($"Save credentials error: {ex.Message}");
         }
     }
+
 
     // ========== Login ==========
 
     private bool CanLogin() => !IsBusy && !IsInitializing;
+
+    private async Task TryAutoLoginAsync()
+    {
+        try
+        {
+            var result = await _authManager.LoginAsync(Username, Password);
+
+            if (result.Success)
+            {
+                _navigation.NavigateToMainMenu();
+                return;
+            }
+
+            Debug.WriteLine($"Auto login failed: {result.Error}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Save username error: {ex.Message}");
+            Debug.WriteLine($"Auto login exception: {ex.Message}");
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanLogin))]
     private async Task LoginAsync()
@@ -166,7 +205,7 @@ public partial class LoginViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await SaveUsernameAsync();
+                await SaveCredentialsAsync();
                 _navigation.NavigateToMainMenu();
             }
             else
@@ -195,6 +234,7 @@ public partial class LoginViewModel : BaseViewModel
         {
             await _secureStorage.RemoveAsync(RememberMeKey);
             await _secureStorage.RemoveAsync(UsernameKey);
+            await _secureStorage.RemoveAsync(PasswordKey);
         }
         catch (Exception ex)
         {

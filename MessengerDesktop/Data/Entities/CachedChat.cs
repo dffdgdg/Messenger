@@ -36,6 +36,5 @@ public class CachedChat
     public long CachedAtTicks { get; set; }
 
     [Ignore]
-    public DateTime? LastMessageDate =>
-        LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
+    public DateTime? LastMessageDate => LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
 }

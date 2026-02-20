@@ -5,7 +5,7 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
-    /// <summary>Сообщение, которое пользователь пересылает (null — режим выключен).</summary>
+    /// <summary>Сообщение, которое пользователь пересылает</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsForwardMode))]
     private MessageViewModel? _forwardingMessage;
@@ -13,10 +13,10 @@ public partial class ChatViewModel
     /// <summary>Активен ли режим пересылки.</summary>
     public bool IsForwardMode => ForwardingMessage != null;
 
-    /// <summary>Имя отправителя пересылаемого сообщения для безопасного биндинга.</summary>
+    /// <summary>Имя отправителя пересылаемого сообщения для безопасного биндинга</summary>
     public string? ForwardingSenderName => ForwardingMessage?.SenderName;
 
-    /// <summary>Превью текста пересылаемого сообщения для панели ввода.</summary>
+    /// <summary>Превью текста пересылаемого сообщения для панели ввода</summary>
     public string? ForwardPreviewText => ForwardingMessage switch
     {
         null => null,

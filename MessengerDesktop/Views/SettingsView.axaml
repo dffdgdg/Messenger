@@ -10,12 +10,11 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Classes="ThinScrollbar">
-            <Border Padding="32,24">
-                <Grid HorizontalAlignment="Center">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" MaxWidth="560"/>
-					</Grid.ColumnDefinitions>
-                    <StackPanel Spacing="5">
+            <Border Padding="32,24,32,56">
+                <StackPanel MaxWidth="560"
+                            HorizontalAlignment="Center"
+                            Spacing="24">
+
                     <!-- ========== ЗАГОЛОВОК ========== -->
                     <StackPanel Spacing="4">
                         <TextBlock Text="Настройки" Classes="PageTitle"/>
@@ -30,7 +29,6 @@
 
                         <Border Classes="SettingsSection">
                             <StackPanel Spacing="16">
-                                <!-- Описание -->
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Тема оформления"
                                                FontWeight="Medium"
@@ -40,8 +38,7 @@
                                                Foreground="{DynamicResource TextSecondary}"/>
                                 </StackPanel>
 
-                                <!-- Селектор темы -->
-                                <controls:ThemeSelectorControl 
+                                <controls:ThemeSelectorControl
                                     SelectedTheme="{Binding SelectedTheme, Mode=TwoWay}"
                                     Margin="0,8,0,0"/>
                             </StackPanel>
@@ -52,26 +49,58 @@
                     <StackPanel Spacing="12">
                         <TextBlock Text="Уведомления" Classes="SectionHeader Large"/>
 
-                        <!-- Push-уведомления -->
                         <Border Classes="SettingsSection">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
-                                <Border Width="40" Height="40" CornerRadius="10"
-                                        Background="{DynamicResource WarningBgBrush}">
-                                    <PathIcon Data="{DynamicResource NotificationsIcon}"
-                                              Width="18" Height="18"
-                                              Foreground="{DynamicResource WarningBrush}"/>
-                                </Border>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                <PathIcon Data="{DynamicResource NotificationsIcon}"
+                                          Width="20" Height="20"
+                                          Foreground="{DynamicResource TextTertiary}"
+                                          VerticalAlignment="Center"/>
 
+                                <!-- Текст -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="Уведомления" FontWeight="Medium"/>
+                                    <TextBlock Text="Push-уведомления"
+                                               FontWeight="Medium"
+                                               FontSize="14"/>
                                     <TextBlock Text="Получать уведомления о новых сообщениях"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextSecondary}"/>
                                 </StackPanel>
 
+                                <!-- Действие -->
                                 <ToggleSwitch Grid.Column="2"
                                               IsChecked="{Binding NotificationsEnabled}"
                                               VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ========== ДАННЫЕ ========== -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Данные" Classes="SectionHeader Large"/>
+
+                        <Border Classes="SettingsSection">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                <PathIcon Data="{DynamicResource DeleteIcon}"
+                                          Width="20" Height="20"
+                                          Foreground="{DynamicResource TextTertiary}"
+                                          VerticalAlignment="Center"/>
+
+                                <!-- Текст -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Очистить кэш"
+                                               FontWeight="Medium"
+                                               FontSize="14"/>
+                                    <TextBlock Text="Удалить локальные данные и освободить место"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}"/>
+                                </StackPanel>
+
+                                <!-- Действие -->
+                                <Button Grid.Column="2"
+                                        Content="Очистить"
+                                        Classes="DialogDanger"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding ClearCacheCommand}"/>
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -82,7 +111,6 @@
 
                         <Border Classes="SettingsSection">
                             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
-                                <!-- Название и версия -->
                                 <StackPanel Grid.Row="0" Spacing="4">
                                     <TextBlock Text="ВнутрьСвязь"
                                                FontWeight="SemiBold"
@@ -91,11 +119,11 @@
                                                FontSize="13"
                                                Foreground="{DynamicResource TextSecondary}"/>
                                 </StackPanel>
-                                
-                                <Border Grid.Row="1" 
-                                        Height="1" 
+
+                                <Border Grid.Row="1"
+                                        Height="1"
                                         Background="{DynamicResource BorderDefault}"/>
-                                
+
                                 <TextBlock Grid.Row="2"
                                            Text="© 2026 Все права защищены"
                                            FontSize="12"
@@ -103,9 +131,8 @@
                             </Grid>
                         </Border>
                     </StackPanel>
-                    <Border Height="32"/>
-                        </StackPanel>
-                </Grid>
+
+                </StackPanel>
             </Border>
         </ScrollViewer>
     </Border>

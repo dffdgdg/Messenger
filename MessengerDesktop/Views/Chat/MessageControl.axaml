@@ -285,7 +285,7 @@
                               Command="{Binding Poll.CancelVoteCommand}"
                               IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
                         <MenuItem.Icon>
-                            <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                            <Path Data="{StaticResource CloseIcon}"
                                   Fill="{DynamicResource TextPrimary}"
                                   Width="14" Height="14" Stretch="Uniform"/>
                         </MenuItem.Icon>
@@ -363,7 +363,6 @@
                             IsVisible="{Binding !HasPoll}">
                         <StackPanel>
 
-                            <!-- ── «Переслано от ...» — одна строка, как в Telegram ── -->
                             <TextBlock Classes="ForwardLabel"
                                        Text="{Binding ForwardedFromHeader}"
                                        IsVisible="{Binding HasForward}"/>
@@ -456,9 +455,9 @@
                             <!-- ── Текст ── -->
                             <Panel IsVisible="{Binding HasTextContent}">
                                 <Grid>
-                                    <SelectableTextBlock Classes="MessageText"
-                                                         Text="{Binding DisplayContent}"
-                                                         Margin="0,0,60,0"/>
+                                    <controls:RichMessageTextBlock Classes="MessageText"
+                                                        RawText="{Binding DisplayContent}"
+                                                        Margin="0,0,60,0"/>
                                     <StackPanel Classes="InlineMeta"
                                                 Orientation="Horizontal"
                                                 Spacing="3"

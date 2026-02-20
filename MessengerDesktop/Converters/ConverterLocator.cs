@@ -65,6 +65,7 @@ public sealed class ConverterLocator
         Add<MessageAlignmentConverter>("MessageAlignment");
         Add<MessageMarginConverter>("MessageToMargin", "MessageMargin");
         Add<HasContentConverter>("HasContent");
+        Add<TextToInlinesConverter>("TextToInlines");
 
         // Generic converters
         Add<IndexToTextConverter>("IndexToText");

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
+using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Storage;
 using MessengerShared.DTO.User;
 using System;
@@ -17,6 +18,7 @@ namespace MessengerDesktop.ViewModels;
 public partial class SettingsViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
+    private readonly ICacheMaintenanceService _cacheMaintenanceService;
     private readonly ISettingsService _settingsService;
     private readonly Timer _autoSaveTimer;
     private readonly int _userId;
@@ -31,9 +33,11 @@ public partial class SettingsViewModel : BaseViewModel
     public SettingsViewModel(
         MainMenuViewModel mainMenuViewModel,
         IApiClientService apiClient,
+        ICacheMaintenanceService cacheMaintenanceService,
         ISettingsService settingsService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+        _cacheMaintenanceService = cacheMaintenanceService ?? throw new ArgumentNullException(nameof(cacheMaintenanceService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _userId = mainMenuViewModel?.UserId ?? throw new ArgumentNullException(nameof(mainMenuViewModel));
 
@@ -165,6 +169,16 @@ public partial class SettingsViewModel : BaseViewModel
         NotificationsEnabled = true;
         CanBeFoundInSearch = true;
         SuccessMessage = "Настройки сброшены";
+    }
+
+    [RelayCommand]
+    private async Task ClearCacheAsync()
+    {
+        await SafeExecuteAsync(async () =>
+        {
+            await _cacheMaintenanceService.ClearAllDataAsync();
+            SuccessMessage = "Кэш успешно очищен";
+        });
     }
 
     protected override void Dispose(bool disposing)

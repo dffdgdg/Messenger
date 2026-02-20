@@ -63,7 +63,7 @@ public partial class MainMenuViewModel : BaseViewModel
     [ObservableProperty]
     private int _selectedMenuIndex = 1;
     private readonly IGlobalHubConnection _globalHub;
-    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+    public static bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool ShowNoResults => HasSearchText  && !IsSearching;
 
     public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,IApiClientService apiClient,IAuthManager authManager,

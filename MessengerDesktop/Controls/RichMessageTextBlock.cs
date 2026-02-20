@@ -5,6 +5,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.TextFormatting;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
@@ -23,8 +24,9 @@ public class RichMessageTextBlock : SelectableTextBlock
     }
 
     private static readonly Regex UrlRegex = new(
-        @"(https?://[^\s<>""')\]]+)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    @"(https?://[^\s<>""')\]]+)",
+    RegexOptions.Compiled | RegexOptions.IgnoreCase,
+    TimeSpan.FromSeconds(1));
 
     private static readonly SolidColorBrush LinkBrush = new(Color.Parse("#4A9EEA"));
 
@@ -57,7 +59,7 @@ public class RichMessageTextBlock : SelectableTextBlock
         }
 
         Text = null;
-        Inlines ??= new InlineCollection();
+        Inlines ??= [];
 
         // Создаём underline декорацию
         var underline = new TextDecorationCollection

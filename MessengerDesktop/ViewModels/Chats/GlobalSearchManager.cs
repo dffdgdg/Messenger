@@ -11,9 +11,10 @@ using System.Threading.Tasks;
 namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
-    : ObservableObject
+    : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _searchCts;
+    private bool _disposed;
 
     [ObservableProperty] private string _searchQuery = string.Empty;
     [ObservableProperty] private bool _isSearching;
@@ -34,6 +35,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         IsSearchMode = !string.IsNullOrWhiteSpace(value);
 
         _searchCts?.Cancel();
+        _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
 
         if (string.IsNullOrWhiteSpace(value))
@@ -53,8 +55,9 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
             if (ct.IsCancellationRequested) return;
             await ExecuteSearchAsync(query, ct);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            // Expected: previous search was cancelled by a newer keystroke (debounce).
         }
     }
 
@@ -154,6 +157,18 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         SearchQuery = string.Empty;
         IsSearchMode = false;
         Clear();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
+
+        GC.SuppressFinalize(this);
     }
 
     private void NotifyResultsChanged()

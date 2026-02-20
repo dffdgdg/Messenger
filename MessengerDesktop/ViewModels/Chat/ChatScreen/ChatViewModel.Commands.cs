@@ -75,15 +75,14 @@ public partial class ChatViewModel
                 {
                     if (Parent.Chats[i].Id != updatedChat.Id)
                         continue;
-
                     Parent.Chats[i] = updatedChat;
                     break;
                 }
 
                 if (Parent.SelectedChat?.Id == updatedChat.Id)
-                {
                     Parent.SelectedChat = updatedChat;
-                }
+
+                _ = ReloadMembersAfterEditAsync();
 
                 OnPropertyChanged(nameof(IsGroupChat));
                 OnPropertyChanged(nameof(IsContactChat));

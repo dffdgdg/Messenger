@@ -242,6 +242,19 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Property Change Handlers
 
+    partial void OnIsContactOnlineChanged(bool value) => OnPropertyChanged(nameof(InfoPanelSubtitle));
+
+    partial void OnMembersChanged(ObservableCollection<UserDTO>? oldValue, ObservableCollection<UserDTO> newValue)
+    {
+        if (oldValue != null)
+            oldValue.CollectionChanged -= OnMembersCollectionChanged;
+
+        if (newValue != null)
+            newValue.CollectionChanged += OnMembersCollectionChanged;
+
+        OnPropertyChanged(nameof(InfoPanelSubtitle));
+    }
+
     partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
 
     partial void OnContactUserChanged(UserDTO? value)

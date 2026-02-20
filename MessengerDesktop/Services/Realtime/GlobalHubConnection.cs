@@ -7,6 +7,7 @@ using MessengerDesktop.Services.UI;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.Notification;
 using MessengerShared.DTO.ReadReceipt;
+using MessengerShared.DTO.User;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,9 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int>? TotalUnreadChanged;
     event Action<MessageDTO>? MessageUpdatedGlobally;
     event Action<int, int>? MessageDeletedGlobally;
+
+    /// <summary>Профиль пользователя обновился (аватар, имя, отдел и т.д.).</summary>
+    event Action<UserDTO>? UserProfileUpdated;
 
     bool IsConnected { get; }
 
@@ -61,6 +65,7 @@ public sealed class GlobalHubConnection(
     public event Action<int>? TotalUnreadChanged;
     public event Action<MessageDTO>? MessageUpdatedGlobally;
     public event Action<int, int>? MessageDeletedGlobally;
+    public event Action<UserDTO>? UserProfileUpdated;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
@@ -98,6 +103,9 @@ public sealed class GlobalHubConnection(
             // Статус пользователей
             _hubConnection.On<int>("UserOnline", userId => OnUserStatusChanged(userId, true));
             _hubConnection.On<int>("UserOffline", userId => OnUserStatusChanged(userId, false));
+
+            // Обновление профиля пользователя
+            _hubConnection.On<UserDTO>("UserProfileUpdated", OnUserProfileUpdated);
 
             // Обновление счётчика непрочитанных
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
@@ -247,6 +255,8 @@ public sealed class GlobalHubConnection(
         });
     }
 
+    #region Event Handlers
+
     private void OnNotificationReceived(NotificationDTO notification)
     {
         if (!_settingsService.NotificationsEnabled)
@@ -299,7 +309,6 @@ public sealed class GlobalHubConnection(
     {
         Debug.WriteLine($"[GlobalHub] MessageUpdated: id={message.Id}, chat={message.ChatId}");
 
-        // Обновляем в кэше
         _ = Task.Run(async () =>
         {
             try
@@ -312,7 +321,6 @@ public sealed class GlobalHubConnection(
             }
         });
 
-        // Пробрасываем событие (ChatViewModel подпишется)
         Dispatcher.UIThread.Post(() => MessageUpdatedGlobally?.Invoke(message));
     }
 
@@ -320,7 +328,6 @@ public sealed class GlobalHubConnection(
     {
         Debug.WriteLine($"[GlobalHub] MessageDeleted: id={evt.MessageId}, chat={evt.ChatId}");
 
-        // Помечаем в кэше
         _ = Task.Run(async () =>
         {
             try
@@ -333,21 +340,52 @@ public sealed class GlobalHubConnection(
             }
         });
 
-        // Пробрасываем событие
         Dispatcher.UIThread.Post(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
     }
 
-    /// <summary>
-    /// Записывает входящее сообщение в кэш + обновляет last message чата.
-    /// Fire-and-forget, ошибки не критичны.
-    /// </summary>
+    private void OnUserStatusChanged(int userId, bool isOnline)
+    {
+        Debug.WriteLine($"[GlobalHub] UserStatusChanged: userId={userId}, isOnline={isOnline}");
+        Dispatcher.UIThread.Post(() => UserStatusChanged?.Invoke(userId, isOnline));
+    }
+
+    private void OnUserProfileUpdated(UserDTO user)
+    {
+        Debug.WriteLine($"[GlobalHub] UserProfileUpdated: userId={user.Id}, name={user.DisplayName}");
+        Dispatcher.UIThread.Post(() => UserProfileUpdated?.Invoke(user));
+    }
+
+    private void OnUnreadCountUpdated(int chatId, int unreadCount)
+    {
+        int total;
+        lock (_lock)
+        {
+            var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
+            var diff = oldCount - unreadCount;
+            _unreadCounts[chatId] = unreadCount;
+            _totalUnread = Math.Max(0, _totalUnread - diff);
+            total = _totalUnread;
+        }
+
+        Debug.WriteLine($"[GlobalHub] Server unread update: chat={chatId}, count={unreadCount}, total={total}");
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            UnreadCountChanged?.Invoke(chatId, unreadCount);
+            TotalUnreadChanged?.Invoke(total);
+        });
+    }
+
+    #endregion
+
+    #region Helpers
+
     private async Task CacheIncomingMessageAsync(MessageDTO message)
     {
         try
         {
             await _cacheService.UpsertMessageAsync(message);
 
-            // Обновляем превью последнего сообщения в списке чатов
             var preview = message.Content?.Length > 100
                 ? message.Content[..100] + "..."
                 : message.Content;
@@ -364,7 +402,6 @@ public sealed class GlobalHubConnection(
     {
         try
         {
-            // Для текущего открытого чата проверяем gap
             if (_currentChatId.HasValue)
             {
                 var syncState = await _cacheService.GetSyncStateAsync(_currentChatId.Value);
@@ -373,9 +410,6 @@ public sealed class GlobalHubConnection(
                     Debug.WriteLine(
                         $"[GlobalHub] Reconcile: checking gap for chat {_currentChatId.Value}, " +
                         $"newestCached={syncState.NewestLoadedId}");
-
-                    // Gap fill делает сам ChatMessageManager через RevalidateNewestAsync
-                    // Здесь просто логируем, что reconciliation нужен
                 }
             }
 
@@ -410,34 +444,12 @@ public sealed class GlobalHubConnection(
         });
     }
 
-    private void OnUnreadCountUpdated(int chatId, int unreadCount)
-    {
-        int total;
-        lock (_lock)
-        {
-            var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
-            var diff = oldCount - unreadCount;
-            _unreadCounts[chatId] = unreadCount;
-            _totalUnread = Math.Max(0, _totalUnread - diff);
-            total = _totalUnread;
-        }
-
-        Debug.WriteLine($"[GlobalHub] Server unread update: chat={chatId}, count={unreadCount}, total={total}");
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            UnreadCountChanged?.Invoke(chatId, unreadCount);
-            TotalUnreadChanged?.Invoke(total);
-        });
-    }
-
     private static string FormatNotificationMessage(NotificationDTO notification)
         => notification.Type == "poll"
             ? notification.Preview ?? "Новый опрос"
             : $"{notification.SenderName}: {notification.Preview}";
 
-    private void OnUserStatusChanged(int userId, bool isOnline)
-        => Dispatcher.UIThread.Post(() => UserStatusChanged?.Invoke(userId, isOnline));
+    #endregion
 
     public void SetCurrentChat(int? chatId)
     {
@@ -508,5 +520,5 @@ public sealed class GlobalHubConnection(
     #endregion
 }
 
-/// <summary>DTO для десериализации события MessageDeleted с сервера</summary>
+/// <summary>DTO для десериализации события MessageDeleted с сервера.</summary>
 public record MessageDeletedEvent(int MessageId, int ChatId);

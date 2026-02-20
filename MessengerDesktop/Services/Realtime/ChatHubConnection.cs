@@ -2,6 +2,7 @@
 using MessengerDesktop.Services.Auth;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.ReadReceipt;
+using MessengerShared.DTO.User;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Diagnostics;
@@ -24,20 +25,34 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     public event Action<int, int>? UnreadCountUpdated;
     public event Action? Reconnected;
 
+    /// <summary>Новый участник присоединился к чату.</summary>
+    public event Action<int, UserDTO>? MemberJoined;
+
+    /// <summary>Участник покинул чат.</summary>
+    public event Action<int, int>? MemberLeft;
+
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {
         try
         {
-            _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options =>
-            options.AccessTokenProvider = () => Task.FromResult(authManager.Session.Token)).WithAutomaticReconnect().Build();
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{App.ApiUrl}chatHub", options =>
+                    options.AccessTokenProvider = () => Task.FromResult(authManager.Session.Token))
+                .WithAutomaticReconnect()
+                .Build();
 
+            //Сообщения
             _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnMessageReceived);
             _hubConnection.On<MessageDTO>("MessageUpdated", OnMessageUpdated);
             _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeletedEvent);
             _hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageRead);
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
+
+            //Участники чата
+            _hubConnection.On<int, UserDTO>("MemberJoined", OnMemberJoined);
+            _hubConnection.On<int, int>("MemberLeft", OnMemberLeft);
 
             _hubConnection.Reconnected += OnReconnected;
 
@@ -130,6 +145,8 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         }
     }
 
+    #region Event Handlers
+
     private void OnMessageReceived(MessageDTO message)
     {
         if (message.ChatId == chatId)
@@ -159,6 +176,20 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         if (cId == chatId)
             UnreadCountUpdated?.Invoke(cId, unreadCount);
     }
+
+    private void OnMemberJoined(int cId, UserDTO user)
+    {
+        if (cId == chatId)
+            MemberJoined?.Invoke(cId, user);
+    }
+
+    private void OnMemberLeft(int cId, int userId)
+    {
+        if (cId == chatId)
+            MemberLeft?.Invoke(cId, userId);
+    }
+
+    #endregion
 
     public async ValueTask DisposeAsync()
     {

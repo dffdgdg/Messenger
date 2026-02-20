@@ -30,47 +30,37 @@ public partial class ChatViewModel
         {
             IsInitialLoading = true;
 
-            // 1. Загрузка метаданных чата
             await LoadChatAsync(ct);
 
-            // 2. Загрузка участников (и контактного пользователя для 1-на-1)
             await LoadMembersAsync(ct);
 
-            // 3. Подключение к SignalR-хабу чата
             await InitHubAsync(ct);
 
-            // 4. Получение информации о прочитанных сообщениях
             var readInfo = await _hubConnection!.GetReadInfoAsync();
             _messageManager.SetReadInfo(readInfo);
 
-            // 5. Загрузка начальной порции сообщений
             var scrollToIndex = await _messageManager.LoadInitialMessagesAsync(ct);
 
-            // 6. Настройки уведомлений (не критично — ошибки глотаются)
             await LoadNotificationSettingsAsync(ct);
 
-            // 7. Подсчёт опросов
             UpdatePollsCount();
 
-            // 8. Инициализация голосовых сообщений
             var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
             InitializeVoice(audioRecorder);
 
-            // Инициализация завершена
+            SubscribeInfoPanelEvents();
+
             _initTcs.TrySetResult();
 
-            // 9. Скролл к нужной позиции
             await Task.Delay(150, ct);
 
             if (scrollToIndex < Messages.Count - 1)
             {
-                // Есть непрочитанные — скроллим к первому из них
                 ScrollToIndexRequested?.Invoke(scrollToIndex.Value, false);
                 Debug.WriteLine($"[ChatViewModel] Scrolling to first unread at index {scrollToIndex.Value}");
             }
             else
             {
-                // Всё прочитано — скроллим вниз
                 ScrollToBottomRequested?.Invoke();
                 Debug.WriteLine("[ChatViewModel] Scrolling to bottom (no unread or at end)");
             }
@@ -98,7 +88,6 @@ public partial class ChatViewModel
 
         if (result.Success && result.Data is not null)
         {
-            // Добавляем cache-buster к URL аватара
             if (!string.IsNullOrEmpty(result.Data.Avatar))
                 result.Data.Avatar = AvatarHelper.GetUrlWithCacheBuster(result.Data.Avatar);
 
@@ -139,7 +128,6 @@ public partial class ChatViewModel
             IsContactOnline = contact.IsOnline;
             ContactLastSeen = FormatLastSeen(contact);
 
-            // Переопределяем название и аватар чата данными собеседника
             if (Chat != null)
             {
                 Chat.Name = contact.DisplayName ?? contact.Username ?? Chat.Name;
@@ -148,12 +136,7 @@ public partial class ChatViewModel
                     Chat.Avatar = contact.Avatar;
             }
 
-            // Обновляем все зависимые свойства
-            OnPropertyChanged(nameof(IsContactChat));
-            OnPropertyChanged(nameof(IsGroupChat));
-            OnPropertyChanged(nameof(InfoPanelTitle));
-            OnPropertyChanged(nameof(InfoPanelSubtitle));
-            OnPropertyChanged(nameof(ContactUser));
+            InvalidateAllInfoPanelProperties();
         }
         catch (Exception ex)
         {
@@ -209,18 +192,22 @@ public partial class ChatViewModel
 
     private void OnChatHubReconnected()
     {
-        Debug.WriteLine($"[ChatViewModel] Chat hub reconnected, triggering gap fill for chat {_chatId}");
+        Debug.WriteLine($"[ChatViewModel] Chat hub reconnected, triggering gap fill and info refresh for chat {_chatId}");
 
         _ = Task.Run(async () =>
         {
             try
             {
                 var ct = _loadingCts?.Token ?? CancellationToken.None;
-                await _messageManager.GapFillAfterReconnectAsync(ct);
+
+                var gapFillTask = _messageManager.GapFillAfterReconnectAsync(ct);
+                var infoPanelTask = RefreshInfoPanelDataAsync(ct);
+
+                await Task.WhenAll(gapFillTask, infoPanelTask);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ChatViewModel] Gap fill error: {ex.Message}");
+                Debug.WriteLine($"[ChatViewModel] Reconnect refresh error: {ex.Message}");
             }
         });
     }
@@ -233,6 +220,8 @@ public partial class ChatViewModel
     {
         if (_disposed) return;
         _disposed = true;
+
+        UnsubscribeInfoPanelEvents();
 
         if (_globalHub is GlobalHubConnection hub)
             hub.SetCurrentChat(null);

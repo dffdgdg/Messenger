@@ -32,18 +32,16 @@ public static class AvatarHelper
         if (string.IsNullOrEmpty(avatarUrl))
             return string.Empty;
 
-        if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            var uriBuilder = new UriBuilder(avatarUrl);
-            var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
-            query["v"] = DateTime.Now.Ticks.ToString();
-            uriBuilder.Query = query.ToString();
-            return uriBuilder.ToString();
-        }
+        var version = DateTime.UtcNow.Ticks.ToString();
+        var avatarUri = avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? avatarUrl : $"{App.ApiUrl.TrimEnd('/')}/{avatarUrl.TrimStart('/')}";
 
-        var baseUrl = App.ApiUrl.TrimEnd('/');
-        var cleanPath = avatarUrl.TrimStart('/');
-        return $"{baseUrl}/{cleanPath}?v={DateTime.Now.Ticks}";
+        var uriBuilder = new UriBuilder(avatarUri);
+        var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        query["v"] = version;
+        uriBuilder.Query = query.ToString();
+
+        return uriBuilder.ToString();
     }
 }
 public static class MimeTypeHelper

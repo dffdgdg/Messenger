@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="dockerfile" />
+  </ItemGroup>
 	
   <ItemGroup>
     <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.5.0" />
@@ -36,7 +40,13 @@
   <ItemGroup>
     <ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
   </ItemGroup>
-
+	
+	<ItemGroup>
+		<Compile Remove="Dockerfile" />
+		<Compile Remove="dockerfile" />
+		<None Include="Dockerfile" />
+	</ItemGroup>
+	
   <ItemGroup>
     <Folder Include="Whisper\Models\" />
   </ItemGroup>

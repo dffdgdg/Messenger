@@ -51,27 +51,27 @@
 							<!-- Аватар по центру -->
 							<StackPanel HorizontalAlignment="Center" Spacing="12">
 								<controls:AvatarControl Classes="XXLarge"
-                                                        Source="{Binding ContactUser.Avatar}"
-                                                        DisplayName="{Binding ContactUser.DisplayName}"
+                                                        Source="{Binding ContactAvatar}"
+                                                        DisplayName="{Binding ContactDisplayName}"
                                                         IsOnline="{Binding IsContactOnline}"
                                                         HorizontalAlignment="Center"/>
 
 								<!-- Имя -->
-								<TextBlock Text="{Binding ContactUser.DisplayName}"
+								<TextBlock Text="{Binding ContactDisplayName}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
                                            TextWrapping="Wrap"
                                            TextAlignment="Center"
-                                           IsVisible="{Binding ContactUser.DisplayName, 
+                                           IsVisible="{Binding ContactDisplayName, 
                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
 								<!-- Username если нет DisplayName -->
-								<TextBlock Text="{Binding ContactUser.Username}"
+								<TextBlock Text="{Binding ContactUsername}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
-                                           IsVisible="{Binding ContactUser.DisplayName, 
+                                           IsVisible="{Binding ContactDisplayName, 
                                                       Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 
 								<!-- Статус -->
@@ -87,24 +87,24 @@
 							<StackPanel Spacing="16">
 								<!-- Username -->
 								<StackPanel Spacing="2"
-                                            IsVisible="{Binding ContactUser.Username, 
+                                            IsVisible="{Binding ContactUsername, 
                                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 									<TextBlock Text="Имя пользователя"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextMuted}"/>
-									<TextBlock Text="{Binding ContactUser.Username, StringFormat='@{0}'}"
+									<TextBlock Text="{Binding ContactUsername, StringFormat='@{0}'}"
                                                FontSize="14"
                                                Foreground="{DynamicResource AccentBrush}"/>
 								</StackPanel>
 
 								<!-- Отдел -->
 								<StackPanel Spacing="2"
-                                            IsVisible="{Binding ContactUser.Department, 
+                                            IsVisible="{Binding ContactDepartment, 
                                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 									<TextBlock Text="Отдел"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextMuted}"/>
-									<TextBlock Text="{Binding ContactUser.Department}"
+									<TextBlock Text="{Binding ContactDepartment}"
                                                FontSize="14"/>
 								</StackPanel>
 							</StackPanel>

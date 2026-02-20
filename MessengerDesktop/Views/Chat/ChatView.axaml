@@ -339,7 +339,7 @@
                                                Foreground="#FF9800">
                                         <TextBlock.Text>
                                             <MultiBinding StringFormat="Переслать от {0}">
-                                                <Binding Path="ForwardingMessage.SenderName"
+                                                <Binding Path="ForwardingSenderName"
                                                          FallbackValue="..."/>
                                             </MultiBinding>
                                         </TextBlock.Text>

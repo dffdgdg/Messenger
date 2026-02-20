@@ -13,13 +13,16 @@ public partial class ChatViewModel
     /// <summary>Активен ли режим пересылки.</summary>
     public bool IsForwardMode => ForwardingMessage != null;
 
+    /// <summary>Имя отправителя пересылаемого сообщения для безопасного биндинга.</summary>
+    public string? ForwardingSenderName => ForwardingMessage?.SenderName;
+
     /// <summary>Превью текста пересылаемого сообщения для панели ввода.</summary>
     public string? ForwardPreviewText => ForwardingMessage switch
     {
         null => null,
         { IsDeleted: true } => "[Сообщение удалено]",
-        { IsVoiceMessage: true } => "🎤 Голосовое сообщение",
-        { HasPoll: true } => "📊 Опрос",
+        { IsVoiceMessage: true } => "Голосовое сообщение",
+        { HasPoll: true } => "Опрос",
         { HasFiles: true, Content: null or "" } => $"📎 {ForwardingMessage.Files.Count} файл(ов)",
         { Content: { } c } => c.Length > 100 ? c[..100] + "…" : c,
         _ => "[Сообщение]"
@@ -32,12 +35,13 @@ public partial class ChatViewModel
     [RelayCommand]
     private void StartForward(MessageViewModel? message)
     {
-        if (message == null || message.IsDeleted) return;
+        if (message?.IsDeleted != false) return;
 
         CancelEditMessage();
         CancelReply();
         ForwardingMessage = message;
         OnPropertyChanged(nameof(ForwardPreviewText));
+        OnPropertyChanged(nameof(ForwardingSenderName));
     }
 
     /// <summary>Отменить пересылку.</summary>
@@ -46,5 +50,6 @@ public partial class ChatViewModel
     {
         ForwardingMessage = null;
         OnPropertyChanged(nameof(ForwardPreviewText));
+        OnPropertyChanged(nameof(ForwardingSenderName));
     }
 }

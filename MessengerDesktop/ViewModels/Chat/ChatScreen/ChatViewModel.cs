@@ -103,6 +103,12 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     /// <summary>Является ли чат групповым или департаментным.</summary>
     public bool IsGroupChat => Chat?.Type is ChatType.Chat or ChatType.Department;
 
+    /// <summary>Безопасные прокси-свойства для биндингов контактного чата.</summary>
+    public string? ContactAvatar => ContactUser?.Avatar;
+    public string? ContactDisplayName => ContactUser?.DisplayName;
+    public string? ContactUsername => ContactUser?.Username;
+    public string? ContactDepartment => ContactUser?.Department;
+
     /// <summary>Заголовок инфо-панели в зависимости от типа чата.</summary>
     public string InfoPanelTitle => IsContactChat
         ? "Информация о пользователе"
@@ -236,8 +242,15 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Property Change Handlers
 
-    partial void OnChatChanged(ChatDTO? value) =>
-        OnPropertyChanged(nameof(IsInfoPanelOpen));
+    partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
+
+    partial void OnContactUserChanged(UserDTO? value)
+    {
+        OnPropertyChanged(nameof(ContactAvatar));
+        OnPropertyChanged(nameof(ContactDisplayName));
+        OnPropertyChanged(nameof(ContactUsername));
+        OnPropertyChanged(nameof(ContactDepartment));
+    }
 
     partial void OnIsNotificationEnabledChanged(bool value) =>
         OnPropertyChanged(nameof(IsChatNotificationsEnabled));

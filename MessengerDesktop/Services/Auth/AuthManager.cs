@@ -33,7 +33,6 @@ public class AuthManager : IAuthManager, IDisposable
     private const string UserRoleKey = "user_role";
     private const string CachedUserIdKey = "cached_user_id";
 
-    private readonly Task? _initializationTask;
     private bool _disposed;
 
     public bool IsInitialized { get; private set; }
@@ -45,8 +44,6 @@ public class AuthManager : IAuthManager, IDisposable
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
         Session = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _cacheMaintenance = cacheMaintenance ?? throw new ArgumentNullException(nameof(cacheMaintenance));
-        _initializationTask = InitializeInternalAsync();
-
         _ = InitializeInternalAsync();
     }
 

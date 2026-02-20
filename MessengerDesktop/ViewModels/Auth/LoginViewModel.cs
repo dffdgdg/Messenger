@@ -2,7 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Navigation;
-using MessengerDesktop.Services.UI;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -14,7 +13,6 @@ public partial class LoginViewModel : BaseViewModel
     private readonly IAuthManager _authManager;
     private readonly INavigationService _navigation;
     private readonly ISecureStorageService _secureStorage;
-    private readonly INotificationService _notificationService;
 
     private const string RememberMeKey = "remember_me";
     private const string UsernameKey = "saved_username";
@@ -33,12 +31,11 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isInitializing = true;
 
-    public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage, INotificationService notificationService)
+    public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage)
     {
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
-        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
         InitializeAsync().ContinueWith(t =>
         {

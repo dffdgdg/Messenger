@@ -24,10 +24,10 @@ public class ChatNotificationApiService(IApiClientService apiClient) : IChatNoti
         return result.Success ? result.Data : null;
     }
 
-    public async Task<bool> SetChatMuteAsync(int chatId, bool NotificationsEnabled, CancellationToken ct = default)
+    public async Task<bool> SetChatMuteAsync(int chatId, bool isMuted, CancellationToken ct = default)
     {
         var result = await apiClient.PostAsync<ChatNotificationSettingsDTO, ChatNotificationSettingsDTO>(ApiEndpoints.Notification.SetMute,
-            new ChatNotificationSettingsDTO { ChatId = chatId, NotificationsEnabled = NotificationsEnabled }, ct);
+            new ChatNotificationSettingsDTO { ChatId = chatId, NotificationsEnabled = isMuted }, ct);
         return result.Success;
     }
 

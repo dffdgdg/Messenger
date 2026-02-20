@@ -17,7 +17,7 @@ namespace MessengerAPI.Services.Auth
 
     public class TokenService : ITokenService
     {
-        private const string SecretPlaceholder = "vRQHb2XjyCqD7hZP9xjMwN5tF3gAS4Ue";
+        private const string SecretPlaceholder = "CHANGE-ME-CONFIGURE-A-REAL-SECRET";
         private readonly JwtSettings _settings;
         private readonly SymmetricSecurityKey _signingKey;
 
@@ -25,8 +25,14 @@ namespace MessengerAPI.Services.Auth
         {
             _settings = settings.Value;
 
-            if (string.IsNullOrWhiteSpace(_settings.Secret) || _settings.Secret == SecretPlaceholder)
-                throw new InvalidOperationException("JWT Secret is not configured");
+            if (string.IsNullOrWhiteSpace(_settings.Secret)
+                || _settings.Secret.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase)
+                || _settings.Secret == SecretPlaceholder)
+            {
+                throw new InvalidOperationException(
+                    "JWT Secret is not configured. Set 'Jwt:Secret' via environment " +
+                    "variable or user-secrets. Do NOT commit secrets to source control.");
+            }
 
             if (_settings.Secret.Length < 32)
                 throw new InvalidOperationException("JWT Secret must be at least 32 characters");

@@ -37,8 +37,7 @@ public class PollService(
         return Result<PollDTO>.Success(poll.ToDto(userId));
     }
 
-    public async Task<Result<MessageDTO>> CreatePollAsync(
-        CreatePollDTO dto, int createdByUserId)
+    public async Task<Result<MessageDTO>> CreatePollAsync(CreatePollDTO dto, int createdByUserId)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -128,8 +127,7 @@ public class PollService(
             return Result<PollDTO>.Failure($"Невалидные варианты: {string.Join(", ", invalidIds)}");
 
         var oldVotes = await _context.PollVotes
-            .Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId)
-            .ToListAsync();
+            .Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId).ToListAsync();
 
         _context.PollVotes.RemoveRange(oldVotes);
 

@@ -67,8 +67,7 @@ public class ChatService(
         if (chatIds.Count == 0)
             return Result<List<ChatDTO>>.Success([]);
 
-        var chatsData = await _context.Chats
-            .Where(c => chatIds.Contains(c.Id))
+        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id))
             .GroupJoin(
                 _context.Messages.Where(m => m.IsDeleted != true),
                 chat => chat.Id,
@@ -89,8 +88,7 @@ public class ChatService(
             .AsNoTracking()
             .ToListAsync();
 
-        var unreadCounts = await readReceiptService
-            .GetUnreadCountsForChatsAsync(userId, chatIds);
+        var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
         var dialogChatIds = chatsData
             .Where(c => c.Chat.Type == ChatType.Contact)
@@ -139,8 +137,7 @@ public class ChatService(
     {
         await accessControl.EnsureIsMemberAsync(userId, chatId);
 
-        var chat = await _context.Chats
-            .AsNoTracking()
+        var chat = await _context.Chats.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
@@ -178,9 +175,7 @@ public class ChatService(
         if (allChatsResult.IsFailure)
             return allChatsResult;
 
-        var dialogs = allChatsResult.Value!
-            .Where(c => c.Type == ChatType.Contact)
-            .ToList();
+        var dialogs = allChatsResult.Value!.Where(c => c.Type == ChatType.Contact).ToList();
 
         return Result<List<ChatDTO>>.Success(dialogs);
     }
@@ -191,9 +186,7 @@ public class ChatService(
         if (allChatsResult.IsFailure)
             return allChatsResult;
 
-        var groups = allChatsResult.Value!
-            .Where(c => c.Type != ChatType.Contact)
-            .ToList();
+        var groups = allChatsResult.Value!.Where(c => c.Type != ChatType.Contact).ToList();
 
         return Result<List<ChatDTO>>.Success(groups);
     }

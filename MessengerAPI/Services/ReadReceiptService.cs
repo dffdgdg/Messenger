@@ -16,32 +16,23 @@ public interface IReadReceiptService
     Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId);
 }
 
-public class ReadReceiptService(
-    MessengerDbContext context,
-    ILogger<ReadReceiptService> logger) : IReadReceiptService
+public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
-    public async Task<ReadReceiptResponseDTO> MarkAsReadAsync(
-        int userId, MarkAsReadDTO request)
+    public async Task<ReadReceiptResponseDTO> MarkAsReadAsync(int userId, MarkAsReadDTO request)
     {
-        var member = await context.ChatMembers
-            .FirstOrDefaultAsync(cm =>
-                cm.ChatId == request.ChatId && cm.UserId == userId)
-            ?? throw new KeyNotFoundException(
-                $"Пользователь {userId} не является участником чата {request.ChatId}");
+        var member = await context.ChatMembers.FirstOrDefaultAsync(cm =>
+        cm.ChatId == request.ChatId && cm.UserId == userId) ?? throw new KeyNotFoundException(
+            $"Пользователь {userId} не является участником чата {request.ChatId}");
 
         var targetMessageId = await DetermineTargetMessageIdAsync(request);
 
-        if (targetMessageId > 0
-            && (!member.LastReadMessageId.HasValue
-                || targetMessageId > member.LastReadMessageId.Value))
+        if (targetMessageId > 0 && (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
         {
             member.LastReadMessageId = targetMessageId;
             member.LastReadAt = AppDateTime.UtcNow;
             await context.SaveChangesAsync();
 
-            logger.LogDebug(
-                "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}",
-                userId, targetMessageId, request.ChatId);
+            logger.LogDebug("Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}", userId, targetMessageId, request.ChatId);
         }
 
         var lastReadId = member.LastReadMessageId ?? 0;
@@ -50,18 +41,14 @@ public class ReadReceiptService(
         return CreateResponse(member, unreadCount);
     }
 
-    public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(
-        int userId, int chatId, int messageId)
+    public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
     {
-        var member = await context.ChatMembers
-            .FirstOrDefaultAsync(cm =>
-                cm.ChatId == chatId && cm.UserId == userId);
+        var member = await context.ChatMembers.FirstOrDefaultAsync(cm =>cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return new ReadReceiptResponseDTO { ChatId = chatId, UnreadCount = 0 };
 
-        if (!member.LastReadMessageId.HasValue
-            || messageId > member.LastReadMessageId.Value)
+        if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
         {
             var messageExists = await context.Messages.AnyAsync(m =>
                 m.Id == messageId
@@ -74,9 +61,7 @@ public class ReadReceiptService(
                 member.LastReadAt = AppDateTime.UtcNow;
                 await context.SaveChangesAsync();
 
-                logger.LogDebug(
-                    "Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-                    userId, messageId, chatId);
+                logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}", userId, messageId, chatId);
             }
         }
 
@@ -88,9 +73,7 @@ public class ReadReceiptService(
 
     public async Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm =>
-                cm.ChatId == chatId && cm.UserId == userId);
+        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm =>cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return null;
@@ -122,9 +105,7 @@ public class ReadReceiptService(
 
     public async Task<int> GetUnreadCountAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm =>
-                cm.ChatId == chatId && cm.UserId == userId);
+        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm =>cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return 0;
@@ -146,8 +127,7 @@ public class ReadReceiptService(
                     && m.SenderId != userId)
             })
             .Where(x => x.UnreadCount > 0)
-            .AsNoTracking()
-            .ToListAsync();
+            .AsNoTracking().ToListAsync();
 
         var result = counts.ConvertAll(x => new UnreadCountDTO(x.ChatId, x.UnreadCount));
 
@@ -158,8 +138,7 @@ public class ReadReceiptService(
         };
     }
 
-    public async Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(
-        int userId, IEnumerable<int> chatIds)
+    public async Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(int userId, IEnumerable<int> chatIds)
     {
         var chatIdList = chatIds.ToList();
 
@@ -217,14 +196,13 @@ public class ReadReceiptService(
             .FirstOrDefaultAsync();
     }
 
-    private static ReadReceiptResponseDTO CreateResponse(
-        ChatMember member, int unreadCount) => new()
-        {
-            ChatId = member.ChatId,
-            LastReadMessageId = member.LastReadMessageId,
-            LastReadAt = member.LastReadAt,
-            UnreadCount = unreadCount
-        };
+    private static ReadReceiptResponseDTO CreateResponse(ChatMember member, int unreadCount) => new()
+    {
+        ChatId = member.ChatId,
+        LastReadMessageId = member.LastReadMessageId,
+        LastReadAt = member.LastReadAt,
+        UnreadCount = unreadCount
+    };
 
     #endregion
 }

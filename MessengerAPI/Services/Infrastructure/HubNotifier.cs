@@ -30,14 +30,11 @@ namespace MessengerAPI.Services.Infrastructure
         {
             try
             {
-                await hubContext.Clients
-                    .Group($"user_{userId}")
-                    .SendAsync(method, data);
+                await hubContext.Clients.Group($"user_{userId}").SendAsync(method, data);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex,
-                    "Не удалось отправить {Method} пользователю {UserId}", method, userId);
+                logger.LogWarning(ex,"Не удалось отправить {Method} пользователю {UserId}", method, userId);
             }
         }
     }

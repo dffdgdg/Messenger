@@ -84,16 +84,14 @@ namespace MessengerAPI.Services.Department
 
             if (dto.ParentDepartmentId.HasValue)
             {
-                var parentExists = await _context.Departments
-                    .AnyAsync(d => d.Id == dto.ParentDepartmentId.Value, ct);
+                var parentExists = await _context.Departments.AnyAsync(d => d.Id == dto.ParentDepartmentId.Value, ct);
                 if (!parentExists)
                     return Result<DepartmentDTO>.Failure("Родительский отдел не существует");
             }
 
             if (dto.Head.HasValue)
             {
-                var headExists = await _context.Users
-                    .AnyAsync(u => u.Id == dto.Head.Value, ct);
+                var headExists = await _context.Users.AnyAsync(u => u.Id == dto.Head.Value, ct);
                 if (!headExists)
                     return Result<DepartmentDTO>.Failure("Указанный пользователь не существует");
             }
@@ -108,8 +106,7 @@ namespace MessengerAPI.Services.Department
             _context.Departments.Add(entity);
             await SaveChangesAsync(ct);
 
-            _logger.LogInformation("Отдел создан: {DepartmentId} '{Name}'",
-                entity.Id, entity.Name);
+            _logger.LogInformation("Отдел создан: {DepartmentId} '{Name}'",entity.Id, entity.Name);
 
             dto.Id = entity.Id;
             dto.UserCount = 0;
@@ -269,8 +266,7 @@ namespace MessengerAPI.Services.Department
         private async Task<bool> IsAdminAsync(int userId, CancellationToken ct)
             => await _context.Users.AnyAsync(u => u.Id == userId && u.DepartmentId == _settings.AdminDepartmentId, ct);
 
-        private async Task<HashSet<int>> GetAllChildIdsAsync(
-            int departmentId, CancellationToken ct)
+        private async Task<HashSet<int>> GetAllChildIdsAsync(int departmentId, CancellationToken ct)
         {
             var allDepartments = await _context.Departments.AsNoTracking().Select(d => new { d.Id, d.ParentDepartmentId }).ToListAsync(ct);
 

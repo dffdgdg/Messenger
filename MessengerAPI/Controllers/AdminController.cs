@@ -11,13 +11,11 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
     : BaseController<AdminController>(logger)
 {
     [HttpGet("users")]
-    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetUsers(
-        CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetUsers(CancellationToken ct)
         => await ExecuteAsync(() => adminService.GetUsersAsync(ct), "Пользователи получены успешно");
 
     [HttpPost("users")]
-    public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser(
-        [FromBody] CreateUserDTO dto, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<UserDTO>>> CreateUser([FromBody] CreateUserDTO dto, CancellationToken ct)
         => await ExecuteAsync(() => adminService.CreateUserAsync(dto, ct), "Пользователь создан успешно");
 
     [HttpPost("users/{id}/toggle-ban")]

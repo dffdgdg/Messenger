@@ -28,16 +28,13 @@ namespace MessengerAPI.Services.Chat
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex,
-                    "Не удалось отправить уведомление пользователю {UserId}",
-                    userId);
+                logger.LogWarning(ex,"Не удалось отправить уведомление пользователю {UserId}",userId);
             }
         }
 
         public async Task<ChatNotificationSettingsDTO?> GetChatNotificationSettingsAsync(int userId, int chatId)
         {
-            var member = await context.ChatMembers.AsNoTracking()
-                .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+            var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
             if (member == null)
                 return null;
@@ -49,8 +46,7 @@ namespace MessengerAPI.Services.Chat
             };
         }
 
-        public async Task<ChatNotificationSettingsDTO> SetChatMuteAsync(
-            int userId, ChatNotificationSettingsDTO request)
+        public async Task<ChatNotificationSettingsDTO> SetChatMuteAsync(int userId, ChatNotificationSettingsDTO request)
         {
             var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == request.ChatId)
                 ?? throw new KeyNotFoundException($"Пользователь не является участником чата {request.ChatId}");
@@ -69,22 +65,19 @@ namespace MessengerAPI.Services.Chat
         }
 
         public async Task<List<ChatNotificationSettingsDTO>> GetAllChatSettingsAsync(int userId)
-            => await context.ChatMembers
-            .Where(cm => cm.UserId == userId)
+            => await context.ChatMembers.Where(cm => cm.UserId == userId)
             .Select(cm => new ChatNotificationSettingsDTO
             {
                 ChatId = cm.ChatId,
                 NotificationsEnabled = cm.NotificationsEnabled
             })
-            .AsNoTracking()
-            .ToListAsync();
+            .AsNoTracking().ToListAsync();
 
         #region Private Methods
 
         private async Task<NotificationDTO> BuildNotificationAsync(MessageDTO message)
         {
-            var chat = await context.Chats.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == message.ChatId);
+            var chat = await context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
 
             return new NotificationDTO
             {

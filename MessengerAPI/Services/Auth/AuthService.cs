@@ -89,8 +89,7 @@ namespace MessengerAPI.Services.Auth
             if (user.DepartmentId == _settings.AdminDepartmentId)
                 return UserRole.Admin;
 
-            var isHead = await _context.Departments
-                .AnyAsync(d => d.HeadId == user.Id, ct);
+            var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id, ct);
 
             return isHead ? UserRole.Head : UserRole.User;
         }

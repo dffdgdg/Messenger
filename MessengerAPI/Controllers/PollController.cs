@@ -13,23 +13,16 @@ public class PollController(
 {
     [HttpGet("{pollId}")]
     public async Task<ActionResult<ApiResponse<PollDTO>>> GetPoll(int pollId)
-        => await ExecuteAsync(
-            () => pollService.GetPollAsync(pollId, GetCurrentUserId()));
+        => await ExecuteAsync(() => pollService.GetPollAsync(pollId, GetCurrentUserId()));
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreatePoll(
-        [FromBody] CreatePollDTO dto)
-        => await ExecuteAsync(
-            () => pollService.CreatePollAsync(dto, GetCurrentUserId()),
-            "Опрос успешно создан");
+    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreatePoll([FromBody] CreatePollDTO dto)
+        => await ExecuteAsync(() => pollService.CreatePollAsync(dto, GetCurrentUserId()), "Опрос успешно создан");
 
     [HttpPost("vote")]
-    public async Task<ActionResult<ApiResponse<PollDTO>>> Vote(
-        [FromBody] PollVoteDTO voteDto)
+    public async Task<ActionResult<ApiResponse<PollDTO>>> Vote([FromBody] PollVoteDTO voteDto)
     {
         voteDto.UserId = GetCurrentUserId();
-        return await ExecuteAsync(
-            () => pollService.VoteAsync(voteDto),
-            "Голос учтён");
+        return await ExecuteAsync(() => pollService.VoteAsync(voteDto),"Голос учтён");
     }
 }

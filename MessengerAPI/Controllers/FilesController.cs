@@ -13,8 +13,7 @@ public class FilesController(IFileService fileService, IChatService chatService,
     private const long MaxFileSizeBytes = 100 * 1024 * 1024;
     [HttpPost("upload")]
     [RequestSizeLimit(MaxFileSizeBytes)]
-    public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload(
-        [FromQuery] int chatId, IFormFile file)
+    public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload([FromQuery] int chatId, IFormFile file)
     {
         var userId = GetCurrentUserId();
 

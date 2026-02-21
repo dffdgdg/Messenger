@@ -21,8 +21,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
 
     protected bool IsCurrentUser(int userId) => GetCurrentUserId() == userId;
 
-    protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(
-        Func<Task<Result<TResult>>> action, string? successMessage = null)
+    protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<Result<TResult>>> action, string? successMessage = null)
     {
         try
         {
@@ -60,8 +59,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         }
     }
 
-    protected async Task<IActionResult> ExecuteAsync(
-        Func<Task<Result>> action, string? successMessage = null)
+    protected async Task<IActionResult> ExecuteAsync(Func<Task<Result>> action, string? successMessage = null)
     {
         try
         {
@@ -105,8 +103,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
     protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
         => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<TData>.Fail(error));
 
-    private ActionResult<ApiResponse<TData>> HandleInternalError<TData>(
-        Exception ex, string error = "Произошла внутренняя ошибка")
+    private ActionResult<ApiResponse<TData>> HandleInternalError<TData>(Exception ex, string error = "Произошла внутренняя ошибка")
     {
         _logger.LogError(ex, "Внутренняя ошибка: {Message}", ex.Message);
         return StatusCode(500, ApiResponse<TData>.Fail(error));

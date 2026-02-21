@@ -14,8 +14,7 @@ public class ReadReceiptsController(
     : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]
-    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDTO>>> MarkAsRead(
-        [FromBody] MarkAsReadDTO request)
+    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDTO>>> MarkAsRead([FromBody] MarkAsReadDTO request)
     {
         var userId = GetCurrentUserId();
 

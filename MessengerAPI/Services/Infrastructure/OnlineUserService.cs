@@ -18,8 +18,7 @@ public class OnlineUserService : IOnlineUserService
 
     public void UserConnected(int userId, string connectionId)
     {
-        var userConnections = _connections.GetOrAdd(
-            userId, _ => new ConcurrentDictionary<string, byte>());
+        var userConnections = _connections.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>());
         userConnections.TryAdd(connectionId, 0);
     }
 

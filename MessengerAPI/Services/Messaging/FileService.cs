@@ -13,8 +13,7 @@ namespace MessengerAPI.Services.Messaging;
 
 public interface IFileService
 {
-    Task<string> SaveImageAsync(
-        IFormFile file, string subFolder, string? oldFilePath = null);
+    Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null);
     Task<MessageFileDTO> SaveMessageFileAsync(IFormFile file, int chatId);
     void DeleteFile(string? filePath);
     bool IsValidImage(IFormFile file);
@@ -30,11 +29,9 @@ public class FileService(
 {
     private readonly MessengerSettings _settings = settings.Value;
 
-    private static readonly HashSet<string> AllowedImageTypes =
-        ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
+    private static readonly HashSet<string> AllowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
 
-    public async Task<string> SaveImageAsync(
-        IFormFile file, string subFolder, string? oldFilePath = null)
+    public async Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null)
     {
         if (!IsValidImage(file))
             throw new ArgumentException("Некорректный файл изображения");
@@ -50,14 +47,11 @@ public class FileService(
 
         using var image = await Image.LoadAsync(file.OpenReadStream());
 
-        if (image.Width > _settings.MaxImageDimension
-            || image.Height > _settings.MaxImageDimension)
+        if (image.Width > _settings.MaxImageDimension || image.Height > _settings.MaxImageDimension)
         {
             image.Mutate(x => x.Resize(new ResizeOptions
             {
-                Size = new Size(
-                    _settings.MaxImageDimension,
-                    _settings.MaxImageDimension),
+                Size = new Size(_settings.MaxImageDimension, _settings.MaxImageDimension),
                 Mode = ResizeMode.Max
             }));
         }
@@ -74,8 +68,7 @@ public class FileService(
         return resultPath;
     }
 
-    public async Task<MessageFileDTO> SaveMessageFileAsync(
-        IFormFile file, int chatId)
+    public async Task<MessageFileDTO> SaveMessageFileAsync(IFormFile file, int chatId)
     {
         if (file is null || file.Length == 0)
             throw new ArgumentException("Файл не предоставлен");
@@ -85,8 +78,7 @@ public class FileService(
 
         var ext = Path.GetExtension(file.FileName) ?? string.Empty;
         var fileName = $"{Guid.NewGuid()}{ext}";
-        var relativePath = Path.Combine(
-            "uploads", "chats", chatId.ToString(), fileName);
+        var relativePath = Path.Combine("uploads", "chats", chatId.ToString(), fileName);
         var absolutePath = GetAbsolutePath(relativePath);
 
         EnsureDirectoryExists(absolutePath);
@@ -98,8 +90,7 @@ public class FileService(
 
         var resultRelativePath = "/" + relativePath.Replace('\\', '/');
 
-        _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}",
-            fileName, chatId);
+        _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}", fileName, chatId);
 
         return new MessageFileDTO
         {
@@ -122,8 +113,7 @@ public class FileService(
 
         if (!File.Exists(fullPath))
         {
-            _logger.LogDebug(
-                "Файл не найден для удаления: {FilePath}", filePath);
+            _logger.LogDebug("Файл не найден для удаления: {FilePath}", filePath);
             return;
         }
 
@@ -134,8 +124,7 @@ public class FileService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex,
-                "Не удалось удалить файл: {FilePath}", filePath);
+            _logger.LogWarning(ex, "Не удалось удалить файл: {FilePath}", filePath);
         }
     }
 

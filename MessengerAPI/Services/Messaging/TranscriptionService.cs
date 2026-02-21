@@ -43,13 +43,9 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         _env = env;
         _logger = logger;
 
-        _whisperPath = Path.Combine(
-            _env.ContentRootPath,
-            "whisper",
-            OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
+        _whisperPath = Path.Combine(_env.ContentRootPath, "whisper", OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
 
-        _modelPath = Path.Combine(
-            _env.ContentRootPath, "whisper", "models", "ggml-small-q5_1.bin");
+        _modelPath = Path.Combine(_env.ContentRootPath, "whisper", "models", "ggml-small-q5_1.bin");
 
         if (!File.Exists(_whisperPath))
             throw new FileNotFoundException("whisper бинарник не найден");
@@ -98,8 +94,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             var transcription = await RecognizeAsync(filePath, ct);
 
             message.Content = transcription;
-            message.TranscriptionStatus =
-                string.IsNullOrWhiteSpace(transcription) ? "failed" : "done";
+            message.TranscriptionStatus = string.IsNullOrWhiteSpace(transcription) ? "failed" : "done";
 
             await context.SaveChangesAsync(ct);
 
@@ -113,9 +108,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
                     Status = message.TranscriptionStatus
                 });
 
-            _logger.LogInformation(
-                "Транскрибация {Id}: {Status}",
-                messageId, message.TranscriptionStatus);
+            _logger.LogInformation("Транскрибация {Id}: {Status}", messageId, message.TranscriptionStatus);
 
             return Result.Success();
         }
@@ -133,8 +126,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         }
     }
 
-    public async Task<Result<VoiceTranscriptionDTO>> GetTranscriptionAsync(
-        int messageId, CancellationToken ct = default)
+    public async Task<Result<VoiceTranscriptionDTO>> GetTranscriptionAsync(int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
@@ -157,8 +149,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         return Result<VoiceTranscriptionDTO>.Success(data);
     }
 
-    public async Task<Result> RetryTranscriptionAsync(
-        int messageId, CancellationToken ct = default)
+    public async Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
@@ -183,8 +174,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Recognition
 
-    private async Task<string?> RecognizeAsync(
-        string audioFilePath, CancellationToken ct)
+    private async Task<string?> RecognizeAsync(string audioFilePath, CancellationToken ct)
     {
         await _semaphore.WaitAsync(ct);
         try
@@ -203,8 +193,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         if (pcmData.Length == 0)
             return null;
 
-        var tempWav = Path.Combine(
-            Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
+        var tempWav = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
 
         await using (var writer = new WaveFileWriter(tempWav,
             new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
@@ -265,8 +254,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Audio Conversion
 
-    private static byte[] ConvertToPcm16Mono16K(
-        string audioFilePath, CancellationToken ct)
+    private static byte[] ConvertToPcm16Mono16K(string audioFilePath, CancellationToken ct)
     {
         using var reader = new AudioFileReader(audioFilePath);
 

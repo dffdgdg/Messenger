@@ -13,16 +13,14 @@ public class NotificationController(
     : BaseController<NotificationController>(logger)
 {
     [HttpGet("chat/{chatId}/settings")]
-    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> GetChatSettings(
-        int chatId)
+    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> GetChatSettings(int chatId)
     {
         var userId = GetCurrentUserId();
 
         return await ExecuteAsync(async () =>
         {
             await chatService.EnsureUserHasChatAccessAsync(userId, chatId);
-            var settings = await notificationService
-                .GetChatNotificationSettingsAsync(userId, chatId);
+            var settings = await notificationService.GetChatNotificationSettingsAsync(userId, chatId);
 
             return settings is not null
                 ? Result<ChatNotificationSettingsDTO>.Success(settings)

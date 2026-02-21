@@ -29,8 +29,7 @@ public static class UserMappings
 
     public static string FormatDisplayName(this User user)
     {
-        var parts = new[] { user.Surname, user.Name, user.Midname }
-            .Where(p => !string.IsNullOrWhiteSpace(p));
+        var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
 
         var formatted = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;

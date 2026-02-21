@@ -165,7 +165,7 @@ Username, Password, Surname, Name, Midname?, DepartmentId?
 
 **`AvatarResponseDTO`**: `AvatarUrl`
 
-**`OnlineStatusDTO`** (record): `UserId, IsOnline, LastOnline?`
+** (record): `UserId, IsOnline, LastOnline?`
 
 **`OnlineUsersResponseDTO`**: `OnlineUserIds[], TotalOnline`
 

@@ -6,27 +6,30 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class PollController(IPollService pollService, ILogger<PollController> logger) : BaseController<PollController>(logger)
+public class PollController(
+    IPollService pollService,
+    ILogger<PollController> logger)
+    : BaseController<PollController>(logger)
 {
     [HttpGet("{pollId}")]
-    public async Task<ActionResult<ApiResponse<PollDTO>>> GetPoll(int pollId, [FromQuery] int userId) => await ExecuteAsync(async () =>
-    {
-        var poll = await pollService.GetPollAsync(pollId, userId);
-        return poll ?? throw new KeyNotFoundException($"Опрос с ID {pollId} не найден");
-    }, "Poll получен успешно");
+    public async Task<ActionResult<ApiResponse<PollDTO>>> GetPoll(int pollId)
+        => await ExecuteAsync(
+            () => pollService.GetPollAsync(pollId, GetCurrentUserId()));
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreatePoll([FromBody] CreatePollDTO dto) => await ExecuteAsync(async () =>
-    {
-        ValidateModel();
-        var userId = GetCurrentUserId();
-        return await pollService.CreatePollAsync(dto, userId);
-    }, "Опрос успешно создан");
+    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreatePoll(
+        [FromBody] CreatePollDTO dto)
+        => await ExecuteAsync(
+            () => pollService.CreatePollAsync(dto, GetCurrentUserId()),
+            "Опрос успешно создан");
 
     [HttpPost("vote")]
-    public async Task<ActionResult<ApiResponse<PollDTO>>> Vote([FromBody] PollVoteDTO voteDto) => await ExecuteAsync(async () =>
+    public async Task<ActionResult<ApiResponse<PollDTO>>> Vote(
+        [FromBody] PollVoteDTO voteDto)
     {
-        ValidateModel();
-        return await pollService.VoteAsync(voteDto);
-    }, "Голос учтён");
+        voteDto.UserId = GetCurrentUserId();
+        return await ExecuteAsync(
+            () => pollService.VoteAsync(voteDto),
+            "Голос учтён");
+    }
 }

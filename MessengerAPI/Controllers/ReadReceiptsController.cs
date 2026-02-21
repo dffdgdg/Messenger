@@ -1,4 +1,5 @@
-﻿using MessengerAPI.Services;
+﻿using MessengerAPI.Common;
+using MessengerAPI.Services;
 using MessengerAPI.Services.Chat;
 using MessengerShared.DTO.ReadReceipt;
 using MessengerShared.Response;
@@ -6,27 +7,26 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ReadReceiptsController(IReadReceiptService readReceiptService,IChatService chatService,ILogger<ReadReceiptsController> logger)
+public class ReadReceiptsController(
+    IReadReceiptService readReceiptService,
+    IChatService chatService,
+    ILogger<ReadReceiptsController> logger)
     : BaseController<ReadReceiptsController>(logger)
 {
-    /// <summary>
-    /// Отметить сообщения как прочитанные
-    /// </summary>
     [HttpPost("mark-read")]
-    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDTO>>> MarkAsRead([FromBody] MarkAsReadDTO request)
+    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDTO>>> MarkAsRead(
+        [FromBody] MarkAsReadDTO request)
     {
         var userId = GetCurrentUserId();
 
         return await ExecuteAsync(async () =>
         {
             await chatService.EnsureUserHasChatAccessAsync(userId, request.ChatId);
-            return await readReceiptService.MarkAsReadAsync(userId, request);
+            var result = await readReceiptService.MarkAsReadAsync(userId, request);
+            return Result<ReadReceiptResponseDTO>.Success(result);
         }, "Сообщения отмечены как прочитанные");
     }
 
-    /// <summary>
-    /// Получить количество непрочитанных в чате
-    /// </summary>
     [HttpGet("chat/{chatId}/unread-count")]
     public async Task<ActionResult<ApiResponse<UnreadCountDTO>>> GetUnreadCount(int chatId)
     {
@@ -36,18 +36,20 @@ public class ReadReceiptsController(IReadReceiptService readReceiptService,IChat
         {
             await chatService.EnsureUserHasChatAccessAsync(userId, chatId);
             var count = await readReceiptService.GetUnreadCountAsync(userId, chatId);
-            return new UnreadCountDTO(default, default) { ChatId = chatId, UnreadCount = count };
+            return Result<UnreadCountDTO>.Success(
+                new UnreadCountDTO(chatId, count));
         });
     }
 
-    /// <summary>
-    /// Получить все непрочитанные
-    /// </summary>
     [HttpGet("unread-counts")]
     public async Task<ActionResult<ApiResponse<AllUnreadCountsDTO>>> GetAllUnreadCounts()
     {
         var userId = GetCurrentUserId();
 
-        return await ExecuteAsync(async () => await readReceiptService.GetAllUnreadCountsAsync(userId), "Количество непрочитанных получено");
+        return await ExecuteAsync(async () =>
+        {
+            var result = await readReceiptService.GetAllUnreadCountsAsync(userId);
+            return Result<AllUnreadCountsDTO>.Success(result);
+        }, "Количество непрочитанных получено");
     }
 }

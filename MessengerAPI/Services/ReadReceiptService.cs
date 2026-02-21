@@ -16,50 +16,57 @@ public interface IReadReceiptService
     Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId);
 }
 
-public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptService> logger) : IReadReceiptService
+public class ReadReceiptService(
+    MessengerDbContext context,
+    ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
     public async Task<ReadReceiptResponseDTO> MarkAsReadAsync(
         int userId, MarkAsReadDTO request)
     {
-        var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == request.ChatId && cm.UserId == userId)
-            ?? throw new KeyNotFoundException($"Пользователь {userId} не является участником чата {request.ChatId}");
+        var member = await context.ChatMembers
+            .FirstOrDefaultAsync(cm =>
+                cm.ChatId == request.ChatId && cm.UserId == userId)
+            ?? throw new KeyNotFoundException(
+                $"Пользователь {userId} не является участником чата {request.ChatId}");
 
         var targetMessageId = await DetermineTargetMessageIdAsync(request);
 
-        if (targetMessageId == 0)
-            return CreateResponse(member, 0);
-
-        if (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value)
+        if (targetMessageId > 0
+            && (!member.LastReadMessageId.HasValue
+                || targetMessageId > member.LastReadMessageId.Value))
         {
             member.LastReadMessageId = targetMessageId;
             member.LastReadAt = AppDateTime.UtcNow;
             await context.SaveChangesAsync();
 
             logger.LogDebug(
-                "Пользователь {UserId} прочитал до сообщения {MessageId} в чате {ChatId}",
+                "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}",
                 userId, targetMessageId, request.ChatId);
         }
 
-        var unreadCount = await GetUnreadCountAsync(userId, request.ChatId);
+        var lastReadId = member.LastReadMessageId ?? 0;
+        var unreadCount = await CountUnreadAsync(userId, request.ChatId, lastReadId);
+
         return CreateResponse(member, unreadCount);
     }
 
-    public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
+    public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(
+        int userId, int chatId, int messageId)
     {
         var member = await context.ChatMembers
             .FirstOrDefaultAsync(cm =>
                 cm.ChatId == chatId && cm.UserId == userId);
 
-        if (member == null)
+        if (member is null)
             return new ReadReceiptResponseDTO { ChatId = chatId, UnreadCount = 0 };
 
-        if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
+        if (!member.LastReadMessageId.HasValue
+            || messageId > member.LastReadMessageId.Value)
         {
-            var messageExists = await context.Messages
-                .AnyAsync(m =>
-                    m.Id == messageId
-                    && m.ChatId == chatId
-                    && m.IsDeleted != true);
+            var messageExists = await context.Messages.AnyAsync(m =>
+                m.Id == messageId
+                && m.ChatId == chatId
+                && m.IsDeleted != true);
 
             if (messageExists)
             {
@@ -73,77 +80,71 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
             }
         }
 
-        var unreadCount = await GetUnreadCountAsync(userId, chatId);
+        var lastReadId = member.LastReadMessageId ?? 0;
+        var unreadCount = await CountUnreadAsync(userId, chatId, lastReadId);
+
         return CreateResponse(member, unreadCount);
     }
 
     public async Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+        var member = await context.ChatMembers.AsNoTracking()
+            .FirstOrDefaultAsync(cm =>
+                cm.ChatId == chatId && cm.UserId == userId);
 
-        if (member == null)
+        if (member is null)
             return null;
 
         var lastReadId = member.LastReadMessageId ?? 0;
 
-        var unreadQuery = context.Messages
-            .Where(m =>
-                m.ChatId == chatId
+        var unreadInfo = await context.Messages
+            .Where(m => m.ChatId == chatId
                 && m.Id > lastReadId
                 && m.IsDeleted != true
-                && m.SenderId != userId);
-
-        var unreadCount = await unreadQuery.CountAsync();
-
-        int? firstUnreadId = null;
-        if (unreadCount > 0)
-        {
-            firstUnreadId = await unreadQuery.OrderBy(m => m.Id).Select(m => m.Id).FirstOrDefaultAsync();
-        }
+                && m.SenderId != userId)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                FirstId = g.Min(m => m.Id)
+            })
+            .FirstOrDefaultAsync();
 
         return new ChatReadInfoDTO
         {
             ChatId = chatId,
             LastReadMessageId = member.LastReadMessageId,
             LastReadAt = member.LastReadAt,
-            UnreadCount = unreadCount,
-            FirstUnreadMessageId = firstUnreadId
+            UnreadCount = unreadInfo?.Count ?? 0,
+            FirstUnreadMessageId = unreadInfo?.Count > 0 ? unreadInfo.FirstId : null
         };
     }
 
     public async Task<int> GetUnreadCountAsync(int userId, int chatId)
     {
         var member = await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+            .FirstOrDefaultAsync(cm =>
+                cm.ChatId == chatId && cm.UserId == userId);
 
-        if (member == null)
+        if (member is null)
             return 0;
 
-        var lastReadId = member.LastReadMessageId ?? 0;
-
-        return await context.Messages.CountAsync(m =>
-            m.ChatId == chatId
-            && m.Id > lastReadId
-            && m.IsDeleted != true
-            && m.SenderId != userId);
+        return await CountUnreadAsync(userId, chatId, member.LastReadMessageId ?? 0);
     }
 
-    /// <summary>
-    /// Оптимизированный: один SQL-запрос с подзапросами вместо загрузки всех ID в память
-    /// </summary>
     public async Task<AllUnreadCountsDTO> GetAllUnreadCountsAsync(int userId)
     {
-        var counts = await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new
-        {
-            cm.ChatId,
-            UnreadCount = context.Messages.Count(m =>
-                m.ChatId == cm.ChatId
-                && m.Id > (cm.LastReadMessageId ?? 0)
-                && m.IsDeleted != true
-                && m.SenderId != userId)
-        })
+        var counts = await context.ChatMembers
+            .Where(cm => cm.UserId == userId)
+            .Select(cm => new
+            {
+                cm.ChatId,
+                UnreadCount = context.Messages.Count(m =>
+                    m.ChatId == cm.ChatId
+                    && m.Id > (cm.LastReadMessageId ?? 0)
+                    && m.IsDeleted != true
+                    && m.SenderId != userId)
+            })
             .Where(x => x.UnreadCount > 0)
             .AsNoTracking()
             .ToListAsync();
@@ -157,10 +158,8 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
         };
     }
 
-    /// <summary>
-    /// Оптимизированный: один запрос вместо N отдельных COUNT в цикле
-    /// </summary>
-    public async Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(int userId, IEnumerable<int> chatIds)
+    public async Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(
+        int userId, IEnumerable<int> chatIds)
     {
         var chatIdList = chatIds.ToList();
 
@@ -178,11 +177,8 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
             .AsNoTracking()
             .ToDictionaryAsync(x => x.ChatId, x => x.UnreadCount);
 
-        // Добавляем 0 для чатов, где пользователь не участник
         foreach (var chatId in chatIdList)
-        {
             counts.TryAdd(chatId, 0);
-        }
 
         return counts;
     }
@@ -190,32 +186,45 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
     public async Task MarkAllAsReadAsync(int userId, int chatId)
         => await MarkAsReadAsync(userId, new MarkAsReadDTO { ChatId = chatId });
 
-    #region Private Methods
+    #region Private
+
+    private async Task<int> CountUnreadAsync(int userId, int chatId, int lastReadId)
+        => await context.Messages.CountAsync(m =>
+            m.ChatId == chatId
+            && m.Id > lastReadId
+            && m.IsDeleted != true
+            && m.SenderId != userId);
 
     private async Task<int> DetermineTargetMessageIdAsync(MarkAsReadDTO request)
     {
         if (request.MessageId.HasValue)
         {
-            var messageExists = await context.Messages.AnyAsync(m => m.Id == request.MessageId.Value
-            && m.ChatId == request.ChatId && m.IsDeleted != true);
+            var exists = await context.Messages.AnyAsync(m =>
+                m.Id == request.MessageId.Value
+                && m.ChatId == request.ChatId
+                && m.IsDeleted != true);
 
-            if (!messageExists)
+            if (!exists)
                 throw new KeyNotFoundException($"Сообщение {request.MessageId} не найдено в чате {request.ChatId}");
 
             return request.MessageId.Value;
         }
 
-        return await context.Messages.Where(m => m.ChatId == request.ChatId && m.IsDeleted != true)
-            .OrderByDescending(m => m.Id).Select(m => m.Id).FirstOrDefaultAsync();
+        return await context.Messages
+            .Where(m => m.ChatId == request.ChatId && m.IsDeleted != true)
+            .OrderByDescending(m => m.Id)
+            .Select(m => m.Id)
+            .FirstOrDefaultAsync();
     }
 
-    private static ReadReceiptResponseDTO CreateResponse(ChatMember member, int unreadCount) => new()
-    {
-        ChatId = member.ChatId,
-        LastReadMessageId = member.LastReadMessageId,
-        LastReadAt = member.LastReadAt,
-        UnreadCount = unreadCount
-    };
+    private static ReadReceiptResponseDTO CreateResponse(
+        ChatMember member, int unreadCount) => new()
+        {
+            ChatId = member.ChatId,
+            LastReadMessageId = member.LastReadMessageId,
+            LastReadAt = member.LastReadAt,
+            UnreadCount = unreadCount
+        };
 
     #endregion
 }

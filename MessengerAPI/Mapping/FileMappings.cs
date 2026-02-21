@@ -6,9 +6,7 @@ namespace MessengerAPI.Mapping;
 
 public static class FileMappings
 {
-    public static MessageFileDTO ToDto(
-        this MessageFile file,
-        IUrlBuilder? urlBuilder = null) => new()
+    public static MessageFileDTO ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null) => new()
         {
             Id = file.Id,
             MessageId = file.MessageId,

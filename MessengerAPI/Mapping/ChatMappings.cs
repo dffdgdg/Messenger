@@ -7,9 +7,7 @@ namespace MessengerAPI.Mapping;
 
 public static class ChatMappings
 {
-    public static ChatDTO ToDto(
-        this Chat chat,
-        IUrlBuilder? urlBuilder = null) => new()
+    public static ChatDTO ToDto(this Chat chat, IUrlBuilder? urlBuilder = null) => new()
         {
             Id = chat.Id,
             Name = chat.Name,
@@ -19,10 +17,7 @@ public static class ChatMappings
             Avatar = chat.Avatar.BuildFullUrl(urlBuilder)
         };
 
-    public static ChatDTO ToDto(
-        this Chat chat,
-        User? dialogPartner,
-        IUrlBuilder? urlBuilder = null)
+    public static ChatDTO ToDto(this Chat chat, User? dialogPartner, IUrlBuilder? urlBuilder = null)
     {
         var dto = chat.ToDto(urlBuilder);
 

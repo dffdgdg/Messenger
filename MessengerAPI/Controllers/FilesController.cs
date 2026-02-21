@@ -1,3 +1,5 @@
+using MessengerAPI.Common;
+using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Messaging;
 using MessengerShared.DTO.Message;
 using MessengerShared.Response;
@@ -5,12 +7,25 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class FilesController(IFileService fileService,ILogger<FilesController> logger) : BaseController<FilesController>(logger)
+public class FilesController(IFileService fileService, IChatService chatService, ILogger<FilesController> logger)
+    : BaseController<FilesController>(logger)
 {
     [HttpPost("upload")]
-    public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload([FromQuery] int chatId, IFormFile file) => await ExecuteAsync(async () =>
+    [RequestSizeLimit(100 * 1024 * 1024)]
+    public async Task<ActionResult<ApiResponse<MessageFileDTO>>> Upload(
+        [FromQuery] int chatId, IFormFile file)
     {
-        if (file == null || file.Length == 0) throw new ArgumentException("Файл не предоставлен");
-        return await fileService.SaveMessageFileAsync(file, chatId);
-    }, "Файлы загружены успешно");
+        var userId = GetCurrentUserId();
+
+        return await ExecuteAsync(async () =>
+        {
+            await chatService.EnsureUserHasChatAccessAsync(userId, chatId);
+
+            if (file is null || file.Length == 0)
+                return Result<MessageFileDTO>.Failure("Файл не предоставлен");
+
+            var result = await fileService.SaveMessageFileAsync(file, chatId);
+            return Result<MessageFileDTO>.Success(result);
+        }, "Файл загружен успешно");
+    }
 }

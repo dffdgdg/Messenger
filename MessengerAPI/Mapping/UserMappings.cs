@@ -23,7 +23,8 @@ public static class UserMappings
             Theme = user.UserSetting?.Theme,
             NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
             IsOnline = isOnline ?? false,
-            LastOnline = user.LastOnline
+            LastOnline = user.LastOnline,
+            IsBanned = user.IsBanned
         };
 
     public static string FormatDisplayName(this User user)
@@ -43,11 +44,7 @@ public static class UserMappings
         if (!string.IsNullOrWhiteSpace(dto.Name))
             user.Name = dto.Name.Trim();
 
-        if (!string.IsNullOrWhiteSpace(dto.Midname))
-            user.Midname = dto.Midname.Trim();
-
-        if (dto.DepartmentId.HasValue)
-            user.DepartmentId = dto.DepartmentId;
+        user.Midname = dto.Midname?.Trim();
 
         user.UpdateSettings(dto);
     }

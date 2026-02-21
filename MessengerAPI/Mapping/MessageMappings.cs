@@ -6,10 +6,7 @@ namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {
-    public static MessageDTO ToDto(
-    this Message message,
-    int? currentUserId = null,
-    IUrlBuilder? urlBuilder = null)
+    public static MessageDTO ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
 

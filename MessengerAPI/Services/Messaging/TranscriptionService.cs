@@ -3,7 +3,6 @@ using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
 using MessengerShared.DTO.Message;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using NAudio.Wave;
 using System.Diagnostics;
 
@@ -13,11 +12,13 @@ public interface ITranscriptionService
 {
     Task<Result> TranscribeAsync(int messageId, CancellationToken ct = default);
     Task<Result<VoiceTranscriptionDTO>> GetTranscriptionAsync(int messageId, CancellationToken ct = default);
+    Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default);
 }
 
 public class TranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TranscriptionQueue _transcriptionQueue;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<TranscriptionService> _logger;
 
@@ -33,10 +34,12 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     public TranscriptionService(
         IServiceScopeFactory scopeFactory,
+        TranscriptionQueue transcriptionQueue,
         IWebHostEnvironment env,
         ILogger<TranscriptionService> logger)
     {
         _scopeFactory = scopeFactory;
+        _transcriptionQueue = transcriptionQueue;
         _env = env;
         _logger = logger;
 
@@ -45,7 +48,8 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             "whisper",
             OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
 
-        _modelPath = Path.Combine(_env.ContentRootPath,"whisper","models","ggml-small-q5_1.bin");
+        _modelPath = Path.Combine(
+            _env.ContentRootPath, "whisper", "models", "ggml-small-q5_1.bin");
 
         if (!File.Exists(_whisperPath))
             throw new FileNotFoundException("whisper бинарник не найден");
@@ -58,7 +62,8 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Public API
 
-    public async Task<Result> TranscribeAsync(int messageId, CancellationToken ct = default)
+    public async Task<Result> TranscribeAsync(
+        int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
@@ -68,16 +73,15 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             .Include(m => m.MessageFiles)
             .FirstOrDefaultAsync(m => m.Id == messageId, ct);
 
-        if (message == null)
+        if (message is null)
             return Result.Failure($"Сообщение {messageId} не найдено");
 
         if (!message.IsVoiceMessage)
             return Result.Failure("Сообщение не является голосовым");
 
-        var audioFile = message.MessageFiles?
-            .FirstOrDefault(f => IsAudioFile(f.ContentType));
+        var audioFile = message.MessageFiles?.FirstOrDefault(f => IsAudioFile(f.ContentType));
 
-        if (audioFile == null)
+        if (audioFile is null)
             return Result.Failure("Аудиофайл не найден");
 
         try
@@ -147,17 +151,40 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             })
             .FirstOrDefaultAsync(ct);
 
-        if (data == null)
+        if (data is null)
             return Result<VoiceTranscriptionDTO>.Failure("Голосовое сообщение не найдено");
 
         return Result<VoiceTranscriptionDTO>.Success(data);
+    }
+
+    public async Task<Result> RetryTranscriptionAsync(
+        int messageId, CancellationToken ct = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
+
+        var message = await context.Messages.AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == messageId, ct);
+
+        if (message is null)
+            return Result.Failure("Сообщение не найдено");
+
+        if (!message.IsVoiceMessage)
+            return Result.Failure("Не является голосовым");
+
+        if (message.TranscriptionStatus == "processing")
+            return Result.Failure("Расшифровка уже выполняется");
+
+        await _transcriptionQueue.EnqueueAsync(messageId, ct);
+        return Result.Success();
     }
 
     #endregion
 
     #region Recognition
 
-    private async Task<string?> RecognizeAsync(string audioFilePath, CancellationToken ct)
+    private async Task<string?> RecognizeAsync(
+        string audioFilePath, CancellationToken ct)
     {
         await _semaphore.WaitAsync(ct);
         try
@@ -176,34 +203,55 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         if (pcmData.Length == 0)
             return null;
 
-        var tempWav = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
+        var tempWav = Path.Combine(
+            Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
 
-        await using (var writer = new WaveFileWriter(
-            tempWav,
+        await using (var writer = new WaveFileWriter(tempWav,
             new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
         {
             await writer.WriteAsync(pcmData, ct);
         }
 
-        var psi = new ProcessStartInfo
+        var psi = new ProcessStartInfo(_whisperPath)
         {
-            FileName = _whisperPath,
-            Arguments = $"-m \"{_modelPath}\" -f \"{tempWav}\" -l ru -nt -of -",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
 
+        psi.ArgumentList.Add("-m");
+        psi.ArgumentList.Add(_modelPath);
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add(tempWav);
+        psi.ArgumentList.Add("-l");
+        psi.ArgumentList.Add("ru");
+        psi.ArgumentList.Add("-nt");
+        psi.ArgumentList.Add("-of");
+        psi.ArgumentList.Add("-");
+
         try
         {
             using var process = Process.Start(psi);
-            if (process == null)
+            if (process is null)
                 return null;
-            var output = await process.StandardOutput.ReadToEndAsync(ct);
-            await process.WaitForExitAsync(ct);
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromMinutes(5));
+
+            var outputTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+            var errorTask = process.StandardError.ReadToEndAsync(cts.Token);
+
+            await process.WaitForExitAsync(cts.Token);
+
+            var output = await outputTask;
+            var error = await errorTask;
+
+            if (process.ExitCode != 0)
+                _logger.LogWarning("Whisper stderr: {Error}", error);
+
             var text = output?.Trim();
-        _logger.LogDebug("Whisper: {Text}", text);
+            _logger.LogDebug("Whisper: {Text}", text);
 
             return string.IsNullOrWhiteSpace(text) ? null : text;
         }
@@ -217,14 +265,12 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Audio Conversion
 
-    private static byte[] ConvertToPcm16Mono16K(string audioFilePath, CancellationToken ct)
+    private static byte[] ConvertToPcm16Mono16K(
+        string audioFilePath, CancellationToken ct)
     {
         using var reader = new AudioFileReader(audioFilePath);
 
-        var targetFormat = new WaveFormat(
-            TargetSampleRate,
-            TargetBitsPerSample,
-            TargetChannels);
+        var targetFormat = new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels);
 
         using var resampler = new MediaFoundationResampler(reader, targetFormat)
         {
@@ -232,7 +278,6 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         };
 
         using var ms = new MemoryStream();
-
         var buffer = new byte[8192];
         int bytesRead;
 
@@ -244,23 +289,18 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
         return ms.ToArray();
     }
+
     #endregion
 
     #region Helpers
 
-    private static async Task SetStatusAsync(
-        MessengerDbContext context,
-        IHubNotifier hubNotifier,
-        Message message,
-        string status,
-        CancellationToken ct)
+    private static async Task SetStatusAsync(MessengerDbContext context, IHubNotifier hubNotifier,
+        Message message, string status, CancellationToken ct)
     {
         message.TranscriptionStatus = status;
         await context.SaveChangesAsync(ct);
 
-        await hubNotifier.SendToChatAsync(
-            message.ChatId,
-            "TranscriptionStatusChanged",
+        await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
             new VoiceTranscriptionDTO
             {
                 MessageId = message.Id,
@@ -269,17 +309,12 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             });
     }
 
-    private static async Task SetFailedAsync(
-        MessengerDbContext context,
-        IHubNotifier hubNotifier,
-        Message message)
+    private static async Task SetFailedAsync(MessengerDbContext context, IHubNotifier hubNotifier, Message message)
     {
         message.TranscriptionStatus = "failed";
         await context.SaveChangesAsync(CancellationToken.None);
 
-        await hubNotifier.SendToChatAsync(
-            message.ChatId,
-            "TranscriptionStatusChanged",
+        await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
             new VoiceTranscriptionDTO
             {
                 MessageId = message.Id,
@@ -293,9 +328,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         if (string.IsNullOrEmpty(relativePath))
             return string.Empty;
 
-        return Path.Combine(
-            _env.WebRootPath ?? "wwwroot",
-            relativePath.TrimStart('/'));
+        return Path.Combine(_env.WebRootPath ?? "wwwroot", relativePath.TrimStart('/'));
     }
 
     private static bool IsAudioFile(string? contentType)
@@ -311,8 +344,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
 
         if (disposing)
             _semaphore.Dispose();

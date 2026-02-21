@@ -1,4 +1,5 @@
-﻿using MessengerAPI.Services.Chat;
+﻿using MessengerAPI.Common;
+using MessengerAPI.Services.Chat;
 using MessengerShared.DTO;
 using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.User;
@@ -7,7 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ChatsController(IChatService chatService, IChatMemberService chatMemberService, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
+public class ChatsController(
+    IChatService chatService,
+    IChatMemberService chatMemberService,
+    ILogger<ChatsController> logger)
+    : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
     public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserDialogs(int userId)
@@ -15,16 +20,20 @@ public class ChatsController(IChatService chatService, IChatMemberService chatMe
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId),"Диалоги пользователя получены успешно");
+        return await ExecuteAsync(
+            () => chatService.GetUserDialogsAsync(userId),
+            "Диалоги пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}/contact/{contactUserId}")]
-    public async Task<ActionResult<ApiResponse<ChatDTO?>>> GetContactChat(int userId, int contactUserId)
+    public async Task<ActionResult<ApiResponse<ChatDTO>>> GetContactChat(
+        int userId, int contactUserId)
     {
         if (!IsCurrentUser(userId))
-            return Forbidden<ChatDTO?>();
+            return Forbidden<ChatDTO>();
 
-        return await ExecuteAsync(() => chatService.GetContactChatAsync(userId, contactUserId));
+        return await ExecuteAsync(
+            () => chatService.GetContactChatAsync(userId, contactUserId));
     }
 
     [HttpGet("user/{userId}/groups")]
@@ -33,7 +42,9 @@ public class ChatsController(IChatService chatService, IChatMemberService chatMe
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserGroupsAsync(userId),"Групповые чаты пользователя получены успешно");
+        return await ExecuteAsync(
+            () => chatService.GetUserGroupsAsync(userId),
+            "Групповые чаты пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}")]
@@ -42,84 +53,75 @@ public class ChatsController(IChatService chatService, IChatMemberService chatMe
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserChatsAsync(userId), "Чаты пользователя получены успешно");
+        return await ExecuteAsync(
+            () => chatService.GetUserChatsAsync(userId),
+            "Чаты пользователя получены успешно");
     }
 
     [HttpGet("{chatId}")]
     public async Task<ActionResult<ApiResponse<ChatDTO>>> GetChat(int chatId)
     {
         var currentUserId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            var chat = await chatService.GetChatAsync(chatId, currentUserId);
-            return chat ?? throw new KeyNotFoundException($"Чат с ID {chatId} не найден");
-        });
+        return await ExecuteAsync(
+            () => chatService.GetChatForUserAsync(chatId, currentUserId));
     }
 
     [HttpGet("{chatId}/members")]
     public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetChatMembers(int chatId)
     {
         var currentUserId = GetCurrentUserId();
-
         return await ExecuteAsync(async () =>
         {
             await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            return await chatService.GetChatMembersAsync(chatId);
+            var members = await chatService.GetChatMembersAsync(chatId);
+            return Result<List<UserDTO>>.Success(members);
         }, "Участники чата получены успешно");
     }
 
     [HttpPost("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDTO dto)
+    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(
+        int chatId, [FromBody] UpdateChatMemberDTO dto)
     {
         var currentUserId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            ValidateModel();
-            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            return await chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId);
-        }, "Участник чата добавлен успешно");
+        return await ExecuteAsync(
+            () => chatMemberService.AddMemberAsync(
+                chatId, dto.UserId, currentUserId),
+            "Участник чата добавлен успешно");
     }
 
     [HttpDelete("{chatId}/members/{userId}")]
     public async Task<IActionResult> RemoveChatMember(int chatId, int userId)
     {
         var currentUserId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            await chatMemberService.RemoveMemberAsync(chatId, userId, currentUserId);
-        }, "Участник чата удалён успешно");
+        return await ExecuteAsync(
+            () => chatMemberService.RemoveMemberAsync(
+                chatId, userId, currentUserId),
+            "Участник чата удалён успешно");
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> CreateChat([FromBody] ChatDTO chatDto)
+    public async Task<ActionResult<ApiResponse<ChatDTO>>> CreateChat(
+        [FromBody] ChatDTO chatDto)
     {
-        var currentUserId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            ValidateModel();
-            if (chatDto.CreatedById != currentUserId)
-                throw new UnauthorizedAccessException("Нельзя создать чат от имени другого пользователя");
-            return await chatService.CreateChatAsync(chatDto);
-        }, "Чат успешно создан");
+        chatDto.CreatedById = GetCurrentUserId();
+        return await ExecuteAsync(
+            () => chatService.CreateChatAsync(chatDto),
+            "Чат успешно создан");
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> UpdateChat(int id, [FromBody] UpdateChatDTO updateDto)
+    public async Task<ActionResult<ApiResponse<ChatDTO>>> UpdateChat(
+        int id, [FromBody] UpdateChatDTO updateDto)
     {
         var currentUserId = GetCurrentUserId();
-
         return await ExecuteAsync(async () =>
         {
-            ValidateModel();
             if (id != updateDto.Id)
-                throw new ArgumentException("Несоответствие ID чата");
-            return await chatService.UpdateChatAsync(id, currentUserId, updateDto);
+                return Result<ChatDTO>.Failure("Несоответствие ID чата");
+
+            var result = await chatService.UpdateChatAsync(
+                id, currentUserId, updateDto);
+            return Result<ChatDTO>.Success(result);
         }, "Чат успешно обновлён");
     }
 
@@ -127,23 +129,22 @@ public class ChatsController(IChatService chatService, IChatMemberService chatMe
     public async Task<IActionResult> DeleteChat(int id)
     {
         var currentUserId = GetCurrentUserId();
-
-        return await ExecuteAsync(() => chatService.DeleteChatAsync(id, currentUserId),"Чат успешно удалён");
+        return await ExecuteAsync(
+            () => chatService.DeleteChatAsync(id, currentUserId),
+            "Чат успешно удалён");
     }
 
     [HttpPost("{id}/avatar")]
-    public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(int id, IFormFile file)
+    public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(
+        int id, IFormFile file)
     {
         var currentUserId = GetCurrentUserId();
-
         return await ExecuteAsync(async () =>
         {
-            if (file == null || file.Length == 0)
-                throw new ArgumentException("Файл не предоставлен");
-
             await chatService.EnsureUserIsChatAdminAsync(currentUserId, id);
             var avatarUrl = await chatService.UploadChatAvatarAsync(id, file);
-            return new AvatarResponseDTO { AvatarUrl = avatarUrl };
+            return Result<AvatarResponseDTO>.Success(
+                new AvatarResponseDTO { AvatarUrl = avatarUrl });
         }, "Аватар чата загружен успешно");
     }
 }

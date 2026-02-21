@@ -8,53 +8,84 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class DepartmentController(IDepartmentService departmentService,ILogger<DepartmentController> logger) : BaseController<DepartmentController>(logger)
+public class DepartmentController(
+    IDepartmentService departmentService,
+    ILogger<DepartmentController> logger)
+    : BaseController<DepartmentController>(logger)
 {
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<DepartmentDTO>>>> GetDepartments(CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.GetDepartmentsAsync(ct),"Список отделов получен");
+    public async Task<ActionResult<ApiResponse<List<DepartmentDTO>>>> GetDepartments(
+        CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.GetDepartmentsAsync(ct),
+            "Список отделов получен");
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<DepartmentDTO>>> GetDepartment(int id, CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.GetDepartmentAsync(id, ct));
+    public async Task<ActionResult<ApiResponse<DepartmentDTO>>> GetDepartment(
+        int id, CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.GetDepartmentAsync(id, ct));
 
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Admin))]
-    public async Task<ActionResult<ApiResponse<DepartmentDTO>>> CreateDepartment([FromBody] DepartmentDTO dto, CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.CreateDepartmentAsync(dto, ct),"Отдел успешно создан");
+    public async Task<ActionResult<ApiResponse<DepartmentDTO>>> CreateDepartment(
+        [FromBody] DepartmentDTO dto, CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.CreateDepartmentAsync(dto, ct),
+            "Отдел успешно создан");
 
     [HttpPut("{id}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
-    public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDTO dto, CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.UpdateDepartmentAsync(id, dto, ct),"Отдел успешно обновлён");
+    public async Task<IActionResult> UpdateDepartment(
+        int id, [FromBody] DepartmentDTO dto, CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.UpdateDepartmentAsync(id, dto, ct),
+            "Отдел успешно обновлён");
 
     [HttpDelete("{id}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
-    public async Task<IActionResult> DeleteDepartment(int id, CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.DeleteDepartmentAsync(id, ct),"Отдел успешно удалён");
+    public async Task<IActionResult> DeleteDepartment(
+        int id, CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.DeleteDepartmentAsync(id, ct),
+            "Отдел успешно удалён");
 
     [HttpGet("{id}/members")]
-    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetDepartmentMembers(int id, CancellationToken ct)
-        => await ExecuteResultAsync(() => departmentService.GetDepartmentMembersAsync(id, ct),"Список сотрудников получен");
+    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetDepartmentMembers(
+        int id, CancellationToken ct)
+        => await ExecuteAsync(
+            () => departmentService.GetDepartmentMembersAsync(id, ct),
+            "Список сотрудников получен");
 
     [HttpPost("{id}/members")]
-    public async Task<IActionResult> AddUserToDepartment(int id, [FromBody] UpdateDepartmentMemberDTO dto, CancellationToken ct)
+    public async Task<IActionResult> AddUserToDepartment(
+        int id, [FromBody] UpdateDepartmentMemberDTO dto, CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteResultAsync(() => departmentService.AddUserToDepartmentAsync(id, dto.UserId, currentUserId, ct),"Пользователь добавлен в отдел");
+        return await ExecuteAsync(
+            () => departmentService.AddUserToDepartmentAsync(
+                id, dto.UserId, currentUserId, ct),
+            "Пользователь добавлен в отдел");
     }
 
     [HttpDelete("{id}/members/{userId}")]
-    public async Task<IActionResult> RemoveUserFromDepartment(int id, int userId, CancellationToken ct)
+    public async Task<IActionResult> RemoveUserFromDepartment(
+        int id, int userId, CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteResultAsync(() => departmentService.RemoveUserFromDepartmentAsync(id, userId, currentUserId, ct),"Пользователь удалён из отдела");
+        return await ExecuteAsync(
+            () => departmentService.RemoveUserFromDepartmentAsync(
+                id, userId, currentUserId, ct),
+            "Пользователь удалён из отдела");
     }
 
     [HttpGet("{id}/can-manage")]
-    public async Task<ActionResult<ApiResponse<bool>>> CanManageDepartment(int id, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<bool>>> CanManageDepartment(
+        int id, CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteResultAsync(() => departmentService.CanManageDepartmentAsync(currentUserId, id, ct));
+        return await ExecuteAsync(
+            () => departmentService.CanManageDepartmentAsync(
+                currentUserId, id, ct));
     }
 }

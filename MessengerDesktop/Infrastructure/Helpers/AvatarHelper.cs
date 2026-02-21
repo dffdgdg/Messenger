@@ -5,49 +5,77 @@ namespace MessengerDesktop.Infrastructure.Helpers;
 
 public static class AvatarHelper
 {
-    private const string DefaultAvatar = "avares://MessengerDesktop/Assets/Images/default-avatar.webp";
+    /// <summary>
+    /// URI аватара по умолчанию. Валидируется при загрузке класса.
+    /// </summary>
+    private static readonly Uri DefaultAvatarUri =
+        new("avares://MessengerDesktop/Assets/Images/default-avatar.webp");
 
-    public static string GetSafeUrl(string? avatarUrl)
+    /// <summary>
+    /// Возвращает валидный абсолютный URI для аватара.
+    /// При пустом или некорректном входе возвращает аватар по умолчанию.
+    /// </summary>
+    public static Uri GetSafeUri(string? avatarUrl)
     {
-        if (string.IsNullOrEmpty(avatarUrl))
-            return DefaultAvatar;
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+            return DefaultAvatarUri;
 
         try
         {
-            if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                return avatarUrl;
+            if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var absoluteUri)
+                && absoluteUri.Scheme is "http" or "https" or "avares")
+            {
+                return absoluteUri;
+            }
 
-            var baseUri = new Uri(App.ApiUrl);
-            var avatarUri = new Uri(baseUri, avatarUrl.TrimStart('/'));
-            return avatarUri.ToString();
+            var baseUri = new Uri(App.ApiUrl, UriKind.Absolute);
+            return new Uri(baseUri, avatarUrl.TrimStart('/'));
         }
-        catch
+        catch (UriFormatException)
         {
-            return DefaultAvatar;
+            return DefaultAvatarUri;
         }
     }
 
-    public static string GetUrlWithCacheBuster(string? avatarUrl)
+    /// <summary>
+    /// Возвращает абсолютный URI с параметром сброса кеша (?v=...),
+    /// или null, если входная строка пуста.
+    /// </summary>
+    public static Uri? GetUriWithCacheBuster(string? avatarUrl)
     {
-        if (string.IsNullOrEmpty(avatarUrl))
-            return string.Empty;
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+            return null;
 
-        if (avatarUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        Uri resolved;
+        if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var absoluteUri)
+            && absoluteUri.Scheme is "http" or "https")
         {
-            var uriBuilder = new UriBuilder(avatarUrl);
-            var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
-            query["v"] = DateTime.Now.Ticks.ToString();
-            uriBuilder.Query = query.ToString();
-            return uriBuilder.ToString();
+            resolved = absoluteUri;
+        }
+        else
+        {
+            var baseUri = new Uri(App.ApiUrl, UriKind.Absolute);
+            resolved = new Uri(baseUri, avatarUrl.TrimStart('/'));
         }
 
-        var baseUrl = App.ApiUrl.TrimEnd('/');
-        var cleanPath = avatarUrl.TrimStart('/');
-        return $"{baseUrl}/{cleanPath}?v={DateTime.Now.Ticks}";
+        var builder = new UriBuilder(resolved);
+        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+        query["v"] = DateTime.UtcNow.Ticks.ToString();
+        builder.Query = query.ToString();
+
+        return builder.Uri;
     }
+
+    public static string GetUrlWithCacheBuster(string? avatarUrl) =>
+        GetUriWithCacheBuster(avatarUrl)?.AbsoluteUri ?? string.Empty;
 }
+
 public static class MimeTypeHelper
 {
+    /// <summary>
+    /// Определяет MIME-тип по расширению файла.
+    /// Для неизвестных расширений возвращает application/octet-stream.
+    /// </summary>
     public static string GetMimeType(string filePath)
     {
         var ext = Path.GetExtension(filePath).ToLowerInvariant();

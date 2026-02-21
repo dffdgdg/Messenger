@@ -32,6 +32,9 @@ public class AuthManager : IAuthManager, IDisposable
     private const string UserIdKey = "user_id";
     private const string UserRoleKey = "user_role";
     private const string CachedUserIdKey = "cached_user_id";
+    private const string RememberMeKey = "remember_me";
+    private const string SavedUsernameKey = "saved_username";
+    private const string SavedPasswordKey = "saved_password";
 
     private bool _disposed;
 
@@ -178,6 +181,7 @@ public class AuthManager : IAuthManager, IDisposable
             }
 
             await ClearCacheOnLogoutAsync();
+            await ClearSavedCredentialsAsync();
             await ClearStoredAuthAsync();
             Session.ClearSession();
 
@@ -252,7 +256,14 @@ public class AuthManager : IAuthManager, IDisposable
 
         Debug.WriteLine("AuthManager: Stored auth cleared");
     }
+    private async Task ClearSavedCredentialsAsync()
+    {
+        await _secureStorage.RemoveAsync(RememberMeKey);
+        await _secureStorage.RemoveAsync(SavedUsernameKey);
+        await _secureStorage.RemoveAsync(SavedPasswordKey);
 
+        Debug.WriteLine("AuthManager: Saved login credentials cleared");
+    }
     public Task WaitForInitializationAsync() => _initializationTcs.Task;
 
     public async Task<bool> WaitForInitializationAsync(TimeSpan timeout)

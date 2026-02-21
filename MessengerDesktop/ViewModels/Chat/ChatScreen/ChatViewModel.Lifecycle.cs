@@ -214,7 +214,7 @@ public partial class ChatViewModel
 
     /// <summary>
     /// Освобождение ресурсов: отключение от хаба, отмена загрузок,
-    /// очистка коллекций, dispose менеджеров.
+    /// отписка от событий, dispose менеджеров.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
@@ -226,6 +226,7 @@ public partial class ChatViewModel
         if (_globalHub is GlobalHubConnection hub)
             hub.SetCurrentChat(null);
 
+        // Отменяем все активные операции загрузки
         if (_loadingCts is not null)
         {
             await _loadingCts.CancelAsync();
@@ -233,6 +234,7 @@ public partial class ChatViewModel
             _loadingCts = null;
         }
 
+        // Отписываемся от событий хаба и отключаемся
         if (_hubConnection is not null)
         {
             _hubConnection.MessageReceived -= OnMessageReceived;
@@ -246,12 +248,6 @@ public partial class ChatViewModel
 
         DisposeVoice();
 
-        Messages.Clear();
-        Members.Clear();
-        LocalAttachments.Clear();
         _attachmentManager.Dispose();
-
-        Dispose();
-        GC.SuppressFinalize(this);
     }
 }

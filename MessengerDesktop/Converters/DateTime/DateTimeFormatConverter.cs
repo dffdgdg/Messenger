@@ -5,13 +5,7 @@ namespace MessengerDesktop.Converters.DateTime;
 
 public enum DateTimeFormat
 {
-    Default,
-    Time,
-    Date,
-    ShortDate,
-    DateTime,
-    Chat,
-    Relative
+    Default, Time, Date, ShortDate, DateTime, Chat, Relative
 }
 
 public class DateTimeFormatConverter : ConverterBase<System.DateTime, string>

@@ -43,9 +43,7 @@ public class ChatCacheRepository(LocalDatabase localDb) : IChatCacheRepository
     public async Task UpdateLastMessageAsync(int chatId, string? preview, string? senderName, long dateTicks)
     {
         await Db.ExecuteAsync(
-            @"UPDATE chats 
-              SET last_message_preview = ?, last_message_sender_name = ?, last_message_date = ?
-              WHERE id = ?",
+            "UPDATE chats SET last_message_preview = ?, last_message_sender_name = ?, last_message_date = ? WHERE id = ?",
             preview, senderName, dateTicks, chatId);
     }
 

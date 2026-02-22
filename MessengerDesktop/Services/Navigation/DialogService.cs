@@ -25,7 +25,7 @@ namespace MessengerDesktop.Services
         void NotifyAnimationComplete();
     }
 
-    public partial class DialogService : ObservableObject, IDialogService, IDisposable
+    public sealed partial class DialogService : ObservableObject, IDialogService, IDisposable
     {
         private readonly List<DialogBaseViewModel> _dialogStack = [];
         private readonly SemaphoreSlim _operationLock = new(1, 1);
@@ -307,8 +307,6 @@ namespace MessengerDesktop.Services
             _operationLock.Dispose();
             _animationCts?.Dispose();
             _processingCts.Dispose();
-
-            GC.SuppressFinalize(this);
         }
     }
 }

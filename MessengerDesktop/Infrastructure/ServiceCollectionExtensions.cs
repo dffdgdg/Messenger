@@ -24,10 +24,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
     {
-        services.AddSingleton<LocalDatabase>(sp =>
+        services.AddSingleton<LocalDatabase>(_ =>
         {
-            var appData = Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData);
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             var dbDir = Path.Combine(appData, "MessengerDesktop");
             Directory.CreateDirectory(dbDir);
             var dbPath = Path.Combine(dbDir, "messenger_cache.db");

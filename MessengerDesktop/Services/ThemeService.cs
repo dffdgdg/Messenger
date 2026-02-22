@@ -27,8 +27,7 @@ namespace MessengerDesktop.Services
 
         public void Toggle()
         {
-            var newTheme = _app.RequestedThemeVariant == ThemeVariant.Dark
-                ? ThemeVariant.Light : ThemeVariant.Dark;
+            var newTheme = _app.RequestedThemeVariant == ThemeVariant.Dark ? ThemeVariant.Light : ThemeVariant.Dark;
 
             _app.RequestedThemeVariant = newTheme;
             SaveTheme(newTheme);

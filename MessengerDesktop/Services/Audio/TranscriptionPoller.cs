@@ -8,17 +8,11 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed class TranscriptionPoller : IDisposable
+public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposable
 {
-    private readonly IApiClientService _apiClient;
     private readonly ConcurrentDictionary<int, PollEntry> _active = new();
     private readonly CancellationTokenSource _globalCts = new();
     private bool _disposed;
-
-    public TranscriptionPoller(IApiClientService apiClient)
-    {
-        _apiClient = apiClient;
-    }
 
     public void StartPolling(int messageId, Action<TranscriptionResult> onUpdate)
     {
@@ -49,7 +43,7 @@ public sealed class TranscriptionPoller : IDisposable
     {
         var delays = new[] { 1000, 2000, 4000, 8000, 16000 };
         var attempt = 0;
-        var maxAttempts = 60;
+        const int maxAttempts = 60;
 
         try
         {
@@ -58,7 +52,7 @@ public sealed class TranscriptionPoller : IDisposable
                 var delayMs = delays[Math.Min(attempt, delays.Length - 1)];
                 await Task.Delay(delayMs, entry.Cts.Token);
 
-                var result = await _apiClient.GetAsync<TranscriptionResult>(
+                var result = await apiClient.GetAsync<TranscriptionResult>(
                     ApiEndpoints.Message.Transcription(messageId),
                     entry.Cts.Token);
 

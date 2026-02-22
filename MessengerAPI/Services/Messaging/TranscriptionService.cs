@@ -58,8 +58,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Public API
 
-    public async Task<Result> TranscribeAsync(
-        int messageId, CancellationToken ct = default)
+    public async Task<Result> TranscribeAsync(int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
@@ -260,10 +259,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
         var targetFormat = new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels);
 
-        using var resampler = new MediaFoundationResampler(reader, targetFormat)
-        {
-            ResamplerQuality = 60
-        };
+        using var resampler = new MediaFoundationResampler(reader, targetFormat) { ResamplerQuality = 60 };
 
         using var ms = new MemoryStream();
         var buffer = new byte[8192];

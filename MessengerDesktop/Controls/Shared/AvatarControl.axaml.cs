@@ -51,56 +51,47 @@ public partial class AvatarControl : UserControl
     public static readonly DirectProperty<AvatarControl, CornerRadius>
         OnlineIndicatorCornerRadiusProperty =
             AvaloniaProperty.RegisterDirect<AvatarControl, CornerRadius>(
-                nameof(OnlineIndicatorCornerRadius),
-                o => o.OnlineIndicatorCornerRadius);
+                nameof(OnlineIndicatorCornerRadius), o => o.OnlineIndicatorCornerRadius);
 
     private string? _imageSource;
     public static readonly DirectProperty<AvatarControl, string?>
-        ImageSourceProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, string?>(
-                nameof(ImageSource), o => o.ImageSource);
+        ImageSourceProperty = AvaloniaProperty.RegisterDirect
+        <AvatarControl, string?>(nameof(ImageSource), o => o.ImageSource);
 
     private bool _hasImage;
     public static readonly DirectProperty<AvatarControl, bool>
-        HasImageProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-                nameof(HasImage), o => o.HasImage);
+        HasImageProperty = AvaloniaProperty.RegisterDirect
+        <AvatarControl, bool>(nameof(HasImage), o => o.HasImage);
 
     private bool _showInitials;
     public static readonly DirectProperty<AvatarControl, bool>
-        ShowInitialsProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-                nameof(ShowInitials), o => o.ShowInitials);
+        ShowInitialsProperty = AvaloniaProperty.RegisterDirect
+        <AvatarControl, bool>(nameof(ShowInitials), o => o.ShowInitials);
 
     private bool _showIcon;
     public static readonly DirectProperty<AvatarControl, bool>
-        ShowIconProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-                nameof(ShowIcon), o => o.ShowIcon);
+        ShowIconProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>
+        (nameof(ShowIcon), o => o.ShowIcon);
 
     private string _initials = "?";
     public static readonly DirectProperty<AvatarControl, string>
-        InitialsProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, string>(
-                nameof(Initials), o => o.Initials);
+        InitialsProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string>
+        (nameof(Initials), o => o.Initials);
 
     private Geometry? _iconData;
     public static readonly DirectProperty<AvatarControl, Geometry?>
-        IconDataProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>(
-                nameof(IconData), o => o.IconData);
+        IconDataProperty = AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>
+        (nameof(IconData), o => o.IconData);
 
     private double _onlineIndicatorSize = 10;
     public static readonly DirectProperty<AvatarControl, double>
-        OnlineIndicatorSizeProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, double>(
-                nameof(OnlineIndicatorSize), o => o.OnlineIndicatorSize);
+        OnlineIndicatorSizeProperty = AvaloniaProperty.RegisterDirect<AvatarControl, double>
+        (nameof(OnlineIndicatorSize), o => o.OnlineIndicatorSize);
 
     private bool _showOnlineStatus;
     public static readonly DirectProperty<AvatarControl, bool>
-        ShowOnlineStatusProperty =
-            AvaloniaProperty.RegisterDirect<AvatarControl, bool>(
-                nameof(ShowOnlineStatus), o => o.ShowOnlineStatus);
+        ShowOnlineStatusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>
+        (nameof(ShowOnlineStatus), o => o.ShowOnlineStatus);
 
     #endregion
 
@@ -175,67 +166,55 @@ public partial class AvatarControl : UserControl
     public CornerRadius OnlineIndicatorCornerRadius
     {
         get => _onlineIndicatorCornerRadius;
-        private set => SetAndRaise(
-            OnlineIndicatorCornerRadiusProperty,
-            ref _onlineIndicatorCornerRadius, value);
+        private set => SetAndRaise(OnlineIndicatorCornerRadiusProperty, ref _onlineIndicatorCornerRadius, value);
     }
 
     public string? ImageSource
     {
         get => _imageSource;
-        private set => SetAndRaise(
-            ImageSourceProperty, ref _imageSource, value);
+        private set => SetAndRaise(ImageSourceProperty, ref _imageSource, value);
     }
 
     public bool HasImage
     {
         get => _hasImage;
-        private set => SetAndRaise(
-            HasImageProperty, ref _hasImage, value);
+        private set => SetAndRaise(HasImageProperty, ref _hasImage, value);
     }
 
     public bool ShowInitials
     {
         get => _showInitials;
-        private set => SetAndRaise(
-            ShowInitialsProperty, ref _showInitials, value);
+        private set => SetAndRaise(ShowInitialsProperty, ref _showInitials, value);
     }
 
     public bool ShowIcon
     {
         get => _showIcon;
-        private set => SetAndRaise(
-            ShowIconProperty, ref _showIcon, value);
+        private set => SetAndRaise(ShowIconProperty, ref _showIcon, value);
     }
 
     public string Initials
     {
         get => _initials;
-        private set => SetAndRaise(
-            InitialsProperty, ref _initials, value);
+        private set => SetAndRaise(InitialsProperty, ref _initials, value);
     }
 
     public Geometry? IconData
     {
         get => _iconData;
-        private set => SetAndRaise(
-            IconDataProperty, ref _iconData, value);
+        private set => SetAndRaise(IconDataProperty, ref _iconData, value);
     }
 
     public double OnlineIndicatorSize
     {
         get => _onlineIndicatorSize;
-        private set => SetAndRaise(
-            OnlineIndicatorSizeProperty,
-            ref _onlineIndicatorSize, value);
+        private set => SetAndRaise(OnlineIndicatorSizeProperty, ref _onlineIndicatorSize, value);
     }
 
     public bool ShowOnlineStatus
     {
         get => _showOnlineStatus;
-        private set => SetAndRaise(
-            ShowOnlineStatusProperty,
-            ref _showOnlineStatus, value);
+        private set => SetAndRaise(ShowOnlineStatusProperty, ref _showOnlineStatus, value);
     }
 
     #endregion
@@ -245,11 +224,9 @@ public partial class AvatarControl : UserControl
     /// can handle. Anything else (.pptx, .pdf, .docx) must NOT
     /// be passed to AsyncImageLoader.
     /// </summary>
-    private static readonly HashSet<string> ImageExtensions = new(
-        StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".jpg", ".jpeg", ".png", ".gif",
-        ".webp", ".bmp", ".ico", ".avif"
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico", ".avif"
     };
 
     public AvatarControl()
@@ -277,20 +254,13 @@ public partial class AvatarControl : UserControl
 
     static AvatarControl()
     {
-        SourceProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateComputedProperties());
-        DisplayNameProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateComputedProperties());
-        FallbackIconProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateComputedProperties());
-        IsOnlineProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateOnlineStatus());
-        ShowOnlineIndicatorProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateOnlineStatus());
-        SizeProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.OnSizeChanged());
-        IsCircularProperty.Changed.AddClassHandler<AvatarControl>(
-            (x, _) => x.UpdateCornerRadius());
+        SourceProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
+        DisplayNameProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
+        FallbackIconProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
+        IsOnlineProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateOnlineStatus());
+        ShowOnlineIndicatorProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateOnlineStatus());
+        SizeProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.OnSizeChanged());
+        IsCircularProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateCornerRadius());
     }
 
     private void UpdateComputedProperties()
@@ -316,11 +286,8 @@ public partial class AvatarControl : UserControl
         IconData = FallbackIcon ?? GetDefaultIcon();
 
         var hasFallbackIcon = FallbackIcon != null;
-        ShowInitials = !HasImage
-                       && !string.IsNullOrEmpty(DisplayName)
-                       && !hasFallbackIcon;
-        ShowIcon = !HasImage
-                   && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);
+        ShowInitials = !HasImage && !string.IsNullOrEmpty(DisplayName) && !hasFallbackIcon;
+        ShowIcon = !HasImage && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);
     }
 
     /// <summary>
@@ -359,8 +326,7 @@ public partial class AvatarControl : UserControl
         return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
     }
 
-    private void UpdateOnlineStatus() =>
-        ShowOnlineStatus = IsOnline && ShowOnlineIndicator;
+    private void UpdateOnlineStatus() => ShowOnlineStatus = IsOnline && ShowOnlineIndicator;
 
     private void OnSizeChanged()
     {
@@ -382,8 +348,7 @@ public partial class AvatarControl : UserControl
     {
         if (this.FindControl<Border>("AvatarBorder") is { } border)
         {
-            border.CornerRadius = IsCircular ? new CornerRadius(Size / 2)
-                : new CornerRadius(8);
+            border.CornerRadius = IsCircular ? new CornerRadius(Size / 2) : new CornerRadius(8);
         }
     }
 
@@ -392,17 +357,13 @@ public partial class AvatarControl : UserControl
         if (string.IsNullOrWhiteSpace(name))
             return "?";
 
-        var parts = name.Trim().Split(
-            ' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         return parts.Length switch
         {
-            >= 2 => $"{char.ToUpper(parts[0][0])}" +
-                     $"{char.ToUpper(parts[1][0])}",
+            >= 2 => $"{char.ToUpper(parts[0][0])}{char.ToUpper(parts[1][0])}",
 
-            1 when parts[0].Length >= 2 =>
-                $"{char.ToUpper(parts[0][0])}" +
-                $"{char.ToUpper(parts[0][1])}",
+            1 when parts[0].Length >= 2 => $"{char.ToUpper(parts[0][0])}{char.ToUpper(parts[0][1])}",
 
             1 => char.ToUpper(parts[0][0]).ToString(),
 
@@ -410,6 +371,5 @@ public partial class AvatarControl : UserControl
         };
     }
 
-    private Geometry? GetDefaultIcon() =>
-        this.FindResource("PersonIcon") as Geometry;
+    private Geometry? GetDefaultIcon() => this.FindResource("PersonIcon") as Geometry;
 }

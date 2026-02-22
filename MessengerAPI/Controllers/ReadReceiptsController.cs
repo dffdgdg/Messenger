@@ -35,8 +35,7 @@ public class ReadReceiptsController(
         {
             await chatService.EnsureUserHasChatAccessAsync(userId, chatId);
             var count = await readReceiptService.GetUnreadCountAsync(userId, chatId);
-            return Result<UnreadCountDTO>.Success(
-                new UnreadCountDTO(chatId, count));
+            return Result<UnreadCountDTO>.Success(new UnreadCountDTO(chatId, count));
         });
     }
 

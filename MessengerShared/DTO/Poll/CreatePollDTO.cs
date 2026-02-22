@@ -1,8 +1,6 @@
 ﻿namespace MessengerShared.DTO.Poll;
 /// <summary>
 /// Запрос на создание опроса.
-/// Question здесь — потому что клиент передаёт вопрос,
-/// сервер запишет его в Message.Content.
 /// </summary>
 public class CreatePollDTO
 {

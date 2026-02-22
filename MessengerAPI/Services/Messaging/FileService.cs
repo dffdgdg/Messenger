@@ -56,10 +56,7 @@ public class FileService(
             }));
         }
 
-        await image.SaveAsWebpAsync(absolutePath, new WebpEncoder
-        {
-            Quality = _settings.ImageQuality
-        });
+        await image.SaveAsWebpAsync(absolutePath, new WebpEncoder { Quality = _settings.ImageQuality });
 
         var resultPath = "/" + relativePath.Replace('\\', '/');
 

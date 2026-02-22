@@ -29,8 +29,7 @@ public class NotificationController(
     }
 
     [HttpPost("chat/mute")]
-    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> SetChatMute(
-        [FromBody] ChatNotificationSettingsDTO request)
+    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> SetChatMute([FromBody] ChatNotificationSettingsDTO request)
     {
         var userId = GetCurrentUserId();
 

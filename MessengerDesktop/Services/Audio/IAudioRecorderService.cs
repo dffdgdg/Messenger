@@ -32,6 +32,5 @@ public sealed class AudioRecordingResult : IDisposable
     public required string FileName { get; init; }
     public required string ContentType { get; init; }
     public required TimeSpan Duration { get; init; }
-
     public void Dispose() => AudioStream.Dispose();
 }

@@ -33,18 +33,14 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     }
 
     public async Task MarkDeletedAsync(int messageId) =>
-        await Db.ExecuteAsync(
-            "UPDATE messages SET is_deleted = 1, content = NULL, poll_json = NULL, files_json = NULL WHERE id = ?",
+        await Db.ExecuteAsync("UPDATE messages SET is_deleted = 1, content = NULL, poll_json = NULL, files_json = NULL WHERE id = ?",
             messageId);
 
     public async Task<List<CachedMessage>> GetLatestAsync(int chatId, int count)
     {
         // Индекс idx_msg_chat_id (chat_id, id DESC) — мгновенно
         var messages = await Db.QueryAsync<CachedMessage>(
-            @"SELECT * FROM messages 
-              WHERE chat_id = ? 
-              ORDER BY id DESC 
-              LIMIT ?",
+            "SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
             chatId, count);
 
         // Разворачиваем: UI ожидает хронологический порядок (старые → новые)
@@ -55,10 +51,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     public async Task<List<CachedMessage>> GetBeforeAsync(int chatId, int beforeId, int count)
     {
         var messages = await Db.QueryAsync<CachedMessage>(
-            @"SELECT * FROM messages 
-              WHERE chat_id = ? AND id < ? 
-              ORDER BY id DESC 
-              LIMIT ?",
+            "SELECT * FROM messages WHERE chat_id = ? AND id < ? ORDER BY id DESC LIMIT ?",
             chatId, beforeId, count);
 
         messages.Reverse();
@@ -69,28 +62,20 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     {
         // Порядок ASC — уже хронологический
         return await Db.QueryAsync<CachedMessage>(
-            @"SELECT * FROM messages 
-              WHERE chat_id = ? AND id > ? 
-              ORDER BY id ASC 
-              LIMIT ?",
+            "SELECT * FROM messages WHERE chat_id = ? AND id > ? ORDER BY id ASC LIMIT ?",
             chatId, afterId, count);
     }
 
     public async Task<List<CachedMessage>> GetAroundAsync(int chatId, int messageId, int halfCount)
     {
         // Часть 1: target + до него
-        var before = await Db.QueryAsync<CachedMessage>(@"SELECT * FROM messages 
-              WHERE chat_id = ? AND id <= ? 
-              ORDER BY id DESC 
-              LIMIT ?",
+        var before = await Db.QueryAsync<CachedMessage>(
+            "SELECT * FROM messages WHERE chat_id = ? AND id <= ? ORDER BY id DESC LIMIT ?",
             chatId, messageId, halfCount + 1);
 
         // Часть 2: после target
         var after = await Db.QueryAsync<CachedMessage>(
-            @"SELECT * FROM messages 
-              WHERE chat_id = ? AND id > ? 
-              ORDER BY id ASC 
-              LIMIT ?",
+            "SELECT * FROM messages WHERE chat_id = ? AND id > ? ORDER BY id ASC LIMIT ?",
             chatId, messageId, halfCount);
 
         // Собираем в хронологическом порядке
@@ -134,13 +119,8 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
         try
         {
             return await Db.QueryAsync<CachedMessage>(
-                @"SELECT m.* FROM messages m
-                  INNER JOIN messages_fts fts ON m.id = fts.rowid
-                  WHERE messages_fts MATCH ?
-                  AND m.is_deleted = 0
-                  ORDER BY m.id DESC
-                  LIMIT ?",
-                $"\"{ftsQuery}\"", limit);
+                @"SELECT m.* FROM messages m INNER JOIN messages_fts fts ON m.id = fts.rowid WHERE messages_fts MATCH ?
+                  AND m.is_deleted = 0 ORDER BY m.id DESC LIMIT ?", $"\"{ftsQuery}\"", limit);
         }
         catch (SQLiteException ex)
         {
@@ -148,9 +128,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
             Debug.WriteLine($"[MsgCache] FTS search failed, falling back to LIKE: {ex.Message}");
 
             return await Db.QueryAsync<CachedMessage>(
-                @"SELECT * FROM messages 
-                  WHERE content LIKE ? AND is_deleted = 0
-                  ORDER BY id DESC LIMIT ?",
+                "SELECT * FROM messages WHERE content LIKE ? AND is_deleted = 0 ORDER BY id DESC LIMIT ?",
                 $"%{query}%", limit);
         }
     }

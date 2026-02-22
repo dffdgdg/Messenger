@@ -9,8 +9,8 @@ namespace MessengerDesktop.Controls;
 
 public partial class ThemeSelectorControl : UserControl
 {
-    public static readonly DirectProperty<ThemeSelectorControl, bool> IsSystemDarkNowProperty =
-        AvaloniaProperty.RegisterDirect<ThemeSelectorControl, bool>
+    public static readonly DirectProperty<ThemeSelectorControl, bool>
+        IsSystemDarkNowProperty = AvaloniaProperty.RegisterDirect<ThemeSelectorControl, bool>
         (nameof(IsSystemDarkNow), o => o.IsSystemDarkNow);
 
     private bool _isSystemDarkNow;

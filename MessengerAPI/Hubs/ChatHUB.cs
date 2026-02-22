@@ -25,12 +25,10 @@ public class ChatHub(
         {
             onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
 
-            await Groups.AddToGroupAsync(
-                Context.ConnectionId, $"user_{userId.Value}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
 
             using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider
-                .GetRequiredService<MessengerDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
             var chatIds = await context.ChatMembers
                 .Where(cm => cm.UserId == userId.Value)
@@ -38,14 +36,12 @@ public class ChatHub(
                 .ToListAsync();
 
             var joinTasks = chatIds.Select(chatId =>
-                Groups.AddToGroupAsync(
-                    Context.ConnectionId, $"chat_{chatId}"));
+                Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
             await Task.WhenAll(joinTasks);
 
             await Clients.Others.SendAsync("UserOnline", userId.Value);
 
-            logger.LogInformation(
-                "Пользователь {UserId} подключился, чатов: {ChatCount}",
+            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
                 userId.Value, chatIds.Count);
         }
 
@@ -57,11 +53,9 @@ public class ChatHub(
         var userId = GetCurrentUserId();
         if (userId.HasValue)
         {
-            onlineUserService.UserDisconnected(
-                userId.Value, Context.ConnectionId);
+            onlineUserService.UserDisconnected(userId.Value, Context.ConnectionId);
 
-            await Groups.RemoveFromGroupAsync(
-                Context.ConnectionId, $"user_{userId.Value}");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
 
             var stillOnline = onlineUserService.IsOnline(userId.Value);
 
@@ -84,13 +78,11 @@ public class ChatHub(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex,
-                        "Ошибка при обработке отключения {UserId}",
+                    logger.LogError(ex, "Ошибка при обработке отключения {UserId}",
                         userId.Value);
                 }
 
-                logger.LogInformation(
-                    "Пользователь {UserId} отключился", userId.Value);
+                logger.LogInformation("Пользователь {UserId} отключился", userId.Value);
             }
         }
 
@@ -106,32 +98,26 @@ public class ChatHub(
         var userId = GetRequiredUserId();
 
         using var scope = scopeFactory.CreateScope();
-        var context = scope.ServiceProvider
-            .GetRequiredService<MessengerDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
         var isMember = await context.ChatMembers.AnyAsync(cm =>
             cm.UserId == userId && cm.ChatId == chatId);
 
         if (!isMember)
         {
-            logger.LogWarning(
-                "Попытка присоединиться к чату без доступа: UserId={UserId}, ChatId={ChatId}",
+            logger.LogWarning("Попытка присоединиться к чату без доступа: UserId={UserId}, ChatId={ChatId}",
                 userId, chatId);
             throw new HubException($"User {userId} is not a member of chat {chatId}");
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}");
-        logger.LogDebug(
-            "Пользователь {UserId} присоединился к чату {ChatId}",
-            userId, chatId);
+        logger.LogDebug("Пользователь {UserId} присоединился к чату {ChatId}", userId, chatId);
     }
 
     public async Task LeaveChat(int chatId)
     {
-        await Groups.RemoveFromGroupAsync(
-            Context.ConnectionId, $"chat_{chatId}");
-        logger.LogDebug(
-            "Соединение {ConnectionId} покинуло чат {ChatId}",
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chat_{chatId}");
+        logger.LogDebug("Соединение {ConnectionId} покинуло чат {ChatId}",
             Context.ConnectionId, chatId);
     }
 
@@ -154,8 +140,7 @@ public class ChatHub(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Ошибка GetReadInfo для user={UserId}, chat={ChatId}",
+            logger.LogError(ex,"Ошибка GetReadInfo для user={UserId}, chat={ChatId}",
                 userId.Value, chatId);
             return null;
         }
@@ -190,14 +175,12 @@ public class ChatHub(
                 result.LastReadMessageId,
                 result.LastReadAt);
 
-            logger.LogDebug(
-                "Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
+            logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
                 userId.Value, chatId, result.UnreadCount);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Ошибка MarkAsRead для пользователя {UserId} в чате {ChatId}",
+            logger.LogError(ex,"Ошибка MarkAsRead для пользователя {UserId} в чате {ChatId}",
                 userId.Value, chatId);
         }
     }
@@ -303,21 +286,15 @@ public class ChatHub(
 
     private int? GetCurrentUserId()
     {
-        var userIdClaim = Context.User?
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        if (string.IsNullOrEmpty(userIdClaim)
-            || !int.TryParse(userIdClaim, out var userId))
-        {
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             return null;
-        }
 
         return userId;
     }
 
-    private int GetRequiredUserId()
-        => GetCurrentUserId()
-           ?? throw new HubException("User not authenticated");
+    private int GetRequiredUserId() => GetCurrentUserId() ?? throw new HubException("User not authenticated");
 
     #endregion
 }

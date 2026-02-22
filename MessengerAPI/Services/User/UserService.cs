@@ -60,12 +60,10 @@ namespace MessengerAPI.Services.User
             if (user == null)
                 return Result<UserDTO>.Failure($"Пользователь с ID {id} не найден");
 
-            return Result<UserDTO>.Success(
-                user.ToDto(urlBuilder, onlineService.IsOnline(id)));
+            return Result<UserDTO>.Success(user.ToDto(urlBuilder, onlineService.IsOnline(id)));
         }
 
-        public async Task<Result> UpdateUserAsync(
-            int id, UserDTO dto, CancellationToken ct = default)
+        public async Task<Result> UpdateUserAsync(int id, UserDTO dto, CancellationToken ct = default)
         {
             if (id != dto.Id)
                 return Result.Failure("Несоответствие ID");
@@ -94,19 +92,17 @@ namespace MessengerAPI.Services.User
             if (user is null)
                 return Result<AvatarResponseDTO>.Failure($"Пользователь с ID {id} не найден");
 
-            var avatarPath = await fileService.SaveImageAsync(
-                file, "avatars/users", user.Avatar);
+            var avatarPath = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
             user.Avatar = avatarPath;
             await SaveChangesAsync(ct);
 
             _logger.LogInformation("Аватар обновлён для пользователя {UserId}", id);
 
-            return Result<AvatarResponseDTO>.Success(
-                new AvatarResponseDTO { AvatarUrl = urlBuilder.BuildUrl(avatarPath)! });
+            return Result<AvatarResponseDTO>.Success(new AvatarResponseDTO
+            { AvatarUrl = urlBuilder.BuildUrl(avatarPath)! });
         }
 
-        public Task<Result<OnlineUsersResponseDTO>> GetOnlineUsersAsync(
-            CancellationToken ct = default)
+        public Task<Result<OnlineUsersResponseDTO>> GetOnlineUsersAsync(CancellationToken ct = default)
         {
             var ids = onlineService.GetOnlineUserIds().ToList();
             return Task.FromResult(Result<OnlineUsersResponseDTO>.Success(
@@ -117,7 +113,7 @@ namespace MessengerAPI.Services.User
                 }));
         }
 
-        public Task<Result<List<int>>> GetOnlineUserIdsAsync(CancellationToken ct = default)
+        public Task<Result<List<int>>> GetOnlineUserIdsAsync()
         {
             var ids = onlineService.GetOnlineUserIds().ToList();
             return Task.FromResult(Result<List<int>>.Success(ids));

@@ -14,8 +14,7 @@ public class MessagesController(
     : BaseController<MessagesController>(logger)
 {
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreateMessage(
-        [FromBody] MessageDTO messageDto)
+    public async Task<ActionResult<ApiResponse<MessageDTO>>> CreateMessage([FromBody] MessageDTO messageDto)
     {
         messageDto.SenderId = GetCurrentUserId();
         return await ExecuteAsync(() => messageService.CreateMessageAsync(messageDto),"Сообщение успешно отправлено");

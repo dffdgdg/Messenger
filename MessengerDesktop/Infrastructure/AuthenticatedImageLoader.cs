@@ -21,7 +21,6 @@ public sealed class AuthenticatedImageLoader(
     private readonly string _apiBaseUrl = apiBaseUrl?.TrimEnd('/')
         ?? throw new ArgumentNullException(nameof(apiBaseUrl));
 
-    // ✅ ДОБАВЛЕНО: белый список расширений изображений
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico", ".avif"
@@ -29,7 +28,6 @@ public sealed class AuthenticatedImageLoader(
 
     protected override async Task<byte[]?> LoadDataFromExternalAsync(string url)
     {
-        // ✅ Ранний выход: не пытаемся декодировать не-картинки как Bitmap
         var ext = GetExtension(url);
         if (!string.IsNullOrEmpty(ext) && !ImageExtensions.Contains(ext))
         {
@@ -37,13 +35,11 @@ public sealed class AuthenticatedImageLoader(
             return null;
         }
 
-        // External URLs (CDN, gravatar, etc.) — use base loader
         if (!url.StartsWith(_apiBaseUrl, StringComparison.OrdinalIgnoreCase))
         {
             return await base.LoadDataFromExternalAsync(url);
         }
 
-        // Our API — must attach token
         var token = _sessionStore.Token;
         if (string.IsNullOrEmpty(token))
         {
@@ -69,7 +65,6 @@ public sealed class AuthenticatedImageLoader(
                 return null;
             }
 
-            // ✅ ДОБАВЛЕНО: проверяем Content-Type ответа сервера
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
             if (!string.IsNullOrEmpty(contentType)
                 && !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
@@ -92,7 +87,6 @@ public sealed class AuthenticatedImageLoader(
         }
         catch (TaskCanceledException)
         {
-            // Timeout — suppress log spam
             return null;
         }
         catch (Exception ex)

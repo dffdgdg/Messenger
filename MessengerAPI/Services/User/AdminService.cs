@@ -31,8 +31,7 @@ public class AdminService(
         return Result<List<UserDTO>>.Success(result);
     }
 
-    public async Task<Result<UserDTO>> CreateUserAsync(
-        CreateUserDTO dto, CancellationToken ct = default)
+    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, CancellationToken ct = default)
     {
         var usernameValidation = ValidationHelper.ValidateUsername(dto.Username);
         if (usernameValidation.IsFailure)
@@ -103,8 +102,7 @@ public class AdminService(
         user.IsBanned = !user.IsBanned;
         await SaveChangesAsync(ct);
 
-        _logger.LogInformation("Пользователь {UserId} {Action}",
-            userId, user.IsBanned ? "заблокирован" : "разблокирован");
+        _logger.LogInformation("Пользователь {UserId} {Action}", userId, user.IsBanned ? "заблокирован" : "разблокирован");
 
         return Result.Success();
     }

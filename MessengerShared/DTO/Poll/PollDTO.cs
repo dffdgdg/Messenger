@@ -8,7 +8,6 @@ namespace MessengerShared.DTO.Poll
 
     /// <summary>
     /// ќпрос дл€ отображени€.
-    /// Question отсутствует Ч вопрос берЄтс€ из Message.Content.
     /// </summary>
     public class PollDTO
     {

@@ -106,8 +106,7 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
         var members = await _context.ChatMembers
             .Where(cm => cm.ChatId == chatId)
             .Include(cm => cm.User)
-            .AsNoTracking()
-            .ToListAsync();
+            .AsNoTracking().ToListAsync();
 
         return Result<List<ChatMemberDTO>>.Success(members.ConvertAll(MapToDto));
     }

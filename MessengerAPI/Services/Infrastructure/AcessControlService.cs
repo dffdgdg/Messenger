@@ -10,11 +10,9 @@ namespace MessengerAPI.Services.Infrastructure
         Task<bool> IsOwnerAsync(int userId, int chatId);
         Task<bool> IsAdminAsync(int userId, int chatId);
         Task<ChatRole?> GetRoleAsync(int userId, int chatId);
-
         Task EnsureIsMemberAsync(int userId, int chatId);
         Task EnsureIsOwnerAsync(int userId, int chatId);
         Task EnsureIsAdminAsync(int userId, int chatId);
-
         Task<List<int>> GetUserChatIdsAsync(int userId);
     }
 

@@ -103,16 +103,14 @@ public class MessageService(
             .FirstAsync(m => m.Id == message.Id);
         var messageDto = createdMessage.ToDto(dto.SenderId, urlBuilder);
 
-        await hubNotifier.SendToChatAsync(
-            dto.ChatId, "ReceiveMessageDTO", messageDto);
+        await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDTO", messageDto);
 
         await NotifyAndUpdateUnreadAsync(messageDto);
 
         if (message.IsVoiceMessage)
         {
             await transcriptionQueue.EnqueueAsync(message.Id);
-            _logger.LogDebug(
-                "Голосовое {MessageId} → очередь транскрибации", message.Id);
+            _logger.LogDebug("Голосовое {MessageId} → очередь транскрибации", message.Id);
         }
 
         _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}", message.Id, dto.ChatId);
@@ -124,8 +122,7 @@ public class MessageService(
 
     public async Task<Result<PagedMessagesDTO>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
     {
-        var (normalizedPage, normalizedPageSize) = NormalizePagination(
-            page, pageSize, _settings.MaxPageSize);
+        var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
         var query = MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.IsDeleted != true)
@@ -194,8 +191,7 @@ public class MessageService(
         var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id < messageId
                 && m.IsDeleted != true)
             .OrderByDescending(m => m.Id)
-            .Take(count)
-            .AsNoTracking().ToListAsync();
+            .Take(count).AsNoTracking().ToListAsync();
 
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
         var hasMore = await _context.Messages.AnyAsync(m =>m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true);
@@ -337,17 +333,15 @@ public class MessageService(
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Result<GlobalSearchResponseDTO>.Success(
-                new GlobalSearchResponseDTO
-                {
-                    Chats = [],
-                    Messages = [],
-                    CurrentPage = page
-                });
+            return Result<GlobalSearchResponseDTO>.Success(new GlobalSearchResponseDTO
+            {
+                Chats = [],
+                Messages = [],
+                CurrentPage = page
+            });
         }
 
-        var (normalizedPage, normalizedPageSize) = NormalizePagination(
-            page, 20, 50);
+        var (normalizedPage, normalizedPageSize) = NormalizePagination(page, 20, 50);
         var escapedQuery = EscapeLikePattern(query);
 
         var userChatIds = await _context.ChatMembers

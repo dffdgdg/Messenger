@@ -94,7 +94,7 @@ namespace MessengerAPI.Services.Chat
                 SenderName = message.SenderName,
                 SenderAvatar = message.SenderAvatarUrl,
                 Preview = message.Poll != null
-                    ? $"📊 {message.Content}"
+                    ? $"{message.Content}"
                     : TruncateText(message.Content, 100),
                 CreatedAt = message.CreatedAt
             };

@@ -445,9 +445,7 @@ public sealed class GlobalHubConnection(
     }
 
     private static string FormatNotificationMessage(NotificationDTO notification)
-        => notification.Type == "poll"
-            ? notification.Preview ?? "Новый опрос"
-            : $"{notification.SenderName}: {notification.Preview}";
+        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
 
     #endregion
 

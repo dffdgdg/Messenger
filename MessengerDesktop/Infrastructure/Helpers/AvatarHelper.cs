@@ -8,8 +8,7 @@ public static class AvatarHelper
     /// <summary>
     /// URI аватара по умолчанию. Валидируется при загрузке класса.
     /// </summary>
-    private static readonly Uri DefaultAvatarUri =
-        new("avares://MessengerDesktop/Assets/Images/default-avatar.webp");
+    private static readonly Uri DefaultAvatarUri = new("avares://MessengerDesktop/Assets/Images/default-avatar.webp");
 
     /// <summary>
     /// Возвращает валидный абсолютный URI для аватара.

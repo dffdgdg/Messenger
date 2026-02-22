@@ -20,8 +20,7 @@ public class ChatsController(
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(
-            () => chatService.GetUserDialogsAsync(userId),
+        return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId),
             "Диалоги пользователя получены успешно");
     }
 
@@ -75,8 +74,8 @@ public class ChatsController(
     public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDTO dto)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(
-            () => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId), "Участник чата добавлен успешно");
+        return await ExecuteAsync(() => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId),
+            "Участник чата добавлен успешно");
     }
 
     [HttpDelete("{chatId}/members/{userId}")]

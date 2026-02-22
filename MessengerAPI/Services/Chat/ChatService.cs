@@ -85,15 +85,13 @@ public class ChatService(
                         })
                         .FirstOrDefault()
                 })
-            .AsNoTracking()
-            .ToListAsync();
+            .AsNoTracking().ToListAsync();
 
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
         var dialogChatIds = chatsData
             .Where(c => c.Chat.Type == ChatType.Contact)
-            .Select(c => c.Chat.Id)
-            .ToList();
+            .Select(c => c.Chat.Id).ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
@@ -127,8 +125,7 @@ public class ChatService(
 
         var sorted = result
             .OrderByDescending(c => c.UnreadCount > 0)
-            .ThenByDescending(c => c.LastMessageDate)
-            .ToList();
+            .ThenByDescending(c => c.LastMessageDate).ToList();
 
         return Result<List<ChatDTO>>.Success(sorted);
     }
@@ -137,8 +134,7 @@ public class ChatService(
     {
         await accessControl.EnsureIsMemberAsync(userId, chatId);
 
-        var chat = await _context.Chats.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == chatId);
+        var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
             return Result<ChatDTO>.Failure($"Чат с ID {chatId} не найден");
@@ -191,8 +187,7 @@ public class ChatService(
         return Result<List<ChatDTO>>.Success(groups);
     }
 
-    public async Task<Result<ChatDTO>> GetContactChatAsync(
-        int userId, int contactUserId)
+    public async Task<Result<ChatDTO>> GetContactChatAsync(int userId, int contactUserId)
     {
         var chat = await _context.Chats
             .Include(c => c.ChatMembers)
@@ -255,8 +250,7 @@ public class ChatService(
             return Result<ChatDTO>.Failure("Некорректный ID создателя");
 
         int? contactUserId = null;
-        if (dto.Type == ChatType.Contact
-            && int.TryParse(dto.Name?.Trim(), out var parsedContactId))
+        if (dto.Type == ChatType.Contact && int.TryParse(dto.Name?.Trim(), out var parsedContactId))
         {
             contactUserId = parsedContactId;
 
@@ -270,8 +264,7 @@ public class ChatService(
             if (existingChat is not null)
                 return Result<ChatDTO>.Failure("Диалог с этим пользователем уже существует");
         }
-        else if (dto.Type != ChatType.Contact
-                 && string.IsNullOrWhiteSpace(dto.Name))
+        else if (dto.Type != ChatType.Contact && string.IsNullOrWhiteSpace(dto.Name))
         {
             return Result<ChatDTO>.Failure("Название чата обязательно");
         }
@@ -299,9 +292,7 @@ public class ChatService(
                 JoinedAt = AppDateTime.UtcNow
             });
 
-            if (dto.Type == ChatType.Contact
-                && contactUserId.HasValue
-                && contactUserId.Value != dto.CreatedById)
+            if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
             {
                 _context.ChatMembers.Add(new ChatMember
                 {
@@ -319,8 +310,7 @@ public class ChatService(
             if (contactUserId.HasValue)
                 cacheService.InvalidateUserChats(contactUserId.Value);
 
-            _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}",
-                chat.Id, dto.CreatedById);
+            _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
 
             return Result<ChatDTO>.Success(new ChatDTO
             {
@@ -337,8 +327,7 @@ public class ChatService(
         }
     }
 
-    public async Task<ChatDTO> UpdateChatAsync(
-        int chatId, int userId, UpdateChatDTO dto)
+    public async Task<ChatDTO> UpdateChatAsync(int chatId, int userId, UpdateChatDTO dto)
     {
         await accessControl.EnsureIsAdminAsync(userId, chatId);
 
@@ -435,8 +424,7 @@ public class ChatService(
 
     #region Private Helpers
 
-    private async Task<Model.Chat?> FindExistingContactChatAsync(
-        int userId, int contactUserId)
+    private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
     {
         return await _context.Chats
             .Include(c => c.ChatMembers)
@@ -446,22 +434,19 @@ public class ChatService(
             .FirstOrDefaultAsync();
     }
 
-    private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(
-        int chatId, int currentUserId)
+    private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
     {
         var partners = await GetDialogPartnersAsync([chatId], currentUserId);
         return partners.GetValueOrDefault(chatId);
     }
 
-    private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(
-        List<int> chatIds, int currentUserId)
+    private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(List<int> chatIds, int currentUserId)
     {
         if (chatIds.Count == 0)
             return [];
 
         var partners = await _context.ChatMembers
-            .Where(cm => chatIds.Contains(cm.ChatId)
-                && cm.UserId != currentUserId)
+            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId)
             .Include(cm => cm.User)
             .AsNoTracking()
             .ToListAsync();

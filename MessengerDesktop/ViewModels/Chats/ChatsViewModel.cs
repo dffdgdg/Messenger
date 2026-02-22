@@ -1,9 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
-using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Factories;

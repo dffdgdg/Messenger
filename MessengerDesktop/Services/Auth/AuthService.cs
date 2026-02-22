@@ -12,8 +12,8 @@ namespace MessengerDesktop.Services.Auth;
 public interface IAuthService
 {
     Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default);
-    Task<ApiResponse> ValidateTokenAsync(string token, CancellationToken ct = default);
-    Task<ApiResponse> LogoutAsync(string token, CancellationToken ct = default);
+    Task<ApiResponse<object>> ValidateTokenAsync(string token, CancellationToken ct = default);
+    Task<ApiResponse<object>> LogoutAsync(string token, CancellationToken ct = default);
 }
 
 public class AuthService(HttpClient httpClient) : IAuthService
@@ -69,7 +69,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
         }
     }
 
-    public async Task<ApiResponse> ValidateTokenAsync(string token, CancellationToken ct = default)
+    public async Task<ApiResponse<object>> ValidateTokenAsync(string token, CancellationToken ct = default)
     {
         try
         {
@@ -81,7 +81,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             var response = await _httpClient.SendAsync(request, ct);
 
             return response.IsSuccessStatusCode
-                ? ApiResponseHelper.Success() : ApiResponseHelper.Error($"Токен недействителен: {response.StatusCode}");
+                ? ApiResponse<object>.Ok(null, "Токен действителен") : ApiResponseHelper.Error($"Токен недействителен: {response.StatusCode}");
         }
         catch (OperationCanceledException)
         {
@@ -93,7 +93,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
         }
     }
 
-    public async Task<ApiResponse> LogoutAsync(string token, CancellationToken ct = default)
+    public async Task<ApiResponse<object>> LogoutAsync(string token, CancellationToken ct = default)
     {
         try
         {
@@ -102,7 +102,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
             var response = await _httpClient.SendAsync(request, ct);
 
-            return response.IsSuccessStatusCode ? ApiResponseHelper.Success("Выход выполнен успешно")
+            return response.IsSuccessStatusCode ? ApiResponse<object>.Ok(null, "Выход выполнен успешно")
                 : ApiResponseHelper.Error($"Ошибка выхода: {response.StatusCode}");
         }
         catch (OperationCanceledException)

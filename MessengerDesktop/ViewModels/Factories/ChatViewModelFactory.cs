@@ -1,7 +1,7 @@
-﻿using MessengerDesktop.Services;
+﻿using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
-using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;

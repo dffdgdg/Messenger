@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace MessengerDesktop.Converters;
+namespace MessengerDesktop.Converters.Boolean;
 
 /// <summary>
 /// Сравнивает значение enum со строковым параметром.
@@ -17,9 +17,6 @@ public class EnumEqualsConverter : ConverterBase
         if (value == null || parameter == null)
             return false;
 
-        return string.Equals(
-            value.ToString(),
-            parameter.ToString(),
-            StringComparison.OrdinalIgnoreCase);
+        return string.Equals(value.ToString(), parameter.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

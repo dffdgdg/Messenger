@@ -15,7 +15,7 @@ public interface IAuthManager
     ISessionStore Session { get; }
     Task InitializeAsync();
     Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password);
-    Task<ApiResponse> LogoutAsync();
+    Task<ApiResponse<object>> LogoutAsync();
     Task WaitForInitializationAsync();
     Task<bool> WaitForInitializationAsync(TimeSpan timeout);
 }
@@ -164,7 +164,7 @@ public class AuthManager : IAuthManager, IDisposable
         }
     }
 
-    public async Task<ApiResponse> LogoutAsync()
+    public async Task<ApiResponse<object>> LogoutAsync()
     {
         ThrowIfDisposed();
 
@@ -185,7 +185,7 @@ public class AuthManager : IAuthManager, IDisposable
             await ClearStoredAuthAsync();
             Session.ClearSession();
 
-            return new ApiResponse
+            return new ApiResponse<object>
             {
                 Success = true,
                 Message = "Выход выполнен",
@@ -195,7 +195,7 @@ public class AuthManager : IAuthManager, IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"AuthManager: Logout exception: {ex.Message}");
-            return new ApiResponse
+            return new ApiResponse<object>
             {
                 Success = false,
                 Error = $"Ошибка выхода: {ex.Message}",

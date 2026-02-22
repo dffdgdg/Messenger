@@ -7,20 +7,12 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.Data.Repositories;
 
-public class MessageCacheRepository : IMessageCacheRepository
+public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheRepository
 {
-    private readonly LocalDatabase _localDb;
+    private readonly LocalDatabase _localDb = localDb ?? throw new ArgumentNullException(nameof(localDb));
     private SQLiteAsyncConnection Db => _localDb.Connection;
 
-    public MessageCacheRepository(LocalDatabase localDb)
-    {
-        _localDb = localDb ?? throw new ArgumentNullException(nameof(localDb));
-    }
-
-    public async Task UpsertAsync(CachedMessage message)
-    {
-        await Db.InsertOrReplaceAsync(message);
-    }
+    public async Task UpsertAsync(CachedMessage message) => await Db.InsertOrReplaceAsync(message);
 
     public async Task UpsertBatchAsync(IReadOnlyList<CachedMessage> messages)
     {
@@ -40,13 +32,10 @@ public class MessageCacheRepository : IMessageCacheRepository
         Debug.WriteLine($"[MsgCache] Upserted {messages.Count} messages in {sw.ElapsedMilliseconds}ms");
     }
 
-    public async Task MarkDeletedAsync(int messageId)
-    {
-        // Мягкое удаление: очищаем content, помечаем флаг
+    public async Task MarkDeletedAsync(int messageId) =>
         await Db.ExecuteAsync(
             "UPDATE messages SET is_deleted = 1, content = NULL, poll_json = NULL, files_json = NULL WHERE id = ?",
             messageId);
-    }
 
     public async Task<List<CachedMessage>> GetLatestAsync(int chatId, int count)
     {
@@ -90,8 +79,7 @@ public class MessageCacheRepository : IMessageCacheRepository
     public async Task<List<CachedMessage>> GetAroundAsync(int chatId, int messageId, int halfCount)
     {
         // Часть 1: target + до него
-        var before = await Db.QueryAsync<CachedMessage>(
-            @"SELECT * FROM messages 
+        var before = await Db.QueryAsync<CachedMessage>(@"SELECT * FROM messages 
               WHERE chat_id = ? AND id <= ? 
               ORDER BY id DESC 
               LIMIT ?",
@@ -114,36 +102,27 @@ public class MessageCacheRepository : IMessageCacheRepository
     public async Task<int?> GetNewestIdAsync(int chatId)
     {
         // ExecuteScalarAsync<int> вернёт 0 если нет записей, поэтому проверяем отдельно
-        var count = await Db.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
+        var count = await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
 
         if (count == 0) return null;
 
-        return await Db.ExecuteScalarAsync<int>(
-            "SELECT MAX(id) FROM messages WHERE chat_id = ?", chatId);
+        return await Db.ExecuteScalarAsync<int>("SELECT MAX(id) FROM messages WHERE chat_id = ?", chatId);
     }
 
     public async Task<int?> GetOldestIdAsync(int chatId)
     {
-        var count = await Db.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
+        var count = await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
 
         if (count == 0) return null;
 
-        return await Db.ExecuteScalarAsync<int>(
-            "SELECT MIN(id) FROM messages WHERE chat_id = ?", chatId);
+        return await Db.ExecuteScalarAsync<int>("SELECT MIN(id) FROM messages WHERE chat_id = ?", chatId);
     }
 
     public async Task<int> GetCountAsync(int chatId)
-    {
-        return await Db.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
-    }
+        => await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages WHERE chat_id = ?", chatId);
 
     public async Task<int> GetTotalCountAsync()
-    {
-        return await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages");
-    }
+        => await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages");
 
     public async Task<List<CachedMessage>> SearchAsync(string query, int limit)
     {
@@ -176,19 +155,9 @@ public class MessageCacheRepository : IMessageCacheRepository
         }
     }
 
-    public async Task DeleteOlderThanAsync(DateTime cutoffUtc)
-    {
-        var cutoffTicks = cutoffUtc.Ticks;
-        var deleted = await Db.ExecuteAsync(
-            "DELETE FROM messages WHERE created_at < ?", cutoffTicks);
-
-        Debug.WriteLine($"[MsgCache] Deleted {deleted} messages older than {cutoffUtc:yyyy-MM-dd}");
-    }
-
     public async Task DeleteForChatAsync(int chatId)
     {
-        var deleted = await Db.ExecuteAsync(
-            "DELETE FROM messages WHERE chat_id = ?", chatId);
+        var deleted = await Db.ExecuteAsync("DELETE FROM messages WHERE chat_id = ?", chatId);
 
         Debug.WriteLine($"[MsgCache] Deleted {deleted} messages for chat {chatId}");
     }

@@ -1,8 +1,8 @@
 ﻿using MessengerDesktop.Data.Entities;
+using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.UI;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.ReadReceipt;

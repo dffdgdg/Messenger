@@ -1,4 +1,5 @@
 ﻿using MessengerDesktop.Data;
+using MessengerDesktop.Data.Repositories;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -6,10 +7,7 @@ using System.Threading.Tasks;
 namespace MessengerDesktop.Services.Cache;
 
 /// <summary>
-/// Обслуживание локального кэша:
-/// - Очистка старых данных
-/// - Контроль размера БД
-/// - VACUUM после массовых удалений
+/// Обслуживание локального кэша.
 /// </summary>
 public interface ICacheMaintenanceService
 {
@@ -28,33 +26,14 @@ public class CacheMaintenanceService(ILocalCacheService cache, LocalDatabase loc
     private readonly ILocalCacheService _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     private readonly LocalDatabase _localDb = localDb ?? throw new ArgumentNullException(nameof(localDb));
 
-    // ── Лимиты ──
-    private const int MaxTotalMessages = 50_000;
-    private const long MaxDbSizeBytes = 100 * 1024 * 1024; // 100 MB
-    private static readonly TimeSpan MaxMessageAge = TimeSpan.FromDays(30);
-
     public async Task RunMaintenanceAsync()
     {
         var sw = Stopwatch.StartNew();
 
         try
         {
-            // 1. Удаляем старые сообщения по возрасту и лимиту
-            await _cache.CleanupOldDataAsync(MaxMessageAge, MaxTotalMessages);
-
-            // 2. Проверяем размер БД
             var dbSize = await _cache.GetDatabaseSizeBytesAsync();
             Debug.WriteLine($"[Maintenance] DB size: {dbSize / 1024}KB");
-
-            if (dbSize > MaxDbSizeBytes)
-            {
-                Debug.WriteLine($"[Maintenance] DB too large ({dbSize / 1024 / 1024}MB), aggressive cleanup");
-
-                // Агрессивная очистка: оставляем только 7 дней и половину лимита
-                await _cache.CleanupOldDataAsync(TimeSpan.FromDays(7), MaxTotalMessages / 2);
-                await _localDb.VacuumAsync();
-            }
-
             sw.Stop();
             Debug.WriteLine($"[Maintenance] Completed in {sw.ElapsedMilliseconds}ms");
         }

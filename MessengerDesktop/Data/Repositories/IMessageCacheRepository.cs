@@ -43,9 +43,6 @@ public interface IMessageCacheRepository
     /// <summary>Полнотекстовый поиск через FTS5</summary>
     Task<List<CachedMessage>> SearchAsync(string query, int limit);
 
-    /// <summary>Удалить сообщения старше указанной даты</summary>
-    Task DeleteOlderThanAsync(DateTime cutoffUtc);
-
     /// <summary>Удалить все сообщения чата</summary>
     Task DeleteForChatAsync(int chatId);
 }

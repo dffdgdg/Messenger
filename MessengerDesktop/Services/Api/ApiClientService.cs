@@ -19,11 +19,11 @@ namespace MessengerDesktop.Services.Api
         Task<ApiResponse<T>> GetAsync<T>(string url, CancellationToken ct = default);
         Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default);
         Task<ApiResponse<T>> PostAsync<T>(string url, object data, CancellationToken ct = default);
-        Task<ApiResponse> PostAsync(string url, object? data, CancellationToken ct = default);
+        Task<ApiResponse<object>> PostAsync(string url, object? data, CancellationToken ct = default);
         Task<ApiResponse<T>> PutAsync<T>(string url, object data, CancellationToken ct = default);
         Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default);
-        Task<ApiResponse> PutAsync(string url, object data, CancellationToken ct = default);
-        Task<ApiResponse> DeleteAsync(string url, CancellationToken ct = default);
+        Task<ApiResponse<object>> PutAsync(string url, object data, CancellationToken ct = default);
+        Task<ApiResponse<object>> DeleteAsync(string url, CancellationToken ct = default);
         Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default);
         Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default);
     }
@@ -90,7 +90,7 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        public async Task<ApiResponse> DeleteAsync(string url, CancellationToken ct = default)
+        public async Task<ApiResponse<object>> DeleteAsync(string url, CancellationToken ct = default)
         {
             ThrowIfDisposed();
 
@@ -170,7 +170,7 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        public async Task<ApiResponse> PostAsync(string url, object? data, CancellationToken ct = default)
+        public async Task<ApiResponse<object>> PostAsync(string url, object? data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
 
@@ -227,7 +227,7 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        public async Task<ApiResponse> PutAsync(string url, object data, CancellationToken ct = default)
+        public async Task<ApiResponse<object>> PutAsync(string url, object data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
 
@@ -394,13 +394,13 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        private async Task<ApiResponse> ProcessResponseAsync(HttpResponseMessage response, CancellationToken ct)
+        private async Task<ApiResponse<object>> ProcessResponseAsync(HttpResponseMessage response, CancellationToken ct)
         {
             var json = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
             {
-                return new ApiResponse
+                return new ApiResponse<object>
                 {
                     Success = false,
                     Error = $"HTTP {response.StatusCode}",
@@ -411,12 +411,12 @@ namespace MessengerDesktop.Services.Api
 
             try
             {
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse>(json, _jsonOptions);
-                return apiResponse ?? new ApiResponse { Success = true, Timestamp = DateTime.Now };
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(json, _jsonOptions);
+                return apiResponse ?? new ApiResponse<object> { Success = true, Timestamp = DateTime.Now };
             }
             catch (JsonException ex)
             {
-                return new ApiResponse
+                return new ApiResponse<object>
                 {
                     Success = false,
                     Error = $"Ошибка десериализации: {ex.Message}",
@@ -433,7 +433,7 @@ namespace MessengerDesktop.Services.Api
             Timestamp = DateTime.Now
         };
 
-        private static ApiResponse CreateErrorResponse(Exception ex) => new()
+        private static ApiResponse<object> CreateErrorResponse(Exception ex) => new()
         {
             Success = false,
             Error = ex.Message,

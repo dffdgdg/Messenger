@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Services.Cache;
+namespace MessengerDesktop.Data.Repositories;
 
 /// <summary>
 /// Результат чтения сообщений из кэша.
@@ -86,9 +86,6 @@ public interface ILocalCacheService
     Task UpsertUsersAsync(IEnumerable<UserDTO> users);
 
     // ═══ Maintenance ═══
-
-    /// <summary>Удалить старые данные по возрасту и лимиту количества</summary>
-    Task CleanupOldDataAsync(TimeSpan maxAge, int maxTotalMessages);
 
     /// <summary>Полная очистка (логаут / смена пользователя)</summary>
     Task ClearAllAsync();

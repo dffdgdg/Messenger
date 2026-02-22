@@ -107,7 +107,9 @@ public class ChatAttachmentManager(int chatId, IApiClientService apiClient, ISto
         }
         finally
         {
-            memoryStream?.Dispose();
+            if (memoryStream is not null)
+                await memoryStream.DisposeAsync();
+
             thumbnail?.Dispose();
         }
     }

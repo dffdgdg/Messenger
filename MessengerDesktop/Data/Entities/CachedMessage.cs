@@ -1,6 +1,5 @@
 ﻿using SQLite;
 using System;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MessengerDesktop.Data.Entities;
 

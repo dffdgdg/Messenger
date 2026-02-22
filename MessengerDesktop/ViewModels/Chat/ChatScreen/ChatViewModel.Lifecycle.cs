@@ -245,8 +245,7 @@ public partial class ChatViewModel
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
-
-        DisposeVoice();
+        await DisposeVoiceAsync();
 
         _attachmentManager.Dispose();
     }

@@ -353,8 +353,7 @@ public partial class AvatarControl : UserControl
 
     private static string? ToAbsoluteUrl(string url)
     {
-        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            || url.StartsWith("avares://", StringComparison.Ordinal))
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) || url.StartsWith("avares://", StringComparison.Ordinal))
             return url;
 
         return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
@@ -374,8 +373,7 @@ public partial class AvatarControl : UserControl
             _ => 16
         };
 
-        OnlineIndicatorCornerRadius =
-            new CornerRadius(OnlineIndicatorSize / 2);
+        OnlineIndicatorCornerRadius = new CornerRadius(OnlineIndicatorSize / 2);
 
         UpdateCornerRadius();
     }
@@ -384,8 +382,7 @@ public partial class AvatarControl : UserControl
     {
         if (this.FindControl<Border>("AvatarBorder") is { } border)
         {
-            border.CornerRadius = IsCircular
-                ? new CornerRadius(Size / 2)
+            border.CornerRadius = IsCircular ? new CornerRadius(Size / 2)
                 : new CornerRadius(8);
         }
     }

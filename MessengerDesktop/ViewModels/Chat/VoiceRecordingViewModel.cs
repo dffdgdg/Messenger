@@ -8,9 +8,8 @@ namespace MessengerDesktop.ViewModels.Chat;
 /// <summary>
 /// Инкапсулирует состояние записи голоса: таймер, состояние, elapsed.
 /// </summary>
-public partial class VoiceRecordingViewModel : ObservableObject, IDisposable
+public partial class VoiceRecordingViewModel(IAudioRecorderService recorder) : ObservableObject, IDisposable
 {
-    private readonly IAudioRecorderService _recorder;
     private DispatcherTimer? _timer;
     private bool _disposed;
 
@@ -23,11 +22,6 @@ public partial class VoiceRecordingViewModel : ObservableObject, IDisposable
     public bool IsRecording => State == AudioRecordingState.Recording;
     public bool IsSending => State == AudioRecordingState.Sending;
     public bool HasError => State == AudioRecordingState.Error;
-
-    public VoiceRecordingViewModel(IAudioRecorderService recorder)
-    {
-        _recorder = recorder;
-    }
 
     public void StartTimer()
     {
@@ -45,7 +39,7 @@ public partial class VoiceRecordingViewModel : ObservableObject, IDisposable
 
     private void UpdateElapsed()
     {
-        Elapsed = _recorder.Elapsed;
+        Elapsed = recorder.Elapsed;
         ElapsedFormatted = Elapsed.ToString(@"m\:ss");
     }
 

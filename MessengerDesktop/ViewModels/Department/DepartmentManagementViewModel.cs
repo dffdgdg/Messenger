@@ -208,7 +208,9 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     [RelayCommand]
     private async Task Refresh()
     {
-        _loadingCts?.Cancel();
+        if (_loadingCts is not null)
+            await _loadingCts.CancelAsync();
+
         _loadingCts = new CancellationTokenSource();
         await LoadAsync(_loadingCts.Token);
     }

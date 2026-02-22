@@ -1,6 +1,4 @@
-﻿// File: MessengerDesktop/Data/Entities/CachedReadPointer.cs
-
-using SQLite;
+﻿using SQLite;
 
 namespace MessengerDesktop.Data.Entities;
 

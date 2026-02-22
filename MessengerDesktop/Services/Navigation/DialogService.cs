@@ -210,10 +210,11 @@ namespace MessengerDesktop.Services
         {
             TaskCompletionSource tcs;
             CancellationTokenSource cts;
+            CancellationTokenSource? previousCts;
 
             lock (_animationLock)
             {
-                _animationCts?.Cancel();
+                previousCts = _animationCts;
                 _animationTcs?.TrySetCanceled();
 
                 tcs = new TaskCompletionSource();
@@ -222,6 +223,9 @@ namespace MessengerDesktop.Services
                 _animationTcs = tcs;
                 _animationCts = cts;
             }
+
+            if (previousCts is not null)
+                await previousCts.CancelAsync();
 
             OnDialogAnimationRequested?.Invoke(isOpening);
 

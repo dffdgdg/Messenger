@@ -1,6 +1,4 @@
-﻿// File: MessengerDesktop/Data/Entities/ChatSyncState.cs
-
-using SQLite;
+﻿using SQLite;
 using System;
 
 namespace MessengerDesktop.Data.Entities;

@@ -55,12 +55,16 @@ public partial class ChatViewModel
     }
 
     /// <summary>Освобождение ресурсов голосовой подсистемы.</summary>
-    private void DisposeVoice()
+    private async Task DisposeVoiceAsync()
     {
         _voiceRecording?.Dispose();
         _transcriptionPoller?.Dispose();
-        _voiceSendCts?.Cancel();
-        _voiceSendCts?.Dispose();
+        if (_voiceSendCts is not null)
+        {
+            await _voiceSendCts.CancelAsync();
+            _voiceSendCts.Dispose();
+            _voiceSendCts = null;
+        }
     }
 
     /// <summary>Начать запись голосового сообщения.</summary>
@@ -159,7 +163,9 @@ public partial class ChatViewModel
             await _audioRecorder.CancelAsync();
         }
 
-        _voiceSendCts?.Cancel();
+        if (_voiceSendCts is not null)
+            await _voiceSendCts.CancelAsync();
+
         ResetVoiceState();
     }
 
@@ -173,7 +179,9 @@ public partial class ChatViewModel
         if (VoiceRecording != null)
             VoiceRecording.State = AudioRecordingState.Sending;
 
-        _voiceSendCts?.Cancel();
+        if (_voiceSendCts is not null)
+            await _voiceSendCts.CancelAsync();
+
         _voiceSendCts = new CancellationTokenSource();
         var ct = _voiceSendCts.Token;
 
@@ -262,7 +270,7 @@ public partial class ChatViewModel
     [RelayCommand]
     private async Task RetryTranscription(MessageViewModel? message)
     {
-        if (message == null || !message.IsVoiceMessage) return;
+        if (message?.IsVoiceMessage != true) return;
 
         message.UpdateTranscription("pending", null);
 

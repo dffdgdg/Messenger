@@ -242,7 +242,9 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 return;
             }
 
-            _avatarStream?.Dispose();
+            if (_avatarStream is not null)
+                await _avatarStream.DisposeAsync();
+
             _avatarStream = new MemoryStream();
 
             await using var fileStream = File.OpenRead(path);

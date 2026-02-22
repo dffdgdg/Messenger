@@ -88,8 +88,11 @@ public partial class MainWindow : Window
             _animationCts = newCts;
         }
 
-        oldCts?.Cancel();
-        oldCts?.Dispose();
+        if (oldCts is not null)
+        {
+            await oldCts.CancelAsync();
+            oldCts.Dispose();
+        }
 
         try
         {

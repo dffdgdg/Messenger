@@ -21,8 +21,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         if (string.IsNullOrWhiteSpace(dbPath))
             throw new ArgumentNullException(nameof(dbPath));
 
-        _db = new SQLiteAsyncConnection(dbPath,
-            SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
+        _db = new SQLiteAsyncConnection(dbPath,SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
 
         Debug.WriteLine($"[LocalDB] Path: {dbPath}");
     }
@@ -110,10 +109,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         }
 
         // PRAGMA user_version не возвращает значение при SET — используем Execute через connection напрямую
-        await _db.RunInTransactionAsync(conn =>
-        {
-            conn.Execute($"PRAGMA user_version = {SchemaVersion}");
-        });
+        await _db.RunInTransactionAsync(conn => conn.Execute($"PRAGMA user_version = {SchemaVersion}"));
 
         Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
     }

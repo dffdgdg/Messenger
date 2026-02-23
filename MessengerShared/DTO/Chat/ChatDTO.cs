@@ -1,9 +1,8 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using MessengerShared.Enum;
 
 namespace MessengerShared.DTO.Chat;
 
-public partial class ChatDTO : ObservableObject
+public class ChatDTO
 {
     public int Id { get; set; }
     public string? Name { get; set; } = string.Empty;
@@ -13,7 +12,5 @@ public partial class ChatDTO : ObservableObject
     public string? Avatar { get; set; } = string.Empty;
     public string? LastMessagePreview { get; set; }
     public string? LastMessageSenderName { get; set; }
-
-    [ObservableProperty]
-    private int _unreadCount;
+    public int UnreadCount { get; set; }
 }

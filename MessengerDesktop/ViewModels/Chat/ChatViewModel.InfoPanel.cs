@@ -111,8 +111,7 @@ public partial class ChatViewModel
     /// <summary>
     /// Обработка обновления профиля пользователя (аватар, имя, отдел).
     /// </summary>
-    private void OnUserProfileUpdatedForInfoPanel(UserDTO updatedUser)
-    {
+    private void OnUserProfileUpdatedForInfoPanel(UserDTO updatedUser) =>
         Dispatcher.UIThread.Post(() =>
         {
             // Обновляем контакт в 1:1 чате
@@ -142,7 +141,6 @@ public partial class ChatViewModel
                 }
             }
         });
-    }
 
     /// <summary>
     /// При изменении коллекции Members обновляем зависимые computed properties.

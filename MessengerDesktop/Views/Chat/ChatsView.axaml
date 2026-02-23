@@ -18,7 +18,7 @@
              xmlns:dto="using:MessengerShared.DTO"
              xmlns:search="using:MessengerShared.DTO.Search"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             xmlns:chatDTO="using:MessengerShared.DTO.Chat">
+             xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats">
 
 	<UserControl.Resources>
 		<!-- ==================== КОНСТАНТЫ ==================== -->
@@ -32,7 +32,7 @@
 		<Thickness x:Key="BadgeMargin">0,4,0,0</Thickness>
 
 		<!-- ==================== ШАБЛОН: Полный элемент чата ==================== -->
-		<DataTemplate x:Key="ChatFullTemplate" x:DataType="chatDTO:ChatDTO">
+		<DataTemplate x:Key="ChatFullTemplate" x:DataType="chatItem:ChatListItemViewModel">
 			<Grid Height="{StaticResource ChatItemHeight}"
 			      ColumnDefinitions="Auto,*,Auto"
 			      HorizontalAlignment="Stretch">
@@ -350,7 +350,7 @@
 					</ListBox.Styles>
 
 					<ListBox.ItemTemplate>
-    <DataTemplate x:DataType="chatDTO:ChatDTO">
+    <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
         <Panel>
             <ContentPresenter Content="{Binding}"
                               ContentTemplate="{StaticResource ChatFullTemplate}"
@@ -399,7 +399,7 @@
 									</Style>
 								</ListBox.Styles>
 								<ListBox.ItemTemplate>
-    <DataTemplate x:DataType="chatDTO:ChatDTO">
+    <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
         <Button Classes="ChatListItem"
                 Margin="0,1"
                 Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"

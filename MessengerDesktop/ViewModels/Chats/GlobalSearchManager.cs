@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Chat;
+using MessengerDesktop.ViewModels.Chats;
 using MessengerShared.DTO.Search;
 using System;
 using System.Collections.ObjectModel;
@@ -23,7 +23,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
     [ObservableProperty] private bool _hasMoreMessages;
     [ObservableProperty] private string? _errorMessage;
 
-    public ObservableCollection<ChatDTO> ChatResults { get; } = [];
+    public ObservableCollection<ChatListItemViewModel> ChatResults { get; } = [];
     public ObservableCollection<GlobalSearchMessageDTO> MessageResults { get; } = [];
 
     public bool HasResults => ChatResults.Count > 0 || MessageResults.Count > 0;
@@ -85,7 +85,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
                 MessageResults.Clear();
 
                 foreach (var chat in result.Data.Chats)
-                    ChatResults.Add(chat);
+                    ChatResults.Add(new ChatListItemViewModel(chat));
 
                 foreach (var msg in result.Data.Messages)
                     MessageResults.Add(msg);

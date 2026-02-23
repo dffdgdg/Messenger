@@ -7,7 +7,6 @@ using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.Poll;

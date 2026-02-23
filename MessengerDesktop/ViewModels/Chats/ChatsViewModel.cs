@@ -6,6 +6,7 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat;
+using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.DTO.Chat;
@@ -55,10 +56,10 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     public MainMenuViewModel Parent { get; }
 
     [ObservableProperty]
-    private ObservableCollection<ChatDTO> chats = [];
+    private ObservableCollection<ChatListItemViewModel> chats = [];
 
     [ObservableProperty]
-    private ChatDTO? selectedChat;
+    private ChatListItemViewModel? selectedChat;
 
     [ObservableProperty]
     private ChatViewModel? currentChatViewModel;
@@ -135,13 +136,13 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private async Task OpenSearchedChat(ChatDTO? chat)
+    private async Task OpenSearchedChat(ChatListItemViewModel? chat)
     {
         if (chat == null) return;
 
         if (!IsChatMatchingCurrentTab(chat.Type))
         {
-            await Parent.SwitchToTabAndOpenChatAsync(chat);
+            await Parent.SwitchToTabAndOpenChatAsync(chat.ToDto());
             SearchManager?.ExitSearch();
             return;
         }
@@ -197,8 +198,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             var result = await _apiClient.GetAsync<ChatDTO>(ApiEndpoints.Chat.ById(chatId));
             if (result.Success && result.Data != null)
             {
-                chat = result.Data;
-                chat.UnreadCount = _globalHub.GetUnreadCount(chatId);
+                result.Data.UnreadCount = _globalHub.GetUnreadCount(chatId);
+                chat = new ChatListItemViewModel(result.Data);
                 Chats.Insert(0, chat);
             }
         }
@@ -219,7 +220,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     private void CloseSearch() => SearchManager?.ExitSearch();
 
     [RelayCommand]
-    private void OpenChat(ChatDTO? chat)
+    private void OpenChat(ChatListItemViewModel? chat)
     {
         if (chat == null) return;
 
@@ -233,7 +234,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
-    partial void OnSelectedChatChanged(ChatDTO? value)
+    partial void OnSelectedChatChanged(ChatListItemViewModel? value)
     {
         if (value != null)
         {
@@ -270,11 +271,13 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         {
             await Parent.ShowCreateGroupDialogAsync(createdChat =>
             {
+                var item = new ChatListItemViewModel(createdChat);
+
                 if (!Chats.Any(c => c.Id == createdChat.Id))
                 {
-                    Chats.Insert(0, createdChat);
+                    Chats.Insert(0, item);
                 }
-                SelectedChat = createdChat;
+                SelectedChat = Chats.FirstOrDefault(c => c.Id == createdChat.Id) ?? item;
             });
         }
         catch (Exception ex)
@@ -301,7 +304,14 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
             if (existingChat != null)
             {
-                OpenChatCommand.Execute(existingChat);
+                var existingItem = Chats.FirstOrDefault(c => c.Id == existingChat.Id) ?? new ChatListItemViewModel(existingChat);
+
+                if (!Chats.Any(c => c.Id == existingItem.Id))
+                {
+                    Chats.Insert(0, existingItem);
+                }
+
+                OpenChatCommand.Execute(existingItem);
                 return;
             }
 
@@ -319,8 +329,9 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 result.Data.Name = user.DisplayName ?? user.Username;
                 result.Data.Avatar = user.Avatar;
 
-                Chats.Add(result.Data);
-                OpenChatCommand.Execute(result.Data);
+                var createdChat = new ChatListItemViewModel(result.Data);
+                Chats.Add(createdChat);
+                OpenChatCommand.Execute(createdChat);
             }
             else
             {
@@ -405,7 +416,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                     chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
                 }
 
-                Chats = new ObservableCollection<ChatDTO>(cachedChats);
+                Chats = new ObservableCollection<ChatListItemViewModel>(cachedChats.Select(c => new ChatListItemViewModel(c)));
                 TotalUnreadCount = _globalHub.GetTotalUnread();
 
                 sw.Stop();
@@ -453,7 +464,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             // ═══ Умное обновление: сохраняем выбранный чат ═══
             var selectedId = SelectedChat?.Id;
 
-            Chats = new ObservableCollection<ChatDTO>(orderedChats);
+            Chats = new ObservableCollection<ChatListItemViewModel>(orderedChats.Select(c => new ChatListItemViewModel(c)));
             TotalUnreadCount = _globalHub.GetTotalUnread();
 
             // Восстанавливаем выбранный чат

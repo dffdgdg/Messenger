@@ -7,12 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Npgsql" Version="10.0.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="DTO\Common\" />
-  </ItemGroup>
-
 </Project>

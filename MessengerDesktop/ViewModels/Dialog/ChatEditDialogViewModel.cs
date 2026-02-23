@@ -5,8 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Platform;
-using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.User;
 using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels;
+namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class ChatEditDialogViewModel : DialogBaseViewModel
 {

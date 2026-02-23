@@ -1,5 +1,5 @@
 ﻿using MessengerDesktop.Data.Entities;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.Poll;
 using MessengerShared.Enum;

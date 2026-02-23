@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.Enum;
 
 namespace MessengerAPI.Mapping;

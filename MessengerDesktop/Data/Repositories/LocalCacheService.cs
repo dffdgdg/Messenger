@@ -1,7 +1,6 @@
-﻿using MessengerDesktop.Data;
-using MessengerDesktop.Data.Entities;
+﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Mappers;
-using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.Message;
 using MessengerShared.DTO.User;
 using MessengerShared.Enum;

@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
 			 xmlns:controls="using:MessengerDesktop.Controls"
              xmlns:shared="using:MessengerShared.DTO"
              xmlns:user="using:MessengerShared.DTO.User"
              xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
              x:Class="MessengerDesktop.Views.Dialogs.SelectUserDialog"
-             x:DataType="vm:SelectUserDialogViewModel">
+             x:DataType="vmDialog:SelectUserDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="420" MaxHeight="550">
 		<Grid RowDefinitions="Auto,Auto,*,Auto">

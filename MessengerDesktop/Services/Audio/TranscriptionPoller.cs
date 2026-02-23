@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels.Chat;
+namespace MessengerDesktop.Services.Audio;
 
 public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposable
 {

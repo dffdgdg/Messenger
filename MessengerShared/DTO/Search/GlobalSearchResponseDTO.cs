@@ -1,4 +1,6 @@
-﻿namespace MessengerShared.DTO.Search;
+﻿using MessengerShared.DTO.Chat;
+
+namespace MessengerShared.DTO.Search;
 
 public class GlobalSearchResponseDTO
 {

@@ -4,6 +4,7 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Admin;
+using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO.Department;
 using MessengerShared.DTO.User;
 using System;

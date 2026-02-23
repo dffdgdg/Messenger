@@ -164,28 +164,28 @@
 
             <ContentControl Content="{Binding CurrentDialog}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="vm:UserProfileDialogViewModel">
+                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
                         <views:UserProfileDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:PollDialogViewModel">
+                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
                         <views:PollDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:ChatEditDialogViewModel">
+                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
                         <views:ChatEditDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:UserEditDialogViewModel">
+                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
                         <views:UserEditDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:DepartmentDialogViewModel">
+                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
                         <views:DepartmentDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:ConfirmDialogViewModel">
+                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
                         <dialogs:ConfirmDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:SelectUserDialogViewModel">
+                    <DataTemplate DataType="vmDialog:SelectUserDialogViewModel">
                         <dialogs:SelectUserDialog/>
                     </DataTemplate>
-                    <DataTemplate DataType="vm:DepartmentHeadDialogViewModel">
+                    <DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
                         <views:DepartmentHeadDialog/>
                     </DataTemplate>
                 </ContentControl.DataTemplates>

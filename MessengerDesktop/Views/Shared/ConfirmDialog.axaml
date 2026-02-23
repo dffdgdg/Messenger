@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              x:Class="MessengerDesktop.Views.Dialogs.ConfirmDialog"
-             x:DataType="vm:ConfirmDialogViewModel">
+             x:DataType="vmDialog:ConfirmDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="380">
 		<StackPanel Spacing="16">

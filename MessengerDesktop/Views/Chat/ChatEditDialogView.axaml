@@ -4,10 +4,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Views.ChatEditDialog"
-             x:DataType="vm:ChatEditDialogViewModel"
+             x:DataType="vmDialog:ChatEditDialogViewModel"
              mc:Ignorable="d"
              d:DesignWidth="450" d:DesignHeight="600">
 
@@ -135,7 +136,7 @@
                         <ItemsControl ItemsSource="{Binding FilteredUsers}"
                                       Margin="4">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ChatEditDialogViewModel+SelectableUserItem">
+                                <DataTemplate x:DataType="vmDialog:ChatEditDialogViewModel+SelectableUserItem">
                                     <Border Padding="8,6"
                                             CornerRadius="6"
                                             Cursor="Hand"

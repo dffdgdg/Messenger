@@ -3,6 +3,7 @@ using MessengerDesktop.Infrastructure.Helpers;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Realtime;
 using MessengerShared.DTO;
+using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.User;
 using Microsoft.Extensions.DependencyInjection;
 using System;

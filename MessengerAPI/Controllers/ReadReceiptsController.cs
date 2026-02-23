@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Common;
-using MessengerAPI.Services;
 using MessengerAPI.Services.Chat;
+using MessengerAPI.Services.ReadReceipt;
 using MessengerShared.DTO.ReadReceipt;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;

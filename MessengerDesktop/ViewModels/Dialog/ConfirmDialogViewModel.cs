@@ -1,9 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.ViewModels.Dialog;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels;
+namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class ConfirmDialogViewModel : DialogBaseViewModel
 {

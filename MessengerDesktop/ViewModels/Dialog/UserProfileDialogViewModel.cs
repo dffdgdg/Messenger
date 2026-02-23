@@ -2,13 +2,12 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
-using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO.User;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels;
+namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class UserProfileDialogViewModel : DialogBaseViewModel
 {

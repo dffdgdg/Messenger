@@ -5,7 +5,7 @@ using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.Messaging;
-using MessengerShared.DTO;
+using MessengerAPI.Services.ReadReceipt;
 using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.User;
 using MessengerShared.Enum;

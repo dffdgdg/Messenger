@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:chatDTO="using:MessengerShared.DTO.Chat"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Controls.ChatItemView"
-             x:DataType="shared:ChatDTO">
+             x:DataType="chatDTO:ChatDTO">
 
 	<Grid Height="52" ColumnDefinitions="Auto,*">
 		<!-- Аватар -->

@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using MessengerShared.Enum;
 
-namespace MessengerShared.DTO;
+namespace MessengerShared.DTO.Chat;
 
 public partial class ChatDTO : ObservableObject
 {

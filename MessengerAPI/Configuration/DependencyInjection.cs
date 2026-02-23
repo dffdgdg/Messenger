@@ -1,10 +1,10 @@
 ﻿using MessengerAPI.Model;
-using MessengerAPI.Services;
 using MessengerAPI.Services.Auth;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Department;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.Messaging;
+using MessengerAPI.Services.ReadReceipt;
 using MessengerAPI.Services.User;
 using Microsoft.EntityFrameworkCore;
 

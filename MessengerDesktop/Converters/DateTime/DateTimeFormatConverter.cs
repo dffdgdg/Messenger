@@ -43,7 +43,7 @@ public class DateTimeFormatConverter : ConverterBase<System.DateTime, string>
 
     private static string FormatChatTime(System.DateTime dt)
     {
-        var now = System.DateTime.Now;
+        var now = System.DateTime.UtcNow;
 
         if (dt.Date == now.Date) return dt.ToString("HH:mm", RuCulture);
 
@@ -56,7 +56,7 @@ public class DateTimeFormatConverter : ConverterBase<System.DateTime, string>
 
     private static string FormatRelativeTime(System.DateTime dt)
     {
-        var diff = System.DateTime.Now - dt;
+        var diff = System.DateTime.UtcNow - dt;
 
         return diff.TotalMinutes switch
         {

@@ -5,6 +5,7 @@ using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Department;
+using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.DTO;
 using MessengerShared.DTO.Chat;

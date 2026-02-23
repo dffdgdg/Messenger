@@ -3,9 +3,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Views.UserProfileDialog"
-             x:DataType="vm:UserProfileDialogViewModel">
+             x:DataType="vmDialog:UserProfileDialogViewModel">
 
 	<Border Width="400"
             Background="{DynamicResource SecondaryBG}"

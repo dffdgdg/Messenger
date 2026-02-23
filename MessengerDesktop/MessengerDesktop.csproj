@@ -110,5 +110,6 @@
 	  <Folder Include="Infrastructure\Logging\" />
 	  <Folder Include="Infrastructure\DependencyInjection\" />
 	  <Folder Include="ViewModels\Chat\Attachments\" />
+	  <Folder Include="ViewModels\Shared\" />
 	</ItemGroup>
 </Project>

@@ -2,8 +2,9 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
+			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              x:Class="MessengerDesktop.Views.PollDialog"
-             x:DataType="vm:PollDialogViewModel">
+             x:DataType="vmDialog:PollDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="420">
 		<StackPanel Spacing="16">
@@ -15,7 +16,7 @@
 
 			<ItemsControl ItemsSource="{Binding Options}">
 				<ItemsControl.ItemTemplate>
-					<DataTemplate x:DataType="vm:PollDialogViewModel+OptionItem">
+					<DataTemplate x:DataType="vmDialog:PollDialogViewModel+OptionItem">
 						<Grid ColumnDefinitions="*,Auto" Margin="0,4">
 							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="DialogInput"/>
 							<Button Grid.Column="1" Classes="IconButton Small" Margin="8,0,0,0"

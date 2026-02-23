@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Model;
-using MessengerAPI.Services;
 using MessengerAPI.Services.Infrastructure;
+using MessengerAPI.Services.ReadReceipt;
 using MessengerShared.DTO.ReadReceipt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;

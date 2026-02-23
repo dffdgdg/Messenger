@@ -1,11 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              xmlns:shared="using:MessengerShared.DTO"
              xmlns:controls="using:MessengerDesktop.Controls"
              xmlns:department="using:MessengerShared.DTO.Department"
              x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
-             x:DataType="vm:DepartmentHeadDialogViewModel">
+             x:DataType="vmDialog:DepartmentHeadDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="440">
 		<StackPanel Spacing="20">

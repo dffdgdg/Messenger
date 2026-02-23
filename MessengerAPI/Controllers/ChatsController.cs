@@ -1,6 +1,5 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Services.Chat;
-using MessengerShared.DTO;
 using MessengerShared.DTO.Chat;
 using MessengerShared.DTO.User;
 using MessengerShared.Response;

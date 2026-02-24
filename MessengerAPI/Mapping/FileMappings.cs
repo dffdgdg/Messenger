@@ -1,12 +1,12 @@
 ﻿using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 
 namespace MessengerAPI.Mapping;
 
 public static class FileMappings
 {
-    public static MessageFileDTO ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null) => new()
+    public static MessageFileDto ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null) => new()
         {
             Id = file.Id,
             MessageId = file.MessageId,

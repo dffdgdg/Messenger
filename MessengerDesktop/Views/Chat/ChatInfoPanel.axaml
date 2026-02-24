@@ -15,7 +15,6 @@
 	<Border Background="{DynamicResource PrimaryBG}"
             CornerRadius="0,16,16,0">
 		<Grid RowDefinitions="58,*">
-			<!-- Заголовок -->
 			<Border Grid.Row="0"
                     BorderBrush="{DynamicResource BorderDefault}"
                     BorderThickness="0,0,0,1"
@@ -33,30 +32,19 @@
 				</Grid>
 			</Border>
 
-			<!-- Контент -->
 			<Grid Grid.Row="1">
-
-				<!-- Skeleton Loading -->
 				<controls:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
-
-				<!-- Основной контент -->
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
                               IsVisible="{Binding !IsInitialLoading}"
                               Padding="16">
 					<StackPanel Spacing="20">
-
-						<!-- ========== ЛИЧНЫЙ ДИАЛОГ ========== -->
 						<StackPanel IsVisible="{Binding IsContactChat}" Spacing="20">
-
-							<!-- Аватар по центру -->
 							<StackPanel HorizontalAlignment="Center" Spacing="12">
 								<controls:AvatarControl Classes="XXLarge"
                                                         Source="{Binding ContactAvatar}"
                                                         DisplayName="{Binding ContactDisplayName}"
                                                         IsOnline="{Binding IsContactOnline}"
                                                         HorizontalAlignment="Center"/>
-
-								<!-- Имя -->
 								<TextBlock Text="{Binding ContactDisplayName}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
@@ -65,16 +53,12 @@
                                            TextAlignment="Center"
                                            IsVisible="{Binding ContactDisplayName, 
                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-								<!-- Username если нет DisplayName -->
 								<TextBlock Text="{Binding ContactUsername}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
                                            IsVisible="{Binding ContactDisplayName, 
                                                       Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-
-								<!-- Статус -->
 								<TextBlock Text="{Binding ContactLastSeen}"
                                            FontSize="14"
                                            Foreground="{DynamicResource TextSecondary}"
@@ -83,9 +67,7 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Информация -->
 							<StackPanel Spacing="16">
-								<!-- Username -->
 								<StackPanel Spacing="2"
                                             IsVisible="{Binding ContactUsername, 
                                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -97,7 +79,6 @@
                                                Foreground="{DynamicResource AccentBrush}"/>
 								</StackPanel>
 
-								<!-- Отдел -->
 								<StackPanel Spacing="2"
                                             IsVisible="{Binding ContactDepartment, 
                                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -111,7 +92,6 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Уведомления -->
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource NotificationsIcon}"
                                           Width="18" Height="18"

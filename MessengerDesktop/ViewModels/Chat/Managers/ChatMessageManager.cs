@@ -4,9 +4,9 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.ReadReceipt;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.ReadReceipt;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,13 +21,13 @@ public class ChatMessageManager(
     int chatId,
     int userId,
     IApiClientService apiClient,
-    Func<ObservableCollection<UserDTO>> getMembersFunc,
+    Func<ObservableCollection<UserDto>> getMembersFunc,
     IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null,
     ILocalCacheService? cacheService = null)
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-    private readonly Func<ObservableCollection<UserDTO>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
+    private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
     private readonly ILocalCacheService? _cache = cacheService;
     private int? _oldestLoadedMessageId;
     private int? _newestLoadedMessageId;
@@ -42,7 +42,7 @@ public class ChatMessageManager(
     public int? LastReadMessageId { get; private set; }
     public int? FirstUnreadMessageId { get; private set; }
 
-    public void SetReadInfo(ChatReadInfoDTO? info)
+    public void SetReadInfo(ChatReadInfoDto? info)
     {
         if (info == null) return;
 
@@ -101,7 +101,7 @@ public class ChatMessageManager(
     private async Task<int?> LoadInitialFromServerAsync(CancellationToken ct)
     {
         var url = ApiEndpoints.Message.ForChat(chatId, userId, 1, AppConstants.DefaultPageSize);
-        var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+        var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
         if (result is { Success: true, Data: not null })
         {
@@ -153,7 +153,7 @@ public class ChatMessageManager(
         }
 
         var url = ApiEndpoints.Message.Around(chatId, messageId, userId, AppConstants.DefaultPageSize);
-        var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+        var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
         if (result is { Success: true, Data: not null })
         {
@@ -190,7 +190,7 @@ public class ChatMessageManager(
         try
         {
             const int requestedCount = AppConstants.LoadMorePageSize;
-            List<MessageDTO>? messagesToPrepend = null;
+            List<MessageDto>? messagesToPrepend = null;
             bool hasMore;
 
             // ═══ CACHE-FIRST ═══
@@ -217,7 +217,7 @@ public class ChatMessageManager(
 
                     var url = ApiEndpoints.Message.Before(
                         chatId, serverBeforeId, userId, requestedCount - cacheCount);
-                    var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+                    var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                     if (result is { Success: true, Data: not null })
                     {
@@ -244,7 +244,7 @@ public class ChatMessageManager(
                 // ═══ ORIGINAL LOGIC (no cache) ═══
                 var url = ApiEndpoints.Message.Before(
                     chatId, _oldestLoadedMessageId.Value, userId, requestedCount);
-                var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+                var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                 if (result is not { Success: true, Data: not null }) return;
 
@@ -286,7 +286,7 @@ public class ChatMessageManager(
 
         try
         {
-            List<MessageDTO>? messagesToAppend = null;
+            List<MessageDto>? messagesToAppend = null;
             bool hasNewer;
 
             // ═══ CACHE-FIRST ═══
@@ -307,7 +307,7 @@ public class ChatMessageManager(
                     // Дозагрузка с сервера
                     var url = ApiEndpoints.Message.After(
                         chatId, _newestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
-                    var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+                    var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                     if (result is not { Success: true, Data: not null }) return;
 
@@ -321,7 +321,7 @@ public class ChatMessageManager(
                 // ═══ ORIGINAL LOGIC ═══
                 var url = ApiEndpoints.Message.After(
                     chatId, _newestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
-                var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+                var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                 if (result is not { Success: true, Data: not null }) return;
 
@@ -378,7 +378,7 @@ public class ChatMessageManager(
         {
             var url = ApiEndpoints.Message.After(
                 chatId, _newestLoadedMessageId.Value, userId, AppConstants.DefaultPageSize);
-            var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+            var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
             if (result is not { Success: true, Data.Messages.Count: > 0 })
             {
@@ -443,7 +443,7 @@ public class ChatMessageManager(
         }
     }
 
-    public void AddReceivedMessage(MessageDTO message)
+    public void AddReceivedMessage(MessageDto message)
     {
         if (!_loadedMessageIds.Add(message.Id))
             return;
@@ -516,7 +516,7 @@ public class ChatMessageManager(
         {
             var url = ApiEndpoints.Message.After(
                 chatId, _newestLoadedMessageId.Value, userId, AppConstants.DefaultPageSize);
-            var result = await _apiClient.GetAsync<PagedMessagesDTO>(url, ct);
+            var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
             if (result is not { Success: true, Data.Messages.Count: > 0 })
             {
@@ -587,7 +587,7 @@ public class ChatMessageManager(
         }
     }
 
-    public void HandleMessageUpdated(MessageDTO updatedDto)
+    public void HandleMessageUpdated(MessageDto updatedDto)
     {
         var msg = Messages.FirstOrDefault(m => m.Id == updatedDto.Id);
         if (msg == null) return;
@@ -624,8 +624,8 @@ public class ChatMessageManager(
 
     public int GetPollsCount() => Messages.Count(m => m.Poll != null);
 
-    /// <summary>Рендерит список DTO в UI (очищает и пересоздаёт)</summary>
-    private void RenderMessages(List<MessageDTO> messages)
+    /// <summary>Рендерит список Dto в UI (очищает и пересоздаёт)</summary>
+    private void RenderMessages(List<MessageDto> messages)
     {
         Messages.Clear();
         _loadedMessageIds.Clear();
@@ -645,7 +645,7 @@ public class ChatMessageManager(
     }
 
     /// <summary>Сохраняет сообщения в кэш + обновляет SyncState</summary>
-    private async Task SaveToCacheAsync(List<MessageDTO> messages, bool hasMoreOlder, bool hasMoreNewer)
+    private async Task SaveToCacheAsync(List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
     {
         if (_cache == null || messages.Count == 0) return;
 
@@ -671,7 +671,7 @@ public class ChatMessageManager(
     }
 
     /// <summary>Сохраняет сообщения в кэш БЕЗ обновления SyncState</summary>
-    private async Task CacheMessagesOnlyAsync(List<MessageDTO> messages)
+    private async Task CacheMessagesOnlyAsync(List<MessageDto> messages)
     {
         if (_cache == null || messages.Count == 0) return;
 
@@ -686,7 +686,7 @@ public class ChatMessageManager(
     }
 
 
-    private MessageViewModel CreateMessageViewModel(MessageDTO msg, ObservableCollection<UserDTO> members)
+    private MessageViewModel CreateMessageViewModel(MessageDto msg, ObservableCollection<UserDto> members)
     {
         var sender = members.FirstOrDefault(m => m.Id == msg.SenderId);
         var vm = new MessageViewModel(msg, downloadService, notificationService)

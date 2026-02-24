@@ -4,6 +4,7 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Realtime;
+using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
@@ -55,7 +56,7 @@ public partial class MainMenuViewModel : BaseViewModel
     private ObservableCollection<UserDTO> _allContacts = [];
 
     [ObservableProperty]
-    private ObservableCollection<ChatDTO> _userChats = [];
+    private ObservableCollection<ChatDto> _userChats = [];
 
     [ObservableProperty]
     private bool _isSearching;
@@ -180,7 +181,7 @@ public partial class MainMenuViewModel : BaseViewModel
     /// <summary>
     /// Переключиться на нужную вкладку и открыть чат (универсальный метод)
     /// </summary>
-    public async Task SwitchToTabAndOpenChatAsync(ChatDTO chat)
+    public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
         // Определяем нужную вкладку по типу чата
         bool isGroupChat = chat.Type == ChatType.Chat || chat.Type == ChatType.Department;
@@ -200,10 +201,10 @@ public partial class MainMenuViewModel : BaseViewModel
 
             if (!_contactsViewModel.Chats.Any(c => c.Id == chat.Id))
             {
-                _contactsViewModel.Chats.Insert(0, chat);
+                _contactsViewModel.Chats.Insert(0, new ChatListItemViewModel(chat));
             }
 
-            _contactsViewModel.SelectedChat = chat;
+            _contactsViewModel.SelectedChat = _contactsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
             CurrentMenuViewModel = _contactsViewModel;
         }
     }
@@ -247,7 +248,7 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
 
-    private async Task OpenChatAsync(ChatDTO chat)
+    private async Task OpenChatAsync(ChatDto chat)
     {
         SetActiveMenu(1);
 
@@ -257,10 +258,10 @@ public partial class MainMenuViewModel : BaseViewModel
 
         if (!_chatsViewModel.Chats.Any(c => c.Id == chat.Id))
         {
-            _chatsViewModel.Chats.Add(chat);
+            _chatsViewModel.Chats.Add(new ChatListItemViewModel(chat));
         }
 
-        _chatsViewModel.SelectedChat = chat;
+        _chatsViewModel.SelectedChat = _chatsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
         CurrentMenuViewModel = _chatsViewModel;
         await Task.CompletedTask;
     }
@@ -321,7 +322,7 @@ public partial class MainMenuViewModel : BaseViewModel
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
         var usersTask = _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll);
-        var chatsTask = _apiClient.GetAsync<List<ChatDTO>>(ApiEndpoints.Chat.UserChats(UserId));
+        var chatsTask = _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chat.UserChats(UserId));
         await Task.WhenAll(usersTask, chatsTask);
         var usersResult = await usersTask;
         var chatsResult = await chatsTask;
@@ -331,14 +332,14 @@ public partial class MainMenuViewModel : BaseViewModel
         }
         if (chatsResult.Success && chatsResult.Data != null)
         {
-            UserChats = new ObservableCollection<ChatDTO>(chatsResult.Data);
+            UserChats = new ObservableCollection<ChatDto>(chatsResult.Data);
         }
     });
 
     /// <summary>
     /// Показать диалог создания новой группы
     /// </summary>
-    public async Task ShowCreateGroupDialogAsync(Action<ChatDTO>? onGroupCreated = null)
+    public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onGroupCreated = null)
     {
         try
         {
@@ -387,7 +388,7 @@ public partial class MainMenuViewModel : BaseViewModel
     /// <summary>
     /// Показать диалог редактирования группы
     /// </summary>
-    public async Task ShowEditGroupDialogAsync(ChatDTO chat, Action<ChatDTO>? onGroupUpdated = null)
+    public async Task ShowEditGroupDialogAsync(ChatDto chat, Action<ChatDto>? onGroupUpdated = null)
     {
         try
         {
@@ -408,11 +409,11 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
 
-    private async Task<bool> CreateGroupChatAsync(ChatDTO chatDto,List<int> memberIds,Stream? avatarStream,string? avatarFileName,Action<ChatDTO>? onSuccess)
+    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto,List<int> memberIds,Stream? avatarStream,string? avatarFileName,Action<ChatDto>? onSuccess)
     {
         try
         {
-            var createResult = await _apiClient.PostAsync<ChatDTO, ChatDTO>(ApiEndpoints.Chat.Create, chatDto);
+            var createResult = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chat.Create, chatDto);
 
             if (!createResult.Success || createResult.Data == null)
             {
@@ -424,7 +425,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds)
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new UpdateChatMemberDTO { UserId = userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new UpdateChatMemberDto { UserId = userId });
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -457,18 +458,18 @@ public partial class MainMenuViewModel : BaseViewModel
     }
 
 
-    private async Task<bool> UpdateGroupChatAsync(ChatDTO chatDto, List<int> memberIds, Stream? avatarStream, string? avatarFileName, Action<ChatDTO>? onSuccess)
+    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
     {
         try
         {
-            var updateDto = new UpdateChatDTO
+            var updateDto = new UpdateChatDto
             {
                 Id = chatDto.Id,
                 Name = chatDto.Name,
                 ChatType = ChatType.Chat
             };
 
-            var updateResult = await _apiClient.PutAsync<UpdateChatDTO, ChatDTO>(ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
+            var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
 
             if (!updateResult.Success || updateResult.Data == null)
             {
@@ -483,7 +484,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new UpdateChatMemberDTO { UserId = userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new UpdateChatMemberDto { UserId = userId });
             }
 
             foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))

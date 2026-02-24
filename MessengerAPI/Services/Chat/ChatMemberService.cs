@@ -2,7 +2,7 @@
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Chat;
+using MessengerShared.Dto.Chat;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,17 +10,17 @@ namespace MessengerAPI.Services.Chat;
 
 public interface IChatMemberService
 {
-    Task<Result<ChatMemberDTO>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member);
+    Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member);
     Task<Result> RemoveMemberAsync(int chatId, int userId, int removedByUserId);
-    Task<Result<ChatMemberDTO>> UpdateRoleAsync(int chatId, int userId, ChatRole newRole, int updatedByUserId);
-    Task<Result<List<ChatMemberDTO>>> GetMembersAsync(int chatId);
+    Task<Result<ChatMemberDto>> UpdateRoleAsync(int chatId, int userId, ChatRole newRole, int updatedByUserId);
+    Task<Result<List<ChatMemberDto>>> GetMembersAsync(int chatId);
     Task<Result> LeaveAsync(int chatId, int userId);
 }
 
 public class ChatMemberService(MessengerDbContext context, ICacheService cache, IAccessControlService accessControl,
     ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
-    public async Task<Result<ChatMemberDTO>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
+    public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
         await accessControl.EnsureIsAdminAsync(addedByUserId, chatId);
 
@@ -28,7 +28,7 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
             cm.ChatId == chatId && cm.UserId == userId);
 
         if (exists)
-            return Result<ChatMemberDTO>.Failure("Пользователь уже является участником чата");
+            return Result<ChatMemberDto>.Failure("Пользователь уже является участником чата");
 
         var member = new ChatMember
         {
@@ -47,7 +47,7 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
 
         _logger.LogInformation("Пользователь {UserId} добавлен в чат {ChatId} пользователем {AddedBy}",userId, chatId, addedByUserId);
 
-        return Result<ChatMemberDTO>.Success(MapToDto(member));
+        return Result<ChatMemberDto>.Success(MapToDto(member));
     }
 
     public async Task<Result> RemoveMemberAsync(int chatId, int userId, int removedByUserId)
@@ -75,7 +75,7 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
         return Result.Success();
     }
 
-    public async Task<Result<ChatMemberDTO>> UpdateRoleAsync(int chatId, int userId, ChatRole newRole, int updatedByUserId)
+    public async Task<Result<ChatMemberDto>> UpdateRoleAsync(int chatId, int userId, ChatRole newRole, int updatedByUserId)
     {
         await accessControl.EnsureIsOwnerAsync(updatedByUserId, chatId);
 
@@ -83,13 +83,13 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
             cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
-            return Result<ChatMemberDTO>.Failure("Пользователь не является участником чата");
+            return Result<ChatMemberDto>.Failure("Пользователь не является участником чата");
 
         if (member.Role == ChatRole.Owner)
-            return Result<ChatMemberDTO>.Failure("Невозможно изменить роль владельца");
+            return Result<ChatMemberDto>.Failure("Невозможно изменить роль владельца");
 
         if (newRole == ChatRole.Owner)
-            return Result<ChatMemberDTO>.Failure("Используйте отдельный метод для передачи владения");
+            return Result<ChatMemberDto>.Failure("Используйте отдельный метод для передачи владения");
 
         member.Role = newRole;
         await SaveChangesAsync();
@@ -98,22 +98,22 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
 
         _logger.LogInformation("Роль пользователя {UserId} в чате {ChatId} изменена на {Role}",userId, chatId, newRole);
 
-        return Result<ChatMemberDTO>.Success(MapToDto(member));
+        return Result<ChatMemberDto>.Success(MapToDto(member));
     }
 
-    public async Task<Result<List<ChatMemberDTO>>> GetMembersAsync(int chatId)
+    public async Task<Result<List<ChatMemberDto>>> GetMembersAsync(int chatId)
     {
         var members = await _context.ChatMembers
             .Where(cm => cm.ChatId == chatId)
             .Include(cm => cm.User)
             .AsNoTracking().ToListAsync();
 
-        return Result<List<ChatMemberDTO>>.Success(members.ConvertAll(MapToDto));
+        return Result<List<ChatMemberDto>>.Success(members.ConvertAll(MapToDto));
     }
 
     public async Task<Result> LeaveAsync(int chatId, int userId) => await RemoveMemberAsync(chatId, userId, userId);
 
-    private static ChatMemberDTO MapToDto(ChatMember member) => new()
+    private static ChatMemberDto MapToDto(ChatMember member) => new()
     {
         ChatId = member.ChatId,
         UserId = member.UserId,

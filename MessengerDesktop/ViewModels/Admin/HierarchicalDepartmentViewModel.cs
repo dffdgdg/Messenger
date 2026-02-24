@@ -1,13 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerShared.DTO.Department;
+using MessengerShared.Dto.Department;
 using System.Collections.ObjectModel;
 
 namespace MessengerDesktop.ViewModels;
 
-public partial class HierarchicalDepartmentViewModel(DepartmentDTO department, int level) : ObservableObject
+public partial class HierarchicalDepartmentViewModel(DepartmentDto department, int level) : ObservableObject
 {
-    public DepartmentDTO Department { get; } = department;
+    public DepartmentDto Department { get; } = department;
     public int Level { get; } = level;
 
     public int Id => Department.Id;

@@ -1,6 +1,6 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Services.Chat;
-using MessengerShared.DTO.Chat;
+using MessengerShared.Dto.Chat;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +13,7 @@ public class NotificationController(
     : BaseController<NotificationController>(logger)
 {
     [HttpGet("chat/{chatId}/settings")]
-    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> GetChatSettings(int chatId)
+    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDto>>> GetChatSettings(int chatId)
     {
         var userId = GetCurrentUserId();
 
@@ -23,13 +23,13 @@ public class NotificationController(
             var settings = await notificationService.GetChatNotificationSettingsAsync(userId, chatId);
 
             return settings is not null
-                ? Result<ChatNotificationSettingsDTO>.Success(settings)
-                : Result<ChatNotificationSettingsDTO>.Failure("Настройки не найдены");
+                ? Result<ChatNotificationSettingsDto>.Success(settings)
+                : Result<ChatNotificationSettingsDto>.Failure("Настройки не найдены");
         });
     }
 
     [HttpPost("chat/mute")]
-    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDTO>>> SetChatMute([FromBody] ChatNotificationSettingsDTO request)
+    public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDto>>> SetChatMute([FromBody] ChatNotificationSettingsDto request)
     {
         var userId = GetCurrentUserId();
 
@@ -37,21 +37,21 @@ public class NotificationController(
         {
             await chatService.EnsureUserHasChatAccessAsync(userId, request.ChatId);
             var result = await notificationService.SetChatMuteAsync(userId, request);
-            return Result<ChatNotificationSettingsDTO>.Success(result);
+            return Result<ChatNotificationSettingsDto>.Success(result);
         }, request.NotificationsEnabled
             ? "Уведомления включены"
             : "Уведомления отключены");
     }
 
     [HttpGet("settings")]
-    public async Task<ActionResult<ApiResponse<List<ChatNotificationSettingsDTO>>>> GetAllSettings()
+    public async Task<ActionResult<ApiResponse<List<ChatNotificationSettingsDto>>>> GetAllSettings()
     {
         var userId = GetCurrentUserId();
 
         return await ExecuteAsync(async () =>
         {
             var result = await notificationService.GetAllChatSettingsAsync(userId);
-            return Result<List<ChatNotificationSettingsDTO>>.Success(result);
+            return Result<List<ChatNotificationSettingsDto>>.Success(result);
         }, "Настройки получены");
     }
 }

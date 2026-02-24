@@ -1,8 +1,8 @@
 ﻿using Avalonia.Threading;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Realtime;
-using MessengerShared.DTO;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto;
+using MessengerShared.Dto.User;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Specialized;
@@ -98,7 +98,7 @@ public partial class ChatViewModel
                     member.LastOnline = DateTime.UtcNow;
 
                 // Принудительно обновляем элемент в коллекции,
-                // чтобы ItemsControl перерисовал (UserDTO не INPC)
+                // чтобы ItemsControl перерисовал (UserDto не INPC)
                 var index = Members.IndexOf(member);
                 if (index >= 0)
                 {
@@ -111,7 +111,7 @@ public partial class ChatViewModel
     /// <summary>
     /// Обработка обновления профиля пользователя (аватар, имя, отдел).
     /// </summary>
-    private void OnUserProfileUpdatedForInfoPanel(UserDTO updatedUser) =>
+    private void OnUserProfileUpdatedForInfoPanel(UserDto updatedUser) =>
         Dispatcher.UIThread.Post(() =>
         {
             // Обновляем контакт в 1:1 чате
@@ -153,7 +153,7 @@ public partial class ChatViewModel
     /// <summary>
     /// Новый участник присоединился к чату (событие от сервера).
     /// </summary>
-    private void OnMemberJoined(int chatId, UserDTO user)
+    private void OnMemberJoined(int chatId, UserDto user)
     {
         Dispatcher.UIThread.Post(() =>
         {

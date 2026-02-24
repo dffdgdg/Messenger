@@ -1,7 +1,7 @@
 ﻿using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System;
 using System.Linq;
 using System.Threading;
@@ -11,7 +11,7 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {
-    private void OnMessageReceived(MessageDTO messageDto) =>
+    private void OnMessageReceived(MessageDto messageDto) =>
         Dispatcher.UIThread.Post(async () =>
         {
             _messageManager.AddReceivedMessage(messageDto);
@@ -27,7 +27,7 @@ public partial class ChatViewModel
                 await MarkMessagesAsReadAsync();
         });
 
-    private void OnMessageUpdatedInChat(MessageDTO messageDto) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageUpdated(messageDto));
+    private void OnMessageUpdatedInChat(MessageDto messageDto) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageUpdated(messageDto));
 
     private void OnMessageDeletedInChat(int messageId) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageDeleted(messageId));
 
@@ -130,7 +130,7 @@ public partial class ChatViewModel
                 content = forwarding!.Content;
             }
 
-            var msg = new MessageDTO
+            var msg = new MessageDto
             {
                 ChatId = _chatId,
                 Content = content,
@@ -147,7 +147,7 @@ public partial class ChatViewModel
                 msg.Files = forwarding.Files;
             }
 
-            var result = await _apiClient.PostAsync<MessageDTO, MessageDTO>(
+            var result = await _apiClient.PostAsync<MessageDto, MessageDto>(
                 ApiEndpoints.Message.Create, msg, ct);
 
             if (result.Success)

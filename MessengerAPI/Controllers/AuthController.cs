@@ -1,5 +1,5 @@
 ﻿using MessengerAPI.Services.Auth;
-using MessengerShared.DTO.Auth;
+using MessengerShared.Dto.Auth;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +13,6 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     [HttpPost("login")]
-    public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Login([FromBody] LoginRequest request, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> Login([FromBody] LoginRequest request, CancellationToken ct)
         => await ExecuteAsync(() => authService.LoginAsync(request.Username, request.Password, ct), "Авторизация прошла успешно");
 }

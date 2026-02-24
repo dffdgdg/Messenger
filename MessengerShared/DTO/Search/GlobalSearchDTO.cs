@@ -1,11 +1,11 @@
 ﻿using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.Search;
+namespace MessengerShared.Dto.Search;
 
 /// <summary>
 /// Сообщение в результатах глобального поиска (с информацией о чате)
 /// </summary>
-public class GlobalSearchMessageDTO
+public class GlobalSearchMessageDto
 {
     public int Id { get; set; }
     public int ChatId { get; set; }

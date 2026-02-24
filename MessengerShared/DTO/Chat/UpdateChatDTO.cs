@@ -1,8 +1,8 @@
 ﻿using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.Chat;
+namespace MessengerShared.Dto.Chat;
 
-public class UpdateChatDTO
+public class UpdateChatDto
 {
     public int Id { get; set; }
     public string? Name { get; set; }

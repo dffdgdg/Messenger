@@ -1,16 +1,16 @@
 ﻿using MessengerDesktop.Converters.Base;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.DateTime;
 
-public class LastMessageDateConverter : ConverterBase<MessageDTO, string>
+public class LastMessageDateConverter : ConverterBase<MessageDto, string>
 {
     private static readonly DateTimeFormatConverter InnerConverter = new() { Format = DateTimeFormat.Chat };
 
     protected override string? DefaultValue => string.Empty;
 
-    protected override string ConvertCore(MessageDTO message, object? parameter, CultureInfo culture)
+    protected override string ConvertCore(MessageDto message, object? parameter, CultureInfo culture)
     {
         if (message.CreatedAt == default)
             return string.Empty;

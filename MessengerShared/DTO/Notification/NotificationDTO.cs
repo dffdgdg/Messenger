@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Notification;
+﻿namespace MessengerShared.Dto.Notification;
 
-public class NotificationDTO
+public class NotificationDto
 {
     public string Type { get; set; } = "message";
     public int ChatId { get; set; }

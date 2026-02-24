@@ -1,3 +1,3 @@
-﻿namespace MessengerShared.DTO.Auth;
+﻿namespace MessengerShared.Dto.Auth;
 
 public record LoginRequest(string Username, string Password);

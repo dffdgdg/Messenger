@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Audio;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -189,7 +189,7 @@ public partial class ChatViewModel
         {
             // 1. Загрузка аудиофайла
             recording.AudioStream.Position = 0;
-            var uploadResult = await _apiClient.UploadFileAsync<MessageFileDTO>(
+            var uploadResult = await _apiClient.UploadFileAsync<MessageFileDto>(
                 ApiEndpoints.File.Upload(_chatId),
                 recording.AudioStream,
                 recording.FileName,
@@ -205,7 +205,7 @@ public partial class ChatViewModel
             }
 
             // 2. Отправка сообщения с прикреплённым файлом
-            var msg = new MessageDTO
+            var msg = new MessageDto
             {
                 ChatId = _chatId,
                 Content = null,
@@ -215,7 +215,7 @@ public partial class ChatViewModel
                 ReplyToMessageId = ReplyingToMessage?.Id
             };
 
-            var sendResult = await _apiClient.PostAsync<MessageDTO, MessageDTO>(
+            var sendResult = await _apiClient.PostAsync<MessageDto, MessageDto>(
                 ApiEndpoints.Message.Create, msg, ct);
 
             if (ct.IsCancellationRequested) return;

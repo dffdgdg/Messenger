@@ -1,8 +1,8 @@
-﻿namespace MessengerShared.DTO.Online;
+﻿namespace MessengerShared.Dto.Online;
 
-public record OnlineStatusDTO(int UserId, bool IsOnline, DateTime? LastOnline);
+public record OnlineStatusDto(int UserId, bool IsOnline, DateTime? LastOnline);
 
-public class OnlineUsersResponseDTO
+public class OnlineUsersResponseDto
 {
     public List<int> OnlineUserIds { get; set; } = [];
     public int TotalOnline { get; set; }

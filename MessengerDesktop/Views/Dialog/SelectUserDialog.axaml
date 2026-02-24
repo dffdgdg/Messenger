@@ -11,8 +11,6 @@
 
 	<Border Classes="DialogContainer" Width="420" MaxHeight="550">
 		<Grid RowDefinitions="Auto,Auto,*,Auto">
-
-			<!-- Заголовок -->
 			<StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
 				<TextBlock Text="{Binding Title}"
                            FontSize="20"
@@ -22,7 +20,6 @@
                            Foreground="{DynamicResource TextSecondary}"/>
 			</StackPanel>
 
-			<!-- Поиск -->
 			<TextBox Grid.Row="1"
                      Text="{Binding SearchQuery}"
                      Watermark="Поиск по имени или логину..."
@@ -36,14 +33,12 @@
 				</TextBox.InnerLeftContent>
 			</TextBox>
 
-			<!-- Список пользователей -->
 			<Border Grid.Row="2"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource BorderDefault}"
                     CornerRadius="8"
                     ClipToBounds="True">
 				<Grid>
-					<!-- Пустой список -->
 					<StackPanel VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 Spacing="12"
@@ -57,7 +52,6 @@
                                    HorizontalAlignment="Center"/>
 					</StackPanel>
 
-					<!-- Список -->
 					<ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto"
                                   IsVisible="{Binding FilteredUsers.Count}">
@@ -65,61 +59,56 @@
                                       Margin="4">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate x:DataType="user:UserDTO">
-    <Border Padding="10,8"
-            Margin="0,2"
-            CornerRadius="6"
-            Cursor="Hand"
-            Background="Transparent"
-            PointerPressed="OnUserItemPressed">
-        <Border.Styles>
-            <Style Selector="Border:pointerover">
-                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
-            </Style>
-        </Border.Styles>
-        
-        <Grid ColumnDefinitions="Auto,*,Auto">
-            <!-- Аватар -->
-			<controls:AvatarControl Classes="Medium"
-									Source="{Binding Avatar}"
-									DisplayName="{Binding DisplayName}"
-									IsOnline="{Binding IsOnline}"
-									HorizontalAlignment="Center"/>
-			
-            <!-- Информация -->
-            <StackPanel Grid.Column="1" 
-                        VerticalAlignment="Center"
-                        Spacing="2">
-                <TextBlock Text="{Binding DisplayName}"
-                           FontWeight="Medium"
-                           FontSize="14"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextSecondary}"
-                           TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-
-            <!-- Онлайн статус -->
-            <Ellipse Grid.Column="2"
-                     Width="10" Height="10"
-                     VerticalAlignment="Center"
-                     IsVisible="{Binding IsOnline}">
-                <Ellipse.Fill>
-                    <SolidColorBrush Color="#22C55E"/>
-                </Ellipse.Fill>
-            </Ellipse>
-        </Grid>
-    </Border>
-</DataTemplate>
+                                    <Border Padding="10,8"
+                                            Margin="0,2"
+                                            CornerRadius="6"
+                                            Cursor="Hand"
+                                            Background="Transparent"
+                                            PointerPressed="OnUserItemPressed">
+                                        <Border.Styles>
+                                            <Style Selector="Border:pointerover">
+                                                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                            </Style>
+                                        </Border.Styles>
+       
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <controls:AvatarControl Classes="Medium"
+                                                                    Source="{Binding Avatar}"
+                                                                    DisplayName="{Binding DisplayName}"
+                                                                    IsOnline="{Binding IsOnline}"
+                                                                    HorizontalAlignment="Center"/>
+                                            
+                                            <StackPanel Grid.Column="1" 
+                                                        VerticalAlignment="Center"
+                                                        Spacing="2">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           FontWeight="Medium"
+                                                           FontSize="14"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextSecondary}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                            
+                                            <Ellipse Grid.Column="2"
+                                                     Width="10" Height="10"
+                                                     VerticalAlignment="Center"
+                                                     IsVisible="{Binding IsOnline}">
+                                                <Ellipse.Fill>
+                                                    <SolidColorBrush Color="#22C55E"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
 					</ScrollViewer>
 				</Grid>
 			</Border>
 
-			<!-- Нижняя панель -->
 			<StackPanel Grid.Row="3" Margin="0,16,0,0" Spacing="12">
-				<!-- Выбранный пользователь -->
 				<Border Background="{DynamicResource SurfaceVariant}"
                         CornerRadius="8"
                         Padding="12,10"

@@ -19,14 +19,12 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Основная карточка отдела -->
         <Border x:Name="DepartmentCard"
                 Classes="DepartmentCard"
                 Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}"
                 Cursor="Hand">
 
             <Grid>
-                <!-- Линия-соединитель слева (для не-корневых элементов) -->
                 <Canvas IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"
                         Width="24" Height="1"
                         HorizontalAlignment="Left"
@@ -38,10 +36,7 @@
                           StrokeLineCap="Round"/>
                 </Canvas>
 
-                <!-- Контент карточки -->
                 <Grid ColumnDefinitions="Auto,*,Auto" Margin="4">
-                    
-                    <!-- Кнопка раскрытия -->
                     <Button Grid.Column="0"
                             Command="{Binding ToggleExpandCommand}"
                             Width="36" Height="36"
@@ -67,21 +62,14 @@
                         </PathIcon>
                     </Button>
                     
-                    <!-- Заглушка если нет детей -->
                     <Border Grid.Column="0" Width="44" Height="44"
                             IsVisible="{Binding !HasChildren}"/>
 
-                    <!-- Основная информация -->
                     <Grid Grid.Column="1" RowDefinitions="Auto,Auto" Margin="8,10">
-                        
-                        <!-- Верхняя строка: иконка + название -->
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-                            
-                            <!-- Иконка отдела -->
                             <Border Width="40" Height="40" CornerRadius="10"
                                     Background="{DynamicResource CardBgBrush}">
                                 <Panel>
-                                    <!-- Разные иконки для разных типов -->
                                     <PathIcon Data="{StaticResource OrganizationIcon}" 
                                               Width="18" Height="18"
                                               Foreground="{DynamicResource Accent}"
@@ -93,16 +81,12 @@
                                 </Panel>
                             </Border>
 
-                            <!-- Название и статистика -->
                             <StackPanel VerticalAlignment="Center" Spacing="2">
                                 <TextBlock Text="{Binding Name}" 
                                            FontSize="14" 
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimary}"/>
-                                
-                                <!-- Мета-информация -->
                                 <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <!-- Руководитель -->
                                     <StackPanel Orientation="Horizontal" Spacing="4"
                                                 IsVisible="{Binding HasHead}">
                                         <PathIcon Data="{StaticResource PersonIcon}" 
@@ -113,7 +97,6 @@
                                                    Foreground="{DynamicResource TextSecondary}"/>
                                     </StackPanel>
                                     
-                                    <!-- Нет руководителя -->
                                     <TextBlock Text="Нет руководителя" 
                                                FontSize="12"
                                                Foreground="{DynamicResource TextMuted}"
@@ -124,12 +107,10 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Правая часть: бейджи и действия -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" 
                                 Spacing="8" Margin="0,0,8,0"
                                 VerticalAlignment="Center">
                         
-                        <!-- Бейдж количества сотрудников -->
                         <Border Background="{DynamicResource AccentMuted}"
                                 CornerRadius="12"
                                 Padding="10,4"
@@ -145,7 +126,6 @@
                             </StackPanel>
                         </Border>
                         
-                        <!-- Бейдж "пусто" если нет сотрудников -->
                         <Border Background="{DynamicResource WarningBgBrush}"
                                 CornerRadius="12"
                                 Padding="10,4"
@@ -155,7 +135,6 @@
                                        Foreground="{DynamicResource WarningBrush}"/>
                         </Border>
 
-                        <!-- Бейдж количества подотделов -->
                         <Border Background="{DynamicResource CardBgBrush}"
                                 CornerRadius="12"
                                 Padding="8,4"
@@ -171,7 +150,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Кнопки действий (показываются при наведении через стили) -->
                         <StackPanel Classes="DepartmentActions" 
                                     Orientation="Horizontal" 
                                     Spacing="4">
@@ -189,13 +167,11 @@
             </Grid>
         </Border>
 
-        <!-- Дочерние элементы -->
         <Border Grid.Row="1"
                 IsVisible="{Binding IsExpanded}"
                 Margin="24,0,0,0">
             
             <Grid>
-                <!-- Вертикальная линия иерархии -->
                 <Border Width="2" 
                         Background="{DynamicResource HierarchyLineBrush}"
                         HorizontalAlignment="Left"
@@ -204,7 +180,6 @@
                         CornerRadius="1"
                         IsVisible="{Binding HasChildren}"/>
                 
-                <!-- Список дочерних отделов -->
                 <ItemsControl ItemsSource="{Binding Children}" 
                               Margin="24,4,0,0"
                               ItemTemplate="{StaticResource DepartmentTemplate}">
@@ -222,8 +197,6 @@
 
 	<Border Classes="PageContainer">
 		<Grid ColumnDefinitions="260,*">
-
-			<!-- Боковая панель -->
 			<Border Grid.Column="0" Background="{DynamicResource SecondaryBG}"
                     BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderDefault}">
 				<DockPanel>
@@ -260,7 +233,6 @@
 				</DockPanel>
 			</Border>
 
-			<!-- Основной контент -->
 			<Border Grid.Column="1" Background="{DynamicResource PrimaryBG}">
 				<Grid Margin="24" RowDefinitions="Auto,Auto,*">
 
@@ -300,7 +272,6 @@
 					</Border>
 
 					<Grid Grid.Row="2">
-						<!-- Loading -->
 						<Border IsVisible="{Binding IsBusy}" Background="{DynamicResource SecondaryBG}"
                                 BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
                                 CornerRadius="16" ZIndex="100">
@@ -311,7 +282,6 @@
 							</StackPanel>
 						</Border>
 
-						<!-- Error -->
 						<Border Classes="AlertError" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
                                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
@@ -322,7 +292,6 @@
 							</Grid>
 						</Border>
 
-						<!-- Success -->
 						<Border Classes="AlertSuccess" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
                                 IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
@@ -333,7 +302,6 @@
 							</Grid>
 						</Border>
 
-						<!-- Users List -->
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
                                 BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
                                 IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
@@ -409,7 +377,6 @@
 							</ScrollViewer>
 						</Border>
 
-						<!-- Departments List -->
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
                                 BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
                                 IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">

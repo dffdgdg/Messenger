@@ -5,7 +5,6 @@
              x:DataType="vm:LoginViewModel">
 
     <Grid>
-        <!-- Background -->
         <Panel>
             <Border>
                 <Border.Background>
@@ -17,7 +16,6 @@
                 </Border.Background>
             </Border>
 
-            <!-- Сетка через тайлинг -->
             <Border IsHitTestVisible="False" Opacity="0.3">
                 <Border.OpacityMask>
                     <RadialGradientBrush Center="0.5,0.5" RadiusX="0.7" RadiusY="0.7">
@@ -51,7 +49,6 @@
                      Fill="{DynamicResource LoginGlowSecondary}"/>
         </Panel>
 
-        <!-- Login Card -->
         <Border Background="{DynamicResource LoginCardBg}"
                 BorderBrush="{DynamicResource LoginCardBorder}"
                 BorderThickness="1" CornerRadius="16" Padding="40,36"
@@ -62,7 +59,6 @@
             </Border.Effect>
 
             <StackPanel Spacing="28">
-                <!-- Logo -->
                 <StackPanel Spacing="16" HorizontalAlignment="Center">
                     <Border Width="56" Height="56" CornerRadius="14" HorizontalAlignment="Center">
                         <Border.Background>
@@ -86,7 +82,6 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Messages -->
                 <Border Classes="MessageError"
                         IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Text="{Binding ErrorMessage}"
@@ -103,7 +98,6 @@
                                HorizontalAlignment="Center"/>
                 </Border>
 
-                <!-- Form -->
                 <StackPanel Spacing="18" IsEnabled="{Binding !IsBusy}">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Логин" Classes="FieldLabel"/>
@@ -127,7 +121,6 @@
                           IsChecked="{Binding RememberMe}"
                           IsEnabled="{Binding !IsBusy}"/>
 
-                <!-- Кнопка входа с индикатором -->
                 <Button Classes="Primary FullWidth"
                         Command="{Binding LoginCommand}">
                     <Panel>
@@ -147,7 +140,6 @@
             </StackPanel>
         </Border>
 
-        <!-- Оверлей инициализации -->
         <Border Background="#80000000"
                 IsVisible="{Binding IsInitializing}"
                 IsHitTestVisible="{Binding IsInitializing}">

@@ -26,7 +26,6 @@
         MinWidth="890"
         MinHeight="500">
     <Window.Styles>
-        <!-- Overlay -->
         <Style Selector="Border.DialogOverlay">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
@@ -64,7 +63,6 @@
             <Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
         </Style>
 
-        <!-- Help button styles -->
         <Style Selector="Button.TitleBarHelp">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>

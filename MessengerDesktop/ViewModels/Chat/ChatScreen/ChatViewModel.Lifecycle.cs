@@ -84,7 +84,7 @@ public partial class ChatViewModel
     /// <summary>Загружает метаданные чата (название, аватар, тип).</summary>
     private async Task LoadChatAsync(CancellationToken ct)
     {
-        var result = await _apiClient.GetAsync<ChatDTO>(ApiEndpoints.Chat.ById(_chatId), ct);
+        var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chat.ById(_chatId), ct);
 
         if (result.Success && result.Data is not null)
         {

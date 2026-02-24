@@ -10,8 +10,6 @@
 
 	<Border Classes="DialogContainer" Width="480">
 		<StackPanel Spacing="20">
-
-			<!-- Заголовок -->
 			<StackPanel Spacing="4">
 				<TextBlock FontSize="20" FontWeight="Bold"
                            Text="{Binding IsNewUser, Converter={conv:Converter Name=BoolToString}, 
@@ -20,7 +18,6 @@
                            FontSize="13" Foreground="{DynamicResource TextSecondary}"/>
 			</StackPanel>
 
-			<!-- Ошибка -->
 			<Border Classes="AlertError"
                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
@@ -31,10 +28,7 @@
 				</Grid>
 			</Border>
 
-			<!-- Основные поля -->
 			<StackPanel Spacing="12">
-
-				<!-- Логин -->
 				<StackPanel Spacing="6">
 					<TextBlock Text="Логин" FontSize="13" FontWeight="Medium"/>
 					<TextBox Text="{Binding Username}" Classes="DialogInput"
@@ -50,7 +44,6 @@
                                IsVisible="{Binding IsNewUser}"/>
 				</StackPanel>
 
-				<!-- ФИО в одну строку -->
 				<StackPanel Spacing="6">
 					<TextBlock Text="ФИО" FontSize="13" FontWeight="Medium"/>
 					<Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
@@ -61,7 +54,6 @@
 						<TextBox Grid.Column="2" Text="{Binding Midname}"
                                  Classes="DialogInput" Watermark="Отчество"/>
 					</Grid>
-					<!-- Превью отображаемого имени -->
 					<StackPanel Orientation="Horizontal" Spacing="4"
                                 IsVisible="{Binding DisplayNamePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 						<TextBlock Text="Будет отображаться как:" FontSize="11"
@@ -71,7 +63,6 @@
 					</StackPanel>
 				</StackPanel>
 
-				<!-- Отдел -->
 				<StackPanel Spacing="6">
 					<TextBlock Text="Отдел" FontSize="13" FontWeight="Medium"/>
 					<ComboBox ItemsSource="{Binding Departments}"
@@ -87,7 +78,6 @@
 					</ComboBox>
 				</StackPanel>
 
-				<!-- Пароль (только для нового пользователя) -->
 				<StackPanel Spacing="12" IsVisible="{Binding IsNewUser}">
 					<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="0,4"/>
 
@@ -124,11 +114,9 @@
 				</StackPanel>
 			</StackPanel>
 
-			<!-- Кнопки -->
 			<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="0,4,0,0"/>
 
 			<Grid ColumnDefinitions="*,Auto,Auto">
-				<!-- Индикатор загрузки -->
 				<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
                             IsVisible="{Binding IsBusy}" VerticalAlignment="Center">
 					<ProgressBar IsIndeterminate="True" Width="80" Height="4"/>

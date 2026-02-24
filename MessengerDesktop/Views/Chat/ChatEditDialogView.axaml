@@ -11,20 +11,15 @@
              x:DataType="vmDialog:ChatEditDialogViewModel"
              mc:Ignorable="d"
              d:DesignWidth="450" d:DesignHeight="600">
-
     <Border Classes="DialogContainer" Width="450" MaxHeight="650"
 			Background="{DynamicResource SecondaryBG}">
         <Grid RowDefinitions="Auto,*,Auto">
             
-            <!-- Заголовок -->
             <StackPanel Grid.Row="0" Spacing="16" Margin="0,0,0,16">
                 <TextBlock Text="{Binding Title}"
                            FontWeight="Bold"
                            FontSize="20"/>
-
-                <!-- Аватар и название -->
                 <Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0">
-                    <!-- Аватар группы -->
                     <Grid Grid.Column="0" 
                           Width="80" Height="80" 
                           Margin="0,0,16,0">
@@ -35,8 +30,6 @@
                                                 ShowOnlineIndicator="False"
                                                 PlaceholderBackground="{DynamicResource SurfaceVariant}"
                                                 PlaceholderForeground="{DynamicResource TextSecondary}"/>
-
-                        <!-- Кнопка выбора аватара -->
                         <Button Classes="IconButton"
                                 Width="28" Height="28"
                                 CornerRadius="14"
@@ -50,7 +43,6 @@
                                   Fill="{DynamicResource TextPrimary}"/>
                         </Button>
 
-                        <!-- Кнопка удаления аватара -->
                         <Button Classes="IconButton"
                                 Width="20" Height="20"
                                 CornerRadius="10"
@@ -67,7 +59,6 @@
                         </Button>
                     </Grid>
 
-                    <!-- Название группы -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
                         <TextBlock Text="Название группы" 
                                    FontWeight="DemiBold"
@@ -81,9 +72,7 @@
                 </Grid>
             </StackPanel>
 
-            <!-- Список участников -->
             <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*">
-                <!-- Заголовок с счётчиком -->
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                     <TextBlock Grid.Column="0" VerticalAlignment="Center">
                         <Run Text="Участники" FontWeight="DemiBold"/>
@@ -106,18 +95,16 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Поиск пользователей -->
                 <TextBox Grid.Row="1"
                          Text="{Binding SearchUserQuery}"
                          Watermark="Поиск пользователей..."
                          Classes="DialogInput SearchInput"
                          Margin="0,0,0,8"/>
 
-                <!-- Индикатор загрузки -->
         <StackPanel Grid.Row="2"
-            IsVisible="{Binding IsBusy}"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Center">
+                    IsVisible="{Binding IsBusy}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
     <ProgressBar IsIndeterminate="True"
                  Width="32" Height="32"/>
     <TextBlock Text="Загрузка пользователей..."
@@ -125,7 +112,6 @@
                Foreground="{DynamicResource TextSecondary}"/>
 </StackPanel>
     
-                <!-- Список пользователей -->
                 <Border Grid.Row="2"
                         BorderThickness="1"
                         BorderBrush="{DynamicResource BorderBrush}"
@@ -150,13 +136,11 @@
                                         </Border.Styles>
                                         
                                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                                            <!-- Чекбокс -->
                                             <CheckBox Grid.Column="0"
                                                       IsChecked="{Binding IsSelected}"
                                                       Margin="0,0,12,0"
                                                       VerticalAlignment="Center"/>
 
-                                            <!-- Аватар -->
                                             <controls:AvatarControl Grid.Column="1"
                                                                     Size="36"
                                                                     FontSize="14"
@@ -195,7 +179,6 @@
                     </ScrollViewer>
                 </Border>
 
-                <!-- Пустой список -->
                 <TextBlock Grid.Row="2"
                            Text="Пользователи не найдены"
                            HorizontalAlignment="Center"
@@ -205,9 +188,7 @@
                                       Converter={conv:Converter Name=ZeroToTrue}}"/>
             </Grid>
 
-			<!-- Нижняя панель -->
 			<StackPanel Grid.Row="2" Spacing="12" Margin="0,16,0,0">
-				<!-- Сообщения об ошибках/успехе -->
 				<TextBlock Text="{Binding ErrorMessage}"
 						   Foreground="{DynamicResource ErrorColor}"
 						   TextWrapping="Wrap"
@@ -219,8 +200,6 @@
 						   TextWrapping="Wrap"
 						   IsVisible="{Binding SuccessMessage, 
                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-				<!-- Кнопки -->
 				<StackPanel Orientation="Horizontal"
 							HorizontalAlignment="Right"
 							Spacing="12">

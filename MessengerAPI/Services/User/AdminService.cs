@@ -2,15 +2,15 @@
 using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services.User;
 
 public interface IAdminService
 {
-    Task<Result<List<UserDTO>>> GetUsersAsync(CancellationToken ct = default);
-    Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, CancellationToken ct = default);
+    Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default);
+    Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default);
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
 }
 
@@ -19,7 +19,7 @@ public class AdminService(
     ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
-    public async Task<Result<List<UserDTO>>> GetUsersAsync(CancellationToken ct = default)
+    public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
         var users = await _context.Users
             .Include(u => u.Department)
@@ -28,37 +28,37 @@ public class AdminService(
             .ToListAsync(ct);
 
         var result = users.ConvertAll(u => u.ToDto());
-        return Result<List<UserDTO>>.Success(result);
+        return Result<List<UserDto>>.Success(result);
     }
 
-    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, CancellationToken ct = default)
+    public async Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default)
     {
         var usernameValidation = ValidationHelper.ValidateUsername(dto.Username);
         if (usernameValidation.IsFailure)
-            return Result<UserDTO>.Failure(usernameValidation.Error!);
+            return Result<UserDto>.Failure(usernameValidation.Error!);
 
         var passwordValidation = ValidationHelper.ValidatePassword(dto.Password);
         if (passwordValidation.IsFailure)
-            return Result<UserDTO>.Failure(passwordValidation.Error!);
+            return Result<UserDto>.Failure(passwordValidation.Error!);
 
         if (string.IsNullOrWhiteSpace(dto.Surname))
-            return Result<UserDTO>.Failure("Фамилия не может быть пустой");
+            return Result<UserDto>.Failure("Фамилия не может быть пустой");
 
         if (string.IsNullOrWhiteSpace(dto.Name))
-            return Result<UserDTO>.Failure("Имя не может быть пустым");
+            return Result<UserDto>.Failure("Имя не может быть пустым");
 
         var username = dto.Username!.Trim().ToLower();
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username, ct);
         if (exists)
-            return Result<UserDTO>.Failure("Пользователь с таким логином уже существует");
+            return Result<UserDto>.Failure("Пользователь с таким логином уже существует");
 
         if (dto.DepartmentId.HasValue)
         {
             var departmentExists = await _context.Departments
                 .AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
             if (!departmentExists)
-                return Result<UserDTO>.Failure("Указанный отдел не существует");
+                return Result<UserDto>.Failure("Указанный отдел не существует");
         }
 
         var user = new Model.User
@@ -90,7 +90,7 @@ public class AdminService(
             .AsNoTracking()
             .FirstAsync(u => u.Id == user.Id, ct);
 
-        return Result<UserDTO>.Success(createdUser.ToDto());
+        return Result<UserDto>.Success(createdUser.ToDto());
     }
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)

@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Message;
+﻿namespace MessengerShared.Dto.Message;
 
-public class VoiceTranscriptionDTO
+public class VoiceTranscriptionDto
 {
     public int MessageId { get; set; }
     public int ChatId { get; set; }

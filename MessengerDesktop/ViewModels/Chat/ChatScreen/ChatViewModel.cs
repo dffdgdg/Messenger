@@ -80,7 +80,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [ObservableProperty] private UserDTO? _contactUser;
     [ObservableProperty] private bool _isContactOnline;
     [ObservableProperty] private string? _contactLastSeen;
-    [ObservableProperty] private ChatDTO? _chat;
+    [ObservableProperty] private ChatDto? _chat;
     [ObservableProperty] private ObservableCollection<UserDTO> _members = [];
     [ObservableProperty] private bool _isInitialLoading = true;
     [ObservableProperty] private bool _isLoadingOlderMessages;
@@ -207,7 +207,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _memberLoader = new ChatMemberLoader(chatId, UserId, apiClient);
 
         // Заглушка до загрузки реальных данных — предотвращает binding-ошибки
-        Chat = new ChatDTO { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
+        Chat = new ChatDto { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
         // Запуск асинхронной инициализации (fire-and-forget)
         _ = InitializeChatAsync();
@@ -256,7 +256,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         OnPropertyChanged(nameof(InfoPanelSubtitle));
     }
 
-    partial void OnChatChanged(ChatDTO? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
+    partial void OnChatChanged(ChatDto? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
 
     partial void OnContactUserChanged(UserDTO? value)
     {

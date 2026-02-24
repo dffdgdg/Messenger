@@ -1,11 +1,11 @@
 ﻿using MessengerAPI.Model;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Poll;
 
 namespace MessengerAPI.Mapping;
 
 public static class PollMappings
 {
-    public static PollDTO ToDto(this Poll poll, int? currentUserId = null)
+    public static PollDto ToDto(this Poll poll, int? currentUserId = null)
     {
         var selectedOptionIds = currentUserId.HasValue
             ? poll.PollOptions?
@@ -15,7 +15,7 @@ public static class PollMappings
                 .ToList() ?? []
             : [];
 
-        return new PollDTO
+        return new PollDto
         {
             Id = poll.Id,
             MessageId = poll.MessageId,
@@ -31,7 +31,7 @@ public static class PollMappings
         };
     }
 
-    public static PollOptionDTO ToDto(this PollOption option, bool isAnonymous = false) => new()
+    public static PollOptionDto ToDto(this PollOption option, bool isAnonymous = false) => new()
         {
             Id = option.Id,
             PollId = option.PollId,
@@ -40,7 +40,7 @@ public static class PollMappings
             VotesCount = option.PollVotes?.Count ?? 0,
             Votes = isAnonymous
             ? []
-            : option.PollVotes?.Select(v => new PollVoteDTO
+            : option.PollVotes?.Select(v => new PollVoteDto
             {
                 PollId = v.PollId,
                 UserId = v.UserId,

@@ -4,10 +4,10 @@ using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Notification;
-using MessengerShared.DTO.ReadReceipt;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Notification;
+using MessengerShared.Dto.ReadReceipt;
+using MessengerShared.Dto.User;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
@@ -19,22 +19,22 @@ namespace MessengerDesktop.Services.Realtime;
 
 public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
 {
-    event Action<NotificationDTO>? NotificationReceived;
+    event Action<NotificationDto>? NotificationReceived;
     event Action<int, bool>? UserStatusChanged;
     event Action<int, int>? UnreadCountChanged;
     event Action<int>? TotalUnreadChanged;
-    event Action<MessageDTO>? MessageUpdatedGlobally;
+    event Action<MessageDto>? MessageUpdatedGlobally;
     event Action<int, int>? MessageDeletedGlobally;
 
     /// <summary>Профиль пользователя обновился (аватар, имя, отдел и т.д.).</summary>
-    event Action<UserDTO>? UserProfileUpdated;
+    event Action<UserDto>? UserProfileUpdated;
 
     bool IsConnected { get; }
 
     Task ConnectAsync(CancellationToken ct = default);
     Task DisconnectAsync();
     void SetCurrentChat(int? chatId);
-    Task<AllUnreadCountsDTO?> GetUnreadCountsAsync();
+    Task<AllUnreadCountsDto?> GetUnreadCountsAsync();
     Task MarkChatAsReadAsync(int chatId);
     int GetUnreadCount(int chatId);
     int GetTotalUnread();
@@ -59,13 +59,13 @@ public sealed class GlobalHubConnection(
     private int _totalUnread;
     private readonly object _lock = new();
 
-    public event Action<NotificationDTO>? NotificationReceived;
+    public event Action<NotificationDto>? NotificationReceived;
     public event Action<int, bool>? UserStatusChanged;
     public event Action<int, int>? UnreadCountChanged;
     public event Action<int>? TotalUnreadChanged;
-    public event Action<MessageDTO>? MessageUpdatedGlobally;
+    public event Action<MessageDto>? MessageUpdatedGlobally;
     public event Action<int, int>? MessageDeletedGlobally;
-    public event Action<UserDTO>? UserProfileUpdated;
+    public event Action<UserDto>? UserProfileUpdated;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
@@ -98,22 +98,22 @@ public sealed class GlobalHubConnection(
                 .Build();
 
             // Уведомления
-            _hubConnection.On<NotificationDTO>("ReceiveNotification", OnNotificationReceived);
+            _hubConnection.On<NotificationDto>("ReceiveNotification", OnNotificationReceived);
 
             // Статус пользователей
             _hubConnection.On<int>("UserOnline", userId => OnUserStatusChanged(userId, true));
             _hubConnection.On<int>("UserOffline", userId => OnUserStatusChanged(userId, false));
 
             // Обновление профиля пользователя
-            _hubConnection.On<UserDTO>("UserProfileUpdated", OnUserProfileUpdated);
+            _hubConnection.On<UserDto>("UserProfileUpdated", OnUserProfileUpdated);
 
             // Обновление счётчика непрочитанных
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
 
             // Новое сообщение в чате
-            _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnNewMessageReceived);
+            _hubConnection.On<MessageDto>("ReceiveMessageDto", OnNewMessageReceived);
 
-            _hubConnection.On<MessageDTO>("MessageUpdated", OnMessageUpdated);
+            _hubConnection.On<MessageDto>("MessageUpdated", OnMessageUpdated);
             _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeleted);
 
             // Кто-то печатает
@@ -188,14 +188,14 @@ public sealed class GlobalHubConnection(
         }
     }
 
-    public async Task<AllUnreadCountsDTO?> GetUnreadCountsAsync()
+    public async Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
     {
         if (_hubConnection?.State != HubConnectionState.Connected)
             return null;
 
         try
         {
-            return await _hubConnection.InvokeAsync<AllUnreadCountsDTO>("GetUnreadCounts");
+            return await _hubConnection.InvokeAsync<AllUnreadCountsDto>("GetUnreadCounts");
         }
         catch (Exception ex)
         {
@@ -257,7 +257,7 @@ public sealed class GlobalHubConnection(
 
     #region Event Handlers
 
-    private void OnNotificationReceived(NotificationDTO notification)
+    private void OnNotificationReceived(NotificationDto notification)
     {
         if (!_settingsService.NotificationsEnabled)
         {
@@ -292,7 +292,7 @@ public sealed class GlobalHubConnection(
         });
     }
 
-    private void OnNewMessageReceived(MessageDTO message)
+    private void OnNewMessageReceived(MessageDto message)
     {
         _ = CacheIncomingMessageAsync(message);
 
@@ -305,7 +305,7 @@ public sealed class GlobalHubConnection(
         IncrementUnreadCount(message.ChatId);
     }
 
-    private void OnMessageUpdated(MessageDTO message)
+    private void OnMessageUpdated(MessageDto message)
     {
         Debug.WriteLine($"[GlobalHub] MessageUpdated: id={message.Id}, chat={message.ChatId}");
 
@@ -349,7 +349,7 @@ public sealed class GlobalHubConnection(
         Dispatcher.UIThread.Post(() => UserStatusChanged?.Invoke(userId, isOnline));
     }
 
-    private void OnUserProfileUpdated(UserDTO user)
+    private void OnUserProfileUpdated(UserDto user)
     {
         Debug.WriteLine($"[GlobalHub] UserProfileUpdated: userId={user.Id}, name={user.DisplayName}");
         Dispatcher.UIThread.Post(() => UserProfileUpdated?.Invoke(user));
@@ -380,7 +380,7 @@ public sealed class GlobalHubConnection(
 
     #region Helpers
 
-    private async Task CacheIncomingMessageAsync(MessageDTO message)
+    private async Task CacheIncomingMessageAsync(MessageDto message)
     {
         try
         {
@@ -444,7 +444,7 @@ public sealed class GlobalHubConnection(
         });
     }
 
-    private static string FormatNotificationMessage(NotificationDTO notification)
+    private static string FormatNotificationMessage(NotificationDto notification)
         => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
 
     #endregion
@@ -518,5 +518,5 @@ public sealed class GlobalHubConnection(
     #endregion
 }
 
-/// <summary>DTO для десериализации события MessageDeleted с сервера.</summary>
+/// <summary>Dto для десериализации события MessageDeleted с сервера.</summary>
 public record MessageDeletedEvent(int MessageId, int ChatId);

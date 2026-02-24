@@ -3,7 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System;
 using System.Threading.Tasks;
 
@@ -68,13 +68,13 @@ public partial class ChatViewModel
 
         await SafeExecuteAsync(async ct =>
         {
-            var updateDto = new UpdateMessageDTO
+            var updateDto = new UpdateMessageDto
             {
                 Id = EditingMessage.Id,
                 Content = newContent
             };
 
-            var result = await _apiClient.PutAsync<UpdateMessageDTO, MessageDTO>(
+            var result = await _apiClient.PutAsync<UpdateMessageDto, MessageDto>(
                 ApiEndpoints.Message.ById(EditingMessage.Id), updateDto, ct);
 
             if (result.Success && result.Data != null)

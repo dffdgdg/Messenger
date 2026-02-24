@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Message;
+﻿namespace MessengerShared.Dto.Message;
 
-public class MessageReplyPreviewDTO
+public class MessageReplyPreviewDto
 {
     public int Id { get; set; }
     public int ChatId { get; set; }

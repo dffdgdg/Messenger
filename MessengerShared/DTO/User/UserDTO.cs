@@ -1,8 +1,8 @@
 ﻿using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.User;
+namespace MessengerShared.Dto.User;
 
-public class UserDTO
+public class UserDto
 {
     public int Id { get; set; }
     public string? Username { get; set; }

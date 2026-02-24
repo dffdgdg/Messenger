@@ -1,12 +1,12 @@
 ﻿using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 
 namespace MessengerAPI.Mapping;
 
 public static class UserMappings
 {
-    public static UserDTO ToDto(
+    public static UserDto ToDto(
         this User user,
         IUrlBuilder? urlBuilder = null,
         bool? isOnline = null) => new()
@@ -35,7 +35,7 @@ public static class UserMappings
         return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;
     }
 
-    public static void UpdateProfile(this User user, UserDTO dto)
+    public static void UpdateProfile(this User user, UserDto dto)
     {
         if (!string.IsNullOrWhiteSpace(dto.Surname))
             user.Surname = dto.Surname.Trim();
@@ -48,7 +48,7 @@ public static class UserMappings
         user.UpdateSettings(dto);
     }
 
-    public static void UpdateSettings(this User user, UserDTO dto)
+    public static void UpdateSettings(this User user, UserDto dto)
     {
         user.UserSetting ??= new UserSetting { UserId = user.Id };
 

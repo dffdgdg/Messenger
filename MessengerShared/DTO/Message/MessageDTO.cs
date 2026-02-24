@@ -1,8 +1,8 @@
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Poll;
 
-namespace MessengerShared.DTO.Message;
+namespace MessengerShared.Dto.Message;
 
-public class MessageDTO
+public class MessageDto
 {
     public bool IsVoiceMessage { get; set; }
     public string? TranscriptionStatus { get; set; }
@@ -13,17 +13,17 @@ public class MessageDTO
     public string? SenderAvatarUrl { get; set; }
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
-    public PollDTO? Poll { get; set; }
+    public PollDto? Poll { get; set; }
     public bool IsOwn { get; set; }
     public bool IsPrevSameSender { get; set; }
     public DateTime? EditedAt { get; set; }
     public bool IsEdited { get; set; }
     public bool IsDeleted { get; set; }
     public int? ReplyToMessageId { get; set; }
-    public MessageReplyPreviewDTO? ReplyToMessage { get; set; }
+    public MessageReplyPreviewDto? ReplyToMessage { get; set; }
     public int? ForwardedFromMessageId { get; set; }
-    public MessageForwardInfoDTO? ForwardedFrom { get; set; }
-    public MessageDTO? PreviousMessage { get; set; }
+    public MessageForwardInfoDto? ForwardedFrom { get; set; }
+    public MessageDto? PreviousMessage { get; set; }
     public bool ShowSenderName
     {
         get
@@ -39,5 +39,5 @@ public class MessageDTO
         }
     }
 
-    public List<MessageFileDTO> Files { get; set; } = [];
+    public List<MessageFileDto> Files { get; set; } = [];
 }

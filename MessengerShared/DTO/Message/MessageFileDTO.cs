@@ -1,6 +1,6 @@
-namespace MessengerShared.DTO.Message;
+namespace MessengerShared.Dto.Message;
 
-public class MessageFileDTO
+public class MessageFileDto
 {
     public int Id { get; set; }
     public int MessageId { get; set; }

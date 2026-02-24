@@ -1,8 +1,8 @@
 using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.Auth;
+namespace MessengerShared.Dto.Auth;
 
-public class AuthResponseDTO
+public class AuthResponseDto
 {
     public int Id { get; set; }
     public string Username { get; set; } = null!;

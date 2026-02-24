@@ -14,44 +14,44 @@ public class ChatsController(
     : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
-    public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserDialogs(int userId)
+    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserDialogs(int userId)
     {
         if (!IsCurrentUser(userId))
-            return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
         return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId),
             "Диалоги пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}/contact/{contactUserId}")]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> GetContactChat(int userId, int contactUserId)
+    public async Task<ActionResult<ApiResponse<ChatDto>>> GetContactChat(int userId, int contactUserId)
     {
         if (!IsCurrentUser(userId))
-            return Forbidden<ChatDTO>();
+            return Forbidden<ChatDto>();
 
         return await ExecuteAsync(() => chatService.GetContactChatAsync(userId, contactUserId));
     }
 
     [HttpGet("user/{userId}/groups")]
-    public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserGroups(int userId)
+    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserGroups(int userId)
     {
         if (!IsCurrentUser(userId))
-            return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
         return await ExecuteAsync(() => chatService.GetUserGroupsAsync(userId),"Групповые чаты пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}")]
-    public async Task<ActionResult<ApiResponse<List<ChatDTO>>>> GetUserChats(int userId)
+    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserChats(int userId)
     {
         if (!IsCurrentUser(userId))
-            return Forbidden<List<ChatDTO>>("Доступ к чатам пользователя запрещён");
+            return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
         return await ExecuteAsync(() => chatService.GetUserChatsAsync(userId),"Чаты пользователя получены успешно");
     }
 
     [HttpGet("{chatId}")]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> GetChat(int chatId)
+    public async Task<ActionResult<ApiResponse<ChatDto>>> GetChat(int chatId)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(() => chatService.GetChatForUserAsync(chatId, currentUserId));
@@ -70,7 +70,7 @@ public class ChatsController(
     }
 
     [HttpPost("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDTO dto)
+    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(() => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId),
@@ -85,23 +85,23 @@ public class ChatsController(
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> CreateChat([FromBody] ChatDTO chatDto)
+    public async Task<ActionResult<ApiResponse<ChatDto>>> CreateChat([FromBody] ChatDto chatDto)
     {
         chatDto.CreatedById = GetCurrentUserId();
         return await ExecuteAsync(() => chatService.CreateChatAsync(chatDto), "Чат успешно создан");
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<ChatDTO>>> UpdateChat(int id, [FromBody] UpdateChatDTO updateDto)
+    public async Task<ActionResult<ApiResponse<ChatDto>>> UpdateChat(int id, [FromBody] UpdateChatDto updateDto)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(async () =>
         {
             if (id != updateDto.Id)
-                return Result<ChatDTO>.Failure("Несоответствие ID чата");
+                return Result<ChatDto>.Failure("Несоответствие ID чата");
 
             var result = await chatService.UpdateChatAsync(id, currentUserId, updateDto);
-            return Result<ChatDTO>.Success(result);
+            return Result<ChatDto>.Success(result);
         }, "Чат успешно обновлён");
     }
 

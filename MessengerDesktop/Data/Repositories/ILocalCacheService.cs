@@ -67,8 +67,8 @@ public interface ILocalCacheService
     // ═══ Chats ═══
 
     /// <summary>Список чатов из кэша, отфильтрованный по режиму (groups/dialogs)</summary>
-    Task<List<ChatDTO>> GetChatsAsync(bool isGroupMode);
-    Task UpsertChatsAsync(IEnumerable<ChatDTO> chats);
+    Task<List<ChatDto>> GetChatsAsync(bool isGroupMode);
+    Task UpsertChatsAsync(IEnumerable<ChatDto> chats);
     Task UpdateChatLastMessageAsync(int chatId, string? preview, string? senderName, DateTime date);
 
     // ═══ Sync State ═══

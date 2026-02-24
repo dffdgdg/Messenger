@@ -1,8 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,29 +13,29 @@ namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
 {
-    private static readonly DepartmentDTO NoParentPlaceholder = new()
+    private static readonly DepartmentDto NoParentPlaceholder = new()
     {
         Id = -1,
         Name = "(Нет родительского отдела)"
     };
 
-    private readonly IReadOnlyList<DepartmentDTO> _allDepartments;
-    private readonly ObservableCollection<UserDTO> _allUsers;
+    private readonly IReadOnlyList<DepartmentDto> _allDepartments;
+    private readonly ObservableCollection<UserDto> _allUsers;
     private readonly IDialogService _dialogService;
 
     [ObservableProperty]
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<DepartmentDTO> _availableParents = [];
+    private ObservableCollection<DepartmentDto> _availableParents = [];
 
     [ObservableProperty]
-    private DepartmentDTO _selectedParent = NoParentPlaceholder;
+    private DepartmentDto _selectedParent = NoParentPlaceholder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHead))]
     [NotifyPropertyChangedFor(nameof(HeadDisplayText))]
-    private UserDTO? _selectedHead;
+    private UserDto? _selectedHead;
 
     public int? EditId { get; }
     public bool IsNewDepartment => EditId == null;
@@ -65,8 +65,8 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     public Func<DepartmentHeadDialogViewModel, Task>? SaveAction { get; set; }
     public Func<DepartmentHeadDialogViewModel, Task>? DeleteAction { get; set; }
 
-    public DepartmentHeadDialogViewModel(List<DepartmentDTO> departments,ObservableCollection<UserDTO> users,
-        IDialogService dialogService,DepartmentDTO? department = null, bool hasChildren = false)
+    public DepartmentHeadDialogViewModel(List<DepartmentDto> departments,ObservableCollection<UserDto> users,
+        IDialogService dialogService,DepartmentDto? department = null, bool hasChildren = false)
     {
         _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
         _allUsers = users ?? throw new ArgumentNullException(nameof(users));
@@ -93,13 +93,13 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
         BuildAvailableParents(department);
     }
 
-    private void BuildAvailableParents(DepartmentDTO? current)
+    private void BuildAvailableParents(DepartmentDto? current)
     {
         var excludedIds = current != null ? GetDescendantIds(current.Id).Append(current.Id).ToHashSet() : [];
 
         var parents = _allDepartments.Where(d => d.Id > 0 && !excludedIds.Contains(d.Id)).OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
 
-        AvailableParents = new ObservableCollection<DepartmentDTO>(parents);
+        AvailableParents = new ObservableCollection<DepartmentDto>(parents);
 
         SelectedParent = current?.ParentDepartmentId is int parentId
             ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder
@@ -131,7 +131,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private async Task SelectHead()
     {
-        var availableUsers = new ObservableCollection<UserDTO>(_allUsers.Where(u => !u.IsBanned));
+        var availableUsers = new ObservableCollection<UserDto>(_allUsers.Where(u => !u.IsBanned));
 
         var selectDialog = new SelectUserDialogViewModel(availableUsers, "Выбрать руководителя");
 

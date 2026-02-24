@@ -2,7 +2,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
     private readonly IApiClientService _apiClient;
 
     [ObservableProperty]
-    private UserDTO _user;
+    private UserDto _user;
 
     [ObservableProperty]
     private Bitmap? _avatarBitmap;
@@ -25,7 +25,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Callback для открытия/создания чата с пользователем
     /// </summary>
-    public Func<UserDTO, Task>? OpenChatWithUserAction { get; set; }
+    public Func<UserDto, Task>? OpenChatWithUserAction { get; set; }
 
     public string? AvatarUrl => GetAbsoluteUrl(User.Avatar);
 
@@ -34,7 +34,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
     /// </summary>
     public bool CanSendMessage { get; init; } = true;
 
-    public UserProfileDialogViewModel(UserDTO user, IApiClientService apiClient)
+    public UserProfileDialogViewModel(UserDto user, IApiClientService apiClient)
     {
         _user = user ?? throw new ArgumentNullException(nameof(user));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
@@ -103,7 +103,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
         }
     }
 
-    partial void OnUserChanged(UserDTO value)
+    partial void OnUserChanged(UserDto value)
     {
         OnPropertyChanged(nameof(AvatarUrl));
         Title = $"Профиль: {value.DisplayName ?? value.Username}";

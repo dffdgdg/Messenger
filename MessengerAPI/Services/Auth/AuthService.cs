@@ -3,7 +3,7 @@ using MessengerAPI.Configuration;
 using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
-using MessengerShared.DTO.Auth;
+using MessengerShared.Dto.Auth;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,7 +12,7 @@ namespace MessengerAPI.Services.Auth
 {
     public interface IAuthService
     {
-        Task<Result<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default);
+        Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default);
     }
 
     public class AuthService : BaseService<AuthService>, IAuthService
@@ -29,42 +29,42 @@ namespace MessengerAPI.Services.Auth
             _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
         }
 
-        public async Task<Result<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default)
+        public async Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(username))
-                    return Result<AuthResponseDTO>.Failure("Имя пользователя обязательно");
+                    return Result<AuthResponseDto>.Failure("Имя пользователя обязательно");
 
                 if (string.IsNullOrWhiteSpace(password))
-                    return Result<AuthResponseDTO>.Failure("Пароль обязателен");
+                    return Result<AuthResponseDto>.Failure("Пароль обязателен");
 
                 var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
 
                 if (user is null)
                 {
                     BCrypt.Net.BCrypt.Verify(password, _dummyHash);
-                    return Result<AuthResponseDTO>.Failure(
+                    return Result<AuthResponseDto>.Failure(
                         "Неверное имя пользователя или пароль");
                 }
 
                 if (!VerifyPassword(password, user.PasswordHash))
                 {
                     _logger.LogWarning("Неудачная попытка входа: {Username}", username);
-                    return Result<AuthResponseDTO>.Failure(
+                    return Result<AuthResponseDto>.Failure(
                         "Неверное имя пользователя или пароль");
                 }
 
                 if (user.IsBanned)
                 {
                     _logger.LogWarning("Попытка входа заблокированного пользователя: {Username}", username);
-                    return Result<AuthResponseDTO>.Failure("Учётная запись заблокирована");
+                    return Result<AuthResponseDto>.Failure("Учётная запись заблокирована");
                 }
 
                 var role = await DetermineUserRoleAsync(user, ct);
                 var token = _tokenService.GenerateToken(user.Id, role);
 
-                var response = new AuthResponseDTO
+                var response = new AuthResponseDto
                 {
                     Id = user.Id,
                     Username = user.Username,
@@ -75,12 +75,12 @@ namespace MessengerAPI.Services.Auth
 
                 _logger.LogInformation("Успешный вход: {Username} (роль: {Role})",username, role);
 
-                return Result<AuthResponseDTO>.Success(response);
+                return Result<AuthResponseDto>.Success(response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка авторизации: {Username}", username);
-                return Result<AuthResponseDTO>.Failure("Произошла ошибка при входе в систему");
+                return Result<AuthResponseDto>.Failure("Произошла ошибка при входе в систему");
             }
         }
 

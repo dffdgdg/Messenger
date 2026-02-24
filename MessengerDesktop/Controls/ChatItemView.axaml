@@ -3,7 +3,7 @@
              xmlns:chatDTO="using:MessengerShared.DTO.Chat"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Controls.ChatItemView"
-             x:DataType="chatDTO:ChatDTO">
+             x:DataType="chatDTO:ChatDto">
 
 	<Grid Height="52" ColumnDefinitions="Auto,*">
 		<!-- Аватар -->

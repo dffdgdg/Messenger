@@ -3,7 +3,7 @@ using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
@@ -14,7 +14,7 @@ namespace MessengerAPI.Services.Messaging;
 public interface IFileService
 {
     Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null);
-    Task<MessageFileDTO> SaveMessageFileAsync(IFormFile file, int chatId);
+    Task<MessageFileDto> SaveMessageFileAsync(IFormFile file, int chatId);
     void DeleteFile(string? filePath);
     bool IsValidImage(IFormFile file);
 }
@@ -65,7 +65,7 @@ public class FileService(
         return resultPath;
     }
 
-    public async Task<MessageFileDTO> SaveMessageFileAsync(IFormFile file, int chatId)
+    public async Task<MessageFileDto> SaveMessageFileAsync(IFormFile file, int chatId)
     {
         if (file is null || file.Length == 0)
             throw new ArgumentException("Файл не предоставлен");
@@ -89,7 +89,7 @@ public class FileService(
 
         _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}", fileName, chatId);
 
-        return new MessageFileDTO
+        return new MessageFileDto
         {
             Id = 0,
             MessageId = 0,

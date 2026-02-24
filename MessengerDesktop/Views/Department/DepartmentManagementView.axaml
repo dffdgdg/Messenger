@@ -10,8 +10,6 @@
 
 	<Border Classes="PageContainer">
 		<Grid RowDefinitions="Auto,*">
-
-			<!-- ШАПКА -->
 			<Border Grid.Row="0"
                     Background="{DynamicResource SecondaryBG}"
                     Padding="24,20"
@@ -67,7 +65,6 @@
 				</Grid>
 			</Border>
 
-			<!-- ЗАГРУЗКА -->
 			<Border Grid.Row="1"
                     IsVisible="{Binding IsLoading}"
                     Background="{DynamicResource PrimaryBG}">
@@ -81,7 +78,6 @@
 				</StackPanel>
 			</Border>
 
-			<!-- ОШИБКА ДОСТУПА -->
 			<Border Grid.Row="1"
                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                     Background="{DynamicResource PrimaryBG}"
@@ -105,14 +101,12 @@
 				</StackPanel>
 			</Border>
 
-			<!-- ОСНОВНОЙ КОНТЕНТ -->
 			<ScrollViewer Grid.Row="1"
                           Classes="ThinScrollbar"
                           Padding="24,20"
                           IsVisible="{Binding CanManage}">
 				<StackPanel Spacing="24" MaxWidth="1200" HorizontalAlignment="Center">
 
-					<!-- СПИСОК СОТРУДНИКОВ -->
 					<Border Classes="ProfileSection" Width="600">
 						<StackPanel Spacing="16">
 							<Grid ColumnDefinitions="*,Auto">
@@ -151,7 +145,6 @@
 								</Border>
 							</Grid>
 
-							<!-- Пустой список -->
 							<Border IsVisible="{Binding !FilteredMembers.Count}"
                                     Padding="40"
                                     HorizontalAlignment="Center">
@@ -165,7 +158,6 @@
 								</StackPanel>
 							</Border>
 
-							<!-- Список -->
 							<ItemsControl ItemsSource="{Binding FilteredMembers}"
                                           IsVisible="{Binding FilteredMembers.Count}">
 								<ItemsControl.ItemsPanel>
@@ -186,7 +178,6 @@
                                                         IsOnline="{Binding IsOnline}"
                                                         HorizontalAlignment="Center"/>
 
-												<!-- Инфо -->
 												<StackPanel Grid.Column="1"
                                                             VerticalAlignment="Center"
                                                             Spacing="2">
@@ -198,7 +189,6 @@
                                                                FontSize="12"/>
 												</StackPanel>
 
-												<!-- Статус -->
 												<StackPanel Grid.Column="2"
                                                             Orientation="Horizontal"
                                                             Spacing="6"
@@ -214,27 +204,26 @@
                                                                Foreground="{DynamicResource TextMuted}"/>
 												</StackPanel>
 
-												<!-- Действия -->
 												<StackPanel Grid.Column="3"
                                                             Orientation="Horizontal"
                                                             Spacing="4"
                                                             Classes="Actions">
 													<Button Classes="IconButton Small"
-                                                            Command="{Binding #Root.((vm:DepartmentManagementViewModel)DataContext).OpenChatCommand}"
-                                                            CommandParameter="{Binding}"
-                                                            ToolTip.Tip="Написать">
-														<PathIcon Data="{StaticResource SendIcon}"
-                                                                  Width="14" Height="14"
-                                                                  Foreground="{DynamicResource Icon}"/>
-													</Button>
+        Command="{Binding $parent[UserControl].((vm:DepartmentManagementViewModel)DataContext).OpenChatCommand}"
+        CommandParameter="{Binding}"
+        ToolTip.Tip="Написать">
+    <PathIcon Data="{StaticResource SendIcon}"
+              Width="14" Height="14"
+              Foreground="{DynamicResource Icon}"/>
+</Button>
 													<Button Classes="IconButton Small Danger"
-                                                            Command="{Binding #Root.((vm:DepartmentManagementViewModel)DataContext).RemoveMemberCommand}"
-                                                            CommandParameter="{Binding}"
-                                                            ToolTip.Tip="Удалить из отдела">
-														<PathIcon Data="{StaticResource DismissIcon}"
-                                                                  Width="14" Height="14"
-                                                                  Foreground="{DynamicResource Icon}"/>
-													</Button>
+        Command="{Binding $parent[UserControl].((vm:DepartmentManagementViewModel)DataContext).RemoveMemberCommand}"
+        CommandParameter="{Binding}"
+        ToolTip.Tip="Удалить из отдела">
+    <PathIcon Data="{StaticResource DismissIcon}"
+              Width="14" Height="14"
+              Foreground="{DynamicResource Icon}"/>
+</Button>
 												</StackPanel>
 											</Grid>
 										</Border>
@@ -244,7 +233,6 @@
 						</StackPanel>
 					</Border>
 
-					<!-- БЫСТРЫЕ ДЕЙСТВИЯ -->
 					<Border Classes="ProfileSection"
 							Width="600">
 						<StackPanel Spacing="16">
@@ -277,7 +265,7 @@
                                                        FontSize="14"/>
 											<TextBlock Text="Открыть чат отдела"
                                                        FontSize="12"
-                                                       Foreground="{DynamicResource TextSecondary}"/>
+													   Foreground="{DynamicResource TextSecondary}"/>
 										</StackPanel>
 									</StackPanel>
 								</Button>

@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Department;
+﻿namespace MessengerShared.Dto.Department;
 
-public class UpdateDepartmentMemberDTO
+public class UpdateDepartmentMemberDto
 {
     public int UserId { get; set; }
 }

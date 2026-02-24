@@ -12,7 +12,7 @@ namespace MessengerDesktop.ViewModels.Chat.Managers;
 
 public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService apiClient)
 {
-    public async Task<ObservableCollection<UserDTO>> LoadMembersAsync(ChatDTO? chat, CancellationToken ct = default)
+    public async Task<ObservableCollection<UserDTO>> LoadMembersAsync(ChatDto? chat, CancellationToken ct = default)
     {
         var result = await apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chatId), ct);
 
@@ -25,7 +25,7 @@ public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService a
         return [];
     }
 
-    private async Task<ObservableCollection<UserDTO>> LoadContactMembersAsync(ChatDTO chat, CancellationToken ct)
+    private async Task<ObservableCollection<UserDTO>> LoadContactMembersAsync(ChatDto chat, CancellationToken ct)
     {
         if (!int.TryParse(chat.Name, out var otherUserId))
         {

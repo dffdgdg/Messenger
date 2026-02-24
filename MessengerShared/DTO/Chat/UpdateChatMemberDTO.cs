@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Chat;
+﻿namespace MessengerShared.Dto.Chat;
 
-public class UpdateChatMemberDTO
+public class UpdateChatMemberDto
 {
     public int UserId { get; set; }
 }

@@ -3,8 +3,8 @@ using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Poll;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -34,9 +34,9 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private int? _forwardedFromMessageId;
     [ObservableProperty] private string? _forwardedFromSenderName;
 
-    public PollDTO? PollDto { get; set; }
+    public PollDto? PollDto { get; set; }
     [ObservableProperty] private PollViewModel? _poll;
-    public List<MessageFileDTO> Files { get; set; } = [];
+    public List<MessageFileDto> Files { get; set; } = [];
 
     [ObservableProperty] private string? _senderAvatar, _senderName, _content;
     [ObservableProperty] private bool _isHighlighted, _isUnread, _isRead, _isEdited, _isDeleted;
@@ -91,7 +91,7 @@ public partial class MessageViewModel : ObservableObject
 
     #endregion
 
-    public MessageDTO Message { get; }
+    public MessageDto Message { get; }
 
     public string? SenderAvatarUrl
     {
@@ -99,7 +99,7 @@ public partial class MessageViewModel : ObservableObject
         set => SenderAvatar = value;
     }
 
-    public MessageViewModel(MessageDTO message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
+    public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
     {
         Message = message;
         Id = message.Id;
@@ -161,7 +161,7 @@ public partial class MessageViewModel : ObservableObject
         }
     }
 
-    public void UpdatePoll(PollDTO pollDto)
+    public void UpdatePoll(PollDto pollDto)
     {
         PollDto = pollDto;
         if (Poll != null) Poll.ApplyDto(pollDto);
@@ -171,7 +171,7 @@ public partial class MessageViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
     }
 
-    public void ApplyUpdate(MessageDTO updated)
+    public void ApplyUpdate(MessageDto updated)
     {
         Content = updated.Content;
         IsEdited = updated.IsEdited;
@@ -200,7 +200,7 @@ public partial class MessageViewModel : ObservableObject
 
     public void MarkAsRead() => IsRead = true;
 
-    private static PollViewModel? CreatePollViewModel(PollDTO pollDto)
+    private static PollViewModel? CreatePollViewModel(PollDto pollDto)
     {
         try
         {

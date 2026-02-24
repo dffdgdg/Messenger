@@ -378,10 +378,10 @@ public class MessageService(
             });
     }
 
-    private async Task<List<ChatDTO>> SearchChatsAsync(List<int> userChatIds, string query, int userId)
+    private async Task<List<ChatDto>> SearchChatsAsync(List<int> userChatIds, string query, int userId)
     {
         const int maxResults = 5;
-        var result = new List<ChatDTO>();
+        var result = new List<ChatDto>();
 
         var dialogs = await _context.Chats
             .Where(c => userChatIds.Contains(c.Id))
@@ -401,7 +401,7 @@ public class MessageService(
             if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase)
                 || username.Contains(query, StringComparison.OrdinalIgnoreCase))
             {
-                result.Add(new ChatDTO
+                result.Add(new ChatDto
                 {
                     Id = chat.Id,
                     Name = displayName,

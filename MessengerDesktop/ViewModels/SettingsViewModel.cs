@@ -6,7 +6,7 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Storage;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,7 +62,7 @@ public partial class SettingsViewModel : BaseViewModel
     {
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(_userId));
+            var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(_userId));
             if (!result.Success || result.Data == null)
             {
                 ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
@@ -102,7 +102,7 @@ public partial class SettingsViewModel : BaseViewModel
 
         try
         {
-            var result = await _apiClient.PutAsync<UserDTO>(ApiEndpoints.User.ById(_userId), new UserDTO
+            var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.User.ById(_userId), new UserDto
             {
                 Id = _userId,
                 Theme = SelectedTheme,

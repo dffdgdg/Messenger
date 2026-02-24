@@ -1,12 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using System;
 
 namespace MessengerDesktop.ViewModels.Department;
 
 public partial class DepartmentMemberViewModel : ObservableObject
 {
-    public DepartmentMemberViewModel(UserDTO user)
+    public DepartmentMemberViewModel(UserDto user)
     {
         UserId = user.Id;
         Username = user.Username;

@@ -195,7 +195,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         if (chat == null)
         {
-            var result = await _apiClient.GetAsync<ChatDTO>(ApiEndpoints.Chat.ById(chatId));
+            var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chat.ById(chatId));
             if (result.Success && result.Data != null)
             {
                 result.Data.UnreadCount = _globalHub.GetUnreadCount(chatId);
@@ -317,7 +317,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
             var userId = _authManager.Session.UserId ?? 0;
 
-            var result = await _apiClient.PostAsync<ChatDTO, ChatDTO>(ApiEndpoints.Chat.Create, new ChatDTO
+            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chat.Create, new ChatDto
             {
                 Name = user.Id.ToString(),
                 Type = ChatType.Contact,
@@ -340,11 +340,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         });
     }
 
-    private async Task<ChatDTO?> FindDialogWithUser(int contactUserId)
+    private async Task<ChatDto?> FindDialogWithUser(int contactUserId)
     {
         var currentUserId = _authManager.Session.UserId ?? 0;
 
-        var result = await _apiClient.GetAsync<ChatDTO?>(ApiEndpoints.Chat.UserContact(currentUserId, contactUserId));
+        var result = await _apiClient.GetAsync<ChatDto?>(ApiEndpoints.Chat.UserContact(currentUserId, contactUserId));
 
         return result.Success ? result.Data : null;
     }
@@ -448,7 +448,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             ? ApiEndpoints.Chat.UserGroups(userId)
             : ApiEndpoints.Chat.UserDialogs(userId);
 
-        var result = await _apiClient.GetAsync<List<ChatDTO>>(endpoint);
+        var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
 
         if (result.Success && result.Data != null)
         {

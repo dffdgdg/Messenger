@@ -1,24 +1,24 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Model;
-using MessengerShared.DTO.ReadReceipt;
+using MessengerShared.Dto.ReadReceipt;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services.ReadReceipt
 {
     public interface IReadReceiptService
     {
-        Task<ReadReceiptResponseDTO> MarkAsReadAsync(int userId, MarkAsReadDTO request);
-        Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId);
+        Task<ReadReceiptResponseDto> MarkAsReadAsync(int userId, MarkAsReadDto request);
+        Task<ReadReceiptResponseDto> MarkMessageAsReadAsync(int userId, int chatId, int messageId);
         Task<int> GetUnreadCountAsync(int userId, int chatId);
-        Task<AllUnreadCountsDTO> GetAllUnreadCountsAsync(int userId);
+        Task<AllUnreadCountsDto> GetAllUnreadCountsAsync(int userId);
         Task<Dictionary<int, int>> GetUnreadCountsForChatsAsync(int userId, IEnumerable<int> chatIds);
         Task MarkAllAsReadAsync(int userId, int chatId);
-        Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId);
+        Task<ChatReadInfoDto?> GetChatReadInfoAsync(int userId, int chatId);
     }
 
     public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptService> logger) : IReadReceiptService
     {
-        public async Task<ReadReceiptResponseDTO> MarkAsReadAsync(int userId, MarkAsReadDTO request)
+        public async Task<ReadReceiptResponseDto> MarkAsReadAsync(int userId, MarkAsReadDto request)
         {
             var member = await context.ChatMembers.FirstOrDefaultAsync(cm =>
             cm.ChatId == request.ChatId && cm.UserId == userId) ?? throw new KeyNotFoundException(
@@ -41,12 +41,12 @@ namespace MessengerAPI.Services.ReadReceipt
             return CreateResponse(member, unreadCount);
         }
 
-        public async Task<ReadReceiptResponseDTO> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
+        public async Task<ReadReceiptResponseDto> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
         {
             var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
             if (member is null)
-                return new ReadReceiptResponseDTO { ChatId = chatId, UnreadCount = 0 };
+                return new ReadReceiptResponseDto { ChatId = chatId, UnreadCount = 0 };
 
             if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
             {
@@ -71,7 +71,7 @@ namespace MessengerAPI.Services.ReadReceipt
             return CreateResponse(member, unreadCount);
         }
 
-        public async Task<ChatReadInfoDTO?> GetChatReadInfoAsync(int userId, int chatId)
+        public async Task<ChatReadInfoDto?> GetChatReadInfoAsync(int userId, int chatId)
         {
             var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
@@ -93,7 +93,7 @@ namespace MessengerAPI.Services.ReadReceipt
                 })
                 .FirstOrDefaultAsync();
 
-            return new ChatReadInfoDTO
+            return new ChatReadInfoDto
             {
                 ChatId = chatId,
                 LastReadMessageId = member.LastReadMessageId,
@@ -113,7 +113,7 @@ namespace MessengerAPI.Services.ReadReceipt
             return await CountUnreadAsync(userId, chatId, member.LastReadMessageId ?? 0);
         }
 
-        public async Task<AllUnreadCountsDTO> GetAllUnreadCountsAsync(int userId)
+        public async Task<AllUnreadCountsDto> GetAllUnreadCountsAsync(int userId)
         {
             var counts = await context.ChatMembers
                 .Where(cm => cm.UserId == userId)
@@ -129,9 +129,9 @@ namespace MessengerAPI.Services.ReadReceipt
                 .Where(x => x.UnreadCount > 0)
                 .AsNoTracking().ToListAsync();
 
-            var result = counts.ConvertAll(x => new UnreadCountDTO(x.ChatId, x.UnreadCount));
+            var result = counts.ConvertAll(x => new UnreadCountDto(x.ChatId, x.UnreadCount));
 
-            return new AllUnreadCountsDTO
+            return new AllUnreadCountsDto
             {
                 Chats = result,
                 TotalUnread = result.Sum(x => x.UnreadCount)
@@ -162,7 +162,7 @@ namespace MessengerAPI.Services.ReadReceipt
         }
 
         public async Task MarkAllAsReadAsync(int userId, int chatId)
-            => await MarkAsReadAsync(userId, new MarkAsReadDTO { ChatId = chatId });
+            => await MarkAsReadAsync(userId, new MarkAsReadDto { ChatId = chatId });
 
         #region Private
 
@@ -173,7 +173,7 @@ namespace MessengerAPI.Services.ReadReceipt
                 && m.IsDeleted != true
                 && m.SenderId != userId);
 
-        private async Task<int> DetermineTargetMessageIdAsync(MarkAsReadDTO request)
+        private async Task<int> DetermineTargetMessageIdAsync(MarkAsReadDto request)
         {
             if (request.MessageId.HasValue)
             {
@@ -195,7 +195,7 @@ namespace MessengerAPI.Services.ReadReceipt
                 .FirstOrDefaultAsync();
         }
 
-        private static ReadReceiptResponseDTO CreateResponse(ChatMember member, int unreadCount) => new()
+        private static ReadReceiptResponseDto CreateResponse(ChatMember member, int unreadCount) => new()
         {
             ChatId = member.ChatId,
             LastReadMessageId = member.LastReadMessageId,

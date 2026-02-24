@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.User;
+﻿namespace MessengerShared.Dto.User;
 
-public class ChangeUsernameDTO
+public class ChangeUsernameDto
 {
     public string NewUsername { get; set; } = string.Empty;
 }

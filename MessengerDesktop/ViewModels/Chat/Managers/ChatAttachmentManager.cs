@@ -3,7 +3,7 @@ using Avalonia.Platform.Storage;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Infrastructure.Helpers;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -129,16 +129,16 @@ public class ChatAttachmentManager(int chatId, IApiClientService apiClient, ISto
         }
     }
 
-    public async Task<List<MessageFileDTO>> UploadAllAsync(CancellationToken ct = default)
+    public async Task<List<MessageFileDto>> UploadAllAsync(CancellationToken ct = default)
     {
-        var uploadedFiles = new List<MessageFileDTO>();
+        var uploadedFiles = new List<MessageFileDto>();
 
         foreach (var local in Attachments.ToList())
         {
             try
             {
                 local.Data.Position = 0;
-                var uploadResult = await apiClient.UploadFileAsync<MessageFileDTO>(
+                var uploadResult = await apiClient.UploadFileAsync<MessageFileDto>(
                     ApiEndpoints.File.Upload(chatId),
                     local.Data,
                     local.FileName,

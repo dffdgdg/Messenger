@@ -4,8 +4,8 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,9 +25,9 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     private int? _departmentId;
 
     public Func<int, Task>? NavigateToChatAction { get; set; }
-    public Func<UserDTO, Task>? OpenChatWithUserAction { get; set; }
+    public Func<UserDto, Task>? OpenChatWithUserAction { get; set; }
     public Func<DepartmentMemberViewModel, Task<bool>>? ShowRemoveConfirmAction { get; set; }
-    public Func<ObservableCollection<UserDTO>, Task<UserDTO?>>? ShowSelectUserAction { get; set; }
+    public Func<ObservableCollection<UserDto>, Task<UserDto?>>? ShowSelectUserAction { get; set; }
 
     public DepartmentManagementViewModel(IApiClientService apiClient,IAuthManager authManager,INotificationService notificationService)
     {
@@ -41,7 +41,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     #region Observable Properties
 
     [ObservableProperty]
-    private DepartmentDTO? _department;
+    private DepartmentDto? _department;
 
     [ObservableProperty]
     private ObservableCollection<DepartmentMemberViewModel> _members = [];
@@ -57,7 +57,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     private bool _canManage;
 
     [ObservableProperty]
-    private ObservableCollection<UserDTO> _availableUsers = [];
+    private ObservableCollection<UserDto> _availableUsers = [];
 
     [ObservableProperty]
     private bool _hasNoDepartment;
@@ -108,7 +108,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             ClearMessages();
 
             // Получаем информацию о текущем пользователе
-            var userResult = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(CurrentUserId), ct);
+            var userResult = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(CurrentUserId), ct);
 
             if (!userResult.Success || userResult.Data == null)
             {
@@ -140,7 +140,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             }
 
             // Загружаем информацию об отделе
-            var departmentResult = await _apiClient.GetAsync<DepartmentDTO>(ApiEndpoints.Department.ById((int)_departmentId), ct);
+            var departmentResult = await _apiClient.GetAsync<DepartmentDto>(ApiEndpoints.Department.ById((int)_departmentId), ct);
             if (departmentResult is { Success: true, Data: not null })
             {
                 Department = departmentResult.Data;
@@ -170,7 +170,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     {
         if (_departmentId == null) return;
 
-        var membersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Department.Members((int)_departmentId), ct);
+        var membersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Department.Members((int)_departmentId), ct);
 
         if (membersResult is { Success: true, Data: not null })
         {
@@ -191,13 +191,13 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
     private async Task LoadAvailableUsersAsync(CancellationToken ct)
     {
-        var usersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll, ct);
+        var usersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.User.GetAll, ct);
 
         if (usersResult is { Success: true, Data: not null })
         {
             var available = usersResult.Data.Where(u => u.DepartmentId == null && !u.IsBanned && u.Id != CurrentUserId).ToList();
 
-            AvailableUsers = new ObservableCollection<UserDTO>(available);
+            AvailableUsers = new ObservableCollection<UserDto>(available);
         }
     }
 
@@ -233,7 +233,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         await SafeExecuteAsync(async ct =>
         {
-            var dto = new UpdateDepartmentMemberDTO { UserId = selectedUser.Id };
+            var dto = new UpdateDepartmentMemberDto { UserId = selectedUser.Id };
             var result = await _apiClient.PostAsync(ApiEndpoints.Department.Members((int)_departmentId), dto, ct);
 
             if (result.Success)
@@ -286,7 +286,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         if (OpenChatWithUserAction != null)
         {
-            var user = new UserDTO
+            var user = new UserDto
             {
                 Id = member.UserId,
                 Username = member.Username,

@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.UI;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class MessageFileViewModel(
-    MessageFileDTO file,
+    MessageFileDto file,
     IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null)
     : ObservableObject
@@ -19,7 +19,7 @@ public partial class MessageFileViewModel(
     private CancellationTokenSource? _downloadCts;
     private readonly object _ctsLock = new();
 
-    public MessageFileDTO File { get; } = file ?? throw new ArgumentNullException(nameof(file));
+    public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
     [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] private double _downloadProgress;

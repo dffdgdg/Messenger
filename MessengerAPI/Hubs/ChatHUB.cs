@@ -2,7 +2,7 @@
 using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.DTO.ReadReceipt;
+using MessengerShared.Dto.ReadReceipt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -125,7 +125,7 @@ public class ChatHub(
 
     #region Read Receipts
 
-    public async Task<ChatReadInfoDTO?> GetReadInfo(int chatId)
+    public async Task<ChatReadInfoDto?> GetReadInfo(int chatId)
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue) return null;
@@ -159,7 +159,7 @@ public class ChatHub(
 
             var result = await readReceiptService.MarkAsReadAsync(
                 userId.Value,
-                new MarkAsReadDTO
+                new MarkAsReadDto
                 {
                     ChatId = chatId,
                     MessageId = messageId
@@ -221,11 +221,11 @@ public class ChatHub(
         }
     }
 
-    public async Task<AllUnreadCountsDTO> GetUnreadCounts()
+    public async Task<AllUnreadCountsDto> GetUnreadCounts()
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return new AllUnreadCountsDTO { Chats = [], TotalUnread = 0 };
+            return new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
 
         try
         {
@@ -240,7 +240,7 @@ public class ChatHub(
             logger.LogError(ex,
                 "Ошибка получения непрочитанных для пользователя {UserId}",
                 userId.Value);
-            return new AllUnreadCountsDTO { Chats = [], TotalUnread = 0 };
+            return new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
         }
     }
 

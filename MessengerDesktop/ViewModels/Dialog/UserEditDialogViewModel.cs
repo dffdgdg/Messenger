@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class UserEditDialogViewModel : DialogBaseViewModel
 {
-    private readonly UserDTO? _originalUser;
+    private readonly UserDto? _originalUser;
 
     #region Основные данные
 
@@ -47,10 +47,10 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     #region Отдел
 
     [ObservableProperty]
-    private ObservableCollection<DepartmentDTO> _departments = [];
+    private ObservableCollection<DepartmentDto> _departments = [];
 
     [ObservableProperty]
-    private DepartmentDTO? _selectedDepartment;
+    private DepartmentDto? _selectedDepartment;
 
     #endregion
 
@@ -59,12 +59,12 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Action для создания нового пользователя
     /// </summary>
-    public Func<CreateUserDTO, Task>? CreateAction { get; set; }
+    public Func<CreateUserDto, Task>? CreateAction { get; set; }
 
     /// <summary>
     /// Action для обновления существующего пользователя
     /// </summary>
-    public Func<UserDTO, Task>? UpdateAction { get; set; }
+    public Func<UserDto, Task>? UpdateAction { get; set; }
 
     public bool IsNewUser => _originalUser == null;
 
@@ -85,7 +85,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     #endregion
 
-    public UserEditDialogViewModel(UserDTO? user, ObservableCollection<DepartmentDTO> departments)
+    public UserEditDialogViewModel(UserDto? user, ObservableCollection<DepartmentDto> departments)
     {
         _originalUser = user;
         Departments = departments ?? [];
@@ -191,7 +191,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
             {
                 if (CreateAction == null) return;
 
-                var createDto = new CreateUserDTO
+                var createDto = new CreateUserDto
                 {
                     Username = Username.Trim().ToLower(),
                     Password = Password,
@@ -207,7 +207,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
             {
                 if (UpdateAction == null) return;
 
-                var updateDto = new UserDTO
+                var updateDto = new UserDto
                 {
                     Id = _originalUser!.Id,
                     Username = Username.Trim().ToLower(),

@@ -1,10 +1,10 @@
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 
-namespace MessengerShared.DTO.Search
+namespace MessengerShared.Dto.Search
 {
-    public class SearchMessagesResponseDTO
+    public class SearchMessagesResponseDto
     {
-        public List<MessageDTO> Messages { get; set; } = [];
+        public List<MessageDto> Messages { get; set; } = [];
         public int TotalCount { get; set; }
         public int CurrentPage { get; set; }
         public bool HasMoreMessages { get; set; }

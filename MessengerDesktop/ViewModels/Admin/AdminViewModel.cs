@@ -1,8 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.ViewModels.Admin;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -79,13 +79,13 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     partial void OnSelectedTabIndexChanged(int value) => ClearMessages();
 
     [RelayCommand]
-    private async Task OpenEditUserDialog(UserDTO user) => await UsersTab.EditCommand.ExecuteAsync(user);
+    private async Task OpenEditUserDialog(UserDto user) => await UsersTab.EditCommand.ExecuteAsync(user);
 
     [RelayCommand]
-    private async Task ToggleBan(UserDTO user) => await UsersTab.ToggleBanCommand.ExecuteAsync(user);
+    private async Task ToggleBan(UserDto user) => await UsersTab.ToggleBanCommand.ExecuteAsync(user);
 
     [RelayCommand]
-    private async Task OpenEditDepartment(DepartmentDTO department)
+    private async Task OpenEditDepartment(DepartmentDto department)
     {
         var hierarchicalItem = FindDepartmentItem(
             DepartmentsTab.HierarchicalDepartments, department.Id);

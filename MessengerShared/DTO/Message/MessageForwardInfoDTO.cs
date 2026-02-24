@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Message;
+﻿namespace MessengerShared.Dto.Message;
 
-public class MessageForwardInfoDTO
+public class MessageForwardInfoDto
 {
     public int OriginalMessageId { get; set; }
     public int OriginalChatId { get; set; }

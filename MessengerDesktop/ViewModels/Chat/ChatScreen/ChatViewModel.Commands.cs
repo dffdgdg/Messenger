@@ -2,6 +2,7 @@
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
@@ -75,12 +76,15 @@ public partial class ChatViewModel
                 {
                     if (Parent.Chats[i].Id != updatedChat.Id)
                         continue;
-                    Parent.Chats[i] = updatedChat;
+                    Parent.Chats[i] = new MessengerDesktop.ViewModels.Chats.ChatListItemViewModel(updatedChat);
                     break;
                 }
 
                 if (Parent.SelectedChat?.Id == updatedChat.Id)
-                    Parent.SelectedChat = updatedChat;
+                {
+                    Parent.SelectedChat = Parent.Chats.FirstOrDefault(c => c.Id == updatedChat.Id)
+                        ?? new MessengerDesktop.ViewModels.Chats.ChatListItemViewModel(updatedChat);
+                }
 
                 _ = ReloadMembersAfterEditAsync();
 

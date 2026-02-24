@@ -146,9 +146,9 @@ public static class CacheMapper
 
     #endregion
 
-    #region ChatDTO ↔ CachedChat
+    #region ChatDto ↔ CachedChat
 
-    public static CachedChat ToEntity(this ChatDTO dto)
+    public static CachedChat ToEntity(this ChatDto dto)
     {
         return new CachedChat
         {
@@ -164,9 +164,9 @@ public static class CacheMapper
         };
     }
 
-    public static ChatDTO ToDto(this CachedChat entity)
+    public static ChatDto ToDto(this CachedChat entity)
     {
-        return new ChatDTO
+        return new ChatDto
         {
             Id = entity.Id,
             Name = entity.Name,

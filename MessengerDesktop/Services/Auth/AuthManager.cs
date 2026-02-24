@@ -1,5 +1,5 @@
 ﻿using MessengerDesktop.Services.Cache;
-using MessengerShared.DTO.Auth;
+using MessengerShared.Dto.Auth;
 using MessengerShared.Enum;
 using MessengerShared.Response;
 using System;
@@ -14,7 +14,7 @@ public interface IAuthManager
     bool IsInitialized { get; }
     ISessionStore Session { get; }
     Task InitializeAsync();
-    Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password);
+    Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password);
     Task<ApiResponse<object>> LogoutAsync();
     Task WaitForInitializationAsync();
     Task<bool> WaitForInitializationAsync(TimeSpan timeout);
@@ -123,7 +123,7 @@ public class AuthManager : IAuthManager, IDisposable
 
     public Task InitializeAsync() => WaitForInitializationAsync();
 
-    public async Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password)
+    public async Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password)
     {
         ThrowIfDisposed();
 
@@ -151,7 +151,7 @@ public class AuthManager : IAuthManager, IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"AuthManager: Login exception: {ex.Message}");
-            return new ApiResponse<AuthResponseDTO>
+            return new ApiResponse<AuthResponseDto>
             {
                 Success = false,
                 Error = $"Ошибка входа: {ex.Message}",

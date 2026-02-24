@@ -132,7 +132,7 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     //  Chats
     // ═══════════════════════════════════════════════════════
 
-    public async Task<List<ChatDTO>> GetChatsAsync(bool isGroupMode)
+    public async Task<List<ChatDto>> GetChatsAsync(bool isGroupMode)
     {
         int[] typeFilter = isGroupMode
             ? [(int)ChatType.Chat, (int)ChatType.Department]
@@ -142,7 +142,7 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         return cached.ConvertAll(c => c.ToDto());
     }
 
-    public async Task UpsertChatsAsync(IEnumerable<ChatDTO> chats)
+    public async Task UpsertChatsAsync(IEnumerable<ChatDto> chats)
     {
         var entities = chats.Select(c => c.ToEntity()).ToList();
         if (entities.Count == 0) return;

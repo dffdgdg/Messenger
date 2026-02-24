@@ -4,8 +4,8 @@ using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.Messaging;
-using MessengerShared.DTO.Online;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Online;
+using MessengerShared.Dto.User;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -13,15 +13,15 @@ namespace MessengerAPI.Services.User
 {
     public interface IUserService
     {
-        Task<Result<List<UserDTO>>> GetAllUsersAsync(CancellationToken ct = default);
-        Task<Result<UserDTO>> GetUserAsync(int id, CancellationToken ct = default);
-        Task<Result> UpdateUserAsync(int id, UserDTO dto, CancellationToken ct = default);
-        Task<Result<AvatarResponseDTO>> UploadAvatarAsync(int id, IFormFile file, CancellationToken ct = default);
-        Task<Result<OnlineUsersResponseDTO>> GetOnlineUsersAsync(CancellationToken ct = default);
-        Task<Result<OnlineStatusDTO>> GetOnlineStatusAsync(int userId, CancellationToken ct = default);
-        Task<Result<List<OnlineStatusDTO>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default);
-        Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDTO dto, CancellationToken ct = default);
-        Task<Result> ChangePasswordAsync(int id, ChangePasswordDTO dto, CancellationToken ct = default);
+        Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default);
+        Task<Result<UserDto>> GetUserAsync(int id, CancellationToken ct = default);
+        Task<Result> UpdateUserAsync(int id, UserDto dto, CancellationToken ct = default);
+        Task<Result<AvatarResponseDto>> UploadAvatarAsync(int id, IFormFile file, CancellationToken ct = default);
+        Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default);
+        Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default);
+        Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default);
+        Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDto dto, CancellationToken ct = default);
+        Task<Result> ChangePasswordAsync(int id, ChangePasswordDto dto, CancellationToken ct = default);
     }
     public class UserService(
     MessengerDbContext context,
@@ -31,7 +31,7 @@ namespace MessengerAPI.Services.User
     ILogger<UserService> logger)
     : BaseService<UserService>(context, logger), IUserService
     {
-        public async Task<Result<List<UserDTO>>> GetAllUsersAsync(
+        public async Task<Result<List<UserDto>>> GetAllUsersAsync(
             CancellationToken ct = default)
         {
             var users = await _context.Users
@@ -45,10 +45,10 @@ namespace MessengerAPI.Services.User
             var result = users.ConvertAll(u => u.ToDto(urlBuilder, onlineIds.Contains(u.Id)))
 ;
 
-            return Result<List<UserDTO>>.Success(result);
+            return Result<List<UserDto>>.Success(result);
         }
 
-        public async Task<Result<UserDTO>> GetUserAsync(
+        public async Task<Result<UserDto>> GetUserAsync(
             int id, CancellationToken ct = default)
         {
             var user = await _context.Users
@@ -58,12 +58,12 @@ namespace MessengerAPI.Services.User
                 .FirstOrDefaultAsync(u => u.Id == id, ct);
 
             if (user == null)
-                return Result<UserDTO>.Failure($"Пользователь с ID {id} не найден");
+                return Result<UserDto>.Failure($"Пользователь с ID {id} не найден");
 
-            return Result<UserDTO>.Success(user.ToDto(urlBuilder, onlineService.IsOnline(id)));
+            return Result<UserDto>.Success(user.ToDto(urlBuilder, onlineService.IsOnline(id)));
         }
 
-        public async Task<Result> UpdateUserAsync(int id, UserDTO dto, CancellationToken ct = default)
+        public async Task<Result> UpdateUserAsync(int id, UserDto dto, CancellationToken ct = default)
         {
             if (id != dto.Id)
                 return Result.Failure("Несоответствие ID");
@@ -82,15 +82,15 @@ namespace MessengerAPI.Services.User
             return Result.Success();
         }
 
-        public async Task<Result<AvatarResponseDTO>> UploadAvatarAsync(
+        public async Task<Result<AvatarResponseDto>> UploadAvatarAsync(
     int id, IFormFile file, CancellationToken ct = default)
         {
             if (file is null || file.Length == 0)
-                return Result<AvatarResponseDTO>.Failure("Файл не предоставлен");
+                return Result<AvatarResponseDto>.Failure("Файл не предоставлен");
 
             var user = await _context.Users.FindAsync([id], ct);
             if (user is null)
-                return Result<AvatarResponseDTO>.Failure($"Пользователь с ID {id} не найден");
+                return Result<AvatarResponseDto>.Failure($"Пользователь с ID {id} не найден");
 
             var avatarPath = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
             user.Avatar = avatarPath;
@@ -98,15 +98,15 @@ namespace MessengerAPI.Services.User
 
             _logger.LogInformation("Аватар обновлён для пользователя {UserId}", id);
 
-            return Result<AvatarResponseDTO>.Success(new AvatarResponseDTO
+            return Result<AvatarResponseDto>.Success(new AvatarResponseDto
             { AvatarUrl = urlBuilder.BuildUrl(avatarPath)! });
         }
 
-        public Task<Result<OnlineUsersResponseDTO>> GetOnlineUsersAsync(CancellationToken ct = default)
+        public Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default)
         {
             var ids = onlineService.GetOnlineUserIds().ToList();
-            return Task.FromResult(Result<OnlineUsersResponseDTO>.Success(
-                new OnlineUsersResponseDTO
+            return Task.FromResult(Result<OnlineUsersResponseDto>.Success(
+                new OnlineUsersResponseDto
                 {
                     OnlineUserIds = ids,
                     TotalOnline = ids.Count
@@ -119,19 +119,19 @@ namespace MessengerAPI.Services.User
             return Task.FromResult(Result<List<int>>.Success(ids));
         }
 
-        public async Task<Result<OnlineStatusDTO>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
+        public async Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
         {
             var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline })
                 .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-            return Result<OnlineStatusDTO>.Success(new OnlineStatusDTO(userId, onlineService.IsOnline(userId), user?.LastOnline));
+            return Result<OnlineStatusDto>.Success(new OnlineStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
         }
 
-        public async Task<Result<List<OnlineStatusDTO>>> GetOnlineStatusesAsync(
+        public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(
             List<int> userIds, CancellationToken ct = default)
         {
             if (userIds is null || userIds.Count == 0)
-                return Result<List<OnlineStatusDTO>>.Failure("Список ID пользователей не может быть пустым");
+                return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
             var users = await _context.Users
                 .Where(u => userIds.Contains(u.Id))
@@ -142,12 +142,12 @@ namespace MessengerAPI.Services.User
             var onlineIds = onlineService.FilterOnline(userIds);
 
             var result = users.ConvertAll(u =>
-                new OnlineStatusDTO(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+                new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
-            return Result<List<OnlineStatusDTO>>.Success(result);
+            return Result<List<OnlineStatusDto>>.Success(result);
         }
 
-        public async Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDTO dto, CancellationToken ct = default)
+        public async Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDto dto, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(dto.NewUsername))
                 return Result.Failure("Username не может быть пустым");
@@ -174,7 +174,7 @@ namespace MessengerAPI.Services.User
             return Result.Success();
         }
 
-        public async Task<Result> ChangePasswordAsync(int id, ChangePasswordDTO dto, CancellationToken ct = default)
+        public async Task<Result> ChangePasswordAsync(int id, ChangePasswordDto dto, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(dto.CurrentPassword))
                 return Result.Failure("Введите текущий пароль");

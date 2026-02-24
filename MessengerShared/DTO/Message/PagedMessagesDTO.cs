@@ -1,8 +1,8 @@
-namespace MessengerShared.DTO.Message;
+namespace MessengerShared.Dto.Message;
 
-public class PagedMessagesDTO
+public class PagedMessagesDto
 {
-    public List<MessageDTO> Messages { get; set; } = [];
+    public List<MessageDto> Messages { get; set; } = [];
     public int TotalCount { get; set; }
     public bool HasMoreMessages { get; set; }
     public bool HasNewerMessages { get; set; }

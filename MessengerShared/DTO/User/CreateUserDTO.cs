@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.User;
+﻿namespace MessengerShared.Dto.User;
 
-public class CreateUserDTO
+public class CreateUserDto
 {
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;

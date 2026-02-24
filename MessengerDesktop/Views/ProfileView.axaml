@@ -7,17 +7,14 @@
              Background="{DynamicResource PrimaryBG}">
 
 	<UserControl.Styles>
-		<!-- Оверлей аватара при наведении -->
 		<Style Selector="Button.AvatarButton:pointerover Border#AvatarOverlay">
 			<Setter Property="Opacity" Value="1"/>
 		</Style>
 
-		<!-- Стиль для полей с ошибкой -->
 		<Style Selector="TextBox.HasError">
 			<Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
 		</Style>
 
-		<!-- Стиль для полей с успехом -->
 		<Style Selector="TextBox.HasSuccess">
 			<Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
 		</Style>
@@ -35,18 +32,13 @@
 
 					<StackPanel Spacing="20">
 
-						<!-- Заголовок -->
 						<TextBlock Text="Профиль"
                                    Classes="PageTitle"
                                    Margin="0,0,0,8"/>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- АВАТАР И ОСНОВНАЯ ИНФОРМАЦИЯ -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<Grid ColumnDefinitions="Auto,*">
 
-								<!-- Аватар -->
 								<Button Classes="AvatarButton IconButton"
                                         Width="88" Height="88"
                                         Command="{Binding UploadAvatarCommand}"
@@ -74,7 +66,6 @@
 									</Panel>
 								</Button>
 
-								<!-- Имя и username -->
 								<StackPanel Grid.Column="1"
                                             VerticalAlignment="Center"
                                             Spacing="6"
@@ -95,13 +86,9 @@
 							</Grid>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- ЛИЧНЫЕ ДАННЫЕ (ФИО) -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<StackPanel Spacing="16">
 
-								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource ProfileIcon}"
@@ -112,7 +99,6 @@
                                                    FontWeight="SemiBold"/>
 									</StackPanel>
 
-									<!-- Кнопка редактирования (когда не редактируем) -->
 									<Button Grid.Column="2"
                                             Classes="IconButton Small"
                                             Command="{Binding StartEditProfileCommand}"
@@ -124,7 +110,6 @@
 									</Button>
 								</Grid>
 
-								<!-- Режим просмотра -->
 								<StackPanel Spacing="12" IsVisible="{Binding !IsEditingProfile}">
 									<Grid RowDefinitions="Auto,Auto,Auto"
                                           ColumnDefinitions="90,*"
@@ -156,10 +141,8 @@
 									</Grid>
 								</StackPanel>
 
-								<!-- Режим редактирования -->
 								<StackPanel Spacing="16" IsVisible="{Binding IsEditingProfile}">
 
-									<!-- Превью имени -->
 									<Border Background="{DynamicResource AccentMuted}"
                                             CornerRadius="8"
                                             Padding="12,10">
@@ -177,7 +160,6 @@
 										</Grid>
 									</Border>
 
-									<!-- Поля ввода -->
 									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
 										<StackPanel Spacing="6">
 											<TextBlock Text="Фамилия"
@@ -207,7 +189,6 @@
 										</StackPanel>
 									</Grid>
 
-									<!-- Кнопки -->
 									<StackPanel Orientation="Horizontal" Spacing="10">
 										<Button Content="Сохранить"
                                                 Classes="DialogAccent"
@@ -222,19 +203,14 @@
 							</StackPanel>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- USERNAME -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<StackPanel Spacing="16">
 
-								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource MentionIcon}"
                                                   Width="18" Height="18"
-                                                  Foreground="{DynamicResource Accent}"
-												  />
+                                                  Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Имя пользователя"
                                                    FontSize="15"
                                                    FontWeight="SemiBold"/>
@@ -251,7 +227,6 @@
 									</Button>
 								</Grid>
 
-								<!-- Режим просмотра -->
 								<Grid ColumnDefinitions="90,*"
                                       IsVisible="{Binding !IsEditingUsername}">
 									<TextBlock Text="Username"
@@ -266,7 +241,6 @@
 									</StackPanel>
 								</Grid>
 
-								<!-- Режим редактирования -->
 								<StackPanel Spacing="14" IsVisible="{Binding IsEditingUsername}">
 									<StackPanel Spacing="6">
 										<TextBlock Text="Новый username"
@@ -292,7 +266,6 @@
                                                      MaxLength="30"/>
 										</Grid>
 
-										<!-- Подсказка / Ошибка -->
 										<Panel Height="16">
 											<TextBlock Text="{Binding UsernameValidationMessage}"
                                                        FontSize="11"
@@ -320,13 +293,8 @@
 							</StackPanel>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- БЕЗОПАСНОСТЬ (ПАРОЛЬ) -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<StackPanel Spacing="16">
-
-								<!-- Заголовок секции -->
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource LockClosedIcon}"
@@ -348,7 +316,6 @@
 									</Button>
 								</Grid>
 
-								<!-- Режим просмотра -->
 								<Grid ColumnDefinitions="90,*"
                                       IsVisible="{Binding !IsEditingPassword}">
 									<TextBlock Text="Пароль"
@@ -361,10 +328,8 @@
                                                LetterSpacing="2"/>
 								</Grid>
 
-								<!-- Режим редактирования -->
 								<StackPanel Spacing="16" IsVisible="{Binding IsEditingPassword}">
 
-									<!-- Текущий пароль -->
 									<StackPanel Spacing="6">
 										<TextBlock Text="Текущий пароль"
                                                    Classes="FieldLabel"
@@ -380,7 +345,6 @@
 									<Separator Background="{DynamicResource BorderDefault}"
                                                Margin="0,4"/>
 
-									<!-- Новый пароль -->
 									<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
 										<StackPanel Spacing="6">
 											<TextBlock Text="Новый пароль"
@@ -405,13 +369,11 @@
                                                      PasswordChar="•"
                                                      Watermark="Повторите пароль"/>
 
-											<!-- Индикатор совпадения -->
 											<StackPanel Orientation="Horizontal"
                                                         Spacing="5"
                                                         Height="16"
                                                         IsVisible="{Binding ShowPasswordMatchIndicator}">
 
-												<!-- Пароли совпадают -->
 												<StackPanel Orientation="Horizontal"
                                                             Spacing="5"
                                                             IsVisible="{Binding PasswordsMatch}">
@@ -423,7 +385,6 @@
                                                                Foreground="{DynamicResource SuccessBrush}"/>
 												</StackPanel>
 
-												<!-- Пароли не совпадают -->
 												<StackPanel Orientation="Horizontal"
                                                             Spacing="5"
                                                             IsVisible="{Binding !PasswordsMatch}">
@@ -453,9 +414,6 @@
 							</StackPanel>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- ОТДЕЛ (если есть) -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection"
                                 IsVisible="{Binding User.Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
@@ -474,9 +432,6 @@
 							</Grid>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- ВЫХОД -->
-						<!-- ═══════════════════════════════════════════════════════ -->
 						<Border Classes="ProfileSection">
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource SignOutIcon}"
@@ -503,11 +458,6 @@
 							</Grid>
 						</Border>
 
-						<!-- ═══════════════════════════════════════════════════════ -->
-						<!-- УВЕДОМЛЕНИЯ (АЛЕРТЫ) -->
-						<!-- ═══════════════════════════════════════════════════════ -->
-
-						<!-- Ошибка -->
 						<Border Classes="AlertError"
                                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
@@ -532,7 +482,6 @@
 							</Grid>
 						</Border>
 
-						<!-- Успех -->
 						<Border Classes="AlertSuccess"
                                 IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
@@ -557,9 +506,7 @@
 							</Grid>
 						</Border>
 
-						<!-- Отступ снизу -->
 						<Border Height="20"/>
-
 					</StackPanel>
 				</Grid>
 			</Border>

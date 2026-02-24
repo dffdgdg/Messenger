@@ -9,7 +9,6 @@
              x:Name="BubbleRoot">
 
     <UserControl.Styles>
-        <!-- ═══ Удалённые сообщения ═══ -->
         <Style Selector="Border.DeletedMessage">
             <Setter Property="Opacity" Value="0.55"/>
         </Style>
@@ -18,7 +17,6 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
         </Style>
 
-        <!-- ═══ Метаданные ═══ -->
         <Style Selector="TextBlock.MessageMeta">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
@@ -33,7 +31,6 @@
             <Setter Property="Margin" Value="0,0,0,1"/>
         </Style>
 
-        <!-- ═══ Статус доставки ═══ -->
         <Style Selector="Path.DeliveryStatus">
             <Setter Property="Width" Value="14"/>
             <Setter Property="Height" Value="14"/>
@@ -48,7 +45,6 @@
             <Setter Property="Fill" Value="{DynamicResource TextMuted}"/>
         </Style>
 
-        <!-- ═══ Опрос ═══ -->
         <Style Selector="Border.PollBubble">
             <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
             <Setter Property="CornerRadius" Value="18"/>
@@ -60,7 +56,6 @@
             <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
         </Style>
 
-        <!-- ═══ Превью ответа ═══ -->
         <Style Selector="Button.ReplyPreviewButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -117,7 +112,6 @@
             <Setter Property="Opacity" Value="0.6"/>
         </Style>
 
-        <!-- ═══ Forward label ═══ -->
         <Style Selector="TextBlock.ForwardLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontStyle" Value="Italic"/>
@@ -127,7 +121,6 @@
             <Setter Property="MaxLines" Value="1"/>
         </Style>
 
-        <!-- ═══ Имя отправителя ═══ -->
         <Style Selector="TextBlock.SenderName">
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="13"/>
@@ -135,14 +128,12 @@
             <Setter Property="Margin" Value="0,0,0,2"/>
         </Style>
 
-        <!-- ═══ Inline-метаданные ═══ -->
         <Style Selector="StackPanel.InlineMeta">
             <Setter Property="Margin" Value="8,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Bottom"/>
             <Setter Property="Opacity" Value="0.7"/>
         </Style>
 
-        <!-- ═══ Текст сообщения ═══ -->
         <Style Selector="SelectableTextBlock.MessageText">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="LineHeight" Value="22"/>
@@ -150,7 +141,6 @@
             <Setter Property="VerticalAlignment" Value="Top"/>
         </Style>
 
-        <!-- ═══ Quick Actions ═══ -->
         <Style Selector="Border.MessageWrapper StackPanel.QuickActions">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="Transitions">
@@ -183,7 +173,6 @@
             <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
         </Style>
 
-        <!-- ═══ Транскрипция ═══ -->
         <Style Selector="Border.TranscriptionPanel">
             <Setter Property="Background" Value="#08000000"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -193,8 +182,6 @@
     </UserControl.Styles>
 
     <StackPanel>
-
-        <!-- ═══ РАЗДЕЛИТЕЛЬ ДАТ ═══ -->
         <Border IsVisible="{Binding ShowDateSeparator}"
                 HorizontalAlignment="Center"
                 Margin="0,16,0,12">
@@ -211,7 +198,6 @@
             </Border>
         </Border>
 
-        <!-- ═══ ОБЁРТКА СООБЩЕНИЯ ═══ -->
         <Border Classes="MessageHighlight MessageWrapper"
                 Classes.Highlighted="{Binding IsHighlighted}"
                 Classes.DeletedMessage="{Binding IsDeleted}"
@@ -222,7 +208,6 @@
                 AutomationProperties.Name="{Binding SenderName}"
                 AutomationProperties.HelpText="{Binding DisplayContent}">
 
-            <!-- ═══ Контекстное меню ═══ -->
             <Border.ContextFlyout>
                 <MenuFlyout>
                     <MenuItem Header="Ответить"
@@ -309,7 +294,6 @@
 
             <Grid ColumnDefinitions="Auto,*,Auto">
 
-                <!-- ═══ АВАТАР ═══ -->
                 <Panel Grid.Column="0"
                        Width="40"
                        VerticalAlignment="Bottom"
@@ -328,14 +312,12 @@
                     </Button>
                 </Panel>
 
-                <!-- ═══ КОНТЕНТ ═══ -->
                 <StackPanel Grid.Column="1"
                             HorizontalAlignment="{Binding IsOwn,
                                 Converter={conv:Converter Name=BoolToHAlignment},
                                 ConverterParameter='Right|Left'}"
                             MaxWidth="520">
 
-                    <!-- Имя отправителя -->
                     <Button Classes="SenderNameButton"
                             IsVisible="{Binding ShowSenderName}"
                             Command="{Binding #BubbleRoot.OpenProfileCommand}"
@@ -344,7 +326,6 @@
                                    Text="{Binding SenderName}"/>
                     </Button>
 
-                    <!-- ═══ ОБЫЧНОЕ СООБЩЕНИЕ ═══ -->
                     <Border Classes="MessageBubble"
                             Classes.Own="{Binding IsOwn}"
                             Classes.Other="{Binding !IsOwn}"
@@ -367,7 +348,6 @@
                                        Text="{Binding ForwardedFromHeader}"
                                        IsVisible="{Binding HasForward}"/>
 
-                            <!-- ── Превью ответа ── -->
                             <Button Classes="ReplyPreviewButton"
                                     IsVisible="{Binding HasReply}"
                                     Command="{Binding #BubbleRoot.ScrollToReplyCommand}"
@@ -387,7 +367,6 @@
                                 </Border>
                             </Button>
 
-                            <!-- ── Голосовое сообщение ── -->
                             <StackPanel IsVisible="{Binding ShowVoiceMessage}" Spacing="6">
 
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -452,7 +431,6 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- ── Текст ── -->
                             <Panel IsVisible="{Binding HasTextContent}">
                                 <Grid>
                                     <controls:RichMessageTextBlock Classes="MessageText"
@@ -477,7 +455,6 @@
                                 </Grid>
                             </Panel>
 
-                            <!-- ── Удалённое ── -->
                             <Panel IsVisible="{Binding IsDeleted}">
                                 <Grid>
                                     <TextBlock Text="{Binding DisplayContent}"
@@ -493,7 +470,6 @@
                                 </Grid>
                             </Panel>
 
-                            <!-- ── Файлы ── -->
                             <ItemsControl ItemsSource="{Binding FileViewModels}"
                                           IsVisible="{Binding ShowNonVoiceFiles}"
                                           Margin="0,6,0,0">
@@ -509,7 +485,6 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- ── Мета без текста ── -->
                             <StackPanel Orientation="Horizontal"
                                         Spacing="3"
                                         HorizontalAlignment="Right"
@@ -530,7 +505,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ═══ ОПРОС ═══ -->
                     <Border Classes="PollBubble"
                             Classes.Own="{Binding IsOwn}"
                             IsVisible="{Binding HasPoll}">
@@ -553,7 +527,6 @@
                     </Border>
                 </StackPanel>
 
-                <!-- ═══ QUICK ACTIONS ═══ -->
                 <StackPanel Grid.Column="2"
                             Classes="QuickActions"
                             Orientation="Horizontal"

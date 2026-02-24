@@ -173,14 +173,14 @@ Username, Password, Surname, Name, Midname?, DepartmentId?
 
 ### DTO — Чаты
 
-**`ChatDTO`** — информация о чате (ObservableObject для UI):
+**`ChatDto`** — информация о чате (ObservableObject для UI):
 ```
 Id, Name?, Type (ChatType), CreatedById
 LastMessageDate?, Avatar?, LastMessagePreview?, LastMessageSenderName?
 UnreadCount (реактивное свойство)
 ```
 
-**`UpdateChatDTO`**: `Id, Name?, ChatType?`
+**`UpdateChatDto`**: `Id, Name?, ChatType?`
 
 ---
 
@@ -1175,7 +1175,7 @@ ExecuteSearchAsync(), LoadMoreMessagesAsync(), ExitSearch()
 Name, AvailableUsers, FilteredUsers, SearchUserQuery
 AvatarPreview, IsNewChat, SelectedUsersCount, CanSave
 
-SaveAction: Func<ChatDTO, List<int>, Stream?, string?, Task<bool>>
+SaveAction: Func<ChatDto, List<int>, Stream?, string?, Task<bool>>
 
 InitializeCommand — загрузка пользователей и аватара
 SelectAvatarCommand, ClearAvatarCommand
@@ -1301,7 +1301,7 @@ ConfirmCommand, CancelCommand
 6. **SafeExecuteAsync** — аналог на клиенте с CancellationToken
 7. **Кеширование доступа** — AccessControlService в рамках запроса
 8. **Опросы** — анонимность, множественный выбор, 2-10 вариантов, дедлайн
-9. **Реактивный UI** — `ObservableObject` в ChatDTO, SessionStore и ViewModels
+9. **Реактивный UI** — `ObservableObject` в ChatDto, SessionStore и ViewModels
 10. **Пагинация** — двунаправленная (before/after/around messageId)
 11. **Real-time** — GlobalHubConnection + ChatHubConnection (SignalR)
 12. **Debounce** — поиск (300мс), MarkMessageAsRead (300мс)

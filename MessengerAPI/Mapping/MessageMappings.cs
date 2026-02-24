@@ -1,16 +1,16 @@
 ﻿using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 
 namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {
-    public static MessageDTO ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
+    public static MessageDto ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
 
-        var dto = new MessageDTO
+        var dto = new MessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
@@ -45,11 +45,11 @@ public static class MessageMappings
         return dto;
     }
 
-    public static MessageReplyPreviewDTO ToReplyPreviewDto(this Message message)
+    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
     {
         var isDeleted = message.IsDeleted ?? false;
 
-        return new MessageReplyPreviewDTO
+        return new MessageReplyPreviewDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
@@ -61,7 +61,7 @@ public static class MessageMappings
         };
     }
 
-    public static MessageForwardInfoDTO ToForwardInfoDto(this Message message) => new()
+    public static MessageForwardInfoDto ToForwardInfoDto(this Message message) => new()
     {
         OriginalMessageId = message.Id,
         OriginalChatId = message.ChatId,

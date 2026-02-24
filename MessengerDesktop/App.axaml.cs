@@ -31,7 +31,7 @@ namespace MessengerDesktop
 
         public IServiceProvider Services { get; private set; } = null!;
 
-        public static readonly string ApiUrl =
+        public const string ApiUrl =
 #if DEBUG
             "https://localhost:7190/";
 #else

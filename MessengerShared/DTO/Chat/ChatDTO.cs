@@ -1,8 +1,8 @@
 using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.Chat;
+namespace MessengerShared.Dto.Chat;
 
-public class ChatDTO
+public class ChatDto
 {
     public int Id { get; set; }
     public string? Name { get; set; } = string.Empty;

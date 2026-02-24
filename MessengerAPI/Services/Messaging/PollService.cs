@@ -3,17 +3,17 @@ using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Poll;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services.Messaging;
 
 public interface IPollService
 {
-    Task<Result<PollDTO>> GetPollAsync(int pollId, int userId);
-    Task<Result<MessageDTO>> CreatePollAsync(CreatePollDTO dto, int createdByUserId);
-    Task<Result<PollDTO>> VoteAsync(PollVoteDTO voteDto);
+    Task<Result<PollDto>> GetPollAsync(int pollId, int userId);
+    Task<Result<MessageDto>> CreatePollAsync(CreatePollDto dto, int createdByUserId);
+    Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto);
 }
 
 public class PollService(
@@ -23,7 +23,7 @@ public class PollService(
     ILogger<PollService> logger)
     : BaseService<PollService>(context, logger), IPollService
 {
-    public async Task<Result<PollDTO>> GetPollAsync(int pollId, int userId)
+    public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
         var poll = await _context.Polls
             .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
@@ -32,12 +32,12 @@ public class PollService(
             .FirstOrDefaultAsync(p => p.Id == pollId);
 
         if (poll is null)
-            return Result<PollDTO>.Failure($"Опрос с ID {pollId} не найден");
+            return Result<PollDto>.Failure($"Опрос с ID {pollId} не найден");
 
-        return Result<PollDTO>.Success(poll.ToDto(userId));
+        return Result<PollDto>.Success(poll.ToDto(userId));
     }
 
-    public async Task<Result<MessageDTO>> CreatePollAsync(CreatePollDTO dto, int createdByUserId)
+    public async Task<Result<MessageDto>> CreatePollAsync(CreatePollDto dto, int createdByUserId)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -87,16 +87,16 @@ public class PollService(
                 .FirstOrDefaultAsync(m => m.Id == message.Id);
 
             if (createdMessage is null)
-                return Result<MessageDTO>.Failure("Не удалось загрузить созданное сообщение");
+                return Result<MessageDto>.Failure("Не удалось загрузить созданное сообщение");
 
             var messageDto = createdMessage.ToDto(createdByUserId, urlBuilder);
 
             await hubNotifier.SendToChatAsync(
-                dto.ChatId, "ReceiveMessageDTO", messageDto);
+                dto.ChatId, "ReceiveMessageDto", messageDto);
 
             _logger.LogInformation("Опрос создан в чате {ChatId}", dto.ChatId);
 
-            return Result<MessageDTO>.Success(messageDto);
+            return Result<MessageDto>.Success(messageDto);
         }
         catch
         {
@@ -105,7 +105,7 @@ public class PollService(
         }
     }
 
-    public async Task<Result<PollDTO>> VoteAsync(PollVoteDTO voteDto)
+    public async Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto)
     {
         var poll = await _context.Polls
             .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
@@ -113,7 +113,7 @@ public class PollService(
             .FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
 
         if (poll is null)
-            return Result<PollDTO>.Failure($"Опрос {voteDto.PollId} не найден");
+            return Result<PollDto>.Failure($"Опрос {voteDto.PollId} не найден");
 
         var optionIds = voteDto.OptionIds?.Count > 0
             ? voteDto.OptionIds
@@ -124,7 +124,7 @@ public class PollService(
         var validOptionIds = poll.PollOptions.Select(o => o.Id).ToHashSet();
         var invalidIds = optionIds.Where(id => !validOptionIds.Contains(id)).ToList();
         if (invalidIds.Count > 0)
-            return Result<PollDTO>.Failure($"Невалидные варианты: {string.Join(", ", invalidIds)}");
+            return Result<PollDto>.Failure($"Невалидные варианты: {string.Join(", ", invalidIds)}");
 
         var oldVotes = await _context.PollVotes
             .Where(v => v.PollId == voteDto.PollId && v.UserId == voteDto.UserId).ToListAsync();

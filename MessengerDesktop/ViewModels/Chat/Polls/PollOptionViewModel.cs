@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Poll;
 using System;
 
 namespace MessengerDesktop.ViewModels.Chat
@@ -8,7 +8,7 @@ namespace MessengerDesktop.ViewModels.Chat
     public partial class PollOptionViewModel : ObservableObject
     {
         private readonly PollViewModel _pollViewModel;
-        private readonly PollOptionDTO _option;
+        private readonly PollOptionDto _option;
 
         [ObservableProperty]
         private bool _isSelected;
@@ -33,7 +33,7 @@ namespace MessengerDesktop.ViewModels.Chat
         [RelayCommand]
         private void ToggleSelection() => IsSelected = !IsSelected;
 
-        public PollOptionViewModel(PollOptionDTO option, PollViewModel pollViewModel)
+        public PollOptionViewModel(PollOptionDto option, PollViewModel pollViewModel)
         {
             _option = option;
             _pollViewModel = pollViewModel;

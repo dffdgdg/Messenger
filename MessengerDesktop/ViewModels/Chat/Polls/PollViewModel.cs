@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Poll;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -28,7 +28,7 @@ public partial class PollViewModel : BaseViewModel
     public int UserId { get; }
     public bool HasSelection => Options.Any(o => o.IsSelected);
 
-    public PollViewModel(PollDTO poll, int userId, IApiClientService apiClient)
+    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
 
@@ -74,7 +74,7 @@ public partial class PollViewModel : BaseViewModel
         option.IsSelected = !option.IsSelected;
     }
 
-    public void ApplyDto(PollDTO dto)
+    public void ApplyDto(PollDto dto)
     {
         AllowsMultipleAnswers = dto.AllowsMultipleAnswers;
         TotalVotes = dto.Options.Sum(o => o.VotesCount);
@@ -86,7 +86,7 @@ public partial class PollViewModel : BaseViewModel
         HasVoted = !dto.CanVote;
     }
 
-    private void UpdateOptions(List<PollOptionDTO> optionDtos)
+    private void UpdateOptions(List<PollOptionDto> optionDtos)
     {
         foreach (var optDto in optionDtos)
         {
@@ -136,14 +136,14 @@ public partial class PollViewModel : BaseViewModel
         {
             Debug.WriteLine($"[Poll] Voting: PollId={PollId}, Options=[{string.Join(", ", selectedIds)}]");
 
-            var voteDto = new PollVoteDTO
+            var voteDto = new PollVoteDto
             {
                 PollId = PollId,
                 UserId = UserId,
                 OptionIds = selectedIds
             };
 
-            var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>(ApiEndpoints.Poll.Vote, voteDto);
+            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Poll.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
             {
@@ -163,14 +163,14 @@ public partial class PollViewModel : BaseViewModel
         {
             Debug.WriteLine($"[Poll] Cancelling vote: PollId={PollId}");
 
-            var voteDto = new PollVoteDTO
+            var voteDto = new PollVoteDto
             {
                 PollId = PollId,
                 UserId = UserId,
                 OptionIds = []
             };
 
-            var result = await _apiClient.PostAsync<PollVoteDTO, PollDTO>(ApiEndpoints.Poll.Vote, voteDto);
+            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Poll.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
             {

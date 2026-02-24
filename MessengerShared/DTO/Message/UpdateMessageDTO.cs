@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Message;
+﻿namespace MessengerShared.Dto.Message;
 
-public class UpdateMessageDTO
+public class UpdateMessageDto
 {
     public int Id { get; set; }
     public string? Content { get; set; }

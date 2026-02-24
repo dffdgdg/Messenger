@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Chat;
+﻿namespace MessengerShared.Dto.Chat;
 
-public class ChatNotificationSettingsDTO
+public class ChatNotificationSettingsDto
 {
     public int ChatId { get; set; }
     public bool NotificationsEnabled { get; set; }

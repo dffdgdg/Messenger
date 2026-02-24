@@ -1,8 +1,8 @@
 ﻿using MessengerShared.Enum;
 
-namespace MessengerShared.DTO.Chat;
+namespace MessengerShared.Dto.Chat;
 
-public class ChatMemberDTO
+public class ChatMemberDto
 {
     public int ChatId { get; set; }
     public int UserId { get; set; }

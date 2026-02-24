@@ -1,8 +1,8 @@
 ﻿using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Auth;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.ReadReceipt;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.ReadReceipt;
+using MessengerShared.Dto.User;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Diagnostics;
@@ -18,15 +18,15 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     private int _lastSentReadMessageId;
     private DateTime _lastSentReadTime = DateTime.MinValue;
 
-    public event Action<MessageDTO>? MessageReceived;
-    public event Action<MessageDTO>? MessageUpdated;
+    public event Action<MessageDto>? MessageReceived;
+    public event Action<MessageDto>? MessageUpdated;
     public event Action<int>? MessageDeleted;
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, int>? UnreadCountUpdated;
     public event Action? Reconnected;
 
     /// <summary>Новый участник присоединился к чату.</summary>
-    public event Action<int, UserDTO>? MemberJoined;
+    public event Action<int, UserDto>? MemberJoined;
 
     /// <summary>Участник покинул чат.</summary>
     public event Action<int, int>? MemberLeft;
@@ -44,14 +44,14 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
                 .Build();
 
             //Сообщения
-            _hubConnection.On<MessageDTO>("ReceiveMessageDTO", OnMessageReceived);
-            _hubConnection.On<MessageDTO>("MessageUpdated", OnMessageUpdated);
+            _hubConnection.On<MessageDto>("ReceiveMessageDto", OnMessageReceived);
+            _hubConnection.On<MessageDto>("MessageUpdated", OnMessageUpdated);
             _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeletedEvent);
             _hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageRead);
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
 
             //Участники чата
-            _hubConnection.On<int, UserDTO>("MemberJoined", OnMemberJoined);
+            _hubConnection.On<int, UserDto>("MemberJoined", OnMemberJoined);
             _hubConnection.On<int, int>("MemberLeft", OnMemberLeft);
 
             _hubConnection.Reconnected += OnReconnected;
@@ -78,13 +78,13 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         Reconnected?.Invoke();
     }
 
-    public async Task<ChatReadInfoDTO?> GetReadInfoAsync()
+    public async Task<ChatReadInfoDto?> GetReadInfoAsync()
     {
         if (!IsConnected) return null;
 
         try
         {
-            return await _hubConnection!.InvokeAsync<ChatReadInfoDTO?>("GetReadInfo", chatId);
+            return await _hubConnection!.InvokeAsync<ChatReadInfoDto?>("GetReadInfo", chatId);
         }
         catch (Exception ex)
         {
@@ -130,13 +130,13 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         }
     }
 
-    public async Task<AllUnreadCountsDTO?> GetUnreadCountsAsync()
+    public async Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
     {
         if (!IsConnected) return null;
 
         try
         {
-            return await _hubConnection!.InvokeAsync<AllUnreadCountsDTO>("GetUnreadCounts");
+            return await _hubConnection!.InvokeAsync<AllUnreadCountsDto>("GetUnreadCounts");
         }
         catch (Exception ex)
         {
@@ -147,13 +147,13 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
 
     #region Event Handlers
 
-    private void OnMessageReceived(MessageDTO message)
+    private void OnMessageReceived(MessageDto message)
     {
         if (message.ChatId == chatId)
             MessageReceived?.Invoke(message);
     }
 
-    private void OnMessageUpdated(MessageDTO message)
+    private void OnMessageUpdated(MessageDto message)
     {
         if (message.ChatId == chatId)
             MessageUpdated?.Invoke(message);
@@ -177,7 +177,7 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
             UnreadCountUpdated?.Invoke(cId, unreadCount);
     }
 
-    private void OnMemberJoined(int cId, UserDTO user)
+    private void OnMemberJoined(int cId, UserDto user)
     {
         if (cId == chatId)
             MemberJoined?.Invoke(cId, user);

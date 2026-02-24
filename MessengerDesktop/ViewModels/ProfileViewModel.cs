@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Auth;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,7 +20,7 @@ namespace MessengerDesktop.ViewModels
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AvatarUrl))]
         [NotifyPropertyChangedFor(nameof(FullName))]
-        private UserDTO? _user;
+        private UserDto? _user;
 
         [ObservableProperty] private int _userId;
 
@@ -131,7 +131,7 @@ namespace MessengerDesktop.ViewModels
 
         private async Task LoadUser() => await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(UserId));
+            var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(UserId));
             if (result.Success)
             {
                 User = result.Data;
@@ -178,7 +178,7 @@ namespace MessengerDesktop.ViewModels
 
             await SafeExecuteAsync(async () =>
             {
-                var update = new UserDTO
+                var update = new UserDto
                 {
                     Id = User.Id,
                     Username = User.Username,
@@ -189,7 +189,7 @@ namespace MessengerDesktop.ViewModels
                     Department = User.Department
                 };
 
-                var result = await _apiClient.PutAsync<UserDTO>(
+                var result = await _apiClient.PutAsync<UserDto>(
                     ApiEndpoints.User.ById(User.Id), update);
 
                 if (result.Success)
@@ -242,7 +242,7 @@ namespace MessengerDesktop.ViewModels
 
             await SafeExecuteAsync(async () =>
             {
-                var dto = new ChangeUsernameDTO { NewUsername = newUsername };
+                var dto = new ChangeUsernameDto { NewUsername = newUsername };
                 var result = await _apiClient.PutAsync<object>(
                     ApiEndpoints.User.Username(User.Id), dto);
 
@@ -290,7 +290,7 @@ namespace MessengerDesktop.ViewModels
 
             await SafeExecuteAsync(async () =>
             {
-                var dto = new ChangePasswordDTO
+                var dto = new ChangePasswordDto
                 {
                     CurrentPassword = CurrentPassword,
                     NewPassword = NewPassword
@@ -336,7 +336,7 @@ namespace MessengerDesktop.ViewModels
             await SafeExecuteAsync(async () =>
             {
                 await using var stream = await files[0].OpenReadAsync();
-                var result = await _apiClient.UploadFileAsync<UserDTO>(
+                var result = await _apiClient.UploadFileAsync<UserDto>(
                     ApiEndpoints.User.Avatar(User!.Id), stream, files[0].Name, "image/png");
 
                 if (result.Success)

@@ -1,5 +1,5 @@
 ﻿using MessengerDesktop.Infrastructure.Configuration;
-using MessengerShared.DTO.Auth;
+using MessengerShared.Dto.Auth;
 using MessengerShared.Response;
 using System;
 using System.Net.Http;
@@ -11,7 +11,7 @@ namespace MessengerDesktop.Services.Auth;
 
 public interface IAuthService
 {
-    Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default);
+    Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default);
     Task<ApiResponse<object>> ValidateTokenAsync(string token, CancellationToken ct = default);
     Task<ApiResponse<object>> LogoutAsync(string token, CancellationToken ct = default);
 }
@@ -20,12 +20,12 @@ public class AuthService(HttpClient httpClient) : IAuthService
 {
     private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
-    public async Task<ApiResponse<AuthResponseDTO>> LoginAsync(string username, string password, CancellationToken ct = default)
+    public async Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-                return ApiResponseHelper.Error<AuthResponseDTO>("Имя пользователя и пароль обязательны");
+                return ApiResponseHelper.Error<AuthResponseDto>("Имя пользователя и пароль обязательны");
 
             var loginDto = new LoginRequest(username, password.Trim());
 
@@ -34,10 +34,10 @@ public class AuthService(HttpClient httpClient) : IAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct);
-                return ApiResponseHelper.Error<AuthResponseDTO>($"Ошибка авторизации: {response.StatusCode}", errorContent);
+                return ApiResponseHelper.Error<AuthResponseDto>($"Ошибка авторизации: {response.StatusCode}", errorContent);
             }
 
-            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDTO>>(ct);
+            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDto>>(ct);
 
             if (apiResponse != null)
             {
@@ -46,7 +46,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
             try
             {
-                var directData = await response.Content.ReadFromJsonAsync<AuthResponseDTO>(ct);
+                var directData = await response.Content.ReadFromJsonAsync<AuthResponseDto>(ct);
                 if (directData != null)
                 {
                     return ApiResponseHelper.Success(directData, "Авторизация успешна");
@@ -57,7 +57,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 // Ignore
             }
 
-            return ApiResponseHelper.Error<AuthResponseDTO>("Не удалось прочитать ответ сервера");
+            return ApiResponseHelper.Error<AuthResponseDto>("Не удалось прочитать ответ сервера");
         }
         catch (OperationCanceledException)
         {
@@ -65,7 +65,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
         }
         catch (Exception ex)
         {
-            return ApiResponseHelper.Error<AuthResponseDTO>($"Ошибка авторизации: {ex.Message}");
+            return ApiResponseHelper.Error<AuthResponseDto>($"Ошибка авторизации: {ex.Message}");
         }
     }
 

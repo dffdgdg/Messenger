@@ -10,8 +10,6 @@
 
 	<Border Classes="DialogContainer" Width="440">
 		<StackPanel Spacing="20">
-
-			<!-- Заголовок с иконкой -->
 			<Grid ColumnDefinitions="Auto,*,Auto">
 				<Border Grid.Column="0"
                         Background="{DynamicResource AccentBrush}"
@@ -42,10 +40,8 @@
 				</Button>
 			</Grid>
 
-			<!-- Разделитель -->
 			<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="-24,0"/>
 
-			<!-- Название отдела -->
 			<StackPanel Spacing="6">
 				<TextBlock Text="Название отдела"
                            FontSize="13"
@@ -63,7 +59,6 @@
 				</TextBox>
 			</StackPanel>
 
-			<!-- Родительский отдел -->
 			<StackPanel Spacing="6">
 				<TextBlock Text="Родительский отдел"
                            FontSize="13"
@@ -87,7 +82,6 @@
 				</ComboBox>
 			</StackPanel>
 
-			<!-- Руководитель отдела -->
 			<StackPanel Spacing="6">
 				<TextBlock Text="Руководитель отдела"
                            FontSize="13"
@@ -100,8 +94,6 @@
                         BorderThickness="1"
                         BorderBrush="{DynamicResource BorderDefault}">
 					<Grid ColumnDefinitions="Auto,*,Auto,Auto">
-
-						<!-- Аватар руководителя -->
 						<controls:AvatarControl Grid.Column="0"
                                                 Classes="Small"
                                                 Source="{Binding SelectedHead.Avatar}"
@@ -109,7 +101,6 @@
                                                 IsVisible="{Binding HasHead}"
                                                 Margin="0,0,12,0"/>
 
-						<!-- Иконка если не выбран -->
 						<Border Grid.Column="0"
                                 Width="36" Height="36"
                                 CornerRadius="18"
@@ -121,7 +112,6 @@
                                       Foreground="{DynamicResource TextTertiary}"/>
 						</Border>
 
-						<!-- Информация -->
 						<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 							<TextBlock Text="{Binding HeadDisplayText}"
                                        FontSize="14"
@@ -132,7 +122,6 @@
                                        IsVisible="{Binding HasHead}"/>
 						</StackPanel>
 
-						<!-- Кнопка очистить -->
 						<Button Grid.Column="2"
                                 Classes="IconButton Small"
                                 Command="{Binding ClearHeadCommand}"
@@ -144,7 +133,6 @@
                                       Foreground="{DynamicResource DangerBrush}"/>
 						</Button>
 
-						<!-- Кнопка выбрать -->
 						<Button Grid.Column="3"
                                 Classes="IconButton"
                                 Command="{Binding SelectHeadCommand}"
@@ -157,13 +145,11 @@
 				</Border>
 			</StackPanel>
 
-			<!-- Информация об отделе (только для существующих) -->
 			<Border Background="{DynamicResource InfoBg}"
                     CornerRadius="8"
                     Padding="12"
                     IsVisible="{Binding !IsNewDepartment}">
 				<StackPanel Spacing="8">
-					<!-- Количество сотрудников -->
 					<Grid ColumnDefinitions="Auto,*,Auto">
 						<PathIcon Grid.Column="0"
                                   Data="{StaticResource PersonIcon}"
@@ -180,7 +166,6 @@
                                    FontWeight="SemiBold"/>
 					</Grid>
 
-					<!-- Предупреждение о дочерних отделах -->
 					<Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasChildren}">
 						<PathIcon Grid.Column="0"
                                   Data="{StaticResource WarningIcon}"
@@ -195,7 +180,6 @@
 				</StackPanel>
 			</Border>
 
-			<!-- Сообщение об ошибке -->
 			<Border Background="{DynamicResource DangerBg}"
                     CornerRadius="8"
                     Padding="12"
@@ -214,7 +198,6 @@
 				</Grid>
 			</Border>
 
-			<!-- Сообщение об успехе -->
 			<Border Background="{DynamicResource SuccessBg}"
                     CornerRadius="8"
                     Padding="12"
@@ -233,13 +216,10 @@
 				</Grid>
 			</Border>
 
-			<!-- Разделитель -->
 			<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="-24,0"/>
 
-			<!-- Кнопки действий -->
 			<Grid ColumnDefinitions="Auto,*,Auto,Auto">
 
-				<!-- Кнопка удаления (только для существующих отделов) -->
 				<Button Grid.Column="0"
                         Classes="DialogDanger"
                         Command="{Binding DeleteCommand}"
@@ -253,17 +233,14 @@
 					</StackPanel>
 				</Button>
 
-				<!-- Спейсер -->
 				<Border Grid.Column="1"/>
 
-				<!-- Отмена -->
 				<Button Grid.Column="2"
                         Content="Отмена"
                         Classes="DialogOutline"
                         Command="{Binding CancelCommand}"
                         Margin="0,0,10,0"/>
 
-				<!-- Сохранить -->
 				<Button Grid.Column="3"
                         Classes="DialogAccent"
                         Command="{Binding SaveCommand}"

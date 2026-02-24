@@ -16,16 +16,16 @@ namespace MessengerAPI.Services.Chat;
 
 public interface IChatService
 {
-    Task<Result<List<ChatDTO>>> GetUserChatsAsync(int userId);
-    Task<Result<ChatDTO>> GetChatForUserAsync(int chatId, int userId);
-    Task<Result<List<ChatDTO>>> GetUserDialogsAsync(int userId);
-    Task<Result<List<ChatDTO>>> GetUserGroupsAsync(int userId);
-    Task<Result<ChatDTO>> GetContactChatAsync(int userId, int contactUserId);
+    Task<Result<List<ChatDto>>> GetUserChatsAsync(int userId);
+    Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId);
+    Task<Result<List<ChatDto>>> GetUserDialogsAsync(int userId);
+    Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId);
+    Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId);
 
     Task<List<UserDTO>> GetChatMembersAsync(int chatId);
 
-    Task<Result<ChatDTO>> CreateChatAsync(ChatDTO dto);
-    Task<ChatDTO> UpdateChatAsync(int chatId, int userId, UpdateChatDTO dto);
+    Task<Result<ChatDto>> CreateChatAsync(ChatDto dto);
+    Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
     Task<Result> DeleteChatAsync(int chatId, int userId);
     Task<string> UploadChatAvatarAsync(int chatId, IFormFile file);
 
@@ -61,11 +61,11 @@ public class ChatService(
 
     #region Get Chats
 
-    public async Task<Result<List<ChatDTO>>> GetUserChatsAsync(int userId)
+    public async Task<Result<List<ChatDto>>> GetUserChatsAsync(int userId)
     {
         var chatIds = await accessControl.GetUserChatIdsAsync(userId);
         if (chatIds.Count == 0)
-            return Result<List<ChatDTO>>.Success([]);
+            return Result<List<ChatDto>>.Success([]);
 
         var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id))
             .GroupJoin(
@@ -97,7 +97,7 @@ public class ChatService(
 
         var result = chatsData.ConvertAll(item =>
         {
-            var dto = new ChatDTO
+            var dto = new ChatDto
             {
                 Id = item.Chat.Id,
                 Type = item.Chat.Type,
@@ -127,19 +127,19 @@ public class ChatService(
             .OrderByDescending(c => c.UnreadCount > 0)
             .ThenByDescending(c => c.LastMessageDate).ToList();
 
-        return Result<List<ChatDTO>>.Success(sorted);
+        return Result<List<ChatDto>>.Success(sorted);
     }
 
-    public async Task<Result<ChatDTO>> GetChatForUserAsync(int chatId, int userId)
+    public async Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId)
     {
         await accessControl.EnsureIsMemberAsync(userId, chatId);
 
         var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
-            return Result<ChatDTO>.Failure($"Чат с ID {chatId} не найден");
+            return Result<ChatDto>.Failure($"Чат с ID {chatId} не найден");
 
-        var dto = new ChatDTO
+        var dto = new ChatDto
         {
             Id = chat.Id,
             Type = chat.Type,
@@ -162,10 +162,10 @@ public class ChatService(
             dto.Avatar = urlBuilder.BuildUrl(chat.Avatar);
         }
 
-        return Result<ChatDTO>.Success(dto);
+        return Result<ChatDto>.Success(dto);
     }
 
-    public async Task<Result<List<ChatDTO>>> GetUserDialogsAsync(int userId)
+    public async Task<Result<List<ChatDto>>> GetUserDialogsAsync(int userId)
     {
         var allChatsResult = await GetUserChatsAsync(userId);
         if (allChatsResult.IsFailure)
@@ -173,10 +173,10 @@ public class ChatService(
 
         var dialogs = allChatsResult.Value!.Where(c => c.Type == ChatType.Contact).ToList();
 
-        return Result<List<ChatDTO>>.Success(dialogs);
+        return Result<List<ChatDto>>.Success(dialogs);
     }
 
-    public async Task<Result<List<ChatDTO>>> GetUserGroupsAsync(int userId)
+    public async Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId)
     {
         var allChatsResult = await GetUserChatsAsync(userId);
         if (allChatsResult.IsFailure)
@@ -184,10 +184,10 @@ public class ChatService(
 
         var groups = allChatsResult.Value!.Where(c => c.Type != ChatType.Contact).ToList();
 
-        return Result<List<ChatDTO>>.Success(groups);
+        return Result<List<ChatDto>>.Success(groups);
     }
 
-    public async Task<Result<ChatDTO>> GetContactChatAsync(int userId, int contactUserId)
+    public async Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId)
     {
         var chat = await _context.Chats
             .Include(c => c.ChatMembers)
@@ -197,7 +197,7 @@ public class ChatService(
             .FirstOrDefaultAsync();
 
         if (chat is null)
-            return Result<ChatDTO>.Failure("Диалог не найден");
+            return Result<ChatDto>.Failure("Диалог не найден");
 
         var dto = chat.ToDto(urlBuilder);
 
@@ -208,7 +208,7 @@ public class ChatService(
             dto.Avatar = partner.Value.AvatarUrl;
         }
 
-        return Result<ChatDTO>.Success(dto);
+        return Result<ChatDto>.Success(dto);
     }
 
     #endregion
@@ -244,10 +244,10 @@ public class ChatService(
 
     #region Create / Update / Delete
 
-    public async Task<Result<ChatDTO>> CreateChatAsync(ChatDTO dto)
+    public async Task<Result<ChatDto>> CreateChatAsync(ChatDto dto)
     {
         if (dto.CreatedById <= 0)
-            return Result<ChatDTO>.Failure("Некорректный ID создателя");
+            return Result<ChatDto>.Failure("Некорректный ID создателя");
 
         int? contactUserId = null;
         if (dto.Type == ChatType.Contact && int.TryParse(dto.Name?.Trim(), out var parsedContactId))
@@ -257,16 +257,16 @@ public class ChatService(
             var contactExists = await _context.Users
                 .AnyAsync(u => u.Id == contactUserId);
             if (!contactExists)
-                return Result<ChatDTO>.Failure("Указанный собеседник не найден");
+                return Result<ChatDto>.Failure("Указанный собеседник не найден");
 
             var existingChat = await FindExistingContactChatAsync(
                 dto.CreatedById, contactUserId.Value);
             if (existingChat is not null)
-                return Result<ChatDTO>.Failure("Диалог с этим пользователем уже существует");
+                return Result<ChatDto>.Failure("Диалог с этим пользователем уже существует");
         }
         else if (dto.Type != ChatType.Contact && string.IsNullOrWhiteSpace(dto.Name))
         {
-            return Result<ChatDTO>.Failure("Название чата обязательно");
+            return Result<ChatDto>.Failure("Название чата обязательно");
         }
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -312,7 +312,7 @@ public class ChatService(
 
             _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
 
-            return Result<ChatDTO>.Success(new ChatDTO
+            return Result<ChatDto>.Success(new ChatDto
             {
                 Id = chat.Id,
                 Name = chat.Name,
@@ -327,7 +327,7 @@ public class ChatService(
         }
     }
 
-    public async Task<ChatDTO> UpdateChatAsync(int chatId, int userId, UpdateChatDTO dto)
+    public async Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto)
     {
         await accessControl.EnsureIsAdminAsync(userId, chatId);
 
@@ -353,7 +353,7 @@ public class ChatService(
 
         _logger.LogInformation("Чат {ChatId} обновлён пользователем {UserId}", chatId, userId);
 
-        return new ChatDTO
+        return new ChatDto
         {
             Id = chat.Id,
             Name = chat.Name,

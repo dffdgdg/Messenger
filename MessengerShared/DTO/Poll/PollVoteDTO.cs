@@ -1,6 +1,6 @@
-﻿namespace MessengerShared.DTO.Poll;
+﻿namespace MessengerShared.Dto.Poll;
 
-public class PollVoteDTO
+public class PollVoteDto
 {
     public int PollId { get; set; }
     public int UserId { get; set; }

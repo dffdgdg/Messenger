@@ -8,9 +8,6 @@
              x:DataType="vmChat:MessageFileViewModel">
 
     <UserControl.Styles>
-        <!-- ═══════════════════════════════════════════════════════
-             ФАЙЛОВОЕ ВЛОЖЕНИЕ
-             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.FileAttachment">
             <Setter Property="Background" Value="#08000000"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -35,9 +32,6 @@
             <Setter Property="Background" Value="{DynamicResource Accent}"/>
         </Style>
 
-        <!-- ═══════════════════════════════════════════════════════
-             ИЗОБРАЖЕНИЕ
-             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.ImageAttachment">
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="ClipToBounds" Value="True"/>
@@ -95,9 +89,6 @@
             <Setter Property="Background" Value="#AA000000"/>
         </Style>
 
-        <!-- ═══════════════════════════════════════════════════════
-             КНОПКИ ДЕЙСТВИЙ ДЛЯ ФАЙЛА
-             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Button.FileActionButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -120,9 +111,6 @@
             <Setter Property="Background" Value="#18000000"/>
         </Style>
 
-        <!-- ═══════════════════════════════════════════════════════
-             ОШИБКА
-             ═══════════════════════════════════════════════════════ -->
         <Style Selector="Border.FileError">
             <Setter Property="Background" Value="#15FF4444"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -137,9 +125,6 @@
             <Setter Property="Opacity" Value="0.9"/>
         </Style>
 
-        <!-- ═══════════════════════════════════════════════════════
-             ПРОГРЕСС-БАР
-             ═══════════════════════════════════════════════════════ -->
         <Style Selector="ProgressBar.FileDownloadProgress">
             <Setter Property="Height" Value="3"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
@@ -152,16 +137,12 @@
     </UserControl.Styles>
 
     <Grid>
-        <!-- ═══════════════════════════════════════════════════════
-             ИЗОБРАЖЕНИЕ
-             ═══════════════════════════════════════════════════════ -->
         <Border Classes="ImageAttachment"
                 HorizontalAlignment="Left"
                 IsVisible="{Binding IsImage}"
                 AutomationProperties.Name="{Binding FileName}"
                 AutomationProperties.HelpText="Вложенное изображение">
             <Grid>
-                <!-- Placeholder -->
                 <Border Classes="ImagePlaceholder">
                     <StackPanel HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -185,7 +166,6 @@
                 <Image Stretch="Uniform"
                        asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"/>
 
-                <!-- Overlay при наведении -->
                 <Border Classes="ImageOverlay">
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Center"
@@ -221,9 +201,6 @@
             </Grid>
         </Border>
 
-        <!-- ═══════════════════════════════════════════════════════
-             ФАЙЛ
-             ═══════════════════════════════════════════════════════ -->
         <Border Classes="FileAttachment"
                 HorizontalAlignment="Left"
                 IsVisible="{Binding !IsImage}"
@@ -231,7 +208,6 @@
                 AutomationProperties.HelpText="Вложенный файл">
             <Grid RowDefinitions="Auto,Auto">
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                    <!-- Иконка файла -->
                     <Border Grid.Column="0" Classes="FileIcon">
                         <TextBlock Text="{Binding FileIcon}"
                                    FontSize="18"
@@ -239,7 +215,6 @@
                                    VerticalAlignment="Center"/>
                     </Border>
 
-                    <!-- Информация о файле -->
                     <StackPanel Grid.Column="1"
                                 Margin="10,0,8,0"
                                 VerticalAlignment="Center"
@@ -268,7 +243,6 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Кнопки действий -->
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center"
@@ -299,7 +273,6 @@
                             </Panel>
                         </Button>
 
-                        <!-- Прогресс загрузки -->
                         <Grid Width="32" Height="32"
                               IsVisible="{Binding IsDownloading}">
                             <shared:CircularProgress Value="{Binding DownloadProgress}"
@@ -321,7 +294,6 @@
                             </Button>
                         </Grid>
 
-                        <!-- Открыть файл -->
                         <Button Classes="FileActionButton"
                                 Command="{Binding OpenFileCommand}"
                                 IsVisible="{Binding IsDownloaded}"
@@ -342,7 +314,6 @@
                              Value="{Binding DownloadProgress}"
                              IsVisible="{Binding IsDownloading}"/>
 
-                <!-- Ошибка загрузки -->
                 <Border Grid.Row="1"
                         Classes="FileError"
                         IsVisible="{Binding HasError}">

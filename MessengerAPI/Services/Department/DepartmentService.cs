@@ -3,8 +3,8 @@ using MessengerAPI.Configuration;
 using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -12,12 +12,12 @@ namespace MessengerAPI.Services.Department
 {
     public interface IDepartmentService
     {
-        Task<Result<List<DepartmentDTO>>> GetDepartmentsAsync(CancellationToken ct = default);
-        Task<Result<DepartmentDTO>> GetDepartmentAsync(int id, CancellationToken ct = default);
-        Task<Result<DepartmentDTO>> CreateDepartmentAsync(DepartmentDTO dto, CancellationToken ct = default);
-        Task<Result> UpdateDepartmentAsync(int id, DepartmentDTO dto, CancellationToken ct = default);
+        Task<Result<List<DepartmentDto>>> GetDepartmentsAsync(CancellationToken ct = default);
+        Task<Result<DepartmentDto>> GetDepartmentAsync(int id, CancellationToken ct = default);
+        Task<Result<DepartmentDto>> CreateDepartmentAsync(DepartmentDto dto, CancellationToken ct = default);
+        Task<Result> UpdateDepartmentAsync(int id, DepartmentDto dto, CancellationToken ct = default);
         Task<Result> DeleteDepartmentAsync(int id, CancellationToken ct = default);
-        Task<Result<List<UserDTO>>> GetDepartmentMembersAsync(int departmentId, CancellationToken ct = default);
+        Task<Result<List<UserDto>>> GetDepartmentMembersAsync(int departmentId, CancellationToken ct = default);
         Task<Result> AddUserToDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default);
         Task<Result> RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default);
         Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default);
@@ -28,7 +28,7 @@ namespace MessengerAPI.Services.Department
     {
         private readonly MessengerSettings _settings = settings.Value;
 
-        public async Task<Result<List<DepartmentDTO>>> GetDepartmentsAsync(CancellationToken ct = default)
+        public async Task<Result<List<DepartmentDto>>> GetDepartmentsAsync(CancellationToken ct = default)
         {
             var departments = await _context.Departments
                 .Include(d => d.Head)
@@ -41,7 +41,7 @@ namespace MessengerAPI.Services.Department
                 .Select(g => new { DepartmentId = g.Key!.Value, Count = g.Count() })
                 .ToDictionaryAsync(x => x.DepartmentId, x => x.Count, ct);
 
-            var result = departments.ConvertAll(d => new DepartmentDTO
+            var result = departments.ConvertAll(d => new DepartmentDto
             {
                 Id = d.Id,
                 Name = d.Name,
@@ -51,10 +51,10 @@ namespace MessengerAPI.Services.Department
                 UserCount = userCounts.GetValueOrDefault(d.Id, 0)
             });
 
-            return Result<List<DepartmentDTO>>.Success(result);
+            return Result<List<DepartmentDto>>.Success(result);
         }
 
-        public async Task<Result<DepartmentDTO>> GetDepartmentAsync(int id, CancellationToken ct = default)
+        public async Task<Result<DepartmentDto>> GetDepartmentAsync(int id, CancellationToken ct = default)
         {
             var department = await _context.Departments
                 .Include(d => d.Head)
@@ -62,11 +62,11 @@ namespace MessengerAPI.Services.Department
                 .FirstOrDefaultAsync(d => d.Id == id, ct);
 
             if (department is null)
-                return Result<DepartmentDTO>.Failure($"Отдел с ID {id} не найден");
+                return Result<DepartmentDto>.Failure($"Отдел с ID {id} не найден");
 
             var userCount = await _context.Users.CountAsync(u => u.DepartmentId == id, ct);
 
-            return Result<DepartmentDTO>.Success(new DepartmentDTO
+            return Result<DepartmentDto>.Success(new DepartmentDto
             {
                 Id = department.Id,
                 Name = department.Name,
@@ -77,23 +77,23 @@ namespace MessengerAPI.Services.Department
             });
         }
 
-        public async Task<Result<DepartmentDTO>> CreateDepartmentAsync(DepartmentDTO dto, CancellationToken ct = default)
+        public async Task<Result<DepartmentDto>> CreateDepartmentAsync(DepartmentDto dto, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
-                return Result<DepartmentDTO>.Failure("Название обязательно");
+                return Result<DepartmentDto>.Failure("Название обязательно");
 
             if (dto.ParentDepartmentId.HasValue)
             {
                 var parentExists = await _context.Departments.AnyAsync(d => d.Id == dto.ParentDepartmentId.Value, ct);
                 if (!parentExists)
-                    return Result<DepartmentDTO>.Failure("Родительский отдел не существует");
+                    return Result<DepartmentDto>.Failure("Родительский отдел не существует");
             }
 
             if (dto.Head.HasValue)
             {
                 var headExists = await _context.Users.AnyAsync(u => u.Id == dto.Head.Value, ct);
                 if (!headExists)
-                    return Result<DepartmentDTO>.Failure("Указанный пользователь не существует");
+                    return Result<DepartmentDto>.Failure("Указанный пользователь не существует");
             }
 
             var entity = new Model.Department
@@ -111,10 +111,10 @@ namespace MessengerAPI.Services.Department
             dto.Id = entity.Id;
             dto.UserCount = 0;
 
-            return Result<DepartmentDTO>.Success(dto);
+            return Result<DepartmentDto>.Success(dto);
         }
 
-        public async Task<Result> UpdateDepartmentAsync(int id, DepartmentDTO dto, CancellationToken ct = default)
+        public async Task<Result> UpdateDepartmentAsync(int id, DepartmentDto dto, CancellationToken ct = default)
         {
             var entity = await _context.Departments.FindAsync([id], ct);
             if (entity == null)
@@ -170,16 +170,16 @@ namespace MessengerAPI.Services.Department
             return Result.Success();
         }
 
-        public async Task<Result<List<UserDTO>>> GetDepartmentMembersAsync(int departmentId, CancellationToken ct = default)
+        public async Task<Result<List<UserDto>>> GetDepartmentMembersAsync(int departmentId, CancellationToken ct = default)
         {
             var exists = await _context.Departments.AnyAsync(d => d.Id == departmentId, ct);
             if (!exists)
-                return Result<List<UserDTO>>.Failure($"Отдел с ID {departmentId} не найден");
+                return Result<List<UserDto>>.Failure($"Отдел с ID {departmentId} не найден");
 
             var users = await _context.Users.Where(u => u.DepartmentId == departmentId)
                 .Include(u => u.Department).AsNoTracking().ToListAsync(ct);
 
-            var result = users.ConvertAll(u => new UserDTO
+            var result = users.ConvertAll(u => new UserDto
             {
                 Id = u.Id,
                 Username = u.Username,
@@ -192,7 +192,7 @@ namespace MessengerAPI.Services.Department
                 Department = u.Department?.Name
             });
 
-            return Result<List<UserDTO>>.Success(result);
+            return Result<List<UserDto>>.Success(result);
         }
 
         public async Task<Result> AddUserToDepartmentAsync(int departmentId, int userId, int requesterId,CancellationToken ct = default)

@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Infrastructure;
-using MessengerShared.DTO.Message;
+using MessengerShared.Dto.Message;
 using Microsoft.EntityFrameworkCore;
 using NAudio.Wave;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ namespace MessengerAPI.Services.Messaging;
 public interface ITranscriptionService
 {
     Task<Result> TranscribeAsync(int messageId, CancellationToken ct = default);
-    Task<Result<VoiceTranscriptionDTO>> GetTranscriptionAsync(int messageId, CancellationToken ct = default);
+    Task<Result<VoiceTranscriptionDto>> GetTranscriptionAsync(int messageId, CancellationToken ct = default);
     Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default);
 }
 
@@ -99,7 +99,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
             await hubNotifier.SendToChatAsync(
                 message.ChatId, "TranscriptionCompleted",
-                new VoiceTranscriptionDTO
+                new VoiceTranscriptionDto
                 {
                     MessageId = messageId,
                     ChatId = message.ChatId,
@@ -125,7 +125,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         }
     }
 
-    public async Task<Result<VoiceTranscriptionDTO>> GetTranscriptionAsync(int messageId, CancellationToken ct = default)
+    public async Task<Result<VoiceTranscriptionDto>> GetTranscriptionAsync(int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
@@ -133,7 +133,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         var data = await context.Messages
             .AsNoTracking()
             .Where(m => m.Id == messageId && m.IsVoiceMessage)
-            .Select(m => new VoiceTranscriptionDTO
+            .Select(m => new VoiceTranscriptionDto
             {
                 MessageId = m.Id,
                 ChatId = m.ChatId,
@@ -143,9 +143,9 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             .FirstOrDefaultAsync(ct);
 
         if (data is null)
-            return Result<VoiceTranscriptionDTO>.Failure("Голосовое сообщение не найдено");
+            return Result<VoiceTranscriptionDto>.Failure("Голосовое сообщение не найдено");
 
-        return Result<VoiceTranscriptionDTO>.Success(data);
+        return Result<VoiceTranscriptionDto>.Success(data);
     }
 
     public async Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default)
@@ -285,7 +285,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         await context.SaveChangesAsync(ct);
 
         await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
-            new VoiceTranscriptionDTO
+            new VoiceTranscriptionDto
             {
                 MessageId = message.Id,
                 ChatId = message.ChatId,
@@ -299,7 +299,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         await context.SaveChangesAsync(CancellationToken.None);
 
         await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
-            new VoiceTranscriptionDTO
+            new VoiceTranscriptionDto
             {
                 MessageId = message.Id,
                 ChatId = message.ChatId,

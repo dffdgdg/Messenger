@@ -33,7 +33,6 @@
         <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
     </Style>
 
-    <!-- ═══ Nav Arrow Buttons ═══ -->
     <Style Selector="Button.NavArrowButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -55,7 +54,6 @@
         </Setter>
     </Style>
 
-    <!-- фон через ContentPresenter, чтобы Avalonia не перебивал -->
     <Style Selector="Button.NavArrowButton /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="CornerRadius" Value="8"/>
@@ -88,10 +86,8 @@
 
     <Grid ColumnDefinitions="73,*">
 
-        <!-- Левая навигационная панель -->
         <DockPanel Grid.Column="0" Width="67" LastChildFill="False">
 
-            <!-- Верхняя часть -->
             <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Spacing="4">
 				<TextBlock VerticalAlignment="Center" Width="150" 
            Padding="10,15,0,15"
@@ -125,7 +121,6 @@
                                  ConverterParameter=Admin}"/>
             </StackPanel>
 
-            <!-- Нижняя часть -->
             <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,10"
                         HorizontalAlignment="Center">
 
@@ -155,17 +150,14 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- Правая часть: навигация + поиск + help + контент -->
         <DockPanel Grid.Column="1">
 
-            <!-- Верхняя панель: навигация + поиск -->
 <StackPanel DockPanel.Dock="Top"
             Orientation="Horizontal"
             HorizontalAlignment="Center"
             Spacing="6"
             Margin="0,8,0,0">
 
-    <!-- ===== Назад ===== -->
     <Button Classes="NavArrowButton"
             ToolTip.Tip="Назад">
         <Path Data="M15.707 4.293a1 1 0 0 1 0 1.414L9.414 12l6.293 6.293a1 1 0 0 1-1.414 1.414l-7-7a1 1 0 0 1 0-1.414l7-7a1 1 0 0 1 1.414 0Z"
@@ -174,7 +166,6 @@
               Stretch="Uniform"/>
     </Button>
 
-    <!-- ===== Вперёд ===== -->
     <Button Classes="NavArrowButton"
             ToolTip.Tip="Вперёд">
         <Path Data="M8.293 4.293a1 1 0 0 0 0 1.414L14.586 12l-6.293 6.293a1 1 0 1 0 1.414 1.414l7-7a1 1 0 0 0 0-1.414l-7-7a1 1 0 0 0-1.414 0Z"
@@ -183,7 +174,6 @@
               Stretch="Uniform"/>
     </Button>
 
-    <!-- ===== Поиск ===== -->
     <Border Classes="SearchContainer"
             Width="420"
             Padding="4,0">
@@ -219,7 +209,6 @@
     </Border>
 </StackPanel>
 
-            <!-- Контент -->
             <Border Background="{DynamicResource SecondaryBG}"
                     Margin="0,8,9,9"
                     CornerRadius="8">
@@ -227,5 +216,4 @@
             </Border>
         </DockPanel>
     </Grid>
-
 </UserControl>

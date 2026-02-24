@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Poll;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -29,7 +29,7 @@ public partial class PollDialogViewModel : DialogBaseViewModel
     [ObservableProperty]
     private bool _isAnonymous = true;
 
-    public Action<CreatePollDTO>? CreateAction { get; set; }
+    public Action<CreatePollDto>? CreateAction { get; set; }
 
     public bool CanAddOption => Options.Count < MaxOptions;
     public bool CanRemoveOption => Options.Count > MinOptions;
@@ -134,13 +134,13 @@ public partial class PollDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        CreateAction?.Invoke(new CreatePollDTO
+        CreateAction?.Invoke(new CreatePollDto
         {
             ChatId = _chatId,
             Question = Question.Trim(),
             AllowsMultipleAnswers = AllowsMultipleAnswers,
             IsAnonymous = IsAnonymous,
-            Options = [.. Options.Select((o, i) => new CreatePollOptionDTO
+            Options = [.. Options.Select((o, i) => new CreatePollOptionDto
             {
                 Text = o.Text.Trim(),
                 Position = i

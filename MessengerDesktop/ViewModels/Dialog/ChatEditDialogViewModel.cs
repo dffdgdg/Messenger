@@ -25,7 +25,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private readonly IApiClientService _apiClient;
     private readonly int _currentUserId;
-    private readonly ChatDTO? _originalChat;
+    private readonly ChatDto? _originalChat;
     private readonly List<UserDTO>? _existingMembers;
 
     private MemoryStream? _avatarStream;
@@ -50,11 +50,11 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
     public bool CanSave => !string.IsNullOrWhiteSpace(Name) && SelectedUsersCount >= 1;
 
-    public Func<ChatDTO, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
+    public Func<ChatDto, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
 
     public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null) { }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDTO? chat,List<UserDTO>? existingMembers = null)
+    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDto? chat,List<UserDTO>? existingMembers = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _currentUserId = currentUserId;
@@ -307,7 +307,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
         await SafeExecuteAsync(async () =>
         {
-            var chatDto = new ChatDTO
+            var chatDto = new ChatDto
             {
                 Id = _originalChat?.Id ?? 0,
                 Name = Name.Trim(),

@@ -1,5 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.DTO.Chat;
+using MessengerShared.Dto.Chat;
 using MessengerShared.Enum;
 using System;
 
@@ -7,7 +7,7 @@ namespace MessengerDesktop.ViewModels.Chats;
 
 public partial class ChatListItemViewModel : ObservableObject
 {
-    public ChatListItemViewModel(ChatDTO dto)
+    public ChatListItemViewModel(ChatDto dto)
     {
         if (dto is null) throw new ArgumentNullException(nameof(dto));
 
@@ -44,7 +44,7 @@ public partial class ChatListItemViewModel : ObservableObject
     [ObservableProperty]
     private int _unreadCount;
 
-    public ChatDTO ToDto() => new()
+    public ChatDto ToDto() => new()
     {
         Id = Id,
         Name = Name,
@@ -57,7 +57,7 @@ public partial class ChatListItemViewModel : ObservableObject
         UnreadCount = UnreadCount
     };
 
-    public void Apply(ChatDTO dto)
+    public void Apply(ChatDto dto)
     {
         Name = dto.Name;
         LastMessageDate = dto.LastMessageDate;

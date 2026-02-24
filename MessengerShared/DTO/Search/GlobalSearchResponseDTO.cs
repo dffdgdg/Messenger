@@ -1,11 +1,11 @@
-﻿using MessengerShared.DTO.Chat;
+﻿using MessengerShared.Dto.Chat;
 
-namespace MessengerShared.DTO.Search;
+namespace MessengerShared.Dto.Search;
 
-public class GlobalSearchResponseDTO
+public class GlobalSearchResponseDto
 {
-    public List<ChatDTO> Chats { get; set; } = [];
-    public List<GlobalSearchMessageDTO> Messages { get; set; } = [];
+    public List<ChatDto> Chats { get; set; } = [];
+    public List<GlobalSearchMessageDto> Messages { get; set; } = [];
     public int TotalChatsCount { get; set; }
     public int TotalMessagesCount { get; set; }
     public int CurrentPage { get; set; }

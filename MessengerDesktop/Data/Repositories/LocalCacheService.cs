@@ -1,8 +1,8 @@
 ﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Mappers;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -22,13 +22,13 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     //  Messages
     // ═══════════════════════════════════════════════════════
 
-    public async Task UpsertMessageAsync(MessageDTO message)
+    public async Task UpsertMessageAsync(MessageDto message)
     {
         var entity = message.ToEntity();
         await _messageRepo.UpsertAsync(entity);
     }
 
-    public async Task UpsertMessagesAsync(IEnumerable<MessageDTO> messages)
+    public async Task UpsertMessagesAsync(IEnumerable<MessageDto> messages)
     {
         var entities = messages.Select(m => m.ToEntity()).ToList();
         if (entities.Count == 0) return;
@@ -122,7 +122,7 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         };
     }
 
-    public async Task<List<MessageDTO>> SearchMessagesLocalAsync(string query, int limit = 50)
+    public async Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50)
     {
         var cached = await _messageRepo.SearchAsync(query, limit);
         return cached.ConvertAll(m => m.ToDto());
@@ -191,7 +191,7 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     //  Users
     // ═══════════════════════════════════════════════════════
 
-    public async Task UpsertUsersAsync(IEnumerable<UserDTO> users)
+    public async Task UpsertUsersAsync(IEnumerable<UserDto> users)
     {
         var entities = users.Select(u => u.ToEntity()).ToList();
         if (entities.Count == 0) return;

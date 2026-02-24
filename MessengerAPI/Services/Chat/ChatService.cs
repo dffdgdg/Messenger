@@ -6,8 +6,8 @@ using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -22,7 +22,7 @@ public interface IChatService
     Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId);
     Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId);
 
-    Task<List<UserDTO>> GetChatMembersAsync(int chatId);
+    Task<List<UserDto>> GetChatMembersAsync(int chatId);
 
     Task<Result<ChatDto>> CreateChatAsync(ChatDto dto);
     Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
@@ -215,7 +215,7 @@ public class ChatService(
 
     #region Members
 
-    public async Task<List<UserDTO>> GetChatMembersAsync(int chatId)
+    public async Task<List<UserDto>> GetChatMembersAsync(int chatId)
     {
         var members = await _context.ChatMembers
             .Where(cm => cm.ChatId == chatId)
@@ -226,7 +226,7 @@ public class ChatService(
         var memberIds = members.ConvertAll(m => m.UserId);
         var onlineIds = onlineService.FilterOnline(memberIds);
 
-        return [.. members.Select(m => new UserDTO
+        return [.. members.Select(m => new UserDto
         {
             Id = m.User.Id,
             Username = m.User.Username,

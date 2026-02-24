@@ -2,9 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
              xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:shared="using:MessengerShared.DTO"
-             xmlns:user="using:MessengerShared.DTO.User"
-             xmlns:userShared="using:MessengerShared.DTO"
+             xmlns:shared="using:MessengerShared.Dto"
+             xmlns:user="using:MessengerShared.Dto.User"
+             xmlns:userShared="using:MessengerShared.Dto"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Views.ChatInfoPanel"
              x:DataType="vm:ChatViewModel"
@@ -188,7 +188,7 @@
 
 								<ItemsControl ItemsSource="{Binding Members}">
 									<ItemsControl.ItemTemplate>
-										<DataTemplate x:DataType="user:UserDTO">
+										<DataTemplate x:DataType="user:UserDto">
 											<Button Classes="MemberItem"
                                                     Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProfileCommand}"
                                                     CommandParameter="{Binding Id}">

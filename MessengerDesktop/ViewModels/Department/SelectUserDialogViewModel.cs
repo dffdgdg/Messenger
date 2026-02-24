@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -10,9 +10,9 @@ namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class SelectUserDialogViewModel : DialogBaseViewModel
 {
-    private readonly TaskCompletionSource<UserDTO?> _tcs = new();
+    private readonly TaskCompletionSource<UserDto?> _tcs = new();
 
-    public SelectUserDialogViewModel(ObservableCollection<UserDTO> users, string title)
+    public SelectUserDialogViewModel(ObservableCollection<UserDto> users, string title)
     {
         AllUsers = users;
         Title = title;
@@ -21,7 +21,7 @@ public partial class SelectUserDialogViewModel : DialogBaseViewModel
     public new string Title { get; }
 
     [ObservableProperty]
-    private ObservableCollection<UserDTO> _allUsers = [];
+    private ObservableCollection<UserDto> _allUsers = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredUsers))]
@@ -29,9 +29,9 @@ public partial class SelectUserDialogViewModel : DialogBaseViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanConfirm))]
-    private UserDTO? _selectedUser;
+    private UserDto? _selectedUser;
 
-    public ObservableCollection<UserDTO> FilteredUsers
+    public ObservableCollection<UserDto> FilteredUsers
     {
         get
         {
@@ -43,16 +43,16 @@ public partial class SelectUserDialogViewModel : DialogBaseViewModel
                 u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
                 u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true);
 
-            return new ObservableCollection<UserDTO>(filtered);
+            return new ObservableCollection<UserDto>(filtered);
         }
     }
 
     public bool CanConfirm => SelectedUser != null;
 
-    public Task<UserDTO?> Result => _tcs.Task;
+    public Task<UserDto?> Result => _tcs.Task;
 
     [RelayCommand]
-    private void SelectUser(UserDTO user) => SelectedUser = user;
+    private void SelectUser(UserDto user) => SelectedUser = user;
 
     [RelayCommand]
     private void Confirm()

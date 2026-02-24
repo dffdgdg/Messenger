@@ -8,11 +8,11 @@ using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Poll;
-using MessengerShared.DTO.Search;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Poll;
+using MessengerShared.Dto.Search;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -53,7 +53,7 @@ public partial class MainMenuViewModel : BaseViewModel
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<UserDTO> _allContacts = [];
+    private ObservableCollection<UserDto> _allContacts = [];
 
     [ObservableProperty]
     private ObservableCollection<ChatDto> _userChats = [];
@@ -211,7 +211,7 @@ public partial class MainMenuViewModel : BaseViewModel
     /// <summary>
     /// Переключиться на нужную вкладку и открыть сообщение
     /// </summary>
-    public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDTO message)
+    public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto message)
     {
         bool isGroupChat = message.ChatType == ChatType.Chat || message.ChatType == ChatType.Department;
         int targetIndex = isGroupChat ? 1 : 5;
@@ -236,7 +236,7 @@ public partial class MainMenuViewModel : BaseViewModel
         await targetViewModel.OpenChatByIdAsync(message.ChatId, message.Id);
     }
     [RelayCommand]
-    public async Task OpenOrCreateChatAsync(UserDTO user)
+    public async Task OpenOrCreateChatAsync(UserDto user)
     {
         SetActiveMenu(5);
 
@@ -268,7 +268,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
     public async Task ShowUserProfileAsync(int userId) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDTO>(ApiEndpoints.User.ById(userId));
+        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(userId));
         if (result.Success && result.Data != null)
         {
             var currentUserId = _authManager.Session.UserId;
@@ -309,9 +309,9 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
 
-    private async Task CreatePollAsync(CreatePollDTO dto) => await SafeExecuteAsync(async () =>
+    private async Task CreatePollAsync(CreatePollDto dto) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.PostAsync<CreatePollDTO, MessageDTO>(ApiEndpoints.Poll.Create, dto);
+        var result = await _apiClient.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Poll.Create, dto);
 
         if (result.Success)
             SuccessMessage = "Опрос создан";
@@ -321,14 +321,14 @@ public partial class MainMenuViewModel : BaseViewModel
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
-        var usersTask = _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll);
+        var usersTask = _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.User.GetAll);
         var chatsTask = _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chat.UserChats(UserId));
         await Task.WhenAll(usersTask, chatsTask);
         var usersResult = await usersTask;
         var chatsResult = await chatsTask;
         if (usersResult.Success && usersResult.Data != null)
         {
-            AllContacts = new ObservableCollection<UserDTO>(usersResult.Data.Where(u => u.Id != UserId));
+            AllContacts = new ObservableCollection<UserDto>(usersResult.Data.Where(u => u.Id != UserId));
         }
         if (chatsResult.Success && chatsResult.Data != null)
         {
@@ -392,7 +392,7 @@ public partial class MainMenuViewModel : BaseViewModel
     {
         try
         {
-            var membersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chat.Id));
+            var membersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chat.Members(chat.Id));
             var members = membersResult.Success ? membersResult.Data : null;
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
@@ -433,7 +433,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>(ApiEndpoints.Chat.Avatar(createdChat.Id),avatarStream,avatarFileName,contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chat.Avatar(createdChat.Id),avatarStream,avatarFileName,contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -479,7 +479,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             var updatedChat = updateResult.Data;
 
-            var currentMembersResult = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Chat.Members(chatDto.Id));
+            var currentMembersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chat.Members(chatDto.Id));
             var currentMemberIds = currentMembersResult.Data?.Select(m => m.Id).ToHashSet() ?? [];
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
@@ -497,7 +497,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDTO>(ApiEndpoints.Chat.Avatar(chatDto.Id),avatarStream,
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chat.Avatar(chatDto.Id),avatarStream,
                     avatarFileName,contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)

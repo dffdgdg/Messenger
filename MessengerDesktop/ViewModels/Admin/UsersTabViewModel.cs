@@ -5,8 +5,8 @@ using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Admin;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,7 +21,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
     [ObservableProperty]
-    private ObservableCollection<UserDTO> _users = [];
+    private ObservableCollection<UserDto> _users = [];
 
     [ObservableProperty]
     private ObservableCollection<DepartmentGroup> _groupedUsers = [];
@@ -30,11 +30,11 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     [NotifyPropertyChangedFor(nameof(FilteredGroups))]
     private string _searchQuery = string.Empty;
 
-    private IReadOnlyList<DepartmentDTO> _departments = [];
+    private IReadOnlyList<DepartmentDto> _departments = [];
 
     public IEnumerable<DepartmentGroup> FilteredGroups => ApplyFilter();
 
-    public void SetDepartments(IReadOnlyList<DepartmentDTO> departments)
+    public void SetDepartments(IReadOnlyList<DepartmentDto> departments)
     {
         _departments = departments;
         RebuildGroups();
@@ -42,11 +42,11 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
     public async Task LoadAsync() => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.Admin.Users);
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Admin.Users);
 
         if (result is { Success: true, Data: not null })
         {
-            Users = new ObservableCollection<UserDTO>(result.Data);
+            Users = new ObservableCollection<UserDto>(result.Data);
             RebuildGroups();
         }
         else
@@ -58,7 +58,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     [RelayCommand]
     private async Task Create()
     {
-        var userDialog = new UserEditDialogViewModel(null, new ObservableCollection<DepartmentDTO>(_departments));
+        var userDialog = new UserEditDialogViewModel(null, new ObservableCollection<DepartmentDto>(_departments));
 
         var tcs = new TaskCompletionSource<bool>();
 
@@ -66,7 +66,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var apiResult = await _apiClient.PostAsync<UserDTO>(ApiEndpoints.Admin.Users, createDto);
+                var apiResult = await _apiClient.PostAsync<UserDto>(ApiEndpoints.Admin.Users, createDto);
 
                 if (apiResult.Success)
                 {
@@ -93,9 +93,9 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     }
 
     [RelayCommand]
-    private async Task Edit(UserDTO user)
+    private async Task Edit(UserDto user)
     {
-        var userDialog = new UserEditDialogViewModel(user, new ObservableCollection<DepartmentDTO>(_departments));
+        var userDialog = new UserEditDialogViewModel(user, new ObservableCollection<DepartmentDto>(_departments));
 
         var tcs = new TaskCompletionSource<bool>();
 
@@ -103,7 +103,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var result = await _apiClient.PutAsync<UserDTO>(ApiEndpoints.User.ById(user.Id), updateDto);
+                var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.User.ById(user.Id), updateDto);
 
                 if (result.Success)
                 {
@@ -135,7 +135,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             var deptName = g.Key.HasValue ? _departments.FirstOrDefault(d => d.Id == g.Key)?.Name ?? "Неизвестный отдел" : "Без отдела";
 
-            return new DepartmentGroup(deptName, g.Key, new ObservableCollection<UserDTO>(g));
+            return new DepartmentGroup(deptName, g.Key, new ObservableCollection<UserDto>(g));
         }).OrderBy(g => g.DepartmentName);
 
         GroupedUsers = new ObservableCollection<DepartmentGroup>(groups);
@@ -143,7 +143,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     }
 
     [RelayCommand]
-    private async Task ToggleBan(UserDTO user)
+    private async Task ToggleBan(UserDto user)
     {
         var action = user.IsBanned ? "разблокировать" : "заблокировать";
         var confirmText = user.IsBanned ? "Разблокировать" : "Заблокировать";
@@ -180,10 +180,10 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         var query = SearchQuery.ToLowerInvariant();
 
         return GroupedUsers.Select(g => new DepartmentGroup(g.DepartmentName,g.DepartmentId,
-            new ObservableCollection<UserDTO>(g.Users.Where(u => MatchesSearch(u, query))))).Where(g => g.Users.Count > 0);
+            new ObservableCollection<UserDto>(g.Users.Where(u => MatchesSearch(u, query))))).Where(g => g.Users.Count > 0);
     }
 
-    private static bool MatchesSearch(UserDTO user, string query) =>
+    private static bool MatchesSearch(UserDto user, string query) =>
         user.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
         user.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
         user.Surname?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||

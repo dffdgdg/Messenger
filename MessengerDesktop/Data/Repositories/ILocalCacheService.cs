@@ -1,7 +1,7 @@
 ﻿using MessengerDesktop.Data.Entities;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ namespace MessengerDesktop.Data.Repositories;
 public class CachedMessagesResult
 {
     /// <summary>Сообщения в хронологическом порядке (старые → новые)</summary>
-    public List<MessageDTO> Messages { get; init; } = [];
+    public List<MessageDto> Messages { get; init; } = [];
 
     /// <summary>На сервере есть ещё более старые сообщения</summary>
     public bool HasMoreOlder { get; init; }
@@ -42,8 +42,8 @@ public interface ILocalCacheService
 {
     // ═══ Messages ═══
 
-    Task UpsertMessageAsync(MessageDTO message);
-    Task UpsertMessagesAsync(IEnumerable<MessageDTO> messages);
+    Task UpsertMessageAsync(MessageDto message);
+    Task UpsertMessagesAsync(IEnumerable<MessageDto> messages);
     Task MarkMessageDeletedAsync(int messageId);
 
     /// <summary>
@@ -62,7 +62,7 @@ public interface ILocalCacheService
     Task<CachedMessagesResult?> GetMessagesAroundAsync(int chatId, int messageId, int count);
 
     /// <summary>Полнотекстовый поиск по локальным сообщениям</summary>
-    Task<List<MessageDTO>> SearchMessagesLocalAsync(string query, int limit = 50);
+    Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50);
 
     // ═══ Chats ═══
 
@@ -83,7 +83,7 @@ public interface ILocalCacheService
 
     // ═══ Users ═══
 
-    Task UpsertUsersAsync(IEnumerable<UserDTO> users);
+    Task UpsertUsersAsync(IEnumerable<UserDto> users);
 
     // ═══ Maintenance ═══
 

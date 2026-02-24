@@ -9,9 +9,9 @@ using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Search;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Search;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -162,7 +162,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private async Task OpenSearchResult(GlobalSearchMessageDTO? searchResult)
+    private async Task OpenSearchResult(GlobalSearchMessageDto? searchResult)
     {
         if (searchResult == null) return;
 
@@ -294,7 +294,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     public bool CombinedIsInfoPanelVisible => CurrentChatViewModel?.IsInfoPanelOpen == true;
 
-    public async Task OpenOrCreateDialogWithUserAsync(UserDTO user)
+    public async Task OpenOrCreateDialogWithUserAsync(UserDto user)
     {
         await SafeExecuteAsync(async () =>
         {

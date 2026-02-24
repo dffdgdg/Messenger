@@ -6,9 +6,9 @@ using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Search;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Search;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,15 +17,15 @@ namespace MessengerAPI.Services.Messaging;
 
 public interface IMessageService
 {
-    Task<Result<MessageDTO>> CreateMessageAsync(MessageDTO dto);
-    Task<Result<MessageDTO>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO dto);
+    Task<Result<MessageDto>> CreateMessageAsync(MessageDto dto);
+    Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto);
     Task<Result> DeleteMessageAsync(int messageId, int userId);
-    Task<Result<PagedMessagesDTO>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize);
-    Task<Result<PagedMessagesDTO>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count);
-    Task<Result<PagedMessagesDTO>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count);
-    Task<Result<PagedMessagesDTO>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count);
-    Task<Result<SearchMessagesResponseDTO>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize);
-    Task<Result<GlobalSearchResponseDTO>> GlobalSearchAsync(int userId, string query, int page, int pageSize);
+    Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize);
+    Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count);
+    Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count);
+    Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count);
+    Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize);
+    Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize);
 }
 
 public class MessageService(
@@ -57,7 +57,7 @@ public class MessageService(
 
     #endregion
 
-    public async Task<Result<MessageDTO>> CreateMessageAsync(MessageDTO dto)
+    public async Task<Result<MessageDto>> CreateMessageAsync(MessageDto dto)
     {
         if (dto.ReplyToMessageId.HasValue)
         {
@@ -67,7 +67,7 @@ public class MessageService(
                 && m.IsDeleted != true);
 
             if (!replyExists)
-                return Result<MessageDTO>.Failure("Сообщение для ответа не найдено в этом чате");
+                return Result<MessageDto>.Failure("Сообщение для ответа не найдено в этом чате");
         }
 
         if (dto.ForwardedFromMessageId.HasValue)
@@ -77,7 +77,7 @@ public class MessageService(
                 && m.IsDeleted != true);
 
             if (!originalExists)
-                return Result<MessageDTO>.Failure("Оригинальное сообщение для пересылки не найдено");
+                return Result<MessageDto>.Failure("Оригинальное сообщение для пересылки не найдено");
         }
 
         var message = new Message
@@ -116,12 +116,12 @@ public class MessageService(
 
         _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}", message.Id, dto.ChatId);
 
-        return Result<MessageDTO>.Success(messageDto);
+        return Result<MessageDto>.Success(messageDto);
     }
 
     #region Get Messages
 
-    public async Task<Result<PagedMessagesDTO>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
+    public async Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
     {
         var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
@@ -137,7 +137,7 @@ public class MessageService(
 
         var messageDtos = messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse().ToList();
 
-        return Result<PagedMessagesDTO>.Success(new PagedMessagesDTO
+        return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
             Messages = messageDtos,
             CurrentPage = normalizedPage,
@@ -147,7 +147,7 @@ public class MessageService(
         });
     }
 
-    public async Task<Result<PagedMessagesDTO>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count)
     {
         var halfCount = count / 2;
 
@@ -177,7 +177,7 @@ public class MessageService(
         var hasNewer = await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestLoadedId
             && m.IsDeleted != true);
 
-        return Result<PagedMessagesDTO>.Success(new PagedMessagesDTO
+        return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
             Messages = messages,
             HasMoreMessages = hasOlder,
@@ -187,7 +187,7 @@ public class MessageService(
         });
     }
 
-    public async Task<Result<PagedMessagesDTO>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
     {
         var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id < messageId
                 && m.IsDeleted != true)
@@ -197,7 +197,7 @@ public class MessageService(
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
         var hasMore = await _context.Messages.AnyAsync(m =>m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true);
 
-        return Result<PagedMessagesDTO>.Success(new PagedMessagesDTO
+        return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
             Messages = [.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
             HasMoreMessages = hasMore,
@@ -207,7 +207,7 @@ public class MessageService(
         });
     }
 
-    public async Task<Result<PagedMessagesDTO>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
     {
         var messages = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
@@ -219,7 +219,7 @@ public class MessageService(
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
         var hasNewer = await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true);
 
-        return Result<PagedMessagesDTO>.Success(new PagedMessagesDTO
+        return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
             Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder))],
             HasMoreMessages = true,
@@ -231,30 +231,30 @@ public class MessageService(
 
     #endregion
 
-    public async Task<Result<MessageDTO>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDTO dto)
+    public async Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto)
     {
         var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
 
         if (message is null)
-            return Result<MessageDTO>.Failure($"Сообщение {messageId} не найдено");
+            return Result<MessageDto>.Failure($"Сообщение {messageId} не найдено");
 
         if (message.SenderId != userId)
-            return Result<MessageDTO>.Failure("Вы можете изменять только свои сообщения");
+            return Result<MessageDto>.Failure("Вы можете изменять только свои сообщения");
 
         if (message.IsDeleted == true)
-            return Result<MessageDTO>.Failure("Сообщение уже удалено");
+            return Result<MessageDto>.Failure("Сообщение уже удалено");
 
         if (message.Polls.Count != 0)
-            return Result<MessageDTO>.Failure("Нельзя редактировать сообщение с опросом");
+            return Result<MessageDto>.Failure("Нельзя редактировать сообщение с опросом");
 
         if (message.IsVoiceMessage)
-            return Result<MessageDTO>.Failure("Нельзя редактировать голосовое сообщение");
+            return Result<MessageDto>.Failure("Нельзя редактировать голосовое сообщение");
 
         if (message.ForwardedFromMessageId.HasValue)
-            return Result<MessageDTO>.Failure("Нельзя редактировать пересланное сообщение");
+            return Result<MessageDto>.Failure("Нельзя редактировать пересланное сообщение");
 
         if (string.IsNullOrWhiteSpace(dto.Content))
-            return Result<MessageDTO>.Failure("Содержимое сообщения не может быть пустым");
+            return Result<MessageDto>.Failure("Содержимое сообщения не может быть пустым");
 
         message.Content = dto.Content.Trim();
         message.EditedAt = AppDateTime.UtcNow;
@@ -264,7 +264,7 @@ public class MessageService(
         await hubNotifier.SendToChatAsync(message.ChatId, "MessageUpdated", messageDto);
 
         _logger.LogInformation("Сообщение {MessageId} отредактировано", messageId);
-        return Result<MessageDTO>.Success(messageDto);
+        return Result<MessageDto>.Success(messageDto);
     }
 
     public async Task<Result> DeleteMessageAsync(int messageId, int userId)
@@ -293,12 +293,12 @@ public class MessageService(
 
     #region Search
 
-    public async Task<Result<SearchMessagesResponseDTO>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize)
+    public async Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Result<SearchMessagesResponseDTO>.Success(
-                new SearchMessagesResponseDTO
+            return Result<SearchMessagesResponseDto>.Success(
+                new SearchMessagesResponseDto
                 {
                     Messages = [],
                     TotalCount = 0,
@@ -319,8 +319,8 @@ public class MessageService(
         var totalCount = await baseQuery.CountAsync();
         var messages = await Paginate(baseQuery, normalizedPage, normalizedPageSize).ToListAsync();
 
-        return Result<SearchMessagesResponseDTO>.Success(
-            new SearchMessagesResponseDTO
+        return Result<SearchMessagesResponseDto>.Success(
+            new SearchMessagesResponseDto
             {
                 Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse()],
                 TotalCount = totalCount,
@@ -330,11 +330,11 @@ public class MessageService(
             });
     }
 
-    public async Task<Result<GlobalSearchResponseDTO>> GlobalSearchAsync(int userId, string query, int page, int pageSize)
+    public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Result<GlobalSearchResponseDTO>.Success(new GlobalSearchResponseDTO
+            return Result<GlobalSearchResponseDto>.Success(new GlobalSearchResponseDto
             {
                 Chats = [],
                 Messages = [],
@@ -352,8 +352,8 @@ public class MessageService(
 
         if (userChatIds.Count == 0)
         {
-            return Result<GlobalSearchResponseDTO>.Success(
-                new GlobalSearchResponseDTO
+            return Result<GlobalSearchResponseDto>.Success(
+                new GlobalSearchResponseDto
                 {
                     Chats = [],
                     Messages = [],
@@ -366,8 +366,8 @@ public class MessageService(
         var (messages, totalCount, hasMore) = await SearchMessagesGlobalAsync(
             userChatIds, escapedQuery, userId, normalizedPage, normalizedPageSize);
 
-        return Result<GlobalSearchResponseDTO>.Success(
-            new GlobalSearchResponseDTO
+        return Result<GlobalSearchResponseDto>.Success(
+            new GlobalSearchResponseDto
             {
                 Chats = foundChats,
                 Messages = messages,
@@ -425,7 +425,7 @@ public class MessageService(
         return [.. result.Take(maxResults)];
     }
 
-    private async Task<(List<GlobalSearchMessageDTO> Messages, int TotalCount, bool HasMore)>
+    private async Task<(List<GlobalSearchMessageDto> Messages, int TotalCount, bool HasMore)>
         SearchMessagesGlobalAsync(List<int> userChatIds, string query, int userId, int page, int pageSize)
     {
         var messagesQuery = _context.Messages
@@ -473,10 +473,10 @@ public class MessageService(
                 ));
     }
 
-    private GlobalSearchMessageDTO CreateGlobalSearchMessageDto(Message message, string searchTerm,
+    private GlobalSearchMessageDto CreateGlobalSearchMessageDto(Message message, string searchTerm,
         Dictionary<int, (string Name, string? Avatar)> dialogPartners)
     {
-        var dto = new GlobalSearchMessageDTO
+        var dto = new GlobalSearchMessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
@@ -541,7 +541,7 @@ public class MessageService(
 
     #region Private Methods
 
-    private async Task SaveMessageFilesAsync(int messageId, List<MessageFileDTO> files)
+    private async Task SaveMessageFilesAsync(int messageId, List<MessageFileDto> files)
     {
         foreach (var f in files)
         {
@@ -572,7 +572,7 @@ public class MessageService(
         }
     }
 
-    private async Task NotifyAndUpdateUnreadAsync(MessageDTO message)
+    private async Task NotifyAndUpdateUnreadAsync(MessageDto message)
     {
         try
         {

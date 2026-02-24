@@ -2,8 +2,8 @@
              xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:shared="using:MessengerShared.DTO"
-             xmlns:userShared="using:MessengerShared.DTO.User"
+             xmlns:shared="using:MessengerShared.Dto"
+             xmlns:userShared="using:MessengerShared.Dto.User"
              xmlns:conv="using:MessengerDesktop.Converters"
              x:Class="MessengerDesktop.Views.AdminView"
              x:DataType="vm:AdminViewModel"
@@ -334,7 +334,7 @@
 														</ItemsPanelTemplate>
 													</ItemsControl.ItemsPanel>
 													<ItemsControl.ItemTemplate>
-														<DataTemplate DataType="userShared:UserDTO">
+														<DataTemplate DataType="userShared:UserDto">
 															<Border Classes="Hoverable HoverActions"
                                                                     Background="{DynamicResource ItemBgBrush}"
                                                                     CornerRadius="8" Padding="12,10">

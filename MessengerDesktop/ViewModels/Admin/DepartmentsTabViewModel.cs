@@ -4,8 +4,8 @@ using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO.Department;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Department;
+using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,10 +20,10 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
     [ObservableProperty]
-    private ObservableCollection<DepartmentDTO> _departments = [];
+    private ObservableCollection<DepartmentDto> _departments = [];
 
     [ObservableProperty]
-    private ObservableCollection<UserDTO> _users = [];
+    private ObservableCollection<UserDto> _users = [];
 
     [ObservableProperty]
     private ObservableCollection<HierarchicalDepartmentViewModel> _hierarchicalDepartments = [];
@@ -37,11 +37,11 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     public async Task LoadAsync() =>
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<List<DepartmentDTO>>(ApiEndpoints.Department.GetAll);
+            var result = await _apiClient.GetAsync<List<DepartmentDto>>(ApiEndpoints.Department.GetAll);
 
             if (result is { Success: true, Data: not null })
             {
-                Departments = new ObservableCollection<DepartmentDTO>(result.Data);
+                Departments = new ObservableCollection<DepartmentDto>(result.Data);
                 BuildHierarchy();
             }
             else
@@ -50,7 +50,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             }
         });
 
-    public void SetUsers(IEnumerable<UserDTO> users) => Users = new ObservableCollection<UserDTO>(users);
+    public void SetUsers(IEnumerable<UserDto> users) => Users = new ObservableCollection<UserDto>(users);
 
     [RelayCommand]
     private async Task Create()
@@ -59,14 +59,14 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
         {
             SaveAction = async dialogVm =>
             {
-                var dto = new DepartmentDTO
+                var dto = new DepartmentDto
                 {
                     Name = dialogVm.Name,
                     ParentDepartmentId = dialogVm.ParentDepartmentId,
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PostAsync<DepartmentDTO>(ApiEndpoints.Department.Create, dto);
+                var result = await _apiClient.PostAsync<DepartmentDto>(ApiEndpoints.Department.Create, dto);
 
                 if (result.Success)
                 {
@@ -91,7 +91,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
         {
             SaveAction = async dialogVm =>
             {
-                var dto = new DepartmentDTO
+                var dto = new DepartmentDto
                 {
                     Id = item.Id,
                     Name = dialogVm.Name,
@@ -99,7 +99,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PutAsync<DepartmentDTO>(ApiEndpoints.Department.ById(item.Id),dto);
+                var result = await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Department.ById(item.Id),dto);
 
                 if (result.Success)
                 {
@@ -182,7 +182,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
         OnPropertyChanged(nameof(FilteredDepartments));
     }
 
-    private HierarchicalDepartmentViewModel CreateHierarchicalItem(DepartmentDTO dept, int level)
+    private HierarchicalDepartmentViewModel CreateHierarchicalItem(DepartmentDto dept, int level)
     {
         var vm = new HierarchicalDepartmentViewModel(dept, level);
 

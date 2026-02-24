@@ -5,8 +5,8 @@ using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Platform;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -26,7 +26,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     private readonly IApiClientService _apiClient;
     private readonly int _currentUserId;
     private readonly ChatDto? _originalChat;
-    private readonly List<UserDTO>? _existingMembers;
+    private readonly List<UserDto>? _existingMembers;
 
     private MemoryStream? _avatarStream;
     private string? _avatarFileName;
@@ -54,7 +54,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null) { }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDto? chat,List<UserDTO>? existingMembers = null)
+    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDto? chat,List<UserDto>? existingMembers = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _currentUserId = currentUserId;
@@ -81,7 +81,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private async Task LoadUsersAsync()
     {
-        var result = await _apiClient.GetAsync<List<UserDTO>>(ApiEndpoints.User.GetAll);
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.User.GetAll);
 
         if (!result.Success || result.Data == null)
         {
@@ -347,9 +347,9 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         base.Dispose(disposing);
     }
 
-    public partial class SelectableUserItem(UserDTO user, bool isSelected = false) : ObservableObject
+    public partial class SelectableUserItem(UserDto user, bool isSelected = false) : ObservableObject
     {
-        public UserDTO User { get; } = user ?? throw new ArgumentNullException(nameof(user));
+        public UserDto User { get; } = user ?? throw new ArgumentNullException(nameof(user));
 
         [ObservableProperty]
         private bool _isSelected = isSelected;

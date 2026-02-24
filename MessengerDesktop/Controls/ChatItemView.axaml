@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:chatDTO="using:MessengerShared.DTO.Chat"
+             xmlns:chatDTO="using:MessengerShared.Dto.Chat"
              xmlns:controls="using:MessengerDesktop.Controls"
              x:Class="MessengerDesktop.Controls.ChatItemView"
              x:DataType="chatDTO:ChatDto">

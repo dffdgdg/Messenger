@@ -15,10 +15,10 @@
              xmlns:views="using:MessengerDesktop.Views"
              xmlns:controls="using:MessengerDesktop.Controls"
              xmlns:shared="using:MessengerDesktop.Controls.Shared"
-             xmlns:dto="using:MessengerShared.DTO"
-             xmlns:search="using:MessengerShared.DTO.Search"
+             xmlns:dto="using:MessengerShared.Dto"
+             xmlns:search="using:MessengerShared.Dto.Search"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             xmlns:chatDTO="using:MessengerShared.DTO.Chat"
+             xmlns:chatDTO="using:MessengerShared.Dto.Chat"
              xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats">
 
 	<UserControl.Resources>
@@ -127,7 +127,7 @@
 			</Grid>
 		</DataTemplate>
 
-		<DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="search:GlobalSearchMessageDTO">
+		<DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="search:GlobalSearchMessageDto">
 			<Grid Height="{StaticResource ChatItemHeight}" ColumnDefinitions="Auto,*,50">
 				<controls:AvatarControl Grid.Column="0"
 				                        Classes="Medium"
@@ -459,7 +459,7 @@
 									</Style>
 								</ListBox.Styles>
 								<ListBox.ItemTemplate>
-									<DataTemplate x:DataType="search:GlobalSearchMessageDTO">
+									<DataTemplate x:DataType="search:GlobalSearchMessageDto">
 										<Button Classes="ChatListItem"
 										        Margin="0,1"
 										        Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"

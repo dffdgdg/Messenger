@@ -2,8 +2,8 @@
 using MessengerDesktop.Infrastructure.Helpers;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Realtime;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.User;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
@@ -145,7 +145,7 @@ public partial class ChatViewModel
     }
 
     /// <summary>Форматирует строку «последний раз в сети» для собеседника.</summary>
-    private static string? FormatLastSeen(UserDTO contact)
+    private static string? FormatLastSeen(UserDto contact)
     {
         if (contact.IsOnline || !contact.LastOnline.HasValue)
             return null;

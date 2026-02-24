@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Common;
 using MessengerAPI.Services.Chat;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.User;
 using MessengerShared.Response;
 using Microsoft.AspNetCore.Mvc;
 
@@ -58,19 +58,19 @@ public class ChatsController(
     }
 
     [HttpGet("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<List<UserDTO>>>> GetChatMembers(int chatId)
+    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetChatMembers(int chatId)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(async () =>
         {
             await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
             var members = await chatService.GetChatMembersAsync(chatId);
-            return Result<List<UserDTO>>.Success(members);
+            return Result<List<UserDto>>.Success(members);
         }, "Участники чата получены успешно");
     }
 
     [HttpPost("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<ChatMemberDTO>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
+    public async Task<ActionResult<ApiResponse<ChatMemberDto>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(() => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId),
@@ -113,14 +113,14 @@ public class ChatsController(
     }
 
     [HttpPost("{id}/avatar")]
-    public async Task<ActionResult<ApiResponse<AvatarResponseDTO>>> UploadAvatar(int id, IFormFile file)
+    public async Task<ActionResult<ApiResponse<AvatarResponseDto>>> UploadAvatar(int id, IFormFile file)
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(async () =>
         {
             await chatService.EnsureUserIsChatAdminAsync(currentUserId, id);
             var avatarUrl = await chatService.UploadChatAvatarAsync(id, file);
-            return Result<AvatarResponseDTO>.Success(new AvatarResponseDTO { AvatarUrl = avatarUrl });
+            return Result<AvatarResponseDto>.Success(new AvatarResponseDto { AvatarUrl = avatarUrl });
         }, "Аватар чата загружен успешно");
     }
 }

@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:department="using:MessengerShared.DTO.Department"
+             xmlns:department="using:MessengerShared.Dto.Department"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:shared="using:MessengerShared.Dto"
              x:Class="MessengerDesktop.Views.DepartmentDialog"
              x:DataType="vmDialog:DepartmentDialogViewModel">
 
@@ -21,7 +21,7 @@
 			<ComboBox ItemsSource="{Binding AvailableParents}" SelectedItem="{Binding SelectedParent}"
                       Classes="DialogCombo" PlaceholderText="Выбрать родительский отдел" HorizontalAlignment="Stretch">
 				<ComboBox.ItemTemplate>
-					<DataTemplate x:DataType="department:DepartmentDTO">
+					<DataTemplate x:DataType="department:DepartmentDto">
 						<TextBlock Text="{Binding Name}"/>
 					</DataTemplate>
 				</ComboBox.ItemTemplate>

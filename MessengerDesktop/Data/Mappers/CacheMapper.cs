@@ -1,7 +1,7 @@
 ﻿using MessengerDesktop.Data.Entities;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.Message;
-using MessengerShared.DTO.Poll;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.Message;
+using MessengerShared.Dto.Poll;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -21,9 +21,9 @@ public static class CacheMapper
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
-    #region MessageDTO ↔ CachedMessage
+    #region MessageDto ↔ CachedMessage
 
-    public static CachedMessage ToEntity(this MessageDTO dto)
+    public static CachedMessage ToEntity(this MessageDto dto)
     {
         return new CachedMessage
         {
@@ -65,9 +65,9 @@ public static class CacheMapper
         };
     }
 
-    public static MessageDTO ToDto(this CachedMessage entity)
+    public static MessageDto ToDto(this CachedMessage entity)
     {
-        var dto = new MessageDTO
+        var dto = new MessageDto
         {
             Id = entity.Id,
             ChatId = entity.ChatId,
@@ -89,7 +89,7 @@ public static class CacheMapper
         // Reply preview
         if (entity.ReplyToMessageId.HasValue && entity.ReplySenderName != null)
         {
-            dto.ReplyToMessage = new MessageReplyPreviewDTO
+            dto.ReplyToMessage = new MessageReplyPreviewDto
             {
                 Id = entity.ReplyToMessageId.Value,
                 SenderId = entity.ReplySenderId ?? 0,
@@ -103,7 +103,7 @@ public static class CacheMapper
         // Forward info
         if (entity.ForwardedFromMessageId.HasValue)
         {
-            dto.ForwardedFrom = new MessageForwardInfoDTO
+            dto.ForwardedFrom = new MessageForwardInfoDto
             {
                 OriginalMessageId = entity.ForwardedFromMessageId.Value,
                 OriginalSenderId = entity.ForwardOriginalSenderId ?? 0,
@@ -120,7 +120,7 @@ public static class CacheMapper
         {
             try
             {
-                dto.Poll = JsonSerializer.Deserialize<PollDTO>(entity.PollJson, JsonOpts);
+                dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts);
             }
             catch
             {
@@ -133,7 +133,7 @@ public static class CacheMapper
         {
             try
             {
-                dto.Files = JsonSerializer.Deserialize<List<MessageFileDTO>>(entity.FilesJson, JsonOpts) ?? [];
+                dto.Files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts) ?? [];
             }
             catch
             {
@@ -183,7 +183,7 @@ public static class CacheMapper
 
     #region UserDTO ↔ CachedUser
 
-    public static CachedUser ToEntity(this MessengerShared.DTO.User.UserDTO dto)
+    public static CachedUser ToEntity(this MessengerShared.Dto.User.UserDto dto)
     {
         return new CachedUser
         {
@@ -195,9 +195,9 @@ public static class CacheMapper
         };
     }
 
-    public static MessengerShared.DTO.User.UserDTO ToDto(this CachedUser entity)
+    public static MessengerShared.Dto.User.UserDto ToDto(this CachedUser entity)
     {
-        return new MessengerShared.DTO.User.UserDTO
+        return new MessengerShared.Dto.User.UserDto
         {
             Id = entity.Id,
             Username = entity.Username,

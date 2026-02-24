@@ -9,8 +9,8 @@ using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.DTO.Chat;
-using MessengerShared.DTO.User;
+using MessengerShared.Dto.Chat;
+using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
@@ -77,11 +77,11 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     [ObservableProperty] private bool _isNotificationEnabled;
     [ObservableProperty] private bool _isLoadingMuteState;
-    [ObservableProperty] private UserDTO? _contactUser;
+    [ObservableProperty] private UserDto? _contactUser;
     [ObservableProperty] private bool _isContactOnline;
     [ObservableProperty] private string? _contactLastSeen;
     [ObservableProperty] private ChatDto? _chat;
-    [ObservableProperty] private ObservableCollection<UserDTO> _members = [];
+    [ObservableProperty] private ObservableCollection<UserDto> _members = [];
     [ObservableProperty] private bool _isInitialLoading = true;
     [ObservableProperty] private bool _isLoadingOlderMessages;
     [ObservableProperty] private bool _hasNewMessages;
@@ -245,7 +245,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     partial void OnIsContactOnlineChanged(bool value) => OnPropertyChanged(nameof(InfoPanelSubtitle));
 
-    partial void OnMembersChanged(ObservableCollection<UserDTO>? oldValue, ObservableCollection<UserDTO> newValue)
+    partial void OnMembersChanged(ObservableCollection<UserDto>? oldValue, ObservableCollection<UserDto> newValue)
     {
         if (oldValue != null)
             oldValue.CollectionChanged -= OnMembersCollectionChanged;
@@ -258,7 +258,7 @@ public partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     partial void OnChatChanged(ChatDto? value) => OnPropertyChanged(nameof(IsInfoPanelOpen));
 
-    partial void OnContactUserChanged(UserDTO? value)
+    partial void OnContactUserChanged(UserDto? value)
     {
         OnPropertyChanged(nameof(ContactAvatar));
         OnPropertyChanged(nameof(ContactDisplayName));

@@ -2,7 +2,7 @@
 using MessengerDesktop.Infrastructure.Configuration;
 using MessengerDesktop.Services.Api;
 using MessengerDesktop.ViewModels.Chats;
-using MessengerShared.DTO.Search;
+using MessengerShared.Dto.Search;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading;
@@ -24,7 +24,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
     [ObservableProperty] private string? _errorMessage;
 
     public ObservableCollection<ChatListItemViewModel> ChatResults { get; } = [];
-    public ObservableCollection<GlobalSearchMessageDTO> MessageResults { get; } = [];
+    public ObservableCollection<GlobalSearchMessageDto> MessageResults { get; } = [];
 
     public bool HasResults => ChatResults.Count > 0 || MessageResults.Count > 0;
     public bool HasChatResults => ChatResults.Count > 0;
@@ -75,7 +75,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
             ErrorMessage = null;
 
             var url = ApiEndpoints.Message.Search(userId, query, 1, AppConstants.SearchPageSize);
-            var result = await apiClient.GetAsync<GlobalSearchResponseDTO>(url, ct);
+            var result = await apiClient.GetAsync<GlobalSearchResponseDto>(url, ct);
 
             if (ct.IsCancellationRequested) return;
 
@@ -125,7 +125,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
             var nextPage = (MessageResults.Count / AppConstants.SearchPageSize) + 1;
 
             var url = ApiEndpoints.Message.Search(userId, SearchQuery, nextPage, AppConstants.SearchPageSize);
-            var result = await apiClient.GetAsync<GlobalSearchResponseDTO>(url);
+            var result = await apiClient.GetAsync<GlobalSearchResponseDto>(url);
 
             if (result.Success && result.Data != null)
             {

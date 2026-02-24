@@ -2,9 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
              xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             xmlns:shared="using:MessengerShared.DTO"
+             xmlns:shared="using:MessengerShared.Dto"
              xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:department="using:MessengerShared.DTO.Department"
+             xmlns:department="using:MessengerShared.Dto.Department"
              x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
              x:DataType="vmDialog:DepartmentHeadDialogViewModel">
 
@@ -70,7 +70,7 @@
                           PlaceholderText="Выбрать родительский отдел"
                           HorizontalAlignment="Stretch">
 					<ComboBox.ItemTemplate>
-						<DataTemplate x:DataType="department:DepartmentDTO">
+						<DataTemplate x:DataType="department:DepartmentDto">
 							<StackPanel Orientation="Horizontal" Spacing="8">
 								<PathIcon Data="{StaticResource OrganizationIcon}"
                                           Width="14" Height="14"

@@ -8,6 +8,7 @@ using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,6 +22,9 @@ public partial class MainWindow : Window
 
     private const int AnimationDurationMs = 250;
     private const int FrameDelayMs = 16;
+    private const double MaximizedPadding = 7;
+    private const string OpenClass = "Open";
+    private const string ClosingClass = "Closing";
 
     private CancellationTokenSource? _animationCts;
     private readonly object _animationLock = new();
@@ -51,33 +55,37 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateWindowPadding()
-    {
+    private void UpdateWindowPadding() =>
         Padding = WindowState == WindowState.Maximized
-            ? new Thickness(7)
-            : new Thickness(0);
-    }
+            ? new Thickness(MaximizedPadding)
+            : default;
 
     private void OnDialogAnimationRequested(bool isOpening)
     {
         _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
+            bool completed = false;
+
             try
             {
-                await RunAnimationAsync(isOpening);
+                completed = await RunAnimationAsync(isOpening);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Debug.WriteLine($"Dialog animation error: {ex}");
                 ResetAnimationState();
             }
             finally
             {
-                _dialogService.NotifyAnimationComplete();
+                if (completed)
+                {
+                    _dialogService.NotifyAnimationComplete();
+                }
             }
         });
     }
 
-    private async Task RunAnimationAsync(bool isOpening)
+    private async Task<bool> RunAnimationAsync(bool isOpening)
     {
         CancellationTokenSource? oldCts;
         var newCts = new CancellationTokenSource();
@@ -105,44 +113,45 @@ public partial class MainWindow : Window
             {
                 await PlayCloseAnimationAsync(newCts.Token);
             }
+
+            return true;
         }
         catch (OperationCanceledException)
         {
             ResetAnimationState();
+            return false;
         }
     }
 
     private void ResetAnimationState()
     {
-        DialogOverlay.Classes.Remove("Open");
-        DialogOverlay.Classes.Remove("Closing");
-        DialogAnimWrapper.Classes.Remove("Open");
-        DialogAnimWrapper.Classes.Remove("Closing");
+        DialogOverlay.Classes.Remove(OpenClass);
+        DialogOverlay.Classes.Remove(ClosingClass);
+        DialogAnimWrapper.Classes.Remove(OpenClass);
+        DialogAnimWrapper.Classes.Remove(ClosingClass);
     }
 
     private async Task PlayOpenAnimationAsync(CancellationToken cancellationToken)
     {
         await Task.Delay(FrameDelayMs, cancellationToken);
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        DialogOverlay.Classes.Add("Open");
-        DialogAnimWrapper.Classes.Add("Open");
+        DialogOverlay.Classes.Add(OpenClass);
+        DialogAnimWrapper.Classes.Add(OpenClass);
 
         await Task.Delay(AnimationDurationMs, cancellationToken);
     }
 
     private async Task PlayCloseAnimationAsync(CancellationToken cancellationToken)
     {
-        DialogOverlay.Classes.Remove("Open");
-        DialogAnimWrapper.Classes.Remove("Open");
-        DialogAnimWrapper.Classes.Add("Closing");
+        DialogOverlay.Classes.Remove(OpenClass);
+        DialogAnimWrapper.Classes.Remove(OpenClass);
+        DialogAnimWrapper.Classes.Add(ClosingClass);
 
         await Task.Delay(AnimationDurationMs, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        DialogAnimWrapper.Classes.Remove("Closing");
+        DialogAnimWrapper.Classes.Remove(ClosingClass);
     }
 
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -156,9 +165,9 @@ public partial class MainWindow : Window
 
     private void OnDialogBackgroundPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm && vm.CurrentDialog != null)
+        if (DataContext is MainWindowViewModel vm)
         {
-            vm.CurrentDialog.CloseOnBackgroundClickCommand?.Execute(null);
+            vm.CurrentDialog?.CloseOnBackgroundClickCommand?.Execute(null);
             e.Handled = true;
         }
     }

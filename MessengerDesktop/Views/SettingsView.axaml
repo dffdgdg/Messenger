@@ -15,7 +15,6 @@
                             HorizontalAlignment="Center"
                             Spacing="24">
 
-                    <!-- ========== ЗАГОЛОВОК ========== -->
                     <StackPanel Spacing="4">
                         <TextBlock Text="Настройки" Classes="PageTitle"/>
                         <TextBlock Text="Параметры внешнего вида и поведения приложения"
@@ -23,7 +22,6 @@
                                    Foreground="{DynamicResource TextSecondary}"/>
                     </StackPanel>
 
-                    <!-- ========== ВНЕШНИЙ ВИД ========== -->
                     <StackPanel Spacing="12">
                         <TextBlock Text="Внешний вид" Classes="SectionHeader Large"/>
 
@@ -45,7 +43,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- ========== УВЕДОМЛЕНИЯ ========== -->
                     <StackPanel Spacing="12">
                         <TextBlock Text="Уведомления" Classes="SectionHeader Large"/>
 
@@ -56,7 +53,6 @@
                                           Foreground="{DynamicResource TextTertiary}"
                                           VerticalAlignment="Center"/>
 
-                                <!-- Текст -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                                     <TextBlock Text="Push-уведомления"
                                                FontWeight="Medium"
@@ -66,7 +62,6 @@
                                                Foreground="{DynamicResource TextSecondary}"/>
                                 </StackPanel>
 
-                                <!-- Действие -->
                                 <ToggleSwitch Grid.Column="2"
                                               IsChecked="{Binding NotificationsEnabled}"
                                               VerticalAlignment="Center"/>
@@ -74,7 +69,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- ========== ДАННЫЕ ========== -->
                     <StackPanel Spacing="12">
                         <TextBlock Text="Данные" Classes="SectionHeader Large"/>
 
@@ -85,7 +79,6 @@
                                           Foreground="{DynamicResource TextTertiary}"
                                           VerticalAlignment="Center"/>
 
-                                <!-- Текст -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                                     <TextBlock Text="Очистить кэш"
                                                FontWeight="Medium"
@@ -95,7 +88,6 @@
                                                Foreground="{DynamicResource TextSecondary}"/>
                                 </StackPanel>
 
-                                <!-- Действие -->
                                 <Button Grid.Column="2"
                                         Content="Очистить"
                                         Classes="DialogDanger"
@@ -105,7 +97,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- ========== О ПРИЛОЖЕНИИ ========== -->
                     <StackPanel Spacing="12">
                         <TextBlock Text="О приложении" Classes="SectionHeader Large"/>
 

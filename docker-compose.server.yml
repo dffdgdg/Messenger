@@ -36,6 +36,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      
+  zap-baseline:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: messenger-zap-baseline
+    profiles:
+      - security
+    depends_on:
+      messenger-api:
+        condition: service_started
+    volumes:
+      - ./security-reports:/zap/wrk:rw
+    command: >
+      zap-baseline.py
+      -t http://messenger-api:8080
+      -r zap-report.html
+      -J zap-report.json
+      -w zap-warnings.md
+      -m 5
+      -I
 
 volumes:
   postgres_data:

@@ -5,153 +5,152 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.ViewModels
+namespace MessengerDesktop.ViewModels;
+
+public abstract partial class BaseViewModel : ObservableObject, IDisposable
 {
-    public abstract partial class BaseViewModel : ObservableObject, IDisposable
+    private CancellationTokenSource? _cts;
+    private bool _disposed;
+
+    [ObservableProperty]
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string? _errorMessage;
+
+    [ObservableProperty]
+    private string? _successMessage;
+
+    // ========== Хуки для подклассов ==========
+    // CommunityToolkit генерирует partial void OnXxxChanged в ЭТОМ классе.
+    // Мы пробрасываем их в виртуальные методы,
+    // чтобы подклассы могли реагировать через override.
+
+    partial void OnIsBusyChanged(bool value) => OnIsBusyUpdated(value);
+
+    partial void OnErrorMessageChanged(string? value) => OnErrorMessageUpdated(value);
+
+    partial void OnSuccessMessageChanged(string? value) => OnSuccessMessageUpdated(value);
+
+    /// <summary>
+    /// Вызывается при изменении IsBusy.
+    /// Переопределите для обновления CanExecute команд.
+    /// </summary>
+    protected virtual void OnIsBusyUpdated(bool value) { }
+
+    /// <summary>
+    /// Вызывается при изменении ErrorMessage.
+    /// Переопределите для взаимоисключения сообщений и т.д.
+    /// </summary>
+    protected virtual void OnErrorMessageUpdated(string? value) { }
+
+    /// <summary>
+    /// Вызывается при изменении SuccessMessage.
+    /// Переопределите для взаимоисключения сообщений и т.д.
+    /// </summary>
+    protected virtual void OnSuccessMessageUpdated(string? value) { }
+
+    // ========== Cancellation ==========
+
+    protected CancellationToken GetCancellationToken()
     {
-        private CancellationTokenSource? _cts;
-        private bool _disposed;
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
+    }
 
-        [ObservableProperty]
-        private bool _isBusy;
+    // ========== Safe Execute ==========
 
-        [ObservableProperty]
-        private string? _errorMessage;
-
-        [ObservableProperty]
-        private string? _successMessage;
-
-        // ========== Хуки для подклассов ==========
-        // CommunityToolkit генерирует partial void OnXxxChanged в ЭТОМ классе.
-        // Мы пробрасываем их в виртуальные методы,
-        // чтобы подклассы могли реагировать через override.
-
-        partial void OnIsBusyChanged(bool value) => OnIsBusyUpdated(value);
-
-        partial void OnErrorMessageChanged(string? value) => OnErrorMessageUpdated(value);
-
-        partial void OnSuccessMessageChanged(string? value) => OnSuccessMessageUpdated(value);
-
-        /// <summary>
-        /// Вызывается при изменении IsBusy.
-        /// Переопределите для обновления CanExecute команд.
-        /// </summary>
-        protected virtual void OnIsBusyUpdated(bool value) { }
-
-        /// <summary>
-        /// Вызывается при изменении ErrorMessage.
-        /// Переопределите для взаимоисключения сообщений и т.д.
-        /// </summary>
-        protected virtual void OnErrorMessageUpdated(string? value) { }
-
-        /// <summary>
-        /// Вызывается при изменении SuccessMessage.
-        /// Переопределите для взаимоисключения сообщений и т.д.
-        /// </summary>
-        protected virtual void OnSuccessMessageUpdated(string? value) { }
-
-        // ========== Cancellation ==========
-
-        protected CancellationToken GetCancellationToken()
+    protected async Task SafeExecuteAsync(
+        Func<Task> operation,
+        string? successMessage = null,
+        Action? finallyAction = null)
+    {
+        try
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = new CancellationTokenSource();
-            return _cts.Token;
+            IsBusy = true;
+            ErrorMessage = null;
+            await operation();
+            if (!string.IsNullOrEmpty(successMessage))
+                SuccessMessage = successMessage;
         }
-
-        // ========== Safe Execute ==========
-
-        protected async Task SafeExecuteAsync(
-            Func<Task> operation,
-            string? successMessage = null,
-            Action? finallyAction = null)
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            try
-            {
-                IsBusy = true;
-                ErrorMessage = null;
-                await operation();
-                if (!string.IsNullOrEmpty(successMessage))
-                    SuccessMessage = successMessage;
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
+            ErrorMessage = ex.Message;
+            Debug.WriteLine($"Error in {GetType().Name}: {ex}");
+        }
+        finally
+        {
+            IsBusy = false;
+            finallyAction?.Invoke();
+        }
+    }
+
+    protected async Task SafeExecuteAsync(
+        Func<CancellationToken, Task> operation,
+        string? successMessage = null,
+        Action? finallyAction = null)
+    {
+        var ct = GetCancellationToken();
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            await operation(ct);
+            if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
+                SuccessMessage = successMessage;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!ct.IsCancellationRequested)
             {
                 ErrorMessage = ex.Message;
                 Debug.WriteLine($"Error in {GetType().Name}: {ex}");
             }
-            finally
-            {
-                IsBusy = false;
-                finallyAction?.Invoke();
-            }
         }
-
-        protected async Task SafeExecuteAsync(
-            Func<CancellationToken, Task> operation,
-            string? successMessage = null,
-            Action? finallyAction = null)
+        finally
         {
-            var ct = GetCancellationToken();
-            try
-            {
-                IsBusy = true;
-                ErrorMessage = null;
-                await operation(ct);
-                if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
-                    SuccessMessage = successMessage;
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                if (!ct.IsCancellationRequested)
-                {
-                    ErrorMessage = ex.Message;
-                    Debug.WriteLine($"Error in {GetType().Name}: {ex}");
-                }
-            }
-            finally
-            {
-                IsBusy = false;
-                finallyAction?.Invoke();
-            }
+            IsBusy = false;
+            finallyAction?.Invoke();
         }
+    }
 
-        // ========== Helpers ==========
+    // ========== Helpers ==========
 
-        protected static string? GetAbsoluteUrl(string? url)
+    protected static string? GetAbsoluteUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return null;
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+    }
+
+    [RelayCommand]
+    protected virtual void ClearMessages()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    // ========== Dispose ==========
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing)
         {
-            if (string.IsNullOrEmpty(url)) return null;
-            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
-            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
         }
-
-        [RelayCommand]
-        protected virtual void ClearMessages()
-        {
-            ErrorMessage = null;
-            SuccessMessage = null;
-        }
-
-        // ========== Dispose ==========
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed) return;
-            if (disposing)
-            {
-                _cts?.Cancel();
-                _cts?.Dispose();
-                _cts = null;
-            }
-            _disposed = true;
-        }
+        _disposed = true;
     }
 }

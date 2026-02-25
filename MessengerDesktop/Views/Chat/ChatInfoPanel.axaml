@@ -106,10 +106,8 @@
 							</Grid>
 						</StackPanel>
 
-						<!-- ========== ГРУППОВОЙ ЧАТ ========== -->
 						<StackPanel IsVisible="{Binding IsGroupChat}" Spacing="20">
 
-							<!-- Аватар и название -->
 							<StackPanel Orientation="Horizontal" Spacing="12">
 								<controls:AvatarControl Classes="Large"
                                                         Source="{Binding Chat.Avatar}"
@@ -129,7 +127,6 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Уведомления -->
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource NotificationsIcon}"
                                           Width="18" Height="18"
@@ -145,7 +142,6 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Медиа -->
 							<StackPanel Spacing="4">
 								<TextBlock Text="Медиа и файлы" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8"/>
 
@@ -178,7 +174,6 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Участники -->
 							<StackPanel Spacing="8">
 								<Grid ColumnDefinitions="*,Auto">
 									<TextBlock Text="Участники" FontWeight="SemiBold" FontSize="14"/>
@@ -193,13 +188,11 @@
                                                     Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProfileCommand}"
                                                     CommandParameter="{Binding Id}">
 												<Grid ColumnDefinitions="Auto,*">
-													<!-- Аватар -->
 													<controls:AvatarControl Classes="Medium"
                                                                             Source="{Binding Avatar}"
                                                                             DisplayName="{Binding DisplayName}"
                                                                             IsOnline="{Binding IsOnline}"/>
 
-													<!-- Имя -->
 													<StackPanel Grid.Column="1"
                                                                 VerticalAlignment="Center"
                                                                 Margin="12,0,0,0"
@@ -220,7 +213,6 @@
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-							<!-- Покинуть группу -->
 							<Button Command="{Binding LeaveChatCommand}"
                                     Classes="InfoPanelItem">
 								<StackPanel Orientation="Horizontal" Spacing="12">

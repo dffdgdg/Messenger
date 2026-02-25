@@ -42,7 +42,6 @@ public class ChatService(
     IReadReceiptService readReceiptService,
     IUrlBuilder urlBuilder,
     ICacheService cacheService,
-    IOptions<MessengerSettings> settings,
     ILogger<ChatService> logger)
     : BaseService<ChatService>(context, logger), IChatService
 {

@@ -86,11 +86,9 @@
 
     <Grid ColumnDefinitions="82,*">
 
-        <!-- ═══ Колонка 0: навигация (DockPanel!) ═══ -->
         <DockPanel Grid.Column="0" LastChildFill="False"
                    Margin="5,0,5,0">
 
-            <!-- ─── Верх: логотип + основные разделы ─── -->
             <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10"
                         HorizontalAlignment="Center">
 
@@ -138,7 +136,6 @@
                                          ConverterParameter=Admin}"/>
             </StackPanel>
 
-            <!-- ─── Низ: профиль, настройки, админ ─── -->
             <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,0,0,10"
                         HorizontalAlignment="Center">
 
@@ -180,7 +177,6 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- ═══ Колонка 1: контент ═══ -->
         <DockPanel Grid.Column="1">
 
             <StackPanel DockPanel.Dock="Top"

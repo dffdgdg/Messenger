@@ -24,7 +24,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
     public IEnumerable<DepartmentGroup> FilteredGroupedUsers => UsersTab.FilteredGroups;
 
-    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments => DepartmentsTab.FilteredDepartments;
+    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments
+        => DepartmentsTab.FilteredDepartments;
 
     public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab)
     {

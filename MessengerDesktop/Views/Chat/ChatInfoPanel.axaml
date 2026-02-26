@@ -35,9 +35,8 @@
 			<Grid Grid.Row="1">
 				<controls:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
-							  IsVisible="{Binding !IsInitialLoading}"
-							  Padding="16">
-					<StackPanel Spacing="20">
+							  IsVisible="{Binding !IsInitialLoading}">
+					<StackPanel Spacing="20" Margin="16,16,16,32">
 						<StackPanel IsVisible="{Binding IsContactChat}" Spacing="20">
 							<StackPanel HorizontalAlignment="Center" Spacing="12">
 								<controls:AvatarControl Classes="XXLarge"
@@ -222,7 +221,6 @@
 								</StackPanel>
 							</Button>
 						</StackPanel>
-
 					</StackPanel>
 				</ScrollViewer>
 			</Grid>

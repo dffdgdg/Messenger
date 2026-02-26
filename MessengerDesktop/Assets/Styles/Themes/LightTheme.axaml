@@ -1,54 +1,54 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 	<Color x:Key="TopBg">#FFFFFF</Color>
-	<Color x:Key="BaseBg">#F7F8FA</Color>
+	<Color x:Key="BaseBg">#F4F6FB</Color>
 
 	<SolidColorBrush x:Key="PrimaryBG" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="SecondaryBG" Color="#F7F8FA"/>
-	<SolidColorBrush x:Key="ThirdBG" Color="#EDF0F3"/>
+	<SolidColorBrush x:Key="SecondaryBG" Color="#F4F6FB"/>
+	<SolidColorBrush x:Key="ThirdBG" Color="#E9EDF5"/>
 	<SolidColorBrush x:Key="FourthBG" Color="#FFFFFF"/>
 
-	<SolidColorBrush x:Key="PanelBg" Color="#20F0F0F0"/>
-	<SolidColorBrush x:Key="PanelBgSolid" Color="#F0F0F0"/>
+	<SolidColorBrush x:Key="PanelBg" Color="#26E8EDF5"/>
+	<SolidColorBrush x:Key="PanelBgSolid" Color="#E8EDF5"/>
 
-	<SolidColorBrush x:Key="Accent" Color="#2481CC"/>
-	<SolidColorBrush x:Key="AccentBrush" Color="#2481CC"/>
-	<SolidColorBrush x:Key="AccentHover" Color="#1A6AAD"/>
-	<SolidColorBrush x:Key="AccentPressed" Color="#145588"/>
-	<SolidColorBrush x:Key="AccentMuted" Color="#2481CC20"/>
-	<SolidColorBrush x:Key="AccentGlow" Color="#2481CC10"/>
+	<SolidColorBrush x:Key="Accent" Color="#2B74D9"/>
+	<SolidColorBrush x:Key="AccentBrush" Color="#2B74D9"/>
+	<SolidColorBrush x:Key="AccentHover" Color="#245FBC"/>
+	<SolidColorBrush x:Key="AccentPressed" Color="#1E4E9B"/>
+	<SolidColorBrush x:Key="AccentMuted" Color="#2B74D920"/>
+	<SolidColorBrush x:Key="AccentGlow" Color="#2B74D910"/>
 
-	<SolidColorBrush x:Key="TextPrimary" Color="#1A1A1A"/>
-	<SolidColorBrush x:Key="TextSecondary" Color="#5F6368"/>
-	<SolidColorBrush x:Key="TextMuted" Color="#8A9099"/>
+	<SolidColorBrush x:Key="TextPrimary" Color="#171A21"/>
+	<SolidColorBrush x:Key="TextSecondary" Color="#606775"/>
+	<SolidColorBrush x:Key="TextMuted" Color="#8791A1"/>
 	<SolidColorBrush x:Key="TextOnAccent" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="Muted" Color="#9DA3AB"/>
+	<SolidColorBrush x:Key="Muted" Color="#98A2B3"/>
 
-	<SolidColorBrush x:Key="Icon" Color="#707580"/>
-	<SolidColorBrush x:Key="IconHover" Color="#5F6368"/>
-	<SolidColorBrush x:Key="IconAccent" Color="#2481CC"/>
-	<SolidColorBrush x:Key="IconActive" Color="#1A1A1A"/>
+	<SolidColorBrush x:Key="Icon" Color="#6E7687"/>
+	<SolidColorBrush x:Key="IconHover" Color="#606775"/>
+	<SolidColorBrush x:Key="IconAccent" Color="#2B74D9"/>
+	<SolidColorBrush x:Key="IconActive" Color="#171A21"/>
 
-	<SolidColorBrush x:Key="BorderDefault" Color="#E0E3E8"/>
-	<SolidColorBrush x:Key="BorderHover" Color="#C8CCD2"/>
-	<SolidColorBrush x:Key="BorderFocus" Color="#2481CC"/>
-	<SolidColorBrush x:Key="BorderSubtle" Color="#EBEDF0"/>
+	<SolidColorBrush x:Key="BorderDefault" Color="#D8DEE9"/>
+	<SolidColorBrush x:Key="BorderHover" Color="#C4CDDB"/>
+	<SolidColorBrush x:Key="BorderFocus" Color="#2B74D9"/>
+	<SolidColorBrush x:Key="BorderSubtle" Color="#E6EBF3"/>
 
 	<SolidColorBrush x:Key="ControlBg" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="ControlBorder" Color="#D8DCE2"/>
-	<SolidColorBrush x:Key="ControlHover" Color="#F5F6F8"/>
-	<SolidColorBrush x:Key="AvatarPlaceholderBG" Color="#C8CCD2"/>
+	<SolidColorBrush x:Key="ControlBorder" Color="#CED6E3"/>
+	<SolidColorBrush x:Key="ControlHover" Color="#F1F4FA"/>
+	<SolidColorBrush x:Key="AvatarPlaceholderBG" Color="#C4CDDB"/>
 	<SolidColorBrush x:Key="TransparentBrush" Color="Transparent"/>
 
-	<SolidColorBrush x:Key="HoverOverlay" Color="#08000000"/>
-	<SolidColorBrush x:Key="PressedOverlay" Color="#10000000"/>
+	<SolidColorBrush x:Key="HoverOverlay" Color="#080E1A24"/>
+	<SolidColorBrush x:Key="PressedOverlay" Color="#100E1A2E"/>
 	<SolidColorBrush x:Key="DialogOverlay" Color="#50000000"/>
-	<SolidColorBrush x:Key="ShadowLight" Color="#15000000"/>
+	<SolidColorBrush x:Key="ShadowLight" Color="#160E1A24"/>
 
 	<SolidColorBrush x:Key="OnlineStatus" Color="#22C55E"/>
 	<SolidColorBrush x:Key="AwayStatus" Color="#EAB308"/>
 	<SolidColorBrush x:Key="DndStatus" Color="#DC2626"/>
-	<SolidColorBrush x:Key="OfflineStatus" Color="#9DA3AB"/>
+	<SolidColorBrush x:Key="OfflineStatus" Color="#98A2B3"/>
 
 	<SolidColorBrush x:Key="DangerBrush" Color="#DC2626"/>
 	<SolidColorBrush x:Key="DangerBgBrush" Color="#FEF2F2"/>
@@ -63,53 +63,53 @@
 	<SolidColorBrush x:Key="WarningBrush" Color="#CA8A04"/>
 	<SolidColorBrush x:Key="WarningBgBrush" Color="#FEFCE8"/>
 	
-	<SolidColorBrush x:Key="MessageOwnBackground" Color="#EEFFDE"/>
-	<SolidColorBrush x:Key="MessageOwnText" Color="#1A1A1A"/>
-	<SolidColorBrush x:Key="MessageOwnTimestamp" Color="#5F6368"/>
+	<SolidColorBrush x:Key="MessageOwnBackground" Color="#E8F1FF"/>
+	<SolidColorBrush x:Key="MessageOwnText" Color="#171A21"/>
+	<SolidColorBrush x:Key="MessageOwnTimestamp" Color="#606775"/>
 
 	<SolidColorBrush x:Key="MessageOtherBackground" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="MessageOtherText" Color="#1A1A1A"/>
-	<SolidColorBrush x:Key="MessageTimestamp" Color="#8A9099"/>
-	<SolidColorBrush x:Key="MessageSenderName" Color="#2481CC"/>
+	<SolidColorBrush x:Key="MessageOtherText" Color="#171A21"/>
+	<SolidColorBrush x:Key="MessageTimestamp" Color="#8791A1"/>
+	<SolidColorBrush x:Key="MessageSenderName" Color="#2B74D9"/>
 
-	<SolidColorBrush x:Key="DateDividerBackground" Color="#F0F2F5"/>
-	<SolidColorBrush x:Key="DateDividerText" Color="#707580"/>
+	<SolidColorBrush x:Key="DateDividerBackground" Color="#EEF2F8"/>
+	<SolidColorBrush x:Key="DateDividerText" Color="#6E7687"/>
 
-	<SolidColorBrush x:Key="MessageHighlight" Color="#2481CC15"/>
-	<SolidColorBrush x:Key="ReplyBorderColor" Color="#2481CC"/>
+	<SolidColorBrush x:Key="MessageHighlight" Color="#2B74D915"/>
+	<SolidColorBrush x:Key="ReplyBorderColor" Color="#2B74D9"/>
 
 	<SolidColorBrush x:Key="CardBgBrush" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="CardHoverBrush" Color="#F5F6F8"/>
+	<SolidColorBrush x:Key="CardHoverBrush" Color="#F1F4FA"/>
 	<SolidColorBrush x:Key="ItemBgBrush" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="ItemHoverBrush" Color="#F0F2F5"/>
-	<SolidColorBrush x:Key="ItemSelectedBrush" Color="#2481CC15"/>
+	<SolidColorBrush x:Key="ItemHoverBrush" Color="#EEF2F8"/>
+	<SolidColorBrush x:Key="ItemSelectedBrush" Color="#2B74D915"/>
 
-	<SolidColorBrush x:Key="BorderBrush" Color="#E0E3E8"/>
-	<SolidColorBrush x:Key="HierarchyLineBrush" Color="#D0D5DC"/>
-	<SolidColorBrush x:Key="DividerBrush" Color="#EBEDF0"/>
+	<SolidColorBrush x:Key="BorderBrush" Color="#D8DEE9"/>
+	<SolidColorBrush x:Key="HierarchyLineBrush" Color="#CCD4E2"/>
+	<SolidColorBrush x:Key="DividerBrush" Color="#E6EBF3"/>
 
 	<SolidColorBrush x:Key="BadgeBg" Color="#DC2626"/>
 	<SolidColorBrush x:Key="BadgeText" Color="#FFFFFF"/>
 	<SolidColorBrush x:Key="MentionBg" Color="#EAB308"/>
-	<SolidColorBrush x:Key="UnreadIndicator" Color="#2481CC"/>
+	<SolidColorBrush x:Key="UnreadIndicator" Color="#2B74D9"/>
 
 	<SolidColorBrush x:Key="Outline" Color="#22C55E"/>
 	<SolidColorBrush x:Key="OutlineHover" Color="#16A34A"/>
 	<SolidColorBrush x:Key="OutlinePressed" Color="#15803D"/>
 
-	<SolidColorBrush x:Key="PrimaryBrdr" Color="#E0E3E8"/>
-	<SolidColorBrush x:Key="SecondaryBrdr" Color="#EBEDF0"/>
+	<SolidColorBrush x:Key="PrimaryBrdr" Color="#D8DEE9"/>
+	<SolidColorBrush x:Key="SecondaryBrdr" Color="#E6EBF3"/>
 	<Color x:Key="LoginBgStart">#f0f4f8</Color>
-	<Color x:Key="LoginBgMiddle">#e8eef4</Color>
-	<Color x:Key="LoginBgEnd">#dfe6ed</Color>
+	<Color x:Key="LoginBgMiddle">#e7edf7</Color>
+	<Color x:Key="LoginBgEnd">#d8e1ef</Color>
 
 	<SolidColorBrush x:Key="LoginGlowPrimary" Color="#202481CC"/>
 	<SolidColorBrush x:Key="LoginGlowSecondary" Color="#151A6AAD"/>
-	<SolidColorBrush x:Key="LoginGridLine" Color="#08000000"/>
+	<SolidColorBrush x:Key="LoginGridLine" Color="#080E1A24"/>
 	<SolidColorBrush x:Key="LoginCardBg" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="LoginCardBorder" Color="#E0E3E8"/>
+	<SolidColorBrush x:Key="LoginCardBorder" Color="#D8DEE9"/>
 	<SolidColorBrush x:Key="LoginShadow" Color="#20000000"/>
 
-	<Color x:Key="LoginLogoStart">#2481CC</Color>
-	<Color x:Key="LoginLogoEnd">#1A6AAD</Color>
+	<Color x:Key="LoginLogoStart">#2B74D9</Color>
+	<Color x:Key="LoginLogoEnd">#245FBC</Color>
 </ResourceDictionary>

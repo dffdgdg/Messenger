@@ -305,8 +305,10 @@
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
 								BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
 								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
-							<ScrollViewer Padding="16">
-								<ItemsControl ItemsSource="{Binding FilteredGroupedUsers}">
+							<ScrollViewer>
+								<ItemsControl 
+								ItemsSource="{Binding FilteredGroupedUsers}"
+								Margin="16,16,16,32">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<StackPanel Spacing="20"/>
@@ -380,9 +382,10 @@
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
 								BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
 								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
-							<ScrollViewer Padding="16">
+							<ScrollViewer>
 								<ItemsControl ItemsSource="{Binding FilteredHierarchicalDepartments}"
-											  ItemTemplate="{StaticResource DepartmentTemplate}">
+					  ItemTemplate="{StaticResource DepartmentTemplate}"
+					  Margin="16,16,16,32">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<StackPanel Spacing="8"/>

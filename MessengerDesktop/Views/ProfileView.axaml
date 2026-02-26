@@ -45,7 +45,7 @@
 										ToolTip.Tip="Изменить аватар">
 									<Panel>
 										<controls:AvatarControl Classes="XLarge"
-																Source="{Binding User.Avatar}"
+																Source="{Binding AvatarUrl}"
 																DisplayName="{Binding FullName}"
 																ShowOnlineIndicator="False"/>
 
@@ -78,7 +78,7 @@
 										<TextBlock Text="@"
 												   FontSize="14"
 												   Foreground="{DynamicResource TextMuted}"/>
-										<TextBlock Text="{Binding User.Username, FallbackValue='username'}"
+										<TextBlock Text="{Binding Username, FallbackValue='username'}"
 												   FontSize="14"
 												   Foreground="{DynamicResource TextSecondary}"/>
 									</StackPanel>
@@ -119,7 +119,7 @@
 												   Classes="FieldLabel"
 												   Opacity="0.7"/>
 										<TextBlock Grid.Column="1"
-												   Text="{Binding User.Surname, TargetNullValue='Не указана'}"
+												   Text="{Binding SurnameDisplay}"
 												   FontSize="14"
 												   />
 
@@ -128,7 +128,7 @@
 												   Classes="FieldLabel"
 												   Opacity="0.7"/>
 										<TextBlock Grid.Row="1" Grid.Column="1"
-												   Text="{Binding User.Name, TargetNullValue='Не указано'}"
+												   Text="{Binding NameDisplay}"
 												   FontSize="14"/>
 
 										<TextBlock Grid.Row="2"
@@ -136,7 +136,7 @@
 												   Classes="FieldLabel"
 												   Opacity="0.7"/>
 										<TextBlock Grid.Row="2" Grid.Column="1"
-												   Text="{Binding User.Midname, TargetNullValue='Не указано'}"
+												   Text="{Binding MidnameDisplay}"
 												   FontSize="14"/>
 									</Grid>
 								</StackPanel>
@@ -236,7 +236,7 @@
 										<TextBlock Text="@"
 												   FontSize="14"
 												   Foreground="{DynamicResource TextMuted}"/>
-										<TextBlock Text="{Binding User.Username}"
+										<TextBlock Text="{Binding Username}"
 												   FontSize="14"/>
 									</StackPanel>
 								</Grid>
@@ -415,7 +415,7 @@
 						</Border>
 
 						<Border Classes="ProfileSection"
-								IsVisible="{Binding User.Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding HasDepartment}">
 							<Grid ColumnDefinitions="Auto,*">
 								<PathIcon Data="{StaticResource OrganizationIcon}"
 										  Width="18" Height="18"
@@ -425,7 +425,7 @@
 									<TextBlock Text="Отдел"
 											   FontSize="12"
 											   Foreground="{DynamicResource TextSecondary}"/>
-									<TextBlock Text="{Binding User.Department}"
+									<TextBlock Text="{Binding DepartmentDisplay}"
 											   FontSize="14"
 											   FontWeight="Medium"/>
 								</StackPanel>

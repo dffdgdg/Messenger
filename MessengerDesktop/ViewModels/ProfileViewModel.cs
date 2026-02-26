@@ -20,6 +20,13 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(FullName))]
+    [NotifyPropertyChangedFor(nameof(Username))]
+    [NotifyPropertyChangedFor(nameof(SurnameDisplay))]
+    [NotifyPropertyChangedFor(nameof(NameDisplay))]
+    [NotifyPropertyChangedFor(nameof(MidnameDisplay))]
+    [NotifyPropertyChangedFor(nameof(HasDepartment))]
+    [NotifyPropertyChangedFor(nameof(DepartmentDisplay))]
+
     private UserDto? _user;
 
     [ObservableProperty] private int _userId;
@@ -71,6 +78,17 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                               ?? User?.Username ?? "Пользователь";
 
     public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "—";
+    public string Username => User?.Username ?? string.Empty;
+
+    public string SurnameDisplay => string.IsNullOrWhiteSpace(User?.Surname) ? "Не указана" : User?.Surname ?? "Не указана";
+
+    public string NameDisplay => string.IsNullOrWhiteSpace(User?.Name) ? "Не указано" : User?.Name ?? "Не указано";
+
+    public string MidnameDisplay => string.IsNullOrWhiteSpace(User?.Midname) ? "Не указано" : User?.Midname ?? "Не указано";
+
+    public bool HasDepartment => !string.IsNullOrWhiteSpace(User?.Department);
+
+    public string DepartmentDisplay => User?.Department ?? string.Empty;
 
     public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
         System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), "^[a-zA-Z0-9_]{3,30}$");

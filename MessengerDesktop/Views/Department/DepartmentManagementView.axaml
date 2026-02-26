@@ -209,7 +209,7 @@
 															Spacing="4"
 															Classes="Actions">
 													<Button Classes="IconButton Small"
-															Command="{Binding $parent[UserControl].((vm:DepartmentManagementViewModel)DataContext).OpenChatCommand}"
+															Command="{Binding #Root.DataContext.OpenChatCommand}"
 															CommandParameter="{Binding}"
 															ToolTip.Tip="Написать">
 														<PathIcon Data="{StaticResource SendIcon}"
@@ -217,7 +217,7 @@
 																  Foreground="{DynamicResource Icon}"/>
 													</Button>
 													<Button Classes="IconButton Small Danger"
-															Command="{Binding $parent[UserControl].((vm:DepartmentManagementViewModel)DataContext).RemoveMemberCommand}"
+															Command="{Binding #Root.DataContext.RemoveMemberCommand}"
 															CommandParameter="{Binding}"
 															ToolTip.Tip="Удалить из отдела">
 														<PathIcon Data="{StaticResource DismissIcon}"

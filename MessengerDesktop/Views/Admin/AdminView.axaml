@@ -154,7 +154,7 @@
 											Orientation="Horizontal"
 											Spacing="4">
 									<Button Classes="IconButton Small"
-											Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditDepartmentCommand}"
+											Command="{Binding #Root.DataContext.OpenEditDepartmentCommand}"
 											CommandParameter="{Binding Department}"
 											ToolTip.Tip="Редактировать">
 										<PathIcon Data="{StaticResource EditIcon}"
@@ -353,13 +353,13 @@
 
 																	<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Classes="Actions">
 																		<Button Classes="IconButton Small"
-																				Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditUserDialogCommand}"
+																				Command="{Binding #Root.DataContext.OpenEditUserDialogCommand}"
 																				CommandParameter="{Binding .}" ToolTip.Tip="Редактировать">
 																			<PathIcon Data="{StaticResource EditIcon}" Width="14" Height="14"
 																					  Foreground="{DynamicResource Icon}"/>
 																		</Button>
 																		<Button Classes="IconButton Small Danger"
-																				Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).ToggleBanCommand}"
+																				Command="{Binding #Root.DataContext.ToggleBanCommand}"
 																				CommandParameter="{Binding .}" ToolTip.Tip="Заблокировать">
 																			<PathIcon Data="{StaticResource BlockIcon}" Width="14" Height="14"
 																					  Foreground="{DynamicResource Icon}"/>

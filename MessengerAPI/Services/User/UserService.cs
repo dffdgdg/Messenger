@@ -71,8 +71,7 @@ public partial class UserService(
         if (id != dto.Id)
             return Result.Failure("Несоответствие ID");
 
-        var user = await _context.Users
-            .Include(u => u.UserSetting)
+        var user = await _context.Users.Include(u => u.UserSetting)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user == null)
@@ -119,8 +118,7 @@ public partial class UserService(
 
     public async Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _context.Users
-            .AsNoTracking()
+        var user = await _context.Users.AsNoTracking()
             .Select(u => new { u.Id, u.LastOnline })
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
@@ -134,10 +132,8 @@ public partial class UserService(
             return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
         var users = await _context.Users
-            .Where(u => userIds.Contains(u.Id))
-            .AsNoTracking()
-            .Select(u => new { u.Id, u.LastOnline })
-            .ToListAsync(ct);
+            .Where(u => userIds.Contains(u.Id)).AsNoTracking()
+            .Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
 
         var onlineIds = onlineService.FilterOnline(userIds);
 

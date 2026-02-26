@@ -1,107 +1,107 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
 			 xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:shared="using:MessengerShared.Dto"
-             xmlns:user="using:MessengerShared.Dto.User"
-             xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
-             x:Class="MessengerDesktop.Views.Dialogs.SelectUserDialog"
-             x:DataType="vmDialog:SelectUserDialogViewModel">
+			 xmlns:shared="using:MessengerShared.Dto"
+			 xmlns:user="using:MessengerShared.Dto.User"
+			 xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
+			 x:Class="MessengerDesktop.Views.Dialogs.SelectUserDialog"
+			 x:DataType="vmDialog:SelectUserDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="420" MaxHeight="550">
 		<Grid RowDefinitions="Auto,Auto,*,Auto">
 			<StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
 				<TextBlock Text="{Binding Title}"
-                           FontSize="20"
-                           FontWeight="Bold"/>
+						   FontSize="20"
+						   FontWeight="Bold"/>
 				<TextBlock Text="Выберите пользователя из списка"
-                           FontSize="13"
-                           Foreground="{DynamicResource TextSecondary}"/>
+						   FontSize="13"
+						   Foreground="{DynamicResource TextSecondary}"/>
 			</StackPanel>
 
 			<TextBox Grid.Row="1"
-                     Text="{Binding SearchQuery}"
-                     Watermark="Поиск по имени или логину..."
-                     Classes="DialogInput Search"
-                     Margin="0,0,0,12">
+					 Text="{Binding SearchQuery}"
+					 Watermark="Поиск по имени или логину..."
+					 Classes="DialogInput Search"
+					 Margin="0,0,0,12">
 				<TextBox.InnerLeftContent>
 					<PathIcon Data="{StaticResource SearchIcon}"
-                              Width="16" Height="16"
-                              Margin="12,0,8,0"
-                              Opacity="0.5"/>
+							  Width="16" Height="16"
+							  Margin="12,0,8,0"
+							  Opacity="0.5"/>
 				</TextBox.InnerLeftContent>
 			</TextBox>
 
 			<Border Grid.Row="2"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderDefault}"
-                    CornerRadius="8"
-                    ClipToBounds="True">
+					BorderThickness="1"
+					BorderBrush="{DynamicResource BorderDefault}"
+					CornerRadius="8"
+					ClipToBounds="True">
 				<Grid>
 					<StackPanel VerticalAlignment="Center"
-                                HorizontalAlignment="Center"
-                                Spacing="12"
-                                IsVisible="{Binding !FilteredUsers.Count}">
+								HorizontalAlignment="Center"
+								Spacing="12"
+								IsVisible="{Binding !FilteredUsers.Count}">
 						<PathIcon Data="{StaticResource PersonIcon}"
-                                  Width="48" Height="48"
-                                  Foreground="{DynamicResource TextMuted}"
-                                  HorizontalAlignment="Center"/>
+								  Width="48" Height="48"
+								  Foreground="{DynamicResource TextMuted}"
+								  HorizontalAlignment="Center"/>
 						<TextBlock Text="Пользователи не найдены"
-                                   Foreground="{DynamicResource TextSecondary}"
-                                   HorizontalAlignment="Center"/>
+								   Foreground="{DynamicResource TextSecondary}"
+								   HorizontalAlignment="Center"/>
 					</StackPanel>
 
 					<ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  IsVisible="{Binding FilteredUsers.Count}">
+								  VerticalScrollBarVisibility="Auto"
+								  IsVisible="{Binding FilteredUsers.Count}">
 						<ItemsControl ItemsSource="{Binding FilteredUsers}"
-                                      Margin="4">
+									  Margin="4">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate x:DataType="user:UserDto">
-                                    <Border Padding="10,8"
-                                            Margin="0,2"
-                                            CornerRadius="6"
-                                            Cursor="Hand"
-                                            Background="Transparent"
-                                            PointerPressed="OnUserItemPressed">
-                                        <Border.Styles>
-                                            <Style Selector="Border:pointerover">
-                                                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
-                                            </Style>
-                                        </Border.Styles>
-       
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <controls:AvatarControl Classes="Medium"
-                                                                    Source="{Binding Avatar}"
-                                                                    DisplayName="{Binding DisplayName}"
-                                                                    IsOnline="{Binding IsOnline}"
-                                                                    HorizontalAlignment="Center"/>
-                                            
-                                            <StackPanel Grid.Column="1" 
-                                                        VerticalAlignment="Center"
-                                                        Spacing="2">
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           FontWeight="Medium"
-                                                           FontSize="14"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-                                                           FontSize="12"
-                                                           Foreground="{DynamicResource TextSecondary}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                            
-                                            <Ellipse Grid.Column="2"
-                                                     Width="10" Height="10"
-                                                     VerticalAlignment="Center"
-                                                     IsVisible="{Binding IsOnline}">
-                                                <Ellipse.Fill>
-                                                    <SolidColorBrush Color="#22C55E"/>
-                                                </Ellipse.Fill>
-                                            </Ellipse>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
+									<Border Padding="10,8"
+											Margin="0,2"
+											CornerRadius="6"
+											Cursor="Hand"
+											Background="Transparent"
+											PointerPressed="OnUserItemPressed">
+										<Border.Styles>
+											<Style Selector="Border:pointerover">
+												<Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
+											</Style>
+										</Border.Styles>
+
+										<Grid ColumnDefinitions="Auto,*,Auto">
+											<controls:AvatarControl Classes="Medium"
+																	Source="{Binding Avatar}"
+																	DisplayName="{Binding DisplayName}"
+																	IsOnline="{Binding IsOnline}"
+																	HorizontalAlignment="Center"/>
+
+											<StackPanel Grid.Column="1"
+														VerticalAlignment="Center"
+														Spacing="2">
+												<TextBlock Text="{Binding DisplayName}"
+														   FontWeight="Medium"
+														   FontSize="14"
+														   TextTrimming="CharacterEllipsis"/>
+												<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+														   FontSize="12"
+														   Foreground="{DynamicResource TextSecondary}"
+														   TextTrimming="CharacterEllipsis"/>
+											</StackPanel>
+
+											<Ellipse Grid.Column="2"
+													 Width="10" Height="10"
+													 VerticalAlignment="Center"
+													 IsVisible="{Binding IsOnline}">
+												<Ellipse.Fill>
+													<SolidColorBrush Color="#22C55E"/>
+												</Ellipse.Fill>
+											</Ellipse>
+										</Grid>
+									</Border>
+								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
 					</ScrollViewer>
@@ -110,44 +110,44 @@
 
 			<StackPanel Grid.Row="3" Margin="0,16,0,0" Spacing="12">
 				<Border Background="{DynamicResource SurfaceVariant}"
-                        CornerRadius="8"
-                        Padding="12,10"
-                        IsVisible="{Binding SelectedUser, Converter={x:Static ObjectConverters.IsNotNull}}">
+						CornerRadius="8"
+						Padding="12,10"
+						IsVisible="{Binding SelectedUser, Converter={x:Static ObjectConverters.IsNotNull}}">
 					<Grid ColumnDefinitions="Auto,*,Auto">
 						<TextBlock Grid.Column="0"
-                                   Text="Выбран:"
-                                   Foreground="{DynamicResource TextSecondary}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0"/>
+								   Text="Выбран:"
+								   Foreground="{DynamicResource TextSecondary}"
+								   VerticalAlignment="Center"
+								   Margin="0,0,8,0"/>
 						<TextBlock Grid.Column="1"
-                                   Text="{Binding SelectedUser.DisplayName}"
-                                   FontWeight="Medium"
-                                   VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
+								   Text="{Binding SelectedUser.DisplayName}"
+								   FontWeight="Medium"
+								   VerticalAlignment="Center"
+								   TextTrimming="CharacterEllipsis"/>
 						<Button Grid.Column="2"
-                                Classes="IconButton Small"
-                                Command="{Binding SelectUserCommand}"
-                                CommandParameter="{x:Null}"
-                                ToolTip.Tip="Отменить выбор">
+								Classes="IconButton Small"
+								Command="{Binding SelectUserCommand}"
+								CommandParameter="{x:Null}"
+								ToolTip.Tip="Отменить выбор">
 							<PathIcon Data="{StaticResource DismissIcon}"
-                                      Width="12" Height="12"
-                                      Foreground="{DynamicResource TextSecondary}"/>
+									  Width="12" Height="12"
+									  Foreground="{DynamicResource TextSecondary}"/>
 						</Button>
 					</Grid>
 				</Border>
 
 				<StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            Spacing="12">
+							HorizontalAlignment="Right"
+							Spacing="12">
 					<Button Content="Отмена"
-                            Classes="DialogOutline"
-                            Command="{Binding CancelCommand}"
-                            MinWidth="100"/>
+							Classes="DialogOutline"
+							Command="{Binding CancelCommand}"
+							MinWidth="100"/>
 					<Button Content="Добавить"
-                            Classes="DialogAccent"
-                            Command="{Binding ConfirmCommand}"
-                            IsEnabled="{Binding CanConfirm}"
-                            MinWidth="100"/>
+							Classes="DialogAccent"
+							Command="{Binding ConfirmCommand}"
+							IsEnabled="{Binding CanConfirm}"
+							MinWidth="100"/>
 				</StackPanel>
 			</StackPanel>
 		</Grid>

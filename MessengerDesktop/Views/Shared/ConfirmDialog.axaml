@@ -1,21 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             x:Class="MessengerDesktop.Views.Dialogs.ConfirmDialog"
-             x:DataType="vmDialog:ConfirmDialogViewModel">
+			 x:Class="MessengerDesktop.Views.Dialogs.ConfirmDialog"
+			 x:DataType="vmDialog:ConfirmDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="380">
 		<StackPanel Spacing="16">
 			<StackPanel Orientation="Horizontal" Spacing="12">
 				<Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource WarningBgBrush}">
 					<PathIcon Data="{StaticResource WarningIcon}" Width="20" Height="20"
-                              Foreground="{DynamicResource WarningBrush}"/>
+							  Foreground="{DynamicResource WarningBrush}"/>
 				</Border>
 				<TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
 			</StackPanel>
 
 			<TextBlock Text="{Binding Message}" FontSize="14" Foreground="{DynamicResource TextSecondary}"
-                       TextWrapping="Wrap" LineHeight="22"/>
+					   TextWrapping="Wrap" LineHeight="22"/>
 
 			<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="0,8"/>
 

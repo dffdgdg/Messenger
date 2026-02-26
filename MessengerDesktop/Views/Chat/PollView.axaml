@@ -1,364 +1,364 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             x:Class="MessengerDesktop.Views.Chat.PollView"
-             x:DataType="vmChat:PollViewModel"
-             x:Name="PollRoot">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 x:Class="MessengerDesktop.Views.Chat.PollView"
+			 x:DataType="vmChat:PollViewModel"
+			 x:Name="PollRoot">
 
-    <UserControl.Styles>
-        <Style Selector="Button.PollOptionButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,3"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="FocusAdorner" Value="{x:Null}"/>
-        </Style>
+	<UserControl.Styles>
+		<Style Selector="Button.PollOptionButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,3"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+		</Style>
 
-        <Style Selector="Button.PollOptionButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+		<Style Selector="Button.PollOptionButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-        <Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#0A000000"/>
-        </Style>
+		<Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#0A000000"/>
+		</Style>
 
-        <Style Selector="Button.PollOptionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#12000000"/>
-        </Style>
+		<Style Selector="Button.PollOptionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#12000000"/>
+		</Style>
 
-        <Style Selector="Border.PollOptionBorder">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.PollOptionBorder">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="BorderThickness" Value="1.5"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="12,10"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollOptionBorder.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="#08000000"/>
-        </Style>
+		<Style Selector="Border.PollOptionBorder.Selected">
+			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+			<Setter Property="Background" Value="#08000000"/>
+		</Style>
 
-        <Style Selector="Border.PollRadioOuter">
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.PollRadioOuter">
+			<Setter Property="Width" Value="20"/>
+			<Setter Property="Height" Value="20"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollRadioOuter.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-        </Style>
+		<Style Selector="Border.PollRadioOuter.Selected">
+			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <Style Selector="Border.PollRadioInner">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.PollRadioInner">
+			<Setter Property="Width" Value="8"/>
+			<Setter Property="Height" Value="8"/>
+			<Setter Property="CornerRadius" Value="4"/>
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollRadioOuter.Selected Border.PollRadioInner">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
+		<Style Selector="Border.PollRadioOuter.Selected Border.PollRadioInner">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
 
-        <Style Selector="Border.PollCheckboxOuter">
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="CornerRadius" Value="5"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.PollCheckboxOuter">
+			<Setter Property="Width" Value="20"/>
+			<Setter Property="Height" Value="20"/>
+			<Setter Property="CornerRadius" Value="5"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollCheckboxOuter.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-        </Style>
+		<Style Selector="Border.PollCheckboxOuter.Selected">
+			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <Style Selector="Path.PollCheckboxTick">
-            <Setter Property="Data" Value="M4.5 12.75l6 6 9-13.5"/>
-            <Setter Property="Stroke" Value="White"/>
-            <Setter Property="StrokeThickness" Value="2"/>
-            <Setter Property="StrokeLineCap" Value="Round"/>
-            <Setter Property="StrokeJoin" Value="Round"/>
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Path.PollCheckboxTick">
+			<Setter Property="Data" Value="M4.5 12.75l6 6 9-13.5"/>
+			<Setter Property="Stroke" Value="White"/>
+			<Setter Property="StrokeThickness" Value="2"/>
+			<Setter Property="StrokeLineCap" Value="Round"/>
+			<Setter Property="StrokeJoin" Value="Round"/>
+			<Setter Property="Width" Value="12"/>
+			<Setter Property="Height" Value="12"/>
+			<Setter Property="Stretch" Value="Uniform"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollCheckboxOuter.Selected Path.PollCheckboxTick">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
+		<Style Selector="Border.PollCheckboxOuter.Selected Path.PollCheckboxTick">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
 
-        <Style Selector="Border.PollResultContainer">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="Margin" Value="0,3"/>
-            <Setter Property="Height" Value="44"/>
-        </Style>
+		<Style Selector="Border.PollResultContainer">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="ClipToBounds" Value="True"/>
+			<Setter Property="Margin" Value="0,3"/>
+			<Setter Property="Height" Value="44"/>
+		</Style>
 
-        <Style Selector="Border.PollProgressBar">
-            <Setter Property="Background" Value="#15000000"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Width" Duration="0:0:0.5" Easing="CubicEaseOut"/>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.PollProgressBar">
+			<Setter Property="Background" Value="#15000000"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+			<Setter Property="Height" Value="44"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Width" Duration="0:0:0.5" Easing="CubicEaseOut"/>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.PollProgressBar.Selected">
-            <Setter Property="Background" Value="#25000000"/>
-        </Style>
+		<Style Selector="Border.PollProgressBar.Selected">
+			<Setter Property="Background" Value="#25000000"/>
+		</Style>
 
-        <Style Selector="Path.PollResultCheck">
-            <Setter Property="Data" Value="M9.5 16.5L4.5 11.5L5.91 10.09L9.5 13.67L18.09 5.09L19.5 6.5L9.5 16.5Z"/>
-            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
+		<Style Selector="Path.PollResultCheck">
+			<Setter Property="Data" Value="M9.5 16.5L4.5 11.5L5.91 10.09L9.5 13.67L18.09 5.09L19.5 6.5L9.5 16.5Z"/>
+			<Setter Property="Fill" Value="{DynamicResource Accent}"/>
+			<Setter Property="Width" Value="16"/>
+			<Setter Property="Height" Value="16"/>
+			<Setter Property="Stretch" Value="Uniform"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollOptionText">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-        </Style>
+		<Style Selector="TextBlock.PollOptionText">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollResultText">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="TextWrapping" Value="NoWrap"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-        </Style>
+		<Style Selector="TextBlock.PollResultText">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="TextWrapping" Value="NoWrap"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollPercentage">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-        </Style>
+		<Style Selector="TextBlock.PollPercentage">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollPercentage.Selected">
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-        </Style>
+		<Style Selector="TextBlock.PollPercentage.Selected">
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollType">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Opacity" Value="0.85"/>
-        </Style>
+		<Style Selector="TextBlock.PollType">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Opacity" Value="0.85"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollSubtype">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-        </Style>
+		<Style Selector="TextBlock.PollSubtype">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+		</Style>
 
-        <Style Selector="TextBlock.PollFooter">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
+		<Style Selector="TextBlock.PollFooter">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
 
-        <Style Selector="Button.PollVoteButton">
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-            <Setter Property="Padding" Value="16,6"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Button.PollVoteButton">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+			<Setter Property="Padding" Value="16,6"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Button.PollVoteButton:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-        </Style>
+		<Style Selector="Button.PollVoteButton:pointerover">
+			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+		</Style>
 
-        <Style Selector="Button.PollVoteButton:pressed">
-            <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-        </Style>
+		<Style Selector="Button.PollVoteButton:pressed">
+			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+		</Style>
 
-        <Style Selector="Button.PollVoteButton:disabled">
-            <Setter Property="Opacity" Value="0.4"/>
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="Button.PollVoteButton:disabled">
+			<Setter Property="Opacity" Value="0.4"/>
+		</Style>
+	</UserControl.Styles>
 
-    <StackPanel Spacing="4"
-                MinWidth="250"
-                AutomationProperties.Name="Опрос">
+	<StackPanel Spacing="4"
+				MinWidth="250"
+				AutomationProperties.Name="Опрос">
 
-        <StackPanel Spacing="2" Margin="2,0,0,4">
-            <TextBlock Classes="PollType"
-                       Text="{Binding IsAnonymous,
-                              Converter={conv:Converter Name=BoolToString},
-                              ConverterParameter='Анонимный опрос|Опрос'}"/>
+		<StackPanel Spacing="2" Margin="2,0,0,4">
+			<TextBlock Classes="PollType"
+					   Text="{Binding IsAnonymous,
+					   Converter={conv:Converter Name=BoolToString},
+					   ConverterParameter='Анонимный опрос|Опрос'}"/>
 
-            <TextBlock Classes="PollSubtype"
-                       Text="{Binding AllowsMultipleAnswers,
-                              Converter={conv:Converter Name=BoolToString},
-                              ConverterParameter='Можно выбрать несколько|Один вариант'}"
-                       IsVisible="{Binding AllowsMultipleAnswers}"/>
-        </StackPanel>
+			<TextBlock Classes="PollSubtype"
+					   Text="{Binding AllowsMultipleAnswers,
+					   Converter={conv:Converter Name=BoolToString},
+					   ConverterParameter='Можно выбрать несколько|Один вариант'}"
+					   IsVisible="{Binding AllowsMultipleAnswers}"/>
+		</StackPanel>
 
-        <ItemsControl ItemsSource="{Binding Options}"
-                      IsVisible="{Binding CanVote}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vmChat:PollOptionViewModel">
-                    <Button Classes="PollOptionButton"
-                            Command="{Binding ToggleSelectionCommand}"
-                            AutomationProperties.Name="{Binding OptionText}">
-                        <Border Classes="PollOptionBorder"
-                                Classes.Selected="{Binding IsSelected}">
-                            <Grid ColumnDefinitions="Auto,*">
+		<ItemsControl ItemsSource="{Binding Options}"
+					  IsVisible="{Binding CanVote}">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate x:DataType="vmChat:PollOptionViewModel">
+					<Button Classes="PollOptionButton"
+							Command="{Binding ToggleSelectionCommand}"
+							AutomationProperties.Name="{Binding OptionText}">
+						<Border Classes="PollOptionBorder"
+								Classes.Selected="{Binding IsSelected}">
+							<Grid ColumnDefinitions="Auto,*">
 
-                                <Panel Grid.Column="0"
-                                       Width="20" Height="20"
-                                       Margin="0,0,10,0"
-                                       VerticalAlignment="Center">
+								<Panel Grid.Column="0"
+									   Width="20" Height="20"
+									   Margin="0,0,10,0"
+									   VerticalAlignment="Center">
 
-                                    <Border Classes="PollRadioOuter"
-                                            Classes.Selected="{Binding IsSelected}"
-                                            IsVisible="{Binding !$parent[ItemsControl].((vmChat:PollViewModel)DataContext).AllowsMultipleAnswers}">
-                                        <Border Classes="PollRadioInner"/>
-                                    </Border>
+									<Border Classes="PollRadioOuter"
+											Classes.Selected="{Binding IsSelected}"
+											IsVisible="{Binding !$parent[ItemsControl].((vmChat:PollViewModel)DataContext).AllowsMultipleAnswers}">
+										<Border Classes="PollRadioInner"/>
+									</Border>
 
-                                    <Border Classes="PollCheckboxOuter"
-                                            Classes.Selected="{Binding IsSelected}"
-                                            IsVisible="{Binding $parent[ItemsControl].((vmChat:PollViewModel)DataContext).AllowsMultipleAnswers}">
-                                        <Path Classes="PollCheckboxTick"/>
-                                    </Border>
-                                </Panel>
+									<Border Classes="PollCheckboxOuter"
+											Classes.Selected="{Binding IsSelected}"
+											IsVisible="{Binding $parent[ItemsControl].((vmChat:PollViewModel)DataContext).AllowsMultipleAnswers}">
+										<Path Classes="PollCheckboxTick"/>
+									</Border>
+								</Panel>
 
-                                <TextBlock Grid.Column="1"
-                                           Classes="PollOptionText"
-                                           Text="{Binding OptionText}"/>
-                            </Grid>
-                        </Border>
-                    </Button>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+								<TextBlock Grid.Column="1"
+										   Classes="PollOptionText"
+										   Text="{Binding OptionText}"/>
+							</Grid>
+						</Border>
+					</Button>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
 
-        <ItemsControl ItemsSource="{Binding Options}"
-                      IsVisible="{Binding !CanVote}"
-                      x:Name="ResultsItemsControl">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vmChat:PollOptionViewModel">
-                    <Border Classes="PollResultContainer"
-                            AutomationProperties.Name="{Binding OptionText}"
-                            AutomationProperties.HelpText="{Binding VotesPercentage, StringFormat='{}{0:0}%'}">
-                        <Panel>
-                            <Border Classes="PollProgressBar"
-                                    Classes.Selected="{Binding IsSelected}"
-                                    CornerRadius="12">
-                                <Border.Width>
-                                    <MultiBinding Converter="{conv:MultiConverter Name=PercentToWidth}">
-                                        <Binding Path="VotesPercentage"/>
-                                        <Binding Path="$parent[ItemsControl].Bounds.Width"/>
-                                    </MultiBinding>
-                                </Border.Width>
-                            </Border>
+		<ItemsControl ItemsSource="{Binding Options}"
+					  IsVisible="{Binding !CanVote}"
+					  x:Name="ResultsItemsControl">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate x:DataType="vmChat:PollOptionViewModel">
+					<Border Classes="PollResultContainer"
+							AutomationProperties.Name="{Binding OptionText}"
+							AutomationProperties.HelpText="{Binding VotesPercentage, StringFormat='{}{0:0}%'}">
+						<Panel>
+							<Border Classes="PollProgressBar"
+									Classes.Selected="{Binding IsSelected}"
+									CornerRadius="12">
+								<Border.Width>
+									<MultiBinding Converter="{conv:MultiConverter Name=PercentToWidth}">
+										<Binding Path="VotesPercentage"/>
+										<Binding Path="$parent[ItemsControl].Bounds.Width"/>
+									</MultiBinding>
+								</Border.Width>
+							</Border>
 
-                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                  Margin="12,0"
-                                  VerticalAlignment="Center">
-                                <Path Grid.Column="0"
-                                      Classes="PollResultCheck"
-                                      IsVisible="{Binding IsSelected}"
-                                      Margin="0,0,8,0"/>
+							<Grid ColumnDefinitions="Auto,*,Auto"
+								  Margin="12,0"
+								  VerticalAlignment="Center">
+								<Path Grid.Column="0"
+									  Classes="PollResultCheck"
+									  IsVisible="{Binding IsSelected}"
+									  Margin="0,0,8,0"/>
 
-                                <TextBlock Grid.Column="1"
-                                           Classes="PollResultText"
-                                           Text="{Binding OptionText}"/>
+								<TextBlock Grid.Column="1"
+										   Classes="PollResultText"
+										   Text="{Binding OptionText}"/>
 
-                                <TextBlock Grid.Column="2"
-                                           Classes="PollPercentage"
-                                           Classes.Selected="{Binding IsSelected}"
-                                           Text="{Binding VotesPercentage, StringFormat={}{0:0}%}"
-                                           Margin="8,0,0,0"/>
-                            </Grid>
-                        </Panel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+								<TextBlock Grid.Column="2"
+										   Classes="PollPercentage"
+										   Classes.Selected="{Binding IsSelected}"
+										   Text="{Binding VotesPercentage, StringFormat={}{0:0}%}"
+										   Margin="8,0,0,0"/>
+							</Grid>
+						</Panel>
+					</Border>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
 
-        <Grid ColumnDefinitions="*,Auto" Margin="2,4,2,0">
-            <TextBlock Grid.Column="0"
-                       Classes="PollFooter">
-                <TextBlock.Text>
-                    <MultiBinding StringFormat="{}{0} {1}">
-                        <Binding Path="TotalVotes"/>
-                        <Binding Path="TotalVotes"
-                                 Converter="{conv:Converter Name=Pluralize}"
-                                 ConverterParameter="голос|голоса|голосов"/>
-                    </MultiBinding>
-                </TextBlock.Text>
-            </TextBlock>
+		<Grid ColumnDefinitions="*,Auto" Margin="2,4,2,0">
+			<TextBlock Grid.Column="0"
+					   Classes="PollFooter">
+				<TextBlock.Text>
+					<MultiBinding StringFormat="{}{0} {1}">
+						<Binding Path="TotalVotes"/>
+						<Binding Path="TotalVotes"
+								 Converter="{conv:Converter Name=Pluralize}"
+								 ConverterParameter="голос|голоса|голосов"/>
+					</MultiBinding>
+				</TextBlock.Text>
+			</TextBlock>
 
-            <Button Grid.Column="1"
-                    Classes="PollVoteButton"
-                    Content="Голосовать"
-                    Command="{Binding VoteCommand}"
-                    IsVisible="{Binding CanVote}"
-                    IsEnabled="{Binding HasSelection}"
-                    AutomationProperties.Name="Голосовать в опросе"/>
-        </Grid>
-    </StackPanel>
+			<Button Grid.Column="1"
+					Classes="PollVoteButton"
+					Content="Голосовать"
+					Command="{Binding VoteCommand}"
+					IsVisible="{Binding CanVote}"
+					IsEnabled="{Binding HasSelection}"
+					AutomationProperties.Name="Голосовать в опросе"/>
+		</Grid>
+	</StackPanel>
 </UserControl>

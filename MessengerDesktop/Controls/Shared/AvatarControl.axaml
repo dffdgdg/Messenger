@@ -61,7 +61,6 @@
                            asyncImageLoader:ImageLoader.Source="{Binding ImageSource, ElementName=Root}"/>
                 </Panel>
 
-                <!-- Initials placeholder -->
                 <TextBlock Text="{Binding Initials, ElementName=Root}"
                            FontSize="{Binding FontSize, ElementName=Root}"
                            FontWeight="SemiBold"
@@ -70,7 +69,6 @@
                            VerticalAlignment="Center"
                            IsVisible="{Binding ShowInitials, ElementName=Root}"/>
 
-                <!-- Icon placeholder -->
                 <PathIcon Data="{Binding IconData, ElementName=Root}"
                           Width="{Binding IconSize, ElementName=Root}"
                           Height="{Binding IconSize, ElementName=Root}"
@@ -81,7 +79,6 @@
             </Panel>
         </Border>
 
-        <!-- Online indicator -->
         <Border x:Name="OnlineIndicator"
                 IsVisible="{Binding ShowOnlineStatus, ElementName=Root}"
                 Width="{Binding OnlineIndicatorSize, ElementName=Root}"

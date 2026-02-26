@@ -64,8 +64,13 @@ public partial class MainMenuViewModel : BaseViewModel
     [ObservableProperty]
     private int _selectedMenuIndex = 1;
     private readonly IGlobalHubConnection _globalHub;
+    private readonly Stack<int> _backHistory = [];
+    private readonly Stack<int> _forwardHistory = [];
+
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool ShowNoResults => HasSearchText  && !IsSearching;
+    public bool CanGoBack => _backHistory.Count > 0;
+    public bool CanGoForward => _forwardHistory.Count > 0;
 
     public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,IApiClientService apiClient,IAuthManager authManager,
         IChatsViewModelFactory chatsViewModelFactory,IServiceProvider serviceProvider, IGlobalHubConnection globalHub)
@@ -100,7 +105,48 @@ public partial class MainMenuViewModel : BaseViewModel
 
     [RelayCommand]
     private void SetItem(int index)
+        => NavigateToMenu(index, addToHistory: true);
+
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void GoBack()
     {
+        if (!CanGoBack)
+            return;
+
+        var previousIndex = _backHistory.Pop();
+
+        if (SelectedMenuIndex != previousIndex)
+        {
+            _forwardHistory.Push(SelectedMenuIndex);
+        }
+
+        NavigateToMenu(previousIndex, addToHistory: false);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoForward))]
+    private void GoForward()
+    {
+        if (!CanGoForward)
+            return;
+
+        var nextIndex = _forwardHistory.Pop();
+
+        if (SelectedMenuIndex != nextIndex)
+        {
+            _backHistory.Push(SelectedMenuIndex);
+        }
+
+        NavigateToMenu(nextIndex, addToHistory: false);
+    }
+
+    private void NavigateToMenu(int index, bool addToHistory)
+    {
+        if (addToHistory && SelectedMenuIndex != index)
+        {
+            _backHistory.Push(SelectedMenuIndex);
+            _forwardHistory.Clear();
+        }
         SelectedMenuIndex = index;
         ClearSearch();
 
@@ -162,7 +208,17 @@ public partial class MainMenuViewModel : BaseViewModel
                 CurrentMenuViewModel = _departmentViewModel;
                 break;
         }
+        UpdateNavigationState();
     }
+
+    private void UpdateNavigationState()
+    {
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(CanGoForward));
+        GoBackCommand.NotifyCanExecuteChanged();
+        GoForwardCommand.NotifyCanExecuteChanged();
+    }
+
 
     partial void OnSearchTextChanged(string value)
     {
@@ -538,9 +594,6 @@ public partial class MainMenuViewModel : BaseViewModel
         };
     }
 
-    public void SetActiveMenu(int index)
-    {
-        SelectedMenuIndex = index;
-        SetItemCommand.Execute(index);
-    }
+    public void SetActiveMenu(int index) =>
+        NavigateToMenu(index, addToHistory: true);
 }

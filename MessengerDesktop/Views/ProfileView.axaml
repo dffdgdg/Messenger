@@ -1,10 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             x:Class="MessengerDesktop.Views.ProfileView"
-             x:DataType="vm:ProfileViewModel"
-             Background="{DynamicResource PrimaryBG}">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 x:Class="MessengerDesktop.Views.ProfileView"
+			 x:DataType="vm:ProfileViewModel"
+			 Background="{DynamicResource PrimaryBG}">
 
 	<UserControl.Styles>
 		<Style Selector="Button.AvatarButton:pointerover Border#AvatarOverlay">
@@ -22,8 +22,8 @@
 
 	<Border Classes="PageContainer">
 		<ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Classes="ThinScrollbar">
+					  HorizontalScrollBarVisibility="Disabled"
+					  Classes="ThinScrollbar">
 			<Border Padding="32,24">
 				<Grid HorizontalAlignment="Center">
 					<Grid.ColumnDefinitions>
@@ -33,54 +33,54 @@
 					<StackPanel Spacing="20">
 
 						<TextBlock Text="Профиль"
-                                   Classes="PageTitle"
-                                   Margin="0,0,0,8"/>
+								   Classes="PageTitle"
+								   Margin="0,0,0,8"/>
 
 						<Border Classes="ProfileSection">
 							<Grid ColumnDefinitions="Auto,*">
 
 								<Button Classes="AvatarButton IconButton"
-                                        Width="88" Height="88"
-                                        Command="{Binding UploadAvatarCommand}"
-                                        ToolTip.Tip="Изменить аватар">
+										Width="88" Height="88"
+										Command="{Binding UploadAvatarCommand}"
+										ToolTip.Tip="Изменить аватар">
 									<Panel>
 										<controls:AvatarControl Classes="XLarge"
-                                                                Source="{Binding User.Avatar}"
-                                                                DisplayName="{Binding FullName}"
-                                                                ShowOnlineIndicator="False"/>
+																Source="{Binding User.Avatar}"
+																DisplayName="{Binding FullName}"
+																ShowOnlineIndicator="False"/>
 
 										<Border x:Name="AvatarOverlay"
-                                                Width="88" Height="88"
-                                                CornerRadius="44"
-                                                Background="#80000000"
-                                                Opacity="0">
+												Width="88" Height="88"
+												CornerRadius="44"
+												Background="#80000000"
+												Opacity="0">
 											<Border.Transitions>
 												<Transitions>
 													<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
 												</Transitions>
 											</Border.Transitions>
 											<PathIcon Data="{StaticResource CameraIcon}"
-                                                      Width="24" Height="24"
-                                                      Foreground="White"/>
+													  Width="24" Height="24"
+													  Foreground="White"/>
 										</Border>
 									</Panel>
 								</Button>
 
 								<StackPanel Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Spacing="6"
-                                            Margin="20,0,0,0">
+											VerticalAlignment="Center"
+											Spacing="6"
+											Margin="20,0,0,0">
 									<TextBlock Text="{Binding FullName}"
-                                               FontSize="20"
-                                               FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"/>
+											   FontSize="20"
+											   FontWeight="SemiBold"
+											   TextTrimming="CharacterEllipsis"/>
 									<StackPanel Orientation="Horizontal" Spacing="2">
 										<TextBlock Text="@"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource TextMuted}"/>
+												   FontSize="14"
+												   Foreground="{DynamicResource TextMuted}"/>
 										<TextBlock Text="{Binding User.Username, FallbackValue='username'}"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource TextSecondary}"/>
+												   FontSize="14"
+												   Foreground="{DynamicResource TextSecondary}"/>
 									</StackPanel>
 								</StackPanel>
 							</Grid>
@@ -92,112 +92,112 @@
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource ProfileIcon}"
-                                                  Width="18" Height="18"
-                                                  Foreground="{DynamicResource Accent}"/>
+												  Width="18" Height="18"
+												  Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Личные данные"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"/>
+												   FontSize="15"
+												   FontWeight="SemiBold"/>
 									</StackPanel>
 
 									<Button Grid.Column="2"
-                                            Classes="IconButton Small"
-                                            Command="{Binding StartEditProfileCommand}"
-                                            IsVisible="{Binding !IsEditingProfile}"
-                                            ToolTip.Tip="Редактировать">
+											Classes="IconButton Small"
+											Command="{Binding StartEditProfileCommand}"
+											IsVisible="{Binding !IsEditingProfile}"
+											ToolTip.Tip="Редактировать">
 										<PathIcon Data="{StaticResource EditIcon}"
-                                                  Width="16" Height="16"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Width="16" Height="16"
+												  Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
 								</Grid>
 
 								<StackPanel Spacing="12" IsVisible="{Binding !IsEditingProfile}">
 									<Grid RowDefinitions="Auto,Auto,Auto"
-                                          ColumnDefinitions="90,*"
-                                          RowSpacing="10">
+										  ColumnDefinitions="90,*"
+										  RowSpacing="10">
 
 										<TextBlock Text="Фамилия"
-                                                   Classes="FieldLabel"
-                                                   Opacity="0.7"/>
+												   Classes="FieldLabel"
+												   Opacity="0.7"/>
 										<TextBlock Grid.Column="1"
-                                                   Text="{Binding User.Surname, TargetNullValue='Не указана'}"
-                                                   FontSize="14"
+												   Text="{Binding User.Surname, TargetNullValue='Не указана'}"
+												   FontSize="14"
 												   />
 
 										<TextBlock Grid.Row="1"
-                                                   Text="Имя"
-                                                   Classes="FieldLabel"
-                                                   Opacity="0.7"/>
+												   Text="Имя"
+												   Classes="FieldLabel"
+												   Opacity="0.7"/>
 										<TextBlock Grid.Row="1" Grid.Column="1"
-                                                   Text="{Binding User.Name, TargetNullValue='Не указано'}"
-                                                   FontSize="14"/>
+												   Text="{Binding User.Name, TargetNullValue='Не указано'}"
+												   FontSize="14"/>
 
 										<TextBlock Grid.Row="2"
-                                                   Text="Отчество"
-                                                   Classes="FieldLabel"
-                                                   Opacity="0.7"/>
+												   Text="Отчество"
+												   Classes="FieldLabel"
+												   Opacity="0.7"/>
 										<TextBlock Grid.Row="2" Grid.Column="1"
-                                                   Text="{Binding User.Midname, TargetNullValue='Не указано'}"
-                                                   FontSize="14"/>
+												   Text="{Binding User.Midname, TargetNullValue='Не указано'}"
+												   FontSize="14"/>
 									</Grid>
 								</StackPanel>
 
 								<StackPanel Spacing="16" IsVisible="{Binding IsEditingProfile}">
 
 									<Border Background="{DynamicResource AccentMuted}"
-                                            CornerRadius="8"
-                                            Padding="12,10">
+											CornerRadius="8"
+											Padding="12,10">
 										<Grid ColumnDefinitions="Auto,*">
 											<TextBlock Text="Отображается как:"
-                                                       FontSize="12"
-                                                       Foreground="{DynamicResource TextSecondary}"
-                                                       VerticalAlignment="Center"/>
+													   FontSize="12"
+													   Foreground="{DynamicResource TextSecondary}"
+													   VerticalAlignment="Center"/>
 											<TextBlock Grid.Column="1"
-                                                       Text="{Binding TempFullName}"
-                                                       FontSize="14"
-                                                       FontWeight="Medium"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"/>
+													   Text="{Binding TempFullName}"
+													   FontSize="14"
+													   FontWeight="Medium"
+													   Margin="8,0,0,0"
+													   VerticalAlignment="Center"/>
 										</Grid>
 									</Border>
 
 									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
 										<StackPanel Spacing="6">
 											<TextBlock Text="Фамилия"
-                                                       Classes="FieldLabel"
-                                                       FontSize="12"/>
+													   Classes="FieldLabel"
+													   FontSize="12"/>
 											<TextBox Text="{Binding TempSurname}"
-                                                     Classes="DialogInput"
-                                                     Watermark="Иванов"/>
+													 Classes="DialogInput"
+													 Watermark="Иванов"/>
 										</StackPanel>
 
 										<StackPanel Grid.Column="1" Spacing="6">
 											<TextBlock Text="Имя"
-                                                       Classes="FieldLabel"
-                                                       FontSize="12"/>
+													   Classes="FieldLabel"
+													   FontSize="12"/>
 											<TextBox Text="{Binding TempName}"
-                                                     Classes="DialogInput"
-                                                     Watermark="Иван"/>
+													 Classes="DialogInput"
+													 Watermark="Иван"/>
 										</StackPanel>
 
 										<StackPanel Grid.Column="2" Spacing="6">
 											<TextBlock Text="Отчество"
-                                                       Classes="FieldLabel"
-                                                       FontSize="12"/>
+													   Classes="FieldLabel"
+													   FontSize="12"/>
 											<TextBox Text="{Binding TempMidname}"
-                                                     Classes="DialogInput"
-                                                     Watermark="Иванович"/>
+													 Classes="DialogInput"
+													 Watermark="Иванович"/>
 										</StackPanel>
 									</Grid>
 
 									<StackPanel Orientation="Horizontal" Spacing="10">
 										<Button Content="Сохранить"
-                                                Classes="DialogAccent"
-                                                Command="{Binding SaveProfileCommand}"
-                                                Padding="20,8"/>
+												Classes="DialogAccent"
+												Command="{Binding SaveProfileCommand}"
+												Padding="20,8"/>
 										<Button Content="Отмена"
-                                                Classes="DialogOutline"
-                                                Command="{Binding CancelEditProfileCommand}"
-                                                Padding="16,8"/>
+												Classes="DialogOutline"
+												Command="{Binding CancelEditProfileCommand}"
+												Padding="16,8"/>
 									</StackPanel>
 								</StackPanel>
 							</StackPanel>
@@ -209,85 +209,85 @@
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource MentionIcon}"
-                                                  Width="18" Height="18"
-                                                  Foreground="{DynamicResource Accent}"/>
+												  Width="18" Height="18"
+												  Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Имя пользователя"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"/>
+												   FontSize="15"
+												   FontWeight="SemiBold"/>
 									</StackPanel>
 
 									<Button Grid.Column="2"
-                                            Classes="IconButton Small"
-                                            Command="{Binding StartEditUsernameCommand}"
-                                            IsVisible="{Binding !IsEditingUsername}"
-                                            ToolTip.Tip="Изменить">
+											Classes="IconButton Small"
+											Command="{Binding StartEditUsernameCommand}"
+											IsVisible="{Binding !IsEditingUsername}"
+											ToolTip.Tip="Изменить">
 										<PathIcon Data="{StaticResource EditIcon}"
-                                                  Width="16" Height="16"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Width="16" Height="16"
+												  Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
 								</Grid>
 
 								<Grid ColumnDefinitions="90,*"
-                                      IsVisible="{Binding !IsEditingUsername}">
+									  IsVisible="{Binding !IsEditingUsername}">
 									<TextBlock Text="Username"
-                                               Classes="FieldLabel"
-                                               Opacity="0.7"/>
+											   Classes="FieldLabel"
+											   Opacity="0.7"/>
 									<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
 										<TextBlock Text="@"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource TextMuted}"/>
+												   FontSize="14"
+												   Foreground="{DynamicResource TextMuted}"/>
 										<TextBlock Text="{Binding User.Username}"
-                                                   FontSize="14"/>
+												   FontSize="14"/>
 									</StackPanel>
 								</Grid>
 
 								<StackPanel Spacing="14" IsVisible="{Binding IsEditingUsername}">
 									<StackPanel Spacing="6">
 										<TextBlock Text="Новый username"
-                                                   Classes="FieldLabel"
-                                                   FontSize="12"/>
+												   Classes="FieldLabel"
+												   FontSize="12"/>
 										<Grid ColumnDefinitions="Auto,*">
 											<Border Background="{DynamicResource ControlBg}"
-                                                    BorderBrush="{DynamicResource ControlBorder}"
-                                                    BorderThickness="1,1,0,1"
-                                                    CornerRadius="8,0,0,8"
-                                                    Padding="12,0"
-                                                    Height="40">
+													BorderBrush="{DynamicResource ControlBorder}"
+													BorderThickness="1,1,0,1"
+													CornerRadius="8,0,0,8"
+													Padding="12,0"
+													Height="40">
 												<TextBlock Text="@"
-                                                           VerticalAlignment="Center"
-                                                           FontSize="14"
-                                                           Foreground="{DynamicResource TextMuted}"/>
+														   VerticalAlignment="Center"
+														   FontSize="14"
+														   Foreground="{DynamicResource TextMuted}"/>
 											</Border>
 											<TextBox Grid.Column="1"
-                                                     Text="{Binding TempUsername}"
-                                                     Classes="DialogInput"
-                                                     CornerRadius="0,8,8,0"
-                                                     Watermark="username"
-                                                     MaxLength="30"/>
+													 Text="{Binding TempUsername}"
+													 Classes="DialogInput"
+													 CornerRadius="0,8,8,0"
+													 Watermark="username"
+													 MaxLength="30"/>
 										</Grid>
 
 										<Panel Height="16">
 											<TextBlock Text="{Binding UsernameValidationMessage}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource ErrorBrush}"
-                                                       IsVisible="{Binding UsernameValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+													   FontSize="11"
+													   Foreground="{DynamicResource ErrorBrush}"
+													   IsVisible="{Binding UsernameValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 											<TextBlock Text="Латинские буквы, цифры и подчёркивания (3-30 символов)"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMuted}"
-                                                       IsVisible="{Binding UsernameValidationMessage, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+													   FontSize="11"
+													   Foreground="{DynamicResource TextMuted}"
+													   IsVisible="{Binding UsernameValidationMessage, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 										</Panel>
 									</StackPanel>
 
 									<StackPanel Orientation="Horizontal" Spacing="10">
 										<Button Content="Сохранить"
-                                                Classes="DialogAccent"
-                                                Command="{Binding SaveUsernameCommand}"
-                                                IsEnabled="{Binding CanSaveUsername}"
-                                                Padding="20,8"/>
+												Classes="DialogAccent"
+												Command="{Binding SaveUsernameCommand}"
+												IsEnabled="{Binding CanSaveUsername}"
+												Padding="20,8"/>
 										<Button Content="Отмена"
-                                                Classes="DialogOutline"
-                                                Command="{Binding CancelEditUsernameCommand}"
-                                                Padding="16,8"/>
+												Classes="DialogOutline"
+												Command="{Binding CancelEditUsernameCommand}"
+												Padding="16,8"/>
 									</StackPanel>
 								</StackPanel>
 							</StackPanel>
@@ -298,102 +298,102 @@
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 										<PathIcon Data="{StaticResource LockClosedIcon}"
-                                                  Width="18" Height="18"
-                                                  Foreground="{DynamicResource Accent}"/>
+												  Width="18" Height="18"
+												  Foreground="{DynamicResource Accent}"/>
 										<TextBlock Text="Безопасность"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"/>
+												   FontSize="15"
+												   FontWeight="SemiBold"/>
 									</StackPanel>
 
 									<Button Grid.Column="2"
-                                            Classes="IconButton Small"
-                                            Command="{Binding StartEditPasswordCommand}"
-                                            IsVisible="{Binding !IsEditingPassword}"
-                                            ToolTip.Tip="Изменить пароль">
+											Classes="IconButton Small"
+											Command="{Binding StartEditPasswordCommand}"
+											IsVisible="{Binding !IsEditingPassword}"
+											ToolTip.Tip="Изменить пароль">
 										<PathIcon Data="{StaticResource EditIcon}"
-                                                  Width="16" Height="16"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Width="16" Height="16"
+												  Foreground="{DynamicResource TextSecondary}"/>
 									</Button>
 								</Grid>
 
 								<Grid ColumnDefinitions="90,*"
-                                      IsVisible="{Binding !IsEditingPassword}">
+									  IsVisible="{Binding !IsEditingPassword}">
 									<TextBlock Text="Пароль"
-                                               Classes="FieldLabel"
-                                               Opacity="0.7"/>
+											   Classes="FieldLabel"
+											   Opacity="0.7"/>
 									<TextBlock Grid.Column="1"
-                                               Text="••••••••••••"
-                                               FontSize="14"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               LetterSpacing="2"/>
+											   Text="••••••••••••"
+											   FontSize="14"
+											   Foreground="{DynamicResource TextSecondary}"
+											   LetterSpacing="2"/>
 								</Grid>
 
 								<StackPanel Spacing="16" IsVisible="{Binding IsEditingPassword}">
 
 									<StackPanel Spacing="6">
 										<TextBlock Text="Текущий пароль"
-                                                   Classes="FieldLabel"
-                                                   FontSize="12"/>
+												   Classes="FieldLabel"
+												   FontSize="12"/>
 										<TextBox Text="{Binding CurrentPassword}"
-                                                 Classes="DialogInput"
-                                                 PasswordChar="•"
-                                                 Watermark="Введите текущий пароль"
-                                                 MaxWidth="320"
-                                                 HorizontalAlignment="Left"/>
+												 Classes="DialogInput"
+												 PasswordChar="•"
+												 Watermark="Введите текущий пароль"
+												 MaxWidth="320"
+												 HorizontalAlignment="Left"/>
 									</StackPanel>
 
 									<Separator Background="{DynamicResource BorderDefault}"
-                                               Margin="0,4"/>
+											   Margin="0,4"/>
 
 									<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
 										<StackPanel Spacing="6">
 											<TextBlock Text="Новый пароль"
-                                                       Classes="FieldLabel"
-                                                       FontSize="12"/>
+													   Classes="FieldLabel"
+													   FontSize="12"/>
 											<TextBox Text="{Binding NewPassword}"
-                                                     Classes="DialogInput"
-                                                     PasswordChar="•"
-                                                     Watermark="Минимум 6 символов"/>
+													 Classes="DialogInput"
+													 PasswordChar="•"
+													 Watermark="Минимум 6 символов"/>
 											<TextBlock Text="{Binding NewPasswordValidationMessage}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMuted}"
-                                                       IsVisible="{Binding NewPasswordValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+													   FontSize="11"
+													   Foreground="{DynamicResource TextMuted}"
+													   IsVisible="{Binding NewPasswordValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 										</StackPanel>
 
 										<StackPanel Grid.Column="1" Spacing="6">
 											<TextBlock Text="Подтвердите пароль"
-                                                       Classes="FieldLabel"
-                                                       FontSize="12"/>
+													   Classes="FieldLabel"
+													   FontSize="12"/>
 											<TextBox Text="{Binding ConfirmPassword}"
-                                                     Classes="DialogInput"
-                                                     PasswordChar="•"
-                                                     Watermark="Повторите пароль"/>
+													 Classes="DialogInput"
+													 PasswordChar="•"
+													 Watermark="Повторите пароль"/>
 
 											<StackPanel Orientation="Horizontal"
-                                                        Spacing="5"
-                                                        Height="16"
-                                                        IsVisible="{Binding ShowPasswordMatchIndicator}">
+														Spacing="5"
+														Height="16"
+														IsVisible="{Binding ShowPasswordMatchIndicator}">
 
 												<StackPanel Orientation="Horizontal"
-                                                            Spacing="5"
-                                                            IsVisible="{Binding PasswordsMatch}">
+															Spacing="5"
+															IsVisible="{Binding PasswordsMatch}">
 													<PathIcon Data="{StaticResource CheckmarkIcon}"
-                                                              Width="12" Height="12"
-                                                              Foreground="{DynamicResource SuccessBrush}"/>
+															  Width="12" Height="12"
+															  Foreground="{DynamicResource SuccessBrush}"/>
 													<TextBlock Text="Пароли совпадают"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource SuccessBrush}"/>
+															   FontSize="11"
+															   Foreground="{DynamicResource SuccessBrush}"/>
 												</StackPanel>
 
 												<StackPanel Orientation="Horizontal"
-                                                            Spacing="5"
-                                                            IsVisible="{Binding !PasswordsMatch}">
+															Spacing="5"
+															IsVisible="{Binding !PasswordsMatch}">
 													<PathIcon Data="{StaticResource DismissIcon}"
-                                                              Width="12" Height="12"
-                                                              Foreground="{DynamicResource ErrorBrush}"/>
+															  Width="12" Height="12"
+															  Foreground="{DynamicResource ErrorBrush}"/>
 													<TextBlock Text="Пароли не совпадают"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource ErrorBrush}"/>
+															   FontSize="11"
+															   Foreground="{DynamicResource ErrorBrush}"/>
 												</StackPanel>
 											</StackPanel>
 										</StackPanel>
@@ -401,33 +401,33 @@
 
 									<StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
 										<Button Content="Изменить пароль"
-                                                Classes="DialogAccent"
-                                                Command="{Binding SavePasswordCommand}"
-                                                IsEnabled="{Binding CanSavePassword}"
-                                                Padding="20,8"/>
+												Classes="DialogAccent"
+												Command="{Binding SavePasswordCommand}"
+												IsEnabled="{Binding CanSavePassword}"
+												Padding="20,8"/>
 										<Button Content="Отмена"
-                                                Classes="DialogOutline"
-                                                Command="{Binding CancelEditPasswordCommand}"
-                                                Padding="16,8"/>
+												Classes="DialogOutline"
+												Command="{Binding CancelEditPasswordCommand}"
+												Padding="16,8"/>
 									</StackPanel>
 								</StackPanel>
 							</StackPanel>
 						</Border>
 
 						<Border Classes="ProfileSection"
-                                IsVisible="{Binding User.Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding User.Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
 								<PathIcon Data="{StaticResource OrganizationIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource Accent}"
-                                          VerticalAlignment="Center"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource Accent}"
+										  VerticalAlignment="Center"/>
 								<StackPanel Grid.Column="1" Spacing="2" Margin="12,0,0,0">
 									<TextBlock Text="Отдел"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextSecondary}"/>
+											   FontSize="12"
+											   Foreground="{DynamicResource TextSecondary}"/>
 									<TextBlock Text="{Binding User.Department}"
-                                               FontSize="14"
-                                               FontWeight="Medium"/>
+											   FontSize="14"
+											   FontWeight="Medium"/>
 								</StackPanel>
 							</Grid>
 						</Border>
@@ -435,73 +435,73 @@
 						<Border Classes="ProfileSection">
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource SignOutIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource DangerBrush}"
-                                          VerticalAlignment="Center"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource DangerBrush}"
+										  VerticalAlignment="Center"/>
 								<StackPanel Grid.Column="1"
-                                            Spacing="2"
-                                            VerticalAlignment="Center"
-                                            Margin="12,0,0,0">
+											Spacing="2"
+											VerticalAlignment="Center"
+											Margin="12,0,0,0">
 									<TextBlock Text="Выход из аккаунта"
-                                               FontSize="14"
-                                               FontWeight="Medium"/>
+											   FontSize="14"
+											   FontWeight="Medium"/>
 									<TextBlock Text="Вы будете перенаправлены на страницу входа"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}"/>
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMuted}"/>
 								</StackPanel>
 								<Button Grid.Column="2"
-                                        Content="Выйти"
-                                        Classes="DialogDanger"
-                                        Command="{Binding LogoutCommand}"
-                                        VerticalAlignment="Center"
-                                        Padding="20,8"/>
+										Content="Выйти"
+										Classes="DialogDanger"
+										Command="{Binding LogoutCommand}"
+										VerticalAlignment="Center"
+										Padding="20,8"/>
 							</Grid>
 						</Border>
 
 						<Border Classes="AlertError"
-                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource WarningIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource ErrorBrush}"
-                                          VerticalAlignment="Center"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource ErrorBrush}"
+										  VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="1"
-                                           Text="{Binding ErrorMessage}"
-                                           Foreground="{DynamicResource ErrorBrush}"
-                                           FontSize="13"
-                                           TextWrapping="Wrap"
-                                           Margin="10,0"/>
+										   Text="{Binding ErrorMessage}"
+										   Foreground="{DynamicResource ErrorBrush}"
+										   FontSize="13"
+										   TextWrapping="Wrap"
+										   Margin="10,0"/>
 								<Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding ClearErrorCommand}"
-                                        ToolTip.Tip="Закрыть">
+										Classes="IconButton Small"
+										Command="{Binding ClearErrorCommand}"
+										ToolTip.Tip="Закрыть">
 									<PathIcon Data="{StaticResource CloseIcon}"
-                                              Width="14" Height="14"
-                                              Foreground="{DynamicResource ErrorBrush}"/>
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource ErrorBrush}"/>
 								</Button>
 							</Grid>
 						</Border>
 
 						<Border Classes="AlertSuccess"
-                                IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource CheckmarkIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource SuccessBrush}"
-                                          VerticalAlignment="Center"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource SuccessBrush}"
+										  VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="1"
-                                           Text="{Binding SuccessMessage}"
-                                           Foreground="{DynamicResource SuccessBrush}"
-                                           FontSize="13"
-                                           TextWrapping="Wrap"
-                                           Margin="10,0"/>
+										   Text="{Binding SuccessMessage}"
+										   Foreground="{DynamicResource SuccessBrush}"
+										   FontSize="13"
+										   TextWrapping="Wrap"
+										   Margin="10,0"/>
 								<Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding ClearSuccessCommand}"
-                                        ToolTip.Tip="Закрыть">
+										Classes="IconButton Small"
+										Command="{Binding ClearSuccessCommand}"
+										ToolTip.Tip="Закрыть">
 									<PathIcon Data="{StaticResource CloseIcon}"
-                                              Width="14" Height="14"
-                                              Foreground="{DynamicResource SuccessBrush}"/>
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource SuccessBrush}"/>
 								</Button>
 							</Grid>
 						</Border>

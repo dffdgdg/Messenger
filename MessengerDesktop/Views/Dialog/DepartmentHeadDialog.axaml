@@ -1,42 +1,42 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             xmlns:shared="using:MessengerShared.Dto"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:department="using:MessengerShared.Dto.Department"
-             x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
-             x:DataType="vmDialog:DepartmentHeadDialogViewModel">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+			 xmlns:shared="using:MessengerShared.Dto"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:department="using:MessengerShared.Dto.Department"
+			 x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
+			 x:DataType="vmDialog:DepartmentHeadDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="440">
 		<StackPanel Spacing="20">
 			<Grid ColumnDefinitions="Auto,*,Auto">
 				<Border Grid.Column="0"
-                        Background="{DynamicResource AccentBrush}"
-                        Width="44" Height="44"
-                        CornerRadius="12"
-                        Margin="0,0,14,0">
+						Background="{DynamicResource AccentBrush}"
+						Width="44" Height="44"
+						CornerRadius="12"
+						Margin="0,0,14,0">
 					<PathIcon Data="{StaticResource OrganizationIcon}"
-                              Width="22" Height="22"
-                              Foreground="{DynamicResource TextOnAccent}"/>
+							  Width="22" Height="22"
+							  Foreground="{DynamicResource TextOnAccent}"/>
 				</Border>
 
 				<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 					<TextBlock Text="{Binding Title}"
-                               FontSize="18"
-                               FontWeight="Bold"/>
+							   FontSize="18"
+							   FontWeight="Bold"/>
 					<TextBlock Text="Отдел"
-                               FontSize="12"
-                               Foreground="{DynamicResource TextSecondary}"/>
+							   FontSize="12"
+							   Foreground="{DynamicResource TextSecondary}"/>
 				</StackPanel>
 
 				<Button Grid.Column="2"
-                        Classes="IconButton"
-                        Command="{Binding CancelCommand}"
-                        ToolTip.Tip="Закрыть">
+						Classes="IconButton"
+						Command="{Binding CancelCommand}"
+						ToolTip.Tip="Закрыть">
 					<PathIcon Data="{StaticResource DismissIcon}"
-                              Width="14" Height="14"
-                              Foreground="{DynamicResource TextSecondary}"/>
+							  Width="14" Height="14"
+							  Foreground="{DynamicResource TextSecondary}"/>
 				</Button>
 			</Grid>
 
@@ -44,37 +44,37 @@
 
 			<StackPanel Spacing="6">
 				<TextBlock Text="Название отдела"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondary}"/>
+						   FontSize="13"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextSecondary}"/>
 				<TextBox Text="{Binding Name}"
-                         Classes="DialogInput"
-                         Watermark="Введите название отдела...">
+						 Classes="DialogInput"
+						 Watermark="Введите название отдела...">
 					<TextBox.InnerLeftContent>
 						<PathIcon Data="{StaticResource FolderIcon}"
-                                  Width="16" Height="16"
-                                  Margin="12,0,8,0"
-                                  Foreground="{DynamicResource TextSecondary}"/>
+								  Width="16" Height="16"
+								  Margin="12,0,8,0"
+								  Foreground="{DynamicResource TextSecondary}"/>
 					</TextBox.InnerLeftContent>
 				</TextBox>
 			</StackPanel>
 
 			<StackPanel Spacing="6">
 				<TextBlock Text="Родительский отдел"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondary}"/>
+						   FontSize="13"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextSecondary}"/>
 				<ComboBox ItemsSource="{Binding AvailableParents}"
-                          SelectedItem="{Binding SelectedParent}"
-                          Classes="DialogCombo"
-                          PlaceholderText="Выбрать родительский отдел"
-                          HorizontalAlignment="Stretch">
+						  SelectedItem="{Binding SelectedParent}"
+						  Classes="DialogCombo"
+						  PlaceholderText="Выбрать родительский отдел"
+						  HorizontalAlignment="Stretch">
 					<ComboBox.ItemTemplate>
 						<DataTemplate x:DataType="department:DepartmentDto">
 							<StackPanel Orientation="Horizontal" Spacing="8">
 								<PathIcon Data="{StaticResource OrganizationIcon}"
-                                          Width="14" Height="14"
-                                          Foreground="{DynamicResource TextSecondary}"/>
+										  Width="14" Height="14"
+										  Foreground="{DynamicResource TextSecondary}"/>
 								<TextBlock Text="{Binding Name}"/>
 							</StackPanel>
 						</DataTemplate>
@@ -84,135 +84,135 @@
 
 			<StackPanel Spacing="6">
 				<TextBlock Text="Руководитель отдела"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondary}"/>
+						   FontSize="13"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextSecondary}"/>
 
 				<Border Background="{DynamicResource SurfaceVariant}"
-                        CornerRadius="10"
-                        Padding="12"
-                        BorderThickness="1"
-                        BorderBrush="{DynamicResource BorderDefault}">
+						CornerRadius="10"
+						Padding="12"
+						BorderThickness="1"
+						BorderBrush="{DynamicResource BorderDefault}">
 					<Grid ColumnDefinitions="Auto,*,Auto,Auto">
 						<controls:AvatarControl Grid.Column="0"
-                                                Classes="Small"
-                                                Source="{Binding SelectedHead.Avatar}"
-                                                DisplayName="{Binding SelectedHead.DisplayName}"
-                                                IsVisible="{Binding HasHead}"
-                                                Margin="0,0,12,0"/>
+												Classes="Small"
+												Source="{Binding SelectedHead.Avatar}"
+												DisplayName="{Binding SelectedHead.DisplayName}"
+												IsVisible="{Binding HasHead}"
+												Margin="0,0,12,0"/>
 
 						<Border Grid.Column="0"
-                                Width="36" Height="36"
-                                CornerRadius="18"
-                                Background="{DynamicResource SurfaceBrush}"
-                                IsVisible="{Binding !HasHead}"
-                                Margin="0,0,12,0">
+								Width="36" Height="36"
+								CornerRadius="18"
+								Background="{DynamicResource SurfaceBrush}"
+								IsVisible="{Binding !HasHead}"
+								Margin="0,0,12,0">
 							<PathIcon Data="{StaticResource PersonIcon}"
-                                      Width="18" Height="18"
-                                      Foreground="{DynamicResource TextTertiary}"/>
+									  Width="18" Height="18"
+									  Foreground="{DynamicResource TextTertiary}"/>
 						</Border>
 
 						<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 							<TextBlock Text="{Binding HeadDisplayText}"
-                                       FontSize="14"
-                                       TextTrimming="CharacterEllipsis"/>
+									   FontSize="14"
+									   TextTrimming="CharacterEllipsis"/>
 							<TextBlock Text="Руководитель отдела"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextTertiary}"
-                                       IsVisible="{Binding HasHead}"/>
+									   FontSize="11"
+									   Foreground="{DynamicResource TextTertiary}"
+									   IsVisible="{Binding HasHead}"/>
 						</StackPanel>
 
 						<Button Grid.Column="2"
-                                Classes="IconButton Small"
-                                Command="{Binding ClearHeadCommand}"
-                                IsVisible="{Binding HasHead}"
-                                ToolTip.Tip="Убрать руководителя"
-                                Margin="8,0,4,0">
+								Classes="IconButton Small"
+								Command="{Binding ClearHeadCommand}"
+								IsVisible="{Binding HasHead}"
+								ToolTip.Tip="Убрать руководителя"
+								Margin="8,0,4,0">
 							<PathIcon Data="{StaticResource DismissIcon}"
-                                      Width="16" Height="16"
-                                      Foreground="{DynamicResource DangerBrush}"/>
+									  Width="16" Height="16"
+									  Foreground="{DynamicResource DangerBrush}"/>
 						</Button>
 
 						<Button Grid.Column="3"
-                                Classes="IconButton"
-                                Command="{Binding SelectHeadCommand}"
-                                ToolTip.Tip="Выбрать руководителя">
+								Classes="IconButton"
+								Command="{Binding SelectHeadCommand}"
+								ToolTip.Tip="Выбрать руководителя">
 							<PathIcon Data="{StaticResource AddIcon}"
-                                      Width="18" Height="18"
-                                      Foreground="{DynamicResource AccentBrush}"/>
+									  Width="18" Height="18"
+									  Foreground="{DynamicResource AccentBrush}"/>
 						</Button>
 					</Grid>
 				</Border>
 			</StackPanel>
 
 			<Border Background="{DynamicResource InfoBg}"
-                    CornerRadius="8"
-                    Padding="12"
-                    IsVisible="{Binding !IsNewDepartment}">
+					CornerRadius="8"
+					Padding="12"
+					IsVisible="{Binding !IsNewDepartment}">
 				<StackPanel Spacing="8">
 					<Grid ColumnDefinitions="Auto,*,Auto">
 						<PathIcon Grid.Column="0"
-                                  Data="{StaticResource PersonIcon}"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource TextSecondary}"
-                                  Margin="0,0,8,0"/>
+								  Data="{StaticResource PersonIcon}"
+								  Width="14" Height="14"
+								  Foreground="{DynamicResource TextSecondary}"
+								  Margin="0,0,8,0"/>
 						<TextBlock Grid.Column="1"
-                                   Text="Сотрудников в отделе"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource TextSecondary}"/>
+								   Text="Сотрудников в отделе"
+								   FontSize="12"
+								   Foreground="{DynamicResource TextSecondary}"/>
 						<TextBlock Grid.Column="2"
-                                   Text="{Binding UserCount}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"/>
+								   Text="{Binding UserCount}"
+								   FontSize="12"
+								   FontWeight="SemiBold"/>
 					</Grid>
 
 					<Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasChildren}">
 						<PathIcon Grid.Column="0"
-                                  Data="{StaticResource WarningIcon}"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource WarningBrush}"
-                                  Margin="0,0,8,0"/>
+								  Data="{StaticResource WarningIcon}"
+								  Width="14" Height="14"
+								  Foreground="{DynamicResource WarningBrush}"
+								  Margin="0,0,8,0"/>
 						<TextBlock Grid.Column="1"
-                                   Text="Имеет дочерние отделы"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource WarningBrush}"/>
+								   Text="Имеет дочерние отделы"
+								   FontSize="12"
+								   Foreground="{DynamicResource WarningBrush}"/>
 					</Grid>
 				</StackPanel>
 			</Border>
 
 			<Border Background="{DynamicResource DangerBg}"
-                    CornerRadius="8"
-                    Padding="12"
-                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+					CornerRadius="8"
+					Padding="12"
+					IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
 					<PathIcon Grid.Column="0"
-                              Data="{StaticResource ErrorIcon}"
-                              Width="16" Height="16"
-                              Foreground="{DynamicResource DangerBrush}"
-                              Margin="0,0,10,0"/>
+							  Data="{StaticResource ErrorIcon}"
+							  Width="16" Height="16"
+							  Foreground="{DynamicResource DangerBrush}"
+							  Margin="0,0,10,0"/>
 					<TextBlock Grid.Column="1"
-                               Text="{Binding ErrorMessage}"
-                               Foreground="{DynamicResource DangerBrush}"
-                               FontSize="12"
-                               TextWrapping="Wrap"/>
+							   Text="{Binding ErrorMessage}"
+							   Foreground="{DynamicResource DangerBrush}"
+							   FontSize="12"
+							   TextWrapping="Wrap"/>
 				</Grid>
 			</Border>
 
 			<Border Background="{DynamicResource SuccessBg}"
-                    CornerRadius="8"
-                    Padding="12"
-                    IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+					CornerRadius="8"
+					Padding="12"
+					IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
 					<PathIcon Grid.Column="0"
-                              Data="{StaticResource CheckmarkIcon}"
-                              Width="16" Height="16"
-                              Foreground="{DynamicResource SuccessBrush}"
-                              Margin="0,0,10,0"/>
+							  Data="{StaticResource CheckmarkIcon}"
+							  Width="16" Height="16"
+							  Foreground="{DynamicResource SuccessBrush}"
+							  Margin="0,0,10,0"/>
 					<TextBlock Grid.Column="1"
-                               Text="{Binding SuccessMessage}"
-                               Foreground="{DynamicResource SuccessBrush}"
-                               FontSize="12"
-                               TextWrapping="Wrap"/>
+							   Text="{Binding SuccessMessage}"
+							   Foreground="{DynamicResource SuccessBrush}"
+							   FontSize="12"
+							   TextWrapping="Wrap"/>
 				</Grid>
 			</Border>
 
@@ -221,14 +221,14 @@
 			<Grid ColumnDefinitions="Auto,*,Auto,Auto">
 
 				<Button Grid.Column="0"
-                        Classes="DialogDanger"
-                        Command="{Binding DeleteCommand}"
-                        IsVisible="{Binding !IsNewDepartment}"
-                        IsEnabled="{Binding CanDelete}"
-                        ToolTip.Tip="{Binding DeleteTooltip}">
+						Classes="DialogDanger"
+						Command="{Binding DeleteCommand}"
+						IsVisible="{Binding !IsNewDepartment}"
+						IsEnabled="{Binding CanDelete}"
+						ToolTip.Tip="{Binding DeleteTooltip}">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<PathIcon Data="{StaticResource DeleteIcon}"
-                                  Width="14" Height="14"/>
+								  Width="14" Height="14"/>
 						<TextBlock Text="Удалить"/>
 					</StackPanel>
 				</Button>
@@ -236,21 +236,21 @@
 				<Border Grid.Column="1"/>
 
 				<Button Grid.Column="2"
-                        Content="Отмена"
-                        Classes="DialogOutline"
-                        Command="{Binding CancelCommand}"
-                        Margin="0,0,10,0"/>
+						Content="Отмена"
+						Classes="DialogOutline"
+						Command="{Binding CancelCommand}"
+						Margin="0,0,10,0"/>
 
 				<Button Grid.Column="3"
-                        Classes="DialogAccent"
-                        Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding CanSave}">
+						Classes="DialogAccent"
+						Command="{Binding SaveCommand}"
+						IsEnabled="{Binding CanSave}">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<PathIcon Data="{StaticResource CheckmarkIcon}"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource TextOnAccent}"/>
+								  Width="14" Height="14"
+								  Foreground="{DynamicResource TextOnAccent}"/>
 						<TextBlock Text="Сохранить"
-                                   Foreground="{DynamicResource TextOnAccent}"/>
+								   Foreground="{DynamicResource TextOnAccent}"/>
 					</StackPanel>
 				</Button>
 			</Grid>

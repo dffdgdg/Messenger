@@ -1,30 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             xmlns:shared="using:MessengerShared.Dto"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:department="using:MessengerShared.Dto.Department"
-             x:Class="MessengerDesktop.Views.UserEditDialog"
-             x:DataType="vmDialog:UserEditDialogViewModel">
+			 xmlns:shared="using:MessengerShared.Dto"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:department="using:MessengerShared.Dto.Department"
+			 x:Class="MessengerDesktop.Views.UserEditDialog"
+			 x:DataType="vmDialog:UserEditDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="480">
 		<StackPanel Spacing="20">
 			<StackPanel Spacing="4">
 				<TextBlock FontSize="20" FontWeight="Bold"
-                           Text="{Binding IsNewUser, Converter={conv:Converter Name=BoolToString}, 
-                                  ConverterParameter='Создать сотрудника|Редактировать сотрудника'}"/>
+						   Text="{Binding IsNewUser, Converter={conv:Converter Name=BoolToString},
+						   ConverterParameter='Создать сотрудника|Редактировать сотрудника'}"/>
 				<TextBlock Text="Заполните данные сотрудника"
-                           FontSize="13" Foreground="{DynamicResource TextSecondary}"/>
+						   FontSize="13" Foreground="{DynamicResource TextSecondary}"/>
 			</StackPanel>
 
 			<Border Classes="AlertError"
-                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+					IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 				<Grid ColumnDefinitions="Auto,*">
 					<PathIcon Data="{StaticResource WarningIcon}" Width="16" Height="16"
-                              Foreground="{DynamicResource DangerBrush}" Margin="0,0,8,0"/>
+							  Foreground="{DynamicResource DangerBrush}" Margin="0,0,8,0"/>
 					<TextBlock Grid.Column="1" Text="{Binding ErrorMessage}"
-                               Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+							   Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
 				</Grid>
 			</Border>
 
@@ -32,44 +32,44 @@
 				<StackPanel Spacing="6">
 					<TextBlock Text="Логин" FontSize="13" FontWeight="Medium"/>
 					<TextBox Text="{Binding Username}" Classes="DialogInput"
-                             Watermark="username" IsEnabled="{Binding IsNewUser}">
+							 Watermark="username" IsEnabled="{Binding IsNewUser}">
 						<TextBox.InnerLeftContent>
 							<TextBlock Text="@" Margin="12,0,4,0"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center"/>
+									   Foreground="{DynamicResource TextSecondary}"
+									   VerticalAlignment="Center"/>
 						</TextBox.InnerLeftContent>
 					</TextBox>
 					<TextBlock Text="Только латинские буквы, цифры и подчёркивания"
-                               FontSize="11" Foreground="{DynamicResource TextTertiary}"
-                               IsVisible="{Binding IsNewUser}"/>
+							   FontSize="11" Foreground="{DynamicResource TextTertiary}"
+							   IsVisible="{Binding IsNewUser}"/>
 				</StackPanel>
 
 				<StackPanel Spacing="6">
 					<TextBlock Text="ФИО" FontSize="13" FontWeight="Medium"/>
 					<Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
 						<TextBox Grid.Column="0" Text="{Binding Surname}"
-                                 Classes="DialogInput" Watermark="Фамилия"/>
+								 Classes="DialogInput" Watermark="Фамилия"/>
 						<TextBox Grid.Column="1" Text="{Binding Name}"
-                                 Classes="DialogInput" Watermark="Имя"/>
+								 Classes="DialogInput" Watermark="Имя"/>
 						<TextBox Grid.Column="2" Text="{Binding Midname}"
-                                 Classes="DialogInput" Watermark="Отчество"/>
+								 Classes="DialogInput" Watermark="Отчество"/>
 					</Grid>
 					<StackPanel Orientation="Horizontal" Spacing="4"
-                                IsVisible="{Binding DisplayNamePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding DisplayNamePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 						<TextBlock Text="Будет отображаться как:" FontSize="11"
-                                   Foreground="{DynamicResource TextTertiary}"/>
+								   Foreground="{DynamicResource TextTertiary}"/>
 						<TextBlock Text="{Binding DisplayNamePreview}" FontSize="11"
-                                   Foreground="{DynamicResource TextSecondary}" FontWeight="Medium"/>
+								   Foreground="{DynamicResource TextSecondary}" FontWeight="Medium"/>
 					</StackPanel>
 				</StackPanel>
 
 				<StackPanel Spacing="6">
 					<TextBlock Text="Отдел" FontSize="13" FontWeight="Medium"/>
 					<ComboBox ItemsSource="{Binding Departments}"
-                              SelectedItem="{Binding SelectedDepartment}"
-                              Classes="DialogCombo"
-                              PlaceholderText="Выберите отдел"
-                              HorizontalAlignment="Stretch">
+							  SelectedItem="{Binding SelectedDepartment}"
+							  Classes="DialogCombo"
+							  PlaceholderText="Выберите отдел"
+							  HorizontalAlignment="Stretch">
 						<ComboBox.ItemTemplate>
 							<DataTemplate x:DataType="department:DepartmentDto">
 								<TextBlock Text="{Binding Name}"/>
@@ -85,32 +85,32 @@
 
 					<Grid ColumnDefinitions="*,*" ColumnSpacing="8">
 						<TextBox Grid.Column="0"
-                                 Text="{Binding Password}"
-                                 PasswordChar="•"
-                                 Classes="DialogInput"
-                                 Watermark="Пароль">
+								 Text="{Binding Password}"
+								 PasswordChar="•"
+								 Classes="DialogInput"
+								 Watermark="Пароль">
 							<TextBox.InnerLeftContent>
 								<PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Width="16" Height="16"
-                                          Margin="12,0,8,0" Opacity="0.5"/>
+										  Width="16" Height="16"
+										  Margin="12,0,8,0" Opacity="0.5"/>
 							</TextBox.InnerLeftContent>
 						</TextBox>
 
 						<TextBox Grid.Column="1"
-                                 Text="{Binding ConfirmPassword}"
-                                 PasswordChar="•"
-                                 Classes="DialogInput"
-                                 Watermark="Подтверждение">
+								 Text="{Binding ConfirmPassword}"
+								 PasswordChar="•"
+								 Classes="DialogInput"
+								 Watermark="Подтверждение">
 							<TextBox.InnerLeftContent>
 								<PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Width="16" Height="16"
-                                          Margin="12,0,8,0" Opacity="0.5"/>
+										  Width="16" Height="16"
+										  Margin="12,0,8,0" Opacity="0.5"/>
 							</TextBox.InnerLeftContent>
 						</TextBox>
 					</Grid>
 
 					<TextBlock Text="Минимум 6 символов"
-                               FontSize="11" Foreground="{DynamicResource TextTertiary}"/>
+							   FontSize="11" Foreground="{DynamicResource TextTertiary}"/>
 				</StackPanel>
 			</StackPanel>
 
@@ -118,28 +118,28 @@
 
 			<Grid ColumnDefinitions="*,Auto,Auto">
 				<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
-                            IsVisible="{Binding IsBusy}" VerticalAlignment="Center">
+							IsVisible="{Binding IsBusy}" VerticalAlignment="Center">
 					<ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
 					<TextBlock Text="Сохранение..." FontSize="12"
-                               Foreground="{DynamicResource TextSecondary}"/>
+							   Foreground="{DynamicResource TextSecondary}"/>
 				</StackPanel>
 
 				<Button Grid.Column="1" Content="Отмена"
-                        Classes="DialogOutline"
-                        Command="{Binding CancelCommand}"
-                        IsEnabled="{Binding !IsBusy}"
-                        Margin="0,0,12,0"/>
+						Classes="DialogOutline"
+						Command="{Binding CancelCommand}"
+						IsEnabled="{Binding !IsBusy}"
+						Margin="0,0,12,0"/>
 
 				<Button Grid.Column="2" Classes="DialogAccent"
-                        Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding !IsBusy}">
+						Command="{Binding SaveCommand}"
+						IsEnabled="{Binding !IsBusy}">
 					<StackPanel Orientation="Horizontal" Spacing="8">
 						<PathIcon Data="{StaticResource CheckmarkIcon}"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource TextOnAccent}"/>
-						<TextBlock Text="{Binding IsNewUser, Converter={conv:Converter Name=BoolToString}, 
-                                          ConverterParameter='Создать|Сохранить'}"
-                                   Foreground="{DynamicResource TextOnAccent}"/>
+								  Width="14" Height="14"
+								  Foreground="{DynamicResource TextOnAccent}"/>
+						<TextBlock Text="{Binding IsNewUser, Converter={conv:Converter Name=BoolToString},
+						ConverterParameter='Создать|Сохранить'}"
+						Foreground="{DynamicResource TextOnAccent}"/>
 					</StackPanel>
 				</Button>
 			</Grid>

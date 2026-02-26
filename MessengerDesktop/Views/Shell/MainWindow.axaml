@@ -1,193 +1,193 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:MessengerDesktop.ViewModels"
-        xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
-        xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-        xmlns:vmDepartment="using:MessengerDesktop.ViewModels.Department"
-        xmlns:views="using:MessengerDesktop.Views"
-        xmlns:dialogs="using:MessengerDesktop.Views.Dialogs"
-        xmlns:chat="using:MessengerDesktop.Views.Chat"
-        xmlns:department="using:MessengerDesktop.Views.Department"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        d:DesignWidth="800"
-        d:DesignHeight="600"
-        x:Class="MessengerDesktop.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        x:Name="MainWindowRoot"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="Messenger"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="Default"
-        ExtendClientAreaTitleBarHeightHint="-1"
-        Background="{DynamicResource PrimaryBG}"
-        TransparencyLevelHint="AcrylicBlur"
-        MinWidth="890"
-        MinHeight="500">
-    <Window.Styles>
-        <Style Selector="Border.DialogOverlay">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="IsHitTestVisible" Value="False"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="using:MessengerDesktop.ViewModels"
+		xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+		xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+		xmlns:vmDepartment="using:MessengerDesktop.ViewModels.Department"
+		xmlns:views="using:MessengerDesktop.Views"
+		xmlns:dialogs="using:MessengerDesktop.Views.Dialogs"
+		xmlns:chat="using:MessengerDesktop.Views.Chat"
+		xmlns:department="using:MessengerDesktop.Views.Department"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		mc:Ignorable="d"
+		d:DesignWidth="800"
+		d:DesignHeight="600"
+		x:Class="MessengerDesktop.Views.MainWindow"
+		x:DataType="vm:MainWindowViewModel"
+		x:Name="MainWindowRoot"
+		Icon="/Assets/avalonia-logo.ico"
+		Title="Messenger"
+		ExtendClientAreaToDecorationsHint="True"
+		ExtendClientAreaChromeHints="Default"
+		ExtendClientAreaTitleBarHeightHint="-1"
+		Background="{DynamicResource PrimaryBG}"
+		TransparencyLevelHint="AcrylicBlur"
+		MinWidth="890"
+		MinHeight="500">
+	<Window.Styles>
+		<Style Selector="Border.DialogOverlay">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="IsHitTestVisible" Value="False"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.DialogOverlay.Open">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="IsHitTestVisible" Value="True"/>
-        </Style>
+		<Style Selector="Border.DialogOverlay.Open">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="IsHitTestVisible" Value="True"/>
+		</Style>
 
-        <Style Selector="Border.DialogAnimWrapper">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-            <Setter Property="RenderTransform" Value="scale(0.9,0.9) translateY(30px)"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.DialogAnimWrapper">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="RenderTransform" Value="scale(0.9,0.9) translateY(30px)"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.DialogAnimWrapper.Open">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="RenderTransform" Value="scale(1,1) translateY(0px)"/>
-        </Style>
+		<Style Selector="Border.DialogAnimWrapper.Open">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="RenderTransform" Value="scale(1,1) translateY(0px)"/>
+		</Style>
 
-        <Style Selector="Border.DialogAnimWrapper.Closing">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
-        </Style>
+		<Style Selector="Border.DialogAnimWrapper.Closing">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
+		</Style>
 
-        <Style Selector="Button.TitleBarHelp">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="CornerRadius" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryFG}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style Selector="Button.TitleBarHelp:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#22FFFFFF"/>
-        </Style>
-        <Style Selector="Button.TitleBarHelp:pressed /template/ ContentPresenter">
-            <Setter Property="Background" Value="#33FFFFFF"/>
-        </Style>
-    </Window.Styles>
+		<Style Selector="Button.TitleBarHelp">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="0"/>
+			<Setter Property="Foreground" Value="{DynamicResource PrimaryFG}"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.TitleBarHelp:pointerover /template/ ContentPresenter">
+			<Setter Property="Background" Value="#22FFFFFF"/>
+		</Style>
+		<Style Selector="Button.TitleBarHelp:pressed /template/ ContentPresenter">
+			<Setter Property="Background" Value="#33FFFFFF"/>
+		</Style>
+	</Window.Styles>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-            <ColumnDefinition MinWidth="200" MaxWidth="600"/>
-            <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition/>
+			<ColumnDefinition MinWidth="200" MaxWidth="600"/>
+			<ColumnDefinition/>
+		</Grid.ColumnDefinitions>
 
-        <Grid PointerPressed="OnTitleBarPointerPressed"
-              IsHitTestVisible="True"
-              Height="48"
-              VerticalAlignment="Top"
-              Background="Transparent"
-              ZIndex="999"/>
-        <Grid PointerPressed="OnTitleBarPointerPressed"
-              Grid.Column="2"
-              IsHitTestVisible="True"
-              Height="48"
-              VerticalAlignment="Top"
-              Background="Transparent"
-              ZIndex="999"/>
+		<Grid PointerPressed="OnTitleBarPointerPressed"
+			  IsHitTestVisible="True"
+			  Height="48"
+			  VerticalAlignment="Top"
+			  Background="Transparent"
+			  ZIndex="999"/>
+		<Grid PointerPressed="OnTitleBarPointerPressed"
+			  Grid.Column="2"
+			  IsHitTestVisible="True"
+			  Height="48"
+			  VerticalAlignment="Top"
+			  Background="Transparent"
+			  ZIndex="999"/>
 
-        <Button Classes="TitleBarHelp"
-                Grid.Column="2"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Height="48"
-                Width="46"
-                Margin="0,0,138,0"
-                ZIndex="1000"
-                ToolTip.Tip="Помощь">
-            <PathIcon Width="16"
-                      Height="16"
-                      Foreground="{DynamicResource PrimaryFG}"
-                      Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-        </Button>
+		<Button Classes="TitleBarHelp"
+				Grid.Column="2"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Top"
+				Height="48"
+				Width="46"
+				Margin="0,0,138,0"
+				ZIndex="1000"
+				ToolTip.Tip="Помощь">
+			<PathIcon Width="16"
+					  Height="16"
+					  Foreground="{DynamicResource PrimaryFG}"
+					  Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+		</Button>
 
-        <ContentControl Content="{Binding CurrentViewModel}" Grid.ColumnSpan="3">
-            <ContentControl.DataTemplates>
-                <DataTemplate DataType="vm:LoginViewModel">
-                    <views:LoginView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:MainMenuViewModel">
-                    <views:MainMenuView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:ChatsViewModel">
-                    <views:ChatsView/>
-                </DataTemplate>
-                <DataTemplate DataType="vmChat:ChatViewModel">
-                    <chat:ChatView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:AdminViewModel">
-                    <views:AdminView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:ProfileViewModel">
-                    <views:ProfileView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:SettingsViewModel">
-                    <views:SettingsView/>
-                </DataTemplate>
-                <DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
-                    <department:DepartmentManagementView/>
-                </DataTemplate>
-            </ContentControl.DataTemplates>
-        </ContentControl>
+		<ContentControl Content="{Binding CurrentViewModel}" Grid.ColumnSpan="3">
+			<ContentControl.DataTemplates>
+				<DataTemplate DataType="vm:LoginViewModel">
+					<views:LoginView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:MainMenuViewModel">
+					<views:MainMenuView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:ChatsViewModel">
+					<views:ChatsView/>
+				</DataTemplate>
+				<DataTemplate DataType="vmChat:ChatViewModel">
+					<chat:ChatView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:AdminViewModel">
+					<views:AdminView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:ProfileViewModel">
+					<views:ProfileView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:SettingsViewModel">
+					<views:SettingsView/>
+				</DataTemplate>
+				<DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
+					<department:DepartmentManagementView/>
+				</DataTemplate>
+			</ContentControl.DataTemplates>
+		</ContentControl>
 
-        <Border x:Name="DialogOverlay"
-                Classes="DialogOverlay"
-                Grid.ColumnSpan="3"
-                Background="#80000000"
-                ZIndex="10000"
-                IsVisible="{Binding IsDialogVisible}"
-                PointerPressed="OnDialogBackgroundPressed"/>
+		<Border x:Name="DialogOverlay"
+				Classes="DialogOverlay"
+				Grid.ColumnSpan="3"
+				Background="#80000000"
+				ZIndex="10000"
+				IsVisible="{Binding IsDialogVisible}"
+				PointerPressed="OnDialogBackgroundPressed"/>
 
-        <Border x:Name="DialogAnimWrapper"
-                Classes="DialogAnimWrapper"
-                Grid.ColumnSpan="3"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                ZIndex="10001"
-                IsVisible="{Binding IsDialogVisible}">
+		<Border x:Name="DialogAnimWrapper"
+				Classes="DialogAnimWrapper"
+				Grid.ColumnSpan="3"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				ZIndex="10001"
+				IsVisible="{Binding IsDialogVisible}">
 
-            <ContentControl Content="{Binding CurrentDialog}">
-                <ContentControl.DataTemplates>
-                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
-                        <views:UserProfileDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
-                        <views:PollDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
-                        <views:ChatEditDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
-                        <views:UserEditDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
-                        <views:DepartmentDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
-                        <dialogs:ConfirmDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:SelectUserDialogViewModel">
-                        <dialogs:SelectUserDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
-                        <views:DepartmentHeadDialog/>
-                    </DataTemplate>
-                </ContentControl.DataTemplates>
-            </ContentControl>
-        </Border>
-    </Grid>
+			<ContentControl Content="{Binding CurrentDialog}">
+				<ContentControl.DataTemplates>
+					<DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
+						<views:UserProfileDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:PollDialogViewModel">
+						<views:PollDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
+						<views:ChatEditDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:UserEditDialogViewModel">
+						<views:UserEditDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
+						<views:DepartmentDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
+						<dialogs:ConfirmDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:SelectUserDialogViewModel">
+						<dialogs:SelectUserDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
+						<views:DepartmentHeadDialog/>
+					</DataTemplate>
+				</ContentControl.DataTemplates>
+			</ContentControl>
+		</Border>
+	</Grid>
 </Window>

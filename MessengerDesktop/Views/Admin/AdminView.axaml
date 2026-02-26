@@ -1,215 +1,215 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:shared="using:MessengerShared.Dto"
-             xmlns:userShared="using:MessengerShared.Dto.User"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             x:Class="MessengerDesktop.Views.AdminView"
-             x:DataType="vm:AdminViewModel"
-             x:Name="Root"
-             Background="{DynamicResource PrimaryBG}"
+			 xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:shared="using:MessengerShared.Dto"
+			 xmlns:userShared="using:MessengerShared.Dto.User"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 x:Class="MessengerDesktop.Views.AdminView"
+			 x:DataType="vm:AdminViewModel"
+			 x:Name="Root"
+			 Background="{DynamicResource PrimaryBG}"
 			 Design.Width="1280" Design.Height="720">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DepartmentTemplate" DataType="vm:HierarchicalDepartmentViewModel">
-    <Grid Margin="0,2">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+			<Grid Margin="0,2">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
 
-        <Border x:Name="DepartmentCard"
-                Classes="DepartmentCard"
-                Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}"
-                Cursor="Hand">
+				<Border x:Name="DepartmentCard"
+						Classes="DepartmentCard"
+						Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}"
+						Cursor="Hand">
 
-            <Grid>
-                <Canvas IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"
-                        Width="24" Height="1"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Margin="-24,0,0,0">
-                    <Line StartPoint="0,0" EndPoint="20,0"
-                          Stroke="{DynamicResource HierarchyLineBrush}"
-                          StrokeThickness="2"
-                          StrokeLineCap="Round"/>
-                </Canvas>
+					<Grid>
+						<Canvas IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"
+								Width="24" Height="1"
+								HorizontalAlignment="Left"
+								VerticalAlignment="Center"
+								Margin="-24,0,0,0">
+							<Line StartPoint="0,0" EndPoint="20,0"
+								  Stroke="{DynamicResource HierarchyLineBrush}"
+								  StrokeThickness="2"
+								  StrokeLineCap="Round"/>
+						</Canvas>
 
-                <Grid ColumnDefinitions="Auto,*,Auto" Margin="4">
-                    <Button Grid.Column="0"
-                            Command="{Binding ToggleExpandCommand}"
-                            Width="36" Height="36"
-                            Margin="4"
-                            Classes="IconButton"
-                            IsVisible="{Binding HasChildren}">
-                        <PathIcon Data="{StaticResource ChevronIcon}" 
-                                  Width="12" Height="12"
-                                  Foreground="{DynamicResource TextSecondary}"
-                                  RenderTransformOrigin="50%,50%">
-                            <PathIcon.RenderTransform>
-                                <RotateTransform Angle="{Binding ExpanderRotation}"/>
-                            </PathIcon.RenderTransform>
-                            <PathIcon.Styles>
-                                <Style Selector="PathIcon">
-                                    <Setter Property="Transitions">
-                                        <Transitions>
-                                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
-                                        </Transitions>
-                                    </Setter>
-                                </Style>
-                            </PathIcon.Styles>
-                        </PathIcon>
-                    </Button>
-                    
-                    <Border Grid.Column="0" Width="44" Height="44"
-                            IsVisible="{Binding !HasChildren}"/>
+						<Grid ColumnDefinitions="Auto,*,Auto" Margin="4">
+							<Button Grid.Column="0"
+									Command="{Binding ToggleExpandCommand}"
+									Width="36" Height="36"
+									Margin="4"
+									Classes="IconButton"
+									IsVisible="{Binding HasChildren}">
+								<PathIcon Data="{StaticResource ChevronIcon}"
+										  Width="12" Height="12"
+										  Foreground="{DynamicResource TextSecondary}"
+										  RenderTransformOrigin="50%,50%">
+									<PathIcon.RenderTransform>
+										<RotateTransform Angle="{Binding ExpanderRotation}"/>
+									</PathIcon.RenderTransform>
+									<PathIcon.Styles>
+										<Style Selector="PathIcon">
+											<Setter Property="Transitions">
+												<Transitions>
+													<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
+												</Transitions>
+											</Setter>
+										</Style>
+									</PathIcon.Styles>
+								</PathIcon>
+							</Button>
 
-                    <Grid Grid.Column="1" RowDefinitions="Auto,Auto" Margin="8,10">
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-                            <Border Width="40" Height="40" CornerRadius="10"
-                                    Background="{DynamicResource CardBgBrush}">
-                                <Panel>
-                                    <PathIcon Data="{StaticResource OrganizationIcon}" 
-                                              Width="18" Height="18"
-                                              Foreground="{DynamicResource Accent}"
-                                              IsVisible="{Binding IsRoot}"/>
-                                    <PathIcon Data="{StaticResource FolderIcon}" 
-                                              Width="18" Height="18"
-                                              Foreground="{DynamicResource TextSecondary}"
-                                              IsVisible="{Binding !IsRoot}"/>
-                                </Panel>
-                            </Border>
+							<Border Grid.Column="0" Width="44" Height="44"
+									IsVisible="{Binding !HasChildren}"/>
 
-                            <StackPanel VerticalAlignment="Center" Spacing="2">
-                                <TextBlock Text="{Binding Name}" 
-                                           FontSize="14" 
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimary}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <StackPanel Orientation="Horizontal" Spacing="4"
-                                                IsVisible="{Binding HasHead}">
-                                        <PathIcon Data="{StaticResource PersonIcon}" 
-                                                  Width="12" Height="12"
-                                                  Foreground="{DynamicResource TextMuted}"/>
-                                        <TextBlock Text="{Binding HeadName}" 
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSecondary}"/>
-                                    </StackPanel>
-                                    
-                                    <TextBlock Text="Нет руководителя" 
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}"
-                                               FontStyle="Italic"
-                                               IsVisible="{Binding !HasHead}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
+							<Grid Grid.Column="1" RowDefinitions="Auto,Auto" Margin="8,10">
+								<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+									<Border Width="40" Height="40" CornerRadius="10"
+											Background="{DynamicResource CardBgBrush}">
+										<Panel>
+											<PathIcon Data="{StaticResource OrganizationIcon}"
+													  Width="18" Height="18"
+													  Foreground="{DynamicResource Accent}"
+													  IsVisible="{Binding IsRoot}"/>
+											<PathIcon Data="{StaticResource FolderIcon}"
+													  Width="18" Height="18"
+													  Foreground="{DynamicResource TextSecondary}"
+													  IsVisible="{Binding !IsRoot}"/>
+										</Panel>
+									</Border>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" 
-                                Spacing="8" Margin="0,0,8,0"
-                                VerticalAlignment="Center">
-                        
-                        <Border Background="{DynamicResource AccentMuted}"
-                                CornerRadius="12"
-                                Padding="10,4"
-                                IsVisible="{Binding ShowUserCount}"
-                                ToolTip.Tip="{Binding UserCountText}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <PathIcon Data="{StaticResource PeopleIcon}" 
-                                          Width="14" Height="14"
-                                          Foreground="{DynamicResource Accent}"/>
-                                <TextBlock Text="{Binding UserCount}" 
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource Accent}"/>
-                            </StackPanel>
-                        </Border>
-                        
-                        <Border Background="{DynamicResource WarningBgBrush}"
-                                CornerRadius="12"
-                                Padding="10,4"
-                                IsVisible="{Binding !ShowUserCount}"
-                                ToolTip.Tip="Нет сотрудников">
-                            <TextBlock Text="Пусто" 
-                                       Foreground="{DynamicResource WarningBrush}"/>
-                        </Border>
+									<StackPanel VerticalAlignment="Center" Spacing="2">
+										<TextBlock Text="{Binding Name}"
+												   FontSize="14"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextPrimary}"/>
+										<StackPanel Orientation="Horizontal" Spacing="12">
+											<StackPanel Orientation="Horizontal" Spacing="4"
+														IsVisible="{Binding HasHead}">
+												<PathIcon Data="{StaticResource PersonIcon}"
+														  Width="12" Height="12"
+														  Foreground="{DynamicResource TextMuted}"/>
+												<TextBlock Text="{Binding HeadName}"
+														   FontSize="12"
+														   Foreground="{DynamicResource TextSecondary}"/>
+											</StackPanel>
 
-                        <Border Background="{DynamicResource CardBgBrush}"
-                                CornerRadius="12"
-                                Padding="8,4"
-                                IsVisible="{Binding HasChildren}"
-                                ToolTip.Tip="Подотделов">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <PathIcon Data="{StaticResource FolderIcon}" 
-                                          Width="12" Height="12"
-                                          Foreground="{DynamicResource TextMuted}"/>
-                                <TextBlock Text="{Binding Children.Count}" 
-                                           FontSize="11" 
-                                           Foreground="{DynamicResource TextMuted}"/>
-                            </StackPanel>
-                        </Border>
+											<TextBlock Text="Нет руководителя"
+													   FontSize="12"
+													   Foreground="{DynamicResource TextMuted}"
+													   FontStyle="Italic"
+													   IsVisible="{Binding !HasHead}"/>
+										</StackPanel>
+									</StackPanel>
+								</StackPanel>
+							</Grid>
 
-                        <StackPanel Classes="DepartmentActions" 
-                                    Orientation="Horizontal" 
-                                    Spacing="4">
-                            <Button Classes="IconButton Small"
-                                    Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditDepartmentCommand}"
-                                    CommandParameter="{Binding Department}"
-                                    ToolTip.Tip="Редактировать">
-                                <PathIcon Data="{StaticResource EditIcon}" 
-                                          Width="14" Height="14"
-                                          Foreground="{DynamicResource Icon}"/>
-                            </Button>
-                        </StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Grid>
-        </Border>
+							<StackPanel Grid.Column="2" Orientation="Horizontal"
+										Spacing="8" Margin="0,0,8,0"
+										VerticalAlignment="Center">
 
-        <Border Grid.Row="1"
-                IsVisible="{Binding IsExpanded}"
-                Margin="24,0,0,0">
-            
-            <Grid>
-                <Border Width="2" 
-                        Background="{DynamicResource HierarchyLineBrush}"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Stretch"
-                        Margin="11,0,0,8"
-                        CornerRadius="1"
-                        IsVisible="{Binding HasChildren}"/>
-                
-                <ItemsControl ItemsSource="{Binding Children}" 
-                              Margin="24,4,0,0"
-                              ItemTemplate="{StaticResource DepartmentTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Spacing="0"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </Grid>
-        </Border>
-    </Grid>
-</DataTemplate>
+								<Border Background="{DynamicResource AccentMuted}"
+										CornerRadius="12"
+										Padding="10,4"
+										IsVisible="{Binding ShowUserCount}"
+										ToolTip.Tip="{Binding UserCountText}">
+									<StackPanel Orientation="Horizontal" Spacing="6">
+										<PathIcon Data="{StaticResource PeopleIcon}"
+												  Width="14" Height="14"
+												  Foreground="{DynamicResource Accent}"/>
+										<TextBlock Text="{Binding UserCount}"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource Accent}"/>
+									</StackPanel>
+								</Border>
+
+								<Border Background="{DynamicResource WarningBgBrush}"
+										CornerRadius="12"
+										Padding="10,4"
+										IsVisible="{Binding !ShowUserCount}"
+										ToolTip.Tip="Нет сотрудников">
+									<TextBlock Text="Пусто"
+											   Foreground="{DynamicResource WarningBrush}"/>
+								</Border>
+
+								<Border Background="{DynamicResource CardBgBrush}"
+										CornerRadius="12"
+										Padding="8,4"
+										IsVisible="{Binding HasChildren}"
+										ToolTip.Tip="Подотделов">
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<PathIcon Data="{StaticResource FolderIcon}"
+												  Width="12" Height="12"
+												  Foreground="{DynamicResource TextMuted}"/>
+										<TextBlock Text="{Binding Children.Count}"
+												   FontSize="11"
+												   Foreground="{DynamicResource TextMuted}"/>
+									</StackPanel>
+								</Border>
+
+								<StackPanel Classes="DepartmentActions"
+											Orientation="Horizontal"
+											Spacing="4">
+									<Button Classes="IconButton Small"
+											Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditDepartmentCommand}"
+											CommandParameter="{Binding Department}"
+											ToolTip.Tip="Редактировать">
+										<PathIcon Data="{StaticResource EditIcon}"
+												  Width="14" Height="14"
+												  Foreground="{DynamicResource Icon}"/>
+									</Button>
+								</StackPanel>
+							</StackPanel>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border Grid.Row="1"
+						IsVisible="{Binding IsExpanded}"
+						Margin="24,0,0,0">
+
+					<Grid>
+						<Border Width="2"
+								Background="{DynamicResource HierarchyLineBrush}"
+								HorizontalAlignment="Left"
+								VerticalAlignment="Stretch"
+								Margin="11,0,0,8"
+								CornerRadius="1"
+								IsVisible="{Binding HasChildren}"/>
+
+						<ItemsControl ItemsSource="{Binding Children}"
+									  Margin="24,4,0,0"
+									  ItemTemplate="{StaticResource DepartmentTemplate}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<StackPanel Spacing="0"/>
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+						</ItemsControl>
+					</Grid>
+				</Border>
+			</Grid>
+		</DataTemplate>
 	</UserControl.Resources>
 
 	<Border Classes="PageContainer">
 		<Grid ColumnDefinitions="260,*">
 			<Border Grid.Column="0" Background="{DynamicResource SecondaryBG}"
-                    BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderDefault}">
+					BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderDefault}">
 				<DockPanel>
 					<Border DockPanel.Dock="Top" Padding="20,24,20,16">
 						<StackPanel Spacing="4">
 							<TextBlock Text="Администрирование" FontSize="20" FontWeight="Bold"/>
 							<TextBlock Text="Управление системой" FontSize="12"
-                                       Foreground="{DynamicResource TextSecondary}"/>
+									   Foreground="{DynamicResource TextSecondary}"/>
 						</StackPanel>
 					</Border>
 
 					<Border DockPanel.Dock="Top" Height="1"
-                            Background="{DynamicResource BorderDefault}" Margin="16,0"/>
+							Background="{DynamicResource BorderDefault}" Margin="16,0"/>
 
 					<ScrollViewer DockPanel.Dock="Top" Margin="12,16">
 						<StackPanel Spacing="4">
@@ -238,34 +238,34 @@
 
 					<StackPanel Grid.Row="0" Margin="0,0,0,20">
 						<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Сотрудники|Отделы'}"
-                                   FontSize="24" FontWeight="Bold"/>
+								   FontSize="24" FontWeight="Bold"/>
 						<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Управление учетными записями сотрудников|Структура отделов организации'}"
-                                   FontSize="13" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
+								   FontSize="13" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
 					</StackPanel>
 
 					<Border Grid.Row="1" Background="{DynamicResource SecondaryBG}"
-                            BorderBrush="{DynamicResource BorderDefault}"
-                            CornerRadius="16" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+							BorderBrush="{DynamicResource BorderDefault}"
+							CornerRadius="16" BorderThickness="1" Padding="16" Margin="0,0,0,16">
 						<Grid ColumnDefinitions="*,Auto,Auto">
 							<TextBox Grid.Column="0" Classes="Search" Text="{Binding SearchQuery}" Watermark="Поиск...">
 								<TextBox.InnerLeftContent>
 									<PathIcon Data="{StaticResource SearchIcon}" Width="16" Height="16"
-                                              Margin="12,0,8,0" Foreground="{DynamicResource TextSecondary}"/>
+											  Margin="12,0,8,0" Foreground="{DynamicResource TextSecondary}"/>
 								</TextBox.InnerLeftContent>
 							</TextBox>
 
 							<Button Grid.Column="1" Command="{Binding RefreshCommand}"
-                                    Classes="IconButton" Margin="12,0,0,0" ToolTip.Tip="Обновить данные">
+									Classes="IconButton" Margin="12,0,0,0" ToolTip.Tip="Обновить данные">
 								<PathIcon Data="{StaticResource RefreshIcon}" Width="16" Height="16"
-                                          Foreground="{DynamicResource Icon}"/>
+										  Foreground="{DynamicResource Icon}"/>
 							</Button>
 
 							<Button Grid.Column="2" Classes="Primary" Command="{Binding CreateCommand}" Margin="12,0,0,0">
 								<StackPanel Orientation="Horizontal" Spacing="8">
 									<PathIcon Data="{StaticResource AddIcon}" Width="14" Height="14"
-                                              Foreground="{DynamicResource TextOnAccent}"/>
+											  Foreground="{DynamicResource TextOnAccent}"/>
 									<TextBlock Text="{Binding SelectedTabIndex, Converter={conv:Converter Name=IndexToText}, ConverterParameter='Добавить сотрудника|Создать отдел'}"
-                                               Foreground="{DynamicResource TextOnAccent}"/>
+											   Foreground="{DynamicResource TextOnAccent}"/>
 								</StackPanel>
 							</Button>
 						</Grid>
@@ -273,38 +273,38 @@
 
 					<Grid Grid.Row="2">
 						<Border IsVisible="{Binding IsBusy}" Background="{DynamicResource SecondaryBG}"
-                                BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
-                                CornerRadius="16" ZIndex="100">
+								BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
+								CornerRadius="16" ZIndex="100">
 							<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
 								<ProgressBar IsIndeterminate="True" Width="200"/>
 								<TextBlock Text="Загрузка данных..." Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center"/>
+										   HorizontalAlignment="Center"/>
 							</StackPanel>
 						</Border>
 
 						<Border Classes="AlertError" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
-                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
 								<PathIcon Data="{StaticResource WarningIcon}" Width="20" Height="20"
-                                          Foreground="{DynamicResource DangerBrush}" Margin="0,0,12,0"/>
+										  Foreground="{DynamicResource DangerBrush}" Margin="0,0,12,0"/>
 								<TextBlock Grid.Column="1" Text="{Binding ErrorMessage}"
-                                           Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+										   Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
 							</Grid>
 						</Border>
 
 						<Border Classes="AlertSuccess" VerticalAlignment="Top" Margin="0,0,0,16" ZIndex="50"
-                                IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+								IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 							<Grid ColumnDefinitions="Auto,*">
 								<PathIcon Data="{StaticResource CheckmarkIcon}" Width="20" Height="20"
-                                          Foreground="{DynamicResource SuccessBrush}" Margin="0,0,12,0"/>
+										  Foreground="{DynamicResource SuccessBrush}" Margin="0,0,12,0"/>
 								<TextBlock Grid.Column="1" Text="{Binding SuccessMessage}"
-                                           Foreground="{DynamicResource SuccessBrush}" TextWrapping="Wrap"/>
+										   Foreground="{DynamicResource SuccessBrush}" TextWrapping="Wrap"/>
 							</Grid>
 						</Border>
 
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
-                                BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
-                                IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
+								BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
+								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
 							<ScrollViewer Padding="16">
 								<ItemsControl ItemsSource="{Binding FilteredGroupedUsers}">
 									<ItemsControl.ItemsPanel>
@@ -319,12 +319,12 @@
 													<Border Background="{DynamicResource CardBgBrush}" CornerRadius="6" Padding="12,6">
 														<StackPanel Orientation="Horizontal" Spacing="8">
 															<PathIcon Data="{StaticResource OrganizationIcon}" Width="14" Height="14"
-                                                                      Foreground="{DynamicResource TextSecondary}"/>
+																	  Foreground="{DynamicResource TextSecondary}"/>
 															<TextBlock Text="{Binding DepartmentName}" FontSize="13" FontWeight="SemiBold"/>
 														</StackPanel>
 													</Border>
 													<Border Grid.Column="1" Height="1" Background="{DynamicResource BorderDefault}"
-                                                            Margin="12,0,0,0" VerticalAlignment="Center"/>
+															Margin="12,0,0,0" VerticalAlignment="Center"/>
 												</Grid>
 
 												<ItemsControl ItemsSource="{Binding Users}">
@@ -336,33 +336,33 @@
 													<ItemsControl.ItemTemplate>
 														<DataTemplate DataType="userShared:UserDto">
 															<Border Classes="Hoverable HoverActions"
-                                                                    Background="{DynamicResource ItemBgBrush}"
-                                                                    CornerRadius="8" Padding="12,10">
+																	Background="{DynamicResource ItemBgBrush}"
+																	CornerRadius="8" Padding="12,10">
 																<Grid ColumnDefinitions="Auto,*,Auto">
 																	<Border Width="40" Height="40" Background="{DynamicResource CardBgBrush}"
-                                                                            CornerRadius="20" Margin="0,0,12,0">
+																			CornerRadius="20" Margin="0,0,12,0">
 																		<PathIcon Data="{StaticResource PersonIcon}" Width="18" Height="18"
-                                                                                  Foreground="{DynamicResource TextSecondary}"/>
+																				  Foreground="{DynamicResource TextSecondary}"/>
 																	</Border>
 
 																	<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 																		<TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="14"/>
 																		<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-                                                                                   Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
+																				   Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
 																	</StackPanel>
 
 																	<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Classes="Actions">
 																		<Button Classes="IconButton Small"
-                                                                                Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditUserDialogCommand}"
-                                                                                CommandParameter="{Binding .}" ToolTip.Tip="Редактировать">
+																				Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).OpenEditUserDialogCommand}"
+																				CommandParameter="{Binding .}" ToolTip.Tip="Редактировать">
 																			<PathIcon Data="{StaticResource EditIcon}" Width="14" Height="14"
-                                                                                      Foreground="{DynamicResource Icon}"/>
+																					  Foreground="{DynamicResource Icon}"/>
 																		</Button>
 																		<Button Classes="IconButton Small Danger"
-                                                                                Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).ToggleBanCommand}"
-                                                                                CommandParameter="{Binding .}" ToolTip.Tip="Заблокировать">
+																				Command="{Binding $parent[UserControl].((vm:AdminViewModel)DataContext).ToggleBanCommand}"
+																				CommandParameter="{Binding .}" ToolTip.Tip="Заблокировать">
 																			<PathIcon Data="{StaticResource BlockIcon}" Width="14" Height="14"
-                                                                                      Foreground="{DynamicResource Icon}"/>
+																					  Foreground="{DynamicResource Icon}"/>
 																		</Button>
 																	</StackPanel>
 																</Grid>
@@ -378,11 +378,11 @@
 						</Border>
 
 						<Border Background="{DynamicResource SecondaryBG}" BorderThickness="1"
-                                BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
-                                IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
+								BorderBrush="{DynamicResource BorderDefault}" CornerRadius="16"
+								IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
 							<ScrollViewer Padding="16">
 								<ItemsControl ItemsSource="{Binding FilteredHierarchicalDepartments}"
-                                              ItemTemplate="{StaticResource DepartmentTemplate}">
+											  ItemTemplate="{StaticResource DepartmentTemplate}">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>
 											<StackPanel Spacing="8"/>

@@ -1,661 +1,669 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:chat="using:MessengerDesktop.Views.Chat"
-             xmlns:managers="using:MessengerDesktop.ViewModels.Chat.Managers"
-             xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
-             x:Class="MessengerDesktop.Views.Chat.ChatView"
-             x:DataType="vmChat:ChatViewModel"
-             x:Name="Root"
-             Design.Width="1280" Design.Height="720"
-             Background="Transparent">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:chat="using:MessengerDesktop.Views.Chat"
+			 xmlns:managers="using:MessengerDesktop.ViewModels.Chat.Managers"
+			 xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
+			 x:Class="MessengerDesktop.Views.Chat.ChatView"
+			 x:DataType="vmChat:ChatViewModel"
+			 x:Name="Root"
+			 Design.Width="1280" Design.Height="720"
+			 Background="Transparent">
 
-    <UserControl.Styles>
-        <Style Selector="TextBox.ChatInput">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8,12"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-            <Setter Property="AcceptsReturn" Value="True"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="MinHeight" Value="44"/>
-            <Setter Property="MaxHeight" Value="400"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
-            <Setter Property="FocusAdorner" Value="{x:Null}"/>
-        </Style>
-        <Style Selector="TextBox.ChatInput /template/ Border,
-                         TextBox.ChatInput:focus-within /template/ Border,
-                         TextBox.ChatInput:pointerover /template/ Border">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
+	<UserControl.Styles>
+		<Style Selector="TextBox.ChatInput">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="8,12"/>
+			<Setter Property="FontSize" Value="15"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+			<Setter Property="AcceptsReturn" Value="True"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="MinHeight" Value="44"/>
+			<Setter Property="MaxHeight" Value="400"/>
+			<Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+		</Style>
+		<Style Selector="TextBox.ChatInput /template/ Border,
+		TextBox.ChatInput:focus-within /template/ Border,
+		TextBox.ChatInput:pointerover /template/ Border">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
 
-        <Style Selector="Border.EditModePanel">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
+		<Style Selector="Border.EditModePanel">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="12,10"/>
+			<Setter Property="Margin" Value="0,0,0,8"/>
+		</Style>
 
-        <Style Selector="Border.AttachmentPreview">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="10"/>
-        </Style>
+		<Style Selector="Border.AttachmentPreview">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="10"/>
+		</Style>
 
-        <Style Selector="ListBox.MessagesList">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <Style Selector="ListBox.MessagesList ListBoxItem">
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,1"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        </Style>
-        <Style Selector="ListBox.MessagesList ListBoxItem:selected /template/ ContentPresenter,
-                         ListBox.MessagesList ListBoxItem:pointerover /template/ ContentPresenter,
-                         ListBox.MessagesList ListBoxItem:selected:pointerover /template/ ContentPresenter,
-                         ListBox.MessagesList ListBoxItem:selected:focus /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="ListBox.MessagesList">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+		<Style Selector="ListBox.MessagesList ListBoxItem">
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,1"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		</Style>
+		<Style Selector="ListBox.MessagesList ListBoxItem:selected /template/ ContentPresenter,
+		ListBox.MessagesList ListBoxItem:pointerover /template/ ContentPresenter,
+		ListBox.MessagesList ListBoxItem:selected:pointerover /template/ ContentPresenter,
+		ListBox.MessagesList ListBoxItem:selected:focus /template/ ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+	</UserControl.Styles>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0"
-                CornerRadius="16"
-                Background="{DynamicResource SecondaryBG}">
-            <Grid RowDefinitions="Auto,Auto,*,Auto">
+		<Border Grid.Column="0"
+				CornerRadius="16"
+				Background="{DynamicResource SecondaryBG}">
+			<Grid RowDefinitions="Auto,Auto,*,Auto">
 
-                <!-- ═══ ШАПКА ЧАТА ═══ -->
-                <Border Grid.Row="0"
-                        BorderBrush="{DynamicResource BorderDefault}"
-                        BorderThickness="0,0,0,1"
-                        Padding="16,0"
-                        ZIndex="10">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   Text="{Binding Chat.Name}"
-                                   FontWeight="SemiBold"
-                                   FontSize="18"
-                                   VerticalAlignment="Center"/>
-                        <Border Grid.Column="2"
-                                HorizontalAlignment="Right"
-                                Background="{DynamicResource PrimaryBG}"
-                                CornerRadius="4"
-                                Margin="8">
-                            <StackPanel Orientation="Horizontal">
-                                <ToggleButton Classes="IconButton"
-                                              ToolTip.Tip="Поиск"
-                                              CornerRadius="4,0,0,4"
-                                              IsChecked="{Binding IsSearchMode}">
-                                    <Path Data="{StaticResource SearchIcon}"
-                                          Fill="{Binding Foreground,
-                                              RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                          Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </ToggleButton>
-                                <ToggleButton Classes="IconButton"
-                                              ToolTip.Tip="Информация о канале"
-                                              CornerRadius="0"
-                                              IsChecked="{Binding IsInfoPanelOpen}">
-                                    <Path Data="{StaticResource PanelRight}"
-                                          Fill="{Binding Foreground,
-                                              RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                          Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </ToggleButton>
-                                <Button Classes="IconButton"
-                                        ToolTip.Tip="Меню"
-                                        CornerRadius="0,4,4,0">
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <MenuItem Header="Редактировать чат"
-                                                      Command="{Binding OpenEditChatCommand}">
-                                                <MenuItem.IsVisible>
-                                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                                        <Binding Path="IsGroupChat"/>
-                                                        <Binding Path=""
-                                                                 Converter="{conv:Converter Name=HasRole}"
-                                                                 ConverterParameter="Admin"/>
-                                                    </MultiBinding>
-                                                </MenuItem.IsVisible>
-                                            </MenuItem>
-                                            <MenuItem Header="Создать опрос"
-                                                      Command="{Binding OpenCreatePollCommand}">
-                                                <MenuItem.IsVisible>
-                                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                                        <Binding Path="IsGroupChat"/>
-                                                        <Binding Path=""
-                                                                 Converter="{conv:Converter Name=HasRole}"
-                                                                 ConverterParameter="Admin"/>
-                                                    </MultiBinding>
-                                                </MenuItem.IsVisible>
-                                            </MenuItem>
-                                            <MenuItem Header="Выйти из чата"
-                                                      Command="{Binding LeaveChatCommand}"
-                                                      Foreground="{DynamicResource DangerBrush}"/>
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                    <Path Margin="10,0,0,0"
-                                          Data="{StaticResource Options}"
-                                          Width="20" Height="20"
-                                          Fill="{DynamicResource TextPrimary}"
-                                          Stretch="Uniform"/>
-                                </Button>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </Border>
+				<!-- ═══ ШАПКА ЧАТА ═══ -->
+				<Border Grid.Row="0"
+						BorderBrush="{DynamicResource BorderDefault}"
+						BorderThickness="0,0,0,1"
+						Padding="16,0"
+						ZIndex="10">
+					<Grid ColumnDefinitions="Auto,*,Auto">
+						<TextBlock Grid.Column="0"
+								   Text="{Binding Chat.Name}"
+								   FontWeight="SemiBold"
+								   FontSize="18"
+								   VerticalAlignment="Center"/>
+						<Border Grid.Column="2"
+								HorizontalAlignment="Right"
+								Background="{DynamicResource PrimaryBG}"
+								CornerRadius="4"
+								Margin="8">
+							<StackPanel Orientation="Horizontal">
+								<ToggleButton Classes="IconButton"
+											  ToolTip.Tip="Поиск"
+											  CornerRadius="4,0,0,4"
+											  IsChecked="{Binding IsSearchMode}">
+									<Path Data="{StaticResource SearchIcon}"
+										  Fill="{Binding Foreground,
+										  RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</ToggleButton>
+								<ToggleButton Classes="IconButton"
+											  ToolTip.Tip="Информация о канале"
+											  CornerRadius="0"
+											  IsChecked="{Binding IsInfoPanelOpen}">
+									<Path Data="{StaticResource PanelRight}"
+										  Fill="{Binding Foreground,
+										  RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</ToggleButton>
+								<Button Classes="IconButton"
+										ToolTip.Tip="Меню"
+										CornerRadius="0,4,4,0">
+									<Button.Flyout>
+										<MenuFlyout Placement="BottomEdgeAlignedRight">
+											<MenuItem Header="Редактировать чат"
+													  Command="{Binding OpenEditChatCommand}">
+												<MenuItem.IsVisible>
+													<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+														<Binding Path="IsGroupChat"/>
+														<Binding Path=""
+																 Converter="{conv:Converter Name=HasRole}"
+																 ConverterParameter="Admin"/>
+													</MultiBinding>
+												</MenuItem.IsVisible>
+											</MenuItem>
+											<MenuItem Header="Создать опрос"
+													  Command="{Binding OpenCreatePollCommand}">
+												<MenuItem.IsVisible>
+													<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+														<Binding Path="IsGroupChat"/>
+														<Binding Path=""
+																 Converter="{conv:Converter Name=HasRole}"
+																 ConverterParameter="Admin"/>
+													</MultiBinding>
+												</MenuItem.IsVisible>
+											</MenuItem>
+											<MenuItem Header="Выйти из чата"
+													  Command="{Binding LeaveChatCommand}"
+													  Foreground="{DynamicResource DangerBrush}"/>
+										</MenuFlyout>
+									</Button.Flyout>
+									<Path Margin="10,0,0,0"
+										  Data="{StaticResource Options}"
+										  Width="20" Height="20"
+										  Fill="{DynamicResource TextPrimary}"
+										  Stretch="Uniform"/>
+								</Button>
+							</StackPanel>
+						</Border>
+					</Grid>
+				</Border>
 
-                <!-- ═══ ДЕКОРАТИВНЫЙ ФОН ═══ -->
-                <Panel Grid.Row="2" Grid.RowSpan="2">
-                    <Border Opacity="0.4">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                <GradientStop Color="{DynamicResource TopBg}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource BaseBg}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Canvas IsHitTestVisible="False" Opacity="0.03">
-                        <Ellipse Width="60" Height="60" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="50" Canvas.Top="100"/>
-                        <Ellipse Width="40" Height="40" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="200" Canvas.Top="50"/>
-                        <Ellipse Width="30" Height="30" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="350" Canvas.Top="180"/>
-                        <Ellipse Width="50" Height="50" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="500" Canvas.Top="80"/>
-                        <Ellipse Width="35" Height="35" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="150" Canvas.Top="300"/>
-                        <Ellipse Width="45" Height="45" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="400" Canvas.Top="350"/>
-                        <Ellipse Width="25" Height="25" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="600" Canvas.Top="200"/>
-                        <Ellipse Width="55" Height="55" Fill="{DynamicResource TextPrimary}"
-                                 Canvas.Left="700" Canvas.Top="400"/>
-                    </Canvas>
-                </Panel>
+				<!-- ═══ ДЕКОРАТИВНЫЙ ФОН ═══ -->
+				<Panel Grid.Row="2" Grid.RowSpan="2">
+					<Border Opacity="0.4">
+						<Border.Background>
+							<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+								<GradientStop Color="{DynamicResource TopBg}" Offset="0"/>
+								<GradientStop Color="{DynamicResource BaseBg}" Offset="1"/>
+							</LinearGradientBrush>
+						</Border.Background>
+					</Border>
+					<Canvas IsHitTestVisible="False" Opacity="0.03">
+						<Ellipse Width="60" Height="60" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="50" Canvas.Top="100"/>
+						<Ellipse Width="40" Height="40" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="200" Canvas.Top="50"/>
+						<Ellipse Width="30" Height="30" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="350" Canvas.Top="180"/>
+						<Ellipse Width="50" Height="50" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="500" Canvas.Top="80"/>
+						<Ellipse Width="35" Height="35" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="150" Canvas.Top="300"/>
+						<Ellipse Width="45" Height="45" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="400" Canvas.Top="350"/>
+						<Ellipse Width="25" Height="25" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="600" Canvas.Top="200"/>
+						<Ellipse Width="55" Height="55" Fill="{DynamicResource TextPrimary}"
+								 Canvas.Left="700" Canvas.Top="400"/>
+					</Canvas>
+				</Panel>
 
-                <!-- ═══ ОБЛАСТЬ СООБЩЕНИЙ ═══ -->
-                <Panel Grid.Row="2">
-                    <controls:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
+				<!-- ═══ ОБЛАСТЬ СООБЩЕНИЙ ═══ -->
+				<Panel Grid.Row="2">
+					<controls:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
-                    <ListBox x:Name="MessagesList"
-                             Classes="MessagesList"
-                             ItemsSource="{Binding Messages}"
-                             Margin="0,8"
-                             Padding="16,0"
-                             IsVisible="{Binding !IsInitialLoading}"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             SelectionMode="Single,Toggle">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel/>
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vmChat:MessageViewModel">
-                                <chat:MessageControl
-                                    EditMessageCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartEditMessageCommand}"
-                                    CopyTextCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).CopyMessageTextCommand}"
-                                    DeleteMessageCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).DeleteMessageCommand}"
-                                    OpenProfileCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
-                                    ReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartReplyCommand}"
-                                    ScrollToReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).ScrollToReplyOriginalCommand}"
-                                    RetryTranscriptionCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RetryTranscriptionCommand}"
-                                    ForwardCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartForwardCommand}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+					<ListBox x:Name="MessagesList"
+							 Classes="MessagesList"
+							 ItemsSource="{Binding Messages}"
+							 Margin="0,8"
+							 Padding="16,0"
+							 IsVisible="{Binding !IsInitialLoading}"
+							 ScrollViewer.VerticalScrollBarVisibility="Auto"
+							 SelectionMode="Single,Toggle">
+						<ListBox.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel/>
+							</ItemsPanelTemplate>
+						</ListBox.ItemsPanel>
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="vmChat:MessageViewModel">
+								<chat:MessageControl
+								EditMessageCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartEditMessageCommand}"
+								CopyTextCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).CopyMessageTextCommand}"
+								DeleteMessageCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).DeleteMessageCommand}"
+								OpenProfileCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
+								ReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartReplyCommand}"
+								ScrollToReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).ScrollToReplyOriginalCommand}"
+								RetryTranscriptionCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RetryTranscriptionCommand}"
+								ForwardCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).StartForwardCommand}"/>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
 
-                    <Button Classes="ScrollToBottomButton"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom"
-                            Margin="0,0,24,16"
-                            IsVisible="{Binding ShowScrollToBottom}"
-                            Command="{Binding ScrollToBottomCommand}">
-                        <Panel>
-                            <Path Data="{StaticResource ChevronIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="18" Height="18"
-                                  Stretch="Uniform"
-                                  HorizontalAlignment="Center"
-                                  Margin="0,25"/>
-                            <Border Background="{DynamicResource Accent}"
-                                    CornerRadius="10"
-                                    MinWidth="20" Height="20"
-                                    Padding="6,0"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Margin="0,0,-10,0"
-                                    IsVisible="{Binding HasNewMessages}">
-                                <TextBlock Text="{Binding UnreadCount, FallbackValue=!}"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextOnAccent}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                        </Panel>
-                    </Button>
-                </Panel>
+					<Button Classes="ScrollToBottomButton"
+							HorizontalAlignment="Right"
+							VerticalAlignment="Bottom"
+							Margin="0,0,24,16"
+							IsVisible="{Binding ShowScrollToBottom}"
+							Command="{Binding ScrollToBottomCommand}">
+						<Panel>
+							<Path Data="{StaticResource ChevronIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="18" Height="18"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  Margin="0,25"/>
+							<Border Background="{DynamicResource Accent}"
+									CornerRadius="10"
+									MinWidth="20" Height="20"
+									Padding="6,0"
+									HorizontalAlignment="Right"
+									VerticalAlignment="Top"
+									Margin="0,0,-10,0"
+									IsVisible="{Binding HasNewMessages}">
+								<TextBlock Text="{Binding UnreadCount, FallbackValue=!}"
+										   FontSize="11"
+										   FontWeight="SemiBold"
+										   Foreground="{DynamicResource TextOnAccent}"
+										   HorizontalAlignment="Center"
+										   VerticalAlignment="Center"/>
+							</Border>
+						</Panel>
+					</Button>
+				</Panel>
 
-                <!-- ═══ ПАНЕЛЬ ВВОДА ═══ -->
-                <Border Grid.Row="3" VerticalAlignment="Bottom" Padding="16,0,16,20">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+				<!-- ═══ ПАНЕЛЬ ВВОДА ═══ -->
+				<Border Grid.Row="3" VerticalAlignment="Bottom" Padding="16,0,16,20">
+					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
 
-                        <!-- Row 0: Редактирование -->
-                        <Border Grid.Row="0"
-                                Classes="EditModePanel"
-                                IsVisible="{Binding IsEditMode}">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Background="{DynamicResource Accent}"
-                                        CornerRadius="2"
-                                        Margin="0,0,12,0"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBlock Text="Редактирование"
-                                               FontWeight="SemiBold" FontSize="12"
-                                               Foreground="{DynamicResource Accent}"/>
-                                    <ContentControl Content="{Binding EditingMessage}"
-                                                    Padding="0" MinHeight="0" BorderThickness="0">
-                                        <ContentControl.ContentTemplate>
-                                            <DataTemplate x:DataType="vmChat:MessageViewModel">
-                                                <TextBlock Text="{Binding Content}"
-                                                           FontSize="13"
-                                                           Foreground="{DynamicResource TextSecondary}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           MaxLines="2"/>
-                                            </DataTemplate>
-                                        </ContentControl.ContentTemplate>
-                                    </ContentControl>
-                                </StackPanel>
-                                <Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding CancelEditMessageCommand}"
-                                        ToolTip.Tip="Отменить редактирование">
-                                    <TextBlock Text="✕" FontSize="14"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<!-- Row 0: Редактирование -->
+						<Border Grid.Row="0"
+								Classes="EditModePanel"
+								IsVisible="{Binding IsEditMode}">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Border Grid.Column="0"
+										Width="4"
+										Background="{DynamicResource Accent}"
+										CornerRadius="2"
+										Margin="0,0,12,0"/>
+								<StackPanel Grid.Column="1" Spacing="2">
+									<TextBlock Text="Редактирование"
+											   FontWeight="SemiBold" FontSize="12"
+											   Foreground="{DynamicResource Accent}"/>
+									<ContentControl Content="{Binding EditingMessage}"
+													Padding="0" MinHeight="0" BorderThickness="0">
+										<ContentControl.ContentTemplate>
+											<DataTemplate x:DataType="vmChat:MessageViewModel">
+												<TextBlock Text="{Binding Content}"
+														   FontSize="13"
+														   Foreground="{DynamicResource TextSecondary}"
+														   TextTrimming="CharacterEllipsis"
+														   MaxLines="2"/>
+											</DataTemplate>
+										</ContentControl.ContentTemplate>
+									</ContentControl>
+								</StackPanel>
+								<Button Grid.Column="2"
+										Classes="IconButton Small"
+										Command="{Binding CancelEditMessageCommand}"
+										ToolTip.Tip="Отменить редактирование">
+									<TextBlock Text="✕" FontSize="14"
+											   Foreground="{DynamicResource TextSecondary}"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center"/>
+								</Button>
+							</Grid>
+						</Border>
 
-                        <!-- Row 1: Ответ -->
-                        <Border Grid.Row="1"
-                                Classes="EditModePanel"
-                                IsVisible="{Binding IsReplyMode}">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Background="{DynamicResource Accent}"
-                                        CornerRadius="2"
-                                        Margin="0,0,12,0"/>
-                                <ContentControl Grid.Column="1"
-                                                Content="{Binding ReplyingToMessage}"
-                                                Padding="0" MinHeight="0" BorderThickness="0">
-                                    <ContentControl.ContentTemplate>
-                                        <DataTemplate x:DataType="vmChat:MessageViewModel">
-                                            <StackPanel Spacing="2">
-                                                <TextBlock Text="{Binding SenderName,
-                                                               StringFormat='Ответ для {0}'}"
-                                                           FontWeight="SemiBold" FontSize="12"
-                                                           Foreground="{DynamicResource Accent}"/>
-                                                <TextBlock Text="{Binding Content}"
-                                                           FontSize="13"
-                                                           Foreground="{DynamicResource TextSecondary}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           MaxLines="2"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ContentControl.ContentTemplate>
-                                </ContentControl>
-                                <Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding CancelReplyCommand}"
-                                        ToolTip.Tip="Отменить ответ">
-                                    <TextBlock Text="✕" FontSize="14"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<!-- Row 1: Ответ -->
+						<Border Grid.Row="1"
+								Classes="EditModePanel"
+								IsVisible="{Binding IsReplyMode}">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Border Grid.Column="0"
+										Width="4"
+										Background="{DynamicResource Accent}"
+										CornerRadius="2"
+										Margin="0,0,12,0"/>
+								<ContentControl Grid.Column="1"
+												Content="{Binding ReplyingToMessage}"
+												Padding="0" MinHeight="0" BorderThickness="0">
+									<ContentControl.ContentTemplate>
+										<DataTemplate x:DataType="vmChat:MessageViewModel">
+											<StackPanel Spacing="2">
+												<TextBlock Text="{Binding SenderName,
+												StringFormat='Ответ для {0}'}"
+												FontWeight="SemiBold" FontSize="12"
+												Foreground="{DynamicResource Accent}"/>
+												<TextBlock Text="{Binding Content}"
+														   FontSize="13"
+														   Foreground="{DynamicResource TextSecondary}"
+														   TextTrimming="CharacterEllipsis"
+														   MaxLines="2"/>
+											</StackPanel>
+										</DataTemplate>
+									</ContentControl.ContentTemplate>
+								</ContentControl>
+								<Button Grid.Column="2"
+										Classes="IconButton Small"
+										Command="{Binding CancelReplyCommand}"
+										ToolTip.Tip="Отменить ответ">
+									<TextBlock Text="✕" FontSize="14"
+											   Foreground="{DynamicResource TextSecondary}"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center"/>
+								</Button>
+							</Grid>
+						</Border>
 
-                        <!-- Row 2: Пересылка (Forward) -->
-                        <Border Grid.Row="2"
-                                Classes="EditModePanel"
-                                IsVisible="{Binding IsForwardMode}">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Background="#FF9800"
-                                        CornerRadius="2"
-                                        Margin="0,0,12,0"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBlock FontWeight="SemiBold" FontSize="12"
-                                               Foreground="#FF9800">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="Переслать от {0}">
-                                                <Binding Path="ForwardingSenderName"
-                                                         FallbackValue="..."/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
-                                    <TextBlock Text="{Binding ForwardPreviewText}"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="2"/>
-                                </StackPanel>
-                                <Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding CancelForwardCommand}"
-                                        ToolTip.Tip="Отменить пересылку">
-                                    <TextBlock Text="✕" FontSize="14"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<!-- Row 2: Пересылка (Forward) -->
+						<Border Grid.Row="2"
+								Classes="EditModePanel"
+								IsVisible="{Binding IsForwardMode}">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Border Grid.Column="0"
+										Width="4"
+										Background="#FF9800"
+										CornerRadius="2"
+										Margin="0,0,12,0"/>
+								<StackPanel Grid.Column="1" Spacing="2">
+									<TextBlock FontWeight="SemiBold" FontSize="12"
+											   Foreground="#FF9800">
+										<TextBlock.Text>
+											<MultiBinding StringFormat="Переслать от {0}">
+												<Binding Path="ForwardingSenderName"
+														 FallbackValue="..."/>
+											</MultiBinding>
+										</TextBlock.Text>
+									</TextBlock>
+									<TextBlock Text="{Binding ForwardPreviewText}"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"
+											   TextTrimming="CharacterEllipsis"
+											   MaxLines="2"/>
+								</StackPanel>
+								<Button Grid.Column="2"
+										Classes="IconButton Small"
+										Command="{Binding CancelForwardCommand}"
+										ToolTip.Tip="Отменить пересылку">
+									<TextBlock Text="✕" FontSize="14"
+											   Foreground="{DynamicResource TextSecondary}"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center"/>
+								</Button>
+							</Grid>
+						</Border>
 
-                        <!-- Row 3: Вложения -->
-                        <ItemsControl Grid.Row="3"
-                                      ItemsSource="{Binding LocalAttachments}"
-                                      Margin="0,0,0,8"
-                                      IsVisible="{Binding LocalAttachments.Count}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Spacing="6"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="managers:LocalFileAttachment">
-                                    <Border Classes="AttachmentPreview">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0"
-                                                    Width="44" Height="44"
-                                                    CornerRadius="8"
-                                                    ClipToBounds="True"
-                                                    Background="{DynamicResource SecondaryBG}">
-                                                <Panel>
-                                                    <TextBlock Text="📎"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"
-                                                               IsVisible="{Binding Thumbnail,
-                                                                   Converter={x:Static ObjectConverters.IsNull}}"/>
-                                                    <Image Source="{Binding Thumbnail}"
-                                                           IsVisible="{Binding Thumbnail,
-                                                               Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                                                </Panel>
-                                            </Border>
-                                            <StackPanel Grid.Column="1"
-                                                        Margin="12,0"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding FileName}"
-                                                           FontWeight="Medium" FontSize="13"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding FileSizeFormatted}"
-                                                           FontSize="11"
-                                                           Foreground="{DynamicResource TextSecondary}"/>
-                                            </StackPanel>
-                                            <Button Grid.Column="2"
-                                                    Classes="IconButton Small"
-                                                    ToolTip.Tip="Удалить"
-                                                    Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RemoveAttachmentCommand}"
-                                                    CommandParameter="{Binding}">
-                                                <TextBlock Text="✕" FontSize="14"
-                                                           Foreground="{DynamicResource TextSecondary}"/>
-                                            </Button>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+						<!-- Row 3: Вложения -->
+						<ItemsControl Grid.Row="3"
+									  ItemsSource="{Binding LocalAttachments}"
+									  Margin="0,0,0,8"
+									  IsVisible="{Binding LocalAttachments.Count}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<StackPanel Spacing="6"/>
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="managers:LocalFileAttachment">
+									<Border Classes="AttachmentPreview">
+										<Grid ColumnDefinitions="Auto,*,Auto">
+											<Border Grid.Column="0"
+													Width="44" Height="44"
+													CornerRadius="8"
+													ClipToBounds="True"
+													Background="{DynamicResource SecondaryBG}">
+												<Panel>
+													<TextBlock Text="📎"
+															   HorizontalAlignment="Center"
+															   VerticalAlignment="Center"
+															   IsVisible="{Binding Thumbnail,
+															   Converter={x:Static ObjectConverters.IsNull}}"/>
+													<Image Source="{Binding Thumbnail}"
+														   IsVisible="{Binding Thumbnail,
+														   Converter={x:Static ObjectConverters.IsNotNull}}"/>
+												</Panel>
+											</Border>
+											<StackPanel Grid.Column="1"
+														Margin="12,0"
+														VerticalAlignment="Center">
+												<TextBlock Text="{Binding FileName}"
+														   FontWeight="Medium" FontSize="13"
+														   TextTrimming="CharacterEllipsis"/>
+												<TextBlock Text="{Binding FileSizeFormatted}"
+														   FontSize="11"
+														   Foreground="{DynamicResource TextSecondary}"/>
+											</StackPanel>
+											<Button Grid.Column="2"
+													Classes="IconButton Small"
+													ToolTip.Tip="Удалить"
+													Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RemoveAttachmentCommand}"
+													CommandParameter="{Binding}">
+												<TextBlock Text="✕" FontSize="14"
+														   Foreground="{DynamicResource TextSecondary}"/>
+											</Button>
+										</Grid>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
 
-                        <!-- Row 4: Голосовые панели -->
-                        <Border Grid.Row="4"
-                                Background="{DynamicResource PrimaryBG}"
-                                CornerRadius="12"
-                                Padding="12,10"
-                                Margin="0,0,0,8"
-                                IsVisible="{Binding IsVoiceRecording}">
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                                <Ellipse Grid.Column="0"
-                                         Width="12" Height="12"
-                                         Fill="#FF4444"
-                                         Margin="0,0,10,0"
-                                         VerticalAlignment="Center">
-                                    <Ellipse.Styles>
-                                        <Style Selector="Ellipse">
-                                            <Style.Animations>
-                                                <Animation Duration="0:0:1"
-                                                           IterationCount="INFINITE">
-                                                    <KeyFrame Cue="0%">
-                                                        <Setter Property="Opacity" Value="1"/>
-                                                    </KeyFrame>
-                                                    <KeyFrame Cue="50%">
-                                                        <Setter Property="Opacity" Value="0.3"/>
-                                                    </KeyFrame>
-                                                    <KeyFrame Cue="100%">
-                                                        <Setter Property="Opacity" Value="1"/>
-                                                    </KeyFrame>
-                                                </Animation>
-                                            </Style.Animations>
-                                        </Style>
-                                    </Ellipse.Styles>
-                                </Ellipse>
-                                <ContentControl Grid.Column="1"
-                                                Content="{Binding VoiceRecording}"
-                                                Padding="0" MinHeight="0" BorderThickness="0"
-                                                Margin="0,0,12,0"
-                                                VerticalContentAlignment="Center">
-                                    <ContentControl.ContentTemplate>
-                                        <DataTemplate x:DataType="vmChat:VoiceRecordingViewModel">
-                                            <TextBlock Text="{Binding ElapsedFormatted}"
-                                                       FontSize="16" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextPrimary}"
-                                                       VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </ContentControl.ContentTemplate>
-                                </ContentControl>
-                                <TextBlock Grid.Column="2"
-                                           Text="Запись голосового сообщения..."
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           VerticalAlignment="Center"/>
-                                <Button Grid.Column="3"
-                                        Classes="IconButton Small"
-                                        Command="{Binding CancelVoiceRecordingCommand}"
-                                        ToolTip.Tip="Отменить запись">
-                                    <TextBlock Text="✕" FontSize="16"
-                                               Foreground="{DynamicResource DangerBrush}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<!-- Row 4: Голосовые панели -->
+						<Border Grid.Row="4"
+								Background="{DynamicResource PrimaryBG}"
+								CornerRadius="12"
+								Padding="12,10"
+								Margin="0,0,0,8"
+								IsVisible="{Binding IsVoiceRecording}">
+							<Grid ColumnDefinitions="Auto,Auto,*,Auto">
+								<Ellipse Grid.Column="0"
+										 Width="12" Height="12"
+										 Fill="#FF4444"
+										 Margin="0,0,10,0"
+										 VerticalAlignment="Center">
+									<Ellipse.Styles>
+										<Style Selector="Ellipse">
+											<Style.Animations>
+												<Animation Duration="0:0:1"
+														   IterationCount="INFINITE">
+													<KeyFrame Cue="0%">
+														<Setter Property="Opacity" Value="1"/>
+													</KeyFrame>
+													<KeyFrame Cue="50%">
+														<Setter Property="Opacity" Value="0.3"/>
+													</KeyFrame>
+													<KeyFrame Cue="100%">
+														<Setter Property="Opacity" Value="1"/>
+													</KeyFrame>
+												</Animation>
+											</Style.Animations>
+										</Style>
+									</Ellipse.Styles>
+								</Ellipse>
+								<ContentControl Grid.Column="1"
+												Content="{Binding VoiceRecording}"
+												Padding="0" MinHeight="0" BorderThickness="0"
+												Margin="0,0,12,0"
+												VerticalContentAlignment="Center">
+									<ContentControl.ContentTemplate>
+										<DataTemplate x:DataType="vmChat:VoiceRecordingViewModel">
+											<TextBlock Text="{Binding ElapsedFormatted}"
+													   FontSize="16" FontWeight="SemiBold"
+													   Foreground="{DynamicResource TextPrimary}"
+													   VerticalAlignment="Center"/>
+										</DataTemplate>
+									</ContentControl.ContentTemplate>
+								</ContentControl>
+								<TextBlock Grid.Column="2"
+										   Text="Запись голосового сообщения..."
+										   FontSize="13"
+										   Foreground="{DynamicResource TextSecondary}"
+										   VerticalAlignment="Center"/>
+								<Button Grid.Column="3"
+										Classes="IconButton Small"
+										Command="{Binding CancelVoiceRecordingCommand}"
+										ToolTip.Tip="Отменить запись">
+									<TextBlock Text="✕" FontSize="16"
+											   Foreground="{DynamicResource DangerBrush}"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center"/>
+								</Button>
+							</Grid>
+						</Border>
 
-                        <Border Grid.Row="4"
-                                Background="{DynamicResource PrimaryBG}"
-                                CornerRadius="12"
-                                Padding="12,10"
-                                Margin="0,0,0,8"
-                                IsVisible="{Binding IsVoiceSending}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="📤" FontSize="16" VerticalAlignment="Center"/>
-                                <TextBlock Text="Отправка голосового сообщения..."
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           VerticalAlignment="Center"/>
-                                <Button Classes="IconButton Small"
-                                        Command="{Binding CancelVoiceRecordingCommand}"
-                                        ToolTip.Tip="Отменить отправку">
-                                    <TextBlock Text="✕" FontSize="14"
-                                               Foreground="{DynamicResource DangerBrush}"/>
-                                </Button>
-                            </StackPanel>
-                        </Border>
+						<Border Grid.Row="4"
+								Background="{DynamicResource PrimaryBG}"
+								CornerRadius="12"
+								Padding="12,10"
+								Margin="0,0,0,8"
+								IsVisible="{Binding IsVoiceSending}">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="📤" FontSize="16" VerticalAlignment="Center"/>
+								<TextBlock Text="Отправка голосового сообщения..."
+										   FontSize="13"
+										   Foreground="{DynamicResource TextSecondary}"
+										   VerticalAlignment="Center"/>
+								<Button Classes="IconButton Small"
+										Command="{Binding CancelVoiceRecordingCommand}"
+										ToolTip.Tip="Отменить отправку">
+									<TextBlock Text="✕" FontSize="14"
+											   Foreground="{DynamicResource DangerBrush}"/>
+								</Button>
+							</StackPanel>
+						</Border>
 
-                        <Border Grid.Row="4"
-                                Background="#33FF4444"
-                                CornerRadius="10"
-                                Padding="10,8"
-                                Margin="0,0,0,8"
-                                IsVisible="{Binding VoiceError,
-                                    Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding VoiceError}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource DangerBrush}"
-                                       TextWrapping="Wrap"/>
-                        </Border>
+						<Border Grid.Row="4"
+								Background="#33FF4444"
+								CornerRadius="10"
+								Padding="10,8"
+								Margin="0,0,0,8"
+								IsVisible="{Binding VoiceError,
+								Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+							<TextBlock Text="{Binding VoiceError}"
+									   FontSize="12"
+									   Foreground="{DynamicResource DangerBrush}"
+									   TextWrapping="Wrap"/>
+						</Border>
 
-                        <!-- Row 5: Ввод -->
-                        <Border Grid.Row="5"
-                                Background="{DynamicResource PrimaryBG}"
-                                CornerRadius="14"
-                                IsVisible="{Binding !IsVoiceRecording}">
-                            <Grid Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
-                                <Button Grid.Column="0"
-                                        Classes="IconButton"
-                                        ToolTip.Tip="Прикрепить файл"
-                                        Width="44" Height="44"
-                                        CornerRadius="10"
-                                        Command="{Binding AttachFileCommand}"
-                                        IsVisible="{Binding !IsEditMode}">
-                                    <Path Data="{StaticResource AttachIcon}"
-                                          Fill="{DynamicResource TextSecondary}"
-                                          Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </Button>
-                                <TextBox Grid.Column="1"
-                                         Classes="ChatInput"
-                                         Text="{Binding NewMessage, Mode=TwoWay}"
-                                         Watermark="Сообщение..."
-                                         IsVisible="{Binding !IsEditMode}"/>
-                                <TextBox Grid.Column="1"
-                                         Classes="ChatInput"
-                                         Text="{Binding EditMessageContent, Mode=TwoWay}"
-                                         Watermark="Редактирование..."
-                                         IsVisible="{Binding IsEditMode}"/>
-                                <Button Grid.Column="2"
-                                        Classes="IconButton"
-                                        ToolTip.Tip="Эмодзи"
-                                        Width="44" Height="44"
-                                        CornerRadius="10"
-                                        VerticalAlignment="Bottom">
-                                    <Button.Flyout>
-                                        <Flyout Placement="TopEdgeAlignedRight"
-                                                ShowMode="TransientWithDismissOnPointerMoveAway">
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="Эмодзи"
-                                                           Classes="SectionHeader"
-                                                           Margin="4,0,0,4"/>
-                                                <ItemsControl ItemsSource="{Binding PopularEmojis}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <WrapPanel MaxWidth="320"
-                                                                       Orientation="Horizontal"/>
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Button Classes="EmojiButton"
-                                                                    Content="{Binding}"
-                                                                    Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).InsertEmojiCommand}"
-                                                                    CommandParameter="{Binding}"/>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                    <Path Data="{StaticResource EmojiIcon}"
-                                          Fill="{DynamicResource TextSecondary}"
-                                          Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </Button>
-                                <Button Grid.Column="3"
-                                        Classes="IconButton"
-                                        ToolTip.Tip="Записать голосовое сообщение"
-                                        Width="44" Height="44"
-                                        CornerRadius="10"
-                                        VerticalAlignment="Bottom"
-                                        Command="{Binding StartVoiceRecordingCommand}"
-                                        IsVisible="{Binding IsVoiceSupported}">
-                                    <Path  Data="M18.25 11a.75.75 0 0 1 .743.648l.007.102v.5a6.75 6.75 0 0 1-6.249 6.732l-.001 2.268a.75.75 0 0 1-1.493.102l-.007-.102v-2.268a6.75 6.75 0 0 1-6.246-6.496L5 12.25v-.5a.75.75 0 0 1 1.493-.102l.007.102v.5a5.25 5.25 0 0 0 5.034 5.246l.216.004h.5a5.25 5.25 0 0 0 5.246-5.034l.004-.216v-.5a.75.75 0 0 1 .75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Zm0 1.5A2.5 2.5 0 0 0 9.5 6v6a2.5 2.5 0 0 0 5 0V6A2.5 2.5 0 0 0 12 3.5Z"
-                                           Fill="{DynamicResource TextSecondary}"
-                                          Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </Button>
-                                <Button Grid.Column="4"
-                                        Classes="Primary"
-                                        Margin="4"
-                                        Width="36" Height="36"
-                                        CornerRadius="10"
-                                        Padding="0"
-                                        Command="{Binding SendMessageCommand}"
-                                        VerticalAlignment="Bottom"
-                                        ToolTip.Tip="{Binding IsEditMode,
-                                            Converter={conv:Converter Name=BoolToString},
-                                            ConverterParameter='Сохранить|Отправить'}">
-                                    <Panel>
-                                        <Path Data="{StaticResource SendIcon}"
-                                              Fill="White" Width="18" Height="18"
-                                              Stretch="Uniform"
-                                              IsVisible="{Binding !IsEditMode}"/>
-                                        <Path Data="{StaticResource CheckmarkIcon}"
-                                              Fill="White" Width="18" Height="18"
-                                              Stretch="Uniform"
-                                              IsVisible="{Binding IsEditMode}"/>
-                                    </Panel>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<!-- Row 5: Ввод -->
+						<Border Grid.Row="5"
+								Background="{DynamicResource PrimaryBG}"
+								CornerRadius="14"
+								IsVisible="{Binding !IsVoiceRecording}">
+							<Grid Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+								<Button Grid.Column="0"
+										Classes="IconButton"
+										ToolTip.Tip="Прикрепить файл"
+										Width="44" Height="44"
+										CornerRadius="10"
+										Command="{Binding AttachFileCommand}"
+										IsVisible="{Binding !IsEditMode}">
+									<Path Data="{StaticResource AttachIcon}"
+										  Fill="{DynamicResource TextSecondary}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</Button>
+								<TextBox Grid.Column="1"
+										 Classes="ChatInput"
+										 Text="{Binding NewMessage, Mode=TwoWay}"
+										 Watermark="Сообщение..."
+										 IsVisible="{Binding !IsEditMode}">
+									<TextBox.KeyBindings>
+										<KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>
+									</TextBox.KeyBindings>
+								</TextBox>
+								<TextBox Grid.Column="1"
+										 Classes="ChatInput"
+										 Text="{Binding EditMessageContent, Mode=TwoWay}"
+										 Watermark="Редактирование..."
+										 IsVisible="{Binding IsEditMode}">
+									<TextBox.KeyBindings>
+										<KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>
+									</TextBox.KeyBindings>
+								</TextBox>
+								<Button Grid.Column="2"
+										Classes="IconButton"
+										ToolTip.Tip="Эмодзи"
+										Width="44" Height="44"
+										CornerRadius="10"
+										VerticalAlignment="Bottom">
+									<Button.Flyout>
+										<Flyout Placement="TopEdgeAlignedRight"
+												ShowMode="TransientWithDismissOnPointerMoveAway">
+											<StackPanel Spacing="8">
+												<TextBlock Text="Эмодзи"
+														   Classes="SectionHeader"
+														   Margin="4,0,0,4"/>
+												<ItemsControl ItemsSource="{Binding PopularEmojis}">
+													<ItemsControl.ItemsPanel>
+														<ItemsPanelTemplate>
+															<WrapPanel MaxWidth="320"
+																	   Orientation="Horizontal"/>
+														</ItemsPanelTemplate>
+													</ItemsControl.ItemsPanel>
+													<ItemsControl.ItemTemplate>
+														<DataTemplate>
+															<Button Classes="EmojiButton"
+																	Content="{Binding}"
+																	Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).InsertEmojiCommand}"
+																	CommandParameter="{Binding}"/>
+														</DataTemplate>
+													</ItemsControl.ItemTemplate>
+												</ItemsControl>
+											</StackPanel>
+										</Flyout>
+									</Button.Flyout>
+									<Path Data="{StaticResource EmojiIcon}"
+										  Fill="{DynamicResource TextSecondary}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</Button>
+								<Button Grid.Column="3"
+										Classes="IconButton"
+										ToolTip.Tip="Записать голосовое сообщение"
+										Width="44" Height="44"
+										CornerRadius="10"
+										VerticalAlignment="Bottom"
+										Command="{Binding StartVoiceRecordingCommand}"
+										IsVisible="{Binding IsVoiceSupported}">
+									<Path  Data="M18.25 11a.75.75 0 0 1 .743.648l.007.102v.5a6.75 6.75 0 0 1-6.249 6.732l-.001 2.268a.75.75 0 0 1-1.493.102l-.007-.102v-2.268a6.75 6.75 0 0 1-6.246-6.496L5 12.25v-.5a.75.75 0 0 1 1.493-.102l.007.102v.5a5.25 5.25 0 0 0 5.034 5.246l.216.004h.5a5.25 5.25 0 0 0 5.246-5.034l.004-.216v-.5a.75.75 0 0 1 .75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Zm0 1.5A2.5 2.5 0 0 0 9.5 6v6a2.5 2.5 0 0 0 5 0V6A2.5 2.5 0 0 0 12 3.5Z"
+										   Fill="{DynamicResource TextSecondary}"
+										   Width="20" Height="20"
+										   Stretch="Uniform"/>
+								</Button>
+								<Button Grid.Column="4"
+										Classes="Primary"
+										Margin="4"
+										Width="36" Height="36"
+										CornerRadius="10"
+										Padding="0"
+										Command="{Binding SendMessageCommand}"
+										VerticalAlignment="Bottom"
+										ToolTip.Tip="{Binding IsEditMode,
+										Converter={conv:Converter Name=BoolToString},
+										ConverterParameter='Сохранить|Отправить'}">
+									<Panel>
+										<Path Data="{StaticResource SendIcon}"
+											  Fill="White" Width="18" Height="18"
+											  Stretch="Uniform"
+											  IsVisible="{Binding !IsEditMode}"/>
+										<Path Data="{StaticResource CheckmarkIcon}"
+											  Fill="White" Width="18" Height="18"
+											  Stretch="Uniform"
+											  IsVisible="{Binding IsEditMode}"/>
+									</Panel>
+								</Button>
+							</Grid>
+						</Border>
 
-                        <Border Grid.Row="5"
-                                Background="{DynamicResource PrimaryBG}"
-                                CornerRadius="14"
-                                IsVisible="{Binding IsVoiceRecording}">
-                            <Grid Margin="4" ColumnDefinitions="*,Auto">
-                                <TextBlock Grid.Column="0"
-                                           Text="Нажмите для отправки →"
-                                           FontSize="14"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           VerticalAlignment="Center"
-                                           Margin="12,0"/>
-                                <Button Grid.Column="1"
-                                        Classes="Primary"
-                                        Margin="4"
-                                        Width="44" Height="44"
-                                        CornerRadius="10"
-                                        Padding="0"
-                                        Command="{Binding StopAndSendVoiceCommand}"
-                                        ToolTip.Tip="Остановить и отправить">
-                                    <Path Data="{StaticResource SendIcon}"
-                                          Fill="White" Width="20" Height="20"
-                                          Stretch="Uniform"/>
-                                </Button>
-                            </Grid>
-                        </Border>
+						<Border Grid.Row="5"
+								Background="{DynamicResource PrimaryBG}"
+								CornerRadius="14"
+								IsVisible="{Binding IsVoiceRecording}">
+							<Grid Margin="4" ColumnDefinitions="*,Auto">
+								<TextBlock Grid.Column="0"
+										   Text="Нажмите для отправки →"
+										   FontSize="14"
+										   Foreground="{DynamicResource TextSecondary}"
+										   VerticalAlignment="Center"
+										   Margin="12,0"/>
+								<Button Grid.Column="1"
+										Classes="Primary"
+										Margin="4"
+										Width="44" Height="44"
+										CornerRadius="10"
+										Padding="0"
+										Command="{Binding StopAndSendVoiceCommand}"
+										ToolTip.Tip="Остановить и отправить">
+									<Path Data="{StaticResource SendIcon}"
+										  Fill="White" Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</Button>
+							</Grid>
+						</Border>
 
-                    </Grid>
-                </Border>
-            </Grid>
-        </Border>
-    </Grid>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
+	</Grid>
 </UserControl>

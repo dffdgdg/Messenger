@@ -1,342 +1,342 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:shared="using:MessengerDesktop.Controls.Shared"
-             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             x:Class="MessengerDesktop.Views.Chat.FileAttachmentControl"
-             x:DataType="vmChat:MessageFileViewModel">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:shared="using:MessengerDesktop.Controls.Shared"
+			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+			 x:Class="MessengerDesktop.Views.Chat.FileAttachmentControl"
+			 x:DataType="vmChat:MessageFileViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="Border.FileAttachment">
-            <Setter Property="Background" Value="#08000000"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="MinWidth" Value="220"/>
-            <Setter Property="MaxWidth" Value="320"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+	<UserControl.Styles>
+		<Style Selector="Border.FileAttachment">
+			<Setter Property="Background" Value="#08000000"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="MinWidth" Value="220"/>
+			<Setter Property="MaxWidth" Value="320"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.FileAttachment:pointerover">
-            <Setter Property="Background" Value="#10000000"/>
-        </Style>
+		<Style Selector="Border.FileAttachment:pointerover">
+			<Setter Property="Background" Value="#10000000"/>
+		</Style>
 
-        <Style Selector="Border.FileIcon">
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-        </Style>
+		<Style Selector="Border.FileIcon">
+			<Setter Property="Width" Value="40"/>
+			<Setter Property="Height" Value="40"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		</Style>
 
-        <Style Selector="Border.ImageAttachment">
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="MaxWidth" Value="320"/>
-            <Setter Property="MaxHeight" Value="320"/>
-        </Style>
+		<Style Selector="Border.ImageAttachment">
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="ClipToBounds" Value="True"/>
+			<Setter Property="MaxWidth" Value="320"/>
+			<Setter Property="MaxHeight" Value="320"/>
+		</Style>
 
-        <Style Selector="Border.ImagePlaceholder">
-            <Setter Property="Background" Value="#08000000"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="MinWidth" Value="160"/>
-            <Setter Property="MinHeight" Value="120"/>
-        </Style>
+		<Style Selector="Border.ImagePlaceholder">
+			<Setter Property="Background" Value="#08000000"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="MinWidth" Value="160"/>
+			<Setter Property="MinHeight" Value="120"/>
+		</Style>
 
-        <Style Selector="Border.ImageOverlay">
-            <Setter Property="Background" Value="#66000000"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Border.ImageOverlay">
+			<Setter Property="Background" Value="#66000000"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Border.ImageAttachment:pointerover Border.ImageOverlay">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
+		<Style Selector="Border.ImageAttachment:pointerover Border.ImageOverlay">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
 
-        <Style Selector="Button.ImageOverlayButton">
-            <Setter Property="Background" Value="#55000000"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="CornerRadius" Value="20"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style Selector="Button.ImageOverlayButton">
+			<Setter Property="Background" Value="#55000000"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Width" Value="40"/>
+			<Setter Property="Height" Value="40"/>
+			<Setter Property="CornerRadius" Value="20"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector="Button.ImageOverlayButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#55000000"/>
-            <Setter Property="CornerRadius" Value="20"/>
-        </Style>
+		<Style Selector="Button.ImageOverlayButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#55000000"/>
+			<Setter Property="CornerRadius" Value="20"/>
+		</Style>
 
-        <Style Selector="Button.ImageOverlayButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#88000000"/>
-        </Style>
+		<Style Selector="Button.ImageOverlayButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#88000000"/>
+		</Style>
 
-        <Style Selector="Button.ImageOverlayButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#AA000000"/>
-        </Style>
+		<Style Selector="Button.ImageOverlayButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#AA000000"/>
+		</Style>
 
-        <Style Selector="Button.FileActionButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
+		<Style Selector="Button.FileActionButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Width" Value="32"/>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
 
-        <Style Selector="Button.FileActionButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+		<Style Selector="Button.FileActionButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-        <Style Selector="Button.FileActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#12000000"/>
-        </Style>
+		<Style Selector="Button.FileActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#12000000"/>
+		</Style>
 
-        <Style Selector="Button.FileActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#18000000"/>
-        </Style>
+		<Style Selector="Button.FileActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="#18000000"/>
+		</Style>
 
-        <Style Selector="Border.FileError">
-            <Setter Property="Background" Value="#15FF4444"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="0,6,0,0"/>
-        </Style>
+		<Style Selector="Border.FileError">
+			<Setter Property="Background" Value="#15FF4444"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="8,4"/>
+			<Setter Property="Margin" Value="0,6,0,0"/>
+		</Style>
 
-        <Style Selector="TextBlock.FileErrorText">
-            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Opacity" Value="0.9"/>
-        </Style>
+		<Style Selector="TextBlock.FileErrorText">
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="Opacity" Value="0.9"/>
+		</Style>
 
-        <Style Selector="ProgressBar.FileDownloadProgress">
-            <Setter Property="Height" Value="3"/>
-            <Setter Property="Margin" Value="0,6,0,0"/>
-            <Setter Property="Minimum" Value="0"/>
-            <Setter Property="Maximum" Value="100"/>
-            <Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="CornerRadius" Value="2"/>
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="ProgressBar.FileDownloadProgress">
+			<Setter Property="Height" Value="3"/>
+			<Setter Property="Margin" Value="0,6,0,0"/>
+			<Setter Property="Minimum" Value="0"/>
+			<Setter Property="Maximum" Value="100"/>
+			<Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			<Setter Property="CornerRadius" Value="2"/>
+		</Style>
+	</UserControl.Styles>
 
-    <Grid>
-        <Border Classes="ImageAttachment"
-                HorizontalAlignment="Left"
-                IsVisible="{Binding IsImage}"
-                AutomationProperties.Name="{Binding FileName}"
-                AutomationProperties.HelpText="Вложенное изображение">
-            <Grid>
-                <Border Classes="ImagePlaceholder">
-                    <StackPanel HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Spacing="6">
-                        <Path Data="{StaticResource ImageIcon}"
-                              Fill="{DynamicResource TextMuted}"
-                              Width="28" Height="28"
-                              Stretch="Uniform"
-                              Opacity="0.25"
-                              HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding FileSizeFormatted}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMuted}"
-                                   Opacity="0.6"
-                                   HorizontalAlignment="Center"
-                                   IsVisible="{Binding FileSizeFormatted,
-                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    </StackPanel>
-                </Border>
+	<Grid>
+		<Border Classes="ImageAttachment"
+				HorizontalAlignment="Left"
+				IsVisible="{Binding IsImage}"
+				AutomationProperties.Name="{Binding FileName}"
+				AutomationProperties.HelpText="Вложенное изображение">
+			<Grid>
+				<Border Classes="ImagePlaceholder">
+					<StackPanel HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Spacing="6">
+						<Path Data="{StaticResource ImageIcon}"
+							  Fill="{DynamicResource TextMuted}"
+							  Width="28" Height="28"
+							  Stretch="Uniform"
+							  Opacity="0.25"
+							  HorizontalAlignment="Center"/>
+						<TextBlock Text="{Binding FileSizeFormatted}"
+								   FontSize="11"
+								   Foreground="{DynamicResource TextMuted}"
+								   Opacity="0.6"
+								   HorizontalAlignment="Center"
+								   IsVisible="{Binding FileSizeFormatted,
+								   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+					</StackPanel>
+				</Border>
 
-                <Image Stretch="Uniform"
-                       asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"/>
+				<Image Stretch="Uniform"
+					   asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"/>
 
-                <Border Classes="ImageOverlay">
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Spacing="8">
-                        <Button Classes="ImageOverlayButton"
-                                Command="{Binding DownloadCommand}"
-                                IsVisible="{Binding !IsDownloaded}"
-                                ToolTip.Tip="Скачать"
-                                AutomationProperties.Name="Скачать изображение">
-                            <Path Data="{StaticResource DownloadIcon}"
-                                  Fill="White"
-                                  Width="18" Height="18"
-                                  Stretch="Uniform"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
-                        </Button>
+				<Border Classes="ImageOverlay">
+					<StackPanel Orientation="Horizontal"
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Spacing="8">
+						<Button Classes="ImageOverlayButton"
+								Command="{Binding DownloadCommand}"
+								IsVisible="{Binding !IsDownloaded}"
+								ToolTip.Tip="Скачать"
+								AutomationProperties.Name="Скачать изображение">
+							<Path Data="{StaticResource DownloadIcon}"
+								  Fill="White"
+								  Width="18" Height="18"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
 
-                        <Button Classes="ImageOverlayButton"
-                                Command="{Binding OpenFileCommand}"
-                                IsVisible="{Binding IsDownloaded}"
-                                ToolTip.Tip="Открыть"
-                                AutomationProperties.Name="Открыть изображение">
-                            <Path Data="{StaticResource OpenIcon}"
-                                  Fill="White"
-                                  Width="18" Height="18"
-                                  Stretch="Uniform"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
-                        </Button>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+						<Button Classes="ImageOverlayButton"
+								Command="{Binding OpenFileCommand}"
+								IsVisible="{Binding IsDownloaded}"
+								ToolTip.Tip="Открыть"
+								AutomationProperties.Name="Открыть изображение">
+							<Path Data="{StaticResource OpenIcon}"
+								  Fill="White"
+								  Width="18" Height="18"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
+					</StackPanel>
+				</Border>
+			</Grid>
+		</Border>
 
-        <Border Classes="FileAttachment"
-                HorizontalAlignment="Left"
-                IsVisible="{Binding !IsImage}"
-                AutomationProperties.Name="{Binding FileName}"
-                AutomationProperties.HelpText="Вложенный файл">
-            <Grid RowDefinitions="Auto,Auto">
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                    <Border Grid.Column="0" Classes="FileIcon">
-                        <TextBlock Text="{Binding FileIcon}"
-                                   FontSize="18"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
-                    </Border>
+		<Border Classes="FileAttachment"
+				HorizontalAlignment="Left"
+				IsVisible="{Binding !IsImage}"
+				AutomationProperties.Name="{Binding FileName}"
+				AutomationProperties.HelpText="Вложенный файл">
+			<Grid RowDefinitions="Auto,Auto">
+				<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+					<Border Grid.Column="0" Classes="FileIcon">
+						<TextBlock Text="{Binding FileIcon}"
+								   FontSize="18"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center"/>
+					</Border>
 
-                    <StackPanel Grid.Column="1"
-                                Margin="10,0,8,0"
-                                VerticalAlignment="Center"
-                                Spacing="1">
-                        <TextBlock Text="{Binding FileName}"
-                                   FontWeight="Medium"
-                                   FontSize="13"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="160"
-                                   Foreground="{DynamicResource TextPrimary}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding FileSizeFormatted}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMuted}"
-                                       IsVisible="{Binding FileSizeFormatted,
-                                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            <TextBlock Text="·"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMuted}"
-                                       IsVisible="{Binding FileSizeFormatted,
-                                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            <TextBlock Text="{Binding ContentType}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMuted}"
-                                       Opacity="0.7"/>
-                        </StackPanel>
-                    </StackPanel>
+					<StackPanel Grid.Column="1"
+								Margin="10,0,8,0"
+								VerticalAlignment="Center"
+								Spacing="1">
+						<TextBlock Text="{Binding FileName}"
+								   FontWeight="Medium"
+								   FontSize="13"
+								   TextTrimming="CharacterEllipsis"
+								   MaxWidth="160"
+								   Foreground="{DynamicResource TextPrimary}"/>
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<TextBlock Text="{Binding FileSizeFormatted}"
+									   FontSize="11"
+									   Foreground="{DynamicResource TextMuted}"
+									   IsVisible="{Binding FileSizeFormatted,
+									   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+							<TextBlock Text="·"
+									   FontSize="11"
+									   Foreground="{DynamicResource TextMuted}"
+									   IsVisible="{Binding FileSizeFormatted,
+									   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+							<TextBlock Text="{Binding ContentType}"
+									   FontSize="11"
+									   Foreground="{DynamicResource TextMuted}"
+									   Opacity="0.7"/>
+						</StackPanel>
+					</StackPanel>
 
-                    <StackPanel Grid.Column="2"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Spacing="2">
+					<StackPanel Grid.Column="2"
+								Orientation="Horizontal"
+								VerticalAlignment="Center"
+								Spacing="2">
 
-                        <Button Classes="FileActionButton"
-                                Command="{Binding DownloadCommand}"
-                                IsVisible="{Binding !IsDownloading}"
-                                ToolTip.Tip="{Binding IsDownloaded,
-                                    Converter={x:Static StringConverters.IsNotNullOrEmpty},
-                                    FallbackValue='Скачать'}"
-                                AutomationProperties.Name="Скачать файл">
-                            <Panel>
-                                <Path Data="{StaticResource DownloadIcon}"
-                                      Fill="{DynamicResource TextSecondary}"
-                                      Width="16" Height="16"
-                                      Stretch="Uniform"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      IsVisible="{Binding !IsDownloaded}"/>
-                                <Path Data="{StaticResource CheckIcon}"
-                                      Fill="{DynamicResource SuccessBrush}"
-                                      Width="16" Height="16"
-                                      Stretch="Uniform"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      IsVisible="{Binding IsDownloaded}"/>
-                            </Panel>
-                        </Button>
+						<Button Classes="FileActionButton"
+								Command="{Binding DownloadCommand}"
+								IsVisible="{Binding !IsDownloading}"
+								ToolTip.Tip="{Binding IsDownloaded,
+								Converter={x:Static StringConverters.IsNotNullOrEmpty},
+								FallbackValue='Скачать'}"
+								AutomationProperties.Name="Скачать файл">
+							<Panel>
+								<Path Data="{StaticResource DownloadIcon}"
+									  Fill="{DynamicResource TextSecondary}"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding !IsDownloaded}"/>
+								<Path Data="{StaticResource CheckIcon}"
+									  Fill="{DynamicResource SuccessBrush}"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding IsDownloaded}"/>
+							</Panel>
+						</Button>
 
-                        <Grid Width="32" Height="32"
-                              IsVisible="{Binding IsDownloading}">
-                            <shared:CircularProgress Value="{Binding DownloadProgress}"
-                                                     Maximum="100"
-                                                     StrokeWidth="2.5"
-                                                     Size="24"
-                                                     Foreground="{DynamicResource Accent}"/>
-                            <Button Classes="FileActionButton"
-                                    Command="{Binding CancelDownloadCommand}"
-                                    ToolTip.Tip="Отменить"
-                                    AutomationProperties.Name="Отменить загрузку"
-                                    Width="18" Height="18"
-                                    CornerRadius="9">
-                                <TextBlock Text="✕"
-                                           FontSize="9"
-                                           Foreground="{DynamicResource TextMuted}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Button>
-                        </Grid>
+						<Grid Width="32" Height="32"
+							  IsVisible="{Binding IsDownloading}">
+							<shared:CircularProgress Value="{Binding DownloadProgress}"
+													 Maximum="100"
+													 StrokeWidth="2.5"
+													 Size="24"
+													 Foreground="{DynamicResource Accent}"/>
+							<Button Classes="FileActionButton"
+									Command="{Binding CancelDownloadCommand}"
+									ToolTip.Tip="Отменить"
+									AutomationProperties.Name="Отменить загрузку"
+									Width="18" Height="18"
+									CornerRadius="9">
+								<TextBlock Text="✕"
+										   FontSize="9"
+										   Foreground="{DynamicResource TextMuted}"
+										   HorizontalAlignment="Center"
+										   VerticalAlignment="Center"/>
+							</Button>
+						</Grid>
 
-                        <Button Classes="FileActionButton"
-                                Command="{Binding OpenFileCommand}"
-                                IsVisible="{Binding IsDownloaded}"
-                                ToolTip.Tip="Открыть файл"
-                                AutomationProperties.Name="Открыть файл">
-                            <Path Data="{StaticResource OpenIcon}"
-                                  Fill="{DynamicResource Accent}"
-                                  Width="16" Height="16"
-                                  Stretch="Uniform"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
-                        </Button>
-                    </StackPanel>
-                </Grid>
+						<Button Classes="FileActionButton"
+								Command="{Binding OpenFileCommand}"
+								IsVisible="{Binding IsDownloaded}"
+								ToolTip.Tip="Открыть файл"
+								AutomationProperties.Name="Открыть файл">
+							<Path Data="{StaticResource OpenIcon}"
+								  Fill="{DynamicResource Accent}"
+								  Width="16" Height="16"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
+					</StackPanel>
+				</Grid>
 
-                <ProgressBar Grid.Row="1"
-                             Classes="FileDownloadProgress"
-                             Value="{Binding DownloadProgress}"
-                             IsVisible="{Binding IsDownloading}"/>
+				<ProgressBar Grid.Row="1"
+							 Classes="FileDownloadProgress"
+							 Value="{Binding DownloadProgress}"
+							 IsVisible="{Binding IsDownloading}"/>
 
-                <Border Grid.Row="1"
-                        Classes="FileError"
-                        IsVisible="{Binding HasError}">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   Classes="FileErrorText"
-                                   Text="{Binding ErrorMessage}"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Classes="FileActionButton"
-                                Command="{Binding RetryDownloadCommand}"
-                                ToolTip.Tip="Повторить"
-                                AutomationProperties.Name="Повторить загрузку"
-                                Width="24" Height="24">
-                            <TextBlock Text="↻"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource Accent}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-                </Border>
-            </Grid>
-        </Border>
-    </Grid>
+				<Border Grid.Row="1"
+						Classes="FileError"
+						IsVisible="{Binding HasError}">
+					<Grid ColumnDefinitions="*,Auto">
+						<TextBlock Grid.Column="0"
+								   Classes="FileErrorText"
+								   Text="{Binding ErrorMessage}"
+								   VerticalAlignment="Center"/>
+						<Button Grid.Column="1"
+								Classes="FileActionButton"
+								Command="{Binding RetryDownloadCommand}"
+								ToolTip.Tip="Повторить"
+								AutomationProperties.Name="Повторить загрузку"
+								Width="24" Height="24">
+							<TextBlock Text="↻"
+									   FontSize="14"
+									   Foreground="{DynamicResource Accent}"
+									   HorizontalAlignment="Center"
+									   VerticalAlignment="Center"/>
+						</Button>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
+	</Grid>
 </UserControl>

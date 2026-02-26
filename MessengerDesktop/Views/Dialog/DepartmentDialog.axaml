@@ -1,11 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:department="using:MessengerShared.Dto.Department"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:department="using:MessengerShared.Dto.Department"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             xmlns:shared="using:MessengerShared.Dto"
-             x:Class="MessengerDesktop.Views.DepartmentDialog"
-             x:DataType="vmDialog:DepartmentDialogViewModel">
+			 xmlns:shared="using:MessengerShared.Dto"
+			 x:Class="MessengerDesktop.Views.DepartmentDialog"
+			 x:DataType="vmDialog:DepartmentDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="400">
 		<StackPanel Spacing="16">
@@ -14,12 +14,12 @@
 			<TextBox Text="{Binding Name}" Classes="DialogInput" Watermark="Название отдела">
 				<TextBox.InnerLeftContent>
 					<PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16"
-                              Margin="12,0,8,0" Opacity="0.5"/>
+							  Margin="12,0,8,0" Opacity="0.5"/>
 				</TextBox.InnerLeftContent>
 			</TextBox>
 
 			<ComboBox ItemsSource="{Binding AvailableParents}" SelectedItem="{Binding SelectedParent}"
-                      Classes="DialogCombo" PlaceholderText="Выбрать родительский отдел" HorizontalAlignment="Stretch">
+					  Classes="DialogCombo" PlaceholderText="Выбрать родительский отдел" HorizontalAlignment="Stretch">
 				<ComboBox.ItemTemplate>
 					<DataTemplate x:DataType="department:DepartmentDto">
 						<TextBlock Text="{Binding Name}"/>

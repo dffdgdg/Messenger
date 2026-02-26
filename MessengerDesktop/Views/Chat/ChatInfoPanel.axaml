@@ -1,33 +1,33 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:shared="using:MessengerShared.Dto"
-             xmlns:user="using:MessengerShared.Dto.User"
-             xmlns:userShared="using:MessengerShared.Dto"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             x:Class="MessengerDesktop.Views.ChatInfoPanel"
-             x:DataType="vm:ChatViewModel"
-             Width="320"
-             Design.Height="720"
-             FontFamily="Segoe UI">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:shared="using:MessengerShared.Dto"
+			 xmlns:user="using:MessengerShared.Dto.User"
+			 xmlns:userShared="using:MessengerShared.Dto"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 x:Class="MessengerDesktop.Views.ChatInfoPanel"
+			 x:DataType="vm:ChatViewModel"
+			 Width="320"
+			 Design.Height="720"
+			 FontFamily="Segoe UI">
 
 	<Border Background="{DynamicResource PrimaryBG}"
-            CornerRadius="0,16,16,0">
+			CornerRadius="0,16,16,0">
 		<Grid RowDefinitions="58,*">
 			<Border Grid.Row="0"
-                    BorderBrush="{DynamicResource BorderDefault}"
-                    BorderThickness="0,0,0,1"
-                    Padding="16,0">
+					BorderBrush="{DynamicResource BorderDefault}"
+					BorderThickness="0,0,0,1"
+					Padding="16,0">
 				<Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
 					<TextBlock Text="{Binding InfoPanelTitle}"
-                               FontWeight="SemiBold"
-                               FontSize="16"/>
+							   FontWeight="SemiBold"
+							   FontSize="16"/>
 					<Button Grid.Column="1"
-                            Command="{Binding ToggleInfoPanelCommand}"
-                            Classes="IconButton Small">
+							Command="{Binding ToggleInfoPanelCommand}"
+							Classes="IconButton Small">
 						<PathIcon Data="{StaticResource CloseIcon}"
-                                  Width="12" Height="12"/>
+								  Width="12" Height="12"/>
 					</Button>
 				</Grid>
 			</Border>
@@ -35,58 +35,58 @@
 			<Grid Grid.Row="1">
 				<controls:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
-                              IsVisible="{Binding !IsInitialLoading}"
-                              Padding="16">
+							  IsVisible="{Binding !IsInitialLoading}"
+							  Padding="16">
 					<StackPanel Spacing="20">
 						<StackPanel IsVisible="{Binding IsContactChat}" Spacing="20">
 							<StackPanel HorizontalAlignment="Center" Spacing="12">
 								<controls:AvatarControl Classes="XXLarge"
-                                                        Source="{Binding ContactAvatar}"
-                                                        DisplayName="{Binding ContactDisplayName}"
-                                                        IsOnline="{Binding IsContactOnline}"
-                                                        HorizontalAlignment="Center"/>
+														Source="{Binding ContactAvatar}"
+														DisplayName="{Binding ContactDisplayName}"
+														IsOnline="{Binding IsContactOnline}"
+														HorizontalAlignment="Center"/>
 								<TextBlock Text="{Binding ContactDisplayName}"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           TextAlignment="Center"
-                                           IsVisible="{Binding ContactDisplayName, 
-                                                      Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+										   FontSize="20"
+										   FontWeight="SemiBold"
+										   HorizontalAlignment="Center"
+										   TextWrapping="Wrap"
+										   TextAlignment="Center"
+										   IsVisible="{Binding ContactDisplayName,
+										   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 								<TextBlock Text="{Binding ContactUsername}"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding ContactDisplayName, 
-                                                      Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+										   FontSize="20"
+										   FontWeight="SemiBold"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding ContactDisplayName,
+										   Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 								<TextBlock Text="{Binding ContactLastSeen}"
-                                           FontSize="14"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center"/>
+										   FontSize="14"
+										   Foreground="{DynamicResource TextSecondary}"
+										   HorizontalAlignment="Center"/>
 							</StackPanel>
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
 							<StackPanel Spacing="16">
 								<StackPanel Spacing="2"
-                                            IsVisible="{Binding ContactUsername, 
-                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+											IsVisible="{Binding ContactUsername,
+											Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 									<TextBlock Text="Имя пользователя"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}"/>
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMuted}"/>
 									<TextBlock Text="{Binding ContactUsername, StringFormat='@{0}'}"
-                                               FontSize="14"
-                                               Foreground="{DynamicResource AccentBrush}"/>
+											   FontSize="14"
+											   Foreground="{DynamicResource AccentBrush}"/>
 								</StackPanel>
 
 								<StackPanel Spacing="2"
-                                            IsVisible="{Binding ContactDepartment, 
-                                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+											IsVisible="{Binding ContactDepartment,
+											Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
 									<TextBlock Text="Отдел"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}"/>
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMuted}"/>
 									<TextBlock Text="{Binding ContactDepartment}"
-                                               FontSize="14"/>
+											   FontSize="14"/>
 								</StackPanel>
 							</StackPanel>
 
@@ -94,15 +94,15 @@
 
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource NotificationsIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource TextSecondary}"
-                                          Margin="0,0,12,0"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource TextSecondary}"
+										  Margin="0,0,12,0"/>
 								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
 								<ToggleSwitch Grid.Column="2"
-                                              IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
-                                              IsEnabled="{Binding !IsLoadingMuteState}"
-                                              OnContent=""
-                                              OffContent=""/>
+											  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+											  IsEnabled="{Binding !IsLoadingMuteState}"
+											  OnContent=""
+											  OffContent=""/>
 							</Grid>
 						</StackPanel>
 
@@ -110,18 +110,18 @@
 
 							<StackPanel Orientation="Horizontal" Spacing="12">
 								<controls:AvatarControl Classes="Large"
-                                                        Source="{Binding Chat.Avatar}"
-                                                        DisplayName="{Binding Chat.Name}"
-                                                        FallbackIcon="{StaticResource GroupIcon}"
-                                                        ShowOnlineIndicator="False"/>
+														Source="{Binding Chat.Avatar}"
+														DisplayName="{Binding Chat.Name}"
+														FallbackIcon="{StaticResource GroupIcon}"
+														ShowOnlineIndicator="False"/>
 
 								<StackPanel VerticalAlignment="Center" Spacing="2">
 									<TextBlock Text="{Binding Chat.Name}"
-                                               FontSize="16"
-                                               FontWeight="SemiBold"/>
+											   FontSize="16"
+											   FontWeight="SemiBold"/>
 									<TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}"/>
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMuted}"/>
 								</StackPanel>
 							</StackPanel>
 
@@ -129,15 +129,15 @@
 
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource NotificationsIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource TextSecondary}"
-                                          Margin="0,0,12,0"/>
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource TextSecondary}"
+										  Margin="0,0,12,0"/>
 								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
 								<ToggleSwitch Grid.Column="2"
-                                              IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
-                                              IsEnabled="{Binding !IsLoadingMuteState}"
-                                              OnContent=""
-                                              OffContent=""/>
+											  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+											  IsEnabled="{Binding !IsLoadingMuteState}"
+											  OnContent=""
+											  OffContent=""/>
 							</Grid>
 
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
@@ -148,7 +148,7 @@
 								<Button Classes="InfoPanelItem">
 									<StackPanel Orientation="Horizontal" Spacing="12">
 										<PathIcon Data="{StaticResource ImageIcon}" Width="18" Height="18"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Text="Фото" VerticalAlignment="Center"/>
 									</StackPanel>
 								</Button>
@@ -156,7 +156,7 @@
 								<Button Classes="InfoPanelItem">
 									<StackPanel Orientation="Horizontal" Spacing="12">
 										<PathIcon Data="{StaticResource DocumentIcon}" Width="18" Height="18"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Text="Файлы" VerticalAlignment="Center"/>
 									</StackPanel>
 								</Button>
@@ -164,10 +164,10 @@
 								<Button Classes="InfoPanelItem" IsVisible="{Binding PollsCount}">
 									<Grid ColumnDefinitions="Auto,*,Auto">
 										<PathIcon Data="{StaticResource PollIcon}" Width="18" Height="18"
-                                                  Foreground="{DynamicResource TextSecondary}"/>
+												  Foreground="{DynamicResource TextSecondary}"/>
 										<TextBlock Grid.Column="1" Text="Опросы" VerticalAlignment="Center" Margin="12,0,0,0"/>
 										<TextBlock Grid.Column="2" Text="{Binding PollsCount}"
-                                                   Foreground="{DynamicResource TextMuted}"/>
+												   Foreground="{DynamicResource TextMuted}"/>
 									</Grid>
 								</Button>
 							</StackPanel>
@@ -178,31 +178,31 @@
 								<Grid ColumnDefinitions="*,Auto">
 									<TextBlock Text="Участники" FontWeight="SemiBold" FontSize="14"/>
 									<TextBlock Grid.Column="1" Text="{Binding Members.Count}"
-                                               Foreground="{DynamicResource TextMuted}"/>
+											   Foreground="{DynamicResource TextMuted}"/>
 								</Grid>
 
 								<ItemsControl ItemsSource="{Binding Members}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate x:DataType="user:UserDto">
 											<Button Classes="MemberItem"
-                                                    Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProfileCommand}"
-                                                    CommandParameter="{Binding Id}">
+													Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProfileCommand}"
+													CommandParameter="{Binding Id}">
 												<Grid ColumnDefinitions="Auto,*">
 													<controls:AvatarControl Classes="Medium"
-                                                                            Source="{Binding Avatar}"
-                                                                            DisplayName="{Binding DisplayName}"
-                                                                            IsOnline="{Binding IsOnline}"/>
+																			Source="{Binding Avatar}"
+																			DisplayName="{Binding DisplayName}"
+																			IsOnline="{Binding IsOnline}"/>
 
 													<StackPanel Grid.Column="1"
-                                                                VerticalAlignment="Center"
-                                                                Margin="12,0,0,0"
-                                                                Spacing="2">
+																VerticalAlignment="Center"
+																Margin="12,0,0,0"
+																Spacing="2">
 														<TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}"
-                                                                   FontSize="14"/>
+																   FontSize="14"/>
 														<TextBlock Text="{Binding Department}"
-                                                                   FontSize="12"
-                                                                   Foreground="{DynamicResource TextMuted}"
-                                                                   IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																   FontSize="12"
+																   Foreground="{DynamicResource TextMuted}"
+																   IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 													</StackPanel>
 												</Grid>
 											</Button>
@@ -214,10 +214,10 @@
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
 							<Button Command="{Binding LeaveChatCommand}"
-                                    Classes="InfoPanelItem">
+									Classes="InfoPanelItem">
 								<StackPanel Orientation="Horizontal" Spacing="12">
 									<PathIcon Data="{StaticResource SignOutIcon}" Width="18" Height="18"
-                                              Foreground="{DynamicResource DangerBrush}"/>
+											  Foreground="{DynamicResource DangerBrush}"/>
 									<TextBlock Text="Покинуть группу" Foreground="{DynamicResource DangerBrush}"/>
 								</StackPanel>
 							</Button>

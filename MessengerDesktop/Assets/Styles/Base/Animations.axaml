@@ -1,78 +1,78 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Style Selector="Border.Skeleton">
-        <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-        <Style.Animations>
-            <Animation Duration="0:0:1.2" IterationCount="INFINITE">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0.4"/>
-                </KeyFrame>
-                <KeyFrame Cue="50%">
-                    <Setter Property="Opacity" Value="0.7"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0.4"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
+	<Style Selector="Border.Skeleton">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Style.Animations>
+			<Animation Duration="0:0:1.2" IterationCount="INFINITE">
+				<KeyFrame Cue="0%">
+					<Setter Property="Opacity" Value="0.4"/>
+				</KeyFrame>
+				<KeyFrame Cue="50%">
+					<Setter Property="Opacity" Value="0.7"/>
+				</KeyFrame>
+				<KeyFrame Cue="100%">
+					<Setter Property="Opacity" Value="0.4"/>
+				</KeyFrame>
+			</Animation>
+		</Style.Animations>
+	</Style>
 
-    <Style Selector="Border.OnlinePulse">
-        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1"/>
-            </Setter.Value>
-        </Setter>
-        <Style.Animations>
-            <Animation Duration="0:0:2" IterationCount="INFINITE">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="ScaleTransform.ScaleX" Value="1"/>
-                    <Setter Property="ScaleTransform.ScaleY" Value="1"/>
-                </KeyFrame>
-                <KeyFrame Cue="50%">
-                    <Setter Property="Opacity" Value="0.7"/>
-                    <Setter Property="ScaleTransform.ScaleX" Value="1.2"/>
-                    <Setter Property="ScaleTransform.ScaleY" Value="1.2"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="ScaleTransform.ScaleX" Value="1"/>
-                    <Setter Property="ScaleTransform.ScaleY" Value="1"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
+	<Style Selector="Border.OnlinePulse">
+		<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+		<Setter Property="RenderTransform">
+			<Setter.Value>
+				<ScaleTransform ScaleX="1" ScaleY="1"/>
+			</Setter.Value>
+		</Setter>
+		<Style.Animations>
+			<Animation Duration="0:0:2" IterationCount="INFINITE">
+				<KeyFrame Cue="0%">
+					<Setter Property="Opacity" Value="1"/>
+					<Setter Property="ScaleTransform.ScaleX" Value="1"/>
+					<Setter Property="ScaleTransform.ScaleY" Value="1"/>
+				</KeyFrame>
+				<KeyFrame Cue="50%">
+					<Setter Property="Opacity" Value="0.7"/>
+					<Setter Property="ScaleTransform.ScaleX" Value="1.2"/>
+					<Setter Property="ScaleTransform.ScaleY" Value="1.2"/>
+				</KeyFrame>
+				<KeyFrame Cue="100%">
+					<Setter Property="Opacity" Value="1"/>
+					<Setter Property="ScaleTransform.ScaleX" Value="1"/>
+					<Setter Property="ScaleTransform.ScaleY" Value="1"/>
+				</KeyFrame>
+			</Animation>
+		</Style.Animations>
+	</Style>
 
-    <Style Selector="Button.MemberItem">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="8,10"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="8"/>
-    </Style>
+	<Style Selector="Button.MemberItem">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="8,10"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="CornerRadius" Value="8"/>
+	</Style>
 
-    <Style Selector="Button.MemberItem:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-    </Style>
+	<Style Selector="Button.MemberItem:pointerover /template/ ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+	</Style>
 
-    <Style Selector="Button.InfoPanelItem">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="Padding" Value="8,12"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="8"/>
-    </Style>
+	<Style Selector="Button.InfoPanelItem">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
+		<Setter Property="Padding" Value="8,12"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="CornerRadius" Value="8"/>
+	</Style>
 
-    <Style Selector="Button.InfoPanelItem:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-    </Style>
+	<Style Selector="Button.InfoPanelItem:pointerover /template/ ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+	</Style>
 
 	<Style Selector="Border.Skeleton">
 		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>

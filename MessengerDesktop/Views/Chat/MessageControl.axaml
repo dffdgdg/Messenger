@@ -1,563 +1,563 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:chat="using:MessengerDesktop.Views.Chat"
-             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
-             x:Class="MessengerDesktop.Views.Chat.MessageControl"
-             x:DataType="vmChat:MessageViewModel"
-             x:Name="BubbleRoot">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:chat="using:MessengerDesktop.Views.Chat"
+			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+			 x:Class="MessengerDesktop.Views.Chat.MessageControl"
+			 x:DataType="vmChat:MessageViewModel"
+			 x:Name="BubbleRoot">
 
-    <UserControl.Styles>
-        <Style Selector="Border.DeletedMessage">
-            <Setter Property="Opacity" Value="0.55"/>
-        </Style>
-        <Style Selector="TextBlock.DeletedText">
-            <Setter Property="FontStyle" Value="Italic"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-        </Style>
+	<UserControl.Styles>
+		<Style Selector="Border.DeletedMessage">
+			<Setter Property="Opacity" Value="0.55"/>
+		</Style>
+		<Style Selector="TextBlock.DeletedText">
+			<Setter Property="FontStyle" Value="Italic"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		</Style>
 
-        <Style Selector="TextBlock.MessageMeta">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="0,0,0,1"/>
-        </Style>
-        <Style Selector="TextBlock.EditedMeta">
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontStyle" Value="Italic"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="0,0,0,1"/>
-        </Style>
+		<Style Selector="TextBlock.MessageMeta">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+			<Setter Property="VerticalAlignment" Value="Bottom"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
+		</Style>
+		<Style Selector="TextBlock.EditedMeta">
+			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="FontStyle" Value="Italic"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+			<Setter Property="VerticalAlignment" Value="Bottom"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
+		</Style>
 
-        <Style Selector="Path.DeliveryStatus">
-            <Setter Property="Width" Value="14"/>
-            <Setter Property="Height" Value="14"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="2,0,0,1"/>
-        </Style>
-        <Style Selector="Path.DeliveryStatus.Read">
-            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
-        </Style>
-        <Style Selector="Path.DeliveryStatus.Unread">
-            <Setter Property="Fill" Value="{DynamicResource TextMuted}"/>
-        </Style>
+		<Style Selector="Path.DeliveryStatus">
+			<Setter Property="Width" Value="14"/>
+			<Setter Property="Height" Value="14"/>
+			<Setter Property="Stretch" Value="Uniform"/>
+			<Setter Property="VerticalAlignment" Value="Bottom"/>
+			<Setter Property="Margin" Value="2,0,0,1"/>
+		</Style>
+		<Style Selector="Path.DeliveryStatus.Read">
+			<Setter Property="Fill" Value="{DynamicResource Accent}"/>
+		</Style>
+		<Style Selector="Path.DeliveryStatus.Unread">
+			<Setter Property="Fill" Value="{DynamicResource TextMuted}"/>
+		</Style>
 
-        <Style Selector="Border.PollBubble">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="18"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="MaxWidth" Value="360"/>
-            <Setter Property="MinWidth" Value="280"/>
-        </Style>
-        <Style Selector="Border.PollBubble.Own">
-            <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-        </Style>
+		<Style Selector="Border.PollBubble">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="18"/>
+			<Setter Property="Padding" Value="14,10"/>
+			<Setter Property="MaxWidth" Value="360"/>
+			<Setter Property="MinWidth" Value="280"/>
+		</Style>
+		<Style Selector="Border.PollBubble.Own">
+			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+		</Style>
 
-        <Style Selector="Button.ReplyPreviewButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
-            <Setter Property="Opacity" Value="0.75"/>
-        </Style>
-        <Style Selector="Border.ReplyPreview">
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
-            <Setter Property="Background" Value="#0A000000"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.ReplyPreview.Own">
-            <Setter Property="Background" Value="#12FFFFFF"/>
-        </Style>
-        <Style Selector="Border.ReplyAccentBar">
-            <Setter Property="Width" Value="3"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="CornerRadius" Value="2"/>
-            <Setter Property="Margin" Value="0,2,8,2"/>
-        </Style>
-        <Style Selector="TextBlock.ReplySenderName">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="MaxLines" Value="1"/>
-        </Style>
-        <Style Selector="TextBlock.ReplyContent">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="MaxLines" Value="1"/>
-            <Setter Property="Margin" Value="0,1,0,0"/>
-        </Style>
-        <Style Selector="TextBlock.ReplyContent.Deleted">
-            <Setter Property="FontStyle" Value="Italic"/>
-            <Setter Property="Opacity" Value="0.6"/>
-        </Style>
+		<Style Selector="Button.ReplyPreviewButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		</Style>
+		<Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+		<Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+		<Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
+			<Setter Property="Opacity" Value="0.75"/>
+		</Style>
+		<Style Selector="Border.ReplyPreview">
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="Margin" Value="0,0,0,6"/>
+			<Setter Property="Background" Value="#0A000000"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Border.ReplyPreview.Own">
+			<Setter Property="Background" Value="#12FFFFFF"/>
+		</Style>
+		<Style Selector="Border.ReplyAccentBar">
+			<Setter Property="Width" Value="3"/>
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="CornerRadius" Value="2"/>
+			<Setter Property="Margin" Value="0,2,8,2"/>
+		</Style>
+		<Style Selector="TextBlock.ReplySenderName">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="MaxLines" Value="1"/>
+		</Style>
+		<Style Selector="TextBlock.ReplyContent">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="MaxLines" Value="1"/>
+			<Setter Property="Margin" Value="0,1,0,0"/>
+		</Style>
+		<Style Selector="TextBlock.ReplyContent.Deleted">
+			<Setter Property="FontStyle" Value="Italic"/>
+			<Setter Property="Opacity" Value="0.6"/>
+		</Style>
 
-        <Style Selector="TextBlock.ForwardLabel">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontStyle" Value="Italic"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="MaxLines" Value="1"/>
-        </Style>
+		<Style Selector="TextBlock.ForwardLabel">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontStyle" Value="Italic"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+			<Setter Property="Margin" Value="0,0,0,4"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="MaxLines" Value="1"/>
+		</Style>
 
-        <Style Selector="TextBlock.SenderName">
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
+		<Style Selector="TextBlock.SenderName">
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			<Setter Property="Margin" Value="0,0,0,2"/>
+		</Style>
 
-        <Style Selector="StackPanel.InlineMeta">
-            <Setter Property="Margin" Value="8,0,0,0"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Opacity" Value="0.7"/>
-        </Style>
+		<Style Selector="StackPanel.InlineMeta">
+			<Setter Property="Margin" Value="8,0,0,0"/>
+			<Setter Property="VerticalAlignment" Value="Bottom"/>
+			<Setter Property="Opacity" Value="0.7"/>
+		</Style>
 
-        <Style Selector="SelectableTextBlock.MessageText">
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="LineHeight" Value="22"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="VerticalAlignment" Value="Top"/>
-        </Style>
+		<Style Selector="SelectableTextBlock.MessageText">
+			<Setter Property="FontSize" Value="15"/>
+			<Setter Property="LineHeight" Value="22"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="VerticalAlignment" Value="Top"/>
+		</Style>
 
-        <Style Selector="Border.MessageWrapper StackPanel.QuickActions">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.MessageWrapper:pointerover StackPanel.QuickActions">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
-        <Style Selector="Button.QuickAction">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Width" Value="28"/>
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style Selector="Button.QuickAction /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-        <Style Selector="Button.QuickAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-        </Style>
-        <Style Selector="Button.QuickAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-        </Style>
+		<Style Selector="Border.MessageWrapper StackPanel.QuickActions">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Border.MessageWrapper:pointerover StackPanel.QuickActions">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+		<Style Selector="Button.QuickAction">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Width" Value="28"/>
+			<Setter Property="Height" Value="28"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.QuickAction /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+		<Style Selector="Button.QuickAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
+		<Style Selector="Button.QuickAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
 
-        <Style Selector="Border.TranscriptionPanel">
-            <Setter Property="Background" Value="#08000000"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="Margin" Value="0,4,0,0"/>
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="Border.TranscriptionPanel">
+			<Setter Property="Background" Value="#08000000"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
+		</Style>
+	</UserControl.Styles>
 
-    <StackPanel>
-        <Border IsVisible="{Binding ShowDateSeparator}"
-                HorizontalAlignment="Center"
-                Margin="0,16,0,12">
-            <Border Background="{DynamicResource SecondaryBG}"
-                    CornerRadius="12"
-                    Padding="16,6"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderDefault}">
-                <TextBlock Text="{Binding DateSeparatorText}"
-                           FontSize="12"
-                           FontWeight="Medium"
-                           Foreground="{DynamicResource TextSecondary}"
-                           HorizontalAlignment="Center"/>
-            </Border>
-        </Border>
+	<StackPanel>
+		<Border IsVisible="{Binding ShowDateSeparator}"
+				HorizontalAlignment="Center"
+				Margin="0,16,0,12">
+			<Border Background="{DynamicResource SecondaryBG}"
+					CornerRadius="12"
+					Padding="16,6"
+					BorderThickness="1"
+					BorderBrush="{DynamicResource BorderDefault}">
+				<TextBlock Text="{Binding DateSeparatorText}"
+						   FontSize="12"
+						   FontWeight="Medium"
+						   Foreground="{DynamicResource TextSecondary}"
+						   HorizontalAlignment="Center"/>
+			</Border>
+		</Border>
 
-        <Border Classes="MessageHighlight MessageWrapper"
-                Classes.Highlighted="{Binding IsHighlighted}"
-                Classes.DeletedMessage="{Binding IsDeleted}"
-                Padding="12,2,12,2"
-                Margin="{Binding IsContinuation,
-                    Converter={conv:Converter Name=BoolToThickness},
-                    ConverterParameter='0,1,0,0|0,4,0,0'}"
-                AutomationProperties.Name="{Binding SenderName}"
-                AutomationProperties.HelpText="{Binding DisplayContent}">
+		<Border Classes="MessageHighlight MessageWrapper"
+				Classes.Highlighted="{Binding IsHighlighted}"
+				Classes.DeletedMessage="{Binding IsDeleted}"
+				Padding="12,2,12,2"
+				Margin="{Binding IsContinuation,
+				Converter={conv:Converter Name=BoolToThickness},
+				ConverterParameter='0,1,0,0|0,4,0,0'}"
+				AutomationProperties.Name="{Binding SenderName}"
+				AutomationProperties.HelpText="{Binding DisplayContent}">
 
-            <Border.ContextFlyout>
-                <MenuFlyout>
-                    <MenuItem Header="Ответить"
-                              Command="{Binding #BubbleRoot.ReplyCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding !IsDeleted}">
-                        <MenuItem.Icon>
-                            <Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+			<Border.ContextFlyout>
+				<MenuFlyout>
+					<MenuItem Header="Ответить"
+							  Command="{Binding #BubbleRoot.ReplyCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding !IsDeleted}">
+						<MenuItem.Icon>
+							<Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <MenuItem Header="Переслать"
-                              Command="{Binding #BubbleRoot.ForwardCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding !IsDeleted}">
-                        <MenuItem.Icon>
-                            <Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+					<MenuItem Header="Переслать"
+							  Command="{Binding #BubbleRoot.ForwardCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding !IsDeleted}">
+						<MenuItem.Icon>
+							<Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <MenuItem Header="Редактировать"
-                              Command="{Binding #BubbleRoot.EditMessageCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding CanEdit}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource EditIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+					<MenuItem Header="Редактировать"
+							  Command="{Binding #BubbleRoot.EditMessageCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding CanEdit}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource EditIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <MenuItem Header="Копировать текст"
-                              Command="{Binding #BubbleRoot.CopyTextCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding Content,
-                                  Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CopyIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+					<MenuItem Header="Копировать текст"
+							  Command="{Binding #BubbleRoot.CopyTextCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding Content,
+							  Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource CopyIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <MenuItem Header="Копировать расшифровку"
-                              Command="{Binding #BubbleRoot.CopyTextCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding HasTranscriptionText}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CopyIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+					<MenuItem Header="Копировать расшифровку"
+							  Command="{Binding #BubbleRoot.CopyTextCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding HasTranscriptionText}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource CopyIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <MenuItem Header="Отменить голос"
-                              Command="{Binding Poll.CancelVoteCommand}"
-                              IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CloseIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
+					<MenuItem Header="Отменить голос"
+							  Command="{Binding Poll.CancelVoteCommand}"
+							  IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource CloseIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
 
-                    <Separator IsVisible="{Binding CanDelete}"/>
+					<Separator IsVisible="{Binding CanDelete}"/>
 
-                    <MenuItem Header="Удалить"
-                              Command="{Binding #BubbleRoot.DeleteMessageCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding CanDelete}"
-                              Foreground="{DynamicResource DangerBrush}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource DeleteIcon}"
-                                  Fill="{DynamicResource DangerBrush}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                </MenuFlyout>
-            </Border.ContextFlyout>
+					<MenuItem Header="Удалить"
+							  Command="{Binding #BubbleRoot.DeleteMessageCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding CanDelete}"
+							  Foreground="{DynamicResource DangerBrush}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource DeleteIcon}"
+								  Fill="{DynamicResource DangerBrush}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+				</MenuFlyout>
+			</Border.ContextFlyout>
 
-            <Grid ColumnDefinitions="Auto,*,Auto">
+			<Grid ColumnDefinitions="Auto,*,Auto">
 
-                <Panel Grid.Column="0"
-                       Width="40"
-                       VerticalAlignment="Bottom"
-                       Margin="0,0,8,0"
-                       IsVisible="{Binding !IsOwn}">
-                    <Button Classes="AvatarButton"
-                            IsVisible="{Binding ShowSenderName}"
-                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
-                            CommandParameter="{Binding SenderId}"
-                            Width="36" Height="36"
-                            ToolTip.Tip="{Binding SenderName}">
-                        <controls:AvatarControl Classes="Small"
-                                                Source="{Binding SenderAvatarUrl}"
-                                                DisplayName="{Binding SenderName}"
-                                                ShowOnlineIndicator="False"/>
-                    </Button>
-                </Panel>
+				<Panel Grid.Column="0"
+					   Width="40"
+					   VerticalAlignment="Bottom"
+					   Margin="0,0,8,0"
+					   IsVisible="{Binding !IsOwn}">
+					<Button Classes="AvatarButton"
+							IsVisible="{Binding ShowSenderName}"
+							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							CommandParameter="{Binding SenderId}"
+							Width="36" Height="36"
+							ToolTip.Tip="{Binding SenderName}">
+						<controls:AvatarControl Classes="Small"
+												Source="{Binding SenderAvatarUrl}"
+												DisplayName="{Binding SenderName}"
+												ShowOnlineIndicator="False"/>
+					</Button>
+				</Panel>
 
-                <StackPanel Grid.Column="1"
-                            HorizontalAlignment="{Binding IsOwn,
-                                Converter={conv:Converter Name=BoolToHAlignment},
-                                ConverterParameter='Right|Left'}"
-                            MaxWidth="520">
+				<StackPanel Grid.Column="1"
+							HorizontalAlignment="{Binding IsOwn,
+							Converter={conv:Converter Name=BoolToHAlignment},
+							ConverterParameter='Right|Left'}"
+							MaxWidth="520">
 
-                    <Button Classes="SenderNameButton"
-                            IsVisible="{Binding ShowSenderName}"
-                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
-                            CommandParameter="{Binding SenderId}">
-                        <TextBlock Classes="SenderName"
-                                   Text="{Binding SenderName}"/>
-                    </Button>
+					<Button Classes="SenderNameButton"
+							IsVisible="{Binding ShowSenderName}"
+							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							CommandParameter="{Binding SenderId}">
+						<TextBlock Classes="SenderName"
+								   Text="{Binding SenderName}"/>
+					</Button>
 
-                    <Border Classes="MessageBubble"
-                            Classes.Own="{Binding IsOwn}"
-                            Classes.Other="{Binding !IsOwn}"
-                            Classes.Alone="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Alone}"
-                            Classes.First="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=First}"
-                            Classes.Middle="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Middle}"
-                            Classes.Last="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Last}"
-                            IsVisible="{Binding !HasPoll}">
-                        <StackPanel>
+					<Border Classes="MessageBubble"
+							Classes.Own="{Binding IsOwn}"
+							Classes.Other="{Binding !IsOwn}"
+							Classes.Alone="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Alone}"
+							Classes.First="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=First}"
+							Classes.Middle="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Middle}"
+							Classes.Last="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Last}"
+							IsVisible="{Binding !HasPoll}">
+						<StackPanel>
 
-                            <TextBlock Classes="ForwardLabel"
-                                       Text="{Binding ForwardedFromHeader}"
-                                       IsVisible="{Binding HasForward}"/>
+							<TextBlock Classes="ForwardLabel"
+									   Text="{Binding ForwardedFromHeader}"
+									   IsVisible="{Binding HasForward}"/>
 
-                            <Button Classes="ReplyPreviewButton"
-                                    IsVisible="{Binding HasReply}"
-                                    Command="{Binding #BubbleRoot.ScrollToReplyCommand}"
-                                    CommandParameter="{Binding}">
-                                <Border Classes="ReplyPreview"
-                                        Classes.Own="{Binding IsOwn}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <Border Grid.Column="0" Classes="ReplyAccentBar"/>
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Classes="ReplySenderName"
-                                                       Text="{Binding ReplyToSenderName, FallbackValue=''}"/>
-                                            <TextBlock Classes="ReplyContent"
-                                                       Classes.Deleted="{Binding ReplyToIsDeleted}"
-                                                       Text="{Binding ReplyToContent, FallbackValue=''}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </Button>
+							<Button Classes="ReplyPreviewButton"
+									IsVisible="{Binding HasReply}"
+									Command="{Binding #BubbleRoot.ScrollToReplyCommand}"
+									CommandParameter="{Binding}">
+								<Border Classes="ReplyPreview"
+										Classes.Own="{Binding IsOwn}">
+									<Grid ColumnDefinitions="Auto,*">
+										<Border Grid.Column="0" Classes="ReplyAccentBar"/>
+										<StackPanel Grid.Column="1" Spacing="1">
+											<TextBlock Classes="ReplySenderName"
+													   Text="{Binding ReplyToSenderName, FallbackValue=''}"/>
+											<TextBlock Classes="ReplyContent"
+													   Classes.Deleted="{Binding ReplyToIsDeleted}"
+													   Text="{Binding ReplyToContent, FallbackValue=''}"/>
+										</StackPanel>
+									</Grid>
+								</Border>
+							</Button>
 
-                            <StackPanel IsVisible="{Binding ShowVoiceMessage}" Spacing="6">
+							<StackPanel IsVisible="{Binding ShowVoiceMessage}" Spacing="6">
 
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="Голосовое сообщение"
-                                               FontSize="14" FontWeight="Medium"
-                                               Foreground="{DynamicResource TextPrimary}"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
+								<StackPanel Orientation="Horizontal" Spacing="8">
+									<TextBlock Text="Голосовое сообщение"
+											   FontSize="14" FontWeight="Medium"
+											   Foreground="{DynamicResource TextPrimary}"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
 
-                                <ItemsControl ItemsSource="{Binding FileViewModels}"
-                                              IsVisible="{Binding HasFiles}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Spacing="4"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vmChat:MessageFileViewModel">
-                                            <chat:FileAttachmentControl/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+								<ItemsControl ItemsSource="{Binding FileViewModels}"
+											  IsVisible="{Binding HasFiles}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<StackPanel Spacing="4"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="vmChat:MessageFileViewModel">
+											<chat:FileAttachmentControl/>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
 
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="3"
-                                            HorizontalAlignment="Right"
-                                            Margin="0,2,0,0">
-                                    <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
-                                               Classes="MessageMeta"/>
-                                    <Path Data="{StaticResource CheckIcon}"
-                                          Classes="DeliveryStatus"
-                                          Classes.Read="{Binding IsRead}"
-                                          Classes.Unread="{Binding !IsRead}"
-                                          IsVisible="{Binding ShowDeliveryStatus}"/>
-                                </StackPanel>
+								<StackPanel Orientation="Horizontal"
+											Spacing="3"
+											HorizontalAlignment="Right"
+											Margin="0,2,0,0">
+									<TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+											   Classes="MessageMeta"/>
+									<Path Data="{StaticResource CheckIcon}"
+										  Classes="DeliveryStatus"
+										  Classes.Read="{Binding IsRead}"
+										  Classes.Unread="{Binding !IsRead}"
+										  IsVisible="{Binding ShowDeliveryStatus}"/>
+								</StackPanel>
 
-                                <Border Classes="TranscriptionPanel">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding TranscriptionStatusDisplay}"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSecondary}"/>
-                                        <SelectableTextBlock Text="{Binding TranscriptionText}"
-                                                             FontSize="13"
-                                                             Foreground="{DynamicResource TextPrimary}"
-                                                             TextWrapping="Wrap"
-                                                             LineHeight="18"
-                                                             IsVisible="{Binding HasTranscriptionText}"/>
-                                        <Button IsVisible="{Binding IsTranscriptionFailed}"
-                                                Classes="IconButton Small"
-                                                HorizontalAlignment="Left"
-                                                Command="{Binding #BubbleRoot.RetryTranscriptionCommand}"
-                                                CommandParameter="{Binding}"
-                                                ToolTip.Tip="Повторить расшифровку">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock Text="🔄" FontSize="12"/>
-                                                <TextBlock Text="Повторить"
-                                                           FontSize="12"
-                                                           Foreground="{DynamicResource Accent}"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
+								<Border Classes="TranscriptionPanel">
+									<StackPanel Spacing="4">
+										<TextBlock Text="{Binding TranscriptionStatusDisplay}"
+												   FontSize="12"
+												   Foreground="{DynamicResource TextSecondary}"/>
+										<SelectableTextBlock Text="{Binding TranscriptionText}"
+															 FontSize="13"
+															 Foreground="{DynamicResource TextPrimary}"
+															 TextWrapping="Wrap"
+															 LineHeight="18"
+															 IsVisible="{Binding HasTranscriptionText}"/>
+										<Button IsVisible="{Binding IsTranscriptionFailed}"
+												Classes="IconButton Small"
+												HorizontalAlignment="Left"
+												Command="{Binding #BubbleRoot.RetryTranscriptionCommand}"
+												CommandParameter="{Binding}"
+												ToolTip.Tip="Повторить расшифровку">
+											<StackPanel Orientation="Horizontal" Spacing="4">
+												<TextBlock Text="🔄" FontSize="12"/>
+												<TextBlock Text="Повторить"
+														   FontSize="12"
+														   Foreground="{DynamicResource Accent}"/>
+											</StackPanel>
+										</Button>
+									</StackPanel>
+								</Border>
+							</StackPanel>
 
-                            <Panel IsVisible="{Binding HasTextContent}">
-                                <Grid>
-                                    <controls:RichMessageTextBlock Classes="MessageText"
-                                                        RawText="{Binding DisplayContent}"
-                                                        Margin="0,0,60,0"/>
-                                    <StackPanel Classes="InlineMeta"
-                                                Orientation="Horizontal"
-                                                Spacing="3"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Bottom">
-                                        <TextBlock Text="изм."
-                                                   Classes="EditedMeta"
-                                                   IsVisible="{Binding IsEdited}"/>
-                                        <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
-                                                   Classes="MessageMeta"/>
-                                        <Path Data="{StaticResource CheckIcon}"
-                                              Classes="DeliveryStatus"
-                                              Classes.Read="{Binding IsRead}"
-                                              Classes.Unread="{Binding !IsRead}"
-                                              IsVisible="{Binding ShowDeliveryStatus}"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Panel>
+							<Panel IsVisible="{Binding HasTextContent}">
+								<Grid>
+									<controls:RichMessageTextBlock Classes="MessageText"
+																   RawText="{Binding DisplayContent}"
+																   Margin="0,0,60,0"/>
+									<StackPanel Classes="InlineMeta"
+												Orientation="Horizontal"
+												Spacing="3"
+												HorizontalAlignment="Right"
+												VerticalAlignment="Bottom">
+										<TextBlock Text="изм."
+												   Classes="EditedMeta"
+												   IsVisible="{Binding IsEdited}"/>
+										<TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+												   Classes="MessageMeta"/>
+										<Path Data="{StaticResource CheckIcon}"
+											  Classes="DeliveryStatus"
+											  Classes.Read="{Binding IsRead}"
+											  Classes.Unread="{Binding !IsRead}"
+											  IsVisible="{Binding ShowDeliveryStatus}"/>
+									</StackPanel>
+								</Grid>
+							</Panel>
 
-                            <Panel IsVisible="{Binding IsDeleted}">
-                                <Grid>
-                                    <TextBlock Text="{Binding DisplayContent}"
-                                               Classes="DeletedText"
-                                               TextWrapping="Wrap"
-                                               FontSize="15"
-                                               LineHeight="22"
-                                               Margin="0,0,50,0"/>
-                                    <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
-                                               Classes="MessageMeta"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Bottom"/>
-                                </Grid>
-                            </Panel>
+							<Panel IsVisible="{Binding IsDeleted}">
+								<Grid>
+									<TextBlock Text="{Binding DisplayContent}"
+											   Classes="DeletedText"
+											   TextWrapping="Wrap"
+											   FontSize="15"
+											   LineHeight="22"
+											   Margin="0,0,50,0"/>
+									<TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+											   Classes="MessageMeta"
+											   HorizontalAlignment="Right"
+											   VerticalAlignment="Bottom"/>
+								</Grid>
+							</Panel>
 
-                            <ItemsControl ItemsSource="{Binding FileViewModels}"
-                                          IsVisible="{Binding ShowNonVoiceFiles}"
-                                          Margin="0,6,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Spacing="4"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vmChat:MessageFileViewModel">
-                                        <chat:FileAttachmentControl/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+							<ItemsControl ItemsSource="{Binding FileViewModels}"
+										  IsVisible="{Binding ShowNonVoiceFiles}"
+										  Margin="0,6,0,0">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<StackPanel Spacing="4"/>
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="vmChat:MessageFileViewModel">
+										<chat:FileAttachmentControl/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
 
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="3"
-                                        HorizontalAlignment="Right"
-                                        Margin="0,4,0,0"
-                                        IsVisible="{Binding ShowFilesOnlyMeta}">
-                                <TextBlock Text="изм."
-                                           Classes="EditedMeta"
-                                           IsVisible="{Binding IsEdited}"/>
-                                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
-                                           Classes="MessageMeta"/>
-                                <Path Data="{StaticResource CheckIcon}"
-                                      Classes="DeliveryStatus"
-                                      Classes.Read="{Binding IsRead}"
-                                      Classes.Unread="{Binding !IsRead}"
-                                      IsVisible="{Binding ShowDeliveryStatus}"/>
-                            </StackPanel>
+							<StackPanel Orientation="Horizontal"
+										Spacing="3"
+										HorizontalAlignment="Right"
+										Margin="0,4,0,0"
+										IsVisible="{Binding ShowFilesOnlyMeta}">
+								<TextBlock Text="изм."
+										   Classes="EditedMeta"
+										   IsVisible="{Binding IsEdited}"/>
+								<TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+										   Classes="MessageMeta"/>
+								<Path Data="{StaticResource CheckIcon}"
+									  Classes="DeliveryStatus"
+									  Classes.Read="{Binding IsRead}"
+									  Classes.Unread="{Binding !IsRead}"
+									  IsVisible="{Binding ShowDeliveryStatus}"/>
+							</StackPanel>
 
-                        </StackPanel>
-                    </Border>
+						</StackPanel>
+					</Border>
 
-                    <Border Classes="PollBubble"
-                            Classes.Own="{Binding IsOwn}"
-                            IsVisible="{Binding HasPoll}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding Content}"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"
-                                       LineHeight="20"
-                                       Margin="0,2,0,4"/>
-                            <chat:PollView DataContext="{Binding Poll}"/>
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="3"
-                                        HorizontalAlignment="Right"
-                                        Margin="0,2,0,0">
-                                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
-                                           Classes="MessageMeta"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+					<Border Classes="PollBubble"
+							Classes.Own="{Binding IsOwn}"
+							IsVisible="{Binding HasPoll}">
+						<StackPanel Spacing="6">
+							<TextBlock Text="{Binding Content}"
+									   FontSize="15"
+									   FontWeight="SemiBold"
+									   TextWrapping="Wrap"
+									   LineHeight="20"
+									   Margin="0,2,0,4"/>
+							<chat:PollView DataContext="{Binding Poll}"/>
+							<StackPanel Orientation="Horizontal"
+										Spacing="3"
+										HorizontalAlignment="Right"
+										Margin="0,2,0,0">
+								<TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+										   Classes="MessageMeta"/>
+							</StackPanel>
+						</StackPanel>
+					</Border>
+				</StackPanel>
 
-                <StackPanel Grid.Column="2"
-                            Classes="QuickActions"
-                            Orientation="Horizontal"
-                            Spacing="2"
-                            VerticalAlignment="Top"
-                            Margin="4,4,0,0"
-                            IsVisible="{Binding !IsDeleted}">
-                    <Button Classes="QuickAction"
-                            Command="{Binding #BubbleRoot.ReplyCommand}"
-                            CommandParameter="{Binding}"
-                            ToolTip.Tip="Ответить">
-                        <Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
-                              Fill="{DynamicResource TextSecondary}"
-                              Width="14" Height="14"
-                              Stretch="Uniform"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
-                    </Button>
-                    <Button Classes="QuickAction"
-                            Command="{Binding #BubbleRoot.ForwardCommand}"
-                            CommandParameter="{Binding}"
-                            ToolTip.Tip="Переслать">
-                        <Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
-                              Fill="{DynamicResource TextSecondary}"
-                              Width="14" Height="14"
-                              Stretch="Uniform"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-    </StackPanel>
+				<StackPanel Grid.Column="2"
+							Classes="QuickActions"
+							Orientation="Horizontal"
+							Spacing="2"
+							VerticalAlignment="Top"
+							Margin="4,4,0,0"
+							IsVisible="{Binding !IsDeleted}">
+					<Button Classes="QuickAction"
+							Command="{Binding #BubbleRoot.ReplyCommand}"
+							CommandParameter="{Binding}"
+							ToolTip.Tip="Ответить">
+						<Path Data="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"
+							  Fill="{DynamicResource TextSecondary}"
+							  Width="14" Height="14"
+							  Stretch="Uniform"
+							  HorizontalAlignment="Center"
+							  VerticalAlignment="Center"/>
+					</Button>
+					<Button Classes="QuickAction"
+							Command="{Binding #BubbleRoot.ForwardCommand}"
+							CommandParameter="{Binding}"
+							ToolTip.Tip="Переслать">
+						<Path Data="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"
+							  Fill="{DynamicResource TextSecondary}"
+							  Width="14" Height="14"
+							  Stretch="Uniform"
+							  HorizontalAlignment="Center"
+							  VerticalAlignment="Center"/>
+					</Button>
+				</StackPanel>
+			</Grid>
+		</Border>
+	</StackPanel>
 </UserControl>

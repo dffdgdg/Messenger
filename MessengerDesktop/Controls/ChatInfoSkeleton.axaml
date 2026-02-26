@@ -10,7 +10,6 @@
                   HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="20">
 
-            <!-- Аватар и имя -->
             <StackPanel HorizontalAlignment="Center" Spacing="12">
                 <Border Classes="Skeleton"
                         Width="100" Height="100"
@@ -30,7 +29,6 @@
 
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-            <!-- Информация -->
             <StackPanel Spacing="16">
                 <StackPanel Spacing="6">
                     <Border Classes="Skeleton" Width="120" Height="12" CornerRadius="3"
@@ -49,7 +47,6 @@
 
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-            <!-- Уведомления -->
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Classes="Skeleton" Width="18" Height="18" CornerRadius="4"/>
                 <Border Grid.Column="1" Classes="Skeleton" Width="100" Height="16" 
@@ -59,7 +56,6 @@
 
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-            <!-- Медиа секция -->
             <StackPanel Spacing="8">
                 <Border Classes="Skeleton" Width="120" Height="16" CornerRadius="4"
                         HorizontalAlignment="Left" Margin="0,0,0,8"/>
@@ -71,7 +67,6 @@
 
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-            <!-- Участники -->
             <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto">
                     <Border Classes="Skeleton" Width="90" Height="16" CornerRadius="4"
@@ -79,7 +74,6 @@
                     <Border Grid.Column="1" Classes="Skeleton" Width="24" Height="16" CornerRadius="4"/>
                 </Grid>
 
-                <!-- 3 участника -->
                 <StackPanel Spacing="8">
                     <Grid ColumnDefinitions="Auto,*" Height="48">
                         <Border Classes="Skeleton" Width="40" Height="40" CornerRadius="20"/>

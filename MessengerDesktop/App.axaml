@@ -1,8 +1,8 @@
 <Application xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:MessengerDesktop.Converters"
-             x:Class="MessengerDesktop.App"
-             RequestedThemeVariant="Dark">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:converters="clr-namespace:MessengerDesktop.Converters"
+			 x:Class="MessengerDesktop.App"
+			 RequestedThemeVariant="Dark">
 
 	<Application.Resources>
 		<ResourceDictionary>

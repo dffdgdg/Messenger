@@ -104,7 +104,7 @@ public class MessageService(
             .FirstAsync(m => m.Id == message.Id);
         var messageDto = createdMessage.ToDto(dto.SenderId, urlBuilder);
 
-        await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDTO", messageDto);
+        await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDto", messageDto);
 
         await NotifyAndUpdateUnreadAsync(messageDto);
 

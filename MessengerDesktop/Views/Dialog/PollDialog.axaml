@@ -1,10 +1,10 @@
 <UserControl x:Name="Root"
-             xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
+			 xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-             x:Class="MessengerDesktop.Views.PollDialog"
-             x:DataType="vmDialog:PollDialogViewModel">
+			 x:Class="MessengerDesktop.Views.PollDialog"
+			 x:DataType="vmDialog:PollDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="420">
 		<StackPanel Spacing="16">
@@ -20,9 +20,9 @@
 						<Grid ColumnDefinitions="*,Auto" Margin="0,4">
 							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="DialogInput"/>
 							<Button Grid.Column="1" Classes="IconButton Small" Margin="8,0,0,0"
-                                    Click="RemoveOption_Click" Tag="{Binding}">
+									Click="RemoveOption_Click" Tag="{Binding}">
 								<Path Data="{StaticResource CloseIcon}" Fill="{DynamicResource TextSecondary}"
-                                      Width="10" Height="10" Stretch="Uniform"/>
+									  Width="10" Height="10" Stretch="Uniform"/>
 							</Button>
 						</Grid>
 					</DataTemplate>
@@ -30,7 +30,7 @@
 			</ItemsControl>
 
 			<Button Content="+ Добавить вариант" Command="{Binding AddOptionCommand}"
-                    Classes="DialogOutline" HorizontalAlignment="Left"/>
+					Classes="DialogOutline" HorizontalAlignment="Left"/>
 
 			<StackPanel Spacing="10" Margin="0,8,0,0">
 				<TextBlock Text="Настройки" FontWeight="DemiBold"/>
@@ -41,7 +41,7 @@
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
 				<Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
 				<Button Content="Создать" Classes="DialogAccent" Command="{Binding CreateCommand}"
-                        IsEnabled="{Binding CanCreate}"/>
+						IsEnabled="{Binding CanCreate}"/>
 			</StackPanel>
 		</StackPanel>
 	</Border>

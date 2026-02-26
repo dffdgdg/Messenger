@@ -6,7 +6,6 @@
              x:DataType="chatDTO:ChatDto">
 
 	<Grid Height="52" ColumnDefinitions="Auto,*">
-		<!-- Аватар -->
 		<controls:AvatarControl Grid.Column="0"
                                  Classes="Medium"
                                  Source="{Binding Avatar}"
@@ -15,7 +14,6 @@
                                  ShowOnlineIndicator="False"
                                  VerticalAlignment="Center"/>
 
-		<!-- Информация -->
 		<StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,8,0">
 			<TextBlock Text="{Binding Name}" Classes="ChatName"/>
 			<TextBlock Classes="ChatPreview"

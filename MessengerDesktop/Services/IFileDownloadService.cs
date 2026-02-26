@@ -18,6 +18,7 @@ namespace MessengerDesktop.Services
 
     public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
     {
+        private const string SafeUnixPath = "/usr/bin:/bin";
         private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
         public string GetDownloadsFolder()
@@ -177,18 +178,30 @@ namespace MessengerDesktop.Services
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Process.Start("explorer.exe", $"/select,\"{folderPath}\"");
+                    var explorerPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                        "explorer.exe");
+
+                    Process.Start(CreateSafeProcessStartInfo(explorerPath, $"/select,\"{folderPath}\""));
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    Process.Start("open", $"-R \"{folderPath}\"");
+                    const string openPath = "/usr/bin/open";
+                    Process.Start(CreateSafeProcessStartInfo(openPath, $"-R \"{folderPath}\""));
                 }
                 else
                 {
                     var directory = Path.GetDirectoryName(folderPath);
                     if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
                     {
-                        Process.Start("xdg-open", directory);
+                        const string xdgOpenPrimaryPath = "/usr/bin/xdg-open";
+                        const string xdgOpenSecondaryPath = "/bin/xdg-open";
+
+                        var xdgOpenPath = File.Exists(xdgOpenPrimaryPath)
+                            ? xdgOpenPrimaryPath
+                            : xdgOpenSecondaryPath;
+
+                        Process.Start(CreateSafeProcessStartInfo(xdgOpenPath, directory));
                     }
                 }
             }
@@ -199,6 +212,24 @@ namespace MessengerDesktop.Services
             }
 
             return Task.CompletedTask;
+        }
+        private static ProcessStartInfo CreateSafeProcessStartInfo(string executablePath, string arguments)
+        {
+            if (!Path.IsPathFullyQualified(executablePath))
+                throw new ArgumentException("Executable path must be absolute.", nameof(executablePath));
+
+            if (!File.Exists(executablePath))
+                throw new FileNotFoundException("Executable was not found.", executablePath);
+
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = executablePath,
+                Arguments = arguments,
+                UseShellExecute = false
+            };
+
+            processStartInfo.Environment["PATH"] = SafeUnixPath;
+            return processStartInfo;
         }
     }
 }

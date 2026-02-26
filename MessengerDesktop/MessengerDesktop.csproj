@@ -44,6 +44,7 @@
 	  <Compile Remove="Assets\Styles\ChatInfoSkeleton.axaml.cs" />
 	  <Compile Remove="Assets\Styles\ChatListSkeleton.axaml.cs" />
 	  <Compile Remove="Assets\Styles\ChatMessagesSkeleton.axaml.cs" />
+	  <Compile Remove="ViewModels\Chat\ChatScreen\ChatViewModel.Typing.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -111,5 +112,9 @@
 	  <Folder Include="Infrastructure\DependencyInjection\" />
 	  <Folder Include="ViewModels\Chat\Attachments\" />
 	  <Folder Include="ViewModels\Shared\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="ViewModels\Chat\ChatScreen\ChatViewModel.Typing.cs" />
 	</ItemGroup>
 </Project>

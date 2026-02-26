@@ -186,6 +186,7 @@ public partial class ChatViewModel
         _hubConnection.MessageUpdated += OnMessageUpdatedInChat;
         _hubConnection.MessageDeleted += OnMessageDeletedInChat;
         _hubConnection.MessageRead += OnMessageRead;
+        _hubConnection.UserTyping += OnUserTyping;
         _hubConnection.Reconnected += OnChatHubReconnected;
         await _hubConnection.ConnectAsync(ct);
     }
@@ -241,10 +242,15 @@ public partial class ChatViewModel
             _hubConnection.MessageUpdated -= OnMessageUpdatedInChat;
             _hubConnection.MessageDeleted -= OnMessageDeletedInChat;
             _hubConnection.MessageRead -= OnMessageRead;
+            _hubConnection.UserTyping -= OnUserTyping;
             _hubConnection.Reconnected -= OnChatHubReconnected;
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
+
+        _typingIndicatorCts?.Cancel();
+        _typingIndicatorCts?.Dispose();
+        _typingIndicatorCts = null;
         await DisposeVoiceAsync();
 
         _attachmentManager.Dispose();

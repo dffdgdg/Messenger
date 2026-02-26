@@ -10,4 +10,6 @@ public static class AppConstants
     public const int HighlightDurationMs = 3000;
     public const int MarkAsReadDebounceMs = 300;
     public const int MarkAsReadCooldownSeconds = 1;
+    public const int TypingSendDebounceMs = 1200;
+    public const int TypingIndicatorDurationMs = 3500;
 }

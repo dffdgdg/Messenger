@@ -83,11 +83,15 @@
 						Padding="16,0"
 						ZIndex="10">
 					<Grid ColumnDefinitions="Auto,*,Auto">
-						<TextBlock Grid.Column="0"
-								   Text="{Binding Chat.Name}"
-								   FontWeight="SemiBold"
-								   FontSize="18"
-								   VerticalAlignment="Center"/>
+						<StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+							<TextBlock Text="{Binding Chat.Name}"
+									   FontWeight="SemiBold"
+									   FontSize="18"/>
+							<TextBlock Text="{Binding TypingText}"
+									   FontSize="12"
+									   Foreground="{DynamicResource TextSecondary}"
+									   IsVisible="{Binding TypingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+						</StackPanel>
 						<Border Grid.Column="2"
 								HorizontalAlignment="Right"
 								Background="{DynamicResource PrimaryBG}"

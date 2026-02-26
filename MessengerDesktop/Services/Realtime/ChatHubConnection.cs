@@ -17,12 +17,14 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
     private bool _disposed;
     private int _lastSentReadMessageId;
     private DateTime _lastSentReadTime = DateTime.MinValue;
+    private DateTime _lastSentTypingTime = DateTime.MinValue;
 
     public event Action<MessageDto>? MessageReceived;
     public event Action<MessageDto>? MessageUpdated;
     public event Action<int>? MessageDeleted;
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, int>? UnreadCountUpdated;
+    public event Action<int, int>? UserTyping;
     public event Action? Reconnected;
 
     /// <summary>Новый участник присоединился к чату.</summary>
@@ -49,6 +51,7 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
             _hubConnection.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeletedEvent);
             _hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageRead);
             _hubConnection.On<int, int>("UnreadCountUpdated", OnUnreadCountUpdated);
+            _hubConnection.On<int, int>("UserTyping", OnUserTyping);
 
             //Участники чата
             _hubConnection.On<int, UserDto>("MemberJoined", OnMemberJoined);
@@ -144,7 +147,25 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
             return null;
         }
     }
+    public async Task SendTypingAsync()
+    {
+        if (!IsConnected) return;
 
+        var now = DateTime.UtcNow;
+        if ((now - _lastSentTypingTime).TotalMilliseconds < AppConstants.TypingSendDebounceMs)
+            return;
+
+        _lastSentTypingTime = now;
+
+        try
+        {
+            await _hubConnection!.InvokeAsync("SendTyping", chatId);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatHub] SendTyping error: {ex.Message}");
+        }
+    }
     #region Event Handlers
 
     private void OnMessageReceived(MessageDto message)
@@ -177,6 +198,12 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
             UnreadCountUpdated?.Invoke(cId, unreadCount);
     }
 
+    private void OnUserTyping(int cId, int userId)
+    {
+        if (cId == chatId)
+            UserTyping?.Invoke(cId, userId);
+    }
+        
     private void OnMemberJoined(int cId, UserDto user)
     {
         if (cId == chatId)

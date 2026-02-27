@@ -248,11 +248,17 @@ public partial class ChatViewModel
             _hubConnection = null;
         }
 
-        _typingIndicatorCts?.Cancel();
-        _typingIndicatorCts?.Dispose();
-        _typingIndicatorCts = null;
+        if (_typingIndicatorCts is not null)
+        {
+            await _typingIndicatorCts.CancelAsync();
+            _typingIndicatorCts.Dispose();
+            _typingIndicatorCts = null;
+        }
+
         await DisposeVoiceAsync();
 
         _attachmentManager.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -22,8 +22,8 @@ public class AccessControlService(MessengerDbContext context, ICacheService cach
 
     public async Task<List<int>> GetUserChatIdsAsync(int userId)
     {
-        return await cache.GetUserChatIdsAsync(userId, async () =>
-        await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
+        return await cache.GetUserChatIdsAsync(userId, () =>
+        context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
     }
 
     public async Task<bool> IsMemberAsync(int userId, int chatId)
@@ -86,11 +86,8 @@ public class AccessControlService(MessengerDbContext context, ICacheService cach
             return requestCached;
         }
 
-        var member = await cache.GetMembershipAsync(userId, chatId, async () =>
-        {
-            return await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
-        });
+        var member = await cache.GetMembershipAsync(userId, chatId, () => context.ChatMembers.AsNoTracking()
+        .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
 
         _requestCache[key] = member;
 

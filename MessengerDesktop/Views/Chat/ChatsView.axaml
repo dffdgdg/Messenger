@@ -198,10 +198,10 @@
 								Classes="PanelTitle"
 								VerticalAlignment="Center"
 								IsVisible="{Binding !IsSearchMode}"/>
-								<TextBlock Text="Поиск"
-										   Classes="PanelTitle"
+								<TextBlock Classes="PanelTitle"
 										   VerticalAlignment="Center"
-										   IsVisible="{Binding IsSearchMode}"/>
+										   IsVisible="{Binding IsSearchMode}"
+										   Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Поиск по чату|Поиск'}"/>
 							</Panel>
 
 							<Button Grid.Column="1"
@@ -414,6 +414,7 @@
 									<Binding Path="SearchManager.HasChatResults"/>
 									<Binding Path="SearchManager.HasMessageResults"/>
 									<Binding Path="!IsCompactMode" ElementName="Root"/>
+									<Binding Path="!IsChatLocalSearchMode"/>
 								</MultiBinding>
 							</Border.IsVisible>
 						</Border>
@@ -523,7 +524,8 @@
 										   Foreground="{DynamicResource TextSecondary}"
 										   HorizontalAlignment="Center"
 										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-								<TextBlock Text="Поиск по названиям чатов и сообщениям"
+								<TextBlock Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString}, 
+										   ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениям'}"
 										   FontSize="{StaticResource FontSizeSmall}"
 										   Foreground="{DynamicResource TextMuted}"
 										   HorizontalAlignment="Center"

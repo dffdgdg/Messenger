@@ -106,7 +106,13 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         {
             OnPropertyChanged(nameof(IsSearchMode));
         }
+        if (e.PropertyName == nameof(GlobalSearchManager.IsChatLocalMode))
+        {
+            OnPropertyChanged(nameof(IsChatLocalSearchMode));
+        }
     }
+
+    public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode ?? false;
 
     #region Unread Count Handlers
 
@@ -217,7 +223,15 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private void CloseSearch() => SearchManager?.ExitSearch();
+    private void CloseSearch()
+    {
+        SearchManager?.ExitSearch();
+
+        if (CurrentChatViewModel?.IsSearchMode == true)
+        {
+            CurrentChatViewModel.IsSearchMode = false;
+        }
+    }
 
     [RelayCommand]
     private void OpenChat(ChatListItemViewModel? chat)
@@ -236,6 +250,16 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     partial void OnSelectedChatChanged(ChatListItemViewModel? value)
     {
+        SyncSearchScopeWithChatViewMode();
+
+        if (SearchManager != null)
+        {
+            SearchManager.ChatLocalSearchChatId = value?.Id;
+            SearchManager.ChatLocalSearchChatType = value?.Type;
+            SearchManager.ChatLocalSearchChatName = value?.Name;
+            SearchManager.ChatLocalSearchChatAvatar = value?.Avatar;
+        }
+
         if (value != null)
         {
             if (value.UnreadCount > 0)
@@ -261,7 +285,32 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (_subscribedChatVm != null)
             _subscribedChatVm.PropertyChanged += SubscribedChatVm_PropertyChanged;
 
+        SyncSearchScopeWithChatViewMode();
         OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
+    }
+
+    private void SyncSearchScopeWithChatViewMode()
+    {
+        if (SearchManager == null)
+            return;
+
+        var shouldUseChatLocal = CurrentChatViewModel?.IsSearchMode == true
+            && SelectedChat != null
+            && CurrentChatViewModel.Chat?.Id == SelectedChat.Id;
+
+        if (shouldUseChatLocal)
+        {
+            SearchManager.ChatLocalSearchChatId = SelectedChat!.Id;
+            SearchManager.ChatLocalSearchChatType = SelectedChat.Type;
+            SearchManager.ChatLocalSearchChatName = SelectedChat.Name;
+            SearchManager.ChatLocalSearchChatAvatar = SelectedChat.Avatar;
+            return;
+        }
+
+        SearchManager.ChatLocalSearchChatId = null;
+        SearchManager.ChatLocalSearchChatType = null;
+        SearchManager.ChatLocalSearchChatName = null;
+        SearchManager.ChatLocalSearchChatAvatar = null;
     }
 
     [RelayCommand]
@@ -290,6 +339,23 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (e.PropertyName == nameof(ChatViewModel.IsInfoPanelOpen))
             OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
+
+        if (e.PropertyName == nameof(ChatViewModel.IsSearchMode))
+        {
+            SyncSearchScopeWithChatViewMode();
+
+            if (SearchManager == null)
+                return;
+
+            if (CurrentChatViewModel?.IsSearchMode == true)
+            {
+                SearchManager.EnterSearchMode();
+            }
+            else
+            {
+                SearchManager.ExitSearch();
+            }
+        }
     }
 
     public bool CombinedIsInfoPanelVisible => CurrentChatViewModel?.IsInfoPanelOpen == true;

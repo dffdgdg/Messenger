@@ -113,6 +113,7 @@ public static class ApiEndpoints
         /// <summary>POST api/messages/{id}/transcription/retry</summary>
         public static string TranscriptionRetry(int id) => $"{Base}/{id}/transcription/retry";
 
+
         /// <summary>GET api/messages/chat/{chatId}?userId={userId}&amp;page={page}&amp;pageSize={pageSize}</summary>
         public static string ForChat(int chatId, int userId, int page, int pageSize)
             => $"{Base}/chat/{chatId}?userId={userId}&page={page}&pageSize={pageSize}";
@@ -132,6 +133,10 @@ public static class ApiEndpoints
         /// <summary>GET api/messages/user/{userId}/search?query={query}&amp;page={page}&amp;pageSize={pageSize}</summary>
         public static string Search(int userId, string query, int page, int pageSize)
             => $"{Base}/user/{userId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}";
+
+        /// <summary>GET api/messages/chat/{chatId}/search?query={query}&amp;page={page}&amp;pageSize={pageSize}</summary>
+        public static string ChatSearch(int chatId, string query, int page, int pageSize)
+            => $"{Base}/chat/{chatId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}";
     }
 
     /// <summary>

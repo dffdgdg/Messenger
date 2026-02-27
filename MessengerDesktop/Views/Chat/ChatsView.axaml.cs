@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Reactive;
 using Avalonia.Threading;
 using MessengerDesktop.Services;
 using MessengerDesktop.ViewModels;
@@ -13,6 +14,8 @@ public partial class ChatsView : UserControl
 {
     private readonly Grid? _mainGrid;
     private bool _isDragging;
+    private bool _forceCompactMode;
+    private bool _hideInfoPanelForWidth;
 
     private const double COMPACT_WIDTH = 72;
     private const double ENTER_COMPACT_THRESHOLD = 120;
@@ -20,6 +23,10 @@ public partial class ChatsView : UserControl
     private const double NORMAL_DEFAULT_WIDTH = 280;
     private const double MIN_WIDTH = 72;
     private const double MAX_WIDTH = 400;
+    private const double FORCE_COMPACT_ENTER_WIDTH = 1020;
+    private const double FORCE_COMPACT_EXIT_WIDTH = 1100;
+    private const double HIDE_INFO_PANEL_ENTER_WIDTH = 820;
+    private const double HIDE_INFO_PANEL_EXIT_WIDTH = 900;
 
     private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
 
@@ -40,6 +47,7 @@ public partial class ChatsView : UserControl
         _mainGrid = this.FindControl<Grid>("MainGrid");
 
         this.DataContextChanged += ChatsView_DataContextChanged;
+        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => EvaluateResponsiveLayout()));
 
         if (_mainGrid != null)
         {
@@ -89,7 +97,39 @@ public partial class ChatsView : UserControl
         var isAnyChatSelected = vm.CurrentChatViewModel != null;
         var globalOpen = _chatInfoPanelStateStore.IsOpen;
 
-        panel.IsVisible = isAnyChatSelected && globalOpen;
+        panel.IsVisible = isAnyChatSelected && globalOpen && !_hideInfoPanelForWidth;
+    }
+
+    private void EvaluateResponsiveLayout()
+    {
+        var width = Bounds.Width;
+        if (width <= 0)
+            return;
+
+        var nextForceCompact = _forceCompactMode
+            ? width < FORCE_COMPACT_EXIT_WIDTH
+            : width <= FORCE_COMPACT_ENTER_WIDTH;
+
+        var nextHideInfoPanel = _hideInfoPanelForWidth
+            ? width < HIDE_INFO_PANEL_EXIT_WIDTH
+            : width <= HIDE_INFO_PANEL_ENTER_WIDTH;
+
+        var layoutChanged = nextForceCompact != _forceCompactMode ||
+                            nextHideInfoPanel != _hideInfoPanelForWidth;
+
+        _forceCompactMode = nextForceCompact;
+        _hideInfoPanelForWidth = nextHideInfoPanel;
+
+        if (_forceCompactMode && !IsCompactMode && _mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
+        {
+            column.Width = new GridLength(COMPACT_WIDTH);
+            IsCompactMode = true;
+        }
+
+        if (layoutChanged && DataContext is ChatsViewModel vm)
+        {
+            UpdateInfoPanelVisibility(vm);
+        }
     }
 
     private void Splitter_DragStarted(object? sender, VectorEventArgs e) => _isDragging = true;
@@ -137,6 +177,9 @@ public partial class ChatsView : UserControl
 
     public void ToggleCompactMode()
     {
+        if (_forceCompactMode)
+            return;
+
         if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
         {
             if (IsCompactMode)
@@ -191,5 +234,7 @@ public partial class ChatsView : UserControl
             double width = column.Width.Value;
             IsCompactMode = width <= ENTER_COMPACT_THRESHOLD;
         }
+
+        EvaluateResponsiveLayout();
     }
 }

@@ -10,7 +10,7 @@ public static class MessageMappings
     {
         var isDeleted = message.IsDeleted ?? false;
 
-        var dto = new MessageDto
+        return new MessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
@@ -29,27 +29,18 @@ public static class MessageMappings
             ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto(),
             IsVoiceMessage = message.IsVoiceMessage,
             TranscriptionStatus = isDeleted ? null : message.TranscriptionStatus,
+            Files = isDeleted
+                ? []
+                : message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
+            Poll = isDeleted ? null : message.Polls?.FirstOrDefault()?.ToDto(currentUserId)
         };
-
-        if (!isDeleted)
-        {
-            dto.Files = message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [];
-
-            dto.Poll = message.Polls?.FirstOrDefault()?.ToDto(currentUserId);
-        }
-        else
-        {
-            dto.Files = [];
-        }
-
-        return dto;
     }
 
     public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
     {
         var isDeleted = message.IsDeleted ?? false;
 
-        return new MessageReplyPreviewDto
+        return new()
         {
             Id = message.Id,
             ChatId = message.ChatId,

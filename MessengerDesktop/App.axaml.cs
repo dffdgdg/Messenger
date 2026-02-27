@@ -94,12 +94,10 @@ public class App : Application, IDisposable
     {
         try
         {
-            // 1. Инициализация БД
             var localDb = Services.GetRequiredService<LocalDatabase>();
             await localDb.InitializeAsync();
             Debug.WriteLine("[App] Local database initialized successfully");
 
-            // 2. Maintenance (очистка старых данных) — не блокирует UI
             var maintenance = Services.GetRequiredService<ICacheMaintenanceService>();
             await maintenance.RunMaintenanceAsync();
         }
@@ -177,7 +175,6 @@ public class App : Application, IDisposable
             var navigationService = Services.GetService<INavigationService>() as IDisposable;
             navigationService?.Dispose();
 
-            // Dispose локальной БД
             var localDb = Services.GetService<LocalDatabase>();
             localDb?.Dispose();
 

@@ -15,7 +15,7 @@ public interface ITokenService
     TokenValidationParameters GetValidationParameters();
 }
 
-public class TokenService : ITokenService
+public sealed class TokenService : ITokenService
 {
     private const string SecretPlaceholder = "CHANGE-ME-CONFIGURE-A-REAL-SECRET";
     private readonly JwtSettings _settings;

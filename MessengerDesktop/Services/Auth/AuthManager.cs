@@ -20,7 +20,7 @@ public interface IAuthManager
     Task<bool> WaitForInitializationAsync(TimeSpan timeout);
 }
 
-public class AuthManager : IAuthManager, IDisposable
+public sealed class AuthManager : IAuthManager, IDisposable
 {
     private readonly IAuthService _authService;
     private readonly ISecureStorageService _secureStorage;
@@ -41,12 +41,17 @@ public class AuthManager : IAuthManager, IDisposable
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
 
-    public AuthManager(IAuthService authService,ISecureStorageService secureStorage,ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
+    public AuthManager(
+        IAuthService authService,
+        ISecureStorageService secureStorage,
+        ISessionStore sessionStore,
+        ICacheMaintenanceService cacheMaintenance)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
         Session = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _cacheMaintenance = cacheMaintenance ?? throw new ArgumentNullException(nameof(cacheMaintenance));
+
         _ = InitializeInternalAsync();
     }
 
@@ -61,11 +66,9 @@ public class AuthManager : IAuthManager, IDisposable
                 Debug.WriteLine("AuthManager: Токен действителен");
                 return true;
             }
-            else
-            {
-                Debug.WriteLine($"AuthManager: Токен недействителен: {validationResult.Error}");
-                return false;
-            }
+
+            Debug.WriteLine($"AuthManager: Токен недействителен: {validationResult.Error}");
+            return false;
         }
         catch (Exception ex)
         {
@@ -82,7 +85,7 @@ public class AuthManager : IAuthManager, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"AuthManager initialization error: {ex.Message}");
+            Debug.WriteLine($"AuthManager Ошибка инициализации: {ex.Message}");
             await ClearStoredAuthAsync();
         }
         finally
@@ -130,12 +133,12 @@ public class AuthManager : IAuthManager, IDisposable
         await _operationLock.WaitAsync();
         try
         {
-            Debug.WriteLine($"AuthManager: Login attempt for {username}");
+            Debug.WriteLine($"AuthManager: Попытка авторизации для {username}");
             var result = await _authService.LoginAsync(username, password);
 
             if (result.Success && result.Data != null)
             {
-                Debug.WriteLine($"AuthManager: Login successful for user {result.Data.Id}");
+                Debug.WriteLine($"AuthManager: Авторизация успешно для пользователя {result.Data.Id}");
 
                 await CheckAndClearCacheOnUserChangeAsync(result.Data.Id);
                 await SaveAuthAsync(result.Data.Token, result.Data.Id, result.Data.Role);
@@ -143,14 +146,14 @@ public class AuthManager : IAuthManager, IDisposable
             }
             else
             {
-                Debug.WriteLine($"AuthManager: Login failed: {result.Error}");
+                Debug.WriteLine($"AuthManager: Ошибка авторизации: {result.Error}");
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"AuthManager: Login exception: {ex.Message}");
+            Debug.WriteLine($"AuthManager: Исключение авторизации: {ex.Message}");
             return new ApiResponse<AuthResponseDto>
             {
                 Success = false,
@@ -177,7 +180,7 @@ public class AuthManager : IAuthManager, IDisposable
 
             if (!string.IsNullOrEmpty(token))
             {
-                var result = await _authService.LogoutAsync(token);
+                await _authService.LogoutAsync(token);
             }
 
             await ClearCacheOnLogoutAsync();
@@ -256,6 +259,7 @@ public class AuthManager : IAuthManager, IDisposable
 
         Debug.WriteLine("AuthManager: Stored auth cleared");
     }
+
     private async Task ClearSavedCredentialsAsync()
     {
         await _secureStorage.RemoveAsync(RememberMeKey);
@@ -264,6 +268,7 @@ public class AuthManager : IAuthManager, IDisposable
 
         Debug.WriteLine("AuthManager: Saved login credentials cleared");
     }
+
     public Task WaitForInitializationAsync() => _initializationTcs.Task;
 
     public async Task<bool> WaitForInitializationAsync(TimeSpan timeout)
@@ -273,15 +278,15 @@ public class AuthManager : IAuthManager, IDisposable
         return completedTask == _initializationTcs.Task;
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
+    private void ThrowIfDisposed() =>
+        ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed)
+            return;
 
         _operationLock.Dispose();
-
-        GC.SuppressFinalize(this);
+        _disposed = true;
     }
 }

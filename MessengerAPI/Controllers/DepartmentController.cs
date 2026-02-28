@@ -8,9 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class DepartmentController(
-    IDepartmentService departmentService,
-    ILogger<DepartmentController> logger)
+public class DepartmentController(IDepartmentService departmentService, ILogger<DepartmentController> logger)
     : BaseController<DepartmentController>(logger)
 {
     [HttpGet]

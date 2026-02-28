@@ -131,14 +131,12 @@ public partial class UserService(
         if (userIds is null || userIds.Count == 0)
             return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
-        var users = await _context.Users
-            .Where(u => userIds.Contains(u.Id)).AsNoTracking()
+        var users = await _context.Users.Where(u => userIds.Contains(u.Id)).AsNoTracking()
             .Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
 
         var onlineIds = onlineService.FilterOnline(userIds);
 
-        var result = users.ConvertAll(u =>
-            new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+        var result = users.ConvertAll(u => new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
         return Result<List<OnlineStatusDto>>.Success(result);
     }
@@ -153,8 +151,7 @@ public partial class UserService(
         if (!UsernameRegex().IsMatch(username))
             return Result.Failure("Username должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
 
-        var exists = await _context.Users
-            .AnyAsync(u => u.Username == username && u.Id != id, ct);
+        var exists = await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
 
         if (exists)
             return Result.Failure("Этот username уже занят");

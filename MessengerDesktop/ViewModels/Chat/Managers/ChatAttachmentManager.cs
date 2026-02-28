@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public class ChatAttachmentManager(int chatId, IApiClientService apiClient, IStorageProvider? storageProvider = null) : IDisposable
+public sealed class ChatAttachmentManager(int chatId, IApiClientService apiClient, IStorageProvider? storageProvider = null) : IDisposable
 {
     private bool _disposed;
 
@@ -97,7 +97,6 @@ public class ChatAttachmentManager(int chatId, IApiClientService apiClient, ISto
 
             Attachments.Add(attachment);
 
-            // Передали владение
             memoryStream = null;
             thumbnail = null;
         }
@@ -139,11 +138,7 @@ public class ChatAttachmentManager(int chatId, IApiClientService apiClient, ISto
             {
                 local.Data.Position = 0;
                 var uploadResult = await apiClient.UploadFileAsync<MessageFileDto>(
-                    ApiEndpoints.File.Upload(chatId),
-                    local.Data,
-                    local.FileName,
-                    local.ContentType,
-                    ct);
+                    ApiEndpoints.File.Upload(chatId), local.Data, local.FileName, local.ContentType, ct);
 
                 if (uploadResult is { Success: true, Data: not null })
                 {
@@ -172,17 +167,17 @@ public class ChatAttachmentManager(int chatId, IApiClientService apiClient, ISto
     public void Clear()
     {
         foreach (var attachment in Attachments)
-        {
             attachment.Dispose();
-        }
+
         Attachments.Clear();
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed)
+            return;
+
         Clear();
-        GC.SuppressFinalize(this);
+        _disposed = true;
     }
 }

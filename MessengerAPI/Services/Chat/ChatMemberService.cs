@@ -17,7 +17,7 @@ public interface IChatMemberService
     Task<Result> LeaveAsync(int chatId, int userId);
 }
 
-public class ChatMemberService(MessengerDbContext context, ICacheService cache, IAccessControlService accessControl,
+public sealed class ChatMemberService(MessengerDbContext context, ICacheService cache, IAccessControlService accessControl,
     ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
@@ -103,9 +103,7 @@ public class ChatMemberService(MessengerDbContext context, ICacheService cache, 
 
     public async Task<Result<List<ChatMemberDto>>> GetMembersAsync(int chatId)
     {
-        var members = await _context.ChatMembers
-            .Where(cm => cm.ChatId == chatId)
-            .Include(cm => cm.User)
+        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User)
             .AsNoTracking().ToListAsync();
 
         return Result<List<ChatMemberDto>>.Success(members.ConvertAll(MapToDto));

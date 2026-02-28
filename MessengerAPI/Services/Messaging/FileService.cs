@@ -81,9 +81,7 @@ public class FileService(
         EnsureDirectoryExists(absolutePath);
 
         await using (var fs = new FileStream(absolutePath, FileMode.Create))
-        {
             await file.CopyToAsync(fs);
-        }
 
         var resultRelativePath = "/" + relativePath.Replace('\\', '/');
 

@@ -15,7 +15,7 @@ public interface IAuthService
     Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default);
 }
 
-public class AuthService : BaseService<AuthService>, IAuthService
+public sealed class AuthService : BaseService<AuthService>, IAuthService
 {
     private readonly ITokenService _tokenService;
     private readonly MessengerSettings _settings;

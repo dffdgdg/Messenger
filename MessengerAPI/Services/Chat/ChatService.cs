@@ -1,5 +1,4 @@
 ﻿using MessengerAPI.Common;
-using MessengerAPI.Configuration;
 using MessengerAPI.Mapping;
 using MessengerAPI.Model;
 using MessengerAPI.Services.Base;
@@ -10,7 +9,6 @@ using MessengerShared.Dto.Chat;
 using MessengerShared.Dto.User;
 using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace MessengerAPI.Services.Chat;
 
@@ -21,14 +19,11 @@ public interface IChatService
     Task<Result<List<ChatDto>>> GetUserDialogsAsync(int userId);
     Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId);
     Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId);
-
     Task<List<UserDto>> GetChatMembersAsync(int chatId);
-
     Task<Result<ChatDto>> CreateChatAsync(ChatDto dto);
     Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
     Task<Result> DeleteChatAsync(int chatId, int userId);
     Task<string> UploadChatAvatarAsync(int chatId, IFormFile file);
-
     Task EnsureUserHasChatAccessAsync(int userId, int chatId);
     Task EnsureUserIsChatAdminAsync(int userId, int chatId);
     Task EnsureUserIsChatOwnerAsync(int userId, int chatId);
@@ -67,11 +62,8 @@ public class ChatService(
             return Result<List<ChatDto>>.Success([]);
 
         var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id))
-            .GroupJoin(
-                _context.Messages.Where(m => m.IsDeleted != true),
-                chat => chat.Id,
-                msg => msg.ChatId,
-                (chat, msgs) => new
+            .GroupJoin(_context.Messages.Where(m => m.IsDeleted != true),
+                chat => chat.Id, msg => msg.ChatId, (chat, msgs) => new
                 {
                     Chat = chat,
                     LastMessage = msgs
@@ -81,15 +73,12 @@ public class ChatService(
                             m.Content,
                             m.CreatedAt,
                             SenderName = m.Sender!.FormatDisplayName()
-                        })
-                        .FirstOrDefault()
-                })
-            .AsNoTracking().ToListAsync();
+                        }).FirstOrDefault()
+                }).AsNoTracking().ToListAsync();
 
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
-        var dialogChatIds = chatsData
-            .Where(c => c.Chat.Type == ChatType.Contact)
+        var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact)
             .Select(c => c.Chat.Id).ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
@@ -122,8 +111,7 @@ public class ChatService(
             return dto;
         });
 
-        var sorted = result
-            .OrderByDescending(c => c.UnreadCount > 0)
+        var sorted = result.OrderByDescending(c => c.UnreadCount > 0)
             .ThenByDescending(c => c.LastMessageDate).ToList();
 
         return Result<List<ChatDto>>.Success(sorted);

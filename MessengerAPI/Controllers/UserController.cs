@@ -7,9 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class UserController(
-    IUserService userService,
-    ILogger<UserController> logger)
+public class UserController(IUserService userService, ILogger<UserController> logger)
     : BaseController<UserController>(logger)
 {
     [HttpGet]

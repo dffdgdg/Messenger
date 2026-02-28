@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class PollController(
-    IPollService pollService,
-    ILogger<PollController> logger)
+public class PollController(IPollService pollService, ILogger<PollController> logger)
     : BaseController<PollController>(logger)
 {
     [HttpGet("{pollId}")]

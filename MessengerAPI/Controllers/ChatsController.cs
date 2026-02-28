@@ -7,11 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ChatsController(
-    IChatService chatService,
-    IChatMemberService chatMemberService,
-    ILogger<ChatsController> logger)
-    : BaseController<ChatsController>(logger)
+public class ChatsController(IChatService chatService, IChatMemberService chatMemberService,
+    ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
     public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserDialogs(int userId)

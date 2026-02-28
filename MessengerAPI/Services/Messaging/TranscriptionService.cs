@@ -15,7 +15,7 @@ public interface ITranscriptionService
     Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default);
 }
 
-public class TranscriptionService : ITranscriptionService, IDisposable
+public sealed class TranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TranscriptionQueue _transcriptionQueue;
@@ -26,7 +26,6 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     private readonly string _modelPath;
 
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private bool _disposed;
 
     private const int TargetSampleRate = 16000;
     private const int TargetBitsPerSample = 16;
@@ -64,8 +63,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
         var hubNotifier = scope.ServiceProvider.GetRequiredService<IHubNotifier>();
 
-        var message = await context.Messages
-            .Include(m => m.MessageFiles)
+        var message = await context.Messages.Include(m => m.MessageFiles)
             .FirstOrDefaultAsync(m => m.Id == messageId, ct);
 
         if (message is null)
@@ -97,8 +95,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
             await context.SaveChangesAsync(ct);
 
-            await hubNotifier.SendToChatAsync(
-                message.ChatId, "TranscriptionCompleted",
+            await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionCompleted",
                 new VoiceTranscriptionDto
                 {
                     MessageId = messageId,
@@ -130,8 +127,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-        var data = await context.Messages
-            .AsNoTracking()
+        var data = await context.Messages.AsNoTracking()
             .Where(m => m.Id == messageId && m.IsVoiceMessage)
             .Select(m => new VoiceTranscriptionDto
             {
@@ -278,8 +274,12 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Helpers
 
-    private static async Task SetStatusAsync(MessengerDbContext context, IHubNotifier hubNotifier,
-        Message message, string status, CancellationToken ct)
+    private static async Task SetStatusAsync(
+        MessengerDbContext context,
+        IHubNotifier hubNotifier,
+        Message message,
+        string status,
+        CancellationToken ct)
     {
         message.TranscriptionStatus = status;
         await context.SaveChangesAsync(ct);
@@ -320,19 +320,5 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
     #endregion
 
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (_disposed) return;
-
-        if (disposing)
-            _semaphore.Dispose();
-
-        _disposed = true;
-    }
+    public void Dispose() => _semaphore.Dispose();
 }

@@ -7,11 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class MessagesController(
-    IMessageService messageService,
-    ITranscriptionService transcriptionService,
-    ILogger<MessagesController> logger)
-    : BaseController<MessagesController>(logger)
+public class MessagesController(IMessageService messageService, ITranscriptionService transcriptionService,
+    ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
     public async Task<ActionResult<ApiResponse<MessageDto>>> CreateMessage([FromBody] MessageDto messageDto)

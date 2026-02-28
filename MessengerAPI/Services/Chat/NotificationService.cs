@@ -16,7 +16,7 @@ public interface INotificationService
     Task<List<ChatNotificationSettingsDto>> GetAllChatSettingsAsync(int userId);
 }
 
-public class NotificationService(MessengerDbContext context, IHubNotifier hubNotifier, IUrlBuilder urlBuilder,
+public sealed class NotificationService(MessengerDbContext context, IHubNotifier hubNotifier, IUrlBuilder urlBuilder,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendNotificationAsync(int userId, MessageDto message)

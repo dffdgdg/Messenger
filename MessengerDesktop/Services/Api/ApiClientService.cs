@@ -28,14 +28,14 @@ namespace MessengerDesktop.Services.Api
         Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default);
     }
 
-    public class ApiClientService : IApiClientService
+    public sealed class ApiClientService : IApiClientService
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly ISessionStore _sessionStore;
         private bool _disposed;
 
-        private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
+        private const long LargeFileThreshold = 10 * 1024 * 1024;
 
         public ApiClientService(HttpClient httpClient, ISessionStore sessionStore)
         {
@@ -65,9 +65,7 @@ namespace MessengerDesktop.Services.Api
         private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName is nameof(ISessionStore.Token) or nameof(ISessionStore.IsAuthenticated))
-            {
                 UpdateAuthorizationHeader();
-            }
         }
 
         private void UpdateAuthorizationHeader()
@@ -90,24 +88,6 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        public async Task<ApiResponse<object>> DeleteAsync(string url, CancellationToken ct = default)
-        {
-            ThrowIfDisposed();
-
-            try
-            {
-                var response = await _httpClient.DeleteAsync(url, ct);
-                return await ProcessResponseAsync(response, ct);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse(ex);
-            }
-        }
         private HttpRequestMessage CreateRequest(HttpMethod method, string url)
         {
             var request = new HttpRequestMessage(method, url);
@@ -135,130 +115,93 @@ namespace MessengerDesktop.Services.Api
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<TResponse>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<TResponse>(ex); }
         }
 
         public async Task<ApiResponse<T>> PostAsync<T>(string url, object data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync<T>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<T>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
 
         public async Task<ApiResponse<object>> PostAsync(string url, object? data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse(ex); }
         }
 
         public async Task<ApiResponse<T>> PutAsync<T>(string url, object data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync<T>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<T>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<TResponse>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<TResponse>(ex); }
         }
 
         public async Task<ApiResponse<object>> PutAsync(string url, object data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
                 return await ProcessResponseAsync(response, ct);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse(ex); }
+        }
+
+        public async Task<ApiResponse<object>> DeleteAsync(string url, CancellationToken ct = default)
+        {
+            ThrowIfDisposed();
+            try
             {
-                throw;
+                var response = await _httpClient.DeleteAsync(url, ct);
+                return await ProcessResponseAsync(response, ct);
             }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse(ex); }
         }
 
         public async Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-                if (!string.IsNullOrEmpty(_sessionStore.Token))
-                {
-                    request.Headers.Authorization =
-                        new AuthenticationHeaderValue("Bearer", _sessionStore.Token);
-                }
+                using var request = CreateRequest(HttpMethod.Get, url);
 
                 var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
@@ -291,10 +234,7 @@ namespace MessengerDesktop.Services.Api
                     throw;
                 }
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"GetStreamAsync ошибка для {url}: {ex}");
@@ -302,37 +242,9 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
-        {
-            var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-
-            try
-            {
-                await using (var fileStream = new FileStream(tempPath, FileMode.CreateNew,
-                    FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
-                {
-                    await response.Content.CopyToAsync(fileStream, ct);
-                }
-
-                response.Dispose();
-
-                return new FileStream(tempPath, FileMode.Open, FileAccess.Read,FileShare.Read, 81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
-            }
-            catch
-            {
-                response.Dispose();
-                if (File.Exists(tempPath))
-                {
-                    try { File.Delete(tempPath); } catch { }
-                }
-                throw;
-            }
-        }
-
         public async Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-
             try
             {
                 using var content = new MultipartFormDataContent();
@@ -343,15 +255,11 @@ namespace MessengerDesktop.Services.Api
                 var response = await _httpClient.PostAsync(url, content, ct);
                 return await ProcessResponseAsync<T>(response, ct);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                return CreateErrorResponse<T>(ex);
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
+
+        #region Response Processing
 
         private async Task<ApiResponse<T>> ProcessResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
         {
@@ -426,6 +334,38 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
+        #endregion
+
+        #region Helpers
+
+        private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+            try
+            {
+                await using (var fileStream = new FileStream(tempPath, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+                {
+                    await response.Content.CopyToAsync(fileStream, ct);
+                }
+
+                response.Dispose();
+
+                return new FileStream(tempPath, FileMode.Open, FileAccess.Read,
+                    FileShare.Read, 81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+            }
+            catch
+            {
+                response.Dispose();
+                if (File.Exists(tempPath))
+                {
+                    try { File.Delete(tempPath); } catch { }
+                }
+                throw;
+            }
+        }
+
         private static ApiResponse<T> CreateErrorResponse<T>(Exception ex) => new()
         {
             Success = false,
@@ -442,25 +382,21 @@ namespace MessengerDesktop.Services.Api
 
         private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _sessionStore.SessionChanged -= OnSessionChanged;
-
-                if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-                {
-                    notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
-                }
-            }
-            _disposed = true;
-        }
+        #endregion
 
         public void Dispose()
         {
-            Dispose(disposing: true);
+            if (_disposed)
+                return;
 
-            GC.SuppressFinalize(this);
+            _sessionStore.SessionChanged -= OnSessionChanged;
+
+            if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
+            {
+                notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
+            }
+
+            _disposed = true;
         }
     }
 }

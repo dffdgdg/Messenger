@@ -6,11 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class NotificationController(
-    INotificationService notificationService,
-    IChatService chatService,
-    ILogger<NotificationController> logger)
-    : BaseController<NotificationController>(logger)
+public class NotificationController(INotificationService notificationService, IChatService chatService,
+    ILogger<NotificationController> logger) : BaseController<NotificationController>(logger)
 {
     [HttpGet("chat/{chatId}/settings")]
     public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDto>>> GetChatSettings(int chatId)

@@ -31,8 +31,7 @@ public class DepartmentService(MessengerDbContext context, IOptions<MessengerSet
     public async Task<Result<List<DepartmentDto>>> GetDepartmentsAsync(CancellationToken ct = default)
     {
         var departments = await _context.Departments
-            .Include(d => d.Head).AsNoTracking()
-            .ToListAsync(ct);
+            .Include(d => d.Head).AsNoTracking().ToListAsync(ct);
 
         var userCounts = await _context.Users
             .Where(u => u.Department != null)
@@ -55,8 +54,7 @@ public class DepartmentService(MessengerDbContext context, IOptions<MessengerSet
 
     public async Task<Result<DepartmentDto>> GetDepartmentAsync(int id, CancellationToken ct = default)
     {
-        var department = await _context.Departments
-            .Include(d => d.Head).AsNoTracking()
+        var department = await _context.Departments.Include(d => d.Head).AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id, ct);
 
         if (department is null)

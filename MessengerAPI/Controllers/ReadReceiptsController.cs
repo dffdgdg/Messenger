@@ -7,10 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ReadReceiptsController(
-    IReadReceiptService readReceiptService,
-    IChatService chatService,
-    ILogger<ReadReceiptsController> logger)
+public class ReadReceiptsController(IReadReceiptService readReceiptService, IChatService chatService, ILogger<ReadReceiptsController> logger)
     : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]

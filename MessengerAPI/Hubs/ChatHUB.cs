@@ -11,9 +11,7 @@ using System.Security.Claims;
 namespace MessengerAPI.Hubs;
 
 [Authorize]
-public class ChatHub(
-    IServiceScopeFactory scopeFactory,
-    IOnlineUserService onlineUserService,
+public class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
     ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
@@ -32,8 +30,7 @@ public class ChatHub(
 
             var chatIds = await context.ChatMembers
                 .Where(cm => cm.UserId == userId.Value)
-                .Select(cm => cm.ChatId)
-                .ToListAsync();
+                .Select(cm => cm.ChatId).ToListAsync();
 
             var joinTasks = chatIds.Select(chatId =>
                 Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
@@ -230,16 +227,12 @@ public class ChatHub(
         try
         {
             using var scope = scopeFactory.CreateScope();
-            var readReceiptService = scope.ServiceProvider
-                .GetRequiredService<IReadReceiptService>();
-            return await readReceiptService
-                .GetAllUnreadCountsAsync(userId.Value);
+            var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
+            return await readReceiptService.GetAllUnreadCountsAsync(userId.Value);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Ошибка получения непрочитанных для пользователя {UserId}",
-                userId.Value);
+            logger.LogError(ex, "Ошибка получения непрочитанных для пользователя {UserId}", userId.Value);
             return new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
         }
     }
@@ -253,8 +246,7 @@ public class ChatHub(
         var userId = GetCurrentUserId();
         if (userId.HasValue)
         {
-            await Clients.OthersInGroup($"chat_{chatId}")
-                .SendAsync("UserTyping", chatId, userId.Value);
+            await Clients.OthersInGroup($"chat_{chatId}").SendAsync("UserTyping", chatId, userId.Value);
         }
     }
 
@@ -263,19 +255,15 @@ public class ChatHub(
         var userId = GetRequiredUserId();
 
         using var scope = scopeFactory.CreateScope();
-        var context = scope.ServiceProvider
-            .GetRequiredService<MessengerDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-        var isMember = await context.ChatMembers
-            .AnyAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+        var isMember = await context.ChatMembers.AnyAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
         if (!isMember)
             throw new HubException("Нет доступа к этому чату");
 
-        var memberIds = await context.ChatMembers
-            .Where(cm => cm.ChatId == chatId)
-            .Select(cm => cm.UserId)
-            .ToListAsync();
+        var memberIds = await context.ChatMembers.Where(cm => cm.ChatId == chatId)
+            .Select(cm => cm.UserId).ToListAsync();
 
         return [.. onlineUserService.FilterOnline(memberIds)];
     }

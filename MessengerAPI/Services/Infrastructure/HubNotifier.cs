@@ -15,9 +15,7 @@ public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> l
     {
         try
         {
-            await hubContext.Clients
-                .Group($"chat_{chatId}")
-                .SendAsync(method, data);
+            await hubContext.Clients.Group($"chat_{chatId}").SendAsync(method, data);
         }
         catch (Exception ex)
         {

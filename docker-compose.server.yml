@@ -8,8 +8,10 @@
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=MessengerDB;Username=postgres;Password=123
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      DisableHttpsRedirection: "true"
+      Jwt__Secret: ${JWT_SECRET:-vRQHb2XjyCqD7hZP9xjMwN5tF3gAS4Ue}        
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=MessengerDB;Username=postgres;Password=${POSTGRES_PASSWORD:-123}
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,7 +26,7 @@
     environment:
       POSTGRES_DB: MessengerDB
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "123"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
     ports:
       - "5432:5432"
     volumes:

@@ -35,7 +35,21 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+var disableHttpsRedirection = app.Configuration.GetValue<bool>("DisableHttpsRedirection");
+if (!disableHttpsRedirection)
+{
+    app.UseHttpsRedirection();
+}
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.TryAdd("Cross-Origin-Embedder-Policy", "require-corp");
+    context.Response.Headers.TryAdd("Cross-Origin-Opener-Policy", "same-origin");
+    context.Response.Headers.TryAdd("Cross-Origin-Resource-Policy", "same-origin");
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+
+    await next();
+});
+
 app.UseMessengerStaticFiles();
 app.UseCors();
 app.UseAuthentication();

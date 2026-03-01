@@ -1,6 +1,5 @@
 ﻿using MessengerAPI.Services.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 
 namespace MessengerAPI.Configuration;
 

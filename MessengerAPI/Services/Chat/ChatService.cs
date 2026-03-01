@@ -1,14 +1,6 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Mapping;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Base;
-using MessengerAPI.Services.Infrastructure;
+﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
-using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services.Chat;
 

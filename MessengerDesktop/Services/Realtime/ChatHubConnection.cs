@@ -1,9 +1,4 @@
-﻿using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Auth;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.ReadReceipt;
-using MessengerShared.Dto.User;
-using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -203,7 +198,7 @@ public sealed class ChatHubConnection(int chatId, IAuthManager authManager) : IA
         if (cId == chatId)
             UserTyping?.Invoke(cId, userId);
     }
-        
+
     private void OnMemberJoined(int cId, UserDto user)
     {
         if (cId == chatId)

@@ -1,13 +1,8 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Services.Chat;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
+﻿using MessengerAPI.Services.Chat;
 
 namespace MessengerAPI.Controllers;
 
-public class ChatsController(IChatService chatService, IChatMemberService chatMemberService,
+public sealed class ChatsController(IChatService chatService, IChatMemberService chatMemberService,
     ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]

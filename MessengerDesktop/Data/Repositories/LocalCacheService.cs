@@ -1,9 +1,5 @@
 ﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Mappers;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
 using System.Linq;

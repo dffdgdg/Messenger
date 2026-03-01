@@ -1,9 +1,4 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Model;
-using MessengerShared.Dto.ReadReceipt;
-using Microsoft.EntityFrameworkCore;
-
-namespace MessengerAPI.Services.ReadReceipt;
+﻿namespace MessengerAPI.Services.ReadReceipt;
 
 public interface IReadReceiptService
 {

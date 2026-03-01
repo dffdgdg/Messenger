@@ -1,15 +1,12 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Documents;
+﻿using Avalonia.Controls.Documents;
 using Avalonia.Input;
-using Avalonia.Media;
 using Avalonia.Media.TextFormatting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-namespace MessengerDesktop.Controls;
+namespace MessengerDesktop.Controls.Shared;
 
 public class RichMessageTextBlock : SelectableTextBlock
 {

@@ -1,17 +1,9 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.Platform;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;

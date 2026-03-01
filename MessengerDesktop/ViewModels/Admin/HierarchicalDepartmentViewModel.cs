@@ -1,7 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using MessengerShared.Dto.Department;
-using System.Collections.ObjectModel;
 
 namespace MessengerDesktop.ViewModels;
 

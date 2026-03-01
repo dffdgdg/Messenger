@@ -1,12 +1,5 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Configuration;
-using MessengerAPI.Mapping;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Base;
+﻿using MessengerAPI.Services.Base;
 using MessengerShared.Dto.Auth;
-using MessengerShared.Enum;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace MessengerAPI.Services.Auth;
 

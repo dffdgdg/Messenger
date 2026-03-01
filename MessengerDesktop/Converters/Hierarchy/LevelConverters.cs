@@ -1,4 +1,3 @@
-using Avalonia;
 using MessengerDesktop.Converters.Base;
 using System.Globalization;
 

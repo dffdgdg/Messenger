@@ -1,9 +1,9 @@
-﻿using MessengerShared.Response;
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace MessengerAPI.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next,ILogger<ExceptionHandlingMiddleware> logger,IWebHostEnvironment env)
+public sealed class ExceptionHandlingMiddleware
+    (RequestDelegate next,ILogger<ExceptionHandlingMiddleware> logger,IWebHostEnvironment env)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 

@@ -1,6 +1,3 @@
-using Avalonia;
-using Avalonia.Controls;
-using CommunityToolkit.Mvvm.Input;
 using System.Windows.Input;
 
 namespace MessengerDesktop.Views.Chat;

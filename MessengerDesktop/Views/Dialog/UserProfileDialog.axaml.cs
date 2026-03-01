@@ -1,5 +1,3 @@
-using Avalonia.Controls;
-using MessengerDesktop.ViewModels;
 using MessengerDesktop.ViewModels.Dialog;
 
 namespace MessengerDesktop.Views;

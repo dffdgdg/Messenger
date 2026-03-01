@@ -1,10 +1,4 @@
-﻿using MessengerAPI.Configuration;
-using MessengerAPI.Mapping;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Base;
-using MessengerAPI.Services.Infrastructure;
-using MessengerShared.Dto.Message;
-using Microsoft.Extensions.Options;
+﻿using MessengerAPI.Services.Base;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;

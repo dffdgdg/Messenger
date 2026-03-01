@@ -1,6 +1,4 @@
 ﻿using MessengerDesktop.Converters.Base;
-using MessengerDesktop.Services.Auth;
-using MessengerShared.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 

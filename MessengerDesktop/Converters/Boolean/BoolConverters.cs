@@ -1,5 +1,4 @@
 ﻿using Avalonia.Layout;
-using Avalonia.Media;
 using MessengerDesktop.Converters.Base;
 using System.Globalization;
 
@@ -14,7 +13,7 @@ public abstract class BoolToValueConverter<T> : ConverterBase<bool, T>
         => value ? TrueValue : FalseValue;
 }
 
-public class BoolToStringConverter : BoolToValueConverter<string>
+public sealed class BoolToStringConverter : BoolToValueConverter<string>
 {
     public char Separator { get; set; } = '|';
 
@@ -30,8 +29,8 @@ public class BoolToStringConverter : BoolToValueConverter<string>
     }
 }
 
-public class BoolToDoubleConverter : BoolToValueConverter<double>;
+public sealed class BoolToDoubleConverter : BoolToValueConverter<double>;
 
-public class BoolToColorConverter : BoolToValueConverter<Color>;
+public sealed class BoolToColorConverter : BoolToValueConverter<Color>;
 
-public class BoolToHAlignmentConverter : BoolToValueConverter<HorizontalAlignment>;
+public sealed class BoolToHAlignmentConverter : BoolToValueConverter<HorizontalAlignment>;

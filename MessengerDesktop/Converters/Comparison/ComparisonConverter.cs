@@ -6,7 +6,7 @@ namespace MessengerDesktop.Converters.Comparison;
 
 public enum ComparisonMode { Equal, NotEqual, GreaterThanZero, Zero }
 
-public class ComparisonConverter : ConverterBase
+public sealed class ComparisonConverter : ConverterBase
 {
     public ComparisonMode Mode { get; set; } = ComparisonMode.Equal;
 

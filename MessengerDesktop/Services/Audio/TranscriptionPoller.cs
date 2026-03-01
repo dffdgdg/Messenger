@@ -1,7 +1,4 @@
-﻿using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Api;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;

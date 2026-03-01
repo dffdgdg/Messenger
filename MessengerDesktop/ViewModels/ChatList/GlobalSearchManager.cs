@@ -1,11 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.ViewModels.Chats;
-using MessengerShared.Dto.Search;
-using MessengerShared.Enum;
+﻿using MessengerDesktop.ViewModels.Chats;
 using System;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,6 +1,4 @@
-﻿﻿using Avalonia.Threading;
-using MessengerDesktop.Infrastructure.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;

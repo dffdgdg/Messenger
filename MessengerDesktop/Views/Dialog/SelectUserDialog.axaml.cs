@@ -1,7 +1,5 @@
-using Avalonia.Controls;
 using Avalonia.Input;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.Dto.User;
 
 namespace MessengerDesktop.Views.Dialogs;
 

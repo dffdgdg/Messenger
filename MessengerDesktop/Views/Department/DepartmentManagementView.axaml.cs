@@ -1,5 +1,3 @@
-using Avalonia.Controls;
-
 namespace MessengerDesktop.Views.Department;
 
 public partial class DepartmentManagementView : UserControl

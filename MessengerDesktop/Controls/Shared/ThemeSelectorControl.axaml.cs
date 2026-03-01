@@ -1,7 +1,4 @@
-using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Styling;
-using System;
 
 using AppTheme = MessengerShared.Enum.Theme;
 

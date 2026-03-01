@@ -1,12 +1,8 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Services.Chat;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
+﻿using MessengerAPI.Services.Chat;
 
 namespace MessengerAPI.Controllers;
 
-public class NotificationController(INotificationService notificationService, IChatService chatService,
+public sealed class NotificationController(INotificationService notificationService, IChatService chatService,
     ILogger<NotificationController> logger) : BaseController<NotificationController>(logger)
 {
     [HttpGet("chat/{chatId}/settings")]

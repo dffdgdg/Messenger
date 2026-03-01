@@ -1,7 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-
-namespace MessengerDesktop.ViewModels.Chat;
+﻿namespace MessengerDesktop.ViewModels.Chat;
 
 public partial class ChatViewModel
 {

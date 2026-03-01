@@ -1,11 +1,10 @@
-﻿using Avalonia.Data.Converters;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.DateTime;
 
-public class LastSeenTextConverter : IMultiValueConverter
+public sealed class LastSeenTextConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {

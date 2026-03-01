@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Input;
-
-namespace MessengerDesktop.ViewModels;
+﻿namespace MessengerDesktop.ViewModels;
 
 /// <summary>
 /// Контракт для ViewModel, поддерживающих обновление данных.

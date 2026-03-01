@@ -1,7 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media;
-using MessengerDesktop.Converters.Base;
+﻿using MessengerDesktop.Converters.Base;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Boolean;
@@ -11,7 +8,7 @@ namespace MessengerDesktop.Converters.Boolean;
 /// ConverterParameter = "Accent|TextSecondary"
 /// true → первый ресурс, false → второй
 /// </summary>
-public class BoolToBrushConverter : ConverterBase<bool, IBrush>
+public sealed class BoolToBrushConverter : ConverterBase<bool, IBrush>
 {
     public char Separator { get; set; } = '|';
     public IBrush? TrueBrush { get; set; }

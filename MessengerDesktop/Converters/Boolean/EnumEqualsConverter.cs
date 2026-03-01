@@ -8,7 +8,7 @@ namespace MessengerDesktop.Converters.Boolean;
 /// Сравнивает значение enum со строковым параметром.
 /// ConverterParameter = "First" → true если value.ToString() == "First"
 /// </summary>
-public class EnumEqualsConverter : ConverterBase
+public sealed class EnumEqualsConverter : ConverterBase
 {
     protected override object? DefaultValue => false;
 

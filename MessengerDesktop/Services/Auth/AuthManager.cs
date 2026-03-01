@@ -1,7 +1,5 @@
 ﻿using MessengerDesktop.Services.Cache;
 using MessengerShared.Dto.Auth;
-using MessengerShared.Enum;
-using MessengerShared.Response;
 using System;
 using System.Diagnostics;
 using System.Threading;

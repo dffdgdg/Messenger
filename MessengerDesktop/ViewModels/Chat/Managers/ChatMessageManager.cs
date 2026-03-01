@@ -1,15 +1,8 @@
 ﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Repositories;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services;
-using MessengerDesktop.Services.Api;
 using MessengerDesktop.Services.UI;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.ReadReceipt;
-using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;

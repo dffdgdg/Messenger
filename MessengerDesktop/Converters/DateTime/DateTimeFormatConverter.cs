@@ -8,7 +8,7 @@ public enum DateTimeFormat
     Default, Time, Date, ShortDate, DateTime, Chat, Relative
 }
 
-public class DateTimeFormatConverter : ConverterBase<System.DateTime, string>
+public sealed class DateTimeFormatConverter : ConverterBase<System.DateTime, string>
 {
     private static readonly CultureInfo RuCulture = new("ru-RU");
 

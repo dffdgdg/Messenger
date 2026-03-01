@@ -1,6 +1,4 @@
-﻿using MessengerDesktop.Services.Auth;
-using MessengerDesktop.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 

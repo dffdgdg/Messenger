@@ -1,13 +1,9 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Services.Chat;
+﻿using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.Dto.ReadReceipt;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class ReadReceiptsController(IReadReceiptService readReceiptService, IChatService chatService, ILogger<ReadReceiptsController> logger)
+public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, IChatService chatService, ILogger<ReadReceiptsController> logger)
     : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]

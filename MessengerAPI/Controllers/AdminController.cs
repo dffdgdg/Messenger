@@ -1,13 +1,9 @@
 using MessengerAPI.Services.User;
-using MessengerShared.Dto.User;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
 [Authorize(Roles = "Admin")]
-public class AdminController(IAdminService adminService, ILogger<AdminController> logger)
+public sealed class AdminController(IAdminService adminService, ILogger<AdminController> logger)
     : BaseController<AdminController>(logger)
 {
     [HttpGet("users")]

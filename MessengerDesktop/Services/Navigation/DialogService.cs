@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerDesktop.ViewModels.Dialog;
+﻿using MessengerDesktop.ViewModels.Dialog;
 using System;
 using System.Collections.Generic;
 using System.Threading;

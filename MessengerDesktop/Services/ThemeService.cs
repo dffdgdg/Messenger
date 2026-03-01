@@ -1,5 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Styling;
+﻿using Avalonia.Styling;
 using MessengerDesktop.Services.Storage;
 using System;
 using System.Diagnostics;

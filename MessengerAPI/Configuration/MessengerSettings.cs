@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Configuration;
 
-public class MessengerSettings
+public sealed class MessengerSettings
 {
     public const string SectionName = "Messenger";
     public int AdminDepartmentId { get; set; } = 1;

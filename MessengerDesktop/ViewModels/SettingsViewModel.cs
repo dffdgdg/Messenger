@@ -1,12 +1,6 @@
-﻿using Avalonia;
-using Avalonia.Styling;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Api;
+﻿using Avalonia.Styling;
 using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Storage;
-using MessengerShared.Dto.User;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

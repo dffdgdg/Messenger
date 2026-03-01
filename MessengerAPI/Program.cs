@@ -1,5 +1,4 @@
-﻿using MessengerAPI.Configuration;
-using MessengerAPI.Hubs;
+﻿using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -21,7 +20,7 @@ builder.Services
 
 // SignalR & CORS
 builder.Services.AddSignalR();
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy 
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy
     => policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials()));
 
 var app = builder.Build();

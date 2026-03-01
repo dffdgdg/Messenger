@@ -1,13 +1,8 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Services.Messaging;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Search;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
+﻿using MessengerAPI.Services.Messaging;
 
 namespace MessengerAPI.Controllers;
 
-public class MessagesController(IMessageService messageService, ITranscriptionService transcriptionService,
+public sealed class MessagesController(IMessageService messageService, ITranscriptionService transcriptionService,
     ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]

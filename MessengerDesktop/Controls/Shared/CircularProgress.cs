@@ -1,7 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media;
-using System;
+﻿using System;
 
 namespace MessengerDesktop.Controls.Shared;
 

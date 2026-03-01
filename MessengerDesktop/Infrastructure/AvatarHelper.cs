@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace MessengerDesktop.Infrastructure.Helpers;
+namespace MessengerDesktop.Infrastructure;
 
 public static class AvatarHelper
 {

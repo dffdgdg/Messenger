@@ -1,17 +1,10 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Infrastructure;
-using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.Dto.ReadReceipt;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
+﻿using MessengerAPI.Services.ReadReceipt;
 using System.Security.Claims;
 
 namespace MessengerAPI.Hubs;
 
 [Authorize]
-public class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
+public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
     ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
@@ -162,8 +155,7 @@ public class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlin
                     MessageId = messageId
                 });
 
-            await Clients.Caller.SendAsync(
-                "UnreadCountUpdated", chatId, result.UnreadCount);
+            await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
 
             await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
                 "MessageRead",
@@ -196,8 +188,7 @@ public class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlin
             var result = await readReceiptService
                 .MarkMessageAsReadAsync(userId.Value, chatId, messageId);
 
-            await Clients.Caller.SendAsync(
-                "UnreadCountUpdated", chatId, result.UnreadCount);
+            await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
 
             await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
                 "MessageRead",
@@ -206,14 +197,12 @@ public class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlin
                 result.LastReadMessageId,
                 result.LastReadAt);
 
-            logger.LogDebug(
-                "Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
+            logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
                 userId.Value, messageId, chatId);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Ошибка MarkMessageAsRead для user={UserId}, chat={ChatId}, msg={MessageId}",
+            logger.LogError(ex, "Ошибка MarkMessageAsRead для user={UserId}, chat={ChatId}, msg={MessageId}",
                 userId.Value, chatId, messageId);
         }
     }

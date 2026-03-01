@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Avalonia.Controls.Notifications;
+using MessengerDesktop.Services.Platform;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Notifications;
-using MessengerDesktop.Services.Platform;
 using AvaloniaNotification = Avalonia.Controls.Notifications.Notification;
 using AvaloniaNotificationType = Avalonia.Controls.Notifications.NotificationType;
 

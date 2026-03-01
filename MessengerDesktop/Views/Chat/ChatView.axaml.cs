@@ -8,6 +8,10 @@
 //
 // Вся бизнес-логика остаётся в ViewModel — здесь только UI-координация.
 
+using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
+using MessengerDesktop.ViewModels.Chat;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -16,14 +20,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Threading;
-using Avalonia.VisualTree;
-using MessengerDesktop.ViewModels.Chat;
 
 namespace MessengerDesktop.Views.Chat;
 

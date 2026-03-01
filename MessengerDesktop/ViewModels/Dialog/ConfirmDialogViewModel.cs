@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Dialog;
 

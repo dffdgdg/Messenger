@@ -1,12 +1,8 @@
 using MessengerAPI.Services.Messaging;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Poll;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class PollController(IPollService pollService, ILogger<PollController> logger)
+public sealed class PollController(IPollService pollService, ILogger<PollController> logger)
     : BaseController<PollController>(logger)
 {
     [HttpGet("{pollId}")]

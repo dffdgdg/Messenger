@@ -1,12 +1,9 @@
-﻿using MessengerAPI.Model;
-using MessengerAPI.Services.Auth;
+﻿using MessengerAPI.Services.Auth;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Department;
-using MessengerAPI.Services.Infrastructure;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
 using MessengerAPI.Services.User;
-using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Configuration;
 
@@ -21,9 +18,9 @@ public static class DependencyInjection
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), npgsql =>
                 {
-                    npgsql.MapEnum<MessengerShared.Enum.Theme>("theme");
-                    npgsql.MapEnum<MessengerShared.Enum.ChatRole>("chat_role");
-                    npgsql.MapEnum<MessengerShared.Enum.ChatType>("chat_type");
+                    npgsql.MapEnum<Theme>("theme");
+                    npgsql.MapEnum<ChatRole>("chat_role");
+                    npgsql.MapEnum<ChatType>("chat_type");
                 });
 
             if (environment.IsDevelopment())

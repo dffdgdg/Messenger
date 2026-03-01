@@ -1,7 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Enum;
-using System;
+﻿using System;
 
 namespace MessengerDesktop.ViewModels.Chats;
 
@@ -9,7 +6,7 @@ public partial class ChatListItemViewModel : ObservableObject
 {
     public ChatListItemViewModel(ChatDto dto)
     {
-        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        ArgumentNullException.ThrowIfNull(dto);
 
         Id = dto.Id;
         Name = dto.Name;

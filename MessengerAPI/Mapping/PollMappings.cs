@@ -1,7 +1,4 @@
-﻿using MessengerAPI.Model;
-using MessengerShared.Dto.Poll;
-
-namespace MessengerAPI.Mapping;
+﻿namespace MessengerAPI.Mapping;
 
 public static class PollMappings
 {

@@ -1,8 +1,4 @@
-﻿using MessengerAPI.Model;
-using MessengerShared.Enum;
-using Microsoft.EntityFrameworkCore;
-
-namespace MessengerAPI.Services.Infrastructure;
+﻿namespace MessengerAPI.Services.Infrastructure;
 
 public interface IAccessControlService
 {
@@ -16,7 +12,8 @@ public interface IAccessControlService
     Task<List<int>> GetUserChatIdsAsync(int userId);
 }
 
-public class AccessControlService(MessengerDbContext context, ICacheService cache,ILogger<AccessControlService> logger) : IAccessControlService
+public sealed class AccessControlService
+    (MessengerDbContext context, ICacheService cache,ILogger<AccessControlService> logger) : IAccessControlService
 {
     private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _requestCache = [];
 

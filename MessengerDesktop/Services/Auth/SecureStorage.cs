@@ -17,7 +17,7 @@ namespace MessengerDesktop.Services.Auth
         Task<bool> ContainsKeyAsync(string key);
     }
 
-    public class SecureStorageService : ISecureStorageService, IDisposable
+    public sealed class SecureStorageService : ISecureStorageService, IDisposable
     {
         private readonly byte[] _key;
         private readonly string _storagePath;

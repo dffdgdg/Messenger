@@ -1,7 +1,4 @@
 ﻿using MessengerDesktop.Data.Entities;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

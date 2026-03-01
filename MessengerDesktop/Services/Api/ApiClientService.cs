@@ -1,6 +1,4 @@
-﻿using MessengerDesktop.Services.Auth;
-using MessengerShared.Response;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;

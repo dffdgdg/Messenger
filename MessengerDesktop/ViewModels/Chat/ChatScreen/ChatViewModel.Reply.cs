@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
@@ -57,7 +55,7 @@ public partial class ChatViewModel
             var ct = _loadingCts?.Token ?? System.Threading.CancellationToken.None;
             var targetIndex = await _messageManager.LoadMessagesAroundAsync(targetId, ct);
 
-            if (targetIndex.HasValue && targetIndex.Value < Messages.Count)
+            if (targetIndex < Messages.Count)
             {
                 HighlightAndScrollToIndex(targetIndex.Value);
             }

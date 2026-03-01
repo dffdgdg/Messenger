@@ -1,7 +1,4 @@
-﻿using MessengerAPI.Model;
-using Microsoft.EntityFrameworkCore;
-
-namespace MessengerAPI.Services.Base;
+﻿namespace MessengerAPI.Services.Base;
 
 public abstract class BaseService<T>(MessengerDbContext context,ILogger<T> logger) where T : class
 {

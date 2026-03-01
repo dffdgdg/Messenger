@@ -1,20 +1,11 @@
 ﻿using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using MessengerDesktop.Data.Repositories;
-using MessengerDesktop.Services;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 

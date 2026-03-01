@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.Enum;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace MessengerDesktop.Services.Auth;

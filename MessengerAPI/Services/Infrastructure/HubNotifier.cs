@@ -1,5 +1,4 @@
 ﻿using MessengerAPI.Hubs;
-using Microsoft.AspNetCore.SignalR;
 
 namespace MessengerAPI.Services.Infrastructure;
 

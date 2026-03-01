@@ -1,13 +1,7 @@
 ﻿using Avalonia.Controls.Notifications;
-using Avalonia.Threading;
 using MessengerDesktop.Data.Repositories;
-using MessengerDesktop.Services.Auth;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Notification;
-using MessengerShared.Dto.ReadReceipt;
-using MessengerShared.Dto.User;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;

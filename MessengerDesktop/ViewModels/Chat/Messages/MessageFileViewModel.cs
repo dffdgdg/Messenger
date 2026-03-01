@@ -1,9 +1,4 @@
-﻿using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services;
-using MessengerDesktop.Services.UI;
-using MessengerShared.Dto.Message;
+﻿using MessengerDesktop.Services.UI;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

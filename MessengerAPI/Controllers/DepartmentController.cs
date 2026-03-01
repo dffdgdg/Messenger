@@ -1,14 +1,9 @@
 using MessengerAPI.Services.Department;
 using MessengerShared.Dto.Department;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class DepartmentController(IDepartmentService departmentService, ILogger<DepartmentController> logger)
+public sealed class DepartmentController(IDepartmentService departmentService, ILogger<DepartmentController> logger)
     : BaseController<DepartmentController>(logger)
 {
     [HttpGet]

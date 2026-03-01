@@ -1,5 +1,3 @@
-using Avalonia.Controls;
-
 namespace MessengerDesktop.Views.Chat;
 
 public partial class FileAttachmentControl : UserControl

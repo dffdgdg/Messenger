@@ -1,10 +1,9 @@
 ﻿using MessengerDesktop.Converters.Base;
-using MessengerShared.Dto.Message;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.DateTime;
 
-public class LastMessageDateConverter : ConverterBase<MessageDto, string>
+public sealed class LastMessageDateConverter : ConverterBase<MessageDto, string>
 {
     private static readonly DateTimeFormatConverter InnerConverter = new() { Format = DateTimeFormat.Chat };
 

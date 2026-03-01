@@ -1,13 +1,9 @@
-using MessengerAPI.Common;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Messaging;
-using MessengerShared.Dto.Message;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class FilesController(IFileService fileService, IChatService chatService, ILogger<FilesController> logger)
+public sealed class FilesController(IFileService fileService, IChatService chatService, ILogger<FilesController> logger)
     : BaseController<FilesController>(logger)
 {
     private const long MaxFileSizeBytes = 100 * 1024 * 1024;

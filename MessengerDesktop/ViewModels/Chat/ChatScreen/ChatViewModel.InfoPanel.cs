@@ -1,10 +1,4 @@
-﻿using Avalonia.Threading;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Realtime;
-using MessengerShared.Dto;
-using MessengerShared.Dto.User;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;

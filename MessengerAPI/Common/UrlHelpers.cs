@@ -1,6 +1,4 @@
-﻿using MessengerAPI.Services.Infrastructure;
-
-namespace MessengerAPI.Mapping;
+﻿namespace MessengerAPI.Common;
 
 public static class UrlHelpers
 {

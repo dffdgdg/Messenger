@@ -1,13 +1,9 @@
 ﻿using MessengerAPI.Services.User;
-using MessengerShared.Dto.Chat;
 using MessengerShared.Dto.Online;
-using MessengerShared.Dto.User;
-using MessengerShared.Response;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MessengerAPI.Controllers;
 
-public class UserController(IUserService userService, ILogger<UserController> logger)
+public sealed class UserController(IUserService userService, ILogger<UserController> logger)
     : BaseController<UserController>(logger)
 {
     [HttpGet]

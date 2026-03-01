@@ -1,5 +1,4 @@
 ﻿using AsyncImageLoader.Loaders;
-using MessengerDesktop.Services.Auth;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

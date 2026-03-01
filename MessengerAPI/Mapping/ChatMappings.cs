@@ -1,9 +1,4 @@
-﻿using MessengerAPI.Model;
-using MessengerAPI.Services.Infrastructure;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Enum;
-
-namespace MessengerAPI.Mapping;
+﻿namespace MessengerAPI.Mapping;
 
 public static class ChatMappings
 {

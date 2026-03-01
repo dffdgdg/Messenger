@@ -1,6 +1,4 @@
-using Avalonia.Data.Converters;
 using Avalonia.Layout;
-using Avalonia.Media;
 using MessengerDesktop.Converters.Boolean;
 using MessengerDesktop.Converters.Comparison;
 using MessengerDesktop.Converters.DateTime;

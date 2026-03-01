@@ -1,6 +1,4 @@
-﻿using MessengerShared.Dto.User;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System.Linq;
 
 namespace MessengerDesktop.ViewModels.Admin;
 

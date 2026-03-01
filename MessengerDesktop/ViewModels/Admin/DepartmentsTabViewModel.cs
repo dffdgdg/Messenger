@@ -1,14 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.ViewModels.Dialog;
+﻿using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.Dto.Department;
-using MessengerShared.Dto.User;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 

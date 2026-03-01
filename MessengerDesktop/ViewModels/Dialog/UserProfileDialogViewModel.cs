@@ -1,8 +1,4 @@
 using Avalonia.Media.Imaging;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services.Api;
-using MessengerShared.Dto.User;
 using System;
 using System.IO;
 using System.Threading.Tasks;

@@ -1,8 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.ViewModels.Admin;
+﻿using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.Dto.Department;
-using MessengerShared.Dto.User;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

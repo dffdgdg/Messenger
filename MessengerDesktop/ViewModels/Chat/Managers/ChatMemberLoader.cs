@@ -1,10 +1,4 @@
-﻿using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Api;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
-using MessengerShared.Enum;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 

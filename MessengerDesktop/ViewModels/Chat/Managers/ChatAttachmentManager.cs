@@ -1,12 +1,8 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Infrastructure.Helpers;
-using MessengerDesktop.Services.Api;
-using MessengerShared.Dto.Message;
+using MessengerDesktop.Infrastructure;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;

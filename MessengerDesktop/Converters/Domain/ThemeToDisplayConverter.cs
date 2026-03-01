@@ -1,5 +1,4 @@
 ﻿using MessengerDesktop.Converters.Base;
-using MessengerShared.Enum;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Domain;

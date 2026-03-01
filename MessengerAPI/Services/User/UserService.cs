@@ -1,12 +1,6 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Mapping;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Base;
-using MessengerAPI.Services.Infrastructure;
+﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Messaging;
 using MessengerShared.Dto.Online;
-using MessengerShared.Dto.User;
-using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
 namespace MessengerAPI.Services.User;

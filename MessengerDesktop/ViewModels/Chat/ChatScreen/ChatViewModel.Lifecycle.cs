@@ -1,9 +1,6 @@
-﻿using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Infrastructure.Helpers;
+﻿using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Realtime;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.User;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;

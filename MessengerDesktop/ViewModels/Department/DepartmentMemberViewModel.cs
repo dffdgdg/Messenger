@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerShared.Dto.User;
-using System;
+﻿using System;
 
 namespace MessengerDesktop.ViewModels.Department;
 

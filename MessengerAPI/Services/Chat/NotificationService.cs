@@ -1,12 +1,4 @@
-﻿using MessengerAPI.Model;
-using MessengerAPI.Services.Infrastructure;
-using MessengerShared.Dto.Chat;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Notification;
-using MessengerShared.Enum;
-using Microsoft.EntityFrameworkCore;
-
-namespace MessengerAPI.Services.Chat;
+﻿namespace MessengerAPI.Services.Chat;
 
 public interface INotificationService
 {

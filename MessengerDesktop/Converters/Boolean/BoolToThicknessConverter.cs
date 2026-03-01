@@ -1,5 +1,4 @@
-﻿using Avalonia;
-using MessengerDesktop.Converters.Base;
+﻿using MessengerDesktop.Converters.Base;
 using System.Globalization;
 
 namespace MessengerDesktop.Converters.Boolean;
@@ -9,7 +8,7 @@ namespace MessengerDesktop.Converters.Boolean;
 /// ConverterParameter = "0,1,0,0|0,4,0,0"
 /// true → первое значение, false → второе
 /// </summary>
-public class BoolToThicknessConverter : ConverterBase<bool, Thickness>
+public sealed class BoolToThicknessConverter : ConverterBase<bool, Thickness>
 {
     public char Separator { get; set; } = '|';
     public Thickness TrueValue { get; set; }

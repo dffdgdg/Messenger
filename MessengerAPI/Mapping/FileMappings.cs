@@ -1,8 +1,4 @@
-﻿using MessengerAPI.Model;
-using MessengerAPI.Services.Infrastructure;
-using MessengerShared.Dto.Message;
-
-namespace MessengerAPI.Mapping;
+﻿namespace MessengerAPI.Mapping;
 
 public static class FileMappings
 {

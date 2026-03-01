@@ -1,6 +1,4 @@
-﻿using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerDesktop.Services.Audio;
+﻿using MessengerDesktop.Services.Audio;
 using System;
 
 namespace MessengerDesktop.ViewModels.Chat;

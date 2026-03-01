@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-
-namespace MessengerAPI.Services.Infrastructure;
+﻿namespace MessengerAPI.Services.Infrastructure;
 
 public interface IOnlineUserService
 {

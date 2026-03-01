@@ -1,8 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Services.Auth;
-using MessengerDesktop.Services.Navigation;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 

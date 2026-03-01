@@ -1,14 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using MessengerDesktop.Services;
-using MessengerDesktop.Services.Api;
-using MessengerDesktop.Services.Auth;
-using MessengerDesktop.Services.UI;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Poll;
+﻿using MessengerDesktop.Services.UI;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace MessengerDesktop.ViewModels.Chat;

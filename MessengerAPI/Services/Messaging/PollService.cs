@@ -1,11 +1,4 @@
-﻿using MessengerAPI.Common;
-using MessengerAPI.Mapping;
-using MessengerAPI.Model;
-using MessengerAPI.Services.Base;
-using MessengerAPI.Services.Infrastructure;
-using MessengerShared.Dto.Message;
-using MessengerShared.Dto.Poll;
-using Microsoft.EntityFrameworkCore;
+﻿using MessengerAPI.Services.Base;
 
 namespace MessengerAPI.Services.Messaging;
 

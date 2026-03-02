@@ -1,8 +1,10 @@
-﻿using MessengerDesktop.Services.UI;
+﻿using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Services.UI;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
@@ -157,11 +159,29 @@ public partial class MessageViewModel : ObservableObject
     public void UpdatePoll(PollDto pollDto)
     {
         PollDto = pollDto;
+        Message.Poll = pollDto;
+
         if (Poll != null) Poll.ApplyDto(pollDto);
         else Poll = CreatePollViewModel(pollDto);
+
+        _ = PersistPollStateToCacheAsync();
+
         OnPropertyChanged(nameof(HasPoll));
         OnPropertyChanged(nameof(HasTextContent));
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
+    }
+
+    private async Task PersistPollStateToCacheAsync()
+    {
+        try
+        {
+            var cacheService = App.Current.Services.GetRequiredService<ILocalCacheService>();
+            await cacheService.UpsertMessageAsync(Message);
+        }
+        catch
+        {
+            // cache update is best-effort only
+        }
     }
 
     public void ApplyUpdate(MessageDto updated)

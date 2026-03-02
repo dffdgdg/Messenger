@@ -1,5 +1,7 @@
 ﻿using MessengerDesktop.Services.UI;
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +13,8 @@ public partial class MessageFileViewModel(
     INotificationService? notificationService = null)
     : ObservableObject
 {
+    private const int MaxDisplayFileNameLength = 18;
+
     private CancellationTokenSource? _downloadCts;
     private readonly object _ctsLock = new();
 
@@ -26,6 +30,7 @@ public partial class MessageFileViewModel(
 
     public int Id => File.Id;
     public string FileName => File.FileName;
+    public string DisplayFileName => FormatDisplayFileName(FileName, MaxDisplayFileNameLength);
     public string ContentType => File.ContentType;
     public string? Url => File.Url;
     public string PreviewType => File.PreviewType;
@@ -183,13 +188,38 @@ public partial class MessageFileViewModel(
 
     private static string FormatFileSize(long bytes) => bytes switch
     {
-        <= 0 => "",
+        < 0 => "",
+        0 => "0 B",
         < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
         < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
         _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
     };
+
+    private static string FormatDisplayFileName(string fileName, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || fileName.Length <= maxLength)
+            return fileName;
+
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrEmpty(extension))
+            return fileName[..Math.Max(1, maxLength - 1)] + "…";
+
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var availableNameLength = maxLength - extension.Length - 1;
+
+        if (availableNameLength <= 0)
+            return "…" + extension;
+
+        var trimmedName = nameWithoutExtension.Length > availableNameLength
+            ? nameWithoutExtension[..availableNameLength]
+            : nameWithoutExtension;
+
+        return $"{trimmedName}…{extension}";
+    }
+
 }
+
 
 public enum DownloadState
 {

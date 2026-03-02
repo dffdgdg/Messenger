@@ -3,7 +3,6 @@
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 x:Class="MessengerDesktop.Views.LoginView"
 			 x:DataType="vm:LoginViewModel">
-
 	<Grid>
 		<Panel>
 			<Border>
@@ -125,6 +124,7 @@
 						Command="{Binding LoginCommand}">
 					<Panel>
 						<TextBlock Text="Войти"
+								   Foreground="White"
 								   HorizontalAlignment="Center"
 								   IsVisible="{Binding !IsBusy}"/>
 

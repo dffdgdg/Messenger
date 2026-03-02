@@ -9,8 +9,7 @@
 			 x:Class="MessengerDesktop.Views.ChatInfoPanel"
 			 x:DataType="vm:ChatViewModel"
 			 Width="320"
-			 Design.Height="720"
-			 FontFamily="Segoe UI">
+			 Design.Height="720">
 
 	<Border Background="{DynamicResource PrimaryBG}"
 			CornerRadius="0,16,16,0">

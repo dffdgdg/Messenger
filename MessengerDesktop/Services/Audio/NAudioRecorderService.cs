@@ -84,8 +84,7 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
                 var duration = _stopwatch.Elapsed;
 
                 _buffer.Position = 0;
-                var resultStream = new MemoryStream(_buffer.ToArray());
-                resultStream.Position = 0;
+                var resultStream = new MemoryStream(_buffer.ToArray()) { Position = 0 };
 
                 var result = new AudioRecordingResult
                 {

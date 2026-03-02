@@ -31,4 +31,8 @@ public partial class LoginView : UserControl
             e.Handled = true;
         }
     }
+
+    private void TextBlock_ActualThemeVariantChanged(object? sender, System.EventArgs e)
+    {
+    }
 }

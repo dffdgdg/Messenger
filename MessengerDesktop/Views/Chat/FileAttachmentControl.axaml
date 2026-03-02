@@ -219,28 +219,17 @@
 								Margin="10,0,8,0"
 								VerticalAlignment="Center"
 								Spacing="1">
-						<TextBlock Text="{Binding FileName}"
+						<TextBlock Text="{Binding DisplayFileName}"
 								   FontWeight="Medium"
 								   FontSize="13"
 								   TextTrimming="CharacterEllipsis"
 								   MaxWidth="160"
 								   Foreground="{DynamicResource TextPrimary}"/>
-						<StackPanel Orientation="Horizontal" Spacing="6">
-							<TextBlock Text="{Binding FileSizeFormatted}"
-									   FontSize="11"
-									   Foreground="{DynamicResource TextMuted}"
-									   IsVisible="{Binding FileSizeFormatted,
-									   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-							<TextBlock Text="·"
-									   FontSize="11"
-									   Foreground="{DynamicResource TextMuted}"
-									   IsVisible="{Binding FileSizeFormatted,
-									   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-							<TextBlock Text="{Binding ContentType}"
-									   FontSize="11"
-									   Foreground="{DynamicResource TextMuted}"
-									   Opacity="0.7"/>
-						</StackPanel>
+						<TextBlock Text="{Binding FileSizeFormatted}"
+							   FontSize="11"
+							   Foreground="{DynamicResource TextMuted}"
+							   IsVisible="{Binding FileSizeFormatted,
+							   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 					</StackPanel>
 
 					<StackPanel Grid.Column="2"

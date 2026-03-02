@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class ChatViewModel
+public sealed partial class ChatViewModel
 {
     /// <summary>
     /// Главный метод инициализации. Вызывается из конструктора (fire-and-forget).
@@ -255,7 +255,5 @@ public partial class ChatViewModel
         await DisposeVoiceAsync();
 
         _attachmentManager.Dispose();
-
-        GC.SuppressFinalize(this);
     }
 }

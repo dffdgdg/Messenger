@@ -2,6 +2,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:controls="using:MessengerDesktop.Controls"
 			 xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:shared="using:MessengerDesktop.Controls.Shared"
 			 xmlns:chat="using:MessengerDesktop.Views.Chat"
 			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
 			 x:Class="MessengerDesktop.Views.Chat.MessageControl"
@@ -433,7 +434,7 @@
 
 							<Panel IsVisible="{Binding HasTextContent}">
 								<Grid>
-									<controls:RichMessageTextBlock Classes="MessageText"
+									<shared:RichMessageTextBlock Classes="MessageText"
 																   RawText="{Binding DisplayContent}"
 																   Margin="0,0,60,0"/>
 									<StackPanel Classes="InlineMeta"

@@ -3,14 +3,36 @@
 public static class FileMappings
 {
     public static MessageFileDto ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null) => new()
+    {
+        Id = file.Id,
+        MessageId = file.MessageId,
+        FileName = file.FileName,
+        ContentType = file.ContentType,
+        Url = file.Path.BuildFullUrl(urlBuilder),
+        PreviewType = DeterminePreviewType(file.ContentType),
+        FileSize = GetFileSize(file.Path)
+    };
+
+    private static long GetFileSize(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return 0;
+
+        var normalized = relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var candidatePaths = new[]
         {
-            Id = file.Id,
-            MessageId = file.MessageId,
-            FileName = file.FileName,
-            ContentType = file.ContentType,
-            Url = file.Path.BuildFullUrl(urlBuilder),
-            PreviewType = DeterminePreviewType(file.ContentType)
+            Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", normalized),
+            Path.Combine(AppContext.BaseDirectory, "wwwroot", normalized)
         };
+
+        foreach (var path in candidatePaths)
+        {
+            if (File.Exists(path))
+                return new FileInfo(path).Length;
+        }
+
+        return 0;
+    }
 
     public static string DeterminePreviewType(string? contentType)
     {

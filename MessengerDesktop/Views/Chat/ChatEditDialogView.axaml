@@ -29,7 +29,7 @@
 												FallbackIcon="{StaticResource GroupIcon}"
 												ShowOnlineIndicator="False"
 												PlaceholderBackground="{DynamicResource SurfaceVariant}"
-												PlaceholderForeground="{DynamicResource TextSecondary}"/>
+												PlaceholderForeground="White"/>
 						<Button Classes="IconButton"
 								Width="28" Height="28"
 								CornerRadius="14"

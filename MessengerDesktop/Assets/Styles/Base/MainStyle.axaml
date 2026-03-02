@@ -1,11 +1,12 @@
 <Styles xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:views="using:MessengerDesktop.Views">
+		xmlns:views="using:MessengerDesktop.Views"
+		>
 
 	<!-- ══════════════════════════════════════════════════════════════
 	БАЗОВЫЕ
 	══════════════════════════════════════════════════════════════ -->
-
+	
 	<Style Selector="Border.PageContainer">
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>

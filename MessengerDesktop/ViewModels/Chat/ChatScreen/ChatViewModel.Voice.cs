@@ -1,9 +1,4 @@
-﻿using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MessengerDesktop.Infrastructure.Configuration;
-using MessengerDesktop.Services.Audio;
-using MessengerShared.Dto.Message;
+﻿using MessengerDesktop.Services.Audio;
 using System;
 using System.Diagnostics;
 using System.Threading;

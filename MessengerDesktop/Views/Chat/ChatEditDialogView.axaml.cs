@@ -1,4 +1,3 @@
-using Avalonia.Input;
 using MessengerDesktop.ViewModels.Dialog;
 
 namespace MessengerDesktop.Views;
@@ -14,14 +13,5 @@ public partial class ChatEditDialog : UserControl
             if (DataContext is ChatEditDialogViewModel vm)
                 await vm.InitializeCommand.ExecuteAsync(null);
         };
-    }
-
-    private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is Border border && border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
-        {
-            user.IsSelected = !user.IsSelected;
-            e.Handled = true;
-        }
     }
 }

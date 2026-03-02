@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using MessengerShared.Enum;
 
 namespace MessengerDesktop.ViewModels.Dialog;
 
@@ -18,7 +19,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     private readonly IApiClientService _apiClient;
     private readonly int _currentUserId;
     private readonly ChatDto? _originalChat;
-    private readonly List<UserDto>? _existingMembers;
+    private readonly List<ChatMemberDto>? _existingMembers;
 
     private MemoryStream? _avatarStream;
     private string? _avatarFileName;
@@ -40,13 +41,25 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public bool IsNewChat => _originalChat == null;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
-    public bool CanSave => !string.IsNullOrWhiteSpace(Name) && SelectedUsersCount >= 1;
+    [ObservableProperty]
+    private ChatRole _currentUserRole = ChatRole.Owner;
 
-    public Func<ChatDto, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
+    [ObservableProperty]
+    private ObservableCollection<int> _selectedAdminIds = [];
+
+    public int ParticipantsCount => AvailableUsers.Count(u => u.IsSelected);
+    public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
+    public bool CanManageParticipants => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
+    public bool CanManageAdmins => IsNewChat || CurrentUserRole == ChatRole.Owner;
+    public bool CanSave => !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
+
+    public Func<ChatDto, List<int>, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
+
+    public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
 
     public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null) { }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDto? chat,List<UserDto>? existingMembers = null)
+    public ChatEditDialogViewModel(IApiClientService apiClient,int currentUserId,ChatDto? chat,List<ChatMemberDto>? existingMembers = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _currentUserId = currentUserId;
@@ -81,7 +94,12 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var existingMemberIds = _existingMembers?.Select(m => m.Id).ToHashSet() ?? [];
+        var existingMemberIds = _existingMembers?.Select(m => m.UserId).ToHashSet() ?? [];
+        var adminIds = _existingMembers?.Where(m => m.Role is ChatRole.Admin or ChatRole.Owner).Select(m => m.UserId).ToHashSet() ?? [];
+        SelectedAdminIds = new ObservableCollection<int>(adminIds);
+
+        var currentMember = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId);
+        CurrentUserRole = currentMember?.Role ?? ChatRole.Owner;
 
         var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username)
             .Select(u => new SelectableUserItem(u, existingMemberIds.Contains(u.Id))).ToList();
@@ -115,6 +133,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         if (e.PropertyName == nameof(SelectableUserItem.IsSelected))
         {
             OnPropertyChanged(nameof(SelectedUsersCount));
+            OnPropertyChanged(nameof(ParticipantsCount));
+            OnPropertyChanged(nameof(AdminsCount));
             NotifyCanSaveChanged();
         }
     }
@@ -148,17 +168,50 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     }
 
     [RelayCommand]
-    private void SelectAll()
+    private async Task ManageParticipants()
     {
-        foreach (var user in FilteredUsers)
-            user.IsSelected = true;
+        if (ShowDialogAction == null)
+            return;
+
+        var dialog = new ChatUserPickerDialogViewModel(
+            "Участники",
+            AvailableUsers,
+            CanManageParticipants,
+            selectedIds =>
+            {
+                foreach (var user in AvailableUsers)
+                    user.IsSelected = selectedIds.Contains(user.Id);
+
+                var selectedSet = selectedIds.ToHashSet();
+                SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(selectedSet.Contains));
+                OnPropertyChanged(nameof(ParticipantsCount));
+                OnPropertyChanged(nameof(AdminsCount));
+            });
+
+        await ShowDialogAction(dialog);
     }
 
     [RelayCommand]
-    private void DeselectAll()
+    private async Task ManageAdmins()
     {
-        foreach (var user in AvailableUsers)
-            user.IsSelected = false;
+        if (ShowDialogAction == null)
+            return;
+
+        var adminsSource = AvailableUsers.Where(x => x.IsSelected)
+            .Select(x => x.Clone(SelectedAdminIds.Contains(x.Id)))
+            .ToList();
+
+        var dialog = new ChatUserPickerDialogViewModel(
+            "Администраторы",
+            adminsSource,
+            CanManageAdmins,
+            selectedIds =>
+            {
+                SelectedAdminIds = new ObservableCollection<int>(selectedIds);
+                OnPropertyChanged(nameof(AdminsCount));
+            });
+
+        await ShowDialogAction(dialog);
     }
 
     public List<int> GetSelectedUserIds() => [.. AvailableUsers.Where(u => u.IsSelected).Select(u => u.Id)];
@@ -311,7 +364,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             {
                 _avatarStream?.Seek(0, SeekOrigin.Begin);
 
-                var success = await SaveAction(chatDto, GetSelectedUserIds(), _avatarStream, _avatarFileName);
+                var success = await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds], _avatarStream, _avatarFileName);
 
                 if (success)
                 {
@@ -339,6 +392,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         base.Dispose(disposing);
     }
 
+    partial void OnSelectedAdminIdsChanged(ObservableCollection<int> value) => OnPropertyChanged(nameof(AdminsCount));
+
     public partial class SelectableUserItem(UserDto user, bool isSelected = false) : ObservableObject
     {
         public UserDto User { get; } = user ?? throw new ArgumentNullException(nameof(user));
@@ -351,5 +406,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         public string Username => $"@{User.Username}";
         public string? AvatarUrl => User.Avatar;
         public bool HasAvatar => !string.IsNullOrEmpty(AvatarUrl);
+
+        public SelectableUserItem Clone(bool? isSelected = null) => new(User, isSelected ?? IsSelected);
     }
 }

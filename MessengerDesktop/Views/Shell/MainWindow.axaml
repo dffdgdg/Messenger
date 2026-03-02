@@ -186,6 +186,9 @@
 					<DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
 						<views:DepartmentHeadDialog/>
 					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ChatUserPickerDialogViewModel">
+						<views:ChatUserPickerDialog/>
+					</DataTemplate>
 				</ContentControl.DataTemplates>
 			</ContentControl>
 		</Border>

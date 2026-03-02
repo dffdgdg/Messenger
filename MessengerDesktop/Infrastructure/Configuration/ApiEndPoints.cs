@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using MessengerShared.Enum;
 
 namespace MessengerDesktop.Infrastructure.Configuration;
 
@@ -74,6 +75,12 @@ public static class ApiEndpoints
 
         /// <summary>DELETE api/chats/{chatId}/members/{userId}</summary>
         public static string RemoveMember(int chatId, int userId) => $"{Base}/{chatId}/members/{userId}";
+
+        /// <summary>GET api/chats/{chatId}/members/detailed</summary>
+        public static string MembersDetailed(int chatId) => $"{Base}/{chatId}/members/detailed";
+
+        /// <summary>PUT api/chats/{chatId}/members/{userId}/role?role={role}</summary>
+        public static string MemberRole(int chatId, int userId, ChatRole role) => $"{Base}/{chatId}/members/{userId}/role?role={role}";
 
         /// <summary>POST api/chats/{chatId}/leave?userId={userId}</summary>
         public static string Leave(int chatId, int userId) => $"{Base}/{chatId}/leave?userId={userId}";

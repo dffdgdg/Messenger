@@ -34,7 +34,7 @@
 						Classes="IconButton"
 						Command="{Binding CancelCommand}"
 						ToolTip.Tip="Закрыть">
-					<PathIcon Data="{StaticResource DismissIcon}"
+					<PathIcon Data="{StaticResource CloseIcon}"
 							  Width="14" Height="14"
 							  Foreground="{DynamicResource TextSecondary}"/>
 				</Button>
@@ -128,7 +128,7 @@
 								IsVisible="{Binding HasHead}"
 								ToolTip.Tip="Убрать руководителя"
 								Margin="8,0,4,0">
-							<PathIcon Data="{StaticResource DismissIcon}"
+							<PathIcon Data="{StaticResource CloseIcon}"
 									  Width="16" Height="16"
 									  Foreground="{DynamicResource DangerBrush}"/>
 						</Button>

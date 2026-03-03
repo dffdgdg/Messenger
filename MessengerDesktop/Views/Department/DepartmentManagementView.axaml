@@ -220,7 +220,7 @@
 															Command="{Binding #Root.DataContext.RemoveMemberCommand}"
 															CommandParameter="{Binding}"
 															ToolTip.Tip="Удалить из отдела">
-														<PathIcon Data="{StaticResource DismissIcon}"
+														<PathIcon Data="{StaticResource CloseIcon}"
 																  Width="14" Height="14"
 																  Foreground="{DynamicResource Icon}"/>
 													</Button>

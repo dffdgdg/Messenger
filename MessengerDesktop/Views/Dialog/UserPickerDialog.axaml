@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+             xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
+             xmlns:controls="using:MessengerDesktop.Controls"
+             x:Class="MessengerDesktop.Views.Dialog.UserPickerDialog"
+             x:DataType="vmDialog:ChatUserPickerDialogViewModel"
+             mc:Ignorable="d"
+             d:DesignWidth="450" d:DesignHeight="600">
+    <Border Classes="DialogContainer" Width="450" MaxHeight="650" Background="{DynamicResource SecondaryBG}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="20"/>
+            <TextBlock Grid.Row="0" HorizontalAlignment="Right" Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}" Foreground="{DynamicResource TextSecondary}"/>
+
+            <TextBox Grid.Row="1" Text="{Binding SearchQuery}" Watermark="Поиск пользователей..." Classes="DialogInput SearchInput"/>
+
+            <Border Grid.Row="2" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" CornerRadius="8">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding FilteredItems}" Margin="4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vmDialog:ChatEditDialogViewModel+SelectableUserItem">
+                                <Border Padding="8,6" CornerRadius="6" Cursor="Hand" Background="Transparent" PointerPressed="OnUserItemPressed">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,12,0" IsEnabled="{Binding $parent[UserControl].DataContext.AllowEdit}" VerticalAlignment="Center"/>
+                                        <controls:AvatarControl Grid.Column="1" Size="36" Source="{Binding AvatarUrl}" DisplayName="{Binding DisplayName}" ShowOnlineIndicator="False" Margin="0,0,12,0"/>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Username}" FontSize="12" Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <Path Grid.Column="3" Data="{StaticResource CheckIcon}" Width="16" Height="16" Fill="{DynamicResource AccentColor}" VerticalAlignment="Center" IsVisible="{Binding IsSelected}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,12,0,0">
+                <Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}" MinWidth="100"/>
+                <Button Content="Сохранить" Classes="DialogAccent" Command="{Binding SaveCommand}" IsVisible="{Binding AllowEdit}" MinWidth="100"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

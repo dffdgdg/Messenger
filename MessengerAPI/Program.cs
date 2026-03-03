@@ -50,6 +50,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseMessengerStaticFiles();
+app.UseMissingFileCleanup();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

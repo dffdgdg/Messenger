@@ -1,6 +1,4 @@
-﻿# Architecture.MD
-
-## Обзор проекта
+﻿## Обзор проекта
 
 Корпоративный мессенджер, состоящий из трёх проектов в одном решении (solution):
 
@@ -10,13 +8,19 @@
 | **MessengerDesktop** | Avalonia UI (MVVM) | Десктопный клиент (кроссплатформенный) |
 | **MessengerShared** | .NET Class Library | Общие DTO, перечисления, обёртки ответов |
 
+### Deployment
+
+**`Dockerfile`** — Multi-stage build. SDK 8.0 → restore → publish Release. Runtime aspnet:8.0. Non-root user (appgroup/appuser). Port 8080. ENTRYPOINT `dotnet MessengerAPI.dll`.
+
+**`docker-compose.yml`** — Сервисы: `messenger-api` (build from Dockerfile, port 8080, volumes uploads/avatars, depends_on postgres healthy), `postgres` (16-alpine, healthcheck pg_isready, volume postgres_data), `zap-baseline` (ZAProxy security scan, profile "security", report html/json/md). Environment: JWT_SECRET, ConnectionStrings, DisableHttpsRedirection. Volumes: postgres_data, messenger_uploads, messenger_avatars.
+
 ---
 
 ## MessengerAPI — Серверная часть
 
 ### Точка входа
 
-**`Program.cs`** — Включает `Npgsql.EnableLegacyTimestampBehavior`. Привязка конфигурации `MessengerSettings`, `JwtSettings`. Регистрация: `AddMessengerDatabase`, `AddInfrastructureServices`, `AddBusinessServices`, `AddMessengerJson`, `AddMessengerAuth`, `AddMessengerSwagger`, SignalR, CORS (AllowAnyHeader/Method, AllowCredentials). Pipeline: `UseExceptionHandling`, Swagger (dev), HTTPS redirect, `UseMessengerStaticFiles`, CORS, Auth. Маршруты: `GET /` (health), `GET /robots.txt`, `GET /sitemap.xml` (AllowAnonymous), `MapControllers`, `MapHub<ChatHub>("/chatHub")`.
+**`Program.cs`** — Включает `Npgsql.EnableLegacyTimestampBehavior`. Привязка конфигурации `MessengerSettings`, `JwtSettings`. Регистрация: `AddMessengerDatabase`, `AddInfrastructureServices`, `AddBusinessServices`, `AddMessengerJson`, `AddMessengerAuth`, `AddMessengerSwagger`, SignalR, CORS (AllowAnyHeader/Method, AllowCredentials). Pipeline: `UseExceptionHandling`, Swagger (dev), HTTPS redirect, `UseMessengerStaticFiles`, `UseMissingFileCleanup`, CORS, Auth. Маршруты: `GET /` (health), `GET /robots.txt`, `GET /sitemap.xml` (AllowAnonymous), `MapControllers`, `MapHub<ChatHub>("/chatHub")`.
 
 ### Common — Общие утилиты
 
@@ -42,13 +46,13 @@
 
 ### Controllers — API-контроллеры
 
-**`Controllers/BaseController.cs`** — Абстрактный `[ApiController, Route("api/[controller]")]`. `GetCurrentUserId()` из ClaimTypes.NameIdentifier. Два `ExecuteAsync` (для `Result<T>` и `Result`) с обработкой: Unauthorized→401, KeyNotFound→404, Argument/InvalidOp→400, прочие→500. `Forbidden()` → 403.
+**`Controllers/BaseController.cs`** — Абстрактный `[ApiController, Route("api/[controller]")]`. `GetCurrentUserId()` из ClaimTypes.NameIdentifier. `IsCurrentUser(userId)` — сравнение. Два `ExecuteAsync` (для `Result<T>` и `Result`) с обработкой: Unauthorized→401, KeyNotFound→404, Argument/InvalidOp→400, прочие→500. `Forbidden()` и `Forbidden<T>()` → 403 с ApiResponse.
 
 **`Controllers/AuthController.cs`** — `[AllowAnonymous, EnableRateLimiting("login")]`. `POST login` → `AuthService.LoginAsync`.
 
 **`Controllers/AdminController.cs`** — `[Authorize(Roles="Admin")]`. `GET users`, `POST users`, `POST users/{id}/toggle-ban`.
 
-**`Controllers/ChatsController.cs`** — `GET user/{userId}/dialogs|groups|chats`, `GET user/{userId}/contact/{contactUserId}`, `GET {chatId}`, `GET {chatId}/members`, `POST {chatId}/members`, `DELETE {chatId}/members/{userId}`, `POST` (создание), `PUT {id}`, `DELETE {id}`, `POST {id}/avatar`. Проверка IsCurrentUser для списков.
+**`Controllers/ChatsController.cs`** — `GET user/{userId}/dialogs|groups|chats`, `GET user/{userId}/contact/{contactUserId}`, `GET {chatId}`, `GET {chatId}/members`, `GET {chatId}/members/detailed` (ChatMemberDto), `POST {chatId}/members`, `DELETE {chatId}/members/{userId}`, `PUT {chatId}/members/{userId}/role` (query ChatRole), `POST` (создание), `PUT {id}`, `DELETE {id}`, `POST {id}/avatar`. Проверка IsCurrentUser для списков. EnsureUserHasChatAccessAsync для members, EnsureUserIsChatAdminAsync для avatar.
 
 **`Controllers/DepartmentController.cs`** — `GET` (все), `GET {id}`, `POST/PUT/DELETE` (Admin-only), `GET {id}/members`, `POST/DELETE {id}/members`, `GET {id}/can-manage`. CancellationToken на всех.
 
@@ -86,6 +90,8 @@
 
 **`Middleware/ExceptionHandlingMiddleware.cs`** — Глобальный перехват: Argument→400, Unauthorized→401, KeyNotFound→404, InvalidOp→400, прочие→500. Dev: Details для 500. Extension `UseExceptionHandling()`.
 
+**`Middleware/MissingFileCleanupMiddleware.cs`** — Перехват GET/HEAD запросов к `/uploads` и `/avatars`. При 404: поиск в БД по relativePath (MessageFiles, Users.Avatar, Chats.Avatar). Удаление записей MessageFile, обнуление Avatar. Логирование количества очищенных ссылок. Extension `UseMissingFileCleanup()`.
+
 ### Services — Бизнес-логика
 
 #### Auth
@@ -102,7 +108,7 @@
 
 **`Services/Chat/ChatService.cs`** — **GetUserChatsAsync**: GroupJoin с последним сообщением, unread, партнёр для Contact, сортировка. **CreateChatAsync**: транзакция, проверка дубликата. **UpdateChatAsync**: Admin, запрет Contact, смена типа Owner. **DeleteChatAsync**: Owner, `ExecuteDeleteAsync`. **UploadChatAvatarAsync**: webp.
 
-**`Services/Chat/ChatMemberService.cs`** — Add (Admin + дубликат), Remove (защита Owner), UpdateRole (Owner only), Leave. Инвалидация кеша.
+**`Services/Chat/ChatMemberService.cs`** — Add (Admin + дубликат), Remove (защита Owner), UpdateRole (Owner only), GetMembers (detailed ChatMemberDto), Leave. Инвалидация кеша.
 
 **`Services/Chat/NotificationService.cs`** — `SendNotificationAsync`: NotificationDto → HubNotifier. CRUD NotificationsEnabled.
 
@@ -188,11 +194,17 @@
 
 ### Controls
 
-**`Controls/Shared/AvatarControl.axaml.cs`** — StyledProperties: Size, FontSize, IconSize, Source, DisplayName, IsOnline, ShowOnlineIndicator, FallbackIcon, PlaceholderBg/Fg, IsCircular. Computed: ImageSource (валидация расширения — защита от non-image URL), HasImage, Initials (ФИ/Ии/?), ShowInitials/ShowIcon. Adaptive OnlineIndicator (8–16px). CornerRadius: circular=Size/2, else=8.
+**`Controls/Shared/AvatarControl.axaml.cs`** — StyledProperties: Size, FontSize, IconSize, Source, DisplayName, IsOnline, ShowOnlineIndicator, FallbackIcon, PlaceholderBg/Fg, IsCircular, ImageBitmap. DirectProperties: ImageSource, HasImage, HasBitmapImage, Initials, ShowInitials, ShowIcon, IconData, OnlineIndicatorSize, OnlineIndicatorCornerRadius, ShowOnlineStatus. Computed: ImageSource (валидация расширения через `ImageExtensions` HashSet — защита от non-image URL), HasImage (valid source && no bitmap), HasBitmapImage (bitmap priority), Initials (ФИ/Ии/?), ShowInitials/ShowIcon (учитывает и bitmap и source). Panel wrapper для AsyncImageLoader (предотвращает загрузку collapsed Image). ToAbsoluteUrl для relative paths. Adaptive OnlineIndicator (8–16px). CornerRadius: circular=Size/2, else=8. Size classes: Small(32)/Medium(40)/Large(56)/XLarge(80)/XXLarge(100).
+
+**`Controls/Admin/DepartmentCardView.axaml(.cs)`** — DataType=HierarchicalDepartmentViewModel. StyledProperty: EditCommand (ICommand). Рекурсивная карточка отдела: кнопка expand с ChevronIcon + RotateTransform анимация, иконка (OrganizationIcon для root, FolderIcon для child), HeadName/«Нет руководителя», бейджи UserCount (AccentMuted) / «Пусто» (WarningBg) / Children.Count. LevelToMargin indent, Canvas hierarchy line (StrokeLineCap.Round). Actions: Edit (DepartmentActions class). Дочерние элементы: ItemsControl с рекурсивным DepartmentCardView, вертикальная линия HierarchyLineBrush.
+
+**`Controls/Admin/DepartmentGroupView.axaml(.cs)`** — DataType=DepartmentGroup. StyledProperties: EditUserCommand, BanUserCommand (ICommand). Заголовок с OrganizationIcon + DepartmentName + разделитель. ItemsControl → UserCardView с проброской команд.
+
+**`Controls/Admin/UserCardView.axaml(.cs)`** — DataType=UserDto. StyledProperties: EditCommand, BanCommand (ICommand). Border.Hoverable: аватар-заглушка (PersonIcon 40×40), DisplayName + @Username. Actions: Edit (EditIcon) + Ban (BlockIcon, Danger class).
 
 **`Controls/ChatInfoSkeleton.axaml`** — Skeleton-заглушка для панели информации о чате. ScrollViewer: аватар (100×100 круг), имя, статус, два поля, toggle, 3 участника (аватар 40×40 + имя + статус). Классы `Skeleton`, разделители `DynamicResource BorderDefault`.
 
-**`Controls/ChatItemView.axaml`** — DataType=`ChatDto`. Grid(Auto,\*) высотой 52px. AvatarControl (Medium, GroupIcon fallback). ChatName, ChatPreview (Run: Sender + Content) с fallback "Нет сообщений".
+**`Controls/ChatItemView.axaml`** — DataType=`ChatListItemViewModel`. Grid(Auto,\*,Auto) высотой 52px: AvatarControl + имя/превью + `UnreadBadge` справа. ChatPreview (Run: Sender + Content) с fallback "Нет сообщений"; видимость превью/заглушки через `StringConverters.IsNotNullOrEmpty/IsNullOrEmpty`, бейдж через `GreaterThanZero`.
 
 **`Controls/ChatListSkeleton.axaml`** — Skeleton-заглушка для списка чатов. 6 элементов (Height=68): аватар 44×44 + имя + превью + время. Варьирующиеся ширины.
 
@@ -250,7 +262,7 @@
 
 **`Infrastructure/ServiceCollectionExtensions.cs`** — AddMessengerCoreServices: LocalDatabase, repos, cache, platform, settings, hub, notification — singleton. HttpClient 30s. Auth chain. Navigation, Dialog — singleton. AddMessengerViewModels: MainWindowVM singleton, Factories singleton, VMs transient.
 
-**`Infrastructure/Configuration/ApiEndPoints.cs`** — Статические классы по контроллерам с параметризованными URL-методами.
+**`Infrastructure/Configuration/ApiEndPoints.cs`** — Статические классы по контроллерам с параметризованными URL-методами. Auth (Login/Validate/Logout), User (GetAll/Online/StatusBatch/ById/Status/Avatar/Username/Password), Chat (Create/ById/Members/MembersDetailed/RemoveMember/MemberRole/Leave/Avatar/UserChats/UserDialogs/UserGroups/UserContact), Message (Create/ById/Transcription/TranscriptionRetry/ForChat/Around/Before/After/Search/ChatSearch), File (Upload), Poll (Create/Vote/ById), Department (GetAll/Create/ById/Members/RemoveMember/CanManage), Notification (AllSettings/SetMute/ChatSettings), ReadReceipt (MarkRead/AllUnreadCounts/UnreadCount), Admin (Users/ToggleBan).
 
 **`Infrastructure/Configuration/AppConstants.cs`** — MaxFileSize=20MB, Debounce=300ms, PageSize=50, LoadMore=30, Search=20, Highlight=3000ms, MarkAsRead debounce=300ms/cooldown=1s, Typing send=1200ms/indicator=3500ms.
 
@@ -280,7 +292,7 @@
 
 **`Services/Realtime/ChatHubConnection.cs`** — Per-chat SignalR. Handlers: ReceiveMessageDto, MessageUpdated/Deleted, MessageRead, UnreadCountUpdated, UserTyping, MemberJoined/Left. MarkMessageAsReadAsync: debounce. SendTypingAsync: debounce. Reconnected→rejoin.
 
-**`Services/Realtime/GlobalHubConnection.cs`** — App-wide SignalR. Dictionary\<int,int\> unreadCounts + totalUnread с lock. Handlers: ReceiveNotification (filter+ShowWindow 5s), ReceiveMessageDto (CacheIncoming+IncrementUnread), MessageUpdated/Deleted, UserOnline/Offline, UserProfileUpdated, UnreadCountUpdated. LoadUnreadCountsAsync, MarkChatAsReadAsync, ReconcileAfterReconnectAsync.
+**`Services/Realtime/GlobalHubConnection.cs`** — App-wide SignalR. Dictionary\<int,int\> unreadCounts + totalUnread с lock. События для UI: `UnreadCountChanged`, `TotalUnreadChanged`, `MessageReceivedGlobally`, `MessageUpdatedGlobally`, `MessageDeletedGlobally`. Handlers: ReceiveNotification (filter+ShowWindow 5s), ReceiveMessageDto (CacheIncoming + publish `MessageReceivedGlobally` + IncrementUnread для чужих/неактивных чатов), MessageUpdated/Deleted, UserOnline/Offline, UserProfileUpdated, UnreadCountUpdated. LoadUnreadCountsAsync, MarkChatAsReadAsync, ReconcileAfterReconnectAsync.
 
 **`Services/Storage/SettingsService.cs`** — JSON файл settings.json. Dictionary\<string, JsonElement\>. Generic Get\<T\>/Set\<T\>.
 
@@ -304,7 +316,7 @@
 
 **`ViewModels/Shell/MainWindowViewModel.cs`** — Deps: INavigationService, IDialogService, IAuthManager, IThemeService. CurrentViewModel, CurrentDialog, HasOpenDialogs, IsDialogVisible. Logout→CloseAllDialogs→LogoutAsync→Login. ShowDialogAsync\<T\>. ToggleTheme, RefreshCurrentView (IRefreshable).
 
-**`ViewModels/Shell/MainMenuViewModel.cs`** — Lazy VMs для каждой вкладки. Navigation: Stack\<int\> back/forward. NavigateToMenu(0–6). Search с CTS. SwitchToTabAndOpenChatAsync/MessageAsync. ShowUserProfileAsync, ShowPollDialogAsync, ShowCreateGroupDialogAsync, ShowEditGroupDialogAsync. InitializeGlobalHubAsync.
+**`ViewModels/Shell/MainMenuViewModel.cs`** — Lazy VMs для каждой вкладки. Navigation: Stack\<int\> back/forward с GoBack/GoForward (CanExecute). NavigateToMenu(0–6) с addToHistory flag. SetActiveMenu→NavigateToMenu. Search с CTS. SwitchToTabAndOpenChatAsync (определение вкладки по ChatType), SwitchToTabAndOpenMessageAsync (GlobalSearchMessageDto). ShowUserProfileAsync, ShowPollDialogAsync, ShowCreateGroupDialogAsync (SaveAction с CreateGroupChatAsync: create→add members→set roles→upload avatar→OpenChat), ShowEditGroupDialogAsync (MembersDetailed→UpdateGroupChatAsync: update→diff members add/remove→diff roles promote/demote→avatar). ShowDialogAction→nested dialogs (ChatUserPickerDialog). OpenOrCreateChatAsync→contacts tab. InitializeGlobalHubAsync. LoadContactsAndChatsAsync parallel. GetMimeType helper.
 
 #### Auth
 
@@ -312,7 +324,7 @@
 
 #### Chats
 
-**`ViewModels/Chats/ChatsViewModel.cs`** — IRefreshable. IsGroupMode, IsInitialLoading. **Stale-while-revalidate**: Phase1 ShowCachedChatsAsync (мгновенный показ + unread из GlobalHub), Phase2 LoadFreshChatsFromServerAsync (сервер + кеширование). Smart update: сохранение selectedId. Unread: подписка GlobalHub. OnSelectedChatChanged: SyncSearchScope, MarkAsRead, create ChatViewModel. OpenOrCreateDialogWithUserAsync. CreateGroup→Parent.ShowCreateGroupDialogAsync. OpenChatByIdAsync (find/GET/insert, optional scroll). Search integration: GlobalSearchManager, OpenSearchedChat/Result.
+**`ViewModels/Chats/ChatsViewModel.cs`** — IRefreshable. IsGroupMode, IsInitialLoading. **Stale-while-revalidate**: Phase1 ShowCachedChatsAsync (мгновенный показ + unread из GlobalHub), Phase2 LoadFreshChatsFromServerAsync (сервер + кеширование). Smart update: сохранение selectedId. Подписки GlobalHub: unread (`UnreadCountChanged`/`TotalUnreadChanged`) + `MessageReceivedGlobally`. На новое сообщение обновляет `LastMessageSenderName` (`"Вы"`, если sender=current user), `LastMessagePreview`, `LastMessageDate` и двигает чат наверх (`MoveChatToTop`). OnSelectedChatChanged: SyncSearchScope, MarkAsRead, create ChatViewModel. OpenOrCreateDialogWithUserAsync. CreateGroup→Parent.ShowCreateGroupDialogAsync. OpenChatByIdAsync (find/GET/insert, optional scroll). Search integration: GlobalSearchManager, OpenSearchedChat/Result.
 
 **`ViewModels/Chats/ChatListItemViewModel.cs`** — ObservableObject. Constructor from ChatDto. Read-only: Id, Type, CreatedById. Observable: Name, LastMessageDate, Avatar, Preview, SenderName, UnreadCount. ToDto(), Apply(ChatDto).
 
@@ -344,7 +356,7 @@
 
 #### Chat — Менеджеры
 
-**`Managers/ChatMessageManager.cs`** — Cache-first с revalidation. LoadInitial: unread→LoadAround, else cache→RenderMessages + background RevalidateNewest, fallback server. LoadOlder/Newer: cache-first + server дозагрузка + dedup. GapFillAfterReconnect: recursive After-endpoint. AddReceivedMessage: dedup→CreateVM→bounds/dates/grouping→background cache. HandleDeleted/Updated→cache sync. DateSeparators (Сегодня/Вчера/d MMMM). Grouping→delegate to MessageViewModel statics.
+**`Managers/ChatMessageManager.cs`** — Cache-first с revalidation. LoadInitial: unread→LoadAround, else cache→RenderMessages + background RevalidateNewest, fallback server. LoadOlder/Newer: cache-first + server дозагрузка + dedup. GapFillAfterReconnect: recursive After-endpoint загрузка пропущенных. AddReceivedMessage: dedup→CreateVM→bounds/dates/grouping→background cache. HandleDeleted/Updated→cache sync. DateSeparators (Сегодня/Вчера/d MMMM). Grouping→delegate to MessageViewModel statics.
 
 **`Managers/ChatMemberLoader.cs`** — GET Chat.Members, fallback Contact→parse Name as userId→GET individual users.
 
@@ -376,7 +388,7 @@
 
 #### Admin
 
-**`ViewModels/Admin/AdminViewModel.cs`** — IRefreshable. UsersTab + DepartmentsTab. Parallel init + cross-reference. SearchQuery propagation. Error/Success message bubbling.
+**`ViewModels/Admin/AdminViewModel.cs`** — IRefreshable. UsersTab + DepartmentsTab. Parallel init (Task.WhenAll) + cross-reference (SetDepartments/SetUsers). SearchQuery propagation to both tabs. SelectedTabIndex → CurrentTab computed. FilteredGroupedUsers/FilteredHierarchicalDepartments delegates. Commands: OpenEditUserDialog→UsersTab.Edit, ToggleBan→UsersTab.ToggleBan, OpenEditDepartment (FindDepartmentItem recursive→DepartmentsTab.Edit), Create (route by tab), Refresh (parallel reload + cross-reference). Error/Success message bubbling via PropagateMessages.
 
 **`ViewModels/Admin/UsersTabViewModel.cs`** — GroupBy DepartmentId→DepartmentGroup. Create/Edit (UserEditDialogVM, TaskCompletionSource), ToggleBan (ConfirmDialog). ApplyFilter LINQ.
 
@@ -398,7 +410,9 @@
 
 **`ViewModels/Dialog/DialogViewModelBase.cs`** — DialogBaseViewModel : BaseViewModel. CloseRequested event. InitializeAsync, Cancel, CloseOnBackgroundClick.
 
-**`ViewModels/Dialog/ChatEditDialogViewModel.cs`** — Create/Edit group. SelectableUserItem (IsSelected). Avatar picker (5MB limit). SaveAction delegate.
+**`ViewModels/Dialog/ChatEditDialogViewModel.cs`** — Create/Edit group. SelectableUserItem (IsSelected, Clone). CurrentUserRole, SelectedAdminIds. CanManageParticipants (Admin/Owner), CanManageAdmins (Owner). ManageParticipants→ChatUserPickerDialogViewModel (via ShowDialogAction). ManageAdmins→ChatUserPickerDialogViewModel (from selected users, clone with admin state). Avatar picker (5MB limit, LoadExistingAvatarAsync). SaveAction delegate with (ChatDto, memberIds, adminIds, Stream?, fileName). Dispose: unsubscribe + stream + bitmap.
+
+**`ViewModels/Dialog/ChatUserPickerDialogViewModel.cs`** — Nested dialog for user selection. Source items cloned. SearchQuery→ApplyFilter. AllowEdit flag. SelectedCount computed. Save→applySelection callback with selected IDs→RequestClose.
 
 **`ViewModels/Dialog/ConfirmDialogViewModel.cs`** — TaskCompletionSource\<bool\>. Message, ConfirmText, CancelText.
 
@@ -420,7 +434,7 @@
 
 ### Views — UI-представления
 
-**`Views/Shell/MainWindow.axaml`** — ExtendClientAreaToDecorationsHint, AcrylicBlur, MinWidth=700. Styles: DialogOverlay (opacity transition), DialogAnimWrapper (scale+translate), TitleBarHelp. Layout: 3-column Grid, TitleBar drag zones. ContentControl с 8 DataTemplates. Dialog system: overlay ZIndex=10000 + wrapper ZIndex=10001, 8 dialog DataTemplates.
+**`Views/Shell/MainWindow.axaml`** — ExtendClientAreaToDecorationsHint, AcrylicBlur, MinWidth=700. Styles: DialogOverlay (opacity transition), DialogAnimWrapper (scale+translate), TitleBarHelp. Layout: 3-column Grid, TitleBar drag zones + Help button (ZIndex=1000). ContentControl с 8 DataTemplates. Dialog system: overlay ZIndex=10000 + wrapper ZIndex=10001, 9 dialog DataTemplates (UserProfile, Poll, ChatEdit, UserEdit, Department, Confirm, SelectUser, DepartmentHead, ChatUserPicker→UserPickerDialog).
 
 **`Views/Shell/MainWindow.axaml.cs`** — Анимация диалогов (Open/Closing CSS-классы, 250ms). TitleBar drag. Maximized padding +7px.
 
@@ -434,9 +448,11 @@
 
 **`Views/Chat/ChatInfoPanel.axaml(.cs)`**, **`MessageControl.axaml(.cs)`** (7 StyledProperty ICommand), **`FileAttachmentControl`**, **`PollView`**, **`ChatEditDialogView`** (Loaded→Initialize) — UI-представления чата.
 
-**`Views/ProfileView`**, **`SettingsView`**, **`AdminView`**, **`DepartmentManagementView`** — простые UserControl/AvaloniaXamlLoader.
+**`Views/AdminView.axaml(.cs)`** — 2-колоночный layout: sidebar (260px) с NavMenu ListBox (Сотрудники/Отделы) + main content area. Toolbar: Search TextBox + Refresh + Create (динамический текст через IndexToText). Loading overlay с ProgressBar. Alert banners (Error/Success). Tab content: Users tab → DepartmentGroupView (EditUserCommand/BanUserCommand из Root.DataContext), Departments tab → DepartmentCardView (EditCommand из Root.DataContext). Visibility по SelectedTabIndex через Equality converter.
 
-**Dialogs**: DepartmentDialog, DepartmentHeadDialog, PollDialog (RemoveOption via Tag), SelectUserDialog (PointerPressed→SelectUser), UserEditDialog, UserProfileDialog (Loaded→Initialize), ConfirmDialog.
+**`Views/ProfileView`**, **`Views/SettingsView`**, **`Views/DepartmentManagementView`** — простые UserControl/AvaloniaXamlLoader.
+
+**Dialogs**: DepartmentDialog, DepartmentHeadDialog, PollDialog (RemoveOption via Tag), SelectUserDialog (PointerPressed→SelectUser), UserEditDialog, UserProfileDialog (Loaded→Initialize), ConfirmDialog, UserPickerDialog (PointerPressed→toggle IsSelected, AllowEdit guard).
 
 ---
 
@@ -446,7 +462,7 @@
 
 **Auth** — `LoginRequest` record(Username, Password). `AuthResponseDto` (Id, Username, DisplayName, Token, Role).
 
-**Chat** — `ChatDto` (Id, Name, Type, CreatedById, LastMessageDate, Avatar, Preview, SenderName, UnreadCount). `ChatMemberDto`, `ChatNotificationSettingsDto`, `UpdateChatDto`, `UpdateChatMemberDto`.
+**Chat** — `ChatDto` (Id, Name, Type, CreatedById, LastMessageDate, Avatar, Preview, SenderName, UnreadCount). `ChatMemberDto` (UserId, Role, JoinedAt, NotificationsEnabled, LastReadMessageId). `ChatNotificationSettingsDto`, `UpdateChatDto`, `UpdateChatMemberDto`.
 
 **Department** — `DepartmentDto` (Id, Name, ParentDepartmentId, Head, HeadName, UserCount). `UpdateDepartmentMemberDto`.
 
@@ -483,6 +499,9 @@
 - Factory — ViewModel с DI (ChatsViewModelFactory, ChatViewModelFactory)
 - Repository + Facade — SQLite кеш с ILocalCacheService
 - Service Locator (Converters) — ConverterLocator singleton + MarkupExtension
+- Recursive UI Controls — DepartmentCardView рекурсивно рендерит дочерние через ItemsControl
+- Command Propagation — StyledProperty ICommand пробрасывается через вложенные UserControl ($parent[...]) и #Root.DataContext
+- Nested Dialog Pattern — ChatEditDialog→ChatUserPickerDialog через ShowDialogAction delegate
 
 **Коммуникация**
 - SignalR Hub — real-time (сообщения, typing, online, read receipts)
@@ -500,12 +519,14 @@
 - FTS5 — полнотекстовый поиск SQLite + триггеры + fallback LIKE
 - WAL + PRAGMA — production SQLite
 - Schema migration — user_version + downgrade detection
+- Orphan file cleanup — MissingFileCleanupMiddleware: 404→DB cleanup (MessageFiles, User/Chat avatars)
 
 **Безопасность**
 - Timing-safe auth — dummy BCrypt.Verify
 - AES-256 + PBKDF2 — SecureStorage, machine-bound key derivation
 - Role Hierarchy — SessionStore с числовой иерархией (User < Head < Admin)
 - Credential persistence — RememberMe + SecureStorage + auto-login
+- Container security — non-root user, ZAProxy baseline scan
 
 **UI/UX**
 - Adaptive UI — CompactMode с гистерезисом, responsive InfoPanel
@@ -514,6 +535,8 @@
 - Animation coordination — TaskCompletionSource + timeout для dialog open/close
 - Message grouping — 2-минутный порог, Alone/First/Middle/Last для bubble radius
 - Typing indicator cleanup loop — background 500ms interval, expire threshold
+- Hierarchy visualization — Canvas lines + LevelToMargin indent + expand/collapse animation
+- Bitmap-priority avatar — ImageBitmap > Source URL, Panel wrapper prevents AsyncImageLoader on collapsed
 
 **Асинхронные паттерны**
 - Fire-and-forget initialization — конструктор → InitializeChatAsync с TaskCompletionSource
@@ -521,6 +544,7 @@
 - Auto-save debounce — SettingsViewModel Timer 800ms
 - TaskCompletionSource dialog results — ConfirmDialog, SelectUserDialog возвращают Task\<T\>
 - Download state machine — NotStarted→Downloading→Completed/Failed/Cancelled с CTS и lock
+- Navigation history — Stack-based back/forward с CanExecute guards
 
 **Медиа**
 - Voice recording pipeline — Start→Record→Stop→Validate (0.5s–300s)→Upload→Send
@@ -538,3 +562,10 @@
 - Optimistic unread tracking — локальный increment/set + серверная синхронизация
 - Cross-reference initialization — Admin parallel load + SetDepartments/SetUsers
 - Hierarchical filtering — recursive clone with child propagation
+- Group chat management — diff-based member/role sync (add/remove members, promote/demote admins)
+- Nested user picker — ChatUserPickerDialog reusable for participants and admins with AllowEdit flag
+
+**Deployment**
+- Docker multi-stage build — SDK→publish→aspnet runtime, non-root user
+- Docker Compose orchestration — API + PostgreSQL (healthcheck) + persistent volumes
+- Security scanning — ZAProxy baseline (profile-gated)

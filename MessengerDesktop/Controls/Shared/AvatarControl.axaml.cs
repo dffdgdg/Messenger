@@ -7,6 +7,9 @@ public partial class AvatarControl : UserControl
 {
     #region Styled Properties
 
+    public static readonly StyledProperty<IImage?> ImageBitmapProperty =
+    AvaloniaProperty.Register<AvatarControl, IImage?>(nameof(ImageBitmap));
+
     public static readonly StyledProperty<double> SizeProperty =
         AvaloniaProperty.Register<AvatarControl, double>(nameof(Size), 40);
 
@@ -40,6 +43,11 @@ public partial class AvatarControl : UserControl
     public static readonly StyledProperty<bool> IsCircularProperty =
         AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsCircular), true);
 
+    public IImage? ImageBitmap
+    {
+        get => GetValue(ImageBitmapProperty);
+        set => SetValue(ImageBitmapProperty, value);
+    }
     #endregion
 
     #region Direct Properties
@@ -90,6 +98,10 @@ public partial class AvatarControl : UserControl
         ShowOnlineStatusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>
         (nameof(ShowOnlineStatus), o => o.ShowOnlineStatus);
 
+    private bool _hasBitmapImage;
+    public static readonly DirectProperty<AvatarControl, bool>
+        HasBitmapImageProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>
+        (nameof(HasBitmapImage), o => o.HasBitmapImage);
     #endregion
 
     #region Property Accessors
@@ -214,6 +226,11 @@ public partial class AvatarControl : UserControl
         private set => SetAndRaise(ShowOnlineStatusProperty, ref _showOnlineStatus, value);
     }
 
+    public bool HasBitmapImage
+    {
+        get => _hasBitmapImage;
+        private set => SetAndRaise(HasBitmapImageProperty, ref _hasBitmapImage, value);
+    }
     #endregion
 
     /// <summary>
@@ -258,33 +275,27 @@ public partial class AvatarControl : UserControl
         ShowOnlineIndicatorProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateOnlineStatus());
         SizeProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.OnSizeChanged());
         IsCircularProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateCornerRadius());
+        ImageBitmapProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
     }
 
     private void UpdateComputedProperties()
     {
+        var hasBitmap = ImageBitmap != null;
+        HasBitmapImage = hasBitmap;
+
         var source = Source;
         var isValidImage = IsValidImageSource(source);
 
-        // CRITICAL: Only set ImageSource when Source is a valid image URL.
-        //
-        // Problem this solves:
-        //   When Source is null, empty, or a non-image URL (.pptx, .pdf),
-        //   the old code would still set ImageSource, causing
-        //   AsyncImageLoader to:
-        //     1. Make an HTTP request with no/bad URL → error in logs
-        //     2. Try to decode a non-image file as Bitmap → exception
-        //
-        // Now: HasImage=false → Panel with Image is collapsed (IsVisible=false)
-        //      → AsyncImageLoader.Source binding never triggers
-        HasImage = isValidImage;
-        ImageSource = isValidImage ? ToAbsoluteUrl(source!) : null;
+        HasImage = isValidImage && !hasBitmap;
+        ImageSource = HasImage ? ToAbsoluteUrl(source!) : null;
 
         Initials = ExtractInitials(DisplayName);
         IconData = FallbackIcon ?? GetDefaultIcon();
 
+        var hasAnyImage = hasBitmap || isValidImage;
         var hasFallbackIcon = FallbackIcon != null;
-        ShowInitials = !HasImage && !string.IsNullOrEmpty(DisplayName) && !hasFallbackIcon;
-        ShowIcon = !HasImage && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);
+        ShowInitials = !hasAnyImage && !string.IsNullOrEmpty(DisplayName) && !hasFallbackIcon;
+        ShowIcon = !hasAnyImage && (string.IsNullOrEmpty(DisplayName) || hasFallbackIcon);
     }
 
     /// <summary>

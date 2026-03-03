@@ -33,43 +33,18 @@
 
 		<DataTemplate x:Key="ChatFullTemplate" x:DataType="chatItem:ChatListItemViewModel">
 			<Grid Height="{StaticResource ChatItemHeight}"
-				  ColumnDefinitions="Auto,*,Auto"
+				  ColumnDefinitions="*,Auto"
 				  HorizontalAlignment="Stretch">
-				<controls:AvatarControl Grid.Column="0"
-										Classes="Medium"
-										Source="{Binding Avatar}"
-										DisplayName="{Binding Name}"
-										FallbackIcon="{StaticResource GroupIcon}"
-										ShowOnlineIndicator="False"
-										VerticalAlignment="Center"/>
+			<controls:ChatItemView Grid.Column="0"
+								HorizontalAlignment="Stretch"/>
 
-				<StackPanel Grid.Column="1"
-							VerticalAlignment="Center"
-							Margin="{StaticResource ChatInfoMargin}"
-							HorizontalAlignment="Stretch">
-					<TextBlock Text="{Binding Name}"
-							   FontWeight="SemiBold"
-							   FontSize="{StaticResource FontSizeTitle}"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"/>
-
-					<TextBlock Classes="ChatPreview"
-							   FontSize="{StaticResource FontSizeBody}"
-							   TextTrimming="CharacterEllipsis"
-							   MaxLines="1"
-							   Margin="{StaticResource PreviewTopMargin}"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-						<Run Text="{Binding LastMessageSenderName}"/>
-						<Run Text=": "/>
-						<Run Text="{Binding LastMessagePreview}"/>
-					</TextBlock>
-
-					<TextBlock Text="Нет сообщений"
-							   Foreground="{DynamicResource TextMuted}"
-							   FontSize="{StaticResource FontSizeBody}"
-							   Margin="{StaticResource PreviewTopMargin}"
-							   IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-				</StackPanel>
+				<TextBlock Grid.Column="1"
+						   Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
+						   Foreground="{DynamicResource TextMuted}"
+						   FontSize="{StaticResource FontSizeSmall}"
+						   VerticalAlignment="Top"
+						   HorizontalAlignment="Right"
+						   Margin="8,4,0,0"/>
 
 				<StackPanel Grid.Column="2"
 							VerticalAlignment="Top"

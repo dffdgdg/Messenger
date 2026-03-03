@@ -30,7 +30,7 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserGroupsAsync(userId),"Групповые чаты пользователя получены успешно");
+        return await ExecuteAsync(() => chatService.GetUserGroupsAsync(userId), "Групповые чаты пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}")]
@@ -39,7 +39,7 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserChatsAsync(userId),"Чаты пользователя получены успешно");
+        return await ExecuteAsync(() => chatService.GetUserChatsAsync(userId), "Чаты пользователя получены успешно");
     }
 
     [HttpGet("{chatId}")]
@@ -61,6 +61,18 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         }, "Участники чата получены успешно");
     }
 
+
+    [HttpGet("{chatId}/members/detailed")]
+    public async Task<ActionResult<ApiResponse<List<ChatMemberDto>>>> GetChatMembersDetailed(int chatId)
+    {
+        var currentUserId = GetCurrentUserId();
+        return await ExecuteAsync(async () =>
+        {
+            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
+            return await chatMemberService.GetMembersAsync(chatId);
+        }, "Участники чата получены успешно");
+    }
+
     [HttpPost("{chatId}/members")]
     public async Task<ActionResult<ApiResponse<ChatMemberDto>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
     {
@@ -73,7 +85,16 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
     public async Task<IActionResult> RemoveChatMember(int chatId, int userId)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => chatMemberService.RemoveMemberAsync(chatId, userId, currentUserId),"Участник чата удалён успешно");
+        return await ExecuteAsync(() => chatMemberService.RemoveMemberAsync(chatId, userId, currentUserId), "Участник чата удалён успешно");
+    }
+
+
+    [HttpPut("{chatId}/members/{userId}/role")]
+    public async Task<ActionResult<ApiResponse<ChatMemberDto>>> UpdateChatMemberRole(int chatId, int userId, [FromQuery] ChatRole role)
+    {
+        var currentUserId = GetCurrentUserId();
+        return await ExecuteAsync(() => chatMemberService.UpdateRoleAsync(chatId, userId, role, currentUserId),
+            "Роль участника чата обновлена успешно");
     }
 
     [HttpPost]

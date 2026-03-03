@@ -76,6 +76,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         _globalHub.TotalUnreadChanged += OnTotalUnreadChanged;
         _globalHub.UnreadCountChanged += OnUnreadCountChanged;
+        _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
 
         InitializeSearchManager();
         _ = LoadChats();
@@ -115,6 +116,54 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         {
             chat.UnreadCount = unreadCount;
         }
+    }
+    private void OnMessageReceivedGlobally(MessageDto message)
+    {
+        var chat = Chats.FirstOrDefault(c => c.Id == message.ChatId);
+        if (chat == null)
+            return;
+
+        var currentUserId = _authManager.Session.UserId;
+        chat.LastMessageSenderName = currentUserId.HasValue && message.SenderId == currentUserId.Value
+            ? "Вы"
+            : message.SenderName;
+        chat.LastMessagePreview = BuildLastMessagePreview(message);
+        chat.LastMessageDate = message.CreatedAt;
+
+        MoveChatToTop(chat);
+    }
+
+    private void MoveChatToTop(ChatListItemViewModel chat)
+    {
+        var currentIndex = Chats.IndexOf(chat);
+        if (currentIndex <= 0)
+            return;
+
+        Chats.Move(currentIndex, 0);
+
+        if (SelectedChat?.Id == chat.Id)
+        {
+            SelectedChat = chat;
+        }
+    }
+
+    private static string BuildLastMessagePreview(MessageDto message)
+    {
+        if (message.Poll != null)
+            return "Опрос";
+
+        if (message.IsVoiceMessage)
+            return "Голосовое сообщение";
+
+        if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
+            return "Вложение";
+
+        if (string.IsNullOrWhiteSpace(message.Content))
+            return "Сообщение";
+
+        return message.Content.Length > 100
+            ? message.Content[..100] + "..."
+            : message.Content;
     }
 
     #endregion
@@ -568,6 +617,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         {
             _globalHub.TotalUnreadChanged -= OnTotalUnreadChanged;
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
+            _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
 
             if (SearchManager != null)
             {

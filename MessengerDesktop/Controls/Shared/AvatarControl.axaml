@@ -55,6 +55,9 @@
                     - Source="file.pptx" → tries to decode as bitmap → crash
                     - Source="avatar.webp" but no token → 401 → log spam
                 -->
+                <Image Source="{Binding ImageBitmap, ElementName=Root}"
+                       Stretch="UniformToFill"
+                       IsVisible="{Binding HasBitmapImage, ElementName=Root}"/>
                 <Panel IsVisible="{Binding HasImage, ElementName=Root}">
                     <Image x:Name="AvatarImage"
                            Stretch="UniformToFill"

@@ -38,7 +38,6 @@
 	  <AvaloniaXaml Remove="Assets\Styles\ChatListSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\ChatMessagesSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\Controls.axaml" />
-	  <AvaloniaXaml Remove="Assets\Styles\Typography.axaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -75,9 +74,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AvaloniaResource Update="Assets\Fonts\SegoeMDL2Assets.ttf">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</AvaloniaResource>
 		<AvaloniaResource Update="Assets\Styles\Base\MainStyle.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
@@ -85,9 +81,6 @@
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
 		<AvaloniaResource Update="Assets\Styles\Controls\Controls.axaml">
-		  <SubType>Designer</SubType>
-		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\Styles\Typography.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
 	</ItemGroup>

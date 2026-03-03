@@ -173,11 +173,10 @@
 							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
 							<StackPanel Spacing="8">
-								<Grid ColumnDefinitions="*,Auto">
+								<StackPanel Orientation="Horizontal">
 									<TextBlock Text="Участники" FontWeight="SemiBold" FontSize="14"/>
-									<TextBlock Grid.Column="1" Text="{Binding Members.Count}"
-											   Foreground="{DynamicResource TextMuted}"/>
-								</Grid>
+									<TextBlock Text="{Binding Members.Count}" Foreground="{DynamicResource TextMuted}" Padding="10,0"/>
+								</StackPanel>
 
 								<ItemsControl ItemsSource="{Binding Members}">
 									<ItemsControl.ItemTemplate>

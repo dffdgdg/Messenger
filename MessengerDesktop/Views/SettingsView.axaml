@@ -49,9 +49,7 @@
 						<Border Classes="SettingsSection">
 							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
 								<PathIcon Data="{DynamicResource NotificationsIcon}"
-										  Width="20" Height="20"
-										  Foreground="{DynamicResource TextTertiary}"
-										  VerticalAlignment="Center"/>
+										  Width="20" Height="20"/>
 
 								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 									<TextBlock Text="Push-уведомления"
@@ -75,9 +73,7 @@
 						<Border Classes="SettingsSection">
 							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
 								<PathIcon Data="{DynamicResource DeleteIcon}"
-										  Width="20" Height="20"
-										  Foreground="{DynamicResource TextTertiary}"
-										  VerticalAlignment="Center"/>
+										  Width="20" Height="20"/>
 
 								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 									<TextBlock Text="Очистить кэш"

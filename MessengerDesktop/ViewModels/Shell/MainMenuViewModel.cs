@@ -1,4 +1,4 @@
-using MessengerDesktop.Services.Realtime;
+п»їusing MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
@@ -21,7 +21,6 @@ public partial class MainMenuViewModel : BaseViewModel
     private readonly IAuthManager _authManager;
     private readonly IChatsViewModelFactory _chatsViewModelFactory;
     private readonly IServiceProvider _serviceProvider;
-
     private ChatsViewModel? _chatsViewModel;
     private ChatsViewModel? _contactsViewModel;
     private DepartmentManagementViewModel? _departmentViewModel;
@@ -179,16 +178,16 @@ public partial class MainMenuViewModel : BaseViewModel
 
                     _departmentViewModel.ShowRemoveConfirmAction = async member =>
                     {
-                        var dialog = new ConfirmDialogViewModel("Удаление из отдела",
-                            $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?",
-                            "Удалить","Отмена");
+                        var dialog = new ConfirmDialogViewModel("РЈРґР°Р»РµРЅРёРµ РёР· РѕС‚РґРµР»Р°",
+                            $"Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ {member.DisplayName} РёР· РѕС‚РґРµР»Р°?",
+                            "РЈРґР°Р»РёС‚СЊ","РћС‚РјРµРЅР°");
                         await _mainWindowViewModel.ShowDialogAsync(dialog);
                         return await dialog.Result;
                     };
 
                     _departmentViewModel.ShowSelectUserAction = async users =>
                     {
-                        var dialog = new SelectUserDialogViewModel(users, "Добавить сотрудника");
+                        var dialog = new SelectUserDialogViewModel(users, "Р”РѕР±Р°РІРёС‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°");
                         await _mainWindowViewModel.ShowDialogAsync(dialog);
                         return await dialog.Result;
                     };
@@ -223,21 +222,21 @@ public partial class MainMenuViewModel : BaseViewModel
     private void ClearSearch() => SearchText = string.Empty;
 
     /// <summary>
-    /// Переключиться на нужную вкладку и открыть чат (универсальный метод)
+    /// РџРµСЂРµРєР»СЋС‡РёС‚СЊСЃСЏ РЅР° РЅСѓР¶РЅСѓСЋ РІРєР»Р°РґРєСѓ Рё РѕС‚РєСЂС‹С‚СЊ С‡Р°С‚ (СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ)
     /// </summary>
     public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
-        // Определяем нужную вкладку по типу чата
+        // РћРїСЂРµРґРµР»СЏРµРј РЅСѓР¶РЅСѓСЋ РІРєР»Р°РґРєСѓ РїРѕ С‚РёРїСѓ С‡Р°С‚Р°
         bool isGroupChat = chat.Type == ChatType.Chat || chat.Type == ChatType.Department;
 
         if (isGroupChat)
         {
-            // Используем существующий метод для групп
+            // РСЃРїРѕР»СЊР·СѓРµРј СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РјРµС‚РѕРґ РґР»СЏ РіСЂСѓРїРї
             await OpenChatAsync(chat);
         }
         else
         {
-            // Для контактов переключаемся на вкладку контактов
+            // Р”Р»СЏ РєРѕРЅС‚Р°РєС‚РѕРІ РїРµСЂРµРєР»СЋС‡Р°РµРјСЃСЏ РЅР° РІРєР»Р°РґРєСѓ РєРѕРЅС‚Р°РєС‚РѕРІ
             SetActiveMenu(5);
             await Task.Delay(50);
 
@@ -253,7 +252,7 @@ public partial class MainMenuViewModel : BaseViewModel
         }
     }
     /// <summary>
-    /// Переключиться на нужную вкладку и открыть сообщение
+    /// РџРµСЂРµРєР»СЋС‡РёС‚СЊСЃСЏ РЅР° РЅСѓР¶РЅСѓСЋ РІРєР»Р°РґРєСѓ Рё РѕС‚РєСЂС‹С‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ
     /// </summary>
     public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto message)
     {
@@ -328,7 +327,7 @@ public partial class MainMenuViewModel : BaseViewModel
         }
         else
         {
-            ErrorMessage = $"Не удалось загрузить профиль: {result.Error}";
+            ErrorMessage = $"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРѕС„РёР»СЊ: {result.Error}";
         }
     });
 
@@ -349,7 +348,7 @@ public partial class MainMenuViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
+            ErrorMessage = $"РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РґРёР°Р»РѕРіР°: {ex.Message}";
         }
     }
 
@@ -358,9 +357,9 @@ public partial class MainMenuViewModel : BaseViewModel
         var result = await _apiClient.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Poll.Create, dto);
 
         if (result.Success)
-            SuccessMessage = "Опрос создан";
+            SuccessMessage = "РћРїСЂРѕСЃ СЃРѕР·РґР°РЅ";
         else
-            ErrorMessage = $"Ошибка создания опроса: {result.Error}";
+            ErrorMessage = $"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РѕРїСЂРѕСЃР°: {result.Error}";
     });
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
@@ -381,7 +380,7 @@ public partial class MainMenuViewModel : BaseViewModel
     });
 
     /// <summary>
-    /// Показать диалог создания новой группы
+    /// РџРѕРєР°Р·Р°С‚СЊ РґРёР°Р»РѕРі СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ РіСЂСѓРїРїС‹
     /// </summary>
     public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onGroupCreated = null)
     {
@@ -389,15 +388,16 @@ public partial class MainMenuViewModel : BaseViewModel
         {
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
             {
-                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName)
-                => await CreateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupCreated)
+                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName)
+                    => await CreateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupCreated),
+                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
             };
 
             await _mainWindowViewModel.ShowDialogAsync(dialog);
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
+            ErrorMessage = $"РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РґРёР°Р»РѕРіР°: {ex.Message}";
         }
     }
 
@@ -430,30 +430,33 @@ public partial class MainMenuViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Показать диалог редактирования группы
+    /// РџРѕРєР°Р·Р°С‚СЊ РґРёР°Р»РѕРі СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РіСЂСѓРїРїС‹
     /// </summary>
     public async Task ShowEditGroupDialogAsync(ChatDto chat, Action<ChatDto>? onGroupUpdated = null)
     {
         try
         {
-            var membersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chat.Members(chat.Id));
+            var membersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
+                ApiEndpoints.Chat.MembersDetailed(chat.Id));
             var members = membersResult.Success ? membersResult.Data : null;
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
             {
-                SaveAction = async (chatDto, memberIds, avatarStream, avatarFileName)
-                => await UpdateGroupChatAsync(chatDto, memberIds, avatarStream, avatarFileName, onGroupUpdated)
+                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName)
+                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupUpdated),
+                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
             };
 
             await _mainWindowViewModel.ShowDialogAsync(dialog);
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
+            ErrorMessage = $"РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РґРёР°Р»РѕРіР°: {ex.Message}";
         }
     }
 
-    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto,List<int> memberIds,Stream? avatarStream,string? avatarFileName,Action<ChatDto>? onSuccess)
+    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream,
+    string? avatarFileName, Action<ChatDto>? onSuccess)
     {
         try
         {
@@ -461,7 +464,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             if (!createResult.Success || createResult.Data == null)
             {
-                ErrorMessage = $"Ошибка создания группы: {createResult.Error}";
+                ErrorMessage = $"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РіСЂСѓРїРїС‹: {createResult.Error}";
                 return false;
             }
 
@@ -469,7 +472,15 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds)
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(createdChat.Id), new UpdateChatMemberDto { UserId = userId });
+                await _apiClient.PostAsync(
+                    ApiEndpoints.Chat.Members(createdChat.Id),
+                    new UpdateChatMemberDto { UserId = userId });
+            }
+
+            foreach (var adminId in adminIds)
+            {
+                await _apiClient.PutAsync(
+                    ApiEndpoints.Chat.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -477,7 +488,8 @@ public partial class MainMenuViewModel : BaseViewModel
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chat.Avatar(createdChat.Id),avatarStream,avatarFileName,contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
+                    ApiEndpoints.Chat.Avatar(createdChat.Id), avatarStream, avatarFileName, contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -486,23 +498,22 @@ public partial class MainMenuViewModel : BaseViewModel
             }
 
             UserChats.Add(createdChat);
-
             await OpenChatAsync(createdChat);
 
             onSuccess?.Invoke(createdChat);
-            SuccessMessage = "Группа успешно создана";
-
+            SuccessMessage = "Р“СЂСѓРїРїР° СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅР°";
             return true;
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка: {ex.Message}";
+            ErrorMessage = $"РћС€РёР±РєР°: {ex.Message}";
             return false;
         }
     }
 
 
-    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
+    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
+        Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
     {
         try
         {
@@ -513,18 +524,24 @@ public partial class MainMenuViewModel : BaseViewModel
                 ChatType = ChatType.Chat
             };
 
-            var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
+            var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(
+                ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
 
             if (!updateResult.Success || updateResult.Data == null)
             {
-                ErrorMessage = $"Ошибка обновления группы: {updateResult.Error}";
+                ErrorMessage = $"РћС€РёР±РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ РіСЂСѓРїРїС‹: {updateResult.Error}";
                 return false;
             }
 
             var updatedChat = updateResult.Data;
 
-            var currentMembersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chat.Members(chatDto.Id));
-            var currentMemberIds = currentMembersResult.Data?.Select(m => m.Id).ToHashSet() ?? [];
+            var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chat.MembersDetailed(chatDto.Id));
+            var currentMembers = currentMembersResult.Data ?? [];
+            var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
+            var currentAdminIds = currentMembers
+                .Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
+                .Select(x => x.UserId)
+                .ToHashSet();
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
             {
@@ -536,13 +553,29 @@ public partial class MainMenuViewModel : BaseViewModel
                 await _apiClient.DeleteAsync(ApiEndpoints.Chat.RemoveMember(chatDto.Id, userId));
             }
 
+            foreach (var adminId in adminIds
+                .Where(id => currentMemberIds.Contains(id) && !currentAdminIds.Contains(id)))
+            {
+                await _apiClient.PutAsync(
+                    ApiEndpoints.Chat.MemberRole(chatDto.Id, adminId, ChatRole.Admin), null!);
+            }
+
+            foreach (var memberId in currentAdminIds
+                .Where(id => id != chatDto.CreatedById
+                          && !adminIds.Contains(id)
+                          && currentMemberIds.Contains(id)))
+            {
+                await _apiClient.PutAsync(
+                    ApiEndpoints.Chat.MemberRole(chatDto.Id, memberId, ChatRole.Member), null!);
+            }
+
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
             {
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chat.Avatar(chatDto.Id),avatarStream,
-                    avatarFileName,contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
+                    ApiEndpoints.Chat.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -558,13 +591,12 @@ public partial class MainMenuViewModel : BaseViewModel
             }
 
             onSuccess?.Invoke(updatedChat);
-            SuccessMessage = "Группа успешно обновлена";
-
+            SuccessMessage = "Р“СЂСѓРїРїР° СѓСЃРїРµС€РЅРѕ РѕР±РЅРѕРІР»РµРЅР°";
             return true;
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка: {ex.Message}";
+            ErrorMessage = $"РћС€РёР±РєР°: {ex.Message}";
             return false;
         }
     }

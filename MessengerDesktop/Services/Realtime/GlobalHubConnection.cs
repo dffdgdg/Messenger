@@ -17,6 +17,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, bool>? UserStatusChanged;
     event Action<int, int>? UnreadCountChanged;
     event Action<int>? TotalUnreadChanged;
+    event Action<MessageDto>? MessageReceivedGlobally;
     event Action<MessageDto>? MessageUpdatedGlobally;
     event Action<int, int>? MessageDeletedGlobally;
 
@@ -57,6 +58,7 @@ public sealed class GlobalHubConnection(
     public event Action<int, bool>? UserStatusChanged;
     public event Action<int, int>? UnreadCountChanged;
     public event Action<int>? TotalUnreadChanged;
+    public event Action<MessageDto>? MessageReceivedGlobally;
     public event Action<MessageDto>? MessageUpdatedGlobally;
     public event Action<int, int>? MessageDeletedGlobally;
     public event Action<UserDto>? UserProfileUpdated;
@@ -289,6 +291,8 @@ public sealed class GlobalHubConnection(
     private void OnNewMessageReceived(MessageDto message)
     {
         _ = CacheIncomingMessageAsync(message);
+
+        Dispatcher.UIThread.Post(() => MessageReceivedGlobally?.Invoke(message));
 
         if (_currentChatId == message.ChatId)
             return;

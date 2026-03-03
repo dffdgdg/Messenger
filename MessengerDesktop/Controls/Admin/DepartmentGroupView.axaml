@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="using:MessengerDesktop.Controls.Admin"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:user="using:MessengerShared.Dto.User"
+             x:Class="MessengerDesktop.Controls.Admin.DepartmentGroupView"
+             x:DataType="admin:DepartmentGroup">
+  <StackPanel>
+        <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
+            <Border Background="{DynamicResource CardBgBrush}"
+                    CornerRadius="6" Padding="12,6">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource OrganizationIcon}"
+                              Width="14" Height="14"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                    <TextBlock Text="{Binding DepartmentName}"
+                               FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Height="1"
+                    Background="{DynamicResource BorderDefault}"
+                    Margin="12,0,0,0" VerticalAlignment="Center"/>
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding Users}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="8"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="user:UserDto">
+                    <local:UserCardView
+                        EditCommand="{Binding $parent[local:DepartmentGroupView].EditUserCommand}"
+                        BanCommand="{Binding $parent[local:DepartmentGroupView].BanUserCommand}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

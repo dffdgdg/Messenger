@@ -2,13 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 Design.Width="400" Design.Height="900"
+             mc:Ignorable="d"
+             Design.Width="320" Design.Height="720"
              x:Class="MessengerDesktop.Controls.ChatInfoSkeleton">
-   <ScrollViewer Padding="16" 
-                  VerticalScrollBarVisibility="Hidden"
+
+    <ScrollViewer VerticalScrollBarVisibility="Hidden"
                   HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="20">
+        <StackPanel Spacing="20" Margin="16,16,16,32">
 
             <StackPanel HorizontalAlignment="Center" Spacing="12">
                 <Border Classes="Skeleton"
@@ -17,7 +17,7 @@
                         HorizontalAlignment="Center"/>
 
                 <Border Classes="Skeleton"
-                        Width="140" Height="24"
+                        Width="150" Height="22"
                         CornerRadius="6"
                         HorizontalAlignment="Center"/>
 
@@ -30,18 +30,18 @@
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
             <StackPanel Spacing="16">
-                <StackPanel Spacing="6">
-                    <Border Classes="Skeleton" Width="120" Height="12" CornerRadius="3"
-                            HorizontalAlignment="Left"/>
-                    <Border Classes="Skeleton" Width="160" Height="16" CornerRadius="4"
-                            HorizontalAlignment="Left"/>
+                <StackPanel Spacing="2">
+                    <Border Classes="Skeleton" Width="130" Height="14"
+                            CornerRadius="3" HorizontalAlignment="Left"/>
+                    <Border Classes="Skeleton" Width="120" Height="16"
+                            CornerRadius="4" HorizontalAlignment="Left"/>
                 </StackPanel>
 
-                <StackPanel Spacing="6">
-                    <Border Classes="Skeleton" Width="80" Height="12" CornerRadius="3"
-                            HorizontalAlignment="Left"/>
-                    <Border Classes="Skeleton" Width="200" Height="16" CornerRadius="4"
-                            HorizontalAlignment="Left"/>
+                <StackPanel Spacing="2">
+                    <Border Classes="Skeleton" Width="40" Height="14"
+                            CornerRadius="3" HorizontalAlignment="Left"/>
+                    <Border Classes="Skeleton" Width="180" Height="16"
+                            CornerRadius="4" HorizontalAlignment="Left"/>
                 </StackPanel>
             </StackPanel>
 
@@ -49,16 +49,20 @@
 
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Classes="Skeleton" Width="18" Height="18" CornerRadius="4"/>
-                <Border Grid.Column="1" Classes="Skeleton" Width="100" Height="16" 
-                        CornerRadius="4" Margin="12,0,0,0" HorizontalAlignment="Left"/>
-                <Border Grid.Column="2" Classes="Skeleton" Width="44" Height="24" CornerRadius="12"/>
+                <Border Grid.Column="1" Classes="Skeleton"
+                        Width="100" Height="16"
+                        CornerRadius="4" Margin="12,0,0,0"
+                        HorizontalAlignment="Left"/>
+                <Border Grid.Column="2" Classes="Skeleton"
+                        Width="44" Height="24" CornerRadius="12"/>
             </Grid>
 
             <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-            <StackPanel Spacing="8">
-                <Border Classes="Skeleton" Width="120" Height="16" CornerRadius="4"
-                        HorizontalAlignment="Left" Margin="0,0,0,8"/>
+            <StackPanel Spacing="4">
+                <Border Classes="Skeleton" Width="120" Height="16"
+                        CornerRadius="4" HorizontalAlignment="Left"
+                        Margin="0,0,0,8"/>
 
                 <Border Classes="Skeleton" Height="44" CornerRadius="8"/>
                 <Border Classes="Skeleton" Height="44" CornerRadius="8"/>
@@ -69,43 +73,51 @@
 
             <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto">
-                    <Border Classes="Skeleton" Width="90" Height="16" CornerRadius="4"
-                            HorizontalAlignment="Left"/>
-                    <Border Grid.Column="1" Classes="Skeleton" Width="24" Height="16" CornerRadius="4"/>
+                    <Border Classes="Skeleton" Width="90" Height="16"
+                            CornerRadius="4" HorizontalAlignment="Left"/>
+                    <Border Grid.Column="1" Classes="Skeleton"
+                            Width="24" Height="16" CornerRadius="4"/>
                 </Grid>
 
                 <StackPanel Spacing="8">
                     <Grid ColumnDefinitions="Auto,*" Height="48">
                         <Border Classes="Skeleton" Width="40" Height="40" CornerRadius="20"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="6">
-                            <Border Classes="Skeleton" Width="120" Height="14" CornerRadius="4"
-                                    HorizontalAlignment="Left"/>
-                            <Border Classes="Skeleton" Width="80" Height="12" CornerRadius="3"
-                                    HorizontalAlignment="Left"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Margin="12,0,0,0" Spacing="2">
+                            <Border Classes="Skeleton" Width="120" Height="14"
+                                    CornerRadius="4" HorizontalAlignment="Left"/>
+                            <Border Classes="Skeleton" Width="80" Height="12"
+                                    CornerRadius="3" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Grid>
-                    
+
                     <Grid ColumnDefinitions="Auto,*" Height="48">
                         <Border Classes="Skeleton" Width="40" Height="40" CornerRadius="20"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="6">
-                            <Border Classes="Skeleton" Width="100" Height="14" CornerRadius="4"
-                                    HorizontalAlignment="Left"/>
-                            <Border Classes="Skeleton" Width="60" Height="12" CornerRadius="3"
-                                    HorizontalAlignment="Left"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Margin="12,0,0,0" Spacing="2">
+                            <Border Classes="Skeleton" Width="100" Height="14"
+                                    CornerRadius="4" HorizontalAlignment="Left"/>
+                            <Border Classes="Skeleton" Width="60" Height="12"
+                                    CornerRadius="3" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Grid>
-                    
+
                     <Grid ColumnDefinitions="Auto,*" Height="48">
                         <Border Classes="Skeleton" Width="40" Height="40" CornerRadius="20"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="6">
-                            <Border Classes="Skeleton" Width="140" Height="14" CornerRadius="4"
-                                    HorizontalAlignment="Left"/>
-                            <Border Classes="Skeleton" Width="70" Height="12" CornerRadius="3"
-                                    HorizontalAlignment="Left"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Margin="12,0,0,0" Spacing="2">
+                            <Border Classes="Skeleton" Width="140" Height="14"
+                                    CornerRadius="4" HorizontalAlignment="Left"/>
+                            <Border Classes="Skeleton" Width="70" Height="12"
+                                    CornerRadius="3" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>
             </StackPanel>
+
+            <Border Height="1" Background="{DynamicResource BorderDefault}"/>
+
+            <Border Classes="Skeleton" Height="44" CornerRadius="8"/>
 
         </StackPanel>
     </ScrollViewer>

@@ -3,218 +3,199 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:vm="clr-namespace:MessengerDesktop.ViewModels"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
 			 xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
 			 xmlns:controls="using:MessengerDesktop.Controls"
 			 x:Class="MessengerDesktop.Views.ChatEditDialog"
 			 x:DataType="vmDialog:ChatEditDialogViewModel"
 			 mc:Ignorable="d"
-			 d:DesignWidth="450" d:DesignHeight="600">
-	<Border Classes="DialogContainer" Width="450" MaxHeight="650"
+			 d:DesignWidth="450" d:DesignHeight="800">
+
+	<Border Classes="DialogContainer" Width="450" MaxHeight="800"
 			Background="{DynamicResource SecondaryBG}">
 		<Grid RowDefinitions="Auto,*,Auto">
-
 			<StackPanel Grid.Row="0" Spacing="16" Margin="0,0,0,16">
-				<TextBlock Text="{Binding Title}"
-						   FontWeight="Bold"
-						   FontSize="20"/>
-				<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0">
-					<Grid Grid.Column="0"
-						  Width="80" Height="80"
-						  Margin="0,0,16,0">
+				<TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="20"/>
 
+				<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0">
+					<Grid Grid.Column="0" Width="80" Height="80" Margin="0,0,16,0">
 						<controls:AvatarControl Classes="XLarge"
-												Source="{Binding AvatarPreview}"
+												ImageBitmap="{Binding AvatarPreview}"
 												FallbackIcon="{StaticResource GroupIcon}"
 												ShowOnlineIndicator="False"
 												PlaceholderBackground="{DynamicResource SurfaceVariant}"
 												PlaceholderForeground="White"/>
-						<Button Classes="IconButton"
-								Width="28" Height="28"
-								CornerRadius="14"
-								HorizontalAlignment="Right"
-								VerticalAlignment="Bottom"
+						<Button Classes="IconButton" Width="28" Height="28" CornerRadius="14"
+								HorizontalAlignment="Right" VerticalAlignment="Bottom"
 								Command="{Binding SelectAvatarCommand}"
 								ToolTip.Tip="Выбрать аватар">
 							<Path Data="{StaticResource CameraIcon}"
-								  Width="14" Height="14"
-								  Stretch="Uniform"
+								  Width="14" Height="14" Stretch="Uniform"
 								  Fill="{DynamicResource TextPrimary}"/>
 						</Button>
-
-						<Button Classes="IconButton"
-								Width="20" Height="20"
-								CornerRadius="10"
-								HorizontalAlignment="Right"
-								VerticalAlignment="Top"
+						<Button Classes="IconButton" Width="20" Height="20" CornerRadius="10"
+								HorizontalAlignment="Right" VerticalAlignment="Top"
 								Margin="0,-4,-4,0"
 								Command="{Binding ClearAvatarCommand}"
 								IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
 								ToolTip.Tip="Удалить аватар">
 							<Path Data="{StaticResource CloseIcon}"
-								  Width="8" Height="8"
-								  Stretch="Uniform"
+								  Width="8" Height="8" Stretch="Uniform"
 								  Fill="{DynamicResource TextSecondary}"/>
 						</Button>
 					</Grid>
 
 					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-						<TextBlock Text="Название группы"
-								   FontWeight="DemiBold"
-								   FontSize="12"
+						<TextBlock Text="Название группы" FontWeight="DemiBold" FontSize="12"
 								   Foreground="{DynamicResource TextSecondary}"/>
-						<TextBox Text="{Binding Name}"
-								 Watermark="Введите название..."
-								 Classes="DialogInput"
-								 MaxLength="100"/>
+						<TextBox Text="{Binding Name}" Watermark="Введите название..."
+								 Classes="DialogInput" MaxLength="100"/>
 					</StackPanel>
 				</Grid>
 			</StackPanel>
 
-			<Grid Grid.Row="1" RowDefinitions="Auto,Auto,*">
-				<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-					<TextBlock Grid.Column="0" VerticalAlignment="Center">
-						<Run Text="Участники" FontWeight="DemiBold"/>
-						<Run Text=" ("/>
-						<Run Text="{Binding SelectedUsersCount}"/>
-						<Run Text=" выбрано)"/>
-					</TextBlock>
+			<ScrollViewer Grid.Row="1"
+              VerticalScrollBarVisibility="Auto"
+              Classes="ThinScrollbar">
+    <StackPanel Spacing="12" Margin="0,0,0,8">
 
-					<StackPanel Grid.Column="1"
-								Orientation="Horizontal"
-								Spacing="8">
-						<Button Content="Все"
-								Classes="TextButton"
-								Command="{Binding SelectAllCommand}"
-								FontSize="12"/>
-						<Button Content="Снять"
-								Classes="TextButton"
-								Command="{Binding DeselectAllCommand}"
-								FontSize="12"/>
-					</StackPanel>
-				</Grid>
+        <TextBlock Text="УПРАВЛЕНИЕ" Classes="CategoryHeader" Margin="0"/>
 
-				<TextBox Grid.Row="1"
-						 Text="{Binding SearchUserQuery}"
-						 Watermark="Поиск пользователей..."
-						 Classes="DialogInput SearchInput"
-						 Margin="0,0,0,8"/>
+        <Border Classes="SettingsSection" Padding="4">
+            <StackPanel Spacing="0">
+                <Button Classes="MemberItem"
+                        Command="{Binding ManageParticipantsCommand}"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <PathIcon Data="{StaticResource GroupIcon}"
+                                  Width="20" Height="20"/>
+                        <TextBlock Grid.Column="1" Text="Участники"
+                                   FontWeight="SemiBold" FontSize="14"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <Border Grid.Column="2" Classes="CountBadge"
+                                VerticalAlignment="Center" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding ParticipantsCount}"/>
+                        </Border>
+                        <Path Grid.Column="3"
+                              Data="{StaticResource ChevronRightIcon}"
+                              Width="12" Height="12" Stretch="Uniform"
+                              Fill="{DynamicResource TextMuted}"
+                              VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
 
-				<StackPanel Grid.Row="2"
-							IsVisible="{Binding IsBusy}"
-							VerticalAlignment="Center"
-							HorizontalAlignment="Center">
-					<ProgressBar IsIndeterminate="True"
-								 Width="32" Height="32"/>
-					<TextBlock Text="Загрузка пользователей..."
-							   Margin="0,8,0,0"
-							   Foreground="{DynamicResource TextSecondary}"/>
-				</StackPanel>
+                <Border Height="1" Background="{DynamicResource BorderDefault}"
+                        Margin="40,0,12,0"/>
 
-				<Border Grid.Row="2"
-						BorderThickness="1"
-						BorderBrush="{DynamicResource BorderBrush}"
-						CornerRadius="8"
-						IsVisible="{Binding !IsBusy}">
-					<ScrollViewer HorizontalScrollBarVisibility="Disabled"
-								  VerticalScrollBarVisibility="Auto">
-						<ItemsControl ItemsSource="{Binding FilteredUsers}"
-									  Margin="4">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="vmDialog:ChatEditDialogViewModel+SelectableUserItem">
-									<Border Padding="8,6"
-											CornerRadius="6"
-											Cursor="Hand"
-											Background="Transparent"
-											PointerPressed="OnUserItemPressed">
-										<Border.Styles>
-											<Style Selector="Border:pointerover">
-												<Setter Property="Background"
-														Value="{DynamicResource SurfaceHover}"/>
-											</Style>
-										</Border.Styles>
+                <Button Classes="MemberItem"
+                        Command="{Binding ManageAdminsCommand}"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <PathIcon Data="M12,1 L3,5 L3,11 C3,16.55 6.84,21.74 12,23 C17.16,21.74 21,16.55 21,11 L21,5 Z"
+                                  Width="20" Height="20"/>
+                        <TextBlock Grid.Column="1" Text="Администраторы"
+                                   FontWeight="SemiBold" FontSize="14"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <Border Grid.Column="2" Classes="CountBadge"
+                                VerticalAlignment="Center" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding AdminsCount}"/>
+                        </Border>
+                        <Path Grid.Column="3"
+                              Data="{StaticResource ChevronRightIcon}"
+                              Width="12" Height="12" Stretch="Uniform"
+                              Fill="{DynamicResource TextMuted}"
+                              VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
+            </StackPanel>
+        </Border>
 
-										<Grid ColumnDefinitions="Auto,Auto,*,Auto">
-											<CheckBox Grid.Column="0"
-													  IsChecked="{Binding IsSelected}"
-													  Margin="0,0,12,0"
-													  VerticalAlignment="Center"/>
+        <Border CornerRadius="8" Padding="12,8"
+                Background="{DynamicResource ThirdBG}"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <PathIcon Data="M12,12 C14.21,12 16,10.21 16,8 C16,5.79 14.21,4 12,4 C9.79,4 8,5.79 8,8 C8,10.21 9.79,12 12,12 Z M12,14 C9.33,14 4,15.34 4,18 L4,20 L20,20 L20,18 C20,15.34 14.67,14 12,14 Z"
+                          Width="16" Height="16"/>
+                <TextBlock Grid.Column="1" Text="Ваша роль"
+                           FontSize="13" Margin="10,0,0,0"
+                           Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="2"
+                        Background="{DynamicResource AccentMuted}"
+                        CornerRadius="6" Padding="10,3">
+                    <TextBlock Text="{Binding CurrentUserRole}"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Accent}"/>
+                </Border>
+            </Grid>
+        </Border>
 
-											<controls:AvatarControl Grid.Column="1"
-																	Size="36"
-																	FontSize="14"
-																	IconSize="16"
-																	Source="{Binding AvatarUrl}"
-																	DisplayName="{Binding DisplayName}"
-																	ShowOnlineIndicator="False"
-																	PlaceholderBackground="{DynamicResource AccentLight}"
-																	PlaceholderForeground="{DynamicResource AccentForeground}"
-																	Margin="0,0,12,0"/>
+        <StackPanel Spacing="12" IsVisible="{Binding !IsNewChat}">
+            <TextBlock Text="НАСТРОЙКИ" Classes="CategoryHeader" Margin="0,8,0,0"/>
 
-											<StackPanel Grid.Column="2"
-														VerticalAlignment="Center"
-														Spacing="2">
-												<TextBlock Text="{Binding DisplayName}"
-														   FontWeight="Medium"
-														   TextTrimming="CharacterEllipsis"/>
-												<TextBlock Text="{Binding Username}"
-														   FontSize="12"
-														   Foreground="{DynamicResource TextSecondary}"
-														   TextTrimming="CharacterEllipsis"/>
-											</StackPanel>
+            <Border Classes="SettingsSection" Padding="4">
+                <Border Padding="12,10" CornerRadius="8">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <PathIcon Data="M13,3 C8.03,3 4,7.03 4,12 L1,12 L4.89,15.89 L4.96,16.03 L9,12 L6,12 C6,8.13 9.13,5 13,5 C16.87,5 20,8.13 20,12 C20,15.87 16.87,19 13,19 C11.07,19 9.32,18.21 8.06,16.94 L6.64,18.36 C8.27,19.99 10.51,21 13,21 C17.97,21 22,16.97 22,12 C22,7.03 17.97,3 13,3 Z M12,8 L12,13 L16.28,15.54 L17,14.33 L13.5,12.25 L13.5,8 Z"
+                                  Width="20" Height="20"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Margin="12,0,12,0" Spacing="2">
+                            <TextBlock Text="История для новых участников"
+                                       FontWeight="SemiBold" FontSize="14"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2"
+                                      VerticalAlignment="Center"
+                                      OnContent="" OffContent=""
+                                      Margin="0,0,-8,0"/>
+                    </Grid>
+                </Border>
+            </Border>
+        </StackPanel>
 
-											<Path Grid.Column="3"
-												  Data="{StaticResource CheckIcon}"
-												  Width="16" Height="16"
-												  Stretch="Uniform"
-												  Fill="{DynamicResource AccentColor}"
-												  VerticalAlignment="Center"
-												  IsVisible="{Binding IsSelected}"/>
-										</Grid>
-									</Border>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
-				</Border>
+        <Border CornerRadius="12" Padding="4"
+                Background="{DynamicResource ThirdBG}"
+                BorderThickness="1" Margin="0,8"
+                BorderBrush="{DynamicResource DangerBorderBrush}"
+                IsVisible="{Binding !IsNewChat}">
+            <Button Classes="MemberItem"
+                    Padding="12,10">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <PathIcon Data="M6,19 C6,20.1 6.9,21 8,21 L16,21 C17.1,21 18,20.1 18,19 L18,7 L6,7 Z M19,4 L15.5,4 L14.5,3 L9.5,3 L8.5,4 L5,4 L5,6 L19,6 Z"
+                              Width="20" Height="20"
+                              Foreground="{DynamicResource DangerBrush}"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                Margin="12,0,0,0" Spacing="2">
+                        <TextBlock Text="Удалить группу"
+                                   FontWeight="SemiBold" FontSize="14"
+                                   Foreground="{DynamicResource DangerBrush}"/>
+                    </StackPanel>
+                    <Path Grid.Column="2"
+                          Data="{StaticResource ChevronRightIcon}"
+                          Width="12" Height="12" Stretch="Uniform"
+                          Fill="{DynamicResource DangerBrush}" Opacity="0.6"
+                          VerticalAlignment="Center"/>
+                </Grid>
+            </Button>
+        </Border>
 
-				<TextBlock Grid.Row="2"
-						   Text="Пользователи не найдены"
-						   HorizontalAlignment="Center"
-						   VerticalAlignment="Center"
-						   Foreground="{DynamicResource TextSecondary}"
-						   IsVisible="{Binding FilteredUsers.Count,
-						   Converter={conv:Converter Name=ZeroToTrue}}"/>
-			</Grid>
+    </StackPanel>
+</ScrollViewer>
 
 			<StackPanel Grid.Row="2" Spacing="12" Margin="0,16,0,0">
 				<TextBlock Text="{Binding ErrorMessage}"
-						   Foreground="{DynamicResource ErrorColor}"
-						   TextWrapping="Wrap"
-						   IsVisible="{Binding ErrorMessage,
-						   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
+						   Foreground="{DynamicResource ErrorColor}" TextWrapping="Wrap"
+						   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 				<TextBlock Text="{Binding SuccessMessage}"
-						   Foreground="{DynamicResource SuccessColor}"
-						   TextWrapping="Wrap"
-						   IsVisible="{Binding SuccessMessage,
-						   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-				<StackPanel Orientation="Horizontal"
-							HorizontalAlignment="Right"
-							Spacing="12">
-					<Button Content="Отмена"
-							Classes="DialogOutline"
-							Command="{Binding CancelCommand}"
-							MinWidth="100"/>
+						   Foreground="{DynamicResource SuccessColor}" TextWrapping="Wrap"
+						   IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+					<Button Content="Отмена" Classes="DialogOutline"
+							Command="{Binding CancelCommand}" MinWidth="100"/>
 					<Button Classes="DialogAccent"
-							Content="{Binding IsNewChat,
-							Converter={conv:Converter Name=BoolToString},
-							ConverterParameter='Создать|Сохранить'}"
+							Content="{Binding IsNewChat, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Создать|Сохранить'}"
 							Command="{Binding SaveCommand}"
-							IsEnabled="{Binding CanSave}"
-							MinWidth="100">
-					</Button>
+							IsEnabled="{Binding CanSave}" MinWidth="100"/>
 				</StackPanel>
 			</StackPanel>
 		</Grid>

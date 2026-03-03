@@ -49,9 +49,9 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             // PRAGMA через ExecuteScalarAsync — они возвращают значение, не "affected rows"
             await _db.ExecuteScalarAsync<string>("PRAGMA journal_mode=WAL");
             await _db.ExecuteScalarAsync<int>("PRAGMA synchronous=NORMAL");
-            await _db.ExecuteScalarAsync<int>("PRAGMA cache_size=-8000");
+            await _db.ExecuteScalarAsync<int>("PRAGMA cache_size=-4000");
             await _db.ExecuteScalarAsync<int>("PRAGMA temp_store=MEMORY");
-            await _db.ExecuteScalarAsync<long>("PRAGMA mmap_size=268435456");
+            await _db.ExecuteScalarAsync<long>("PRAGMA mmap_size=33554432");
 
             Debug.WriteLine("[LocalDB] PRAGMAs set");
 

@@ -388,7 +388,7 @@
 												<StackPanel Orientation="Horizontal"
 															Spacing="5"
 															IsVisible="{Binding !PasswordsMatch}">
-													<PathIcon Data="{StaticResource DismissIcon}"
+													<PathIcon Data="{StaticResource CloseIcon}"
 															  Width="12" Height="12"
 															  Foreground="{DynamicResource ErrorBrush}"/>
 													<TextBlock Text="Пароли не совпадают"

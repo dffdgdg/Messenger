@@ -29,6 +29,7 @@ public class ChatService(
     IReadReceiptService readReceiptService,
     IUrlBuilder urlBuilder,
     ICacheService cacheService,
+    AppDateTime appDateTime,
     ILogger<ChatService> logger)
     : BaseService<ChatService>(context, logger), IChatService
 {
@@ -257,7 +258,7 @@ public class ChatService(
                 Name = dto.Type == ChatType.Contact ? null : dto.Name?.Trim(),
                 Type = dto.Type,
                 CreatedById = dto.CreatedById,
-                CreatedAt = AppDateTime.UtcNow
+                CreatedAt = appDateTime.UtcNow
             };
 
             _context.Chats.Add(chat);
@@ -268,7 +269,7 @@ public class ChatService(
                 ChatId = chat.Id,
                 UserId = dto.CreatedById,
                 Role = ChatRole.Owner,
-                JoinedAt = AppDateTime.UtcNow
+                JoinedAt = appDateTime.UtcNow
             });
 
             if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
@@ -278,7 +279,7 @@ public class ChatService(
                     ChatId = chat.Id,
                     UserId = contactUserId.Value,
                     Role = ChatRole.Member,
-                    JoinedAt = AppDateTime.UtcNow
+                    JoinedAt = appDateTime.UtcNow
                 });
             }
 

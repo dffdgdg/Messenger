@@ -5,7 +5,7 @@ namespace MessengerAPI.Hubs;
 
 [Authorize]
 public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
-    ILogger<ChatHub> logger) : Hub
+    AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
 
@@ -60,7 +60,7 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
                     var user = await context.Users.FindAsync(userId.Value);
                     if (user != null)
                     {
-                        user.LastOnline = AppDateTime.UtcNow;
+                        user.LastOnline = appDateTime.UtcNow;
                         await context.SaveChangesAsync();
                     }
 

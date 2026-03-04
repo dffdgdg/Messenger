@@ -25,6 +25,7 @@ public class MessageService(
     IUrlBuilder urlBuilder,
     TranscriptionQueue transcriptionQueue,
     IOptions<MessengerSettings> settings,
+    AppDateTime appDateTime,
     ILogger<MessageService> logger)
     : BaseService<MessageService>(context, logger), IMessageService
 {
@@ -34,15 +35,9 @@ public class MessageService(
 
     private IQueryable<Message> MessagesWithIncludes()
         => _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.MessageFiles)
-            .Include(m => m.Polls)
-                .ThenInclude(p => p.PollOptions)
-                .ThenInclude(o => o.PollVotes)
-            .Include(m => m.ReplyToMessage)
-                .ThenInclude(r => r!.Sender)
-            .Include(m => m.ForwardedFromMessage)
-                .ThenInclude(f => f!.Sender);
+            .Include(m => m.Sender).Include(m => m.MessageFiles).Include(m => m.Polls)
+            .ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage)
+            .ThenInclude(r => r!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender);
 
     #endregion
 
@@ -51,9 +46,7 @@ public class MessageService(
         if (dto.ReplyToMessageId.HasValue)
         {
             var replyExists = await _context.Messages.AnyAsync(m =>
-                m.Id == dto.ReplyToMessageId.Value
-                && m.ChatId == dto.ChatId
-                && m.IsDeleted != true);
+                m.Id == dto.ReplyToMessageId.Value && m.ChatId == dto.ChatId && m.IsDeleted != true);
 
             if (!replyExists)
                 return Result<MessageDto>.Failure("Сообщение для ответа не найдено в этом чате");
@@ -89,8 +82,7 @@ public class MessageService(
 
         await UpdateChatLastMessageTimeAsync(dto.ChatId);
 
-        var createdMessage = await MessagesWithIncludes()
-            .FirstAsync(m => m.Id == message.Id);
+        var createdMessage = await MessagesWithIncludes().FirstAsync(m => m.Id == message.Id);
         var messageDto = createdMessage.ToDto(dto.SenderId, urlBuilder);
 
         await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDto", messageDto);
@@ -141,20 +133,15 @@ public class MessageService(
         var beforeAndTarget = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
             .OrderByDescending(m => m.Id)
-            .Take(halfCount + 1)
-            .AsNoTracking().ToListAsync();
+            .Take(halfCount + 1).AsNoTracking().ToListAsync();
 
         var after = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
-            .OrderBy(m => m.Id)
-            .Take(halfCount)
-            .AsNoTracking().ToListAsync();
+            .OrderBy(m => m.Id).Take(halfCount).AsNoTracking().ToListAsync();
 
         var messages = beforeAndTarget
-            .OrderBy(m => m.Id)
-            .Concat(after)
-            .Select(m => m.ToDto(userId, urlBuilder))
-            .ToList();
+            .OrderBy(m => m.Id).Concat(after)
+            .Select(m => m.ToDto(userId, urlBuilder)).ToList();
 
         var oldestLoadedId = beforeAndTarget.Count > 0 ? beforeAndTarget.Min(m => m.Id) : messageId;
         var hasOlder = await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestLoadedId
@@ -238,7 +225,7 @@ public class MessageService(
             return Result<MessageDto>.Failure("Содержимое сообщения не может быть пустым");
 
         message.Content = dto.Content.Trim();
-        message.EditedAt = AppDateTime.UtcNow;
+        message.EditedAt = appDateTime.UtcNow;
         await SaveChangesAsync();
 
         var messageDto = message.ToDto(userId, urlBuilder);
@@ -263,7 +250,7 @@ public class MessageService(
 
         message.IsDeleted = true;
         message.Content = null;
-        message.EditedAt = AppDateTime.UtcNow;
+        message.EditedAt =  appDateTime.UtcNow;
         await SaveChangesAsync();
 
         await hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted", new { MessageId = messageId, message.ChatId });
@@ -412,16 +399,14 @@ public class MessageService(
             .Include(m => m.Sender)
             .Include(m => m.Chat)
             .Include(m => m.MessageFiles)
-            .OrderByDescending(m => m.CreatedAt)
-            .AsNoTracking();
+            .OrderByDescending(m => m.CreatedAt).AsNoTracking();
 
         var totalCount = await messagesQuery.CountAsync();
         var messages = await Paginate(messagesQuery, page, pageSize).ToListAsync();
 
         var dialogChatIds = messages
             .Where(m => m.Chat.Type == ChatType.Contact)
-            .Select(m => m.ChatId)
-            .Distinct().ToList();
+            .Select(m => m.ChatId).Distinct().ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
@@ -436,8 +421,7 @@ public class MessageService(
 
         var partners = await _context.ChatMembers
             .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
-            .Include(cm => cm.User)
-            .AsNoTracking().ToListAsync();
+            .Include(cm => cm.User).AsNoTracking().ToListAsync();
 
         return partners.Where(p => p.User != null).ToDictionary(
             p => p.ChatId,
@@ -456,8 +440,7 @@ public class MessageService(
             SenderName = message.Sender?.FormatDisplayName(),
             Content = message.Content,
             CreatedAt = message.CreatedAt,
-            HighlightedContent = CreateHighlightedContent(
-                message.Content, searchTerm),
+            HighlightedContent = CreateHighlightedContent(message.Content, searchTerm),
             HasFiles = message.MessageFiles?.Count > 0
         };
 
@@ -536,7 +519,7 @@ public class MessageService(
         var chat = await _context.Chats.FindAsync(chatId);
         if (chat != null)
         {
-            chat.LastMessageTime = AppDateTime.UtcNow;
+            chat.LastMessageTime = appDateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
     }
@@ -545,17 +528,14 @@ public class MessageService(
     {
         try
         {
-            var usersToNotify = await _context.ChatMembers
-                .Where(cm => cm.ChatId == message.ChatId
-                    && cm.UserId != message.SenderId)
-                .Select(cm => new
+            var usersToNotify = await _context.ChatMembers.Where(cm => cm.ChatId == message.ChatId
+                && cm.UserId != message.SenderId).Select(cm => new
                 {
                     cm.UserId,
                     cm.NotificationsEnabled,
                     GlobalEnabled = cm.User.UserSetting == null
                         || cm.User.UserSetting.NotificationsEnabled
-                })
-                .ToListAsync();
+                }).ToListAsync();
 
             foreach (var member in usersToNotify)
             {

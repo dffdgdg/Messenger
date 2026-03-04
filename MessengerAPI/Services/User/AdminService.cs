@@ -9,9 +9,7 @@ public interface IAdminService
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
 }
 
-public class AdminService(
-    MessengerDbContext context,
-    ILogger<AdminService> logger)
+public class AdminService(MessengerDbContext context, AppDateTime appDateTime, ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
@@ -64,7 +62,7 @@ public class AdminService(
             Name = dto.Name.Trim(),
             Midname = dto.Midname?.Trim(),
             DepartmentId = dto.DepartmentId,
-            CreatedAt = AppDateTime.UtcNow,
+            CreatedAt = appDateTime.UtcNow,
             IsBanned = false,
             UserSetting = new UserSetting
             {

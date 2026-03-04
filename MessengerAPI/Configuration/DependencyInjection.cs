@@ -40,6 +40,8 @@ public static class DependencyInjection
     {
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<AppDateTime>();
 
         services.AddSingleton<IOnlineUserService, OnlineUserService>();
         services.AddScoped<ICacheService, CacheService>();

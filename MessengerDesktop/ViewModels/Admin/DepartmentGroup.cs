@@ -7,7 +7,6 @@ public class DepartmentGroup(string departmentName, int? departmentId, Observabl
     public string DepartmentName { get; } = departmentName;
     public int? DepartmentId { get; } = departmentId;
     public ObservableCollection<UserDto> Users { get; } = users;
-
     public int UsersCount => Users.Count;
     public int ActiveUsersCount => Users.Count(u => !u.IsOnline);
     public int BannedUsersCount => Users.Count(u => u.IsOnline);

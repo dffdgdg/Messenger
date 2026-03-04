@@ -6,7 +6,6 @@ public partial class HierarchicalDepartmentViewModel(DepartmentDto department, i
 {
     public DepartmentDto Department { get; } = department;
     public int Level { get; } = level;
-
     public int Id => Department.Id;
     public string Name => Department.Name;
     public string? HeadName => Department.HeadName;

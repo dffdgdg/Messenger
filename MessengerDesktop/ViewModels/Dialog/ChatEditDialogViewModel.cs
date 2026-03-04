@@ -112,6 +112,9 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         AvailableUsers = new ObservableCollection<SelectableUserItem>(users);
         SubscribeToUsers(AvailableUsers);
         ApplyUserFilter();
+        OnPropertyChanged(nameof(SelectedUsersCount));
+        OnPropertyChanged(nameof(ParticipantsCount));
+        OnPropertyChanged(nameof(AdminsCount));
         NotifyCanSaveChanged();
     }
 

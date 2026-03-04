@@ -11,7 +11,7 @@ public interface IReadReceiptService
     Task<ChatReadInfoDto?> GetChatReadInfoAsync(int userId, int chatId);
 }
 
-public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptService> logger) : IReadReceiptService
+public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime, ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
     public async Task<ReadReceiptResponseDto> MarkAsReadAsync(int userId, MarkAsReadDto request)
     {
@@ -24,7 +24,7 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
         if (targetMessageId > 0 && (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
         {
             member.LastReadMessageId = targetMessageId;
-            member.LastReadAt = AppDateTime.UtcNow;
+            member.LastReadAt = appDateTime.UtcNow;
             await context.SaveChangesAsync();
 
             logger.LogDebug("Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}", userId, targetMessageId, request.ChatId);
@@ -46,14 +46,12 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
         if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
         {
             var messageExists = await context.Messages.AnyAsync(m =>
-                m.Id == messageId
-                && m.ChatId == chatId
-                && m.IsDeleted != true);
+                m.Id == messageId && m.ChatId == chatId && m.IsDeleted != true);
 
             if (messageExists)
             {
                 member.LastReadMessageId = messageId;
-                member.LastReadAt = AppDateTime.UtcNow;
+                member.LastReadAt = appDateTime.UtcNow;
                 await context.SaveChangesAsync();
 
                 logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}", userId, messageId, chatId);
@@ -186,8 +184,7 @@ public class ReadReceiptService(MessengerDbContext context, ILogger<ReadReceiptS
         return await context.Messages
             .Where(m => m.ChatId == request.ChatId && m.IsDeleted != true)
             .OrderByDescending(m => m.Id)
-            .Select(m => m.Id)
-            .FirstOrDefaultAsync();
+            .Select(m => m.Id).FirstOrDefaultAsync();
     }
 
     private static ReadReceiptResponseDto CreateResponse(ChatMember member, int unreadCount) => new()

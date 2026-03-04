@@ -50,8 +50,7 @@ public partial class UserService(
         var user = await _context.Users
             .Include(u => u.UserSetting)
             .Include(u => u.Department)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == id, ct);
+            .AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user == null)
             return Result<UserDto>.Failure($"Пользователь с ID {id} не найден");

@@ -24,7 +24,7 @@
 
 ### Common — Общие утилиты
 
-**`Common/AppDateTime.cs`** — Статический класс — единый источник времени. `UtcNow` → `DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)` для совместимости Npgsql.
+**`Common/AppDateTime.cs`** — Sealed class с DI-инъекцией `TimeProvider` — единый источник времени. `UtcNow` → `DateTime.SpecifyKind(timeProvider.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified)` для совместимости Npgsql. Регистрируется как singleton.
 
 **`Common/Result.cs`** — Result-паттерн. `Result` — `Success()`/`Failure(error)`. `Result<T>` — `Success(value)`/`Failure(error)`, деконструктор `(success, data, error)`, метод `Match<TResult>(onSuccess, onFailure)`.
 
@@ -34,7 +34,7 @@
 
 **`Configuration/AuthConfiguration.cs`** — `AddMessengerAuth`: JWT Bearer с параметрами из `TokenService.CreateValidationParameters`. SignalR-токен из query `access_token` для `/chatHub`. Fallback-политика: все эндпоинты требуют аутентификации.
 
-**`Configuration/DependencyInjection.cs`** — `AddMessengerDatabase` — PostgreSQL/Npgsql, маппинг enum `Theme`/`ChatRole`/`ChatType`, dev: SensitiveDataLogging. `AddInfrastructureServices` — MemoryCache, HttpContextAccessor, OnlineUserService(singleton), scoped: CacheService, AccessControlService, FileService, TokenService, HubNotifier, HttpUrlBuilder. `AddBusinessServices` — scoped: AuthService, UserService, AdminService, ChatService, ChatMemberService, NotificationService, MessageService, PollService, ReadReceiptService, DepartmentService; singletons: TranscriptionQueue, TranscriptionService; hosted: TranscriptionBackgroundService. `AddMessengerJson` — ReferenceHandler.IgnoreCycles, WriteIndented в dev.
+**`Configuration/DependencyInjection.cs`** — `AddMessengerDatabase` — PostgreSQL/Npgsql, маппинг enum `Theme`/`ChatRole`/`ChatType`, dev: SensitiveDataLogging. `AddInfrastructureServices` — MemoryCache, HttpContextAccessor, TimeProvider.System (singleton), AppDateTime (singleton), OnlineUserService(singleton), scoped: CacheService, AccessControlService, FileService, TokenService, HubNotifier, HttpUrlBuilder. `AddBusinessServices` — scoped: AuthService, UserService, AdminService, ChatService, ChatMemberService, NotificationService, MessageService, PollService, ReadReceiptService, DepartmentService; singletons: TranscriptionQueue, TranscriptionService; hosted: TranscriptionBackgroundService. `AddMessengerJson` — ReferenceHandler.IgnoreCycles, WriteIndented в dev.
 
 **`Configuration/JwtSettings.cs`** — POCO: `Secret`, `LifetimeHours`=24, `Issuer`="MessengerAPI", `Audience`="MessengerClient". Section: `"Jwt"`.
 
@@ -70,7 +70,7 @@
 
 ### Hubs — SignalR
 
-**`Hubs/ChatHub.cs`** — `[Authorize]`. **OnConnectedAsync**: регистрация в OnlineUserService, join `user_{id}` + все `chat_{id}`, broadcast `UserOnline`. **OnDisconnectedAsync**: при полном оффлайне — `LastOnline` в БД, broadcast `UserOffline`. **JoinChat/LeaveChat**: с проверкой членства. **MarkAsRead/MarkMessageAsRead**: через ReadReceiptService → `UnreadCountUpdated` caller + `MessageRead` остальным. **SendTyping** → `UserTyping`. **GetOnlineUsersInChat**. `IServiceScopeFactory`.
+**`Hubs/ChatHub.cs`** — `[Authorize]`. Инъекция `AppDateTime`. **OnConnectedAsync**: регистрация в OnlineUserService, join `user_{id}` + все `chat_{id}`, broadcast `UserOnline`. **OnDisconnectedAsync**: при полном оффлайне — `LastOnline` через `appDateTime.UtcNow` в БД, broadcast `UserOffline`. **JoinChat/LeaveChat**: с проверкой членства. **MarkAsRead/MarkMessageAsRead**: через ReadReceiptService → `UnreadCountUpdated` caller + `MessageRead` остальным. **SendTyping** → `UserTyping`. **GetOnlineUsersInChat**. `IServiceScopeFactory`.
 
 ### Mapping — Маппинг сущностей в DTO
 
@@ -106,9 +106,9 @@
 
 #### Chat
 
-**`Services/Chat/ChatService.cs`** — **GetUserChatsAsync**: GroupJoin с последним сообщением, unread, партнёр для Contact, сортировка. **CreateChatAsync**: транзакция, проверка дубликата. **UpdateChatAsync**: Admin, запрет Contact, смена типа Owner. **DeleteChatAsync**: Owner, `ExecuteDeleteAsync`. **UploadChatAvatarAsync**: webp.
+**`Services/Chat/ChatService.cs`** — Инъекция `AppDateTime`. **GetUserChatsAsync**: GroupJoin с последним сообщением, unread, партнёр для Contact, сортировка. **CreateChatAsync**: транзакция, проверка дубликата, `appDateTime.UtcNow` для CreatedAt/JoinedAt. **UpdateChatAsync**: Admin, запрет Contact, смена типа Owner. **DeleteChatAsync**: Owner, `ExecuteDeleteAsync`. **UploadChatAvatarAsync**: webp.
 
-**`Services/Chat/ChatMemberService.cs`** — Add (Admin + дубликат), Remove (защита Owner), UpdateRole (Owner only), GetMembers (detailed ChatMemberDto), Leave. Инвалидация кеша.
+**`Services/Chat/ChatMemberService.cs`** — Инъекция `AppDateTime`. Add (Admin + дубликат, `appDateTime.UtcNow` для JoinedAt), Remove (защита Owner), UpdateRole (Owner only), GetMembers (detailed ChatMemberDto), Leave. Инвалидация кеша.
 
 **`Services/Chat/NotificationService.cs`** — `SendNotificationAsync`: NotificationDto → HubNotifier. CRUD NotificationsEnabled.
 
@@ -130,7 +130,7 @@
 
 #### Messaging
 
-**`Services/Messaging/MessageService.cs`** — **Create**: валидация Reply/Forward, файлы (reverse URL→path), LastMessageTime, broadcast, notify+unread, voice→TranscriptionQueue. **Get**: пагинация Reverse, Around/Before/After по ID. **Update**: проверка владельца, запрет poll/voice/forward/deleted. **Delete**: soft-delete. **Search**: ILike с escape. **GlobalSearch**: чаты (Contact партнёр + Group name, до 5) + сообщения с highlight (±40 chars).
+**`Services/Messaging/MessageService.cs`** — Инъекция `AppDateTime`. **Create**: валидация Reply/Forward, файлы (reverse URL→path), `appDateTime.UtcNow` для LastMessageTime, broadcast, notify+unread, voice→TranscriptionQueue. **Get**: пагинация Reverse, Around/Before/After по ID. **Update**: проверка владельца, запрет poll/voice/forward/deleted, `appDateTime.UtcNow` для EditedAt. **Delete**: soft-delete, `appDateTime.UtcNow` для EditedAt. **Search**: ILike с escape. **GlobalSearch**: чаты (Contact партнёр + Group name, до 5) + сообщения с highlight (±40 chars).
 
 **`Services/Messaging/FileService.cs`** — **SaveImageAsync**: MIME валидация, ресайз ImageSharp, WebP. **SaveMessageFileAsync**: размер, `uploads/chats/{chatId}/{guid}{ext}`. **DeleteFile**: safe. **IsValidImage**.
 
@@ -142,13 +142,13 @@
 
 #### ReadReceipt
 
-**`Services/ReadReceipt/ReadReceiptService.cs`** — **MarkAsRead**: target messageId (конкретный или последний), обновление LastReadMessageId (только если >). **GetChatReadInfoAsync**: GroupBy → Count + FirstUnreadId. **GetAllUnreadCounts**: subquery. **GetUnreadCountsForChats**: батч.
+**`Services/ReadReceipt/ReadReceiptService.cs`** — Инъекция `AppDateTime`. **MarkAsRead**: target messageId (конкретный или последний), обновление LastReadMessageId (только если >), `appDateTime.UtcNow` для LastReadAt. **GetChatReadInfoAsync**: GroupBy → Count + FirstUnreadId. **GetAllUnreadCounts**: subquery. **GetUnreadCountsForChats**: батч.
 
 #### User
 
 **`Services/User/UserService.cs`** — GetAll/Get с online. UpdateProfile. UploadAvatar. GetOnlineStatus(es). **ChangeUsername**: regex + уникальность. **ChangePassword**: BCrypt verify→hash.
 
-**`Services/User/AdminService.cs`** — GetUsers. **CreateUser**: validation, lowercase, уникальность, BCrypt, UserSetting. **ToggleBan**: toggle.
+**`Services/User/AdminService.cs`** — Инъекция `AppDateTime`. GetUsers. **CreateUser**: validation, lowercase, уникальность, BCrypt, UserSetting, `appDateTime.UtcNow` для CreatedAt. **ToggleBan**: toggle.
 
 ### Model — Сущности БД
 
@@ -161,8 +161,6 @@
 **`Model/Message.cs`** — Id, ChatId, SenderId, Content, CreatedAt, EditedAt, IsDeleted, ReplyTo, ForwardedFrom, IsVoiceMessage, TranscriptionStatus. Навигации: Files, Polls, Reply/Forward inverse.
 
 **`Model/MessageFile.cs`** — Id, FileName, ContentType, MessageId, Path.
-
-**`Model/MessageStatus.cs`** — Id, MessageId, UserId, Status, UpdatedAt (legacy, не используется).
 
 **`Model/Poll.cs`** — Id, MessageId, IsAnonymous, AllowsMultipleAnswers, ClosesAt.
 
@@ -192,31 +190,31 @@
 
 **`ViewLocator.cs`** — `IDataTemplate`. Конвенция: "ViewModel"→"View". Match: `BaseViewModel`.
 
-### Controls
+### Views/Controls — UI-контролы
 
-**`Controls/Shared/AvatarControl.axaml.cs`** — StyledProperties: Size, FontSize, IconSize, Source, DisplayName, IsOnline, ShowOnlineIndicator, FallbackIcon, PlaceholderBg/Fg, IsCircular, ImageBitmap. DirectProperties: ImageSource, HasImage, HasBitmapImage, Initials, ShowInitials, ShowIcon, IconData, OnlineIndicatorSize, OnlineIndicatorCornerRadius, ShowOnlineStatus. Computed: ImageSource (валидация расширения через `ImageExtensions` HashSet — защита от non-image URL), HasImage (valid source && no bitmap), HasBitmapImage (bitmap priority), Initials (ФИ/Ии/?), ShowInitials/ShowIcon (учитывает и bitmap и source). Panel wrapper для AsyncImageLoader (предотвращает загрузку collapsed Image). ToAbsoluteUrl для relative paths. Adaptive OnlineIndicator (8–16px). CornerRadius: circular=Size/2, else=8. Size classes: Small(32)/Medium(40)/Large(56)/XLarge(80)/XXLarge(100).
+**`Views/Controls/Shared/AvatarControl.axaml.cs`** — StyledProperties: Size, FontSize, IconSize, Source, DisplayName, IsOnline, ShowOnlineIndicator, FallbackIcon, PlaceholderBg/Fg, IsCircular, ImageBitmap. DirectProperties: ImageSource, HasImage, HasBitmapImage, Initials, ShowInitials, ShowIcon, IconData, OnlineIndicatorSize, OnlineIndicatorCornerRadius, ShowOnlineStatus. Computed: ImageSource (валидация расширения через `ImageExtensions` HashSet — защита от non-image URL), HasImage (valid source && no bitmap), HasBitmapImage (bitmap priority), Initials (ФИ/Ии/?), ShowInitials/ShowIcon (учитывает и bitmap и source). Panel wrapper для AsyncImageLoader (предотвращает загрузку collapsed Image). ToAbsoluteUrl для relative paths. Adaptive OnlineIndicator (8–16px). CornerRadius: circular=Size/2, else=8. Size classes: Small(32)/Medium(40)/Large(56)/XLarge(80)/XXLarge(100).
 
-**`Controls/Admin/DepartmentCardView.axaml(.cs)`** — DataType=HierarchicalDepartmentViewModel. StyledProperty: EditCommand (ICommand). Рекурсивная карточка отдела: кнопка expand с ChevronIcon + RotateTransform анимация, иконка (OrganizationIcon для root, FolderIcon для child), HeadName/«Нет руководителя», бейджи UserCount (AccentMuted) / «Пусто» (WarningBg) / Children.Count. LevelToMargin indent, Canvas hierarchy line (StrokeLineCap.Round). Actions: Edit (DepartmentActions class). Дочерние элементы: ItemsControl с рекурсивным DepartmentCardView, вертикальная линия HierarchyLineBrush.
+**`Views/Controls/Admin/DepartmentCardView.axaml(.cs)`** — DataType=HierarchicalDepartmentViewModel. StyledProperty: EditCommand (ICommand). Рекурсивная карточка отдела: кнопка expand с ChevronIcon + RotateTransform анимация, иконка (OrganizationIcon для root, FolderIcon для child), HeadName/«Нет руководителя», бейджи UserCount (AccentMuted) / «Пусто» (WarningBg) / Children.Count. LevelToMargin indent, Canvas hierarchy line (StrokeLineCap.Round). Actions: Edit (DepartmentActions class). Дочерние элементы: ItemsControl с рекурсивным DepartmentCardView, вертикальная линия HierarchyLineBrush.
 
-**`Controls/Admin/DepartmentGroupView.axaml(.cs)`** — DataType=DepartmentGroup. StyledProperties: EditUserCommand, BanUserCommand (ICommand). Заголовок с OrganizationIcon + DepartmentName + разделитель. ItemsControl → UserCardView с проброской команд.
+**`Views/Controls/Admin/DepartmentGroupView.axaml(.cs)`** — DataType=DepartmentGroup. StyledProperties: EditUserCommand, BanUserCommand (ICommand). Заголовок с OrganizationIcon + DepartmentName + разделитель. ItemsControl → UserCardView с проброской команд.
 
-**`Controls/Admin/UserCardView.axaml(.cs)`** — DataType=UserDto. StyledProperties: EditCommand, BanCommand (ICommand). Border.Hoverable: аватар-заглушка (PersonIcon 40×40), DisplayName + @Username. Actions: Edit (EditIcon) + Ban (BlockIcon, Danger class).
+**`Views/Controls/Admin/UserCardView.axaml(.cs)`** — DataType=UserDto. StyledProperties: EditCommand, BanCommand (ICommand). Border.Hoverable: аватар-заглушка (PersonIcon 40×40), DisplayName + @Username. Actions: Edit (EditIcon) + Ban (BlockIcon, Danger class).
 
-**`Controls/ChatInfoSkeleton.axaml`** — Skeleton-заглушка для панели информации о чате. ScrollViewer: аватар (100×100 круг), имя, статус, два поля, toggle, 3 участника (аватар 40×40 + имя + статус). Классы `Skeleton`, разделители `DynamicResource BorderDefault`.
+**`Views/Controls/ChatInfoSkeleton.axaml`** — Skeleton-заглушка для панели информации о чате. ScrollViewer: аватар (100×100 круг), имя, статус, два поля, toggle, 3 участника (аватар 40×40 + имя + статус). Классы `Skeleton`, разделители `DynamicResource BorderDefault`.
 
-**`Controls/ChatItemView.axaml`** — DataType=`ChatListItemViewModel`. Grid(Auto,\*,Auto) высотой 52px: AvatarControl + имя/превью + `UnreadBadge` справа. ChatPreview (Run: Sender + Content) с fallback "Нет сообщений"; видимость превью/заглушки через `StringConverters.IsNotNullOrEmpty/IsNullOrEmpty`, бейдж через `GreaterThanZero`.
+**`Views/Controls/ChatItemView.axaml`** — DataType=`ChatListItemViewModel`. Grid(Auto,\*,Auto) высотой 52px: AvatarControl + имя/превью + `UnreadBadge` справа. ChatPreview (Run: Sender + Content) с fallback "Нет сообщений"; видимость превью/заглушки через `StringConverters.IsNotNullOrEmpty/IsNullOrEmpty`, бейдж через `GreaterThanZero`.
 
-**`Controls/ChatListSkeleton.axaml`** — Skeleton-заглушка для списка чатов. 6 элементов (Height=68): аватар 44×44 + имя + превью + время. Варьирующиеся ширины.
+**`Views/Controls/ChatListSkeleton.axaml`** — Skeleton-заглушка для списка чатов. 6 элементов (Height=68): аватар 44×44 + имя + превью + время. Варьирующиеся ширины.
 
-**`Controls/ChatMessagesSkeleton.axaml`** — Skeleton-заглушка для области сообщений. 6 блоков в формате чата — аватары 36×36, пузыри с BoxShadow, 1–3 строки разной ширины, промежуточные «продолжения».
+**`Views/Controls/ChatMessagesSkeleton.axaml`** — Skeleton-заглушка для области сообщений. 6 блоков в формате чата — аватары 36×36, пузыри с BoxShadow, 1–3 строки разной ширины, промежуточные «продолжения».
 
-**`Controls/RichMessageTextBlock.cs`** — Наследует `SelectableTextBlock`. StyledProperty `RawText`. URL Regex `(https?://[^\s<>"')\]]+)` (Compiled, 1s timeout). RebuildInlines: Run обычный + Run с LinkBrush=#4A9EEA + Underline. Hit-testing через `_linkRanges` + TextLayout.HitTestPoint (рефлексия + fallback GetCharIndexByPosition). Клик → `Process.Start(UseShellExecute)`, Hand cursor на ховере.
+**`Views/Controls/RichMessageTextBlock.cs`** — Наследует `SelectableTextBlock`. StyledProperty `RawText`. URL Regex `(https?://[^\s<>"')\]]+)` (Compiled, 1s timeout). RebuildInlines: Run обычный + Run с LinkBrush=#4A9EEA + Underline. Hit-testing через `_linkRanges` + TextLayout.HitTestPoint (рефлексия + fallback GetCharIndexByPosition). Клик → `Process.Start(UseShellExecute)`, Hand cursor на ховере.
 
-**`Controls/Shared/CircularProgress.cs`** — Custom `Control`. StyledProperties: Value, Maximum(100), Minimum, StrokeWidth(4), Size(32), Foreground(DodgerBlue), BackgroundTrack, IsIndeterminate. Анимация: DispatcherTimer.Run 16ms (~60fps), `_animationAngle += 6` mod 360. Render: StreamGeometry arc — background track (ellipse) + foreground arc. `DrawArc` с PenLineCap.Round, isLargeArc при >180°.
+**`Views/Controls/Shared/CircularProgress.cs`** — Custom `Control`. StyledProperties: Value, Maximum(100), Minimum, StrokeWidth(4), Size(32), Foreground(DodgerBlue), BackgroundTrack, IsIndeterminate. Анимация: DispatcherTimer.Run 16ms (~60fps), `_animationAngle += 6` mod 360. Render: StreamGeometry arc — background track (ellipse) + foreground arc. `DrawArc` с PenLineCap.Round, isLargeArc при >180°.
 
-**`Controls/Shared/ThemeSelectorControl.axaml`** — 3-колоночный Grid. Resources: LightPreview/DarkPreview ControlTemplate — мини-превью мессенджера. RadioButton.ThemeOption с custom template, `:checked`→Accent. System: preview по IsSystemDarkNow + badge "AUTO".
+**`Views/Controls/Shared/ThemeSelectorControl.axaml`** — 3-колоночный Grid. Resources: LightPreview/DarkPreview ControlTemplate — мини-превью мессенджера. RadioButton.ThemeOption с custom template, `:checked`→Accent. System: preview по IsSystemDarkNow + badge "AUTO".
 
-**`Controls/Shared/ThemeSelectorControl.axaml.cs`** — StyledProperties: SelectedTheme (AppTheme enum), IsLightSelected, IsDarkSelected, IsSystemSelected. DirectProperty: IsSystemDarkNow. Двухсторонняя синхронизация enum↔bool. Подписка ActualThemeVariantChanged.
+**`Views/Controls/Shared/ThemeSelectorControl.axaml.cs`** — StyledProperties: SelectedTheme (AppTheme enum), IsLightSelected, IsDarkSelected, IsSystemSelected. DirectProperty: IsSystemDarkNow. Двухсторонняя синхронизация enum↔bool. Подписка ActualThemeVariantChanged.
 
 ### Converters
 
@@ -286,7 +284,7 @@
 
 **`Services/Navigation/NavigationService.cs`** — Stack\<Type\> history. NavigateTo→Push. GoBack→Pop. NavigateToMainMenu→auth check.
 
-**`Services/Navigation/DialogService.cs`** — List\<DialogBaseViewModel\> stack. Channel\<CloseRequest\> (Bounded=10, SingleReader) + background processing. ShowAsync: SemaphoreSlim, animation(open). RequestAnimationAsync: TaskCompletionSource + 1s timeout.
+**`Services/Navigation/DialogService.cs`** — List\<DialogBaseViewModel\> stack. Channel\<CloseRequest\> (Bounded=10, SingleReader) + background processing. ShowAsync: SemaphoreSlim, анимация открытия только при первом диалоге (guard `hadOpenDialogs`). CloseAsync: анимация закрытия только если нет нижележащего диалога (guard `hasUnderlyingDialog`), при возврате к предыдущему диалогу без повторной анимации. RequestAnimationAsync: TaskCompletionSource + 1s timeout.
 
 **`Services/Platform/PlatformService.cs`** — MainWindow (explicit/ApplicationLifetime fallback). Clipboard (TopLevel). Copy/Get/Clear с try-catch.
 
@@ -410,13 +408,13 @@
 
 **`ViewModels/Dialog/DialogViewModelBase.cs`** — DialogBaseViewModel : BaseViewModel. CloseRequested event. InitializeAsync, Cancel, CloseOnBackgroundClick.
 
-**`ViewModels/Dialog/ChatEditDialogViewModel.cs`** — Create/Edit group. SelectableUserItem (IsSelected, Clone). CurrentUserRole, SelectedAdminIds. CanManageParticipants (Admin/Owner), CanManageAdmins (Owner). ManageParticipants→ChatUserPickerDialogViewModel (via ShowDialogAction). ManageAdmins→ChatUserPickerDialogViewModel (from selected users, clone with admin state). Avatar picker (5MB limit, LoadExistingAvatarAsync). SaveAction delegate with (ChatDto, memberIds, adminIds, Stream?, fileName). Dispose: unsubscribe + stream + bitmap.
+**`ViewModels/Dialog/ChatEditDialogViewModel.cs`** — Create/Edit group. SelectableUserItem (IsSelected, Clone). CurrentUserRole, SelectedAdminIds. CanManageParticipants (Admin/Owner), CanManageAdmins (Owner). ManageParticipants→ChatUserPickerDialogViewModel (via ShowDialogAction). ManageAdmins→ChatUserPickerDialogViewModel (from selected users, clone with admin state). Avatar picker (5MB limit, LoadExistingAvatarAsync). SaveAction delegate with (ChatDto, memberIds, adminIds, Stream?, fileName). Explicit property notifications после обновления AvailableUsers: SelectedUsersCount, ParticipantsCount, AdminsCount. Dispose: unsubscribe + stream + bitmap.
 
 **`ViewModels/Dialog/ChatUserPickerDialogViewModel.cs`** — Nested dialog for user selection. Source items cloned. SearchQuery→ApplyFilter. AllowEdit flag. SelectedCount computed. Save→applySelection callback with selected IDs→RequestClose.
 
 **`ViewModels/Dialog/ConfirmDialogViewModel.cs`** — TaskCompletionSource\<bool\>. Message, ConfirmText, CancelText.
 
-**`ViewModels/Dialog/DepartmentDialogViewModel.cs`** — BFS GetDescendantIds для предотвращения циклов. SaveAction delegate.
+**`ViewModels/Dialog/DepartmentDialogViewModel.cs`** — Упрощённая фильтрация доступных родительских отделов: исключается только сам редактируемый отдел (`d.Id != currentDepartmentId`), проверка циклов делегирована серверу (BFS в DepartmentService). SaveAction delegate.
 
 **`ViewModels/Dialog/DepartmentHeadDialogViewModel.cs`** — Head management + Confirm dialogs. CanDelete guard (hasChildren, userCount).
 
@@ -532,7 +530,7 @@
 - Adaptive UI — CompactMode с гистерезисом, responsive InfoPanel
 - Scroll preservation — offset compensation при подгрузке истории
 - Visibility tracking — debounced для read receipts
-- Animation coordination — TaskCompletionSource + timeout для dialog open/close
+- Animation coordination — TaskCompletionSource + timeout для dialog open/close; nested-aware (анимация только при переходе между «нет диалогов» ↔ «есть диалоги»)
 - Message grouping — 2-минутный порог, Alone/First/Middle/Last для bubble radius
 - Typing indicator cleanup loop — background 500ms interval, expire threshold
 - Hierarchy visualization — Canvas lines + LevelToMargin indent + expand/collapse animation
@@ -554,7 +552,7 @@
 - AuthenticatedImageLoader — JWT + extension filtering
 
 **Domain-specific**
-- BFS cycle prevention — Department hierarchy (server + client)
+- BFS cycle prevention — Department hierarchy (server DepartmentService), клиент делегирует проверку серверу
 - Forward with content inheritance — копирование content/files оригинала
 - Dual-scope search — global (chats+messages) и chat-local режимы
 - Reactive InfoPanel — подписки GlobalHub + ChatHub → InvalidateAllInfoPanelProperties
@@ -564,6 +562,9 @@
 - Hierarchical filtering — recursive clone with child propagation
 - Group chat management — diff-based member/role sync (add/remove members, promote/demote admins)
 - Nested user picker — ChatUserPickerDialog reusable for participants and admins with AllowEdit flag
+
+**Тестируемость**
+- Injectable TimeProvider — AppDateTime с DI-инъекцией TimeProvider для детерминированного времени в тестах
 
 **Deployment**
 - Docker multi-stage build — SDK→publish→aspnet runtime, non-root user

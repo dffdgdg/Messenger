@@ -12,7 +12,7 @@ public interface IChatMemberService
 }
 
 public sealed class ChatMemberService(MessengerDbContext context, ICacheService cache, IAccessControlService accessControl,
-    ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
+    AppDateTime appDateTime, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
@@ -29,7 +29,7 @@ public sealed class ChatMemberService(MessengerDbContext context, ICacheService 
             ChatId = chatId,
             UserId = userId,
             Role = role,
-            JoinedAt = AppDateTime.UtcNow,
+            JoinedAt = appDateTime.UtcNow,
             NotificationsEnabled = true
         };
 

@@ -6,97 +6,84 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Dialog;
 
-    public partial class DepartmentDialogViewModel : DialogBaseViewModel
+public partial class DepartmentDialogViewModel : DialogBaseViewModel
+{
+    private static readonly DepartmentDto NoParentPlaceholder = new()
     {
-        private static readonly DepartmentDto NoParentPlaceholder = new()
-        {
-            Id = -1,
-            Name = "(Нет родительского отдела)"
-        };
+        Id = -1,
+        Name = "(Нет родительского отдела)"
+    };
 
-        private readonly IReadOnlyList<DepartmentDto> _allDepartments;
+    private readonly IReadOnlyList<DepartmentDto> _allDepartments;
 
-        [ObservableProperty]
-        private string _name = string.Empty;
+    [ObservableProperty]
+    private string _name = string.Empty;
 
-        [ObservableProperty]
-        private ObservableCollection<DepartmentDto> _availableParents = [];
+    [ObservableProperty]
+    private ObservableCollection<DepartmentDto> _availableParents = [];
 
-        [ObservableProperty]
-        private DepartmentDto _selectedParent = NoParentPlaceholder;
+    [ObservableProperty]
+    private DepartmentDto _selectedParent = NoParentPlaceholder;
 
-        public int? EditId { get; }
-        public bool IsNewDepartment => EditId == null;
-        public int? ParentDepartmentId => SelectedParent.Id > 0 ? SelectedParent.Id : null;
-        public bool CanSave => !string.IsNullOrWhiteSpace(Name);
+    public int? EditId { get; }
+    public bool IsNewDepartment => EditId == null;
+    public int? ParentDepartmentId => SelectedParent.Id > 0 ? SelectedParent.Id : null;
+    public bool CanSave => !string.IsNullOrWhiteSpace(Name);
 
-        public Func<DepartmentDialogViewModel, Task>? SaveAction { get; set; }
+    public Func<DepartmentDialogViewModel, Task>? SaveAction { get; set; }
 
-        public DepartmentDialogViewModel(List<DepartmentDto> departments, DepartmentDto? department = null)
-        {
-            _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
-            EditId = department?.Id;
+    public DepartmentDialogViewModel(List<DepartmentDto> departments, DepartmentDto? department = null)
+    {
+        _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
+        EditId = department?.Id;
 
-            Title = department == null ? "Создать отдел" : $"Редактировать: {department.Name}";
-            CanCloseOnBackgroundClick = true;
+        Title = department == null ? "Создать отдел" : $"Редактировать: {department.Name}";
+        CanCloseOnBackgroundClick = true;
 
-            if (department != null)
-                Name = department.Name;
+        if (department != null)
+            Name = department.Name;
 
-            BuildAvailableParents(department);
-        }
+        BuildAvailableParents(department);
+    }
 
-        private void BuildAvailableParents(DepartmentDto? current)
-        {
-            var excludedIds = current != null ? GetDescendantIds(current.Id).Append(current.Id).ToHashSet() : [];
+    private void BuildAvailableParents(DepartmentDto? current)
+    {
+        var currentDepartmentId = current?.Id;
 
-            var parents = _allDepartments.Where(d => d.Id > 0 && !excludedIds.Contains(d.Id)).OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
+        var parents = _allDepartments
+                .Where(d => d.Id > 0 && d.Id != currentDepartmentId)
+                .OrderBy(d => d.Name)
+                .Prepend(NoParentPlaceholder);
 
-            AvailableParents = new ObservableCollection<DepartmentDto>(parents);
+        AvailableParents = new ObservableCollection<DepartmentDto>(parents);
 
-            SelectedParent = current?.ParentDepartmentId is int parentId
-                ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder
-                : NoParentPlaceholder;
-        }
+        SelectedParent = current?.ParentDepartmentId is int parentId
+            ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder
+            : NoParentPlaceholder;
+    }
 
-        private HashSet<int> GetDescendantIds(int rootId)
-        {
-            var result = new HashSet<int>();
-            var queue = new Queue<int>([rootId]);
-
-            while (queue.TryDequeue(out var currentId))
-            {
-                foreach (var child in _allDepartments.Where(d => d.ParentDepartmentId == currentId))
-                {
-                    if (result.Add(child.Id))
-                        queue.Enqueue(child.Id);
-                }
-            }
-            return result;
-        }
-
-        partial void OnNameChanged(string value)
-        {
-            if (CanSave) ErrorMessage = null;
-            SaveCommand.NotifyCanExecuteChanged();
-        }
+    partial void OnNameChanged(string value)
+    {
+        if (CanSave) ErrorMessage = null;
+        SaveCommand.NotifyCanExecuteChanged();
+    }
 
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(Name))
         {
-            if (string.IsNullOrWhiteSpace(Name))
-            {
-                ErrorMessage = "Введите название отдела";
-                return;
-            }
-
-            await SafeExecuteAsync(async () =>
-            {
-                if (SaveAction != null)
-                    await SaveAction(this);
-
-                SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлён";
-                RequestClose();
-            });
+            ErrorMessage = "Введите название отдела";
+            return;
         }
+
+        await SafeExecuteAsync(async () =>
+        {
+            if (SaveAction != null)
+                await SaveAction(this);
+
+            SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлён";
+            RequestClose();
+        });
     }
+}

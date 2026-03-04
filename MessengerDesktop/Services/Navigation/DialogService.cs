@@ -102,6 +102,8 @@ namespace MessengerDesktop.Services
 
             try
             {
+                var hadOpenDialogs = HasOpenDialogs;
+
                 if (CurrentDialog != null)
                 {
                     CurrentDialog.CloseRequested -= OnDialogClosed;
@@ -115,7 +117,10 @@ namespace MessengerDesktop.Services
 
                 OnDialogStackChanged?.Invoke();
 
-                await RequestAnimationAsync(isOpening: true);
+                if (!hadOpenDialogs)
+                {
+                    await RequestAnimationAsync(isOpening: true);
+                }
             }
             finally
             {
@@ -151,8 +156,12 @@ namespace MessengerDesktop.Services
                     return;
 
                 var closingDialog = CurrentDialog;
+                var hasUnderlyingDialog = _dialogStack.Count > 1;
 
-                await RequestAnimationAsync(isOpening: false);
+                if (!hasUnderlyingDialog)
+                {
+                    await RequestAnimationAsync(isOpening: false);
+                }
 
                 closingDialog.CloseRequested -= OnDialogClosed;
                 _dialogStack.Remove(closingDialog);
@@ -162,7 +171,6 @@ namespace MessengerDesktop.Services
                 if (CurrentDialog != null)
                 {
                     CurrentDialog.CloseRequested += OnDialogClosed;
-                    await RequestAnimationAsync(isOpening: true);
                 }
                 else
                 {

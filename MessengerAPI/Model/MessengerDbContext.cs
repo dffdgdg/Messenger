@@ -14,7 +14,7 @@ public partial class MessengerDbContext : DbContext
     }
 
     public virtual DbSet<Chat> Chats { get; set; }
-
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
     public virtual DbSet<ChatMember> ChatMembers { get; set; }
 
     public virtual DbSet<Department> Departments { get; set; }
@@ -391,5 +391,68 @@ public partial class MessengerDbContext : DbContext
                 .HasConstraintName("UserSettings_UserId_fkey");
         });
 
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("refresh_tokens_pkey");
+
+            entity.ToTable("refresh_tokens");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("nextval('\"RefreshTokens_Id_seq\"'::regclass)")
+                .HasColumnName("id");
+
+            entity.Property(e => e.UserId)
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.TokenHash)
+                .HasMaxLength(128)
+                .HasColumnName("token_hash");
+
+            entity.Property(e => e.JwtId)
+                .HasMaxLength(64)
+                .HasColumnName("jwt_id");
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("expires_at");
+
+            entity.Property(e => e.UsedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("used_at");
+
+            entity.Property(e => e.RevokedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("revoked_at");
+
+            entity.Property(e => e.ReplacedByTokenId)
+                .HasColumnName("replaced_by_token_id");
+
+            entity.Property(e => e.FamilyId)
+                .HasMaxLength(64)
+                .HasColumnName("family_id");
+
+            // Indexes
+            entity.HasIndex(e => e.TokenHash, "idx_refresh_tokens_token_hash");
+            entity.HasIndex(e => e.UserId, "idx_refresh_tokens_user_id");
+            entity.HasIndex(e => e.FamilyId, "idx_refresh_tokens_family_id");
+            entity.HasIndex(e => e.ExpiresAt, "idx_refresh_tokens_expires_at");
+
+            // Relationships
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.RefreshTokens)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("RefreshTokens_UserId_fkey");
+
+            entity.HasOne(d => d.ReplacedByToken)
+                .WithMany()
+                .HasForeignKey(d => d.ReplacedByTokenId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("RefreshTokens_ReplacedBy_fkey");
+        });
     }
 }

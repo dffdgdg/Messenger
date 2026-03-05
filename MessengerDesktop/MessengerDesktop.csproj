@@ -67,6 +67,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -64,6 +64,7 @@ public partial class LoginViewModel : BaseViewModel
     {
         try
         {
+            // Ждём завершения AuthManager.LoadStoredSessionAsync()
             var initTask = _authManager.WaitForInitializationAsync();
             var completed = await Task.WhenAny(initTask, Task.Delay(InitTimeout));
 
@@ -75,18 +76,25 @@ public partial class LoginViewModel : BaseViewModel
 
             await initTask;
 
+            // Проверяем: сессия уже восстановлена через refresh token?
             if (_authManager.Session.IsAuthenticated)
             {
+                Debug.WriteLine("LoginVM: Сессия восстановлена через refresh token, переход в MainMenu");
                 _navigation.NavigateToMainMenu();
                 return;
             }
 
+            // Сессия НЕ восстановлена (нет токенов или refresh не удался)
+            // Загружаем сохранённые credentials для отображения в UI
+            Debug.WriteLine("LoginVM: Сессия не восстановлена, загружаем credentials");
             await LoadSavedCredentialsAsync();
 
+            // Auto-login только если есть RememberMe И credentials
             if (RememberMe &&
                 !string.IsNullOrWhiteSpace(Username) &&
                 !string.IsNullOrWhiteSpace(Password))
             {
+                Debug.WriteLine("LoginVM: Попытка auto-login с сохранёнными credentials");
                 await TryAutoLoginAsync();
             }
         }
@@ -140,15 +148,23 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-
     // ========== Login ==========
 
     private bool CanLogin() => !IsBusy && !IsInitializing;
 
     private async Task TryAutoLoginAsync()
     {
+        // Двойная проверка: если за время загрузки credentials сессия уже восстановилась
+        if (_authManager.Session.IsAuthenticated)
+        {
+            Debug.WriteLine("LoginVM: TryAutoLogin — сессия уже активна, пропускаем");
+            _navigation.NavigateToMainMenu();
+            return;
+        }
+
         try
         {
+            Debug.WriteLine("LoginVM: TryAutoLogin — выполняем LoginAsync с паролем (новый FamilyId)");
             var result = await _authManager.LoginAsync(Username, Password);
 
             if (result.Success)
@@ -161,7 +177,6 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Save username error: {ex.Message}");
             Debug.WriteLine($"Auto login exception: {ex.Message}");
         }
     }

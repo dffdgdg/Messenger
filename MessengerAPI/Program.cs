@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
 
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+AppContext.SetSwitch("Npgsql.Enable TimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 

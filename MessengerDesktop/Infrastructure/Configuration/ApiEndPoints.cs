@@ -18,10 +18,10 @@ public static class ApiEndpoints
         private const string Base = $"{Api}/auth";
         /// <summary>POST api/auth/login</summary>
         public const string Login = $"{Base}/login";
-        /// <summary>POST api/auth/validate</summary>
-        public const string Validate = $"{Base}/validate";
-        /// <summary>POST api/auth/logout</summary>
-        public const string Logout = $"{Base}/logout";
+        /// <summary>POST api/auth/refresh</summary>
+        public const string Refresh = $"{Base}/refresh";
+        /// <summary>POST api/auth/revoke</summary>
+        public const string Revoke = $"{Base}/revoke";
     }
 
     /// <summary>

@@ -58,12 +58,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISecureStorageService, SecureStorageService>();
         services.AddSingleton<IAuthManager, AuthManager>();
 
-        services.AddSingleton<IApiClientService>(sp =>
-        {
-            var httpClient = sp.GetRequiredService<HttpClient>();
-            var sessionStore = sp.GetRequiredService<ISessionStore>();
-            return new ApiClientService(httpClient, sessionStore);
-        });
+        services.AddSingleton<IApiClientService>(sp => new ApiClientService(
+        sp.GetRequiredService<HttpClient>(),
+        sp.GetRequiredService<ISessionStore>(),
+        sp.GetRequiredService<IAuthManager>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();

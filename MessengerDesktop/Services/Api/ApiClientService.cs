@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -31,14 +32,26 @@ namespace MessengerDesktop.Services.Api
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly ISessionStore _sessionStore;
+        private readonly IAuthManager _authManager;
         private bool _disposed;
 
         private const long LargeFileThreshold = 10 * 1024 * 1024;
 
-        public ApiClientService(HttpClient httpClient, ISessionStore sessionStore)
+        /// <summary>
+        /// URLs, для которых НЕ нужно делать auto-refresh (чтобы избежать бесконечного цикла).
+        /// </summary>
+        private static readonly string[] NoRefreshUrls =
+        [
+            ApiEndpoints.Auth.Login,
+            ApiEndpoints.Auth.Refresh,
+            ApiEndpoints.Auth.Revoke
+        ];
+
+        public ApiClientService(HttpClient httpClient, ISessionStore sessionStore, IAuthManager authManager)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+            _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
 
             _jsonOptions = new JsonSerializerOptions
             {
@@ -49,13 +62,10 @@ namespace MessengerDesktop.Services.Api
             };
 
             UpdateAuthorizationHeader();
-
             _sessionStore.SessionChanged += OnSessionChanged;
 
             if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-            {
                 notifyPropertyChanged.PropertyChanged += OnSessionPropertyChanged;
-            }
         }
 
         private void OnSessionChanged() => UpdateAuthorizationHeader();
@@ -70,15 +80,10 @@ namespace MessengerDesktop.Services.Api
         {
             try
             {
-                if (!string.IsNullOrEmpty(_sessionStore.Token))
-                {
-                    _httpClient.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", _sessionStore.Token);
-                }
-                else
-                {
-                    _httpClient.DefaultRequestHeaders.Authorization = null;
-                }
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    !string.IsNullOrEmpty(_sessionStore.Token)
+                        ? new AuthenticationHeaderValue("Bearer", _sessionStore.Token)
+                        : null;
             }
             catch (Exception ex)
             {
@@ -91,10 +96,63 @@ namespace MessengerDesktop.Services.Api
             var request = new HttpRequestMessage(method, url);
             var token = _sessionStore.Token;
             if (!string.IsNullOrEmpty(token))
-            {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
             return request;
+        }
+
+        /// <summary>
+        /// Проверяет, нужно ли пробовать refresh для данного URL.
+        /// </summary>
+        private static bool ShouldAttemptRefresh(string url)
+        {
+            foreach (var noRefreshUrl in NoRefreshUrls)
+            {
+                if (url.Contains(noRefreshUrl, StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Центральный метод отправки запроса с поддержкой auto-refresh.
+        /// sendFunc вызывается повторно при retry — он должен создавать новый request.
+        /// </summary>
+        private async Task<HttpResponseMessage> SendWithRefreshAsync(
+            Func<Task<HttpResponseMessage>> sendFunc,
+            string url,
+            CancellationToken ct)
+        {
+            var response = await sendFunc();
+
+            if (response.StatusCode != HttpStatusCode.Unauthorized || !ShouldAttemptRefresh(url))
+                return response;
+
+            Debug.WriteLine($"[ApiClient] Got 401 for {url}, attempting token refresh...");
+
+            // Dispose ответ 401 — он нам больше не нужен
+            response.Dispose();
+
+            var refreshed = await _authManager.TryRefreshTokenAsync();
+
+            if (refreshed)
+            {
+                Debug.WriteLine("[ApiClient] Token refreshed, retrying...");
+                return await sendFunc();
+            }
+
+            Debug.WriteLine("[ApiClient] Token refresh failed");
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Сессия истекла. Войдите заново.",
+                        Timestamp = DateTime.Now
+                    }, _jsonOptions),
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            };
         }
 
         public async Task<ApiResponse<T>> GetAsync<T>(string url, CancellationToken ct = default)
@@ -102,20 +160,30 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                using var request = CreateRequest(HttpMethod.Get, url);
-                var response = await _httpClient.SendAsync(request, ct);
+                var response = await SendWithRefreshAsync(
+                    () =>
+                    {
+                        var request = CreateRequest(HttpMethod.Get, url);
+                        return _httpClient.SendAsync(request, ct);
+                    },
+                    url, ct);
+
                 return await ProcessResponseAsync<T>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
 
-        public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
+        public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(
+            string url, TRequest data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -127,7 +195,10 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync<T>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -139,7 +210,10 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -151,19 +225,26 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync<T>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { return CreateErrorResponse<T>(ex); }
         }
 
-        public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
+        public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(
+            string url, TRequest data, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -175,7 +256,10 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -187,7 +271,10 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await _httpClient.DeleteAsync(url, ct);
+                var response = await SendWithRefreshAsync(
+                    () => _httpClient.DeleteAsync(url, ct),
+                    url, ct);
+
                 return await ProcessResponseAsync(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -199,9 +286,14 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                using var request = CreateRequest(HttpMethod.Get, url);
-
-                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                var response = await SendWithRefreshAsync(
+                    async () =>
+                    {
+                        using var request = CreateRequest(HttpMethod.Get, url);
+                        return await _httpClient.SendAsync(
+                            request, HttpCompletionOption.ResponseHeadersRead, ct);
+                    },
+                    url, ct);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -213,9 +305,7 @@ namespace MessengerDesktop.Services.Api
                 var contentLength = response.Content.Headers.ContentLength;
 
                 if (contentLength > LargeFileThreshold)
-                {
                     return await CreateTempFileStreamAsync(response, ct);
-                }
 
                 var memoryStream = new MemoryStream();
                 try
@@ -240,17 +330,32 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        public async Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
+        public async Task<ApiResponse<T>> UploadFileAsync<T>(
+            string url, Stream fileStream, string fileName, string contentType,
+            CancellationToken ct = default)
         {
             ThrowIfDisposed();
             try
             {
-                using var content = new MultipartFormDataContent();
-                var streamContent = new StreamContent(fileStream);
-                streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                content.Add(streamContent, "file", fileName);
+                // Запоминаем позицию, чтобы при retry можно было перемотать
+                var startPosition = fileStream.CanSeek ? fileStream.Position : -1;
 
-                var response = await _httpClient.PostAsync(url, content, ct);
+                var response = await SendWithRefreshAsync(
+                    async () =>
+                    {
+                        // Перематываем stream при retry
+                        if (startPosition >= 0 && fileStream.Position != startPosition)
+                            fileStream.Position = startPosition;
+
+                        using var content = new MultipartFormDataContent();
+                        var streamContent = new StreamContent(fileStream);
+                        streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                        content.Add(streamContent, "file", fileName);
+
+                        return await _httpClient.PostAsync(url, content, ct);
+                    },
+                    url, ct);
+
                 return await ProcessResponseAsync<T>(response, ct);
             }
             catch (OperationCanceledException) { throw; }
@@ -259,7 +364,8 @@ namespace MessengerDesktop.Services.Api
 
         #region Response Processing
 
-        private async Task<ApiResponse<T>> ProcessResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
+        private async Task<ApiResponse<T>> ProcessResponseAsync<T>(
+            HttpResponseMessage response, CancellationToken ct)
         {
             var json = await response.Content.ReadAsStringAsync(ct);
 
@@ -277,8 +383,7 @@ namespace MessengerDesktop.Services.Api
             try
             {
                 var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(json, _jsonOptions);
-                if (apiResponse != null)
-                    return apiResponse;
+                if (apiResponse != null) return apiResponse;
 
                 var directData = JsonSerializer.Deserialize<T>(json, _jsonOptions);
                 return new ApiResponse<T>
@@ -300,7 +405,8 @@ namespace MessengerDesktop.Services.Api
             }
         }
 
-        private async Task<ApiResponse<object>> ProcessResponseAsync(HttpResponseMessage response, CancellationToken ct)
+        private async Task<ApiResponse<object>> ProcessResponseAsync(
+            HttpResponseMessage response, CancellationToken ct)
         {
             var json = await response.Content.ReadAsStringAsync(ct);
 
@@ -318,7 +424,11 @@ namespace MessengerDesktop.Services.Api
             try
             {
                 var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(json, _jsonOptions);
-                return apiResponse ?? new ApiResponse<object> { Success = true, Timestamp = DateTime.Now };
+                return apiResponse ?? new ApiResponse<object>
+                {
+                    Success = true,
+                    Timestamp = DateTime.Now
+                };
             }
             catch (JsonException ex)
             {
@@ -336,7 +446,8 @@ namespace MessengerDesktop.Services.Api
 
         #region Helpers
 
-        private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
+        private static async Task<Stream> CreateTempFileStreamAsync(
+            HttpResponseMessage response, CancellationToken ct)
         {
             var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
@@ -351,14 +462,16 @@ namespace MessengerDesktop.Services.Api
                 response.Dispose();
 
                 return new FileStream(tempPath, FileMode.Open, FileAccess.Read,
-                    FileShare.Read, 81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+                    FileShare.Read, 81920,
+                    FileOptions.DeleteOnClose | FileOptions.Asynchronous);
             }
             catch
             {
                 response.Dispose();
                 if (File.Exists(tempPath))
                 {
-                    try { File.Delete(tempPath); } catch { }
+                    try { File.Delete(tempPath); }
+                    catch { /* ignore */ }
                 }
                 throw;
             }
@@ -378,21 +491,19 @@ namespace MessengerDesktop.Services.Api
             Timestamp = DateTime.Now
         };
 
-        private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
+        private void ThrowIfDisposed() =>
+            ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
 
         #endregion
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
+            if (_disposed) return;
 
             _sessionStore.SessionChanged -= OnSessionChanged;
 
             if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-            {
                 notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
-            }
 
             _disposed = true;
         }

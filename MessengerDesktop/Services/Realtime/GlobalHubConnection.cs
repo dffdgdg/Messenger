@@ -116,10 +116,16 @@ public sealed class GlobalHubConnection(
             _hubConnection.On<int, int>("UserTyping", (chatId, userId) =>
                 Debug.WriteLine($"[GlobalHub] User {userId} is typing in chat {chatId}"));
 
-            _hubConnection.Reconnecting += error =>
+            _hubConnection.Reconnecting += async error =>
             {
                 Debug.WriteLine($"[GlobalHub] Reconnecting: {error?.Message}");
-                return Task.CompletedTask;
+
+                if (error?.Message?.Contains("401") == true ||
+                    error?.Message?.Contains("Unauthorized") == true)
+                {
+                    Debug.WriteLine("[GlobalHub] Attempting token refresh before reconnect...");
+                    await _authManager.TryRefreshTokenAsync();
+                }
             };
 
             _hubConnection.Reconnected += async _ =>

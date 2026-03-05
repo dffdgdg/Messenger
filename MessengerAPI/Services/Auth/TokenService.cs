@@ -1,14 +1,42 @@
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace MessengerAPI.Services.Auth;
 
+public sealed class TokenPair
+{
+    public required string AccessToken { get; init; }
+    public required string RefreshToken { get; init; }
+    public required string JwtId { get; init; }
+}
+
 public interface ITokenService
 {
-    string GenerateToken(int userId, UserRole? role = null);
+    /// <summary>
+    /// Генерирует пару access + refresh токенов.
+    /// </summary>
+    TokenPair GenerateTokenPair(int userId, UserRole? role = null);
+
+    /// <summary>
+    /// Валидирует access token (включая проверку срока действия).
+    /// </summary>
     bool ValidateToken(string token, out int userId);
+
+    /// <summary>
+    /// Извлекает claims из истёкшего access token без проверки срока действия.
+    /// Используется при refresh.
+    /// </summary>
+    ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
+
+    /// <summary>
+    /// Хеширует refresh token для хранения в БД.
+    /// </summary>
+    static string HashToken(string token) => Convert.ToBase64String(
+        SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
     TokenValidationParameters GetValidationParameters();
 }
 
@@ -37,13 +65,17 @@ public sealed class TokenService : ITokenService
         _signingKey = CreateSigningKey(_settings.Secret);
     }
 
-    public string GenerateToken(int userId, UserRole? role = null)
+    public TokenPair GenerateTokenPair(int userId, UserRole? role = null)
     {
+        var jti = Guid.NewGuid().ToString();
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+            new(JwtRegisteredClaimNames.Jti, jti),
+            new(JwtRegisteredClaimNames.Iat,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64)
         };
 
         if (role.HasValue)
@@ -56,7 +88,7 @@ public sealed class TokenService : ITokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(_settings.LifetimeHours),
+            Expires = DateTime.UtcNow.AddMinutes(_settings.AccessTokenLifetimeMinutes),
             Issuer = _settings.Issuer,
             Audience = _settings.Audience,
             SigningCredentials = credentials,
@@ -65,8 +97,16 @@ public sealed class TokenService : ITokenService
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
+        var accessToken = tokenHandler.WriteToken(token);
 
-        return tokenHandler.WriteToken(token);
+        var refreshToken = GenerateRefreshToken();
+
+        return new TokenPair
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            JwtId = jti
+        };
     }
 
     public bool ValidateToken(string token, out int userId)
@@ -87,6 +127,43 @@ public sealed class TokenService : ITokenService
         catch
         {
             return false;
+        }
+    }
+
+    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        try
+        {
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = _signingKey,
+                ValidateIssuer = true,
+                ValidIssuer = _settings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = _settings.Audience,
+                ValidateLifetime = false, // Ключевое: НЕ проверяем срок действия
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+            var principal = handler.ValidateToken(token, validationParameters, out var securityToken);
+
+            if (securityToken is not JwtSecurityToken jwtToken ||
+                !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
+                    StringComparison.InvariantCultureIgnoreCase))
+            {
+                return null;
+            }
+
+            return principal;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -135,6 +212,13 @@ public sealed class TokenService : ITokenService
             ClockSkew = TimeSpan.Zero
         };
     }
+
+    private static string GenerateRefreshToken()
+    {
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes);
+    }
+
     private static SymmetricSecurityKey CreateSigningKey(string keyMaterial)
-       => new(Encoding.UTF8.GetBytes(keyMaterial));
+        => new(Encoding.UTF8.GetBytes(keyMaterial));
 }

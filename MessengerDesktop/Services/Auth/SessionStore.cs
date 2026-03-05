@@ -7,13 +7,15 @@ public interface ISessionStore
 {
     int? UserId { get; }
     string? Token { get; }
+    string? RefreshToken { get; }
     UserRole UserRole { get; }
     bool IsAuthenticated { get; }
     bool IsAdmin { get; }
     bool IsHead { get; }
     bool IsUser { get; }
 
-    void SetSession(string token, int userId, UserRole role);
+    void SetSession(string token, string refreshToken, int userId, UserRole role);
+    void UpdateTokens(string token, string refreshToken);
     void ClearSession();
 
     bool HasRole(UserRole requiredRole);
@@ -39,6 +41,9 @@ public partial class SessionStore : ObservableObject, ISessionStore
     private string? _token;
 
     [ObservableProperty]
+    private string? _refreshToken;
+
+    [ObservableProperty]
     private UserRole _userRole = UserRole.User;
 
     public bool IsAuthenticated => !string.IsNullOrEmpty(Token) && UserId.HasValue;
@@ -48,15 +53,17 @@ public partial class SessionStore : ObservableObject, ISessionStore
 
     public event Action? SessionChanged;
 
-    public void SetSession(string token, int userId, UserRole role)
+    public void SetSession(string token, string refreshToken, int userId, UserRole role)
     {
         if (string.IsNullOrEmpty(token))
             throw new ArgumentException("Token cannot be null or empty", nameof(token));
-
+        if (string.IsNullOrEmpty(refreshToken))
+            throw new ArgumentException("RefreshToken cannot be null or empty", nameof(refreshToken));
         if (userId <= 0)
             throw new ArgumentException("UserId must be positive", nameof(userId));
 
         Token = token;
+        RefreshToken = refreshToken;
         UserId = userId;
         UserRole = role;
 
@@ -64,9 +71,24 @@ public partial class SessionStore : ObservableObject, ISessionStore
         SessionChanged?.Invoke();
     }
 
+    public void UpdateTokens(string token, string refreshToken)
+    {
+        if (string.IsNullOrEmpty(token))
+            throw new ArgumentException("Token cannot be null or empty", nameof(token));
+        if (string.IsNullOrEmpty(refreshToken))
+            throw new ArgumentException("RefreshToken cannot be null or empty", nameof(refreshToken));
+
+        Token = token;
+        RefreshToken = refreshToken;
+
+        // Уведомляем об изменении токена, чтобы HttpClient обновил заголовок
+        SessionChanged?.Invoke();
+    }
+
     public void ClearSession()
     {
         Token = null;
+        RefreshToken = null;
         UserId = null;
         UserRole = UserRole.User;
 
@@ -84,32 +106,19 @@ public partial class SessionStore : ObservableObject, ISessionStore
 
     public bool HasRole(UserRole requiredRole)
     {
-        if (!IsAuthenticated)
-            return false;
-
-        if (!RoleHierarchy.TryGetValue(UserRole, out var currentLevel))
-            return false;
-
-        if (!RoleHierarchy.TryGetValue(requiredRole, out var requiredLevel))
-            return false;
-
+        if (!IsAuthenticated) return false;
+        if (!RoleHierarchy.TryGetValue(UserRole, out var currentLevel)) return false;
+        if (!RoleHierarchy.TryGetValue(requiredRole, out var requiredLevel)) return false;
         return currentLevel >= requiredLevel;
     }
 
     public bool HasAnyRole(params UserRole[] roles)
     {
-        if (roles.Length == 0)
-            return false;
-
-        if (!IsAuthenticated)
-            return false;
-
+        if (roles.Length == 0 || !IsAuthenticated) return false;
         foreach (var role in roles)
         {
-            if (IsInRole(role))
-                return true;
+            if (IsInRole(role)) return true;
         }
-
         return false;
     }
 

@@ -12,7 +12,7 @@
 
 **`Dockerfile`** — Multi-stage build. SDK 8.0 → restore → publish Release. Runtime aspnet:8.0. Non-root user (appgroup/appuser). Port 8080. ENTRYPOINT `dotnet MessengerAPI.dll`.
 
-**`docker-compose.yml`** — Сервисы: `messenger-api` (build from Dockerfile, port 8080, volumes uploads/avatars, depends_on postgres healthy), `postgres` (16-alpine, healthcheck pg_isready, volume postgres_data), `zap-baseline` (ZAProxy security scan, profile "security", report html/json/md). Environment: JWT_SECRET, ConnectionStrings, DisableHttpsRedirection. Volumes: postgres_data, messenger_uploads, messenger_avatars.
+**`docker-compose.yml`** — Сервисы: `messenger-api` (build from Dockerfile, port 8080, volumes uploads/avatars, depends_on postgres healthy), `postgres` (16-alpine, healthcheck pg_isready, volume postgres_data), `zap-baseline` (ZAProxy security scan, profile "security", report html/json/md). Environment: JWT_SECRET, JWT_ACCESS_TOKEN_LIFETIME_MINUTES, JWT_REFRESH_TOKEN_LIFETIME_DAYS, ConnectionStrings, DisableHttpsRedirection. Volumes: postgres_data, messenger_uploads, messenger_avatars.
 
 ---
 
@@ -36,7 +36,7 @@
 
 **`Configuration/DependencyInjection.cs`** — `AddMessengerDatabase` — PostgreSQL/Npgsql, маппинг enum `Theme`/`ChatRole`/`ChatType`, dev: SensitiveDataLogging. `AddInfrastructureServices` — MemoryCache, HttpContextAccessor, TimeProvider.System (singleton), AppDateTime (singleton), OnlineUserService(singleton), scoped: CacheService, AccessControlService, FileService, TokenService, HubNotifier, HttpUrlBuilder. `AddBusinessServices` — scoped: AuthService, UserService, AdminService, ChatService, ChatMemberService, NotificationService, MessageService, PollService, ReadReceiptService, DepartmentService; singletons: TranscriptionQueue, TranscriptionService; hosted: TranscriptionBackgroundService. `AddMessengerJson` — ReferenceHandler.IgnoreCycles, WriteIndented в dev.
 
-**`Configuration/JwtSettings.cs`** — POCO: `Secret`, `LifetimeHours`=24, `Issuer`="MessengerAPI", `Audience`="MessengerClient". Section: `"Jwt"`.
+**`Configuration/JwtSettings.cs`** — POCO: `Secret`, `AccessTokenLifetimeMinutes`=15, `RefreshTokenLifetimeDays`=30, `Issuer`="MessengerAPI", `Audience`="MessengerClient". Section: `"Jwt"`.
 
 **`Configuration/MessengerSettings.cs`** — POCO: `AdminDepartmentId`=1, `MaxFileSizeBytes`=20MB, `BcryptWorkFactor`=12, `MaxImageDimension`=1600, `ImageQuality`=85, `DefaultPageSize`=50, `MaxPageSize`=100. Section: `"Messenger"`.
 
@@ -48,7 +48,7 @@
 
 **`Controllers/BaseController.cs`** — Абстрактный `[ApiController, Route("api/[controller]")]`. `GetCurrentUserId()` из ClaimTypes.NameIdentifier. `IsCurrentUser(userId)` — сравнение. Два `ExecuteAsync` (для `Result<T>` и `Result`) с обработкой: Unauthorized→401, KeyNotFound→404, Argument/InvalidOp→400, прочие→500. `Forbidden()` и `Forbidden<T>()` → 403 с ApiResponse.
 
-**`Controllers/AuthController.cs`** — `[AllowAnonymous, EnableRateLimiting("login")]`. `POST login` → `AuthService.LoginAsync`.
+**`Controllers/AuthController.cs`** — `POST login` `[AllowAnonymous, EnableRateLimiting("login")]` → `AuthService.LoginAsync`. `POST refresh` `[AllowAnonymous]` → `AuthService.RefreshTokenAsync` (принимает истёкший access + refresh token, возвращает новую пару). `POST revoke` `[Authorize]` → `AuthService.RevokeRefreshTokenAsync` (отзыв всех refresh tokens текущего пользователя, используется при logout).
 
 **`Controllers/AdminController.cs`** — `[Authorize(Roles="Admin")]`. `GET users`, `POST users`, `POST users/{id}/toggle-ban`.
 
@@ -96,9 +96,9 @@
 
 #### Auth
 
-**`Services/Auth/AuthService.cs`** — `LoginAsync`: timing-safe (dummy BCrypt.Verify). Проверка пароля, бана. `DetermineUserRoleAsync`: Admin/Head/User. JWT через TokenService.
+**`Services/Auth/AuthService.cs`** — Инъекция `AppDateTime`, `IOptions<JwtSettings>`. **LoginAsync**: timing-safe (dummy BCrypt.Verify). Проверка пароля, бана. `DetermineUserRoleAsync`: Admin/Head/User. Генерация TokenPair через TokenService, сохранение refresh token (хеш) в БД с новым FamilyId, очистка истёкших токенов. **RefreshTokenAsync**: извлечение claims из expired access token (GetPrincipalFromExpiredToken), поиск refresh token по хешу в БД, replay attack detection (если UsedAt!=null → отзыв всей семьи FamilyId), проверка срока/бана, ротация (старый→UsedAt=now, новый→same FamilyId), возвращает новую пару TokenResponseDto. **RevokeRefreshTokenAsync**: отзыв всех активных refresh tokens пользователя (RevokedAt=now). Приватные: `SaveRefreshTokenAsync`, `RevokeTokenFamilyAsync` (отзыв всей цепочки при компрометации), `CleanupExpiredTokensAsync` (удаление >60 дней).
 
-**`Services/Auth/TokenService.cs`** — HMAC-SHA256. Секрет ≥32 символа. Claims: NameIdentifier/Jti/Iat/Role. `ValidateToken`, статический `CreateValidationParameters`.
+**`Services/Auth/TokenService.cs`** — HMAC-SHA256. Секрет ≥32 символа. `TokenPair` record: AccessToken, RefreshToken, JwtId. Claims: NameIdentifier/Jti/Iat/Role. `GenerateTokenPair` — access token (AccessTokenLifetimeMinutes) + cryptographic random refresh token (64 bytes → Base64). `ValidateToken` — стандартная валидация с проверкой lifetime. `GetPrincipalFromExpiredToken` — валидация без проверки lifetime (ValidateLifetime=false), проверка алгоритма HmacSha256; используется при refresh. `HashToken` — SHA-256 хеш refresh token для хранения в БД. Статический `CreateValidationParameters`.
 
 #### Base
 
@@ -162,6 +162,8 @@
 
 **`Model/MessageFile.cs`** — Id, FileName, ContentType, MessageId, Path.
 
+**`Model/RefreshToken.cs`** — Id, UserId, TokenHash (SHA-256 хеш, сам токен не хранится), JwtId (привязка к access token), CreatedAt, ExpiresAt, UsedAt (null=активен, заполняется при ротации), RevokedAt (null=не отозван, заполняется при компрометации), ReplacedByTokenId (ссылка на новый токен после ротации), FamilyId (идентификатор цепочки ротации — все токены одной серии логина). Computed: `IsActive` (UsedAt==null && RevokedAt==null && !expired). Навигация: User, ReplacedByToken.
+
 **`Model/Poll.cs`** — Id, MessageId, IsAnonymous, AllowsMultipleAnswers, ClosesAt.
 
 **`Model/PollOption.cs`** — Id, PollId, OptionText (max 50), Position.
@@ -170,11 +172,11 @@
 
 **`Model/SystemSetting.cs`** — Key-Value store. PK: Key (max 50).
 
-**`Model/User.cs`** — Id, Username (unique, max 32), Name/Surname/Midname, PasswordHash, CreatedAt, LastOnline, DepartmentId, Avatar, IsBanned. `[NotMapped] DisplayName`.
+**`Model/User.cs`** — Id, Username (unique, max 32), Name/Surname/Midname, PasswordHash, CreatedAt, LastOnline, DepartmentId, Avatar, IsBanned. `[NotMapped] DisplayName`. Navigation: RefreshTokens.
 
 **`Model/UserSetting.cs`** — PK: UserId (1:1). NotificationsEnabled. Partial: `Theme` (Theme?).
 
-**`Model/MessengerDbContext.cs`** — PostgreSQL enums, snake_case таблицы, sequences. Индексы: messages(chatId,createdAt), reply, forward, chatMembers(lastRead, userId), departments(headId), pollVotes(userId). Unique: Chat_User, Poll_User_Option, username. Каскады: Chat→CreatedBy(Cascade), остальные SetNull.
+**`Model/MessengerDbContext.cs`** — PostgreSQL enums, snake_case таблицы, sequences. DbSet: RefreshTokens. Индексы: messages(chatId,createdAt), reply, forward, chatMembers(lastRead, userId), departments(headId), pollVotes(userId), refreshTokens(tokenHash, userId, familyId, expiresAt). Unique: Chat_User, Poll_User_Option, username. Каскады: Chat→CreatedBy(Cascade), User→RefreshTokens(Cascade), RefreshToken→ReplacedBy(SetNull), остальные SetNull.
 
 ---
 
@@ -260,7 +262,7 @@
 
 **`Infrastructure/ServiceCollectionExtensions.cs`** — AddMessengerCoreServices: LocalDatabase, repos, cache, platform, settings, hub, notification — singleton. HttpClient 30s. Auth chain. Navigation, Dialog — singleton. AddMessengerViewModels: MainWindowVM singleton, Factories singleton, VMs transient.
 
-**`Infrastructure/Configuration/ApiEndPoints.cs`** — Статические классы по контроллерам с параметризованными URL-методами. Auth (Login/Validate/Logout), User (GetAll/Online/StatusBatch/ById/Status/Avatar/Username/Password), Chat (Create/ById/Members/MembersDetailed/RemoveMember/MemberRole/Leave/Avatar/UserChats/UserDialogs/UserGroups/UserContact), Message (Create/ById/Transcription/TranscriptionRetry/ForChat/Around/Before/After/Search/ChatSearch), File (Upload), Poll (Create/Vote/ById), Department (GetAll/Create/ById/Members/RemoveMember/CanManage), Notification (AllSettings/SetMute/ChatSettings), ReadReceipt (MarkRead/AllUnreadCounts/UnreadCount), Admin (Users/ToggleBan).
+**`Infrastructure/Configuration/ApiEndPoints.cs`** — Статические классы по контроллерам с параметризованными URL-методами. Auth (Login/Refresh/Revoke), User (GetAll/Online/StatusBatch/ById/Status/Avatar/Username/Password), Chat (Create/ById/Members/MembersDetailed/RemoveMember/MemberRole/Leave/Avatar/UserChats/UserDialogs/UserGroups/UserContact), Message (Create/ById/Transcription/TranscriptionRetry/ForChat/Around/Before/After/Search/ChatSearch), File (Upload), Poll (Create/Vote/ById), Department (GetAll/Create/ById/Members/RemoveMember/CanManage), Notification (AllSettings/SetMute/ChatSettings), ReadReceipt (MarkRead/AllUnreadCounts/UnreadCount), Admin (Users/ToggleBan).
 
 **`Infrastructure/Configuration/AppConstants.cs`** — MaxFileSize=20MB, Debounce=300ms, PageSize=50, LoadMore=30, Search=20, Highlight=3000ms, MarkAsRead debounce=300ms/cooldown=1s, Typing send=1200ms/indicator=3500ms.
 
@@ -268,17 +270,17 @@
 
 ### Services — Сервисный слой клиента
 
-**`Services/Api/ApiClientService.cs`** — IApiClientService: Get/Post/Put/Delete + UploadFile + GetStream. HttpClient + ISessionStore, SessionChanged→UpdateAuthorizationHeader. ProcessResponseAsync\<T\>: fallback direct deserialize. GetStreamAsync: >10MB→temp file (DeleteOnClose), ≤10MB→MemoryStream.
+**`Services/Api/ApiClientService.cs`** — IApiClientService: Get/Post(3 перегрузки)/Put(3 перегрузки)/Delete + UploadFile + GetStream. HttpClient + ISessionStore + IAuthManager. Двойная подписка: SessionChanged event + INotifyPropertyChanged на Token/IsAuthenticated → UpdateAuthorizationHeader. **Auto-refresh**: `SendWithRefreshAsync` — Func\<Task\<HttpResponseMessage\>\> sendFunc (лямбда для повторного вызова), перехват 401 на всех запросах (кроме NoRefreshUrls: Login/Refresh/Revoke), Dispose ответа 401, вызов `IAuthManager.TryRefreshTokenAsync()`, retry через повторный вызов sendFunc; при неудачном refresh → синтетический 401 с "Сессия истекла". **CreateRequest**: GET/DELETE используют для создания нового HttpRequestMessage с текущим токеном при retry. POST/PUT используют `PostAsJsonAsync`/`PutAsJsonAsync` extension-методы (токен из DefaultRequestHeaders, обновляется через SessionChanged при Session.UpdateTokens). ProcessResponseAsync\<T\>: fallback direct deserialize. GetStreamAsync: >10MB→temp file (DeleteOnClose), ≤10MB→MemoryStream. UploadFileAsync: запоминает startPosition, stream.Position reset при retry, новый MultipartFormDataContent при каждом вызове sendFunc.
 
 **`Services/Audio/`** — AudioRecordingState (Idle/Recording/Sending/Error). IAudioRecorderService (Start/Stop/Cancel→AudioRecordingResult IDisposable). NAudioRecorderService: WaveInEvent MME, 16kHz/16bit/mono, IgnoreDisposeStream wrapper, Stopwatch, thread-safe lock. TranscriptionPoller: ConcurrentDictionary, exponential backoff [1,2,4,8,16]s, max 60, IDisposable.
 
-**`Services/Auth/AuthService.cs`** — Login→PostAsJsonAsync, двойная десериализация. Validate→GET Bearer. Logout→POST.
+**`Services/Auth/AuthService.cs`** — HttpClient. **LoginAsync**: PostAsJsonAsync, двойная десериализация (ApiResponse → fallback direct). **RefreshTokenAsync**: POST RefreshTokenRequest → ApiResponse\<TokenResponseDto\>. **RevokeAsync**: POST с Bearer header (ручной HttpRequestMessage), отзыв refresh tokens на сервере. **IsAccessTokenValid**: локальная проверка без сетевого запроса — `JwtSecurityTokenHandler.ReadJwtToken`, проверка `ValidTo > UtcNow + 30s` буфер; используется при загрузке сохранённой сессии вместо сетевой валидации.
 
-**`Services/Auth/AuthManager.cs`** — InitializeInternalAsync (constructor). LoadStoredSession→SecureStorage→ValidateToken→SetSession. LoginAsync: SemaphoreSlim, cache clear on user change, SaveAuth. LogoutAsync: clear all. TaskCompletionSource для инициализации.
+**`Services/Auth/AuthManager.cs`** — InitializeInternalAsync (constructor). **LoadStoredSession**: SecureStorage → IsAccessTokenValid (локальная проверка exp claim с 30s буфером); если access token действителен → SetSession; если истёк → RefreshTokenAsync; при успехе → SaveAuth+SetSession, при неудаче → ClearStoredAuth. LoginAsync: SemaphoreSlim, cache clear on user change, SaveAuth (token+refreshToken+userId+role). LogoutAsync: RevokeAsync (отзыв refresh tokens на сервере), clear cache+credentials+stored auth. **TryRefreshTokenAsync**: SemaphoreSlim `_refreshLock` (timeout 10s) + `_isRefreshing` guard, вызов AuthService.RefreshTokenAsync, при успехе → SaveAuth + Session.UpdateTokens; при неудаче → ForceLogoutAsync (ClearStoredAuth + ClearSession, UI реагирует на SessionChanged). **ForceLogoutAsync**: ClearStoredAuth + ClearSession (без RevokeAsync — refresh token уже скомпрометирован/недействителен на сервере). TaskCompletionSource для инициализации. SecureStorage ключи: auth\_token, auth\_refresh\_token, user\_id, user\_role, cached\_user\_id, remember\_me, saved\_username, saved\_password.
 
 **`Services/Auth/SecureStorage.cs`** — AES-256 + PBKDF2 (100K, SHA256). Machine-bound salt (.salt файл). AppData/SecureStorage/{base64key}.secure. Random IV prepend. SemaphoreSlim, auto-remove corrupted.
 
-**`Services/Auth/SessionStore.cs`** — ObservableObject. RoleHierarchy dict (User=0, Head=1, Admin=2). HasRole→hierarchy comparison (≥). SetSession validation, SessionChanged event.
+**`Services/Auth/SessionStore.cs`** — ObservableObject. RoleHierarchy dict (User=0, Head=1, Admin=2). HasRole→hierarchy comparison (≥). Properties: UserId, Token, RefreshToken, UserRole. `SetSession(token, refreshToken, userId, role)` — полная установка сессии. `UpdateTokens(token, refreshToken)` — обновление только токенов без смены userId/role (используется при refresh). ClearSession, SessionChanged event.
 
 **`Services/Cache/CacheMaintenanceService.cs`** — RunMaintenance (size+timing), ClearAllData (cache+vacuum), ClearChatCache (reset SyncState).
 
@@ -288,7 +290,7 @@
 
 **`Services/Platform/PlatformService.cs`** — MainWindow (explicit/ApplicationLifetime fallback). Clipboard (TopLevel). Copy/Get/Clear с try-catch.
 
-**`Services/Realtime/ChatHubConnection.cs`** — Per-chat SignalR. Handlers: ReceiveMessageDto, MessageUpdated/Deleted, MessageRead, UnreadCountUpdated, UserTyping, MemberJoined/Left. MarkMessageAsReadAsync: debounce. SendTypingAsync: debounce. Reconnected→rejoin.
+**`Services/Realtime/ChatHubConnection.cs`** — Per-chat SignalR. Handlers: ReceiveMessageDto, MessageUpdated/Deleted, MessageRead, UnreadCountUpdated, UserTyping, MemberJoined/Left. MarkMessageAsReadAsync: debounce. SendTypingAsync: debounce. Reconnecting: при 401/Unauthorized в ошибке→TryRefreshTokenAsync перед reconnect. Reconnected→rejoin+LoadUnreadCounts+Reconcile. AccessTokenProvider динамически берёт Session.Token (автоматически подхватывает обновлённый токен после refresh).
 
 **`Services/Realtime/GlobalHubConnection.cs`** — App-wide SignalR. Dictionary\<int,int\> unreadCounts + totalUnread с lock. События для UI: `UnreadCountChanged`, `TotalUnreadChanged`, `MessageReceivedGlobally`, `MessageUpdatedGlobally`, `MessageDeletedGlobally`. Handlers: ReceiveNotification (filter+ShowWindow 5s), ReceiveMessageDto (CacheIncoming + publish `MessageReceivedGlobally` + IncrementUnread для чужих/неактивных чатов), MessageUpdated/Deleted, UserOnline/Offline, UserProfileUpdated, UnreadCountUpdated. LoadUnreadCountsAsync, MarkChatAsReadAsync, ReconcileAfterReconnectAsync.
 
@@ -458,7 +460,7 @@
 
 ### DTO
 
-**Auth** — `LoginRequest` record(Username, Password). `AuthResponseDto` (Id, Username, DisplayName, Token, Role).
+**Auth** — `LoginRequest` record(Username, Password). `RefreshTokenRequest` record(AccessToken, RefreshToken). `AuthResponseDto` (Id, Username, DisplayName, Token, RefreshToken, Role). `TokenResponseDto` (Token, RefreshToken, UserId, Role).
 
 **Chat** — `ChatDto` (Id, Name, Type, CreatedById, LastMessageDate, Avatar, Preview, SenderName, UnreadCount). `ChatMemberDto` (UserId, Role, JoinedAt, NotificationsEnabled, LastReadMessageId). `ChatNotificationSettingsDto`, `UpdateChatDto`, `UpdateChatMemberDto`.
 
@@ -502,7 +504,7 @@
 - Nested Dialog Pattern — ChatEditDialog→ChatUserPickerDialog через ShowDialogAction delegate
 
 **Коммуникация**
-- SignalR Hub — real-time (сообщения, typing, online, read receipts)
+- SignalR Hub — real-time (сообщения, typing, online, read receipts); AccessTokenProvider динамически резолвит токен (поддержка refresh)
 - Dual Hub Pattern — ChatHubConnection (per-chat) + GlobalHubConnection (app-wide)
 - Channel\<T\> + BackgroundService — очередь транскрибации (server) + dialog close queue (client)
 
@@ -521,9 +523,14 @@
 
 **Безопасность**
 - Timing-safe auth — dummy BCrypt.Verify
+- Local JWT validation — IsAccessTokenValid читает exp claim через JwtSecurityTokenHandler без сетевого запроса, 30-секундный буфер для превентивного refresh
+- Refresh Token Rotation — при каждом использовании refresh token выдаётся новый (старый помечается UsedAt), replay attack detection (повторное использование → отзыв всей семьи FamilyId), SHA-256 хеширование для хранения в БД
+- Short-lived access tokens — 15 минут, автоматический refresh при 401 (ApiClientService SendWithRefreshAsync interceptor с lambda-based retry)
+- Dual auth header sync — SessionChanged event + INotifyPropertyChanged подписка для гарантированного обновления DefaultRequestHeaders.Authorization
+- ForceLogout without revoke — при неудачном refresh только ClearStoredAuth+ClearSession (без RevokeAsync — скомпрометированный refresh token уже недействителен на сервере)
 - AES-256 + PBKDF2 — SecureStorage, machine-bound key derivation
 - Role Hierarchy — SessionStore с числовой иерархией (User < Head < Admin)
-- Credential persistence — RememberMe + SecureStorage + auto-login
+- Credential persistence — RememberMe + SecureStorage + auto-login с token refresh fallback
 - Container security — non-root user, ZAProxy baseline scan
 
 **UI/UX**
@@ -543,6 +550,9 @@
 - TaskCompletionSource dialog results — ConfirmDialog, SelectUserDialog возвращают Task\<T\>
 - Download state machine — NotStarted→Downloading→Completed/Failed/Cancelled с CTS и lock
 - Navigation history — Stack-based back/forward с CanExecute guards
+- Concurrent refresh prevention — SemaphoreSlim(timeout 10s) + _isRefreshing bool guard в AuthManager.TryRefreshTokenAsync, предотвращение параллельных refresh-запросов при множественных 401
+- Lambda-based retry — SendWithRefreshAsync принимает Func\<Task\<HttpResponseMessage\>\> для создания нового запроса при каждом retry (поддержка обновлённого токена)
+- Stream-safe retry — UploadFileAsync запоминает начальную позицию stream, перематывает при retry, создаёт новый MultipartFormDataContent
 
 **Медиа**
 - Voice recording pipeline — Start→Record→Stop→Validate (0.5s–300s)→Upload→Send

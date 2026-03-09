@@ -1,46 +1,28 @@
-﻿using MessengerAPI.Services.Chat;
-using MessengerAPI.Services.ReadReceipt;
+﻿using MessengerAPI.Services.ReadReceipt;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, IChatService chatService, ILogger<ReadReceiptsController> logger)
+public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, ILogger<ReadReceiptsController> logger)
     : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]
     public async Task<ActionResult<ApiResponse<ReadReceiptResponseDto>>> MarkAsRead([FromBody] MarkAsReadDto request)
     {
         var userId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(userId, request.ChatId);
-            var result = await readReceiptService.MarkAsReadAsync(userId, request);
-            return Result<ReadReceiptResponseDto>.Success(result);
-        }, "Сообщения отмечены как прочитанные");
+        return await ExecuteAsync(() => readReceiptService.MarkAsReadAsync(userId, request));
     }
 
     [HttpGet("chat/{chatId}/unread-count")]
-    public async Task<ActionResult<ApiResponse<UnreadCountDto>>> GetUnreadCount(int chatId)
+    public async Task<ActionResult<ApiResponse<int>>> GetUnreadCount(int chatId)
     {
         var userId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(userId, chatId);
-            var count = await readReceiptService.GetUnreadCountAsync(userId, chatId);
-            return Result<UnreadCountDto>.Success(new UnreadCountDto(chatId, count));
-        });
+        return await ExecuteAsync(() => readReceiptService.GetUnreadCountAsync(userId, chatId));
     }
 
     [HttpGet("unread-counts")]
     public async Task<ActionResult<ApiResponse<AllUnreadCountsDto>>> GetAllUnreadCounts()
     {
         var userId = GetCurrentUserId();
-
-        return await ExecuteAsync(async () =>
-        {
-            var result = await readReceiptService.GetAllUnreadCountsAsync(userId);
-            return Result<AllUnreadCountsDto>.Success(result);
-        }, "Количество непрочитанных получено");
+        return await ExecuteAsync(() => readReceiptService.GetAllUnreadCountsAsync(userId));
     }
 }

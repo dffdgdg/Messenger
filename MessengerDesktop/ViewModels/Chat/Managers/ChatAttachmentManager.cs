@@ -11,11 +11,19 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatAttachmentManager(int chatId, IApiClientService apiClient, IStorageProvider? storageProvider = null) : IDisposable
+public sealed class ChatAttachmentManager(
+    int chatId,
+    IApiClientService apiClient,
+    IStorageProvider? storageProvider = null) : IDisposable
 {
+    private readonly IApiClientService _apiClient = apiClient
+            ?? throw new ArgumentNullException(nameof(apiClient));
     private bool _disposed;
 
-    public ObservableCollection<LocalFileAttachment> Attachments { get; } = [];
+    private const int ThumbnailMaxDimension = 200;
+
+    public ObservableCollection<LocalFileAttachment> Attachments { get; }
+        = [];
 
     public async Task<bool> PickAndAddFilesAsync()
     {
@@ -79,7 +87,7 @@ public sealed class ChatAttachmentManager(int chatId, IApiClientService apiClien
 
             if (contentType.StartsWith("image/"))
             {
-                thumbnail = TryCreateThumbnail(memoryStream);
+                thumbnail = TryCreateThumbnail(memoryStream, ThumbnailMaxDimension);
             }
 
             var attachment = new LocalFileAttachment
@@ -109,17 +117,42 @@ public sealed class ChatAttachmentManager(int chatId, IApiClientService apiClien
         }
     }
 
-    private static Bitmap? TryCreateThumbnail(MemoryStream stream)
+    /// <summary>
+    /// Создаёт thumbnail с ограничением размера.
+    /// Полноразмерный Bitmap диспозится после ресайза.
+    /// </summary>
+    private static Bitmap? TryCreateThumbnail(MemoryStream stream, int maxDimension)
     {
+        Bitmap? fullBitmap = null;
+
         try
         {
             stream.Position = 0;
-            var bitmap = new Bitmap(stream);
+            fullBitmap = new Bitmap(stream);
             stream.Position = 0;
-            return bitmap;
+
+            var width = fullBitmap.PixelSize.Width;
+            var height = fullBitmap.PixelSize.Height;
+
+            if (width <= maxDimension && height <= maxDimension)
+                return fullBitmap;
+
+            var scale = Math.Min((double)maxDimension / width, (double)maxDimension / height);
+
+            var newSize = new Avalonia.PixelSize(
+                Math.Max(1, (int)(width * scale)),
+                Math.Max(1, (int)(height * scale)));
+
+            var resized = fullBitmap.CreateScaledBitmap(newSize);
+
+            fullBitmap.Dispose();
+            fullBitmap = null;
+
+            return resized;
         }
         catch
         {
+            fullBitmap?.Dispose();
             return null;
         }
     }
@@ -133,8 +166,13 @@ public sealed class ChatAttachmentManager(int chatId, IApiClientService apiClien
             try
             {
                 local.Data.Position = 0;
-                var uploadResult = await apiClient.UploadFileAsync<MessageFileDto>(
-                    ApiEndpoints.File.Upload(chatId), local.Data, local.FileName, local.ContentType, ct);
+                var uploadResult =
+                    await _apiClient.UploadFileAsync<MessageFileDto>(
+                        ApiEndpoints.Files.Upload(chatId),
+                        local.Data,
+                        local.FileName,
+                        local.ContentType,
+                        ct);
 
                 if (uploadResult is { Success: true, Data: not null })
                 {

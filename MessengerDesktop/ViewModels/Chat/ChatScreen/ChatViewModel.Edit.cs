@@ -70,7 +70,7 @@ public partial class ChatViewModel
             };
 
             var result = await _apiClient.PutAsync<UpdateMessageDto, MessageDto>(
-                ApiEndpoints.Message.ById(EditingMessage.Id), updateDto, ct);
+                ApiEndpoints.Messages.ById(EditingMessage.Id), updateDto, ct);
 
             if (result.Success && result.Data != null)
             {
@@ -101,7 +101,7 @@ public partial class ChatViewModel
 
         await SafeExecuteAsync(async ct =>
         {
-            var result = await _apiClient.DeleteAsync(ApiEndpoints.Message.ById(message.Id), ct);
+            var result = await _apiClient.DeleteAsync(ApiEndpoints.Messages.ById(message.Id), ct);
 
             if (result.Success)
             {

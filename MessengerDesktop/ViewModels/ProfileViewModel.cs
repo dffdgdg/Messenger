@@ -143,7 +143,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     private async Task LoadUser() => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(UserId));
+        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(UserId));
         if (result.Success)
         {
             User = result.Data;
@@ -202,7 +202,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             };
 
             var result = await _apiClient.PutAsync<UserDto>(
-                ApiEndpoints.User.ById(User.Id), update);
+                ApiEndpoints.Users.ById(User.Id), update);
 
             if (result.Success)
             {
@@ -256,7 +256,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         {
             var dto = new ChangeUsernameDto { NewUsername = newUsername };
             var result = await _apiClient.PutAsync<object>(
-                ApiEndpoints.User.Username(User.Id), dto);
+                ApiEndpoints.Users.Username(User.Id), dto);
 
             if (result.Success)
             {
@@ -309,7 +309,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             };
 
             var result = await _apiClient.PutAsync<object>(
-                ApiEndpoints.User.Password(User.Id), dto);
+                ApiEndpoints.Users.Password(User.Id), dto);
 
             if (result.Success)
             {
@@ -349,7 +349,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         {
             await using var stream = await files[0].OpenReadAsync();
             var result = await _apiClient.UploadFileAsync<UserDto>(
-                ApiEndpoints.User.Avatar(User!.Id), stream, files[0].Name, "image/png");
+                ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
 
             if (result.Success)
             {

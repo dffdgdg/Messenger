@@ -56,7 +56,7 @@ public partial class SettingsViewModel : BaseViewModel
     {
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(_userId));
+            var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(_userId));
             if (!result.Success || result.Data == null)
             {
                 ErrorMessage = $"Ошибка загрузки настроек: {result.Error}";
@@ -96,7 +96,7 @@ public partial class SettingsViewModel : BaseViewModel
 
         try
         {
-            var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.User.ById(_userId), new UserDto
+            var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.Users.ById(_userId), new UserDto
             {
                 Id = _userId,
                 Theme = SelectedTheme,

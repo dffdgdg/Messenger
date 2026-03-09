@@ -14,7 +14,9 @@ public interface ISessionStore
     bool IsHead { get; }
     bool IsUser { get; }
 
-    void SetSession(string token, string refreshToken, int userId, UserRole role);
+    void SetSession(
+        string token, string refreshToken,
+        int userId, UserRole role);
     void UpdateTokens(string token, string refreshToken);
     void ClearSession();
 
@@ -46,7 +48,8 @@ public partial class SessionStore : ObservableObject, ISessionStore
     [ObservableProperty]
     private UserRole _userRole = UserRole.User;
 
-    public bool IsAuthenticated => !string.IsNullOrEmpty(Token) && UserId.HasValue;
+    public bool IsAuthenticated
+        => !string.IsNullOrEmpty(Token) && UserId.HasValue;
     public bool IsAdmin => UserRole == UserRole.Admin;
     public bool IsHead => UserRole == UserRole.Head;
     public bool IsUser => UserRole == UserRole.User;
@@ -81,7 +84,6 @@ public partial class SessionStore : ObservableObject, ISessionStore
         Token = token;
         RefreshToken = refreshToken;
 
-        // Уведомляем об изменении токена, чтобы HttpClient обновил заголовок
         SessionChanged?.Invoke();
     }
 
@@ -107,8 +109,10 @@ public partial class SessionStore : ObservableObject, ISessionStore
     public bool HasRole(UserRole requiredRole)
     {
         if (!IsAuthenticated) return false;
-        if (!RoleHierarchy.TryGetValue(UserRole, out var currentLevel)) return false;
-        if (!RoleHierarchy.TryGetValue(requiredRole, out var requiredLevel)) return false;
+        if (!RoleHierarchy.TryGetValue(UserRole, out var currentLevel))
+            return false;
+        if (!RoleHierarchy.TryGetValue(requiredRole, out var requiredLevel))
+            return false;
         return currentLevel >= requiredLevel;
     }
 

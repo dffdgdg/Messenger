@@ -81,9 +81,6 @@
 		<AvaloniaResource Update="Assets\Styles\Base\Animations.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
-		<AvaloniaResource Update="Assets\Styles\Controls\Controls.axaml">
-		  <SubType>Designer</SubType>
-		</AvaloniaResource>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -95,9 +92,6 @@
 	  </Compile>
 	  <Compile Update="Views\Shared\ConfirmDialog.axaml.cs">
 	    <DependentUpon>ConfirmDialog.axaml</DependentUpon>
-	  </Compile>
-	  <Compile Update="Views\Dialog\SelectUserDialog.axaml.cs">
-	    <DependentUpon>SelectUserDialog.axaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 

@@ -11,8 +11,7 @@ public partial class LoginViewModel : BaseViewModel
     private readonly ISecureStorageService _secureStorage;
 
     private const string RememberMeKey = "remember_me";
-    private const string UsernameKey = "saved_username";
-    private const string PasswordKey = "saved_password";
+    private const string SavedUsernameKey = "saved_username";
     private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);
 
     [ObservableProperty]
@@ -76,7 +75,7 @@ public partial class LoginViewModel : BaseViewModel
 
             await initTask;
 
-            // Проверяем: сессия уже восстановлена через refresh token?
+            // Сессия восстановлена через refresh token — переход в MainMenu
             if (_authManager.Session.IsAuthenticated)
             {
                 Debug.WriteLine("LoginVM: Сессия восстановлена через refresh token, переход в MainMenu");
@@ -84,19 +83,9 @@ public partial class LoginViewModel : BaseViewModel
                 return;
             }
 
-            // Сессия НЕ восстановлена (нет токенов или refresh не удался)
-            // Загружаем сохранённые credentials для отображения в UI
-            Debug.WriteLine("LoginVM: Сессия не восстановлена, загружаем credentials");
-            await LoadSavedCredentialsAsync();
-
-            // Auto-login только если есть RememberMe И credentials
-            if (RememberMe &&
-                !string.IsNullOrWhiteSpace(Username) &&
-                !string.IsNullOrWhiteSpace(Password))
-            {
-                Debug.WriteLine("LoginVM: Попытка auto-login с сохранёнными credentials");
-                await TryAutoLoginAsync();
-            }
+            // Сессия не восстановлена — загружаем сохранённый username для предзаполнения
+            Debug.WriteLine("LoginVM: Сессия не восстановлена, показываем форму логина");
+            await LoadSavedUsernameAsync();
         }
         catch (Exception ex)
         {
@@ -109,77 +98,25 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-    private async Task LoadSavedCredentialsAsync()
+    private async Task LoadSavedUsernameAsync()
     {
         try
         {
             RememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
             if (RememberMe)
             {
-                Username = await _secureStorage.GetAsync<string>(UsernameKey) ?? string.Empty;
-                Password = await _secureStorage.GetAsync<string>(PasswordKey) ?? string.Empty;
+                Username = await _secureStorage.GetAsync<string>(SavedUsernameKey) ?? string.Empty;
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Load credentials error: {ex.Message}");
-        }
-    }
-
-    private async Task SaveCredentialsAsync()
-    {
-        try
-        {
-            await _secureStorage.SaveAsync(RememberMeKey, RememberMe);
-            if (RememberMe)
-            {
-                await _secureStorage.SaveAsync(UsernameKey, Username);
-                await _secureStorage.SaveAsync(PasswordKey, Password);
-            }
-            else
-            {
-                await _secureStorage.RemoveAsync(UsernameKey);
-                await _secureStorage.RemoveAsync(PasswordKey);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Save credentials error: {ex.Message}");
+            Debug.WriteLine($"Load saved username error: {ex.Message}");
         }
     }
 
     // ========== Login ==========
 
     private bool CanLogin() => !IsBusy && !IsInitializing;
-
-    private async Task TryAutoLoginAsync()
-    {
-        // Двойная проверка: если за время загрузки credentials сессия уже восстановилась
-        if (_authManager.Session.IsAuthenticated)
-        {
-            Debug.WriteLine("LoginVM: TryAutoLogin — сессия уже активна, пропускаем");
-            _navigation.NavigateToMainMenu();
-            return;
-        }
-
-        try
-        {
-            Debug.WriteLine("LoginVM: TryAutoLogin — выполняем LoginAsync с паролем (новый FamilyId)");
-            var result = await _authManager.LoginAsync(Username, Password);
-
-            if (result.Success)
-            {
-                _navigation.NavigateToMainMenu();
-                return;
-            }
-
-            Debug.WriteLine($"Auto login failed: {result.Error}");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Auto login exception: {ex.Message}");
-        }
-    }
 
     [RelayCommand(CanExecute = nameof(CanLogin))]
     private async Task LoginAsync()
@@ -209,11 +146,10 @@ public partial class LoginViewModel : BaseViewModel
                 await initTask;
             }
 
-            var result = await _authManager.LoginAsync(Username, Password);
+            var result = await _authManager.LoginAsync(Username, Password, RememberMe);
 
             if (result.Success)
             {
-                await SaveCredentialsAsync();
                 _navigation.NavigateToMainMenu();
             }
             else
@@ -241,8 +177,7 @@ public partial class LoginViewModel : BaseViewModel
         try
         {
             await _secureStorage.RemoveAsync(RememberMeKey);
-            await _secureStorage.RemoveAsync(UsernameKey);
-            await _secureStorage.RemoveAsync(PasswordKey);
+            await _secureStorage.RemoveAsync(SavedUsernameKey);
         }
         catch (Exception ex)
         {

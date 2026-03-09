@@ -3,7 +3,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MessengerDesktop.Data;
 using MessengerDesktop.Infrastructure;
-using MessengerDesktop.Infrastructure.ImageLoading;
 using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.UI;
@@ -16,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop;
 
-public class App : Application, IDisposable
+public sealed class App : Application, IDisposable
 {
     private bool _disposed;
     private INotificationService? _notificationService;
@@ -29,7 +28,7 @@ public class App : Application, IDisposable
 #if DEBUG
         "https://localhost:7190/";
 #else
-        "http://localhost:5274/";
+        "https://localhost:5274/";
 #endif
 
     public override void Initialize()
@@ -180,7 +179,5 @@ public class App : Application, IDisposable
         {
             Debug.WriteLine($"[App] Error during disposal: {ex.Message}");
         }
-
-        GC.SuppressFinalize(this);
     }
 }

@@ -20,11 +20,6 @@
 		<Setter Property="OffContent" Value="Выкл"/>
 	</Style>
 
-	<Style Selector="UserControl">
-		<Setter Property="Design.Height" Value="400"/>
-		<Setter Property="Design.Width" Value="800"/>
-	</Style>
-
 	<Style Selector="Button">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -257,6 +252,20 @@
 		<Setter Property="Padding" Value="16,8"/>
 		<Setter Property="CornerRadius" Value="8"/>
 		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+
+	<Style Selector="Button.DialogOutline:pointerover">
+		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+	</Style>
+
+	<Style Selector="Button.DialogOutline:pressed">
+		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
 	</Style>
 
 	<Style Selector="Button.DialogAccent">
@@ -266,6 +275,19 @@
 		<Setter Property="CornerRadius" Value="8"/>
 		<Setter Property="FontWeight" Value="Medium"/>
 		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+
+	<Style Selector="Button.DialogAccent:pointerover">
+		<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+	</Style>
+
+	<Style Selector="Button.DialogAccent:pressed">
+		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
 	</Style>
 
 	<Style Selector="Button.DialogDanger">
@@ -275,14 +297,19 @@
 		<Setter Property="CornerRadius" Value="8"/>
 		<Setter Property="FontWeight" Value="Medium"/>
 		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
 	</Style>
 
-	<Style Selector="Button.TextButton">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="BorderThickness" Value="0"/>
-		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-		<Setter Property="Padding" Value="8,4"/>
-		<Setter Property="Cursor" Value="Hand"/>
+	<Style Selector="Button.DialogDanger:pointerover">
+		<Setter Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
+	</Style>
+
+	<Style Selector="Button.DialogDanger:pressed">
+		<Setter Property="Background" Value="{DynamicResource DangerPressedBrush}"/>
 	</Style>
 
 	<Style Selector="Button.EmojiButton">
@@ -306,6 +333,11 @@
 		<Setter Property="Padding" Value="6"/>
 		<Setter Property="Cursor" Value="Hand"/>
 		<Setter Property="CornerRadius" Value="4"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
 	</Style>
 
 	<Style Selector="Button.ClearButton:pointerover">
@@ -461,6 +493,13 @@
 		<Setter Property="Cursor" Value="Arrow"/>
 	</Style>
 
+	<!-- ─── Focus-visible (клавиатурная навигация) ─── -->
+	<Style Selector="RadioButton.NavButton:focus-visible /template/ Border#ButtonBody,
+	RadioButton.IconButton:focus-visible /template/ Border#ButtonBody">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="BorderThickness" Value="2"/>
+	</Style>
+
 	<!-- ══════════════════════════════════════════════════════════════
 	ПОЛЯ ВВОДА
 	══════════════════════════════════════════════════════════════ -->
@@ -576,14 +615,6 @@
 		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
 	</Style>
 
-	<Style Selector="Border.SearchResults">
-		<Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
-		<Setter Property="CornerRadius" Value="0,0,8,8"/>
-		<Setter Property="BorderThickness" Value="1,0,1,1"/>
-		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-		<Setter Property="Padding" Value="4"/>
-	</Style>
-
 	<!-- ══════════════════════════════════════════════════════════════
 	СЕКЦИИ
 	══════════════════════════════════════════════════════════════ -->
@@ -633,7 +664,7 @@
 		<Setter Property="Padding" Value="24"/>
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-		<Setter Property="BoxShadow" Value="0 8 32 #50000000"/>
+		<Setter Property="BoxShadow" Value="{DynamicResource DialogShadow}"/>
 	</Style>
 
 	<!-- ══════════════════════════════════════════════════════════════
@@ -664,7 +695,7 @@
 		<Setter Property="Padding" Value="12,8"/>
 		<Setter Property="MinWidth" Value="48"/>
 		<Setter Property="MaxWidth" Value="520"/>
-		<Setter Property="BoxShadow" Value="0 1 3 0 #0A000000"/>
+		<Setter Property="BoxShadow" Value="{DynamicResource MessageBubbleShadow}"/>
 	</Style>
 
 	<!-- ─── OWN: Одиночное ─── -->
@@ -728,7 +759,7 @@
 	</Style>
 
 	<Style Selector="Border.MessageHighlight.Highlighted">
-		<Setter Property="Background" Value="#30FFD700"/>
+		<Setter Property="Background" Value="{DynamicResource MessageHighlightBrush}"/>
 	</Style>
 
 	<Style Selector="Border.MessageWrapper">
@@ -795,30 +826,6 @@
 	</Style>
 
 	<Style Selector="Button.ChatListItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-	</Style>
-
-	<Style Selector="ItemsControl.ChatList">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="HorizontalAlignment" Value="Stretch"/>
-	</Style>
-
-	<Style Selector="ItemsControl.ChatList > ContentPresenter">
-		<Setter Property="HorizontalAlignment" Value="Stretch"/>
-	</Style>
-
-	<Style Selector="ListBoxItem.ChatItem">
-		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-		<Setter Property="CornerRadius" Value="6"/>
-		<Setter Property="Padding" Value="0"/>
-		<Setter Property="Margin" Value="0,2"/>
-	</Style>
-
-	<Style Selector="ListBoxItem.ChatItem:pointerover">
-		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-	</Style>
-
-	<Style Selector="ListBoxItem.ChatItem:selected">
 		<Setter Property="Background" Value="{DynamicResource Accent}"/>
 	</Style>
 
@@ -910,19 +917,6 @@
 	ЭЛЕМЕНТ СПИСКА ЧАТА (КОНТЕНТ)
 	══════════════════════════════════════════════════════════════ -->
 
-	<Style Selector="Grid.ChatItemContent">
-		<Setter Property="Height" Value="52"/>
-	</Style>
-
-	<Style Selector="Grid.ChatItemContent > Border.Avatar">
-		<Setter Property="VerticalAlignment" Value="Center"/>
-	</Style>
-
-	<Style Selector="Grid.ChatItemContent > StackPanel.ChatInfo">
-		<Setter Property="VerticalAlignment" Value="Center"/>
-		<Setter Property="Margin" Value="12,0,8,0"/>
-	</Style>
-
 	<Style Selector="TextBlock.ChatName">
 		<Setter Property="FontWeight" Value="SemiBold"/>
 		<Setter Property="FontSize" Value="14"/>
@@ -936,14 +930,6 @@
 		<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
 		<Setter Property="MaxLines" Value="1"/>
 		<Setter Property="Margin" Value="0,2,0,0"/>
-	</Style>
-
-	<Style Selector="TextBlock.ChatTime">
-		<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-		<Setter Property="FontSize" Value="11"/>
-		<Setter Property="VerticalAlignment" Value="Top"/>
-		<Setter Property="HorizontalAlignment" Value="Right"/>
-		<Setter Property="Margin" Value="0,4,0,0"/>
 	</Style>
 
 	<!-- ══════════════════════════════════════════════════════════════
@@ -1041,28 +1027,6 @@
 		<Setter Property="Opacity" Value="1"/>
 	</Style>
 
-	<Style Selector="ScrollViewer.MessagesScrollbar ScrollBar:vertical">
-		<Setter Property="Width" Value="8"/>
-		<Setter Property="Margin" Value="0,0,4,0"/>
-	</Style>
-
-	<Style Selector="ScrollViewer.MessagesScrollbar ScrollBar /template/ Thumb /template/ Border">
-		<Setter Property="Background" Value="{DynamicResource TextMuted}"/>
-		<Setter Property="CornerRadius" Value="4"/>
-	</Style>
-
-	<Style Selector="ScrollViewer.MessagesScrollbar ScrollBar /template/ Thumb:pointerover /template/ Border">
-		<Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
-	</Style>
-
-	<Style Selector="ScrollViewer.AccentScrollbar ScrollBar /template/ Thumb /template/ Border">
-		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
-	</Style>
-
-	<Style Selector="ScrollViewer.AccentScrollbar ScrollBar /template/ Thumb:pointerover /template/ Border">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-	</Style>
-
 	<!-- ══════════════════════════════════════════════════════════════
 	ЭЛЕМЕНТЫ СПИСКА УЧАСТНИКОВ
 	══════════════════════════════════════════════════════════════ -->
@@ -1106,30 +1070,6 @@
 	<!-- ══════════════════════════════════════════════════════════════
 	КНОПКИ ПРОФИЛЯ
 	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="Button.ProfileLink">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="BorderThickness" Value="0"/>
-		<Setter Property="Padding" Value="0"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="FocusAdorner" Value="{x:Null}"/>
-	</Style>
-
-	<Style Selector="Button.ProfileLink /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
-
-	<Style Selector="Button.ProfileLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
-
-	<Style Selector="Button.ProfileLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
-
-	<Style Selector="Button.ProfileLink:focus /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
 
 	<Style Selector="Button.AvatarButton">
 		<Setter Property="Background" Value="Transparent"/>
@@ -1187,39 +1127,13 @@
 	</Style>
 
 	<!-- ══════════════════════════════════════════════════════════════
-	РЕЗУЛЬТАТЫ ПОИСКА
-	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="Button.SearchResultItem">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="BorderThickness" Value="0"/>
-		<Setter Property="Padding" Value="16,12"/>
-		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="CornerRadius" Value="8"/>
-	</Style>
-
-	<Style Selector="Button.SearchResultItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-	</Style>
-
-	<!-- ══════════════════════════════════════════════════════════════
 	СТРАНИЦЫ НАСТРОЕК
 	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="Grid.PageContent">
-		<Setter Property="HorizontalAlignment" Value="Center"/>
-	</Style>
 
 	<Style Selector="Border.SettingsIcon">
 		<Setter Property="Width" Value="40"/>
 		<Setter Property="Height" Value="40"/>
 		<Setter Property="CornerRadius" Value="10"/>
-	</Style>
-
-	<Style Selector="TextBlock.SettingsDescription">
-		<Setter Property="FontSize" Value="12"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
 	</Style>
 
 	<Style Selector="TextBlock.FieldLabel">
@@ -1246,65 +1160,6 @@
 		<Setter Property="Fill" Value="{DynamicResource TextMuted}"/>
 	</Style>
 
-	<!-- ══════════════════════════════════════════════════════════════
-	КАРТОЧКИ ДЕЙСТВИЙ
-	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="Button.ActionCard">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-		<Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="Padding" Value="16,14"/>
-		<Setter Property="CornerRadius" Value="12"/>
-		<Setter Property="HorizontalAlignment" Value="Stretch"/>
-		<Setter Property="HorizontalContentAlignment" Value="Left"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
-	</Style>
-
-	<Style Selector="Button.ActionCard:pointerover">
-		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
-	</Style>
-
-	<Style Selector="Button.ActionCard:pressed">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-	</Style>
-
-	<Style Selector="Border.ActionCardIcon">
-		<Setter Property="Width" Value="44"/>
-		<Setter Property="Height" Value="44"/>
-		<Setter Property="CornerRadius" Value="12"/>
-	</Style>
-
-	<!-- ══════════════════════════════════════════════════════════════
-	ПУСТОЕ СОСТОЯНИЕ
-	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="StackPanel.EmptyState">
-		<Setter Property="Opacity" Value="0.6"/>
-		<Setter Property="HorizontalAlignment" Value="Center"/>
-		<Setter Property="Margin" Value="0,32"/>
-	</Style>
-
-	<Style Selector="StackPanel.EmptyState PathIcon">
-		<Setter Property="Width" Value="48"/>
-		<Setter Property="Height" Value="48"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-		<Setter Property="Opacity" Value="0.3"/>
-		<Setter Property="HorizontalAlignment" Value="Center"/>
-	</Style>
-
-	<Style Selector="StackPanel.EmptyState TextBlock">
-		<Setter Property="FontSize" Value="14"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-		<Setter Property="HorizontalAlignment" Value="Center"/>
-		<Setter Property="Margin" Value="0,12,0,0"/>
-	</Style>
 
 	<!-- ══════════════════════════════════════════════════════════════
 	КОМПАКТНЫЙ РЕЖИМ
@@ -1370,128 +1225,6 @@
 	</Style>
 
 	<!-- ══════════════════════════════════════════════════════════════
-	КАРТОЧКИ ТЕМ
-	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="RadioButton.ThemeCard">
-		<Setter Property="Background" Value="Transparent"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="Padding" Value="12"/>
-		<Setter Property="CornerRadius" Value="12"/>
-		<Setter Property="BorderThickness" Value="2"/>
-		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-		<Setter Property="HorizontalAlignment" Value="Stretch"/>
-		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
-		<Setter Property="Template">
-			<ControlTemplate TargetType="RadioButton">
-				<Border Background="{TemplateBinding Background}"
-						BorderBrush="{TemplateBinding BorderBrush}"
-						BorderThickness="{TemplateBinding BorderThickness}"
-						CornerRadius="{TemplateBinding CornerRadius}"
-						Padding="{TemplateBinding Padding}">
-					<ContentPresenter Content="{TemplateBinding Content}"
-									  HorizontalAlignment="Center"/>
-				</Border>
-			</ControlTemplate>
-		</Setter>
-	</Style>
-
-	<Style Selector="RadioButton.ThemeCard:pointerover">
-		<Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
-		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-	</Style>
-
-	<Style Selector="RadioButton.ThemeCard:checked">
-		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
-	</Style>
-
-	<Style Selector="RadioButton.ThemeCard:pressed">
-		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-	</Style>
-
-	<Style Selector="Border.ThemePreview">
-		<Setter Property="Height" Value="80"/>
-		<Setter Property="CornerRadius" Value="8"/>
-		<Setter Property="ClipToBounds" Value="True"/>
-		<Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-	</Style>
-
-	<Style Selector="Border.ThemePreview.Light">
-		<Setter Property="Background" Value="#F5F5F5"/>
-	</Style>
-
-	<Style Selector="Border.ThemePreview.Dark">
-		<Setter Property="Background" Value="#252525"/>
-	</Style>
-
-	<Style Selector="Border.ThemePreview.System">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
-
-	<Style Selector="RadioButton.ThemeCard:checked Border.ThemePreview">
-		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-	</Style>
-
-	<!-- ══════════════════════════════════════════════════════════════
-	КНОПКА ПРОКРУТКИ ВНИЗ
-	══════════════════════════════════════════════════════════════ -->
-
-	<Style Selector="Button.ScrollToBottomButton">
-		<Setter Property="Width" Value="44"/>
-		<Setter Property="Height" Value="44"/>
-		<Setter Property="CornerRadius" Value="22"/>
-		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-		<Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-		<Setter Property="Padding" Value="0"/>
-		<Setter Property="Cursor" Value="Hand"/>
-		<Setter Property="Opacity" Value="0"/>
-		<Setter Property="RenderTransform" Value="translateY(10px)"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-				<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton[IsVisible=True]">
-		<Setter Property="Opacity" Value="1"/>
-		<Setter Property="RenderTransform" Value="translateY(0)"/>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton:pointerover">
-		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="Transparent"/>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton:pressed">
-		<Setter Property="Background" Value="{DynamicResource Accent}"/>
-		<Setter Property="RenderTransform" Value="scale(0.95)"/>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton:pressed Path">
-		<Setter Property="Fill" Value="{DynamicResource TextOnAccent}"/>
-	</Style>
-
-	<Style Selector="Button.ScrollToBottomButton.HasNew">
-		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-		<Setter Property="BorderThickness" Value="2"/>
-	</Style>
-
-	<!-- ══════════════════════════════════════════════════════════════
 	КОНТЕКСТНОЕ МЕНЮ
 	══════════════════════════════════════════════════════════════ -->
 
@@ -1523,5 +1256,238 @@
 		<Setter Property="Height" Value="1"/>
 		<Setter Property="Margin" Value="8,4"/>
 	</Style>
+
+
+	<!-- ══════════════════════════════════════════════════════════════
+	СКРОЛЛБАР ПАНЕЛИ ЧАТОВ
+	══════════════════════════════════════════════════════════════ -->
+
+<Style Selector="views|ChatsView ListBox ScrollBar">
+    <Setter Property="Opacity" Value="1"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar:vertical">
+    <Setter Property="Width" Value="5"/>
+    <Setter Property="MinWidth" Value="5"/>
+    <Setter Property="MaxWidth" Value="5"/>
+    <Setter Property="Margin" Value="0"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
+    <Setter Property="Opacity" Value="1"/>
+    <Setter Property="Width" Value="5"/>
+    <Setter Property="MinWidth" Value="5"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
+    <Setter Property="CornerRadius" Value="2.5"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar:pointerover /template/ Thumb">
+    <Setter Property="Opacity" Value="1"/>
+    <Setter Property="Width" Value="5"/>
+    <Setter Property="MinWidth" Value="5"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar:pointerover /template/ Thumb /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextPrimary}"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb:pointerover /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextPrimary}"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb:pressed /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+</Style>
+
+<Style Selector="views|ChatsView ListBox ScrollBar /template/ Border#TrackBackground">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Width" Value="5"/>
+</Style>
+
+<!-- ══════════════════════════════════════════════════════════════
+VOICE MESSAGE PLAYER
+══════════════════════════════════════════════════════════════ -->
+
+<Style Selector="Button.VoicePlayBtn">
+    <Setter Property="Width" Value="42"/>
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="21"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Button.VoicePlayBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="CornerRadius" Value="21"/>
+</Style>
+
+<Style Selector="Button.VoicePlayBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+</Style>
+
+<Style Selector="Button.VoicePlayBtn:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.92)"/>
+</Style>
+
+<Style Selector="Button.VoicePlayBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+</Style>
+
+<Style Selector="Button.VoicePlayBtn PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+</Style>
+
+<Style Selector="Border.VoicePlayerContainer">
+    <Setter Property="MinWidth" Value="240"/>
+    <Setter Property="MaxWidth" Value="340"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider">
+    <Setter Property="MinHeight" Value="20"/>
+    <Setter Property="Height" Value="20"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Margin" Value="0"/>
+    <Setter Property="Minimum" Value="0"/>
+    <Setter Property="Maximum" Value="100"/>
+    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider /template/ Border#TrackBackground">
+    <Setter Property="Height" Value="3"/>
+    <Setter Property="CornerRadius" Value="1.5"/>
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider /template/ Thumb">
+    <Setter Property="Width" Value="14"/>
+    <Setter Property="Height" Value="14"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider /template/ Thumb /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="CornerRadius" Value="7"/>
+    <Setter Property="Width" Value="14"/>
+    <Setter Property="Height" Value="14"/>
+    <Setter Property="BoxShadow" Value="0 1 3 #30000000"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Slider.VoiceSlider /template/ Thumb:pointerover /template/ Border">
+    <Setter Property="RenderTransform" Value="scale(1.2)"/>
+    <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider /template/ Thumb:pressed /template/ Border">
+    <Setter Property="RenderTransform" Value="scale(1.1)"/>
+</Style>
+
+<Style Selector="Slider.VoiceSlider:disabled">
+    <Setter Property="Opacity" Value="0.5"/>
+</Style>
+
+<Style Selector="TextBlock.VoiceTime">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+</Style>
+
+<Style Selector="Border.VoiceLoadingContainer">
+    <Setter Property="Width" Value="42"/>
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="CornerRadius" Value="21"/>
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+<Style Selector="TextBlock.VoiceError">
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+    <Setter Property="TextWrapping" Value="Wrap"/>
+    <Setter Property="Margin" Value="0,2,0,0"/>
+</Style>
+
+<!-- Transcribe toggle button -->
+<Style Selector="Button.TranscribeBtn">
+    <Setter Property="Width" Value="28"/>
+    <Setter Property="Height" Value="28"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Opacity" Value="0.6"/>
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Button.TranscribeBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="14"/>
+</Style>
+
+<Style Selector="Button.TranscribeBtn:pointerover">
+    <Setter Property="Opacity" Value="1"/>
+</Style>
+
+<Style Selector="Button.TranscribeBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+</Style>
+
+<Style Selector="Button.TranscribeBtn:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.9)"/>
+</Style>
+
+<Style Selector="Button.TranscribeBtn.Active">
+    <Setter Property="Opacity" Value="1"/>
+</Style>
+
+<Style Selector="Button.TranscribeBtn.Active PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+</Style>
+
+<!-- Transcription expandable panel -->
+<Style Selector="Border.TranscriptionPanel">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="10,8"/>
+    <Setter Property="Margin" Value="0,6,0,0"/>
+</Style>
+
+<Style Selector="Button.RetryTranscription">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Cursor" Value="Hand"/>
+</Style>
+
+<Style Selector="Button.RetryTranscription /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
+
+<Style Selector="Button.RetryTranscription:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+    <Setter Property="CornerRadius" Value="6"/>
+</Style>
 
 </Styles>

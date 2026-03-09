@@ -8,7 +8,7 @@ public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService a
 {
     public async Task<ObservableCollection<UserDto>> LoadMembersAsync(ChatDto? chat, CancellationToken ct = default)
     {
-        var result = await apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chat.Members(chatId), ct);
+        var result = await apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chats.Members(chatId), ct);
 
         if (result.Success && result.Data is { Count: > 0 })
             return new ObservableCollection<UserDto>(result.Data);
@@ -27,7 +27,7 @@ public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService a
         }
 
         var members = new ObservableCollection<UserDto>();
-        var meResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(currentUserId), ct);
+        var meResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(currentUserId), ct);
         if (meResult is { Success: true, Data: not null })
         {
             members.Add(meResult.Data);
@@ -35,7 +35,7 @@ public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService a
 
         if (otherUserId != currentUserId)
         {
-            var otherResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(otherUserId), ct);
+            var otherResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(otherUserId), ct);
             if (otherResult is { Success: true, Data: not null })
             {
                 members.Add(otherResult.Data);

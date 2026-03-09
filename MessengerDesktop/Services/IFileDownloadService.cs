@@ -178,8 +178,7 @@ namespace MessengerDesktop.Services
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var explorerPath = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                    var explorerPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),
                         "explorer.exe");
 
                     Process.Start(CreateSafeProcessStartInfo(explorerPath, $"/select,\"{folderPath}\""));

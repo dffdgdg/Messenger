@@ -17,11 +17,12 @@ public static class DependencyInjection
         services.AddDbContext<MessengerDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), npgsql =>
-                {
-                    npgsql.MapEnum<Theme>("theme");
-                    npgsql.MapEnum<ChatRole>("chat_role");
-                    npgsql.MapEnum<ChatType>("chat_type");
-                });
+            {
+                npgsql.MapEnum<Theme>("theme");
+                npgsql.MapEnum<ChatRole>("chat_role");
+                npgsql.MapEnum<ChatType>("chat_type");
+                npgsql.MapEnum<SystemEventType>("system_event_type");
+            });
 
             if (environment.IsDevelopment())
             {
@@ -34,7 +35,7 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Инфраструктурные сервисы (кэш, онлайн, доступ, файлы, токены)
+    /// Инфраструктурные сервисы
     /// </summary>
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
@@ -69,6 +70,7 @@ public static class DependencyInjection
         // Chats
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatMemberService, ChatMemberService>();
+        services.AddScoped<ISystemMessageService, SystemMessageService>();
         services.AddScoped<INotificationService, NotificationService>();
 
         // Messaging

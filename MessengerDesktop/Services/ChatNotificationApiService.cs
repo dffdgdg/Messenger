@@ -15,21 +15,21 @@ public class ChatNotificationApiService(IApiClientService apiClient) : IChatNoti
 {
     public async Task<ChatNotificationSettingsDto?> GetChatSettingsAsync(int chatId, CancellationToken ct = default)
     {
-        var result = await apiClient.GetAsync<ChatNotificationSettingsDto>(ApiEndpoints.Notification.ChatSettings(chatId), ct);
+        var result = await apiClient.GetAsync<ChatNotificationSettingsDto>(ApiEndpoints.Notifications.ChatSettings(chatId), ct);
 
         return result.Success ? result.Data : null;
     }
 
     public async Task<bool> SetChatMuteAsync(int chatId, bool isMuted, CancellationToken ct = default)
     {
-        var result = await apiClient.PostAsync<ChatNotificationSettingsDto, ChatNotificationSettingsDto>(ApiEndpoints.Notification.SetMute,
+        var result = await apiClient.PostAsync<ChatNotificationSettingsDto, ChatNotificationSettingsDto>(ApiEndpoints.Notifications.SetMute,
             new ChatNotificationSettingsDto { ChatId = chatId, NotificationsEnabled = isMuted }, ct);
         return result.Success;
     }
 
     public async Task<List<ChatNotificationSettingsDto>> GetAllSettingsAsync(CancellationToken ct = default)
     {
-        var result = await apiClient.GetAsync<List<ChatNotificationSettingsDto>>(ApiEndpoints.Notification.AllSettings, ct);
+        var result = await apiClient.GetAsync<List<ChatNotificationSettingsDto>>(ApiEndpoints.Notifications.AllSettings, ct);
 
         return result.Success && result.Data != null ? result.Data : [];
     }

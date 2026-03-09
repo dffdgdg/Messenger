@@ -7,15 +7,9 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.Services.Audio;
 
-/// <summary>
-/// Запись аудио через NAudio.
-/// Windows: WaveInEvent (MME).
-/// Linux: требуется PulseAudio/PipeWire-pulse (NAudio.Core поддерживает ALSA через WaveInEvent на .NET 8+).
-/// Если платформа не поддерживается — IsSupported = false.
-/// </summary>
 public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
 {
-    private static readonly WaveFormat RecordingFormat = new(16000, 16, 1); // 16kHz mono 16bit
+    private static readonly WaveFormat RecordingFormat = new(16000, 16, 1);
 
     private WaveInEvent? _waveIn;
     private MemoryStream? _buffer;
@@ -77,19 +71,21 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
                 _waveIn.StopRecording();
 
                 _writer.Flush();
-                // WaveFileWriter записал заголовки, нужно финализировать
                 _writer.Dispose();
                 _writer = null;
 
                 var duration = _stopwatch.Elapsed;
 
                 _buffer.Position = 0;
-                var resultStream = new MemoryStream(_buffer.ToArray()) { Position = 0 };
+                var resultStream = new MemoryStream(
+                    _buffer.ToArray())
+                { Position = 0 };
 
                 var result = new AudioRecordingResult
                 {
                     AudioStream = resultStream,
-                    FileName = $"voice_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav",
+                    FileName =
+                        $"voice_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav",
                     ContentType = "audio/wav",
                     Duration = duration
                 };
@@ -99,7 +95,8 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[NAudioRecorder] Stop failed: {ex.Message}");
+                Debug.WriteLine(
+                    $"[NAudioRecorder] Stop failed: {ex.Message}");
                 CleanupInternal();
                 return Task.FromResult<AudioRecordingResult?>(null);
             }
@@ -124,7 +121,14 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     {
         lock (_lock)
         {
-            _writer?.Write(e.Buffer, 0, e.BytesRecorded);
+            try
+            {
+                _writer?.Write(e.Buffer, 0, e.BytesRecorded);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Writer disposed between check and write — OK
+            }
         }
     }
 
@@ -159,15 +163,10 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     {
         try
         {
-            // На Windows проверяем наличие устройств
             if (OperatingSystem.IsWindows())
                 return WaveInEvent.DeviceCount > 0;
 
-            // На Linux NAudio работает через ALSA — пробуем
-            if (OperatingSystem.IsLinux())
-                return true; // Optimistic; StartAsync вернёт false если не сработает
-
-            return false;
+            return OperatingSystem.IsLinux();
         }
         catch
         {
@@ -182,7 +181,10 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
         lock (_lock) { CleanupInternal(); }
     }
 
-    /// <summary>Обёртка, которая не закрывает underlying stream при Dispose.</summary>
+    /// <summary>
+    /// Обёртка, которая не закрывает underlying stream при Dispose.
+    /// Нужна, чтобы WaveFileWriter.Dispose() не закрыл MemoryStream.
+    /// </summary>
     private sealed class IgnoreDisposeStream(Stream inner) : Stream
     {
         public override bool CanRead => inner.CanRead;
@@ -195,10 +197,17 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
             set => inner.Position = value;
         }
         public override void Flush() => inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
-        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
-        public override void SetLength(long value) => inner.SetLength(value);
-        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
-        protected override void Dispose(bool disposing) { /* не закрываем inner */ }
+        public override int Read(byte[] buffer, int offset, int count)
+            => inner.Read(buffer, offset, count);
+        public override long Seek(long offset, SeekOrigin origin)
+            => inner.Seek(offset, origin);
+        public override void SetLength(long value)
+            => inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count)
+            => inner.Write(buffer, offset, count);
+        protected override void Dispose(bool disposing)
+        {
+            // Intentionally empty — не закрываем inner
+        }
     }
 }

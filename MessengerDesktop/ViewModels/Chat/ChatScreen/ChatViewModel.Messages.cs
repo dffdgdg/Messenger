@@ -10,10 +10,13 @@ public partial class ChatViewModel
     private void OnMessageReceived(MessageDto messageDto) =>
         Dispatcher.UIThread.Post(async () =>
         {
+            if (_disposed) return;
+
             _messageManager.AddReceivedMessage(messageDto);
             UpdatePollsCount();
 
-            var addedMsg = Messages.LastOrDefault(m => m.Id == messageDto.Id);
+            var addedMsg = Messages.LastOrDefault(
+                m => m.Id == messageDto.Id);
             if (addedMsg != null)
                 StartTranscriptionPollingIfNeeded(addedMsg);
 
@@ -23,16 +26,29 @@ public partial class ChatViewModel
                 await MarkMessagesAsReadAsync();
         });
 
-    private void OnMessageUpdatedInChat(MessageDto messageDto) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageUpdated(messageDto));
-
-    private void OnMessageDeletedInChat(int messageId) => Dispatcher.UIThread.Post(() => _messageManager.HandleMessageDeleted(messageId));
-
-    private void OnMessageRead(int chatId, int userId, int? lastReadMessageId, DateTime? readAt) =>
+    private void OnMessageUpdatedInChat(MessageDto messageDto) =>
         Dispatcher.UIThread.Post(() =>
         {
+            if (_disposed) return;
+            _messageManager.HandleMessageUpdated(messageDto);
+        });
+
+    private void OnMessageDeletedInChat(int messageId) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            _messageManager.HandleMessageDeleted(messageId);
+        });
+
+    private void OnMessageRead(int? lastReadMessageId) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
             if (!lastReadMessageId.HasValue) return;
 
-            foreach (var msg in Messages.Where(m => m.Id <= lastReadMessageId.Value && m.SenderId == UserId))
+            foreach (var msg in Messages.Where(
+                m => m.Id <= lastReadMessageId.Value
+                     && m.SenderId == UserId))
             {
                 msg.IsRead = true;
             }
@@ -40,26 +56,29 @@ public partial class ChatViewModel
 
     public async Task OnMessageVisibleAsync(MessageViewModel message)
     {
+        if (_disposed) return;
+
         if (!message.IsUnread || message.SenderId == UserId)
             return;
 
         message.IsUnread = false;
         _messageManager.MarkAsReadLocally(message.Id);
 
-        if (_hubConnection != null)
-            await _hubConnection.MarkMessageAsReadAsync(message.Id);
+        await _globalHub.MarkMessageAsReadAsync(_chatId, message.Id);
     }
 
-    public async Task MarkMessagesAsReadAsync(int? messageId = null)
+    public async Task MarkMessagesAsReadAsync()
     {
+        if (_disposed) return;
+
         var now = DateTime.UtcNow;
         if ((now - _lastMarkAsReadTime).TotalSeconds < AppConstants.MarkAsReadCooldownSeconds)
             return;
 
-        _lastMarkAsReadTime = DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
+        _lastMarkAsReadTime =
+            DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
 
-        if (_hubConnection is not null)
-            await _hubConnection.MarkAsReadAsync(messageId);
+        await _globalHub.MarkChatAsReadAsync(_chatId);
     }
 
     public async Task OnMessagesVisibleAsync() => await MarkMessagesAsReadAsync();
@@ -67,7 +86,7 @@ public partial class ChatViewModel
     [RelayCommand]
     private async Task LoadOlderMessages()
     {
-        if (_messageManager.IsLoading) return;
+        if (_disposed || _messageManager.IsLoading) return;
 
         var ct = _loadingCts?.Token ?? CancellationToken.None;
 
@@ -86,20 +105,19 @@ public partial class ChatViewModel
     [RelayCommand]
     private async Task LoadNewerMessages()
     {
-        if (_messageManager.IsLoading || !_messageManager.HasMoreNewer) return;
+        if (_disposed || _messageManager.IsLoading || !_messageManager.HasMoreNewer)
+            return;
 
         var ct = _loadingCts?.Token ?? CancellationToken.None;
         await _messageManager.LoadNewerMessagesAsync(ct);
         UpdatePollsCount();
     }
 
-    /// <summary>
-    /// Отправка нового сообщения.
-    /// При forward — копирует контент оригинала если пользователь не написал свой текст.
-    /// </summary>
     [RelayCommand]
     private async Task SendMessage()
     {
+        if (_disposed) return;
+
         if (IsEditMode)
         {
             await SaveEditMessage();
@@ -118,8 +136,6 @@ public partial class ChatViewModel
         {
             var files = await _attachmentManager.UploadAllAsync(ct);
 
-            // При forward: если пользователь не написал свой текст,
-            // копируем контент оригинального сообщения
             var content = NewMessage;
             if (hasForward && string.IsNullOrWhiteSpace(content))
             {
@@ -136,15 +152,15 @@ public partial class ChatViewModel
                 ForwardedFromMessageId = forwarding?.Id
             };
 
-            // При forward: если оригинал имел файлы, а пользователь не добавил свои —
-            // копируем файлы оригинала
-            if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
+            if (hasForward && files.Count == 0
+                && forwarding!.Files.Count > 0)
             {
                 msg.Files = forwarding.Files;
             }
 
-            var result = await _apiClient.PostAsync<MessageDto, MessageDto>(
-                ApiEndpoints.Message.Create, msg, ct);
+            var result = await _apiClient
+                .PostAsync<MessageDto, MessageDto>(
+                    ApiEndpoints.Messages.Create, msg, ct);
 
             if (result.Success)
             {

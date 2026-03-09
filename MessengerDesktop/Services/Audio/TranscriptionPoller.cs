@@ -7,6 +7,7 @@ namespace MessengerDesktop.Services.Audio;
 
 public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposable
 {
+    private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly ConcurrentDictionary<int, PollEntry> _active = new();
     private readonly CancellationTokenSource _globalCts = new();
     private bool _disposed;
@@ -25,14 +26,24 @@ public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposab
         {
             _ = PollLoopAsync(messageId, entry);
         }
+        else
+        {
+            cts.Dispose();
+        }
     }
 
     public void StopPolling(int messageId)
     {
         if (_active.TryRemove(messageId, out var entry))
         {
-            entry.Cts.Cancel();
-            entry.Cts.Dispose();
+            try
+            {
+                entry.Cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // CTS уже disposed из PollLoopAsync.finally — OK
+            }
         }
     }
 
@@ -49,33 +60,51 @@ public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposab
                 var delayMs = delays[Math.Min(attempt, delays.Length - 1)];
                 await Task.Delay(delayMs, entry.Cts.Token);
 
-                var result = await apiClient.GetAsync<TranscriptionResult>(
-                    ApiEndpoints.Message.Transcription(messageId),
-                    entry.Cts.Token);
+                var result = await _apiClient.GetAsync<TranscriptionResult>(ApiEndpoints.Messages.Transcription(messageId), entry.Cts.Token);
 
                 if (result is { Success: true, Data: not null })
                 {
-                    entry.OnUpdate(result.Data);
+                    try
+                    {
+                        entry.OnUpdate(result.Data);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[TranscriptionPoller] Callback error for msg {messageId}: {ex.Message}");
+                    }
 
                     var status = result.Data.Status;
                     if (status is "done" or "failed")
                     {
-                        StopPolling(messageId);
                         return;
                     }
                 }
 
                 attempt++;
             }
+
+            if (attempt >= maxAttempts)
+            {
+                Debug.WriteLine($"[TranscriptionPoller] Max attempts reached for msg {messageId}");
+            }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected: StopPolling или Dispose
+        }
+        catch (ObjectDisposedException)
+        {
+            // CTS disposed — нормально при Dispose
+        }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[TranscriptionPoller] Error for msg {messageId}: {ex.Message}");
+            Debug.WriteLine(
+                $"[TranscriptionPoller] Error for msg {messageId}: {ex.Message}");
         }
         finally
         {
             _active.TryRemove(messageId, out _);
+            entry.Cts.Dispose();
         }
     }
 
@@ -84,13 +113,14 @@ public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposab
         if (_disposed) return;
         _disposed = true;
 
-        _globalCts.Cancel();
-
-        foreach (var kvp in _active)
+        try
         {
-            kvp.Value.Cts.Dispose();
+            _globalCts.Cancel();
         }
-        _active.Clear();
+        catch (ObjectDisposedException)
+        {
+            // Already disposed
+        }
 
         _globalCts.Dispose();
     }

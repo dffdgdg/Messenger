@@ -43,7 +43,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             // Проверяем срок действия с небольшим запасом (30 секунд)
             // Если до истечения осталось меньше 30 секунд — считаем невалидным,
             // чтобы refresh произошёл заранее
-            var bufferSeconds = 30;
+            const int bufferSeconds = 30;
             return jwt.ValidTo > DateTime.UtcNow.AddSeconds(bufferSeconds);
         }
         catch
@@ -100,8 +100,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(ct);
-                return ApiResponseHelper.Error<TokenResponseDto>(
-                    $"Ошибка обновления токена: {response.StatusCode}", errorContent);
+                return ApiResponseHelper.Error<TokenResponseDto>($"Ошибка обновления токена: {response.StatusCode}", errorContent);
             }
 
             var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<TokenResponseDto>>(ct);
@@ -124,8 +123,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
             var response = await _httpClient.SendAsync(request, ct);
 
-            return response.IsSuccessStatusCode
-                ? ApiResponse<object>.Ok(null, "Выход выполнен успешно")
+            return response.IsSuccessStatusCode ? ApiResponse<object>.Ok(null, "Выход выполнен успешно")
                 : ApiResponseHelper.Error($"Ошибка выхода: {response.StatusCode}");
         }
         catch (OperationCanceledException) { throw; }

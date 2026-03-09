@@ -3,8 +3,8 @@ using MessengerShared.Dto.Online;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class UserController(IUserService userService, ILogger<UserController> logger)
-    : BaseController<UserController>(logger)
+public sealed class UsersController(IUserService userService, ILogger<UsersController> logger)
+    : BaseController<UsersController>(logger)
 {
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAllUsers(CancellationToken ct)

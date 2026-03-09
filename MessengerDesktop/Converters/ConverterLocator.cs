@@ -48,8 +48,6 @@ public sealed class ConverterLocator
 
         // Domain converters
         Add<ThemeToDisplayConverter>("ThemeToDisplay");
-        Add<DisplayOrUsernameConverter>("DisplayOrUsername");
-        Add<PollToPollViewModelConverter>("PollToPollViewModel");
         Add<InitialsConverter>("Initials", "InitialsConverter");
 
         // Enum converters
@@ -60,13 +58,12 @@ public sealed class ConverterLocator
         Add<LevelToVisibilityConverter>("LevelToVisibility");
 
         // Message converters
-        Add<MessageAlignmentConverter>("MessageAlignment");
-        Add<MessageMarginConverter>("MessageToMargin", "MessageMargin");
         Add<HasContentConverter>("HasContent");
 
         // Generic converters
         Add<IndexToTextConverter>("IndexToText");
         Add<PluralizeConverter>("Pluralize");
+        Add<ResourceKeyToGeometryConverter>("ResourceGeometry", "ResourceKeyToGeometry");
 
         // Multi converters
         AddMulti<BooleanAndConverter>("BooleanAnd");

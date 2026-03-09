@@ -1,7 +1,6 @@
 ﻿using MessengerDesktop.Services.UI;
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,13 +9,13 @@ namespace MessengerDesktop.ViewModels.Chat;
 public partial class MessageFileViewModel(
     MessageFileDto file,
     IFileDownloadService? downloadService = null,
-    INotificationService? notificationService = null)
-    : ObservableObject
+    INotificationService? notificationService = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
 
     private CancellationTokenSource? _downloadCts;
     private readonly object _ctsLock = new();
+    private bool _disposed;
 
     public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
@@ -26,7 +25,9 @@ public partial class MessageFileViewModel(
     [ObservableProperty] private string? _downloadedFilePath;
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private bool _hasError;
-    [ObservableProperty] private DownloadState _state = DownloadState.NotStarted;
+    [ObservableProperty]
+    private DownloadState _state =
+        DownloadState.NotStarted;
 
     public int Id => File.Id;
     public string FileName => File.FileName;
@@ -42,20 +43,20 @@ public partial class MessageFileViewModel(
 
     public string? ImageUrl => IsImage ? Url : null;
 
-    public string FileIcon => PreviewType switch
+    public string FileIconResourceKey => PreviewType switch
     {
-        "image" => "🖼️",
-        "video" => "🎬",
-        "audio" => "🎵",
-        "file" when ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) => "📕",
+        "image" => "FileTypeImageIcon",
+        "video" => "FileTypeVideoIcon",
+        "audio" => "FileTypeAudioIcon",
+        "file" when ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) => "FileTypePdfIcon",
         "file" when ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
-                     || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase) => "📘",
+        || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase) => "FileTypeWordIcon",
         "file" when ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
-                     || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) => "📗",
+        || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) => "FileTypeExcelIcon",
         "file" when ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-                     || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
-                     || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase) => "📦",
-        _ => "📄"
+        || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase) => "FileTypeArchiveIcon",
+        _ => "FileTypeDefaultIcon"
     };
 
     public string FileSizeFormatted => FormatFileSize(File.FileSize);
@@ -63,7 +64,7 @@ public partial class MessageFileViewModel(
     [RelayCommand]
     private async Task DownloadAsync()
     {
-        if (IsDownloading || string.IsNullOrEmpty(Url) || downloadService == null)
+        if (_disposed || IsDownloading || string.IsNullOrEmpty(Url) || downloadService == null)
             return;
 
         ErrorMessage = null;
@@ -83,18 +84,19 @@ public partial class MessageFileViewModel(
         try
         {
             var progress = new Progress<double>(p =>
-                Dispatcher.UIThread.Post(() => DownloadProgress = p));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (!_disposed) DownloadProgress = p;
+                }));
 
-            var filePath = await downloadService.DownloadFileAsync(
-                Url, FileName, progress, cts.Token);
+            var filePath = await downloadService.DownloadFileAsync(Url, FileName, progress, cts.Token);
 
             if (filePath != null)
             {
                 DownloadedFilePath = filePath;
                 IsDownloaded = true;
                 State = DownloadState.Completed;
-                notificationService?.ShowSuccessAsync(
-                    $"Файл сохранён: {FileName}", copyToClipboard: false);
+                notificationService?.ShowSuccessAsync($"Файл сохранён: {FileName}", copyToClipboard: false);
             }
         }
         catch (OperationCanceledException)
@@ -107,8 +109,7 @@ public partial class MessageFileViewModel(
             ErrorMessage = ex.Message;
             HasError = true;
             State = DownloadState.Failed;
-            notificationService?.ShowErrorAsync(
-                $"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
+            notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
         }
         finally
         {
@@ -117,9 +118,7 @@ public partial class MessageFileViewModel(
             lock (_ctsLock)
             {
                 if (_downloadCts == cts)
-                {
                     _downloadCts = null;
-                }
             }
 
             cts.Dispose();
@@ -131,13 +130,8 @@ public partial class MessageFileViewModel(
     {
         lock (_ctsLock)
         {
-            try
-            {
-                _downloadCts?.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
+            try { _downloadCts?.Cancel(); }
+            catch (ObjectDisposedException) { }
         }
     }
 
@@ -155,9 +149,11 @@ public partial class MessageFileViewModel(
             else if (!IsDownloaded && !IsDownloading)
             {
                 await DownloadAsync();
-                if (IsDownloaded && !string.IsNullOrEmpty(DownloadedFilePath))
+                if (IsDownloaded &&
+                    !string.IsNullOrEmpty(DownloadedFilePath))
                 {
-                    await downloadService.OpenFileAsync(DownloadedFilePath);
+                    await downloadService.OpenFileAsync(
+                        DownloadedFilePath);
                 }
             }
         }
@@ -186,13 +182,31 @@ public partial class MessageFileViewModel(
         _ = DownloadAsync();
     }
 
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        lock (_ctsLock)
+        {
+            try
+            {
+                _downloadCts?.Cancel();
+                _downloadCts?.Dispose();
+            }
+            catch { /* best-effort */ }
+            _downloadCts = null;
+        }
+    }
+
     private static string FormatFileSize(long bytes) => bytes switch
     {
         < 0 => "",
         0 => "0 B",
         < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-        < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        < 1024L * 1024 * 1024
+            => $"{bytes / (1024.0 * 1024.0):F1} MB",
         _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
     };
 
@@ -205,21 +219,21 @@ public partial class MessageFileViewModel(
         if (string.IsNullOrEmpty(extension))
             return fileName[..Math.Max(1, maxLength - 1)] + "…";
 
-        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        var availableNameLength = maxLength - extension.Length - 1;
+        var nameWithoutExtension =
+            Path.GetFileNameWithoutExtension(fileName);
+        var availableNameLength =
+            maxLength - extension.Length - 1;
 
         if (availableNameLength <= 0)
             return "…" + extension;
 
         var trimmedName = nameWithoutExtension.Length > availableNameLength
-            ? nameWithoutExtension[..availableNameLength]
-            : nameWithoutExtension;
+                ? nameWithoutExtension[..availableNameLength]
+                : nameWithoutExtension;
 
         return $"{trimmedName}…{extension}";
     }
-
 }
-
 
 public enum DownloadState
 {

@@ -1,6 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:converters="using:MessengerDesktop.Converters"
 			 xmlns:shared="using:MessengerDesktop.Controls.Shared"
 			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -209,10 +210,12 @@
 			<Grid RowDefinitions="Auto,Auto">
 				<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
 					<Border Grid.Column="0" Classes="FileIcon">
-						<TextBlock Text="{Binding FileIcon}"
-								   FontSize="18"
-								   HorizontalAlignment="Center"
-								   VerticalAlignment="Center"/>
+						<Path Data="{Binding FileIconResourceKey, Converter={converters:Converter Name=ResourceGeometry}}"
+							  Fill="White"
+							  Width="24" Height="24"
+							  Stretch="Uniform"
+							  HorizontalAlignment="Center"
+							  VerticalAlignment="Center"/>
 					</Border>
 
 					<StackPanel Grid.Column="1"

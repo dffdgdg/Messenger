@@ -19,6 +19,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
     private readonly AppDateTime _appDateTime;
     private readonly IOptions<JwtSettings> _jwtSettings;
     private readonly string _dummyHash;
+    private const int MaxActiveSessions = 5;
 
     public AuthService(
         MessengerDbContext context,
@@ -35,209 +36,157 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
     }
 
-    public async Task<Result<AuthResponseDto>> LoginAsync(
-        string username, string password, CancellationToken ct = default)
+    public async Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default)
     {
-        try
+        if (string.IsNullOrWhiteSpace(username))
+            return Result<AuthResponseDto>.Failure("Имя пользователя обязательно");
+
+        if (string.IsNullOrWhiteSpace(password))
+            return Result<AuthResponseDto>.Failure("Пароль обязателен");
+
+        var user = await _context.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
+
+        if (user is null)
         {
-            if (string.IsNullOrWhiteSpace(username))
-                return Result<AuthResponseDto>.Failure("Имя пользователя обязательно");
-
-            if (string.IsNullOrWhiteSpace(password))
-                return Result<AuthResponseDto>.Failure("Пароль обязателен");
-
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
-
-            if (user is null)
-            {
-                BCrypt.Net.BCrypt.Verify(password, _dummyHash);
-                return Result<AuthResponseDto>.Failure(
-                    "Неверное имя пользователя или пароль");
-            }
-
-            if (!VerifyPassword(password, user.PasswordHash))
-            {
-                _logger.LogWarning("Неудачная попытка входа: {Username}", username);
-                return Result<AuthResponseDto>.Failure(
-                    "Неверное имя пользователя или пароль");
-            }
-
-            if (user.IsBanned)
-            {
-                _logger.LogWarning("Попытка входа заблокированного пользователя: {Username}", username);
-                return Result<AuthResponseDto>.Failure("Учётная запись заблокирована");
-            }
-
-            var role = await DetermineUserRoleAsync(user, ct);
-            var tokenPair = _tokenService.GenerateTokenPair(user.Id, role);
-
-            // Сохраняем refresh token в БД
-            await SaveRefreshTokenAsync(user.Id, tokenPair, ct);
-
-            var response = new AuthResponseDto
-            {
-                Id = user.Id,
-                Username = user.Username,
-                DisplayName = user.FormatDisplayName(),
-                Token = tokenPair.AccessToken,
-                RefreshToken = tokenPair.RefreshToken,
-                Role = role
-            };
-
-            _logger.LogInformation("Успешный вход: {Username} (роль: {Role})",
-                username, role);
-
-            return Result<AuthResponseDto>.Success(response);
+            BCrypt.Net.BCrypt.Verify(password, _dummyHash);
+            return Result<AuthResponseDto>.Failure("Неверное имя пользователя или пароль");
         }
-        catch (Exception ex)
+
+        if (!VerifyPassword(password, user.PasswordHash))
         {
-            _logger.LogError(ex, "Ошибка авторизации: {Username}", username);
-            return Result<AuthResponseDto>.Failure("Произошла ошибка при входе в систему");
+            _logger.LogWarning("Неудачная попытка входа: {Username}", username);
+            return Result<AuthResponseDto>.Failure("Неверное имя пользователя или пароль");
         }
+
+        if (user.IsBanned)
+        {
+            _logger.LogWarning("Попытка входа заблокированного пользователя: {Username}", username);
+            return Result<AuthResponseDto>.Forbidden("Учётная запись заблокирована");
+        }
+
+        var role = await DetermineUserRoleAsync(user, ct);
+        var tokenPair = _tokenService.GenerateTokenPair(user.Id, role);
+
+        var saveResult = await SaveRefreshTokenAsync(user.Id, tokenPair, ct);
+        if (saveResult.IsFailure)
+            return Result<AuthResponseDto>.Internal("Ошибка при сохранении сессии");
+
+        var response = new AuthResponseDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            DisplayName = user.FormatDisplayName(),
+            Token = tokenPair.AccessToken,
+            RefreshToken = tokenPair.RefreshToken,
+            Role = role
+        };
+
+        _logger.LogInformation("Успешный вход: {Username} (роль: {Role})", username, role);
+
+        return Result<AuthResponseDto>.Success(response);
     }
 
-    public async Task<Result<TokenResponseDto>> RefreshTokenAsync(
-        string accessToken, string refreshToken, CancellationToken ct = default)
+    public async Task<Result<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default)
     {
-        try
+        var principalResult = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+        if (principalResult.IsFailure)
+            return Result<TokenResponseDto>.FromFailure(principalResult);
+
+        var principal = principalResult.Value!;
+        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var jtiClaim = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+        if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrEmpty(jtiClaim))
+            return Result<TokenResponseDto>.Unauthorized("Недействительный access token");
+
+        var refreshTokenHash = ITokenService.HashToken(refreshToken);
+
+        var storedToken = await _context.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt =>
+                rt.TokenHash == refreshTokenHash &&
+                rt.UserId == userId, ct);
+
+        if (storedToken is null)
         {
-            // 1. Извлекаем claims из истёкшего access token
-            var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
-            if (principal is null)
-                return Result<TokenResponseDto>.Failure("Недействительный access token");
-
-            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var jtiClaim = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-
-            if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrEmpty(jtiClaim))
-                return Result<TokenResponseDto>.Failure("Недействительный access token");
-
-            // 2. Находим refresh token в БД по хешу
-            var refreshTokenHash = ITokenService.HashToken(refreshToken);
-
-            var storedToken = await _context.RefreshTokens
-                .Include(rt => rt.User)
-                .FirstOrDefaultAsync(rt =>
-                    rt.TokenHash == refreshTokenHash &&
-                    rt.UserId == userId, ct);
-
-            if (storedToken is null)
-            {
-                _logger.LogWarning(
-                    "Refresh token не найден для пользователя {UserId}", userId);
-                return Result<TokenResponseDto>.Failure("Недействительный refresh token");
-            }
-
-            // 3. Проверяем: если токен уже использован — это replay attack
-            if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
-            {
-                _logger.LogWarning(
-                    "Обнаружено повторное использование refresh token! " +
-                    "UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.",
-                    userId, storedToken.FamilyId);
-
-                // Отзываем ВСЮ семью ротации — потенциальная компрометация
-                await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
-
-                return Result<TokenResponseDto>.Failure("Refresh token уже использован. Авторизуйтесь заново.");
-            }
-
-            // 4. Проверяем срок действия
-            if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
-            {
-                _logger.LogWarning(
-                    "Истёкший refresh token для пользователя {UserId}", userId);
-                return Result<TokenResponseDto>.Failure("Refresh token истёк");
-            }
-
-            // 5. Проверяем, что пользователь не забанен
-            var user = storedToken.User;
-            if (user.IsBanned)
-            {
-                await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
-                return Result<TokenResponseDto>.Failure("Учётная запись заблокирована");
-            }
-
-            // 6. Ротация: помечаем старый как использованный
-            var role = await DetermineUserRoleAsync(user, ct);
-            var newTokenPair = _tokenService.GenerateTokenPair(userId, role);
-
-            var newRefreshToken = new Model.RefreshToken
-            {
-                UserId = userId,
-                TokenHash = ITokenService.HashToken(newTokenPair.RefreshToken),
-                JwtId = newTokenPair.JwtId,
-                CreatedAt = _appDateTime.UtcNow,
-                ExpiresAt = _appDateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenLifetimeDays),
-                FamilyId = storedToken.FamilyId // Та же семья
-            };
-
-            _context.RefreshTokens.Add(newRefreshToken);
-
-            storedToken.UsedAt = _appDateTime.UtcNow;
-            // ReplacedByTokenId установим после SaveChanges, когда у newRefreshToken будет Id
-
-            await _context.SaveChangesAsync(ct);
-
-            // Обновляем ссылку
-            storedToken.ReplacedByTokenId = newRefreshToken.Id;
-            await _context.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "Refresh token ротирован для пользователя {UserId}", userId);
-
-            return Result<TokenResponseDto>.Success(new TokenResponseDto
-            {
-                Token = newTokenPair.AccessToken,
-                RefreshToken = newTokenPair.RefreshToken,
-                UserId = userId,
-                Role = role
-            });
+            _logger.LogWarning("Refresh token не найден для пользователя {UserId}", userId);
+            return Result<TokenResponseDto>.Unauthorized("Недействительный refresh token");
         }
-        catch (Exception ex)
+
+        if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
         {
-            _logger.LogError(ex, "Ошибка обновления токена");
-            return Result<TokenResponseDto>.Failure("Произошла ошибка при обновлении токена");
+            _logger.LogWarning("Обнаружено повторное использование refresh token! UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.",
+                userId, storedToken.FamilyId);
+
+            await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
+
+            return Result<TokenResponseDto>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
         }
+
+        if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
+        {
+            _logger.LogWarning("Истёкший refresh token для пользователя {UserId}", userId);
+            return Result<TokenResponseDto>.Unauthorized("Refresh token истёк");
+        }
+
+        if (storedToken.User.IsBanned)
+        {
+            await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
+            return Result<TokenResponseDto>.Forbidden("Учётная запись заблокирована");
+        }
+
+        var role = await DetermineUserRoleAsync(storedToken.User, ct);
+        var newTokenPair = _tokenService.GenerateTokenPair(userId, role);
+
+        // Ротация: помечаем старый как использованный
+        storedToken.UsedAt = _appDateTime.UtcNow;
+
+        var newRefreshToken = new Model.RefreshToken
+        {
+            UserId = userId,
+            TokenHash = ITokenService.HashToken(newTokenPair.RefreshToken),
+            JwtId = newTokenPair.JwtId,
+            CreatedAt = _appDateTime.UtcNow,
+            ExpiresAt = _appDateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenLifetimeDays),
+            FamilyId = storedToken.FamilyId
+        };
+
+        _context.RefreshTokens.Add(newRefreshToken);
+        await _context.SaveChangesAsync(ct);
+
+        storedToken.ReplacedByTokenId = newRefreshToken.Id;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Refresh token ротирован для пользователя {UserId}", userId);
+
+        return Result<TokenResponseDto>.Success(new TokenResponseDto
+        {
+            Token = newTokenPair.AccessToken,
+            RefreshToken = newTokenPair.RefreshToken,
+            UserId = userId,
+            Role = role
+        });
     }
 
     public async Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
     {
-        try
-        {
-            var now = _appDateTime.UtcNow;
+        var now = _appDateTime.UtcNow;
 
-            var activeTokens = await _context.RefreshTokens
-                .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null)
-                .ToListAsync(ct);
+        var revokedCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
 
-            foreach (var token in activeTokens)
-            {
-                token.RevokedAt = now;
-            }
+        _logger.LogInformation("Отозвано {Count} refresh tokens для пользователя {UserId}", revokedCount, userId);
 
-            await _context.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "Отозвано {Count} refresh tokens для пользователя {UserId}",
-                activeTokens.Count, userId);
-
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка отзыва токенов для пользователя {UserId}", userId);
-            return Result.Failure("Ошибка при отзыве токенов");
-        }
+        return Result.Success();
     }
 
     #region Private Methods
 
-    private async Task SaveRefreshTokenAsync(
-        int userId, TokenPair tokenPair, CancellationToken ct)
+    private async Task<Result> SaveRefreshTokenAsync(int userId, TokenPair tokenPair, CancellationToken ct)
     {
+        await EnforceSessionLimitAsync(userId, ct);
+
         var refreshTokenEntity = new Model.RefreshToken
         {
             UserId = userId,
@@ -245,39 +194,72 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
             JwtId = tokenPair.JwtId,
             CreatedAt = _appDateTime.UtcNow,
             ExpiresAt = _appDateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenLifetimeDays),
-            FamilyId = Guid.NewGuid().ToString() // Новая семья при логине
+            FamilyId = Guid.NewGuid().ToString()
         };
 
         _context.RefreshTokens.Add(refreshTokenEntity);
-        await _context.SaveChangesAsync(ct);
 
-        // Очистка старых токенов (опционально, чтобы таблица не разрасталась)
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
+
         await CleanupExpiredTokensAsync(userId, ct);
+
+        return Result.Success();
+    }
+
+    private async Task EnforceSessionLimitAsync(int userId, CancellationToken ct)
+    {
+        var now = _appDateTime.UtcNow;
+
+        var activeFamilies = await _context.RefreshTokens
+            .Where(rt =>
+                rt.UserId == userId &&
+                rt.RevokedAt == null &&
+                rt.UsedAt == null &&
+                rt.ExpiresAt > now)
+            .GroupBy(rt => rt.FamilyId)
+            .Select(g => new
+            {
+                FamilyId = g.Key,
+                LatestCreatedAt = g.Max(rt => rt.CreatedAt)
+            })
+            .OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
+
+        if (activeFamilies.Count >= MaxActiveSessions)
+        {
+            var familiesToRevoke = activeFamilies
+                .Skip(MaxActiveSessions - 1)
+                .Select(f => f.FamilyId).ToList();
+
+            if (familiesToRevoke.Count > 0)
+            {
+                var revokedCount = await _context.RefreshTokens
+                    .Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
+                    .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
+
+                _logger.LogInformation(
+                    "Превышен лимит сессий для пользователя {UserId}: " +
+                    "отозвано {RevokedCount} токенов из {FamilyCount} старых сессий " +
+                    "(лимит: {MaxSessions})",
+                    userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
+            }
+        }
     }
 
     private async Task RevokeTokenFamilyAsync(string familyId, CancellationToken ct)
     {
         var now = _appDateTime.UtcNow;
 
-        var familyTokens = await _context.RefreshTokens
-            .Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null)
-            .ToListAsync(ct);
+        var revokedCount = await _context.RefreshTokens.Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
 
-        foreach (var token in familyTokens)
-        {
-            token.RevokedAt = now;
-        }
-
-        await _context.SaveChangesAsync(ct);
-
-        _logger.LogWarning(
-            "Отозвано {Count} токенов семьи {FamilyId}",
-            familyTokens.Count, familyId);
+        _logger.LogWarning("Отозвано {Count} токенов семьи {FamilyId}", revokedCount, familyId);
     }
 
     private async Task CleanupExpiredTokensAsync(int userId, CancellationToken ct)
     {
-        var cutoff = _appDateTime.UtcNow.AddDays(-60); // Удаляем старше 60 дней
+        var cutoff = _appDateTime.UtcNow.AddDays(-60);
 
         var expiredCount = await _context.RefreshTokens
             .Where(rt => rt.UserId == userId && rt.ExpiresAt < cutoff)
@@ -285,8 +267,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
 
         if (expiredCount > 0)
         {
-            _logger.LogDebug(
-                "Очищено {Count} истёкших refresh tokens для пользователя {UserId}",
+            _logger.LogDebug("Очищено {Count} истёкших refresh tokens для пользователя {UserId}",
                 expiredCount, userId);
         }
     }

@@ -25,11 +25,11 @@ public static class ApiEndpoints
     }
 
     /// <summary>
-    /// UserController - пользователи
+    /// UsersController - пользователи
     /// </summary>
-    public static class User
+    public static class Users
     {
-        private const string Base = $"{Api}/user";
+        private const string Base = $"{Api}/users";
 
         /// <summary>GET api/user</summary>
         public const string GetAll = Base;
@@ -59,7 +59,7 @@ public static class ApiEndpoints
     /// <summary>
     /// ChatsController - чаты
     /// </summary>
-    public static class Chat
+    public static class Chats
     {
         private const string Base = $"{Api}/chats";
 
@@ -102,7 +102,7 @@ public static class ApiEndpoints
     /// <summary>
     /// MessagesController - сообщения
     /// </summary>
-    public static class Message
+    public static class Messages
     {
         private const string Base = $"{Api}/messages";
 
@@ -147,7 +147,7 @@ public static class ApiEndpoints
     /// <summary>
     /// FilesController - файлы
     /// </summary>
-    public static class File
+    public static class Files
     {
         private const string Base = $"{Api}/files";
 
@@ -158,67 +158,67 @@ public static class ApiEndpoints
     /// <summary>
     /// PollController - опросы
     /// </summary>
-    public static class Poll
+    public static class Polls
     {
-        private const string Base = $"{Api}/poll";
+        private const string Base = $"{Api}/polls";
 
-        /// <summary>POST api/poll</summary>
+        /// <summary>POST api/polls</summary>
         public const string Create = Base;
 
-        /// <summary>POST api/poll/vote</summary>
+        /// <summary>POST api/polls/vote</summary>
         public const string Vote = $"{Base}/vote";
 
-        /// <summary>GET api/poll/{pollId}?userId={userId}</summary>
+        /// <summary>GET api/polls/{pollId}?userId={userId}</summary>
         public static string ById(int pollId, int userId) => $"{Base}/{pollId}?userId={userId}";
     }
 
     /// <summary>
     /// DepartmentController - отделы
     /// </summary>
-    public static class Department
+    public static class Departments
     {
-        private const string Base = $"{Api}/department";
+        private const string Base = $"{Api}/departments";
 
-        /// <summary>GET api/department</summary>
+        /// <summary>GET api/departments</summary>
         public const string GetAll = Base;
 
-        /// <summary>POST api/department</summary>
+        /// <summary>POST api/departments</summary>
         public const string Create = Base;
 
-        /// <summary>GET/PUT/DELETE api/department/{id}</summary>
+        /// <summary>GET/PUT/DELETE api/departments/{id}</summary>
         public static string ById(int id) => $"{Base}/{id}";
 
-        /// <summary>GET/POST api/department/{id}/members</summary>
+        /// <summary>GET/POST api/departments/{id}/members</summary>
         public static string Members(int id) => $"{Base}/{id}/members";
 
-        /// <summary>DELETE api/department/{departmentId}/members/{userId}</summary>
+        /// <summary>DELETE api/departments/{departmentId}/members/{userId}</summary>
         public static string RemoveMember(int departmentId, int userId) => $"{Base}/{departmentId}/members/{userId}";
 
-        /// <summary>GET api/department/{id}/can-manage</summary>
+        /// <summary>GET api/departments/{id}/can-manage</summary>
         public static string CanManage(int id) => $"{Base}/{id}/can-manage";
     }
 
     /// <summary>
     /// NotificationController - уведомления
     /// </summary>
-    public static class Notification
+    public static class Notifications
     {
-        private const string Base = $"{Api}/notification";
+        private const string Base = $"{Api}/notifications";
 
-        /// <summary>GET api/notification/settings</summary>
+        /// <summary>GET api/notifications/settings</summary>
         public const string AllSettings = $"{Base}/settings";
 
-        /// <summary>POST api/notification/chat/mute</summary>
+        /// <summary>POST api/notifications/chat/mute</summary>
         public const string SetMute = $"{Base}/chat/mute";
 
-        /// <summary>GET api/notification/chat/{chatId}/settings</summary>
+        /// <summary>GET api/notifications/chat/{chatId}/settings</summary>
         public static string ChatSettings(int chatId) => $"{Base}/chat/{chatId}/settings";
     }
 
     /// <summary>
     /// ReadReceiptsController - прочтения
     /// </summary>
-    public static class ReadReceipt
+    public static class ReadReceipts
     {
         private const string Base = $"{Api}/readreceipts";
 

@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
         services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
         services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
+        services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
 
         services.AddSingleton(_ =>
         {

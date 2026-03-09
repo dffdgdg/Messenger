@@ -183,9 +183,8 @@ namespace MessengerDesktop.Services.Auth
         private string GetFilePath(string key)
         {
             var safeKey = Convert.ToBase64String(Encoding.UTF8.GetBytes(key))
-                .Replace('/', '_')
-                .Replace('+', '-')
-                .Replace('=', '.');
+                .Replace('/', '_').Replace('+', '-').Replace('=', '.');
+
             return Path.Combine(_storagePath, $"{safeKey}.secure");
         }
 
@@ -243,8 +242,6 @@ namespace MessengerDesktop.Services.Auth
             _lock.Dispose();
 
             Array.Clear(_key, 0, _key.Length);
-
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -8,20 +8,15 @@
 	<SolidColorBrush x:Key="ThirdBG" Color="#1A1A24"/>
 	<SolidColorBrush x:Key="FourthBG" Color="#22222E"/>
 
-	<SolidColorBrush x:Key="PanelBg" Color="#2618181F"/>
-	<SolidColorBrush x:Key="PanelBgSolid" Color="#1E1E28"/>
 	<SolidColorBrush x:Key="Accent" Color="#3390EC"/>
-	<SolidColorBrush x:Key="AccentBrush" Color="#3390EC"/>
 	<SolidColorBrush x:Key="AccentHover" Color="#50A0F0"/>
 	<SolidColorBrush x:Key="AccentPressed" Color="#2B7DD2"/>
 	<SolidColorBrush x:Key="AccentMuted" Color="#3390EC40"/>
-	<SolidColorBrush x:Key="AccentGlow" Color="#3390EC20"/>
 
 	<SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
 	<SolidColorBrush x:Key="TextSecondary" Color="#AAAABC"/>
 	<SolidColorBrush x:Key="TextMuted" Color="#6B6B7A"/>
 	<SolidColorBrush x:Key="TextOnAccent" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="Muted" Color="#8888A0"/>
 
 	<SolidColorBrush x:Key="Icon" Color="#8888A0"/>
 	<SolidColorBrush x:Key="IconHover" Color="#AAAABC"/>
@@ -112,4 +107,9 @@
 
 	<Color x:Key="LoginLogoStart">#3B82F6</Color>
 	<Color x:Key="LoginLogoEnd">#1D4ED8</Color>
+
+	<BoxShadows	x:Key="DialogShadow">0 8 32 #70000000</BoxShadows >
+	<BoxShadows x:Key="MessageBubbleShadow">0 1 3 0 #15000000</BoxShadows >
+	<SolidColorBrush x:Key="MessageHighlightBrush" Color="#30FFD700"/>
+	<SolidColorBrush x:Key="DangerPressedBrush" Color="#D32F2F"/>
 </ResourceDictionary>

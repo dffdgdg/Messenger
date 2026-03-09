@@ -5,6 +5,8 @@ public static class MessageMappings
     public static MessageDto ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
+        var isSystem = message.IsSystemMessage;
+        var voice = message.VoiceMessage;
 
         return new MessageDto
         {
@@ -14,17 +16,30 @@ public static class MessageMappings
             Content = isDeleted ? "[Сообщение удалено]" : message.Content,
             CreatedAt = message.CreatedAt,
             EditedAt = message.EditedAt,
-            IsEdited = message.EditedAt.HasValue && !isDeleted,
+            IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,
             IsDeleted = isDeleted,
             SenderName = message.Sender?.FormatDisplayName(),
             SenderAvatarUrl = message.Sender?.Avatar.BuildFullUrl(urlBuilder),
-            IsOwn = currentUserId.HasValue && message.SenderId == currentUserId,
+            IsOwn = !isSystem && currentUserId.HasValue && message.SenderId == currentUserId,
+            IsSystemMessage = isSystem,
+            SystemEventType = isSystem ? message.SystemEventType : null,
+            TargetUserId = isSystem ? message.TargetUserId : null,
+            TargetUserName = isSystem ? message.TargetUser?.FormatDisplayName() : null,
+
             ReplyToMessageId = message.ReplyToMessageId,
             ForwardedFromMessageId = message.ForwardedFromMessageId,
             ReplyToMessage = message.ReplyToMessage?.ToReplyPreviewDto(),
             ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto(),
-            IsVoiceMessage = message.IsVoiceMessage,
-            TranscriptionStatus = isDeleted ? null : message.TranscriptionStatus,
+
+            IsVoiceMessage = voice != null,
+            VoiceDurationSeconds = voice?.DurationSeconds,
+            TranscriptionStatus = isDeleted ? null : voice?.TranscriptionStatus,
+            TranscriptionText = isDeleted ? null : voice?.TranscriptionText,
+            VoiceFileUrl = isDeleted ? null : voice?.FilePath.BuildFullUrl(urlBuilder),
+            VoiceFileName = voice?.FileName,
+            VoiceContentType = voice?.ContentType,
+            VoiceFileSize = voice?.FileSize,
+
             Files = isDeleted
                 ? []
                 : message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
@@ -35,7 +50,6 @@ public static class MessageMappings
     public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
     {
         var isDeleted = message.IsDeleted ?? false;
-
         return new()
         {
             Id = message.Id,

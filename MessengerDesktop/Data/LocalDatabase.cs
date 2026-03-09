@@ -9,7 +9,7 @@ namespace MessengerDesktop.Data;
 
 public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 {
-    private const int SchemaVersion = 1;
+    private const int SchemaVersion = 3;
 
     private readonly SQLiteAsyncConnection _db;
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -21,7 +21,11 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         if (string.IsNullOrWhiteSpace(dbPath))
             throw new ArgumentNullException(nameof(dbPath));
 
-        _db = new SQLiteAsyncConnection(dbPath,SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
+        _db = new SQLiteAsyncConnection(
+            dbPath,
+            SQLiteOpenFlags.ReadWrite |
+            SQLiteOpenFlags.Create |
+            SQLiteOpenFlags.FullMutex);
 
         Debug.WriteLine($"[LocalDB] Path: {dbPath}");
     }
@@ -46,7 +50,6 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
             var sw = Stopwatch.StartNew();
 
-            // PRAGMA через ExecuteScalarAsync — они возвращают значение, не "affected rows"
             await _db.ExecuteScalarAsync<string>("PRAGMA journal_mode=WAL");
             await _db.ExecuteScalarAsync<int>("PRAGMA synchronous=NORMAL");
             await _db.ExecuteScalarAsync<int>("PRAGMA cache_size=-4000");
@@ -55,10 +58,8 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
             Debug.WriteLine("[LocalDB] PRAGMAs set");
 
-            // Миграции
             await MigrateAsync();
 
-            // Создание таблиц (IF NOT EXISTS)
             await _db.CreateTableAsync<CachedMessage>();
             await _db.CreateTableAsync<CachedChat>();
             await _db.CreateTableAsync<CachedUser>();
@@ -67,10 +68,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
             Debug.WriteLine("[LocalDB] Tables created");
 
-            // Индексы
             await CreateIndexesAsync();
-
-            // FTS5
             await CreateFtsAsync();
 
             _initialized = true;
@@ -104,12 +102,11 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
         if (currentVersion < 1)
         {
-            Debug.WriteLine("[LocalDB] Migrating to schema v1 (initial)");
-            // Таблицы создаются ниже через CreateTableAsync
+            Debug.WriteLine(
+                "[LocalDB] Migrating to schema v1 (initial)");
         }
 
-        // PRAGMA user_version не возвращает значение при SET — используем Execute через connection напрямую
-        await _db.RunInTransactionAsync(conn => conn.Execute($"PRAGMA user_version = {SchemaVersion}"));
+        await _db.ExecuteAsync($"PRAGMA user_version = {SchemaVersion}");
 
         Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
     }
@@ -129,21 +126,20 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
     private async Task CreateIndexesAsync()
     {
-        // Все CREATE INDEX IF NOT EXISTS — DDL, не возвращает affected rows
-        // Используем RunInTransactionAsync с синхронным Execute
         await _db.RunInTransactionAsync(conn =>
         {
             conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id ON messages(chat_id, id DESC)");
-
+                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id " +
+                "ON messages(chat_id, id DESC)");
             conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc ON messages(chat_id, id ASC)");
-
+                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc " +
+                "ON messages(chat_id, id ASC)");
             conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_chats_last_msg ON chats(last_message_date DESC)");
-
+                "CREATE INDEX IF NOT EXISTS idx_chats_last_msg " +
+                "ON chats(last_message_date DESC)");
             conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
+                "CREATE INDEX IF NOT EXISTS idx_chats_type_date " +
+                "ON chats(type, last_message_date DESC)");
         });
 
         Debug.WriteLine("[LocalDB] Indexes created");
@@ -151,64 +147,55 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
     private async Task CreateFtsAsync()
     {
-        // FTS5 и триггеры — DDL, выполняем через синхронный Execute внутри транзакции
-        // НО: CREATE VIRTUAL TABLE нельзя в транзакции в SQLite, выполняем отдельно
         try
         {
-            // Сначала FTS таблица (вне транзакции)
-            await Task.Run(() =>
-            {
-                var conn = _db.GetConnection();
-                using (conn.Lock())
-                {
-                    conn.Execute(@"
-                        CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts 
-                        USING fts5(content, content=messages, content_rowid=id)");
-                }
-            });
+            await _db.ExecuteAsync(@"
+                CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts 
+                USING fts5(
+                    content, 
+                    content=messages, 
+                    content_rowid=id
+                )");
 
-            // Триггеры — тоже DDL, выполняем поштучно
-            await Task.Run(() =>
-            {
-                var conn = _db.GetConnection();
-                using (conn.Lock())
-                {
-                    conn.Execute(@"
-                        CREATE TRIGGER IF NOT EXISTS trg_msg_fts_ins 
-                        AFTER INSERT ON messages 
-                        WHEN new.content IS NOT NULL AND new.is_deleted = 0
-                        BEGIN
-                            INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
-                        END");
+            await _db.ExecuteAsync(@"
+                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_ins 
+                AFTER INSERT ON messages 
+                WHEN new.content IS NOT NULL 
+                    AND new.is_deleted = 0
+                BEGIN
+                    INSERT INTO messages_fts(rowid, content) 
+                        VALUES (new.id, new.content);
+                END");
 
-                    conn.Execute(@"
-                        CREATE TRIGGER IF NOT EXISTS trg_msg_fts_upd 
-                        AFTER UPDATE OF content, is_deleted ON messages
-                        BEGIN
-                            INSERT INTO messages_fts(messages_fts, rowid, content) 
-                                VALUES('delete', old.id, COALESCE(old.content, ''));
-                            INSERT OR IGNORE INTO messages_fts(rowid, content) 
-                                SELECT new.id, new.content 
-                                WHERE new.content IS NOT NULL AND new.is_deleted = 0;
-                        END");
+            await _db.ExecuteAsync(@"
+                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_upd 
+                AFTER UPDATE OF content, is_deleted ON messages
+                BEGIN
+                    INSERT INTO messages_fts(
+                        messages_fts, rowid, content) 
+                        VALUES('delete', old.id, 
+                            COALESCE(old.content, ''));
+                    INSERT OR IGNORE INTO 
+                        messages_fts(rowid, content) 
+                        SELECT new.id, new.content 
+                        WHERE new.content IS NOT NULL 
+                            AND new.is_deleted = 0;
+                END");
 
-                    conn.Execute(@"
-                        CREATE TRIGGER IF NOT EXISTS trg_msg_fts_del 
-                        AFTER DELETE ON messages
-                        WHEN old.content IS NOT NULL
-                        BEGIN
-                            INSERT INTO messages_fts(messages_fts, rowid, content) 
-                                VALUES('delete', old.id, old.content);
-                        END");
-                }
-            });
+            await _db.ExecuteAsync(@"
+                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_del 
+                AFTER DELETE ON messages
+                WHEN old.content IS NOT NULL
+                BEGIN
+                    INSERT INTO messages_fts(
+                        messages_fts, rowid, content) 
+                        VALUES('delete', old.id, old.content);
+                END");
 
             Debug.WriteLine("[LocalDB] FTS5 table + triggers created");
         }
         catch (Exception ex)
         {
-            // FTS — не критично. Если SQLite скомпилирован без FTS5,
-            // поиск просто будет fallback на LIKE
             Debug.WriteLine($"[LocalDB] FTS5 setup failed (non-critical): {ex.Message}");
         }
     }
@@ -229,15 +216,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
     public async Task VacuumAsync()
     {
         var sizeBefore = await GetDatabaseSizeBytesAsync();
-        // VACUUM нельзя в транзакции
-        await Task.Run(() =>
-        {
-            var conn = _db.GetConnection();
-            using (conn.Lock())
-            {
-                conn.Execute("VACUUM");
-            }
-        });
+        await _db.ExecuteAsync("VACUUM");
         var sizeAfter = await GetDatabaseSizeBytesAsync();
         Debug.WriteLine($"[LocalDB] VACUUM: {sizeBefore / 1024}KB → {sizeAfter / 1024}KB");
     }

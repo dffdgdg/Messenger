@@ -18,6 +18,14 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     //  Messages
     // ═══════════════════════════════════════════════════════
 
+    public async Task ClearChatMessagesAsync(int chatId)
+    {
+        // Удаляем все сообщения чата
+        await _messageRepo.DeleteByChatIdAsync(chatId);
+
+        // Сбрасываем SyncState — чат будет загружен заново
+        await _localDb.Connection.DeleteAsync<ChatSyncState>(chatId);
+    }
     public async Task UpsertMessageAsync(MessageDto message)
     {
         var entity = message.ToEntity();

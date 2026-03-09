@@ -3,39 +3,30 @@
 public class Message
 {
     public int Id { get; set; }
-
     public int ChatId { get; set; }
-
     public int SenderId { get; set; }
-
     public string? Content { get; set; }
-
     public DateTime CreatedAt { get; set; }
-
     public DateTime? EditedAt { get; set; }
-
     public bool? IsDeleted { get; set; }
-
     public int? ReplyToMessageId { get; set; }
-
     public int? ForwardedFromMessageId { get; set; }
+    public bool IsSystemMessage { get; set; } = false;
+    public SystemEventType? SystemEventType { get; set; }
+    public int? TargetUserId { get; set; }
+    public virtual VoiceMessage? VoiceMessage { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool IsVoiceMessage => VoiceMessage != null;
 
     public virtual Chat Chat { get; set; } = null!;
-
-    public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
-
-    public virtual ICollection<MessageFile> MessageFiles { get; set; } = [];
-
-    public virtual ICollection<Message> InverseReplyToMessage { get; set; } = [];
-
-    public virtual ICollection<Message> InverseForwardedFromMessage { get; set; } = [];
-    public bool IsVoiceMessage { get; set; } = false;
-    public string? TranscriptionStatus { get; set; }
-    public virtual Message? ReplyToMessage { get; set; }
-
-    public virtual Message? ForwardedFromMessage { get; set; }
-
-    public virtual ICollection<Poll> Polls { get; set; } = [];
-
     public virtual User Sender { get; set; } = null!;
+    public virtual User? TargetUser { get; set; }
+    public virtual Message? ReplyToMessage { get; set; }
+    public virtual Message? ForwardedFromMessage { get; set; }
+    public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
+    public virtual ICollection<MessageFile> MessageFiles { get; set; } = [];
+    public virtual ICollection<Message> InverseReplyToMessage { get; set; } = [];
+    public virtual ICollection<Message> InverseForwardedFromMessage { get; set; } = [];
+    public virtual ICollection<Poll> Polls { get; set; } = [];
 }

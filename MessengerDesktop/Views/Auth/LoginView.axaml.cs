@@ -10,17 +10,8 @@ public partial class LoginView : UserControl
     {
         base.OnLoaded(e);
 
-        // Подписка на Enter в поле пароля
         if (this.FindControl<TextBox>("PasswordBox") is { } passwordBox)
             passwordBox.KeyDown += OnPasswordKeyDown;
-    }
-
-    protected override void OnUnloaded(RoutedEventArgs e)
-    {
-        if (this.FindControl<TextBox>("PasswordBox") is { } passwordBox)
-            passwordBox.KeyDown -= OnPasswordKeyDown;
-
-        base.OnUnloaded(e);
     }
 
     private void OnPasswordKeyDown(object? sender, KeyEventArgs e)
@@ -30,9 +21,5 @@ public partial class LoginView : UserControl
             vm.LoginCommand.Execute(null);
             e.Handled = true;
         }
-    }
-
-    private void TextBlock_ActualThemeVariantChanged(object? sender, System.EventArgs e)
-    {
     }
 }

@@ -85,7 +85,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private async Task LoadUsersAsync()
     {
-        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.User.GetAll);
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
 
         if (!result.Success || result.Data == null)
         {
@@ -175,7 +175,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         if (ShowDialogAction == null)
             return;
 
-        var dialog = new ChatUserPickerDialogViewModel(
+        var dialog = new UserPickerDialogViewModel(
             "Участники",
             AvailableUsers,
             CanManageParticipants,
@@ -203,7 +203,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             .Select(x => x.Clone(SelectedAdminIds.Contains(x.Id)))
             .ToList();
 
-        var dialog = new ChatUserPickerDialogViewModel(
+        var dialog = new UserPickerDialogViewModel(
             "Администраторы",
             adminsSource,
             CanManageAdmins,

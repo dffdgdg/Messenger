@@ -15,27 +15,17 @@ public sealed class TokenPair
 
 public interface ITokenService
 {
-    /// <summary>
-    /// Генерирует пару access + refresh токенов.
-    /// </summary>
     TokenPair GenerateTokenPair(int userId, UserRole? role = null);
-
-    /// <summary>
-    /// Валидирует access token (включая проверку срока действия).
-    /// </summary>
     bool ValidateToken(string token, out int userId);
 
     /// <summary>
     /// Извлекает claims из истёкшего access token без проверки срока действия.
-    /// Используется при refresh.
+    /// Возвращает Result.Failure при невалидном токене вместо исключения.
     /// </summary>
-    ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
+    Result<ClaimsPrincipal> GetPrincipalFromExpiredToken(string token);
 
-    /// <summary>
-    /// Хеширует refresh token для хранения в БД.
-    /// </summary>
-    static string HashToken(string token) => Convert.ToBase64String(
-        SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+    static string HashToken(string token)
+        => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
     TokenValidationParameters GetValidationParameters();
 }
@@ -130,10 +120,10 @@ public sealed class TokenService : ITokenService
         }
     }
 
-    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+    public Result<ClaimsPrincipal> GetPrincipalFromExpiredToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
-            return null;
+            return Result<ClaimsPrincipal>.Unauthorized("Access token не предоставлен");
 
         try
         {
@@ -145,7 +135,7 @@ public sealed class TokenService : ITokenService
                 ValidIssuer = _settings.Issuer,
                 ValidateAudience = true,
                 ValidAudience = _settings.Audience,
-                ValidateLifetime = false, // Ключевое: НЕ проверяем срок действия
+                ValidateLifetime = false,
                 ClockSkew = TimeSpan.Zero
             };
 
@@ -156,14 +146,14 @@ public sealed class TokenService : ITokenService
                 !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
                     StringComparison.InvariantCultureIgnoreCase))
             {
-                return null;
+                return Result<ClaimsPrincipal>.Unauthorized("Недействительный алгоритм токена");
             }
 
-            return principal;
+            return Result<ClaimsPrincipal>.Success(principal);
         }
-        catch
+        catch (Exception)
         {
-            return null;
+            return Result<ClaimsPrincipal>.Unauthorized("Недействительный access token");
         }
     }
 

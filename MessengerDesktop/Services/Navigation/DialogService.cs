@@ -1,319 +1,315 @@
 ﻿using MessengerDesktop.ViewModels.Dialog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Services
+namespace MessengerDesktop.Services;
+
+public interface IDialogService
 {
-    public interface IDialogService
+    IReadOnlyList<DialogBaseViewModel> DialogStack { get; }
+    DialogBaseViewModel? CurrentDialog { get; }
+    bool HasOpenDialogs { get; }
+    bool IsDialogVisible { get; }
+
+    event Action? OnDialogStackChanged;
+    event Action<bool>? OnDialogAnimationRequested;
+
+    Task ShowAsync<TViewModel>(TViewModel dialogViewModel)
+        where TViewModel : DialogBaseViewModel;
+    Task CloseAsync();
+    Task CloseAllAsync();
+    void NotifyAnimationComplete();
+}
+
+public sealed partial class DialogService : ObservableObject, IDialogService, IDisposable
+{
+    private readonly List<DialogBaseViewModel> _dialogStack = [];
+    private readonly SemaphoreSlim _operationLock = new(1, 1);
+    private readonly object _animationLock = new();
+    private readonly Channel<CloseRequest> _closeRequests;
+    private readonly CancellationTokenSource _processingCts = new();
+
+    private TaskCompletionSource? _animationTcs;
+    private CancellationTokenSource? _animationCts;
+    private bool _disposed;
+
+    private record CloseRequest(bool CloseAll, TaskCompletionSource Completion);
+
+    [ObservableProperty]
+    private DialogBaseViewModel? _currentDialog;
+
+    [ObservableProperty]
+    private bool _isDialogVisible;
+
+    public IReadOnlyList<DialogBaseViewModel> DialogStack => _dialogStack.AsReadOnly();
+    public event Action? OnDialogStackChanged;
+    public event Action<bool>? OnDialogAnimationRequested;
+    public bool HasOpenDialogs => _dialogStack.Count > 0;
+
+    public DialogService()
     {
-        IReadOnlyList<DialogBaseViewModel> DialogStack { get; }
-        DialogBaseViewModel? CurrentDialog { get; }
-        bool HasOpenDialogs { get; }
-        bool IsDialogVisible { get; }
-
-        event Action? OnDialogStackChanged;
-        event Action<bool>? OnDialogAnimationRequested;
-
-        Task ShowAsync<TViewModel>(TViewModel dialogViewModel) where TViewModel : DialogBaseViewModel;
-        Task CloseAsync();
-        Task CloseAllAsync();
-
-        void NotifyAnimationComplete();
-    }
-
-    public sealed partial class DialogService : ObservableObject, IDialogService, IDisposable
-    {
-        private readonly List<DialogBaseViewModel> _dialogStack = [];
-        private readonly SemaphoreSlim _operationLock = new(1, 1);
-        private readonly object _animationLock = new();
-        private readonly Channel<CloseRequest> _closeRequests;
-        private readonly CancellationTokenSource _processingCts = new();
-
-        private TaskCompletionSource? _animationTcs;
-        private CancellationTokenSource? _animationCts;
-        private bool _disposed;
-
-        private record CloseRequest(bool CloseAll, TaskCompletionSource Completion);
-
-        [ObservableProperty]
-        private DialogBaseViewModel? _currentDialog;
-
-        [ObservableProperty]
-        private bool _isDialogVisible;
-
-        public IReadOnlyList<DialogBaseViewModel> DialogStack => _dialogStack.AsReadOnly();
-        public event Action? OnDialogStackChanged;
-        public event Action<bool>? OnDialogAnimationRequested;
-
-        public bool HasOpenDialogs => _dialogStack.Count > 0;
-
-        public DialogService()
-        {
-            _closeRequests = Channel.CreateBounded<CloseRequest>(new BoundedChannelOptions(10)
+        _closeRequests = Channel.CreateBounded<CloseRequest>(
+            new BoundedChannelOptions(10)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true
             });
 
-            _ = ProcessCloseRequestsAsync(_processingCts.Token);
-        }
+        _ = ProcessCloseRequestsAsync(_processingCts.Token);
+    }
 
-        private async Task ProcessCloseRequestsAsync(CancellationToken ct)
+    private async Task ProcessCloseRequestsAsync(CancellationToken ct)
+    {
+        try
         {
-            try
+            await foreach (var request in
+                _closeRequests.Reader.ReadAllAsync(ct))
             {
-                await foreach (var request in _closeRequests.Reader.ReadAllAsync(ct))
+                try
                 {
-                    try
-                    {
-                        if (request.CloseAll)
-                        {
-                            await CloseAllInternalAsync();
-                        }
-                        else
-                        {
-                            await CloseInternalAsync();
-                        }
+                    if (request.CloseAll)
+                        await CloseAllInternalAsync();
+                    else
+                        await CloseInternalAsync();
 
-                        request.Completion.TrySetResult();
-                    }
-                    catch (Exception ex)
-                    {
-                        request.Completion.TrySetException(ex);
-                    }
+                    request.Completion.TrySetResult();
+                }
+                catch (Exception ex)
+                {
+                    request.Completion.TrySetException(ex);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Expected on disposal
-            }
         }
-
-        public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel)
-            where TViewModel : DialogBaseViewModel
+        catch (OperationCanceledException)
         {
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(dialogViewModel);
-
-            await _operationLock.WaitAsync();
-
-            try
-            {
-                var hadOpenDialogs = HasOpenDialogs;
-
-                if (CurrentDialog != null)
-                {
-                    CurrentDialog.CloseRequested -= OnDialogClosed;
-                }
-
-                _dialogStack.Add(dialogViewModel);
-                CurrentDialog = dialogViewModel;
-                dialogViewModel.CloseRequested += OnDialogClosed;
-
-                IsDialogVisible = true;
-
-                OnDialogStackChanged?.Invoke();
-
-                if (!hadOpenDialogs)
-                {
-                    await RequestAnimationAsync(isOpening: true);
-                }
-            }
-            finally
-            {
-                _operationLock.Release();
-            }
+            // Expected on disposal
         }
+    }
 
-        public async Task CloseAsync()
+    public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel)
+        where TViewModel : DialogBaseViewModel
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(dialogViewModel);
+
+        await _operationLock.WaitAsync();
+
+        try
         {
-            ThrowIfDisposed();
+            var hadOpenDialogs = HasOpenDialogs;
 
-            var tcs = new TaskCompletionSource();
-            await _closeRequests.Writer.WriteAsync(new CloseRequest(false, tcs));
-            await tcs.Task;
+            if (CurrentDialog != null)
+                CurrentDialog.CloseRequested -= OnDialogClosed;
+
+            _dialogStack.Add(dialogViewModel);
+            CurrentDialog = dialogViewModel;
+            dialogViewModel.CloseRequested += OnDialogClosed;
+
+            IsDialogVisible = true;
+            OnDialogStackChanged?.Invoke();
+
+            if (!hadOpenDialogs)
+                await RequestAnimationAsync(isOpening: true);
         }
-
-        public async Task CloseAllAsync()
+        finally
         {
-            ThrowIfDisposed();
-
-            var tcs = new TaskCompletionSource();
-            await _closeRequests.Writer.WriteAsync(new CloseRequest(true, tcs));
-            await tcs.Task;
+            _operationLock.Release();
         }
+    }
 
-        private async Task CloseInternalAsync()
+    public async Task CloseAsync()
+    {
+        ThrowIfDisposed();
+
+        var tcs = new TaskCompletionSource();
+        await _closeRequests.Writer.WriteAsync(new CloseRequest(false, tcs));
+        await tcs.Task;
+    }
+
+    public async Task CloseAllAsync()
+    {
+        ThrowIfDisposed();
+
+        var tcs = new TaskCompletionSource();
+        await _closeRequests.Writer.WriteAsync(new CloseRequest(true, tcs));
+        await tcs.Task;
+    }
+
+    private async Task CloseInternalAsync()
+    {
+        await _operationLock.WaitAsync();
+
+        try
         {
-            await _operationLock.WaitAsync();
+            if (CurrentDialog == null)
+                return;
 
-            try
-            {
-                if (CurrentDialog == null)
-                    return;
+            var closingDialog = CurrentDialog;
+            var hasUnderlyingDialog = _dialogStack.Count > 1;
 
-                var closingDialog = CurrentDialog;
-                var hasUnderlyingDialog = _dialogStack.Count > 1;
-
-                if (!hasUnderlyingDialog)
-                {
-                    await RequestAnimationAsync(isOpening: false);
-                }
-
-                closingDialog.CloseRequested -= OnDialogClosed;
-                _dialogStack.Remove(closingDialog);
-
-                CurrentDialog = _dialogStack.Count > 0 ? _dialogStack[^1] : null;
-
-                if (CurrentDialog != null)
-                {
-                    CurrentDialog.CloseRequested += OnDialogClosed;
-                }
-                else
-                {
-                    IsDialogVisible = false;
-                }
-
-                OnDialogStackChanged?.Invoke();
-            }
-            finally
-            {
-                _operationLock.Release();
-            }
-        }
-
-        private async Task CloseAllInternalAsync()
-        {
-            await _operationLock.WaitAsync();
-
-            try
-            {
-                if (!HasOpenDialogs)
-                    return;
-
+            if (!hasUnderlyingDialog)
                 await RequestAnimationAsync(isOpening: false);
 
-                foreach (var dialog in _dialogStack)
-                {
-                    dialog.CloseRequested -= OnDialogClosed;
-                }
+            closingDialog.CloseRequested -= OnDialogClosed;
+            _dialogStack.Remove(closingDialog);
 
-                _dialogStack.Clear();
-                CurrentDialog = null;
+            CurrentDialog = _dialogStack.Count > 0
+                ? _dialogStack[^1] : null;
+
+            if (CurrentDialog != null)
+                CurrentDialog.CloseRequested += OnDialogClosed;
+            else
                 IsDialogVisible = false;
 
-                OnDialogStackChanged?.Invoke();
-            }
-            finally
-            {
-                _operationLock.Release();
-            }
+            OnDialogStackChanged?.Invoke();
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
+    }
+
+    private async Task CloseAllInternalAsync()
+    {
+        await _operationLock.WaitAsync();
+
+        try
+        {
+            if (!HasOpenDialogs)
+                return;
+
+            await RequestAnimationAsync(isOpening: false);
+
+            foreach (var dialog in _dialogStack)
+                dialog.CloseRequested -= OnDialogClosed;
+
+            _dialogStack.Clear();
+            CurrentDialog = null;
+            IsDialogVisible = false;
+
+            OnDialogStackChanged?.Invoke();
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
+    }
+
+    private async Task RequestAnimationAsync(bool isOpening)
+    {
+        TaskCompletionSource tcs;
+        CancellationTokenSource cts;
+        CancellationTokenSource? previousCts;
+
+        lock (_animationLock)
+        {
+            previousCts = _animationCts;
+            _animationTcs?.TrySetCanceled();
+
+            tcs = new TaskCompletionSource();
+            cts = new CancellationTokenSource();
+
+            _animationTcs = tcs;
+            _animationCts = cts;
         }
 
-        private async Task RequestAnimationAsync(bool isOpening)
+        if (previousCts is not null)
+            await previousCts.CancelAsync();
+
+        OnDialogAnimationRequested?.Invoke(isOpening);
+
+        try
         {
-            TaskCompletionSource tcs;
-            CancellationTokenSource cts;
-            CancellationTokenSource? previousCts;
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(1));
 
-            lock (_animationLock)
-            {
-                previousCts = _animationCts;
-                _animationTcs?.TrySetCanceled();
-
-                tcs = new TaskCompletionSource();
-                cts = new CancellationTokenSource();
-
-                _animationTcs = tcs;
-                _animationCts = cts;
-            }
-
-            if (previousCts is not null)
-                await previousCts.CancelAsync();
-
-            OnDialogAnimationRequested?.Invoke(isOpening);
-
-            try
-            {
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(1));
-
-                timeoutCts.Token.Register(() =>
-                {
-                    lock (_animationLock)
-                    {
-                        _animationTcs?.TrySetResult();
-                    }
-                });
-
-                await tcs.Task;
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected
-            }
-            finally
+            timeoutCts.Token.Register(() =>
             {
                 lock (_animationLock)
                 {
-                    if (_animationCts == cts)
-                    {
-                        _animationCts = null;
-                    }
-                    if (_animationTcs == tcs)
-                    {
-                        _animationTcs = null;
-                    }
+                    _animationTcs?.TrySetResult();
                 }
+            });
 
-                cts.Dispose();
-            }
+            await tcs.Task;
         }
-
-        public void NotifyAnimationComplete()
+        catch (OperationCanceledException)
+        {
+            // Expected
+        }
+        finally
         {
             lock (_animationLock)
             {
-                _animationTcs?.TrySetResult();
+                if (_animationCts == cts)
+                    _animationCts = null;
+                if (_animationTcs == tcs)
+                    _animationTcs = null;
             }
-        }
 
-        private async void OnDialogClosed()
+            cts.Dispose();
+        }
+    }
+
+    public void NotifyAnimationComplete()
+    {
+        lock (_animationLock)
         {
+            _animationTcs?.TrySetResult();
+        }
+    }
+
+    private async void OnDialogClosed()
+    {
+        try
+        {
+            await CloseAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[DialogService] OnDialogClosed error: {ex.Message}");
+        }
+    }
+
+    private void ThrowIfDisposed()
+        => ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _processingCts.Cancel();
+        _closeRequests.Writer.TryComplete();
+
+        try
+        {
+            _operationLock.Wait(TimeSpan.FromSeconds(2));
             try
             {
-                await CloseAsync();
+                foreach (var dialog in _dialogStack)
+                    dialog.CloseRequested -= OnDialogClosed;
+                _dialogStack.Clear();
             }
-            catch (ObjectDisposedException)
+            finally
             {
-                // Сервис уже освобождён
+                _operationLock.Release();
             }
         }
-
-        private void ThrowIfDisposed() =>
-            ObjectDisposedException.ThrowIf(_disposed, nameof(DialogService));
-
-        public void Dispose()
+        catch (Exception ex)
         {
-            if (_disposed) return;
-            _disposed = true;
-
-            _processingCts.Cancel();
-            _closeRequests.Writer.TryComplete();
-
+            Debug.WriteLine($"[DialogService] Dispose lock timeout: {ex.Message}");
             foreach (var dialog in _dialogStack)
-            {
                 dialog.CloseRequested -= OnDialogClosed;
-            }
-
             _dialogStack.Clear();
-
-            _operationLock.Dispose();
-            _animationCts?.Dispose();
-            _processingCts.Dispose();
         }
+
+        _operationLock.Dispose();
+        _animationCts?.Dispose();
+        _processingCts.Dispose();
     }
 }

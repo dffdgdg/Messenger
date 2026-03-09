@@ -3,8 +3,8 @@ using MessengerShared.Dto.Department;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class DepartmentController(IDepartmentService departmentService, ILogger<DepartmentController> logger)
-    : BaseController<DepartmentController>(logger)
+public sealed class DepartmentsController(IDepartmentService departmentService, ILogger<DepartmentsController> logger)
+    : BaseController<DepartmentsController>(logger)
 {
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<DepartmentDto>>>> GetDepartments(CancellationToken ct)

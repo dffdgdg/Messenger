@@ -26,20 +26,19 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
     private const int TargetBitsPerSample = 16;
     private const int TargetChannels = 1;
 
-    public TranscriptionService(
-        IServiceScopeFactory scopeFactory,
-        TranscriptionQueue transcriptionQueue,
-        IWebHostEnvironment env,
-        ILogger<TranscriptionService> logger)
+    public TranscriptionService(IServiceScopeFactory scopeFactory, TranscriptionQueue transcriptionQueue,
+        IWebHostEnvironment env, ILogger<TranscriptionService> logger)
     {
         _scopeFactory = scopeFactory;
         _transcriptionQueue = transcriptionQueue;
         _env = env;
         _logger = logger;
 
-        _whisperPath = Path.Combine(_env.ContentRootPath, "whisper", OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
+        _whisperPath = Path.Combine(_env.ContentRootPath, "whisper",
+            OperatingSystem.IsWindows() ? "whisper.exe" : "whisper");
 
-        _modelPath = Path.Combine(_env.ContentRootPath, "whisper", "models", "ggml-small-q5_1.bin");
+        _modelPath = Path.Combine(
+            _env.ContentRootPath, "whisper", "models", "ggml-small-q5_1.bin");
 
         if (!File.Exists(_whisperPath))
             throw new FileNotFoundException("whisper бинарник не найден");
@@ -58,61 +57,53 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
         var hubNotifier = scope.ServiceProvider.GetRequiredService<IHubNotifier>();
 
-        var message = await context.Messages.Include(m => m.MessageFiles)
-            .FirstOrDefaultAsync(m => m.Id == messageId, ct);
+        var voiceMessage = await context.VoiceMessages.Include(v => v.Message)
+            .FirstOrDefaultAsync(v => v.MessageId == messageId, ct);
 
-        if (message is null)
-            return Result.Failure($"Сообщение {messageId} не найдено");
-
-        if (!message.IsVoiceMessage)
-            return Result.Failure("Сообщение не является голосовым");
-
-        var audioFile = message.MessageFiles?.FirstOrDefault(f => IsAudioFile(f.ContentType));
-
-        if (audioFile is null)
-            return Result.Failure("Аудиофайл не найден");
+        if (voiceMessage is null)
+            return Result.Failure($"Голосовое сообщение {messageId} не найдено");
 
         try
         {
-            await SetStatusAsync(context, hubNotifier, message, "processing", ct);
+            await SetStatusAsync(context, hubNotifier, voiceMessage, "processing", ct);
 
-            var filePath = GetAbsolutePath(audioFile.Path);
+            var filePath = GetAbsolutePath(voiceMessage.FilePath);
             if (!File.Exists(filePath))
             {
-                await SetFailedAsync(context, hubNotifier, message);
+                await SetFailedSafeAsync(context, hubNotifier, voiceMessage);
                 return Result.Failure("Аудиофайл не найден на диске");
             }
 
             var transcription = await RecognizeAsync(filePath, ct);
 
-            message.Content = transcription;
-            message.TranscriptionStatus = string.IsNullOrWhiteSpace(transcription) ? "failed" : "done";
+            voiceMessage.TranscriptionText = transcription;
+            voiceMessage.TranscriptionStatus = string.IsNullOrWhiteSpace(transcription) ? "failed" : "done";
 
             await context.SaveChangesAsync(ct);
 
-            await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionCompleted",
+            await hubNotifier.SendToChatAsync(voiceMessage.Message.ChatId, "TranscriptionCompleted",
                 new VoiceTranscriptionDto
                 {
                     MessageId = messageId,
-                    ChatId = message.ChatId,
-                    Transcription = message.Content,
-                    Status = message.TranscriptionStatus
+                    ChatId = voiceMessage.Message.ChatId,
+                    Transcription = voiceMessage.TranscriptionText,
+                    Status = voiceMessage.TranscriptionStatus
                 });
 
-            _logger.LogInformation("Транскрибация {Id}: {Status}", messageId, message.TranscriptionStatus);
+            _logger.LogInformation("Транскрибация {Id}: {Status}", messageId, voiceMessage.TranscriptionStatus);
 
             return Result.Success();
         }
         catch (OperationCanceledException ex)
         {
             _logger.LogWarning(ex, "Транскрибация {Id} отменена", messageId);
-            await SetFailedAsync(context, hubNotifier, message);
+            await SetFailedSafeAsync(context, hubNotifier, voiceMessage);
             return Result.Failure("Транскрибация отменена");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка транскрибации {Id}", messageId);
-            await SetFailedAsync(context, hubNotifier, message);
+            await SetFailedSafeAsync(context, hubNotifier, voiceMessage);
             return Result.Failure("Ошибка распознавания речи");
         }
     }
@@ -122,14 +113,14 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-        var data = await context.Messages.AsNoTracking()
-            .Where(m => m.Id == messageId && m.IsVoiceMessage)
-            .Select(m => new VoiceTranscriptionDto
+        var data = await context.VoiceMessages.AsNoTracking()
+            .Where(v => v.MessageId == messageId)
+            .Select(v => new VoiceTranscriptionDto
             {
-                MessageId = m.Id,
-                ChatId = m.ChatId,
-                Transcription = m.Content,
-                Status = m.TranscriptionStatus ?? "pending"
+                MessageId = v.MessageId,
+                ChatId = v.Message.ChatId,
+                Transcription = v.TranscriptionText,
+                Status = v.TranscriptionStatus
             })
             .FirstOrDefaultAsync(ct);
 
@@ -139,21 +130,18 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         return Result<VoiceTranscriptionDto>.Success(data);
     }
 
-    public async Task<Result> RetryTranscriptionAsync(int messageId, CancellationToken ct = default)
+    public async Task<Result> RetryTranscriptionAsync(
+        int messageId, CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-        var message = await context.Messages.AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Id == messageId, ct);
+        var voiceMessage = await context.VoiceMessages.AsNoTracking().FirstOrDefaultAsync(v => v.MessageId == messageId, ct);
 
-        if (message is null)
-            return Result.Failure("Сообщение не найдено");
+        if (voiceMessage is null)
+            return Result.Failure("Голосовое сообщение не найдено");
 
-        if (!message.IsVoiceMessage)
-            return Result.Failure("Не является голосовым");
-
-        if (message.TranscriptionStatus == "processing")
+        if (voiceMessage.TranscriptionStatus == "processing")
             return Result.Failure("Расшифровка уже выполняется");
 
         await _transcriptionQueue.EnqueueAsync(messageId, ct);
@@ -177,7 +165,8 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         }
     }
 
-    private async Task<string?> ProcessAudioWithWhisper(string audioFilePath, CancellationToken ct)
+    private async Task<string?> ProcessAudioWithWhisper(
+        string audioFilePath, CancellationToken ct)
     {
         var pcmData = ConvertToPcm16Mono16K(audioFilePath, ct);
         if (pcmData.Length == 0)
@@ -185,8 +174,8 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
         var tempWav = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.wav");
 
-        await using (var writer = new WaveFileWriter(tempWav,
-            new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
+        await using (var writer = new WaveFileWriter(
+            tempWav, new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels)))
         {
             await writer.WriteAsync(pcmData, ct);
         }
@@ -209,9 +198,11 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         psi.ArgumentList.Add("-of");
         psi.ArgumentList.Add("-");
 
+        Process? process = null;
+
         try
         {
-            using var process = Process.Start(psi);
+            process = Process.Start(psi);
             if (process is null)
                 return null;
 
@@ -234,9 +225,30 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
             return string.IsNullOrWhiteSpace(text) ? null : text;
         }
+        catch (OperationCanceledException)
+        {
+            if (process is not null)
+            {
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill(entireProcessTree: true);
+                        _logger.LogWarning("Whisper process killed due to timeout/cancellation");
+                    }
+                }
+                catch (Exception killEx)
+                {
+                    _logger.LogError(killEx, "Failed to kill whisper process");
+                }
+            }
+
+            throw;
+        }
         finally
         {
-            try { File.Delete(tempWav); } catch { }
+            process?.Dispose();
+            try { File.Delete(tempWav); } catch { /* cleanup best-effort */ }
         }
     }
 
@@ -248,9 +260,13 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
     {
         using var reader = new AudioFileReader(audioFilePath);
 
-        var targetFormat = new WaveFormat(TargetSampleRate, TargetBitsPerSample, TargetChannels);
+        var targetFormat = new WaveFormat(
+            TargetSampleRate, TargetBitsPerSample, TargetChannels);
 
-        using var resampler = new MediaFoundationResampler(reader, targetFormat) { ResamplerQuality = 60 };
+        using var resampler = new MediaFoundationResampler(reader, targetFormat)
+        {
+            ResamplerQuality = 60
+        };
 
         using var ms = new MemoryStream();
         var buffer = new byte[8192];
@@ -270,36 +286,41 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
     #region Helpers
 
     private static async Task SetStatusAsync(
-        MessengerDbContext context,
-        IHubNotifier hubNotifier,
-        Message message,
-        string status,
-        CancellationToken ct)
+        MessengerDbContext context, IHubNotifier hubNotifier,
+        VoiceMessage voiceMessage, string status, CancellationToken ct)
     {
-        message.TranscriptionStatus = status;
+        voiceMessage.TranscriptionStatus = status;
         await context.SaveChangesAsync(ct);
 
-        await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
+        await hubNotifier.SendToChatAsync(voiceMessage.Message.ChatId, "TranscriptionStatusChanged",
             new VoiceTranscriptionDto
             {
-                MessageId = message.Id,
-                ChatId = message.ChatId,
+                MessageId = voiceMessage.MessageId,
+                ChatId = voiceMessage.Message.ChatId,
                 Status = status
             });
     }
 
-    private static async Task SetFailedAsync(MessengerDbContext context, IHubNotifier hubNotifier, Message message)
+    private async Task SetFailedSafeAsync(
+        MessengerDbContext context, IHubNotifier hubNotifier, VoiceMessage voiceMessage)
     {
-        message.TranscriptionStatus = "failed";
-        await context.SaveChangesAsync(CancellationToken.None);
+        try
+        {
+            voiceMessage.TranscriptionStatus = "failed";
+            await context.SaveChangesAsync(CancellationToken.None);
 
-        await hubNotifier.SendToChatAsync(message.ChatId, "TranscriptionStatusChanged",
-            new VoiceTranscriptionDto
-            {
-                MessageId = message.Id,
-                ChatId = message.ChatId,
-                Status = "failed"
-            });
+            await hubNotifier.SendToChatAsync(voiceMessage.Message.ChatId, "TranscriptionStatusChanged",
+                new VoiceTranscriptionDto
+                {
+                    MessageId = voiceMessage.MessageId,
+                    ChatId = voiceMessage.Message.ChatId,
+                    Status = "failed"
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,"Не удалось установить статус failed для сообщения {MessageId}", voiceMessage.MessageId);
+        }
     }
 
     private string GetAbsolutePath(string? relativePath)
@@ -309,9 +330,6 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
         return Path.Combine(_env.WebRootPath ?? "wwwroot", relativePath.TrimStart('/'));
     }
-
-    private static bool IsAudioFile(string? contentType)
-        => contentType?.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) == true;
 
     #endregion
 

@@ -18,8 +18,7 @@ public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> l
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex,
-                "Не удалось отправить {Method} в чат {ChatId}", method, chatId);
+            logger.LogWarning(ex, "Не удалось отправить {Method} в чат {ChatId}", method, chatId);
         }
     }
 

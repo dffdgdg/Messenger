@@ -1,6 +1,5 @@
 ﻿using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
-using MessengerDesktop.Services.Realtime;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
@@ -14,10 +13,16 @@ namespace MessengerDesktop.ViewModels.Chat;
 public sealed partial class ChatViewModel
 {
     /// <summary>
-    /// Главный метод инициализации. Вызывается из конструктора (fire-and-forget).
-    /// Последовательно загружает: чат → участников → хаб → сообщения → настройки.
-    /// После — определяет позицию скролла.
+    /// Флаг: были ли подписаны события чата.
+    /// Нужен для гарантированной отписки при ошибке инициализации.
     /// </summary>
+    private bool _chatEventsSubscribed;
+
+    /// <summary>
+    /// Флаг: были ли подписаны события info panel.
+    /// </summary>
+    private readonly bool _infoPanelEventsSubscribed;
+
     private async Task InitializeChatAsync()
     {
         _loadingCts = new CancellationTokenSource();
@@ -28,21 +33,22 @@ public sealed partial class ChatViewModel
             IsInitialLoading = true;
 
             await LoadChatAsync(ct);
-
             await LoadMembersAsync(ct);
 
-            await InitHubAsync(ct);
+            SubscribeChatEvents();
 
-            var readInfo = await _hubConnection!.GetReadInfoAsync();
+            var readInfo = await _globalHub.GetReadInfoAsync(_chatId);
             _messageManager.SetReadInfo(readInfo);
 
-            var scrollToIndex = await _messageManager.LoadInitialMessagesAsync(ct);
+            var scrollToIndex =
+                await _messageManager.LoadInitialMessagesAsync(ct);
 
             await LoadNotificationSettingsAsync(ct);
 
             UpdatePollsCount();
 
-            var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
+            var audioRecorder = App.Current.Services
+                .GetRequiredService<IAudioRecorderService>();
             InitializeVoice(audioRecorder);
 
             SubscribeInfoPanelEvents();
@@ -54,12 +60,10 @@ public sealed partial class ChatViewModel
             if (scrollToIndex < Messages.Count - 1)
             {
                 ScrollToIndexRequested?.Invoke(scrollToIndex.Value, false);
-                Debug.WriteLine($"[ChatViewModel] Scrolling to first unread at index {scrollToIndex.Value}");
             }
             else
             {
                 ScrollToBottomRequested?.Invoke();
-                Debug.WriteLine("[ChatViewModel] Scrolling to bottom (no unread or at end)");
             }
         }
         catch (OperationCanceledException)
@@ -70,6 +74,11 @@ public sealed partial class ChatViewModel
         {
             Debug.WriteLine($"[ChatViewModel] Init error: {ex.Message}");
             ErrorMessage = $"Ошибка инициализации чата: {ex.Message}";
+
+            // Очистка подписок при ошибке инициализации,
+            // чтобы не удерживать VM через делегаты на singleton
+            CleanupSubscriptions();
+
             _initTcs.TrySetException(ex);
         }
         finally
@@ -78,28 +87,129 @@ public sealed partial class ChatViewModel
         }
     }
 
-    /// <summary>Загружает метаданные чата (название, аватар, тип).</summary>
+    private void SubscribeChatEvents()
+    {
+        _globalHub.MessageReceivedGlobally += OnMessageReceivedForChat;
+        _globalHub.MessageUpdatedGlobally += OnMessageUpdatedForChat;
+        _globalHub.MessageDeletedGlobally += OnMessageDeletedForChat;
+        _globalHub.MessageRead += OnMessageReadForChat;
+        _globalHub.UserTyping += OnUserTypingForChat;
+        _globalHub.UnreadCountChanged += OnUnreadCountChangedForChat;
+        _globalHub.Reconnected += OnHubReconnected;
+
+        _chatEventsSubscribed = true;
+    }
+
+    private void UnsubscribeChatEvents()
+    {
+        if (!_chatEventsSubscribed) return;
+
+        _globalHub.MessageReceivedGlobally -= OnMessageReceivedForChat;
+        _globalHub.MessageUpdatedGlobally -= OnMessageUpdatedForChat;
+        _globalHub.MessageDeletedGlobally -= OnMessageDeletedForChat;
+        _globalHub.MessageRead -= OnMessageReadForChat;
+        _globalHub.UserTyping -= OnUserTypingForChat;
+        _globalHub.UnreadCountChanged -= OnUnreadCountChangedForChat;
+        _globalHub.Reconnected -= OnHubReconnected;
+
+        _chatEventsSubscribed = false;
+    }
+
+    /// <summary>
+    /// Очистка всех подписок — вызывается и при ошибке init,
+    /// и при нормальном dispose.
+    /// </summary>
+    private void CleanupSubscriptions()
+    {
+        UnsubscribeChatEvents();
+        UnsubscribeInfoPanelEvents();
+
+        if (Members != null)
+            Members.CollectionChanged -= OnMembersCollectionChanged;
+    }
+
+    #region Chat event filters
+
+    private void OnMessageReceivedForChat(MessageDto message)
+    {
+        if (_disposed || message.ChatId != _chatId) return;
+        OnMessageReceived(message);
+    }
+
+    private void OnMessageUpdatedForChat(MessageDto message)
+    {
+        if (_disposed || message.ChatId != _chatId) return;
+        OnMessageUpdatedInChat(message);
+    }
+
+    private void OnMessageDeletedForChat(int messageId, int chatId)
+    {
+        if (_disposed || chatId != _chatId) return;
+        OnMessageDeletedInChat(messageId);
+    }
+
+    private void OnMessageReadForChat(
+        int chatId, int userId, int? lastReadMessageId, DateTime? readAt)
+    {
+        if (_disposed || chatId != _chatId) return;
+        OnMessageRead(lastReadMessageId);
+    }
+
+    private void OnUserTypingForChat(int chatId, int userId)
+    {
+        if (_disposed || chatId != _chatId) return;
+        OnUserTyping(userId);
+    }
+
+    private void OnUnreadCountChangedForChat(int chatId, int unreadCount)
+    {
+        if (_disposed || chatId != _chatId) return;
+        UnreadCount = unreadCount;
+    }
+
+    #endregion
+
+    private void OnHubReconnected()
+    {
+        if (_disposed) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var ct = _loadingCts?.Token ?? CancellationToken.None;
+                var gapFillTask = _messageManager.GapFillAfterReconnectAsync(ct);
+                var infoPanelTask = RefreshInfoPanelDataAsync(ct);
+
+                await Task.WhenAll(gapFillTask, infoPanelTask);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatViewModel] Reconnect refresh error: {ex.Message}");
+            }
+        });
+    }
+
     private async Task LoadChatAsync(CancellationToken ct)
     {
-        var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chat.ById(_chatId), ct);
+        var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(_chatId), ct);
 
         if (result.Success && result.Data is not null)
         {
             if (!string.IsNullOrEmpty(result.Data.Avatar))
+            {
                 result.Data.Avatar = AvatarHelper.GetUrlWithCacheBuster(result.Data.Avatar);
+            }
 
             Chat = result.Data;
         }
         else
         {
-            throw new HttpRequestException($"Ошибка загрузки чата: {result.Error}");
+            throw new HttpRequestException(
+                $"Ошибка загрузки чата: {result.Error}");
         }
     }
 
-    /// <summary>
-    /// Загружает участников чата.
-    /// Для контактных чатов дополнительно определяет собеседника.
-    /// </summary>
     private async Task LoadMembersAsync(CancellationToken ct)
     {
         Members = await _memberLoader.LoadMembersAsync(Chat, ct);
@@ -110,10 +220,6 @@ public sealed partial class ChatViewModel
         OnPropertyChanged(nameof(InfoPanelSubtitle));
     }
 
-    /// <summary>
-    /// Определяет собеседника в контактном чате (1-на-1).
-    /// Устанавливает аватар, имя и статус «последний раз в сети».
-    /// </summary>
     private void LoadContactUser()
     {
         try
@@ -127,7 +233,8 @@ public sealed partial class ChatViewModel
 
             if (Chat != null)
             {
-                Chat.Name = contact.DisplayName ?? contact.Username ?? Chat.Name;
+                Chat.Name = contact.DisplayName
+                    ?? contact.Username ?? Chat.Name;
 
                 if (!string.IsNullOrEmpty(contact.Avatar))
                     Chat.Avatar = contact.Avatar;
@@ -141,7 +248,6 @@ public sealed partial class ChatViewModel
         }
     }
 
-    /// <summary>Форматирует строку «последний раз в сети» для собеседника.</summary>
     private static string? FormatLastSeen(UserDto contact)
     {
         if (contact.IsOnline || !contact.LastOnline.HasValue)
@@ -160,7 +266,6 @@ public sealed partial class ChatViewModel
         };
     }
 
-    /// <summary>Загружает настройки уведомлений. Ошибки не критичны.</summary>
     private async Task LoadNotificationSettingsAsync(CancellationToken ct)
     {
         try
@@ -175,74 +280,20 @@ public sealed partial class ChatViewModel
         }
     }
 
-    /// <summary>Создаёт и подключает SignalR-хаб для получения сообщений в реальном времени.</summary>
-    private async Task InitHubAsync(CancellationToken ct)
-    {
-        _hubConnection = new ChatHubConnection(_chatId, _authManager);
-        _hubConnection.MessageReceived += OnMessageReceived;
-        _hubConnection.MessageUpdated += OnMessageUpdatedInChat;
-        _hubConnection.MessageDeleted += OnMessageDeletedInChat;
-        _hubConnection.MessageRead += OnMessageRead;
-        _hubConnection.UserTyping += OnUserTyping;
-        _hubConnection.Reconnected += OnChatHubReconnected;
-        await _hubConnection.ConnectAsync(ct);
-    }
-
-    private void OnChatHubReconnected()
-    {
-        Debug.WriteLine($"[ChatViewModel] Chat hub reconnected, triggering gap fill and info refresh for chat {_chatId}");
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var ct = _loadingCts?.Token ?? CancellationToken.None;
-
-                var gapFillTask = _messageManager.GapFillAfterReconnectAsync(ct);
-                var infoPanelTask = RefreshInfoPanelDataAsync(ct);
-
-                await Task.WhenAll(gapFillTask, infoPanelTask);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatViewModel] Reconnect refresh error: {ex.Message}");
-            }
-        });
-    }
-
-    /// <summary>
-    /// Освобождение ресурсов: отключение от хаба, отмена загрузок,
-    /// отписка от событий, dispose менеджеров.
-    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
-        UnsubscribeInfoPanelEvents();
+        CleanupSubscriptions();
 
-        if (_globalHub is GlobalHubConnection hub)
-            hub.SetCurrentChat(null);
+        _globalHub.SetCurrentChat(null);
 
-        // Отменяем все активные операции загрузки
         if (_loadingCts is not null)
         {
             await _loadingCts.CancelAsync();
             _loadingCts.Dispose();
             _loadingCts = null;
-        }
-
-        // Отписываемся от событий хаба и отключаемся
-        if (_hubConnection is not null)
-        {
-            _hubConnection.MessageReceived -= OnMessageReceived;
-            _hubConnection.MessageUpdated -= OnMessageUpdatedInChat;
-            _hubConnection.MessageDeleted -= OnMessageDeletedInChat;
-            _hubConnection.MessageRead -= OnMessageRead;
-            _hubConnection.UserTyping -= OnUserTyping;
-            _hubConnection.Reconnected -= OnChatHubReconnected;
-            await _hubConnection.DisposeAsync();
-            _hubConnection = null;
         }
 
         if (_typingIndicatorCts is not null)
@@ -251,6 +302,7 @@ public sealed partial class ChatViewModel
             _typingIndicatorCts.Dispose();
             _typingIndicatorCts = null;
         }
+        _typingUsers.Clear();
 
         await DisposeVoiceAsync();
 

@@ -223,7 +223,7 @@
 						</ListBox.ItemTemplate>
 					</ListBox>
 
-					<Button Classes="ScrollToBottomButton"
+					<Button Classes="IconButton"
 							HorizontalAlignment="Right"
 							VerticalAlignment="Bottom"
 							Margin="0,0,24,16"
@@ -290,10 +290,9 @@
 										Classes="IconButton Small"
 										Command="{Binding CancelEditMessageCommand}"
 										ToolTip.Tip="Отменить редактирование">
-									<TextBlock Text="✕" FontSize="14"
-											   Foreground="{DynamicResource TextSecondary}"
-											   HorizontalAlignment="Center"
-											   VerticalAlignment="Center"/>
+									<PathIcon Data="{StaticResource CloseIcon}"
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource TextSecondary}"/>
 								</Button>
 							</Grid>
 						</Border>
@@ -331,10 +330,9 @@
 										Classes="IconButton Small"
 										Command="{Binding CancelReplyCommand}"
 										ToolTip.Tip="Отменить ответ">
-									<TextBlock Text="✕" FontSize="14"
-											   Foreground="{DynamicResource TextSecondary}"
-											   HorizontalAlignment="Center"
-											   VerticalAlignment="Center"/>
+									<PathIcon Data="{StaticResource CloseIcon}"
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource TextSecondary}"/>
 								</Button>
 							</Grid>
 						</Border>
@@ -369,10 +367,9 @@
 										Classes="IconButton Small"
 										Command="{Binding CancelForwardCommand}"
 										ToolTip.Tip="Отменить пересылку">
-									<TextBlock Text="✕" FontSize="14"
-											   Foreground="{DynamicResource TextSecondary}"
-											   HorizontalAlignment="Center"
-											   VerticalAlignment="Center"/>
+									<PathIcon Data="{StaticResource CloseIcon}"
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource TextSecondary}"/>
 								</Button>
 							</Grid>
 						</Border>
@@ -422,8 +419,9 @@
 													ToolTip.Tip="Удалить"
 													Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).RemoveAttachmentCommand}"
 													CommandParameter="{Binding}">
-												<TextBlock Text="✕" FontSize="14"
-														   Foreground="{DynamicResource TextSecondary}"/>
+												<PathIcon Data="{StaticResource CloseIcon}"
+														  Width="14" Height="14"
+														  Foreground="{DynamicResource TextSecondary}"/>
 											</Button>
 										</Grid>
 									</Border>
@@ -486,10 +484,9 @@
 										Classes="IconButton Small"
 										Command="{Binding CancelVoiceRecordingCommand}"
 										ToolTip.Tip="Отменить запись">
-									<TextBlock Text="✕" FontSize="16"
-											   Foreground="{DynamicResource DangerBrush}"
-											   HorizontalAlignment="Center"
-											   VerticalAlignment="Center"/>
+									<PathIcon Data="{StaticResource CloseIcon}"
+											  Width="16" Height="16"
+											  Foreground="{DynamicResource DangerBrush}"/>
 								</Button>
 							</Grid>
 						</Border>
@@ -509,8 +506,9 @@
 								<Button Classes="IconButton Small"
 										Command="{Binding CancelVoiceRecordingCommand}"
 										ToolTip.Tip="Отменить отправку">
-									<TextBlock Text="✕" FontSize="14"
-											   Foreground="{DynamicResource DangerBrush}"/>
+									<PathIcon Data="{StaticResource CloseIcon}"
+											  Width="14" Height="14"
+											  Foreground="{DynamicResource DangerBrush}"/>
 								</Button>
 							</StackPanel>
 						</Border>
@@ -609,10 +607,10 @@
 										VerticalAlignment="Bottom"
 										Command="{Binding StartVoiceRecordingCommand}"
 										IsVisible="{Binding IsVoiceSupported}">
-									<Path  Data="M18.25 11a.75.75 0 0 1 .743.648l.007.102v.5a6.75 6.75 0 0 1-6.249 6.732l-.001 2.268a.75.75 0 0 1-1.493.102l-.007-.102v-2.268a6.75 6.75 0 0 1-6.246-6.496L5 12.25v-.5a.75.75 0 0 1 1.493-.102l.007.102v.5a5.25 5.25 0 0 0 5.034 5.246l.216.004h.5a5.25 5.25 0 0 0 5.246-5.034l.004-.216v-.5a.75.75 0 0 1 .75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Zm0 1.5A2.5 2.5 0 0 0 9.5 6v6a2.5 2.5 0 0 0 5 0V6A2.5 2.5 0 0 0 12 3.5Z"
-										   Fill="{DynamicResource TextSecondary}"
-										   Width="20" Height="20"
-										   Stretch="Uniform"/>
+									<Path Data="{StaticResource MicrophoneIcon}"
+										  Fill="{DynamicResource TextSecondary}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
 								</Button>
 								<Button Grid.Column="4"
 										Classes="Primary"

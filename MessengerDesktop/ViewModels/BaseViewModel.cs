@@ -48,8 +48,6 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
     /// </summary>
     protected virtual void OnSuccessMessageUpdated(string? value) { }
 
-    // ========== Cancellation ==========
-
     protected CancellationToken GetCancellationToken()
     {
         _cts?.Cancel();
@@ -58,12 +56,7 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
         return _cts.Token;
     }
 
-    // ========== Safe Execute ==========
-
-    protected async Task SafeExecuteAsync(
-        Func<Task> operation,
-        string? successMessage = null,
-        Action? finallyAction = null)
+    protected async Task SafeExecuteAsync(Func<Task> operation, string? successMessage = null, Action? finallyAction = null)
     {
         try
         {
@@ -86,10 +79,7 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
         }
     }
 
-    protected async Task SafeExecuteAsync(
-        Func<CancellationToken, Task> operation,
-        string? successMessage = null,
-        Action? finallyAction = null)
+    protected async Task SafeExecuteAsync(Func<CancellationToken, Task> operation, string? successMessage = null, Action? finallyAction = null)
     {
         var ct = GetCancellationToken();
         try
@@ -116,8 +106,6 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
         }
     }
 
-    // ========== Helpers ==========
-
     protected static string? GetAbsoluteUrl(string? url)
     {
         if (string.IsNullOrEmpty(url)) return null;
@@ -131,8 +119,6 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
         ErrorMessage = null;
         SuccessMessage = null;
     }
-
-    // ========== Dispose ==========
 
     public void Dispose()
     {

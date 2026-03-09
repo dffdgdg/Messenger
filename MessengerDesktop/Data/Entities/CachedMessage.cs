@@ -30,12 +30,6 @@ public class CachedMessage
     [SQLite.Column("is_deleted")]
     public bool IsDeleted { get; set; }
 
-    [SQLite.Column("is_voice_message")]
-    public bool IsVoiceMessage { get; set; }
-
-    [SQLite.Column("transcription_status")]
-    public string? TranscriptionStatus { get; set; }
-
     [SQLite.Column("reply_to_message_id")]
     public int? ReplyToMessageId { get; set; }
 
@@ -44,6 +38,31 @@ public class CachedMessage
 
     [SQLite.Column("is_own")]
     public bool IsOwn { get; set; }
+
+    // ── Voice message ──
+    [SQLite.Column("is_voice_message")]
+    public bool IsVoiceMessage { get; set; }
+
+    [SQLite.Column("voice_duration_seconds")]
+    public double? VoiceDurationSeconds { get; set; }
+
+    [SQLite.Column("transcription_status")]
+    public string? TranscriptionStatus { get; set; }
+
+    [SQLite.Column("transcription_text")]
+    public string? TranscriptionText { get; set; }
+
+    [SQLite.Column("voice_file_url")]
+    public string? VoiceFileUrl { get; set; }
+
+    [SQLite.Column("voice_file_name")]
+    public string? VoiceFileName { get; set; }
+
+    [SQLite.Column("voice_content_type")]
+    public string? VoiceContentType { get; set; }
+
+    [SQLite.Column("voice_file_size")]
+    public long? VoiceFileSize { get; set; }
 
     // ── Sender info ──
     [SQLite.Column("sender_name")]
@@ -81,7 +100,7 @@ public class CachedMessage
     [SQLite.Column("forward_original_date")]
     public long? ForwardOriginalDateTicks { get; set; }
 
-    // ── Poll — сериализован в JSON ──
+    // ── Poll — JSON ──
     [SQLite.Column("poll_json")]
     public string? PollJson { get; set; }
 
@@ -89,11 +108,17 @@ public class CachedMessage
     [SQLite.Column("files_json")]
     public string? FilesJson { get; set; }
 
-    // ── Версия записи (для conflict resolution) ──
+    // ── Версия записи ──
     [SQLite.Column("cached_at")]
     public long CachedAtTicks { get; set; }
 
-    // ── Helpers (не хранятся, только для маппинга) ──
+    // ── System messages ──
+    public bool IsSystemMessage { get; set; }
+    public int? SystemEventTypeInt { get; set; }
+    public int? TargetUserId { get; set; }
+    public string? TargetUserName { get; set; }
+
+    // ── Helpers ──
     [Ignore] public DateTime CreatedAt => new(CreatedAtTicks, DateTimeKind.Utc);
     [Ignore] public DateTime? EditedAt => EditedAtTicks.HasValue ? new DateTime(EditedAtTicks.Value, DateTimeKind.Utc) : null;
     [Ignore] public DateTime CachedAt => new(CachedAtTicks, DateTimeKind.Utc);

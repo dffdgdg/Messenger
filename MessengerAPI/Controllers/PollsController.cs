@@ -2,8 +2,8 @@ using MessengerAPI.Services.Messaging;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class PollController(IPollService pollService, ILogger<PollController> logger)
-    : BaseController<PollController>(logger)
+public sealed class PollsController(IPollService pollService, ILogger<PollsController> logger)
+    : BaseController<PollsController>(logger)
 {
     [HttpGet("{pollId}")]
     public async Task<ActionResult<ApiResponse<PollDto>>> GetPoll(int pollId)

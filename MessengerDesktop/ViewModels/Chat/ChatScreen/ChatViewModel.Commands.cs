@@ -35,7 +35,7 @@ public partial class ChatViewModel
     {
         await SafeExecuteAsync(async ct =>
         {
-            var result = await _apiClient.PostAsync(ApiEndpoints.Chat.Leave(_chatId, UserId), null, ct);
+            var result = await _apiClient.PostAsync(ApiEndpoints.Chats.Leave(_chatId, UserId), null, ct);
 
             if (result.Success)
                 SuccessMessage = "Вы покинули чат";

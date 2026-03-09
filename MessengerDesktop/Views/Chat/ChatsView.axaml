@@ -35,8 +35,8 @@
 			<Grid Height="{StaticResource ChatItemHeight}"
 				  ColumnDefinitions="*,Auto"
 				  HorizontalAlignment="Stretch">
-			<controls:ChatItemView Grid.Column="0"
-								HorizontalAlignment="Stretch"/>
+				<controls:ChatItemView Grid.Column="0"
+									   HorizontalAlignment="Stretch"/>
 
 				<TextBlock Grid.Column="1"
 						   Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
@@ -213,7 +213,7 @@
 								ToolTip.Tip="Развернуть панель"
 								AutomationProperties.Name="Развернуть панель чатов"
 								HorizontalAlignment="Center">
-							<PathIcon Data="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"
+							<PathIcon Data="{StaticResource MenuIcon}"
 									  Width="20" Height="20"
 									  Foreground="{DynamicResource Icon}"/>
 						</Button>
@@ -269,7 +269,7 @@
 						 SelectedItem="{Binding SelectedChat}"
 						 AutomationProperties.Name="Список чатов"
 						 Background="Transparent"
-						 Margin="4,4,4,8"
+						 Margin="4,4,0,8"
 						 BorderThickness="0"
 						 HorizontalAlignment="Stretch"
 						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -286,7 +286,7 @@
 							<Setter Property="HorizontalAlignment" Value="Stretch"/>
 							<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 							<Setter Property="Padding" Value="8"/>
-							<Setter Property="Margin" Value="0,1"/>
+							<Setter Property="Margin" Value="0,1,6,1"/>
 							<Setter Property="CornerRadius" Value="8"/>
 							<Setter Property="Background" Value="Transparent"/>
 							<Setter Property="Cursor" Value="Hand"/>
@@ -499,12 +499,12 @@
 										   Foreground="{DynamicResource TextSecondary}"
 										   HorizontalAlignment="Center"
 										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-								<TextBlock Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString}, 
-										   ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениям'}"
-										   FontSize="{StaticResource FontSizeSmall}"
-										   Foreground="{DynamicResource TextMuted}"
-										   HorizontalAlignment="Center"
-										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+								<TextBlock Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString},
+								ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениям'}"
+								FontSize="{StaticResource FontSizeSmall}"
+								Foreground="{DynamicResource TextMuted}"
+								HorizontalAlignment="Center"
+								IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 							</StackPanel>
 
 							<StackPanel Spacing="8"
@@ -569,7 +569,7 @@
 						</MultiBinding>
 					</StackPanel.IsVisible>
 
-					<PathIcon Data="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+					<PathIcon Data="{StaticResource ChatOutlineIcon}"
 							  Width="64" Height="64"
 							  Foreground="{DynamicResource TextMuted}"
 							  Opacity="0.5"/>
@@ -595,4 +595,4 @@
 							 Grid.Column="3"
 							 DataContext="{Binding CurrentChatViewModel}"/>
 	</Grid>
-</UserControl> 
+</UserControl>

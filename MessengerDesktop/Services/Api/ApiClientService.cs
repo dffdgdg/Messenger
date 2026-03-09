@@ -116,11 +116,9 @@ namespace MessengerDesktop.Services.Api
         /// <summary>
         /// Центральный метод отправки запроса с поддержкой auto-refresh.
         /// sendFunc вызывается повторно при retry — он должен создавать новый request.
+        /// [UPD] После refresh ожидаем обновления токена перед retry.
         /// </summary>
-        private async Task<HttpResponseMessage> SendWithRefreshAsync(
-            Func<Task<HttpResponseMessage>> sendFunc,
-            string url,
-            CancellationToken ct)
+        private async Task<HttpResponseMessage> SendWithRefreshAsync(Func<Task<HttpResponseMessage>> sendFunc, string url)
         {
             var response = await sendFunc();
 
@@ -132,11 +130,15 @@ namespace MessengerDesktop.Services.Api
             // Dispose ответ 401 — он нам больше не нужен
             response.Dispose();
 
+            // TryRefreshTokenAsync теперь безопасен для параллельных вызовов —
+            // все ждут один и тот же Task
             var refreshed = await _authManager.TryRefreshTokenAsync();
 
             if (refreshed)
             {
                 Debug.WriteLine("[ApiClient] Token refreshed, retrying...");
+                // sendFunc создаёт новый запрос с актуальным токеном
+                // (DefaultRequestHeaders уже обновлён через SessionChanged)
                 return await sendFunc();
             }
 
@@ -166,7 +168,7 @@ namespace MessengerDesktop.Services.Api
                         var request = CreateRequest(HttpMethod.Get, url);
                         return _httpClient.SendAsync(request, ct);
                     },
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<T>(response, ct);
             }
@@ -182,7 +184,7 @@ namespace MessengerDesktop.Services.Api
             {
                 var response = await SendWithRefreshAsync(
                     () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
@@ -197,7 +199,7 @@ namespace MessengerDesktop.Services.Api
             {
                 var response = await SendWithRefreshAsync(
                     () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<T>(response, ct);
             }
@@ -212,7 +214,7 @@ namespace MessengerDesktop.Services.Api
             {
                 var response = await SendWithRefreshAsync(
                     () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync(response, ct);
             }
@@ -227,7 +229,7 @@ namespace MessengerDesktop.Services.Api
             {
                 var response = await SendWithRefreshAsync(
                     () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<T>(response, ct);
             }
@@ -243,7 +245,7 @@ namespace MessengerDesktop.Services.Api
             {
                 var response = await SendWithRefreshAsync(
                     () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<TResponse>(response, ct);
             }
@@ -256,9 +258,7 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                var response = await SendWithRefreshAsync(
-                    () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
-                    url, ct);
+                var response = await SendWithRefreshAsync(() => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct), url);
 
                 return await ProcessResponseAsync(response, ct);
             }
@@ -271,9 +271,14 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
+                // [UPD] Используем CreateRequest для консистентности с GET
                 var response = await SendWithRefreshAsync(
-                    () => _httpClient.DeleteAsync(url, ct),
-                    url, ct);
+                    () =>
+                    {
+                        var request = CreateRequest(HttpMethod.Delete, url);
+                        return _httpClient.SendAsync(request, ct);
+                    },
+                    url);
 
                 return await ProcessResponseAsync(response, ct);
             }
@@ -286,14 +291,16 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
+                // Убран using — request создаётся заново при каждом вызове лямбды,
+                // не нужно dispose раньше времени (HttpClient.SendAsync не владеет request)
                 var response = await SendWithRefreshAsync(
-                    async () =>
+                    () =>
                     {
-                        using var request = CreateRequest(HttpMethod.Get, url);
-                        return await _httpClient.SendAsync(
+                        var request = CreateRequest(HttpMethod.Get, url);
+                        return _httpClient.SendAsync(
                             request, HttpCompletionOption.ResponseHeadersRead, ct);
                     },
-                    url, ct);
+                    url);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -337,24 +344,24 @@ namespace MessengerDesktop.Services.Api
             ThrowIfDisposed();
             try
             {
-                // Запоминаем позицию, чтобы при retry можно было перемотать
                 var startPosition = fileStream.CanSeek ? fileStream.Position : -1;
 
                 var response = await SendWithRefreshAsync(
                     async () =>
                     {
-                        // Перематываем stream при retry
                         if (startPosition >= 0 && fileStream.Position != startPosition)
                             fileStream.Position = startPosition;
 
-                        using var content = new MultipartFormDataContent();
+                        var content = new MultipartFormDataContent();
                         var streamContent = new StreamContent(fileStream);
                         streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
                         content.Add(streamContent, "file", fileName);
 
-                        return await _httpClient.PostAsync(url, content, ct);
+                        var request = CreateRequest(HttpMethod.Post, url);
+                        request.Content = content;
+                        return await _httpClient.SendAsync(request, ct);
                     },
-                    url, ct);
+                    url);
 
                 return await ProcessResponseAsync<T>(response, ct);
             }

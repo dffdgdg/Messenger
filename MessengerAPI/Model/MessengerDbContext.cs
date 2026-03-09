@@ -20,7 +20,7 @@ public partial class MessengerDbContext : DbContext
     public virtual DbSet<Department> Departments { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
-
+    public virtual DbSet<VoiceMessage> VoiceMessages { get; set; }
     public virtual DbSet<MessageFile> MessageFiles { get; set; }
 
     public virtual DbSet<Poll> Polls { get; set; }
@@ -41,7 +41,8 @@ public partial class MessengerDbContext : DbContext
         modelBuilder
             .HasPostgresEnum<ChatRole>("chat_role")
             .HasPostgresEnum<ChatType>("chat_type")
-            .HasPostgresEnum<Theme>("theme");
+            .HasPostgresEnum<Theme>("theme")
+            .HasPostgresEnum<SystemEventType>("system_event_type");
 
         modelBuilder.Entity<Chat>(entity =>
         {
@@ -164,6 +165,17 @@ public partial class MessengerDbContext : DbContext
             entity.HasIndex(e => new { e.ChatId, e.CreatedAt }, "idx_messages_chatid_createdat");
             entity.HasIndex(e => e.ReplyToMessageId, "idx_messages_reply_to_message_id");
             entity.HasIndex(e => e.ForwardedFromMessageId, "idx_messages_forwarded_from_message_id");
+            entity.HasIndex(e => e.TargetUserId, "idx_messages_target_user_id");
+
+            entity.Property(e => e.IsSystemMessage).HasColumnName("is_system_message")
+            .HasDefaultValue(false);
+
+            entity.Property(e => e.SystemEventType).HasColumnName("system_event_type").HasColumnType("system_event_type");
+
+            entity.Property(e => e.TargetUserId).HasColumnName("target_user_id");
+
+            entity.HasOne(d => d.TargetUser).WithMany().HasForeignKey(d => d.TargetUserId)
+            .OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_TargetUserId_fkey");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("nextval('\"Messages_Id_seq\"'::regclass)")
@@ -183,11 +195,7 @@ public partial class MessengerDbContext : DbContext
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
             entity.Property(e => e.ReplyToMessageId).HasColumnName("reply_to_message_id");
             entity.Property(e => e.ForwardedFromMessageId).HasColumnName("forwarded_from_message_id");
-            entity.Property(e => e.IsVoiceMessage).HasColumnName("is_voice_message").HasDefaultValue(false);
 
-            entity.Property(e => e.TranscriptionStatus)
-                .HasColumnName("transcription_status")
-                .HasMaxLength(20);
             entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ChatId)
                 .HasConstraintName("Messages_ChatId_fkey");
@@ -205,6 +213,49 @@ public partial class MessengerDbContext : DbContext
                 .HasForeignKey(d => d.ForwardedFromMessageId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Messages_ForwardedFromMessageId_fkey");
+        });
+
+        modelBuilder.Entity<VoiceMessage>(entity =>
+        {
+            entity.HasKey(e => e.MessageId).HasName("voice_messages_pkey");
+
+            entity.ToTable("voice_messages");
+
+            entity.Property(e => e.MessageId)
+                .ValueGeneratedNever()
+                .HasColumnName("message_id");
+
+            entity.Property(e => e.DurationSeconds)
+                .HasColumnName("duration_seconds");
+
+            entity.Property(e => e.TranscriptionStatus)
+                .HasMaxLength(20)
+                .HasDefaultValue("pending")
+                .HasColumnName("transcription_status");
+
+            entity.Property(e => e.TranscriptionText)
+                .HasColumnName("transcription_text");
+
+            entity.Property(e => e.FilePath)
+                .HasColumnName("file_path");
+
+            entity.Property(e => e.FileName)
+                .HasMaxLength(255)
+                .HasColumnName("file_name");
+
+            entity.Property(e => e.ContentType)
+                .HasMaxLength(100)
+                .HasDefaultValue("audio/wav")
+                .HasColumnName("content_type");
+
+            entity.Property(e => e.FileSize)
+                .HasColumnName("file_size");
+
+            entity.HasOne(d => d.Message)
+                .WithOne(p => p.VoiceMessage)
+                .HasForeignKey<VoiceMessage>(d => d.MessageId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("VoiceMessages_MessageId_fkey");
         });
 
         modelBuilder.Entity<MessageFile>(entity =>

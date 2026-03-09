@@ -20,78 +20,22 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
 
     protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<Result<TResult>>> action, string? successMessage = null)
     {
-        try
-        {
-            var result = await action();
+        var result = await action();
 
-            if (result.IsSuccess)
-                return Ok(ApiResponse<TResult>.Ok(result.Value!, successMessage));
+        if (result.IsSuccess)
+            return Ok(ApiResponse<TResult>.Ok(result.Value!, successMessage));
 
-            _logger.LogWarning("Бизнес-ошибка: {Error}", result.Error);
-            return BadRequest(ApiResponse<TResult>.Fail(result.Error!));
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _logger.LogWarning(ex, "Неавторизованный доступ");
-            return Unauthorized(ApiResponse<TResult>.Fail(ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            _logger.LogWarning(ex, "Ресурс не найден");
-            return NotFound(ApiResponse<TResult>.Fail(ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Ошибка валидации");
-            return BadRequest(ApiResponse<TResult>.Fail(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Недопустимая операция");
-            return BadRequest(ApiResponse<TResult>.Fail(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            return HandleInternalError<TResult>(ex);
-        }
+        return MapFailure<TResult>(result);
     }
 
     protected async Task<IActionResult> ExecuteAsync(Func<Task<Result>> action, string? successMessage = null)
     {
-        try
-        {
-            var result = await action();
+        var result = await action();
 
-            if (result.IsSuccess)
-                return Ok(ApiResponse<object>.Ok(null, successMessage));
+        if (result.IsSuccess)
+            return Ok(ApiResponse<object>.Ok(null, successMessage));
 
-            _logger.LogWarning("Бизнес-ошибка: {Error}", result.Error);
-            return BadRequest(ApiResponse<object>.Fail(result.Error!));
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _logger.LogWarning(ex, "Неавторизованный доступ");
-            return Unauthorized(ApiResponse<object>.Fail(ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            _logger.LogWarning(ex, "Ресурс не найден");
-            return NotFound(ApiResponse<object>.Fail(ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Ошибка валидации");
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Недопустимая операция");
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            return HandleInternalError(ex);
-        }
+        return MapFailure(result);
     }
 
     protected ActionResult Forbidden(string error = "Доступ запрещён")
@@ -100,15 +44,37 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
     protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
         => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<TData>.Fail(error));
 
-    private ActionResult<ApiResponse<TData>> HandleInternalError<TData>(Exception ex, string error = "Произошла внутренняя ошибка")
+    private ActionResult<ApiResponse<TData>> MapFailure<TData>(Result result)
     {
-        _logger.LogError(ex, "Внутренняя ошибка: {Message}", ex.Message);
-        return StatusCode(500, ApiResponse<TData>.Fail(error));
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+
+        var response = ApiResponse<TData>.Fail(result.Error!);
+
+        return result.ErrorType switch
+        {
+            ResultErrorType.Unauthorized => Unauthorized(response),
+            ResultErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, response),
+            ResultErrorType.NotFound => NotFound(response),
+            ResultErrorType.Conflict => Conflict(response),
+            ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
+            _ => BadRequest(response)
+        };
     }
 
-    private ObjectResult HandleInternalError(Exception ex, string error = "Произошла внутренняя ошибка")
+    private IActionResult MapFailure(Result result)
     {
-        _logger.LogError(ex, "Внутренняя ошибка: {Message}", ex.Message);
-        return StatusCode(500, ApiResponse<object>.Fail(error));
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+
+        var response = ApiResponse<object>.Fail(result.Error!);
+
+        return result.ErrorType switch
+        {
+            ResultErrorType.Unauthorized => Unauthorized(response),
+            ResultErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, response),
+            ResultErrorType.NotFound => NotFound(response),
+            ResultErrorType.Conflict => Conflict(response),
+            ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
+            _ => BadRequest(response)
+        };
     }
 }

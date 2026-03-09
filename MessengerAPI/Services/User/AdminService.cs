@@ -9,7 +9,10 @@ public interface IAdminService
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
 }
 
-public class AdminService(MessengerDbContext context, AppDateTime appDateTime, ILogger<AdminService> logger)
+public class AdminService(
+    MessengerDbContext context,
+    AppDateTime appDateTime,
+    ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
@@ -44,14 +47,13 @@ public class AdminService(MessengerDbContext context, AppDateTime appDateTime, I
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username, ct);
         if (exists)
-            return Result<UserDto>.Failure("Пользователь с таким логином уже существует");
+            return Result<UserDto>.Conflict("Пользователь с таким логином уже существует");
 
         if (dto.DepartmentId.HasValue)
         {
-            var departmentExists = await _context.Departments
-                .AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
+            var departmentExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
             if (!departmentExists)
-                return Result<UserDto>.Failure("Указанный отдел не существует");
+                return Result<UserDto>.NotFound("Указанный отдел не существует");
         }
 
         var user = new Model.User
@@ -72,10 +74,12 @@ public class AdminService(MessengerDbContext context, AppDateTime appDateTime, I
         };
 
         _context.Users.Add(user);
-        await SaveChangesAsync(ct);
 
-        _logger.LogInformation("Создан пользователь {Username} с ID {UserId}",
-            username, user.Id);
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return Result<UserDto>.FromFailure(saveResult);
+
+        _logger.LogInformation("Создан пользователь {Username} с ID {UserId}", username, user.Id);
 
         var createdUser = await _context.Users
             .Include(u => u.Department)
@@ -88,12 +92,16 @@ public class AdminService(MessengerDbContext context, AppDateTime appDateTime, I
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _context.Users.FindAsync([userId], ct);
-        if (user is null)
-            return Result.Failure($"Пользователь с ID {userId} не найден");
+        var userResult = await FindEntityAsync<Model.User>(userId, ct);
+        if (userResult.IsFailure)
+            return Result.FromFailure(userResult);
 
+        var user = userResult.Value!;
         user.IsBanned = !user.IsBanned;
-        await SaveChangesAsync(ct);
+
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
 
         _logger.LogInformation("Пользователь {UserId} {Action}", userId, user.IsBanned ? "заблокирован" : "разблокирован");
 

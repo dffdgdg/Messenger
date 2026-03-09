@@ -4,36 +4,38 @@ using System.Security.Claims;
 namespace MessengerAPI.Hubs;
 
 [Authorize]
-public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
-    AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
+public sealed class ChatHub(
+    IServiceScopeFactory scopeFactory,
+    IOnlineUserService onlineUserService,
+    AppDateTime appDateTime,
+    ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
 
     public override async Task OnConnectedAsync()
     {
         var userId = GetCurrentUserId();
-        if (userId.HasValue)
+        if (!userId.HasValue)
         {
-            onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
-
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
-
-            using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
-
-            var chatIds = await context.ChatMembers
-                .Where(cm => cm.UserId == userId.Value)
-                .Select(cm => cm.ChatId).ToListAsync();
-
-            var joinTasks = chatIds.Select(chatId =>
-                Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
-            await Task.WhenAll(joinTasks);
-
-            await Clients.Others.SendAsync("UserOnline", userId.Value);
-
-            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
-                userId.Value, chatIds.Count);
+            await base.OnConnectedAsync();
+            return;
         }
+
+        onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
+
+        using var scope = scopeFactory.CreateScope();
+        var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
+
+        var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
+
+        var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
+        await Task.WhenAll(joinTasks);
+
+        await Clients.Others.SendAsync("UserOnline", userId.Value);
+
+        logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
+            userId.Value, chatIds.Count);
 
         await base.OnConnectedAsync();
     }
@@ -44,32 +46,24 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         if (userId.HasValue)
         {
             onlineUserService.UserDisconnected(userId.Value, Context.ConnectionId);
-
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
 
-            var stillOnline = onlineUserService.IsOnline(userId.Value);
-
-            if (!stillOnline)
+            if (!onlineUserService.IsOnline(userId.Value))
             {
                 try
                 {
                     using var scope = scopeFactory.CreateScope();
-                    var context = scope.ServiceProvider
-                        .GetRequiredService<MessengerDbContext>();
+                    var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-                    var user = await context.Users.FindAsync(userId.Value);
-                    if (user != null)
-                    {
-                        user.LastOnline = appDateTime.UtcNow;
-                        await context.SaveChangesAsync();
-                    }
+                    await context.Users
+                        .Where(u => u.Id == userId.Value)
+                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.LastOnline, appDateTime.UtcNow));
 
                     await Clients.Others.SendAsync("UserOffline", userId.Value);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Ошибка при обработке отключения {UserId}",
-                        userId.Value);
+                    logger.LogError(ex, "Ошибка при обработке отключения {UserId}", userId.Value);
                 }
 
                 logger.LogInformation("Пользователь {UserId} отключился", userId.Value);
@@ -88,17 +82,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var userId = GetRequiredUserId();
 
         using var scope = scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
+        var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
 
-        var isMember = await context.ChatMembers.AnyAsync(cm =>
-            cm.UserId == userId && cm.ChatId == chatId);
-
-        if (!isMember)
-        {
-            logger.LogWarning("Попытка присоединиться к чату без доступа: UserId={UserId}, ChatId={ChatId}",
-                userId, chatId);
-            throw new HubException($"User {userId} is not a member of chat {chatId}");
-        }
+        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
+        if (result.IsFailure)
+            throw new HubException(result.Error);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}");
         logger.LogDebug("Пользователь {UserId} присоединился к чату {ChatId}", userId, chatId);
@@ -120,20 +108,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var userId = GetCurrentUserId();
         if (!userId.HasValue) return null;
 
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var readReceiptService = scope.ServiceProvider
-                .GetRequiredService<IReadReceiptService>();
-            return await readReceiptService
-                .GetChatReadInfoAsync(userId.Value, chatId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,"Ошибка GetReadInfo для user={UserId}, chat={ChatId}",
-                userId.Value, chatId);
-            return null;
-        }
+        using var scope = scopeFactory.CreateScope();
+        var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
+
+        var result = await readReceiptService.GetChatReadInfoAsync(userId.Value, chatId);
+        return result.UnwrapOrDefault(logger);
     }
 
     public async Task MarkAsRead(int chatId, int? messageId = null)
@@ -141,37 +120,24 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var userId = GetCurrentUserId();
         if (!userId.HasValue) return;
 
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var readReceiptService = scope.ServiceProvider
-                .GetRequiredService<IReadReceiptService>();
+        using var scope = scopeFactory.CreateScope();
+        var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
 
-            var result = await readReceiptService.MarkAsReadAsync(
-                userId.Value,
-                new MarkAsReadDto
-                {
-                    ChatId = chatId,
-                    MessageId = messageId
-                });
+        var result = await readReceiptService.MarkAsReadAsync(
+            userId.Value,
+            new MarkAsReadDto { ChatId = chatId, MessageId = messageId });
 
-            await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
+        if (!result.TryUnwrap(out var receipt, logger))
+            return;
 
-            await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
-                "MessageRead",
-                chatId,
-                userId.Value,
-                result.LastReadMessageId,
-                result.LastReadAt);
+        await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
 
-            logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
-                userId.Value, chatId, result.UnreadCount);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,"Ошибка MarkAsRead для пользователя {UserId} в чате {ChatId}",
-                userId.Value, chatId);
-        }
+        await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
+            "MessageRead", chatId, userId.Value,
+            receipt.LastReadMessageId, receipt.LastReadAt);
+
+        logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
+            userId.Value, chatId, receipt.UnreadCount);
     }
 
     public async Task MarkMessageAsRead(int chatId, int messageId)
@@ -179,51 +145,36 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var userId = GetCurrentUserId();
         if (!userId.HasValue) return;
 
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var readReceiptService = scope.ServiceProvider
-                .GetRequiredService<IReadReceiptService>();
+        using var scope = scopeFactory.CreateScope();
+        var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
 
-            var result = await readReceiptService
-                .MarkMessageAsReadAsync(userId.Value, chatId, messageId);
+        var result = await readReceiptService.MarkMessageAsReadAsync(userId.Value, chatId, messageId);
 
-            await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, result.UnreadCount);
+        if (!result.TryUnwrap(out var receipt, logger))
+            return;
 
-            await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
-                "MessageRead",
-                chatId,
-                userId.Value,
-                result.LastReadMessageId,
-                result.LastReadAt);
+        await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
 
-            logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-                userId.Value, messageId, chatId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка MarkMessageAsRead для user={UserId}, chat={ChatId}, msg={MessageId}",
-                userId.Value, chatId, messageId);
-        }
+        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value,
+            receipt.LastReadMessageId, receipt.LastReadAt);
+
+        logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
+            userId.Value, messageId, chatId);
     }
 
     public async Task<AllUnreadCountsDto> GetUnreadCounts()
     {
         var userId = GetCurrentUserId();
-        if (!userId.HasValue)
-            return new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
+        var fallback = new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
 
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
-            return await readReceiptService.GetAllUnreadCountsAsync(userId.Value);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка получения непрочитанных для пользователя {UserId}", userId.Value);
-            return new AllUnreadCountsDto { Chats = [], TotalUnread = 0 };
-        }
+        if (!userId.HasValue)
+            return fallback;
+
+        using var scope = scopeFactory.CreateScope();
+        var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
+
+        var result = await readReceiptService.GetAllUnreadCountsAsync(userId.Value);
+        return result.UnwrapOrFallback(fallback, logger);
     }
 
     #endregion
@@ -244,16 +195,13 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var userId = GetRequiredUserId();
 
         using var scope = scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
+        var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
 
-        var isMember = await context.ChatMembers.AnyAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+        var memberCheck = await accessControl.CheckIsMemberAsync(userId, chatId);
+        if (memberCheck.IsFailure)
+            throw new HubException(memberCheck.Error);
 
-        if (!isMember)
-            throw new HubException("Нет доступа к этому чату");
-
-        var memberIds = await context.ChatMembers.Where(cm => cm.ChatId == chatId)
-            .Select(cm => cm.UserId).ToListAsync();
-
+        var memberIds = await accessControl.GetUserChatIdsAsync(chatId);
         return [.. onlineUserService.FilterOnline(memberIds)];
     }
 
@@ -271,7 +219,8 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         return userId;
     }
 
-    private int GetRequiredUserId() => GetCurrentUserId() ?? throw new HubException("User not authenticated");
+    private int GetRequiredUserId()
+        => GetCurrentUserId() ?? throw new HubException("User not authenticated");
 
     #endregion
 }

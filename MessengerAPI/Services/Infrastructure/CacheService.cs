@@ -12,7 +12,6 @@ public interface ICacheService
 
 public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : ICacheService
 {
-    // Время жизни кэша
     private static readonly TimeSpan UserChatsTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MembershipTtl = TimeSpan.FromMinutes(10);
 
@@ -59,7 +58,6 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
         var member = await factory();
 
-        // Кэшируем даже null (отсутствие членства)
         cache.Set(cacheKey, member, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = MembershipTtl,
@@ -90,7 +88,6 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
     public void InvalidateChat(int chatId)
     {
-        // При удалении чата инвалидируем ключ чата
         var key = $"chat_{chatId}";
         cache.Remove(key);
         logger.LogDebug("Cache invalidated: chat_{ChatId}", chatId);

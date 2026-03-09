@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
+public sealed partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
     : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _searchCts;
@@ -112,7 +112,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
 
     private async Task ExecuteGlobalSearchAsync(string query, int page, CancellationToken ct)
     {
-        var url = ApiEndpoints.Message.Search(userId, query, page, AppConstants.SearchPageSize);
+        var url = ApiEndpoints.Messages.Search(userId, query, page, AppConstants.SearchPageSize);
         var result = await apiClient.GetAsync<GlobalSearchResponseDto>(url, ct);
 
         if (ct.IsCancellationRequested) return;
@@ -150,7 +150,7 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         }
 
         var chatId = ChatLocalSearchChatId.Value;
-        var url = ApiEndpoints.Message.ChatSearch(chatId, query, page, AppConstants.SearchPageSize);
+        var url = ApiEndpoints.Messages.ChatSearch(chatId, query, page, AppConstants.SearchPageSize);
         var result = await apiClient.GetAsync<SearchMessagesResponseDto>(url, ct);
 
         if (ct.IsCancellationRequested) return;
@@ -253,8 +253,6 @@ public partial class GlobalSearchManager(int userId, IApiClientService apiClient
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = null;
-
-        GC.SuppressFinalize(this);
     }
 
     private void NotifyResultsChanged()

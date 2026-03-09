@@ -1,11 +1,10 @@
 using MessengerShared.Dto.Poll;
+using MessengerShared.Enum;
 
 namespace MessengerShared.Dto.Message;
 
 public class MessageDto
 {
-    public bool IsVoiceMessage { get; set; }
-    public string? TranscriptionStatus { get; set; }
     public int Id { get; set; }
     public int ChatId { get; set; }
     public int SenderId { get; set; }
@@ -24,20 +23,36 @@ public class MessageDto
     public int? ForwardedFromMessageId { get; set; }
     public MessageForwardInfoDto? ForwardedFrom { get; set; }
     public MessageDto? PreviousMessage { get; set; }
+
     public bool ShowSenderName
     {
         get
         {
             if (PreviousMessage == null)
                 return true;
-
             if (SenderId != PreviousMessage.SenderId)
                 return true;
-
             var timeDiff = CreatedAt - PreviousMessage.CreatedAt;
             return timeDiff.TotalMinutes > 5;
         }
     }
 
+    // ── System messages ──
+    public bool IsSystemMessage { get; set; }
+    public SystemEventType? SystemEventType { get; set; }
+    public int? TargetUserId { get; set; }
+    public string? TargetUserName { get; set; }
+
+    // ── Voice message ──
+    public bool IsVoiceMessage { get; set; }
+    public double? VoiceDurationSeconds { get; set; }
+    public string? TranscriptionStatus { get; set; }
+    public string? TranscriptionText { get; set; }
+    public string? VoiceFileUrl { get; set; }
+    public string? VoiceFileName { get; set; }
+    public string? VoiceContentType { get; set; }
+    public long? VoiceFileSize { get; set; }
+
+    // ── Regular files ──
     public List<MessageFileDto> Files { get; set; } = [];
 }

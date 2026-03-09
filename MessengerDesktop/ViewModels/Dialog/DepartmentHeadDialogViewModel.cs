@@ -126,12 +126,14 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private async Task SelectHead()
     {
-        var availableUsers = new ObservableCollection<UserDto>(_allUsers.Where(u => !u.IsBanned));
+        var availableUsers = _allUsers.Where(u => !u.IsBanned);
 
-        var selectDialog = new SelectUserDialogViewModel(availableUsers, "Выбрать руководителя");
+        var pickerDialog = new UserPickerDialogViewModel(
+            "Выбрать руководителя",
+            availableUsers);
 
-        await _dialogService.ShowAsync(selectDialog);
-        var selectedUser = await selectDialog.Result;
+        await _dialogService.ShowAsync(pickerDialog);
+        var selectedUser = await pickerDialog.SingleSelectResult;
 
         if (selectedUser != null)
         {

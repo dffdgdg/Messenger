@@ -9,12 +9,25 @@ public partial class UserPickerDialog : UserControl
 
     private void OnUserItemPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is not ChatUserPickerDialogViewModel vm || !vm.AllowEdit)
+        if (DataContext is not UserPickerDialogViewModel vm)
             return;
 
-        if (sender is Border border && border.DataContext is ChatEditDialogViewModel.SelectableUserItem user)
+        if (sender is not Border { DataContext: ChatEditDialogViewModel.SelectableUserItem user })
+            return;
+
+        if (vm.IsMultiSelect)
         {
-            user.IsSelected = !user.IsSelected;
+            // Multi-select: toggle чекбокса
+            if (vm.AllowEdit)
+            {
+                user.IsSelected = !user.IsSelected;
+                e.Handled = true;
+            }
+        }
+        else
+        {
+            // Single-select: выбрать и закрыть
+            vm.SelectSingleUserCommand.Execute(user);
             e.Handled = true;
         }
     }

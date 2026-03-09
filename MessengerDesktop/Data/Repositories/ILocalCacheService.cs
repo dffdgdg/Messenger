@@ -42,7 +42,10 @@ public interface ILocalCacheService
     Task UpsertMessageAsync(MessageDto message);
     Task UpsertMessagesAsync(IEnumerable<MessageDto> messages);
     Task MarkMessageDeletedAsync(int messageId);
-
+    /// <summary>
+    /// Используется при gap fill overflow (слишком большой разрыв после reconnect).
+    /// </summary>
+    Task ClearChatMessagesAsync(int chatId);
     /// <summary>
     /// Последние N сообщений чата из кэша.
     /// Возвращает null если для этого чата кэш пуст.

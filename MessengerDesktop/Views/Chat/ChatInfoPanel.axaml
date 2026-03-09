@@ -194,7 +194,7 @@
 																VerticalAlignment="Center"
 																Margin="12,0,0,0"
 																Spacing="2">
-														<TextBlock Text="{Binding ., Converter={conv:Converter Name=DisplayOrUsername}}"
+														<TextBlock Text="{Binding DisplayName}"
 																   FontSize="14"/>
 														<TextBlock Text="{Binding Department}"
 																   FontSize="12"

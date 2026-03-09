@@ -4,9 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class AuthController(
-    IAuthService authService,
-    ILogger<AuthController> logger)
+public sealed class AuthController(IAuthService authService, ILogger<AuthController> logger)
     : BaseController<AuthController>(logger)
 {
     [AllowAnonymous]

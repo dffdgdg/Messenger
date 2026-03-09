@@ -2,8 +2,8 @@
 
 namespace MessengerAPI.Controllers;
 
-public sealed class ChatsController(IChatService chatService, IChatMemberService chatMemberService,
-    ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
+public sealed class ChatsController(IChatService chatService, IChatMemberService chatMemberService, ILogger<ChatsController> logger)
+    : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
     public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserDialogs(int userId)
@@ -11,8 +11,7 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
 
-        return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId),
-            "Диалоги пользователя получены успешно");
+        return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId), "Диалоги пользователя получены успешно");
     }
 
     [HttpGet("user/{userId}/contact/{contactUserId}")]
@@ -50,35 +49,26 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
     }
 
     [HttpGet("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetChatMembers(int chatId)
+    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetMembers(int chatId)
     {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            var members = await chatService.GetChatMembersAsync(chatId);
-            return Result<List<UserDto>>.Success(members);
-        }, "Участники чата получены успешно");
+        var userId = GetCurrentUserId();
+        return await ExecuteAsync(() => chatService.GetChatMembersAsync(chatId, userId));
     }
-
 
     [HttpGet("{chatId}/members/detailed")]
     public async Task<ActionResult<ApiResponse<List<ChatMemberDto>>>> GetChatMembersDetailed(int chatId)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserHasChatAccessAsync(currentUserId, chatId);
-            return await chatMemberService.GetMembersAsync(chatId);
-        }, "Участники чата получены успешно");
+        return await ExecuteAsync(
+            () => chatMemberService.GetMembersAsync(chatId, currentUserId),
+            "Участники чата получены успешно");
     }
 
     [HttpPost("{chatId}/members")]
     public async Task<ActionResult<ApiResponse<ChatMemberDto>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId),
-            "Участник чата добавлен успешно");
+        return await ExecuteAsync(() => chatMemberService.AddMemberAsync(chatId, dto.UserId, currentUserId), "Участник чата добавлен успешно");
     }
 
     [HttpDelete("{chatId}/members/{userId}")]
@@ -88,13 +78,11 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         return await ExecuteAsync(() => chatMemberService.RemoveMemberAsync(chatId, userId, currentUserId), "Участник чата удалён успешно");
     }
 
-
     [HttpPut("{chatId}/members/{userId}/role")]
     public async Task<ActionResult<ApiResponse<ChatMemberDto>>> UpdateChatMemberRole(int chatId, int userId, [FromQuery] ChatRole role)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => chatMemberService.UpdateRoleAsync(chatId, userId, role, currentUserId),
-            "Роль участника чата обновлена успешно");
+        return await ExecuteAsync(() => chatMemberService.UpdateRoleAsync(chatId, userId, role, currentUserId), "Роль участника чата обновлена успешно");
     }
 
     [HttpPost]
@@ -105,17 +93,10 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<ChatDto>>> UpdateChat(int id, [FromBody] UpdateChatDto updateDto)
+    public async Task<ActionResult<ApiResponse<ChatDto>>> UpdateChat(int id, [FromBody] UpdateChatDto dto)
     {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(async () =>
-        {
-            if (id != updateDto.Id)
-                return Result<ChatDto>.Failure("Несоответствие ID чата");
-
-            var result = await chatService.UpdateChatAsync(id, currentUserId, updateDto);
-            return Result<ChatDto>.Success(result);
-        }, "Чат успешно обновлён");
+        var userId = GetCurrentUserId();
+        return await ExecuteAsync(() => chatService.UpdateChatAsync(id, userId, dto), "Чат обновлён");
     }
 
     [HttpDelete("{id}")]
@@ -126,14 +107,9 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
     }
 
     [HttpPost("{id}/avatar")]
-    public async Task<ActionResult<ApiResponse<AvatarResponseDto>>> UploadAvatar(int id, IFormFile file)
+    public async Task<ActionResult<ApiResponse<string>>> UploadAvatar(int id, IFormFile file)
     {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(async () =>
-        {
-            await chatService.EnsureUserIsChatAdminAsync(currentUserId, id);
-            var avatarUrl = await chatService.UploadChatAvatarAsync(id, file);
-            return Result<AvatarResponseDto>.Success(new AvatarResponseDto { AvatarUrl = avatarUrl });
-        }, "Аватар чата загружен успешно");
+        var userId = GetCurrentUserId();
+        return await ExecuteAsync(() => chatService.UploadChatAvatarAsync(id, userId, file), "Аватар обновлён");
     }
 }

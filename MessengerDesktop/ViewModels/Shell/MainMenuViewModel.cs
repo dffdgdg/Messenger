@@ -187,9 +187,10 @@ public partial class MainMenuViewModel : BaseViewModel
 
                     _departmentViewModel.ShowSelectUserAction = async users =>
                     {
-                        var dialog = new SelectUserDialogViewModel(users, "Добавить сотрудника");
-                        await _mainWindowViewModel.ShowDialogAsync(dialog);
-                        return await dialog.Result;
+                        var pickerDialog = new UserPickerDialogViewModel("Добавить сотрудника", users);
+
+                        await _mainWindowViewModel.ShowDialogAsync(pickerDialog);
+                        return await pickerDialog.SingleSelectResult;
                     };
                 }
                 CurrentMenuViewModel = _departmentViewModel;
@@ -311,7 +312,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
     public async Task ShowUserProfileAsync(int userId) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.User.ById(userId));
+        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(userId));
         if (result.Success && result.Data != null)
         {
             var currentUserId = _authManager.Session.UserId;
@@ -354,7 +355,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
     private async Task CreatePollAsync(CreatePollDto dto) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Poll.Create, dto);
+        var result = await _apiClient.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Polls.Create, dto);
 
         if (result.Success)
             SuccessMessage = "Опрос создан";
@@ -364,8 +365,8 @@ public partial class MainMenuViewModel : BaseViewModel
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
-        var usersTask = _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.User.GetAll);
-        var chatsTask = _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chat.UserChats(UserId));
+        var usersTask = _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
+        var chatsTask = _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(UserId));
         await Task.WhenAll(usersTask, chatsTask);
         var usersResult = await usersTask;
         var chatsResult = await chatsTask;
@@ -437,7 +438,7 @@ public partial class MainMenuViewModel : BaseViewModel
         try
         {
             var membersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
-                ApiEndpoints.Chat.MembersDetailed(chat.Id));
+                ApiEndpoints.Chats.MembersDetailed(chat.Id));
             var members = membersResult.Success ? membersResult.Data : null;
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
@@ -460,7 +461,7 @@ public partial class MainMenuViewModel : BaseViewModel
     {
         try
         {
-            var createResult = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chat.Create, chatDto);
+            var createResult = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create, chatDto);
 
             if (!createResult.Success || createResult.Data == null)
             {
@@ -473,14 +474,14 @@ public partial class MainMenuViewModel : BaseViewModel
             foreach (var userId in memberIds)
             {
                 await _apiClient.PostAsync(
-                    ApiEndpoints.Chat.Members(createdChat.Id),
+                    ApiEndpoints.Chats.Members(createdChat.Id),
                     new UpdateChatMemberDto { UserId = userId });
             }
 
             foreach (var adminId in adminIds)
             {
                 await _apiClient.PutAsync(
-                    ApiEndpoints.Chat.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
+                    ApiEndpoints.Chats.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -489,7 +490,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 avatarStream.Position = 0;
 
                 var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-                    ApiEndpoints.Chat.Avatar(createdChat.Id), avatarStream, avatarFileName, contentType);
+                    ApiEndpoints.Chats.Avatar(createdChat.Id), avatarStream, avatarFileName, contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -525,7 +526,7 @@ public partial class MainMenuViewModel : BaseViewModel
             };
 
             var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(
-                ApiEndpoints.Chat.ById(chatDto.Id), updateDto);
+                ApiEndpoints.Chats.ById(chatDto.Id), updateDto);
 
             if (!updateResult.Success || updateResult.Data == null)
             {
@@ -535,7 +536,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
             var updatedChat = updateResult.Data;
 
-            var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chat.MembersDetailed(chatDto.Id));
+            var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chatDto.Id));
             var currentMembers = currentMembersResult.Data ?? [];
             var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
             var currentAdminIds = currentMembers
@@ -545,19 +546,19 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
             {
-                await _apiClient.PostAsync(ApiEndpoints.Chat.Members(chatDto.Id), new UpdateChatMemberDto { UserId = userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chats.Members(chatDto.Id), new UpdateChatMemberDto { UserId = userId });
             }
 
             foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))
             {
-                await _apiClient.DeleteAsync(ApiEndpoints.Chat.RemoveMember(chatDto.Id, userId));
+                await _apiClient.DeleteAsync(ApiEndpoints.Chats.RemoveMember(chatDto.Id, userId));
             }
 
             foreach (var adminId in adminIds
                 .Where(id => currentMemberIds.Contains(id) && !currentAdminIds.Contains(id)))
             {
                 await _apiClient.PutAsync(
-                    ApiEndpoints.Chat.MemberRole(chatDto.Id, adminId, ChatRole.Admin), null!);
+                    ApiEndpoints.Chats.MemberRole(chatDto.Id, adminId, ChatRole.Admin), null!);
             }
 
             foreach (var memberId in currentAdminIds
@@ -566,7 +567,7 @@ public partial class MainMenuViewModel : BaseViewModel
                           && currentMemberIds.Contains(id)))
             {
                 await _apiClient.PutAsync(
-                    ApiEndpoints.Chat.MemberRole(chatDto.Id, memberId, ChatRole.Member), null!);
+                    ApiEndpoints.Chats.MemberRole(chatDto.Id, memberId, ChatRole.Member), null!);
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -575,7 +576,7 @@ public partial class MainMenuViewModel : BaseViewModel
                 avatarStream.Position = 0;
 
                 var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-                    ApiEndpoints.Chat.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
+                    ApiEndpoints.Chats.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {

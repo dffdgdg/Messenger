@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Services.Infrastructure;
 
-public interface IOnlineUserService
+public interface IOnlineUserService : IDisposable
 {
     void UserConnected(int userId, string connectionId);
     void UserDisconnected(int userId, string connectionId);
@@ -10,9 +10,17 @@ public interface IOnlineUserService
     int OnlineCount { get; }
 }
 
-public class OnlineUserService : IOnlineUserService
+public sealed class OnlineUserService : IOnlineUserService
 {
     private readonly ConcurrentDictionary<int, ConcurrentDictionary<string, byte>> _connections = new();
+    private readonly Timer _cleanupTimer;
+    private bool _disposed;
+
+    public OnlineUserService()
+    {
+        _cleanupTimer = new Timer(callback: _ => CleanupEmptyEntries(), state: null,
+            dueTime: TimeSpan.FromMinutes(5), period: TimeSpan.FromMinutes(5));
+    }
 
     public void UserConnected(int userId, string connectionId)
     {
@@ -26,18 +34,38 @@ public class OnlineUserService : IOnlineUserService
             return;
 
         userConnections.TryRemove(connectionId, out _);
+    }
 
-        if (userConnections.IsEmpty)
+    public bool IsOnline(int userId)
+        => _connections.TryGetValue(userId, out var c) && !c.IsEmpty;
+
+    public HashSet<int> GetOnlineUserIds()
+        => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
+
+    public HashSet<int> FilterOnline(IEnumerable<int> userIds)
+        => [.. userIds.Where(IsOnline)];
+
+    public int OnlineCount
+        => _connections.Count(kv => !kv.Value.IsEmpty);
+
+    private void CleanupEmptyEntries()
+    {
+        var removedCount = 0;
+
+        foreach (var kvp in _connections)
         {
-            ((ICollection<KeyValuePair<int, ConcurrentDictionary<string, byte>>>)_connections).Remove(new(userId, userConnections));
+            if (kvp.Value.IsEmpty && _connections.TryRemove(kvp))
+            {
+                removedCount++;
+            }
         }
     }
 
-    public bool IsOnline(int userId) => _connections.TryGetValue(userId, out var c) && !c.IsEmpty;
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
 
-    public HashSet<int> GetOnlineUserIds() => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
-
-    public HashSet<int> FilterOnline(IEnumerable<int> userIds) => [.. userIds.Where(IsOnline)];
-
-    public int OnlineCount => _connections.Count(kv => !kv.Value.IsEmpty);
+        _cleanupTimer.Dispose();
+    }
 }

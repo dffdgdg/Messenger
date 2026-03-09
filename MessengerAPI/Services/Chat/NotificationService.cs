@@ -3,12 +3,15 @@
 public interface INotificationService
 {
     Task SendNotificationAsync(int userId, MessageDto message);
-    Task<ChatNotificationSettingsDto?> GetChatNotificationSettingsAsync(int userId, int chatId);
-    Task<ChatNotificationSettingsDto> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request);
-    Task<List<ChatNotificationSettingsDto>> GetAllChatSettingsAsync(int userId);
+    Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(int userId, int chatId);
+    Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request);
+    Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
 }
 
-public sealed class NotificationService(MessengerDbContext context, IHubNotifier hubNotifier, IUrlBuilder urlBuilder,
+public sealed class NotificationService(
+    MessengerDbContext context,
+    IHubNotifier hubNotifier,
+    IUrlBuilder urlBuilder,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendNotificationAsync(int userId, MessageDto message)
@@ -20,28 +23,33 @@ public sealed class NotificationService(MessengerDbContext context, IHubNotifier
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex,"Не удалось отправить уведомление пользователю {UserId}",userId);
+            logger.LogWarning(ex, "Не удалось отправить уведомление пользователю {UserId}", userId);
         }
     }
 
-    public async Task<ChatNotificationSettingsDto?> GetChatNotificationSettingsAsync(int userId, int chatId)
+    public async Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(
+        int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+        var member = await context.ChatMembers.AsNoTracking()
+            .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
-        if (member == null)
-            return null;
+        if (member is null)
+            return Result<ChatNotificationSettingsDto>.Failure($"Пользователь не является участником чата {chatId}");
 
-        return new ChatNotificationSettingsDto
+        return Result<ChatNotificationSettingsDto>.Success(new ChatNotificationSettingsDto
         {
             ChatId = chatId,
             NotificationsEnabled = member.NotificationsEnabled
-        };
+        });
     }
 
-    public async Task<ChatNotificationSettingsDto> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request)
+    public async Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(
+        int userId, ChatNotificationSettingsDto request)
     {
-        var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == request.ChatId)
-            ?? throw new KeyNotFoundException($"Пользователь не является участником чата {request.ChatId}");
+        var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == request.ChatId);
+
+        if (member is null)
+            return Result<ChatNotificationSettingsDto>.Failure($"Пользователь не является участником чата {request.ChatId}");
 
         member.NotificationsEnabled = request.NotificationsEnabled;
         await context.SaveChangesAsync();
@@ -49,21 +57,27 @@ public sealed class NotificationService(MessengerDbContext context, IHubNotifier
         logger.LogInformation("Пользователь {UserId} {Action} уведомления для чата {ChatId}",
             userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
 
-        return new ChatNotificationSettingsDto
+        return Result<ChatNotificationSettingsDto>.Success(new ChatNotificationSettingsDto
         {
             ChatId = request.ChatId,
             NotificationsEnabled = member.NotificationsEnabled
-        };
+        });
     }
 
-    public async Task<List<ChatNotificationSettingsDto>> GetAllChatSettingsAsync(int userId)
-        => await context.ChatMembers.Where(cm => cm.UserId == userId)
-        .Select(cm => new ChatNotificationSettingsDto
-        {
-            ChatId = cm.ChatId,
-            NotificationsEnabled = cm.NotificationsEnabled
-        })
-        .AsNoTracking().ToListAsync();
+    public async Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId)
+    {
+        var settings = await context.ChatMembers
+            .Where(cm => cm.UserId == userId)
+            .Select(cm => new ChatNotificationSettingsDto
+            {
+                ChatId = cm.ChatId,
+                NotificationsEnabled = cm.NotificationsEnabled
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Result<List<ChatNotificationSettingsDto>>.Success(settings);
+    }
 
     #region Private Methods
 

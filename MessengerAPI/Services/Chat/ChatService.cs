@@ -11,14 +11,11 @@ public interface IChatService
     Task<Result<List<ChatDto>>> GetUserDialogsAsync(int userId);
     Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId);
     Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId);
-    Task<List<UserDto>> GetChatMembersAsync(int chatId);
+    Task<Result<List<UserDto>>> GetChatMembersAsync(int chatId, int userId);
     Task<Result<ChatDto>> CreateChatAsync(ChatDto dto);
-    Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
+    Task<Result<ChatDto>> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
     Task<Result> DeleteChatAsync(int chatId, int userId);
-    Task<string> UploadChatAvatarAsync(int chatId, IFormFile file);
-    Task EnsureUserHasChatAccessAsync(int userId, int chatId);
-    Task EnsureUserIsChatAdminAsync(int userId, int chatId);
-    Task EnsureUserIsChatOwnerAsync(int userId, int chatId);
+    Task<Result<string>> UploadChatAvatarAsync(int chatId, int userId, IFormFile file);
 }
 
 public class ChatService(
@@ -29,23 +26,12 @@ public class ChatService(
     IReadReceiptService readReceiptService,
     IUrlBuilder urlBuilder,
     ICacheService cacheService,
+    IHubNotifier hubNotifier,
+    ISystemMessageService systemMessages,
     AppDateTime appDateTime,
     ILogger<ChatService> logger)
     : BaseService<ChatService>(context, logger), IChatService
 {
-    #region Access Control Delegation
-
-    public Task EnsureUserHasChatAccessAsync(int userId, int chatId)
-        => accessControl.EnsureIsMemberAsync(userId, chatId);
-
-    public Task EnsureUserIsChatAdminAsync(int userId, int chatId)
-        => accessControl.EnsureIsAdminAsync(userId, chatId);
-
-    public Task EnsureUserIsChatOwnerAsync(int userId, int chatId)
-        => accessControl.EnsureIsOwnerAsync(userId, chatId);
-
-    #endregion
-
     #region Get Chats
 
     public async Task<Result<List<ChatDto>>> GetUserChatsAsync(int userId)
@@ -65,6 +51,7 @@ public class ChatService(
                         {
                             m.Content,
                             m.CreatedAt,
+                            m.IsSystemMessage,
                             SenderName = m.Sender!.FormatDisplayName()
                         }).FirstOrDefault()
                 }).AsNoTracking().ToListAsync();
@@ -85,7 +72,9 @@ public class ChatService(
                 CreatedById = item.Chat.CreatedById ?? 0,
                 LastMessageDate = item.LastMessage?.CreatedAt ?? item.Chat.LastMessageTime,
                 LastMessagePreview = Truncate(item.LastMessage?.Content, 50),
-                LastMessageSenderName = item.LastMessage?.SenderName,
+                LastMessageSenderName = item.LastMessage?.IsSystemMessage == true
+                    ? null
+                    : item.LastMessage?.SenderName,
                 UnreadCount = unreadCounts.GetValueOrDefault(item.Chat.Id, 0)
             };
 
@@ -112,12 +101,14 @@ public class ChatService(
 
     public async Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId)
     {
-        await accessControl.EnsureIsMemberAsync(userId, chatId);
+        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
+        if (accessResult.IsFailure)
+            return Result<ChatDto>.FromFailure(accessResult);
 
         var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
-            return Result<ChatDto>.Failure($"Чат с ID {chatId} не найден");
+            return Result<ChatDto>.NotFound($"Чат с ID {chatId} не найден");
 
         var dto = new ChatDto
         {
@@ -152,7 +143,6 @@ public class ChatService(
             return allChatsResult;
 
         var dialogs = allChatsResult.Value!.Where(c => c.Type == ChatType.Contact).ToList();
-
         return Result<List<ChatDto>>.Success(dialogs);
     }
 
@@ -163,7 +153,6 @@ public class ChatService(
             return allChatsResult;
 
         var groups = allChatsResult.Value!.Where(c => c.Type != ChatType.Contact).ToList();
-
         return Result<List<ChatDto>>.Success(groups);
     }
 
@@ -177,7 +166,7 @@ public class ChatService(
             .FirstOrDefaultAsync();
 
         if (chat is null)
-            return Result<ChatDto>.Failure("Диалог не найден");
+            return Result<ChatDto>.NotFound("Диалог не найден");
 
         var dto = chat.ToDto(urlBuilder);
 
@@ -195,8 +184,12 @@ public class ChatService(
 
     #region Members
 
-    public async Task<List<UserDto>> GetChatMembersAsync(int chatId)
+    public async Task<Result<List<UserDto>>> GetChatMembersAsync(int chatId, int userId)
     {
+        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
+        if (accessResult.IsFailure)
+            return Result<List<UserDto>>.FromFailure(accessResult);
+
         var members = await _context.ChatMembers
             .Where(cm => cm.ChatId == chatId)
             .Include(cm => cm.User)
@@ -206,7 +199,7 @@ public class ChatService(
         var memberIds = members.ConvertAll(m => m.UserId);
         var onlineIds = onlineService.FilterOnline(memberIds);
 
-        return [.. members.Select(m => new UserDto
+        var result = members.ConvertAll(m => new UserDto
         {
             Id = m.User.Id,
             Username = m.User.Username,
@@ -217,7 +210,9 @@ public class ChatService(
             Avatar = urlBuilder.BuildUrl(m.User.Avatar),
             IsOnline = onlineIds.Contains(m.User.Id),
             LastOnline = m.User.LastOnline
-        })];
+        });
+
+        return Result<List<UserDto>>.Success(result);
     }
 
     #endregion
@@ -234,15 +229,13 @@ public class ChatService(
         {
             contactUserId = parsedContactId;
 
-            var contactExists = await _context.Users
-                .AnyAsync(u => u.Id == contactUserId);
+            var contactExists = await _context.Users.AnyAsync(u => u.Id == contactUserId);
             if (!contactExists)
-                return Result<ChatDto>.Failure("Указанный собеседник не найден");
+                return Result<ChatDto>.NotFound("Указанный собеседник не найден");
 
-            var existingChat = await FindExistingContactChatAsync(
-                dto.CreatedById, contactUserId.Value);
+            var existingChat = await FindExistingContactChatAsync(dto.CreatedById, contactUserId.Value);
             if (existingChat is not null)
-                return Result<ChatDto>.Failure("Диалог с этим пользователем уже существует");
+                return Result<ChatDto>.Conflict("Диалог с этим пользователем уже существует");
         }
         else if (dto.Type != ChatType.Contact && string.IsNullOrWhiteSpace(dto.Name))
         {
@@ -251,72 +244,76 @@ public class ChatService(
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        try
+        var chat = new Model.Chat
         {
-            var chat = new Model.Chat
-            {
-                Name = dto.Type == ChatType.Contact ? null : dto.Name?.Trim(),
-                Type = dto.Type,
-                CreatedById = dto.CreatedById,
-                CreatedAt = appDateTime.UtcNow
-            };
+            Name = dto.Type == ChatType.Contact ? null : dto.Name?.Trim(),
+            Type = dto.Type,
+            CreatedById = dto.CreatedById,
+            CreatedAt = appDateTime.UtcNow
+        };
 
-            _context.Chats.Add(chat);
-            await _context.SaveChangesAsync();
+        _context.Chats.Add(chat);
+        await _context.SaveChangesAsync();
 
+        _context.ChatMembers.Add(new ChatMember
+        {
+            ChatId = chat.Id,
+            UserId = dto.CreatedById,
+            Role = ChatRole.Owner,
+            JoinedAt = appDateTime.UtcNow
+        });
+
+        if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
+        {
             _context.ChatMembers.Add(new ChatMember
             {
                 ChatId = chat.Id,
-                UserId = dto.CreatedById,
-                Role = ChatRole.Owner,
+                UserId = contactUserId.Value,
+                Role = ChatRole.Member,
                 JoinedAt = appDateTime.UtcNow
             });
-
-            if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
-            {
-                _context.ChatMembers.Add(new ChatMember
-                {
-                    ChatId = chat.Id,
-                    UserId = contactUserId.Value,
-                    Role = ChatRole.Member,
-                    JoinedAt = appDateTime.UtcNow
-                });
-            }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            cacheService.InvalidateUserChats(dto.CreatedById);
-            if (contactUserId.HasValue)
-                cacheService.InvalidateUserChats(contactUserId.Value);
-
-            _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
-
-            return Result<ChatDto>.Success(new ChatDto
-            {
-                Id = chat.Id,
-                Name = chat.Name,
-                Type = chat.Type,
-                CreatedById = dto.CreatedById
-            });
         }
-        catch
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        cacheService.InvalidateUserChats(dto.CreatedById);
+        if (contactUserId.HasValue)
+            cacheService.InvalidateUserChats(contactUserId.Value);
+
+        if (chat.Type != ChatType.Contact)
         {
-            await transaction.RollbackAsync();
-            throw;
+            var creator = await _context.Users.FindAsync(dto.CreatedById);
+            await systemMessages.CreateAsync(chat.Id, dto.CreatedById,
+                $"{creator?.FormatDisplayName() ?? "Пользователь"} создал группу",
+                SystemEventType.ChatCreated);
         }
+
+        _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}",
+            chat.Id, dto.CreatedById);
+
+        return Result<ChatDto>.Success(new ChatDto
+        {
+            Id = chat.Id,
+            Name = chat.Name,
+            Type = chat.Type,
+            CreatedById = dto.CreatedById
+        });
     }
 
-    public async Task<ChatDto> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto)
+    public async Task<Result<ChatDto>> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto)
     {
-        await accessControl.EnsureIsAdminAsync(userId, chatId);
+        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
+        if (adminResult.IsFailure)
+            return Result<ChatDto>.FromFailure(adminResult);
 
-        var chat = await _context.Chats
-            .FirstOrDefaultAsync(c => c.Id == chatId)
-            ?? throw new KeyNotFoundException($"Чат с ID {chatId} не найден");
+        var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId);
+
+        if (chat is null)
+            return Result<ChatDto>.NotFound($"Чат с ID {chatId} не найден");
 
         if (chat.Type == ChatType.Contact)
-            throw new InvalidOperationException("Нельзя редактировать диалог");
+            return Result<ChatDto>.Failure("Нельзя редактировать диалог");
 
         if (!string.IsNullOrWhiteSpace(dto.Name))
             chat.Name = dto.Name.Trim();
@@ -324,16 +321,18 @@ public class ChatService(
         if (dto.ChatType.HasValue)
         {
             if (!await accessControl.IsOwnerAsync(userId, chatId))
-                throw new UnauthorizedAccessException("Только владелец может изменить тип чата");
+                return Result<ChatDto>.Forbidden("Только владелец может изменить тип чата");
 
             chat.Type = dto.ChatType.Value;
         }
 
-        await SaveChangesAsync();
+        var saveResult = await SaveChangesAsync();
+        if (saveResult.IsFailure)
+            return Result<ChatDto>.FromFailure(saveResult);
 
         _logger.LogInformation("Чат {ChatId} обновлён пользователем {UserId}", chatId, userId);
 
-        return new ChatDto
+        return Result<ChatDto>.Success(new ChatDto
         {
             Id = chat.Id,
             Name = chat.Name,
@@ -341,30 +340,32 @@ public class ChatService(
             CreatedById = chat.CreatedById ?? 0,
             LastMessageDate = chat.LastMessageTime,
             Avatar = urlBuilder.BuildUrl(chat.Avatar)
-        };
+        });
     }
 
     public async Task<Result> DeleteChatAsync(int chatId, int userId)
     {
-        await accessControl.EnsureIsOwnerAsync(userId, chatId);
+        var ownerResult = await accessControl.CheckIsOwnerAsync(userId, chatId);
+        if (ownerResult.IsFailure)
+            return ownerResult;
 
         var chat = await _context.Chats
             .Include(c => c.ChatMembers)
             .FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
-            return Result.Failure($"Чат с ID {chatId} не найден");
+            return Result.NotFound($"Чат с ID {chatId} не найден");
 
         var memberIds = chat.ChatMembers.Select(cm => cm.UserId).ToList();
 
-        await _context.Messages
-            .Where(m => m.ChatId == chatId)
-            .ExecuteDeleteAsync();
+        await _context.Messages.Where(m => m.ChatId == chatId).ExecuteDeleteAsync();
 
         _context.ChatMembers.RemoveRange(chat.ChatMembers);
         _context.Chats.Remove(chat);
 
-        await SaveChangesAsync();
+        var saveResult = await SaveChangesAsync();
+        if (saveResult.IsFailure)
+            return saveResult;
 
         foreach (var memberId in memberIds)
         {
@@ -377,27 +378,40 @@ public class ChatService(
         return Result.Success();
     }
 
-    public async Task<string> UploadChatAvatarAsync(int chatId, IFormFile file)
+    public async Task<Result<string>> UploadChatAvatarAsync(int chatId, int userId, IFormFile file)
     {
+        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
+        if (adminResult.IsFailure)
+            return Result<string>.FromFailure(adminResult);
+
         if (file is null || file.Length == 0)
-            throw new ArgumentException("Файл не загружен");
+            return Result<string>.Failure("Файл не загружен");
 
         if (!file.ContentType.StartsWith("image/"))
-            throw new ArgumentException("Файл должен быть изображением");
+            return Result<string>.Failure("Файл должен быть изображением");
 
-        var chat = await GetRequiredEntityAsync<Model.Chat>(chatId);
+        var chatResult = await FindEntityAsync<Model.Chat>(chatId);
+        if (chatResult.IsFailure)
+            return Result<string>.FromFailure(chatResult);
+
+        var chat = chatResult.Value!;
 
         if (chat.Type == ChatType.Contact)
-            throw new InvalidOperationException("Нельзя установить аватар для диалога");
+            return Result<string>.Failure("Нельзя установить аватар для диалога");
 
-        var avatarPath = await fileService.SaveImageAsync(file, "chats", chat.Avatar);
-        chat.Avatar = avatarPath;
+        var saveResult = await fileService.SaveImageAsync(file, "chats", chat.Avatar);
+        if (saveResult.IsFailure)
+            return Result<string>.FromFailure(saveResult);
 
-        await SaveChangesAsync();
+        chat.Avatar = saveResult.Value;
+
+        var dbSaveResult = await SaveChangesAsync();
+        if (dbSaveResult.IsFailure)
+            return Result<string>.FromFailure(dbSaveResult);
 
         _logger.LogInformation("Аватар загружен для чата {ChatId}", chatId);
 
-        return urlBuilder.BuildUrl(avatarPath)!;
+        return Result<string>.Success(urlBuilder.BuildUrl(saveResult.Value)!);
     }
 
     #endregion

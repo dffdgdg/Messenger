@@ -6,29 +6,27 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-namespace MessengerDesktop.Infrastructure.ImageLoading;
+namespace MessengerDesktop.Infrastructure;
 
-public sealed class AuthenticatedImageLoader(
-    HttpClient httpClient,
-    ISessionStore sessionStore,
-    string apiBaseUrl) : RamCachedWebImageLoader
+public sealed class AuthenticatedImageLoader(HttpClient httpClient, ISessionStore sessionStore, string apiBaseUrl) : RamCachedWebImageLoader
 {
-    private readonly HttpClient _httpClient = httpClient
-        ?? throw new ArgumentNullException(nameof(httpClient));
-    private readonly ISessionStore _sessionStore = sessionStore
-        ?? throw new ArgumentNullException(nameof(sessionStore));
-    private readonly string _apiBaseUrl = apiBaseUrl?.TrimEnd('/')
-        ?? throw new ArgumentNullException(nameof(apiBaseUrl));
+    private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    private readonly ISessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+    private readonly string _apiBaseUrl = apiBaseUrl?.TrimEnd('/') ?? throw new ArgumentNullException(nameof(apiBaseUrl));
 
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico", ".avif"
-    };
+    private static readonly HashSet<string> ImageExtensions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp",
+            ".bmp", ".svg", ".ico", ".avif"
+        };
 
-    protected override async Task<byte[]?> LoadDataFromExternalAsync(string url)
+    protected override async Task<byte[]?> LoadDataFromExternalAsync(
+        string url)
     {
         var ext = GetExtension(url);
-        if (!string.IsNullOrEmpty(ext) && !ImageExtensions.Contains(ext))
+        if (!string.IsNullOrEmpty(ext) &&
+            !ImageExtensions.Contains(ext))
         {
             Debug.WriteLine($"[AuthImageLoader] Skipping non-image: {GetFileName(url)}");
             return null;
@@ -49,39 +47,31 @@ public sealed class AuthenticatedImageLoader(
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            using var response = await _httpClient
-                .SendAsync(request)
-                .ConfigureAwait(false);
+            using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                Debug.WriteLine(
-                    $"[AuthImageLoader] {(int)response.StatusCode} " +
+                Debug.WriteLine($"[AuthImageLoader] {(int)response.StatusCode} " +
                     $"for: {GetFileName(url)}");
                 return null;
             }
 
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
-            if (!string.IsNullOrEmpty(contentType)
-                && !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            var contentType =
+                response.Content.Headers.ContentType?.MediaType ?? "";
+            if (!string.IsNullOrEmpty(contentType) &&
+                !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.WriteLine(
-                    $"[AuthImageLoader] Non-image content-type '{contentType}' " +
-                    $"for: {GetFileName(url)}");
+                Debug.WriteLine("[AuthImageLoader] Non-image content-type'{contentType}' for: {GetFileName(url)}");
                 return null;
             }
 
-            return await response.Content
-                .ReadAsByteArrayAsync()
-                .ConfigureAwait(false);
+            return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
-            Debug.WriteLine(
-                $"[AuthImageLoader] HTTP error for {GetFileName(url)}: {ex.Message}");
+            Debug.WriteLine($"[AuthImageLoader] HTTP error for {GetFileName(url)}: {ex.Message}");
             return null;
         }
         catch (TaskCanceledException)
@@ -98,7 +88,6 @@ public sealed class AuthenticatedImageLoader(
 
     /// <summary>
     /// Extracts file extension from URL.
-    /// "https://localhost:7190/uploads/chats/4/abc.wav?v=123" → ".wav"
     /// </summary>
     private static string GetExtension(string url)
     {
@@ -108,7 +97,6 @@ public sealed class AuthenticatedImageLoader(
             var dot = path.LastIndexOf('.');
             if (dot < 0) return "";
             var ext = path[dot..];
-            // Отсекаем query-параметры, если они попали
             var q = ext.IndexOf('?');
             return q >= 0 ? ext[..q] : ext;
         }
@@ -120,7 +108,6 @@ public sealed class AuthenticatedImageLoader(
 
     /// <summary>
     /// Extracts just the file name from URL for readable logs.
-    /// "https://localhost:7190/avatars/users/abc.webp?v=123" → "abc.webp"
     /// </summary>
     private static string GetFileName(string url)
     {

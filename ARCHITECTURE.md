@@ -1,582 +1,280 @@
-﻿## Обзор проекта
+﻿## Проект
 
-Корпоративный мессенджер, состоящий из трёх проектов в одном решении (solution):
+Локальный корпоративный мессенджер: MessengerAPI (ASP.NET Core, REST+SignalR), MessengerDesktop (Avalonia MVVM), MessengerShared (.NET Class Library — DTO, enums, ApiResponse).
 
-| Проект | Технология | Назначение |
-|---|---|---|
-| **MessengerAPI** | ASP.NET Core Web API | Серверная часть (REST API + SignalR) |
-| **MessengerDesktop** | Avalonia UI (MVVM) | Десктопный клиент (кроссплатформенный) |
-| **MessengerShared** | .NET Class Library | Общие DTO, перечисления, обёртки ответов |
-
-### Deployment
-
-**`Dockerfile`** — Multi-stage build. SDK 8.0 → restore → publish Release. Runtime aspnet:8.0. Non-root user (appgroup/appuser). Port 8080. ENTRYPOINT `dotnet MessengerAPI.dll`.
-
-**`docker-compose.yml`** — Сервисы: `messenger-api` (build from Dockerfile, port 8080, volumes uploads/avatars, depends_on postgres healthy), `postgres` (16-alpine, healthcheck pg_isready, volume postgres_data), `zap-baseline` (ZAProxy security scan, profile "security", report html/json/md). Environment: JWT_SECRET, JWT_ACCESS_TOKEN_LIFETIME_MINUTES, JWT_REFRESH_TOKEN_LIFETIME_DAYS, ConnectionStrings, DisableHttpsRedirection. Volumes: postgres_data, messenger_uploads, messenger_avatars.
+Docker: multi-stage build, non-root, port 8080. Compose: API + PostgreSQL 16 + ZAProxy scan. Volumes: postgres_data, uploads, avatars.
 
 ---
 
-## MessengerAPI — Серверная часть
+## MessengerAPI
 
-### Точка входа
+### Точка входа (Program.cs)
 
-**`Program.cs`** — Включает `Npgsql.EnableLegacyTimestampBehavior`. Привязка конфигурации `MessengerSettings`, `JwtSettings`. Регистрация: `AddMessengerDatabase`, `AddInfrastructureServices`, `AddBusinessServices`, `AddMessengerJson`, `AddMessengerAuth`, `AddMessengerSwagger`, SignalR, CORS (AllowAnyHeader/Method, AllowCredentials). Pipeline: `UseExceptionHandling`, Swagger (dev), HTTPS redirect, `UseMessengerStaticFiles`, `UseMissingFileCleanup`, CORS, Auth. Маршруты: `GET /` (health), `GET /robots.txt`, `GET /sitemap.xml` (AllowAnonymous), `MapControllers`, `MapHub<ChatHub>("/chatHub")`.
+Npgsql legacy timestamps. DI: database, infrastructure, business services, JSON, auth, Swagger, rate limiter, SignalR, CORS.
 
-### Common — Общие утилиты
+Rate Limiting: глобальный SlidingWindow 100req/10s на IP; именованные: login 5/min/IP, upload 10/min/user, search 15/min/user, messaging 30/min/user. OnRejected → 429 + Retry-After.
 
-**`Common/AppDateTime.cs`** — Sealed class с DI-инъекцией `TimeProvider` — единый источник времени. `UtcNow` → `DateTime.SpecifyKind(timeProvider.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified)` для совместимости Npgsql. Регистрируется как singleton.
+Pipeline: ExceptionHandling → Swagger(dev) → HTTPS → security headers → static files (без auth) → MissingFileCleanup → CORS → RateLimiter → Auth. Routes: health, robots, sitemap (anon), controllers, ChatHub.
 
-**`Common/Result.cs`** — Result-паттерн. `Result` — `Success()`/`Failure(error)`. `Result<T>` — `Success(value)`/`Failure(error)`, деконструктор `(success, data, error)`, метод `Match<TResult>(onSuccess, onFailure)`.
+### Common
 
-**`Common/ValidationHelper.cs`** — `ValidateUsername` — source-generated regex `^[a-z0-9_]{3,30}$`. `ValidatePassword` — минимум 6 символов. Возвращают `Result`.
+**AppDateTime** — singleton, DI TimeProvider, UtcNow с Kind=Unspecified для Npgsql.
 
-### Configuration — Конфигурация и DI
+**Result Pattern** — `Result`/`Result<T>` с `ResultErrorType` enum (Validation→400, Unauthorized→401, Forbidden→403, NotFound→404, Conflict→409, Internal→500). Фабрики: `NotFound()`, `Forbidden()`, `Unauthorized()`, `Conflict()`, `Internal()`. `FromFailure(Result)` — propagation ошибок между типами. `ResultExtensions` для Hub-контекста: `UnwrapOrDefault`, `UnwrapOrFallback`, `TryUnwrap` с CallerMemberName логированием. `Result<T>.Match(onSuccess, onFailure)`.
 
-**`Configuration/AuthConfiguration.cs`** — `AddMessengerAuth`: JWT Bearer с параметрами из `TokenService.CreateValidationParameters`. SignalR-токен из query `access_token` для `/chatHub`. Fallback-политика: все эндпоинты требуют аутентификации.
+**UrlHelpers** — `BuildFullUrl` extension на string: null/empty→passthrough, already absolute→passthrough, else→`urlBuilder.BuildUrl(path)`.
 
-**`Configuration/DependencyInjection.cs`** — `AddMessengerDatabase` — PostgreSQL/Npgsql, маппинг enum `Theme`/`ChatRole`/`ChatType`, dev: SensitiveDataLogging. `AddInfrastructureServices` — MemoryCache, HttpContextAccessor, TimeProvider.System (singleton), AppDateTime (singleton), OnlineUserService(singleton), scoped: CacheService, AccessControlService, FileService, TokenService, HubNotifier, HttpUrlBuilder. `AddBusinessServices` — scoped: AuthService, UserService, AdminService, ChatService, ChatMemberService, NotificationService, MessageService, PollService, ReadReceiptService, DepartmentService; singletons: TranscriptionQueue, TranscriptionService; hosted: TranscriptionBackgroundService. `AddMessengerJson` — ReferenceHandler.IgnoreCycles, WriteIndented в dev.
+**ValidationHelper** — regex username `^[a-z0-9_]{3,30}$`, password ≥6. Возвращают Result.
 
-**`Configuration/JwtSettings.cs`** — POCO: `Secret`, `AccessTokenLifetimeMinutes`=15, `RefreshTokenLifetimeDays`=30, `Issuer`="MessengerAPI", `Audience`="MessengerClient". Section: `"Jwt"`.
+### Configuration
 
-**`Configuration/MessengerSettings.cs`** — POCO: `AdminDepartmentId`=1, `MaxFileSizeBytes`=20MB, `BcryptWorkFactor`=12, `MaxImageDimension`=1600, `ImageQuality`=85, `DefaultPageSize`=50, `MaxPageSize`=100. Section: `"Messenger"`.
+**Auth** — JWT Bearer из TokenService.CreateValidationParameters. SignalR token из query. Fallback: все endpoints требуют auth.
 
-**`Configuration/StaticFilesConfiguration.cs`** — `UseMessengerStaticFiles`: создаёт `wwwroot/uploads` и `wwwroot/avatars`. Кастомный ContentTypeProvider (ipynb, md, yaml, py, cs, ts, tsx, jsx, webp). Аватары: `Cache-Control: no-cache, no-store`.
+**DI** — Database: PostgreSQL+Npgsql, enum mapping. Infrastructure: MemoryCache, TimeProvider, AppDateTime, OnlineUserService (singleton), scoped: CacheService, AccessControlService, FileService, TokenService, HubNotifier, HttpUrlBuilder. Business: scoped сервисы (Auth, User, Admin, Chat, ChatMember, SystemMessage, Notification, Message, Poll, ReadReceipt, Department), singletons: TranscriptionQueue/Service, hosted: TranscriptionBackgroundService.
 
-**`Configuration/SwaggerConfiguration.cs`** — Swagger v1 с JWT Bearer SecurityDefinition (ApiKey в Header).
+**JwtSettings** — Secret, AccessTokenLifetimeMinutes=15, RefreshTokenLifetimeDays=30, Issuer/Audience.
 
-### Controllers — API-контроллеры
+**MessengerSettings** — AdminDepartmentId=1, MaxFileSize=20MB, BcryptWorkFactor=12, MaxImageDimension=256, DefaultPageSize=50, MaxPageSize=100.
 
-**`Controllers/BaseController.cs`** — Абстрактный `[ApiController, Route("api/[controller]")]`. `GetCurrentUserId()` из ClaimTypes.NameIdentifier. `IsCurrentUser(userId)` — сравнение. Два `ExecuteAsync` (для `Result<T>` и `Result`) с обработкой: Unauthorized→401, KeyNotFound→404, Argument/InvalidOp→400, прочие→500. `Forbidden()` и `Forbidden<T>()` → 403 с ApiResponse.
+**StaticFiles** — wwwroot/uploads + avatars via PhysicalFileProvider. Custom MIME types (ipynb, md, yaml, py, cs, ts, tsx, jsx, webp). Uploads: ServeUnknownFileTypes=true, DefaultContentType=octet-stream. Avatars: no-cache headers. Middleware стоит до UseAuthentication — файлы доступны без авторизации.
 
-**`Controllers/AuthController.cs`** — `POST login` `[AllowAnonymous, EnableRateLimiting("login")]` → `AuthService.LoginAsync`. `POST refresh` `[AllowAnonymous]` → `AuthService.RefreshTokenAsync` (принимает истёкший access + refresh token, возвращает новую пару). `POST revoke` `[Authorize]` → `AuthService.RevokeRefreshTokenAsync` (отзыв всех refresh tokens текущего пользователя, используется при logout).
+### Controllers
 
-**`Controllers/AdminController.cs`** — `[Authorize(Roles="Admin")]`. `GET users`, `POST users`, `POST users/{id}/toggle-ban`.
+**BaseController** — GetCurrentUserId из claims. `ExecuteAsync(Result/Result<T>)`: Success→Ok, Failure→MapFailure по ResultErrorType. Без catch — исключения в ExceptionHandlingMiddleware.
 
-**`Controllers/ChatsController.cs`** — `GET user/{userId}/dialogs|groups|chats`, `GET user/{userId}/contact/{contactUserId}`, `GET {chatId}`, `GET {chatId}/members`, `GET {chatId}/members/detailed` (ChatMemberDto), `POST {chatId}/members`, `DELETE {chatId}/members/{userId}`, `PUT {chatId}/members/{userId}/role` (query ChatRole), `POST` (создание), `PUT {id}`, `DELETE {id}`, `POST {id}/avatar`. Проверка IsCurrentUser для списков. EnsureUserHasChatAccessAsync для members, EnsureUserIsChatAdminAsync для avatar.
+**AuthController** — `POST login` [anon, rate:login], `POST refresh` [anon] (expired access + refresh → new pair), `POST revoke` [auth] (отзыв всех refresh tokens).
 
-**`Controllers/DepartmentController.cs`** — `GET` (все), `GET {id}`, `POST/PUT/DELETE` (Admin-only), `GET {id}/members`, `POST/DELETE {id}/members`, `GET {id}/can-manage`. CancellationToken на всех.
+**AdminController** — [Admin]. GET/POST users, toggle-ban.
 
-**`Controllers/FilesController.cs`** — `POST upload` с `[RequestSizeLimit(100MB)]`, query `chatId`. Проверка доступа к чату.
+**ChatsController** — CRUD чатов, members (add/remove/role), avatar upload. Доступ: часть через сервис, часть через CheckUserChat*Async → FromFailure.
 
-**`Controllers/MessagesController.cs`** — `POST`, `PUT {id}`, `DELETE {id}`, `GET chat/{chatId}` (пагинация), `GET chat/{chatId}/around|before|after/{messageId}`, `GET chat/{chatId}/search`, `GET user/{userId}/search` (глобальный), `GET {id}/transcription`, `POST {id}/transcription/retry`.
+**DepartmentsController** — CRUD (admin-only), members, can-manage. CancellationToken.
 
-**`Controllers/NotificationController.cs`** — `GET chat/{chatId}/settings`, `POST chat/mute`, `GET settings`.
+**FilesController** — POST upload [100MB, rate:upload], проверка доступа → fileService.SaveMessageFileAsync.
 
-**`Controllers/PollController.cs`** — `GET {pollId}`, `POST` (создание → MessageDto), `POST vote`.
+**MessagesController** — CRUD, пагинация (chat/{chatId}, around/before/after/{messageId}), search (chat + global) [rate:search], transcription get/retry.
 
-**`Controllers/ReadReceiptsController.cs`** — `POST mark-read`, `GET chat/{chatId}/unread-count`, `GET unread-counts`.
+**NotificationsController** — chat settings get/mute, all settings.
 
-**`Controllers/UserController.cs`** — `GET` (все), `GET {id}`, `PUT {id}`, `POST {id}/avatar`, `PUT {id}/username`, `PUT {id}/password`, `GET online`, `GET {id}/status`, `POST status/batch`.
+**PollsController** — get, create (→MessageDto), vote.
 
-### Hubs — SignalR
+**ReadReceiptsController** — mark-read, unread-count (chat + all).
 
-**`Hubs/ChatHub.cs`** — `[Authorize]`. Инъекция `AppDateTime`. **OnConnectedAsync**: регистрация в OnlineUserService, join `user_{id}` + все `chat_{id}`, broadcast `UserOnline`. **OnDisconnectedAsync**: при полном оффлайне — `LastOnline` через `appDateTime.UtcNow` в БД, broadcast `UserOffline`. **JoinChat/LeaveChat**: с проверкой членства. **MarkAsRead/MarkMessageAsRead**: через ReadReceiptService → `UnreadCountUpdated` caller + `MessageRead` остальным. **SendTyping** → `UserTyping`. **GetOnlineUsersInChat**. `IServiceScopeFactory`.
+**UsersController** — CRUD, avatar, username/password change, online status.
 
-### Mapping — Маппинг сущностей в DTO
+### SignalR (ChatHub)
 
-**`Mapping/ChatMappings.cs`** — `Chat.ToDto()` → ChatDto. Перегрузка с `dialogPartner` для Contact-чатов. IUrlBuilder для URL.
+[Authorize]. OnConnected: register online, join user_{id} + chat groups. OnDisconnected: offline → ExecuteUpdateAsync LastOnline, broadcast.
 
-**`Mapping/FileMappings.cs`** — `MessageFile.ToDto()` → MessageFileDto. `DeterminePreviewType` → "image"/"video"/"audio"/"file".
+JoinChat/LeaveChat: CheckIsMemberAsync → HubException. GetReadInfo: UnwrapOrDefault. MarkAsRead/MarkMessageAsRead: TryUnwrap + early return, notify caller + others. GetUnreadCounts: UnwrapOrFallback. SendTyping → UserTyping. GetOnlineUsersInChat: CheckIsMemberAsync.
 
-**`Mapping/MessageMappings.cs`** — `Message.ToDto()` → MessageDto. IsDeleted → "[Сообщение удалено]". ReplyTo → `ToReplyPreviewDto()`, Forward → `ToForwardInfoDto()`. IsOwn, IsVoiceMessage, TranscriptionStatus, файлы, опрос.
+### Mapping
 
-**`Mapping/PollMappings.cs`** — `Poll.ToDto()` — SelectedOptionIds текущего пользователя, CanVote. Анонимные опросы скрывают голоса.
+**MessageMappings** — `Message.ToDto()`: IsDeleted→placeholder content, IsOwn подавляется для системных, voice из навигации VoiceMessage (duration, transcription, FilePath→BuildFullUrl для VoiceFileUrl, fileName, contentType, fileSize), system-поля (eventType, targetUser), ReplyTo→ToReplyPreviewDto, Forward→ToForwardInfoDto, Files→ToDto, Poll→ToDto. `ToReplyPreviewDto`, `ToForwardInfoDto`.
 
-**`Mapping/UrlHelpers.cs`** — `BuildFullUrl(this string?, IUrlBuilder?)` — делегация в urlBuilder.
+**FileMappings** — `MessageFile.ToDto()`: Path→BuildFullUrl, DeterminePreviewType (image/video/audio/file), GetFileSize (filesystem lookup). `DeterminePreviewType` — public static.
 
-**`Mapping/UserMappings.cs`** — `User.ToDto()` → UserDto. `FormatDisplayName()` — ФИО/Username. `UpdateProfile()`, `UpdateSettings()`.
+**Прочие** — Chat→ChatDto (с dialogPartner), Poll→PollDto (анонимность скрывает голоса), User→UserDto (FormatDisplayName).
 
 ### Middleware
 
-**`Middleware/ExceptionHandlingMiddleware.cs`** — Глобальный перехват: Argument→400, Unauthorized→401, KeyNotFound→404, InvalidOp→400, прочие→500. Dev: Details для 500. Extension `UseExceptionHandling()`.
+**ExceptionHandling** — catch-all → 500 ApiResponse, dev: stack trace. Все бизнес-ошибки через Result.
 
-**`Middleware/MissingFileCleanupMiddleware.cs`** — Перехват GET/HEAD запросов к `/uploads` и `/avatars`. При 404: поиск в БД по relativePath (MessageFiles, Users.Avatar, Chats.Avatar). Удаление записей MessageFile, обнуление Avatar. Логирование количества очищенных ссылок. Extension `UseMissingFileCleanup()`.
+**MissingFileCleanup** — GET/HEAD к /uploads, /avatars при 404: поиск в БД, удаление ссылок.
 
-### Services — Бизнес-логика
+### Services
+
+Все бизнес-сервисы возвращают Result (если не указано иное). Наследуют BaseService: `SaveChangesAsync` → Result (DbUpdateConcurrencyException→Conflict, unique violation→Conflict, прочие→Internal). `FindEntityAsync` → Result<T> (NotFound).
 
 #### Auth
 
-**`Services/Auth/AuthService.cs`** — Инъекция `AppDateTime`, `IOptions<JwtSettings>`. **LoginAsync**: timing-safe (dummy BCrypt.Verify). Проверка пароля, бана. `DetermineUserRoleAsync`: Admin/Head/User. Генерация TokenPair через TokenService, сохранение refresh token (хеш) в БД с новым FamilyId, очистка истёкших токенов. **RefreshTokenAsync**: извлечение claims из expired access token (GetPrincipalFromExpiredToken), поиск refresh token по хешу в БД, replay attack detection (если UsedAt!=null → отзыв всей семьи FamilyId), проверка срока/бана, ротация (старый→UsedAt=now, новый→same FamilyId), возвращает новую пару TokenResponseDto. **RevokeRefreshTokenAsync**: отзыв всех активных refresh tokens пользователя (RevokedAt=now). Приватные: `SaveRefreshTokenAsync`, `RevokeTokenFamilyAsync` (отзыв всей цепочки при компрометации), `CleanupExpiredTokensAsync` (удаление >60 дней).
+**AuthService** — MaxActiveSessions=5. Login: timing-safe (dummy BCrypt), проверка бана→Forbidden, роль (Admin/Head/User), token pair, refresh hash в БД с FamilyId, EnforceSessionLimit, cleanup expired. Refresh: claims из expired token (GetPrincipalFromExpiredToken→Result), replay detection (UsedAt/RevokedAt→отзыв семьи FamilyId), ротация (старый→UsedAt, новый→same FamilyId). Revoke: bulk ExecuteUpdateAsync всех active tokens.
 
-**`Services/Auth/TokenService.cs`** — HMAC-SHA256. Секрет ≥32 символа. `TokenPair` record: AccessToken, RefreshToken, JwtId. Claims: NameIdentifier/Jti/Iat/Role. `GenerateTokenPair` — access token (AccessTokenLifetimeMinutes) + cryptographic random refresh token (64 bytes → Base64). `ValidateToken` — стандартная валидация с проверкой lifetime. `GetPrincipalFromExpiredToken` — валидация без проверки lifetime (ValidateLifetime=false), проверка алгоритма HmacSha256; используется при refresh. `HashToken` — SHA-256 хеш refresh token для хранения в БД. Статический `CreateValidationParameters`.
-
-#### Base
-
-**`Services/Base/BaseService.cs`** — Абстрактный с DbContext + ILogger. `SaveChangesAsync`, `GetRequiredEntityAsync<T>`, `EnsureNotNull`, `Paginate`, `NormalizePagination`.
+**TokenService** — HMAC-SHA256, secret≥32. TokenPair record. Claims: NameIdentifier/Jti/Iat/Role. GenerateTokenPair: access (configurable lifetime) + random refresh (64 bytes Base64). GetPrincipalFromExpiredToken→Result (ValidateLifetime=false, boundary catch). HashToken: SHA-256.
 
 #### Chat
 
-**`Services/Chat/ChatService.cs`** — Инъекция `AppDateTime`. **GetUserChatsAsync**: GroupJoin с последним сообщением, unread, партнёр для Contact, сортировка. **CreateChatAsync**: транзакция, проверка дубликата, `appDateTime.UtcNow` для CreatedAt/JoinedAt. **UpdateChatAsync**: Admin, запрет Contact, смена типа Owner. **DeleteChatAsync**: Owner, `ExecuteDeleteAsync`. **UploadChatAvatarAsync**: webp.
+**ChatService** — Access delegation: CheckUserChat*Async → accessControl.Check*Async. GetUserChats: GroupJoin с последним сообщением + unread + Contact partner. CreateChat: транзакция, после коммита → systemMessages.CreateAsync. UpdateChat: CheckIsAdmin→FromFailure, owner checks. DeleteChat: CheckIsOwner. UploadAvatar: CheckIsAdmin. Запрет Contact.
 
-**`Services/Chat/ChatMemberService.cs`** — Инъекция `AppDateTime`. Add (Admin + дубликат, `appDateTime.UtcNow` для JoinedAt), Remove (защита Owner), UpdateRole (Owner only), GetMembers (detailed ChatMemberDto), Leave. Инвалидация кеша.
+**ChatMemberService** — AddMember: CheckIsAdmin, dedup→Conflict, systemMessages.CreateAsync (member_added). RemoveMember: условная проверка прав, защита Owner→Forbidden, systemMessages (member_left/member_removed). UpdateRole: CheckIsOwner, защита Owner, systemMessages (role_changed). LeaveAsync → RemoveMember. Cache invalidation.
 
-**`Services/Chat/NotificationService.cs`** — `SendNotificationAsync`: NotificationDto → HubNotifier. CRUD NotificationsEnabled.
+**SystemMessageService** — Централизованный, fire-and-forget с try-catch+LogWarning. CreateAsync: пропуск Contact, создание Message с IsSystemMessage+SystemEventType+TargetUserId, обновление LastMessageTime, reload с Include, broadcast через hubNotifier. Используется ChatService и ChatMemberService.
+
+**NotificationService** — CRUD NotificationsEnabled. SendNotificationAsync: void fire-and-forget.
 
 #### Department
 
-**`Services/Department/DepartmentService.cs`** — CRUD: GroupBy подсчёт, защита от циклов (BFS), запрет удаления при дочерних/сотрудниках. Состав: Add (перемещение — Admin), Remove (запрет Head). CanManage — Admin или Head.
+**DepartmentService** — CRUD с защитой от циклов (BFS→Result), запрет удаления при children/users. Состав: CheckCanManageAsync (Admin/Head), Add (перемещение Forbidden для не-Admin), Remove (запрет Head).
 
 #### Infrastructure
 
-**`Services/Infrastructure/AccessControlService.cs`** — Per-request кеш `Dictionary<(UserId,ChatId), ChatMember?>` + L2 через ICacheService. IsMember/IsOwner/IsAdmin, Ensure-методы throw UnauthorizedAccessException.
+**AccessControlService** — Per-request Dict + L2 IMemoryCache. Bool-методы (IsMember/IsOwner/IsAdmin) для условных проверок. Result-методы (CheckIs*→Forbidden) для guard-проверок + FromFailure.
 
-**`Services/Infrastructure/CacheService.cs`** — IMemoryCache. UserChats: TTL 5min + 2min sliding. Membership: TTL 10min + 3min sliding, кеширует null. Invalidation: UserChats, Membership (+UserChats), Chat, ChatMembers (natural expiry).
+**CacheService** — UserChats: 5min+2min sliding. Membership: 10min+3min sliding (кеширует null).
 
-**`Services/Infrastructure/HttpUrlBuilder.cs`** — IUrlBuilder. Абсолютный → as-is. Относительный → `{scheme}://{host}/{path}` из HttpContext.
+**HttpUrlBuilder** — IUrlBuilder impl. `BuildUrl`: null→null, already http(s)→passthrough, else→`{scheme}://{host}/{path.TrimStart('/')}` из HttpContext.Request.
 
-**`Services/Infrastructure/HubNotifier.cs`** — `SendToChatAsync` → Group("chat_{id}"). `SendToUserAsync` → Group("user_{id}"). Try-catch + LogWarning.
+**HubNotifier** — SendToChat/User → SignalR groups. Fire-and-forget try-catch.
 
-**`Services/Infrastructure/OnlineUserService.cs`** — Singleton. `ConcurrentDictionary<int, ConcurrentDictionary<string, byte>>`. Connect/Disconnect, IsOnline, GetOnlineUserIds, FilterOnline, OnlineCount.
+**OnlineUserService** — Singleton, ConcurrentDictionary<int, ConcurrentDictionary<string, byte>>. Timer cleanup каждые 5min, атомарный TryRemove(KeyValuePair).
 
 #### Messaging
 
-**`Services/Messaging/MessageService.cs`** — Инъекция `AppDateTime`. **Create**: валидация Reply/Forward, файлы (reverse URL→path), `appDateTime.UtcNow` для LastMessageTime, broadcast, notify+unread, voice→TranscriptionQueue. **Get**: пагинация Reverse, Around/Before/After по ID. **Update**: проверка владельца, запрет poll/voice/forward/deleted, `appDateTime.UtcNow` для EditedAt. **Delete**: soft-delete, `appDateTime.UtcNow` для EditedAt. **Search**: ILike с escape. **GlobalSearch**: чаты (Contact партнёр + Group name, до 5) + сообщения с highlight (±40 chars).
+**MessageService** — Create: валидация Reply/Forward, voice→VoiceMessage entity (StripBaseUrl для FilePath, pending transcription) + TranscriptionQueue, файлы→SaveMessageFiles (StripBaseUrl для Path), broadcast+notify+unread. StripBaseUrl: strip urlBuilder.BuildUrl("/") prefix, гарантирует ведущий `/`. Get: пагинация Reverse, Around/Before/After по ID. Update: owner check, запрет system/poll/voice/forward/deleted. Delete: soft-delete, voice→физическое удаление аудио + Remove VoiceMessage. Search/GlobalSearch: ILike с EscapeLikePattern, фильтр !IsSystemMessage, highlight ±40 chars.
 
-**`Services/Messaging/FileService.cs`** — **SaveImageAsync**: MIME валидация, ресайз ImageSharp, WebP. **SaveMessageFileAsync**: размер, `uploads/chats/{chatId}/{guid}{ext}`. **DeleteFile**: safe. **IsValidImage**.
+**FileService** — SaveImage: MIME валидация, ресайз ImageSharp, WebP. SaveMessageFile: проверка membership, uploads/chats/{chatId}/{guid}{ext}, возвращает MessageFileDto с urlBuilder.BuildUrl. DeleteFile: void safe.
 
-**`Services/Messaging/PollService.cs`** — **Get**: Include Options→Votes. **Create**: транзакция Message+Poll+Options, broadcast. **Vote**: удаление старых + создание новых, broadcast `ReceivePollUpdate`.
+**PollService** — Get, Create (транзакция Message+Poll+Options, broadcast), Vote (delete old + create new, broadcast PollUpdate).
 
-**`Services/Messaging/TranscriptionQueue.cs`** — `Channel<int>` Unbounded/SingleReader. **TranscriptionBackgroundService**: BackgroundService, scope→TranscribeAsync.
-
-**`Services/Messaging/TranscriptionService.cs`** — Whisper CLI, модель ggml-small-q5_1.bin, SemaphoreSlim(1,1). PCM 16kHz/16bit/mono через NAudio. Timeout 5min. Broadcast TranscriptionCompleted/StatusChanged. IDisposable.
+**TranscriptionService** — Whisper CLI, ggml-small-q5_1.bin, SemaphoreSlim(1,1). NAudio PCM 16kHz/16bit/mono. Timeout 5min. Работает с VoiceMessage entity. Channel<int> Bounded(100) + BackgroundService.
 
 #### ReadReceipt
 
-**`Services/ReadReceipt/ReadReceiptService.cs`** — Инъекция `AppDateTime`. **MarkAsRead**: target messageId (конкретный или последний), обновление LastReadMessageId (только если >), `appDateTime.UtcNow` для LastReadAt. **GetChatReadInfoAsync**: GroupBy → Count + FirstUnreadId. **GetAllUnreadCounts**: subquery. **GetUnreadCountsForChats**: батч.
+**ReadReceiptService** — MarkAsRead: target messageId, update LastReadMessageId (monotonic). GetChatReadInfo: GroupBy → Count + FirstUnreadId. GetAllUnreadCounts: subquery. GetUnreadCountsForChats: batch Dictionary (без Result).
 
 #### User
 
-**`Services/User/UserService.cs`** — GetAll/Get с online. UpdateProfile. UploadAvatar. GetOnlineStatus(es). **ChangeUsername**: regex + уникальность. **ChangePassword**: BCrypt verify→hash.
+**UserService** — CRUD с online status. UploadAvatar: FindEntity→SaveImage→SaveChanges (полная Result chain через FromFailure). ChangeUsername: regex + unique→Conflict. ChangePassword: BCrypt verify→Unauthorized.
 
-**`Services/User/AdminService.cs`** — Инъекция `AppDateTime`. GetUsers. **CreateUser**: validation, lowercase, уникальность, BCrypt, UserSetting, `appDateTime.UtcNow` для CreatedAt. **ToggleBan**: toggle.
+**AdminService** — GetUsers, CreateUser (validation, unique→Conflict, department→NotFound, BCrypt), ToggleBan.
 
-### Model — Сущности БД
+### Models
 
-**`Model/Chat.cs`** — Id, Name, CreatedAt, CreatedById, LastMessageTime, Avatar. Partial: `Type` (ChatType).
+**Core**: Chat (Id, Name, Type, CreatedAt, LastMessageTime, Avatar), ChatMember (PK:Chat+User, JoinedAt, NotificationsEnabled, LastReadMessageId, Role), User (Id, Username unique, ФИО, PasswordHash, LastOnline, DepartmentId, Avatar, IsBanned, DisplayName computed), UserSetting (1:1, Theme?, Notifications).
 
-**`Model/ChatMember.cs`** — PK: ChatId+UserId. JoinedAt, NotificationsEnabled, LastReadMessageId, LastReadAt. Partial: `Role` (ChatRole).
+**Messaging**: Message (ChatId, SenderId, Content, CreatedAt, EditedAt, IsDeleted, ReplyTo, ForwardedFrom, IsSystemMessage, SystemEventType, TargetUserId; [NotMapped] IsVoiceMessage computed from VoiceMessage!=null), VoiceMessage (PK:MessageId 1:1, Duration, TranscriptionStatus/Text, FilePath, FileName, ContentType, FileSize; cascade delete), MessageFile (FileName, ContentType, Path).
 
-**`Model/Department.cs`** — Id, Name, ParentDepartmentId, ChatId, HeadId. 1:1 Chat, Head, Parent tree, Users.
+**Auth**: RefreshToken (TokenHash SHA-256, JwtId, FamilyId, CreatedAt, ExpiresAt, UsedAt, RevokedAt, ReplacedByTokenId; computed IsActive).
 
-**`Model/Message.cs`** — Id, ChatId, SenderId, Content, CreatedAt, EditedAt, IsDeleted, ReplyTo, ForwardedFrom, IsVoiceMessage, TranscriptionStatus. Навигации: Files, Polls, Reply/Forward inverse.
+**Other**: Department (Name, Parent tree, ChatId, HeadId), Poll/PollOption/PollVote (unique Poll+User+Option), SystemSetting (KV store).
 
-**`Model/MessageFile.cs`** — Id, FileName, ContentType, MessageId, Path.
-
-**`Model/RefreshToken.cs`** — Id, UserId, TokenHash (SHA-256 хеш, сам токен не хранится), JwtId (привязка к access token), CreatedAt, ExpiresAt, UsedAt (null=активен, заполняется при ротации), RevokedAt (null=не отозван, заполняется при компрометации), ReplacedByTokenId (ссылка на новый токен после ротации), FamilyId (идентификатор цепочки ротации — все токены одной серии логина). Computed: `IsActive` (UsedAt==null && RevokedAt==null && !expired). Навигация: User, ReplacedByToken.
-
-**`Model/Poll.cs`** — Id, MessageId, IsAnonymous, AllowsMultipleAnswers, ClosesAt.
-
-**`Model/PollOption.cs`** — Id, PollId, OptionText (max 50), Position.
-
-**`Model/PollVote.cs`** — Id, PollId, OptionId, UserId, VotedAt. Unique: (Poll,User,Option).
-
-**`Model/SystemSetting.cs`** — Key-Value store. PK: Key (max 50).
-
-**`Model/User.cs`** — Id, Username (unique, max 32), Name/Surname/Midname, PasswordHash, CreatedAt, LastOnline, DepartmentId, Avatar, IsBanned. `[NotMapped] DisplayName`. Navigation: RefreshTokens.
-
-**`Model/UserSetting.cs`** — PK: UserId (1:1). NotificationsEnabled. Partial: `Theme` (Theme?).
-
-**`Model/MessengerDbContext.cs`** — PostgreSQL enums, snake_case таблицы, sequences. DbSet: RefreshTokens. Индексы: messages(chatId,createdAt), reply, forward, chatMembers(lastRead, userId), departments(headId), pollVotes(userId), refreshTokens(tokenHash, userId, familyId, expiresAt). Unique: Chat_User, Poll_User_Option, username. Каскады: Chat→CreatedBy(Cascade), User→RefreshTokens(Cascade), RefreshToken→ReplacedBy(SetNull), остальные SetNull.
+**DbContext**: PostgreSQL enums, snake_case, sequences. Indices: messages(chatId,createdAt), chatMembers(lastRead, userId), refreshTokens(tokenHash, userId, familyId). Cascades: Chat→CreatedBy, User→RefreshTokens, Message→VoiceMessage; SetNull: остальные.
 
 ---
 
-## MessengerDesktop — Клиентская часть (Avalonia, MVVM)
-
-### Точка входа и каркас
-
-**`Program.cs`** — `[STAThread]`. `AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace()`.
-
-**`App.axaml`** — RequestedThemeVariant="Dark". Resources: `ConverterLocator` (x:Key="Converters"), MergedDictionaries: `Icons.axaml`. ThemeDictionaries: Dark→`DarkTheme.axaml`, Light→`LightTheme.axaml`. Styles: `FluentTheme`, `Animations.axaml`, `MainStyle.axaml`.
-
-**`App.axaml.cs`** — `IDisposable`. ApiUrl (debug: https://localhost:7190, release: http://localhost:5274). ConfigureServices → DI. OnFrameworkInitializationCompleted: MainWindow, PlatformService, NotificationService, AuthenticatedImageLoader, LocalDatabase+CacheMaintenanceService (фоновая), ThemeService, DataContext=MainWindowVM. Dispose: последовательная очистка всех сервисов.
-
-**`ViewLocator.cs`** — `IDataTemplate`. Конвенция: "ViewModel"→"View". Match: `BaseViewModel`.
-
-### Views/Controls — UI-контролы
-
-**`Views/Controls/Shared/AvatarControl.axaml.cs`** — StyledProperties: Size, FontSize, IconSize, Source, DisplayName, IsOnline, ShowOnlineIndicator, FallbackIcon, PlaceholderBg/Fg, IsCircular, ImageBitmap. DirectProperties: ImageSource, HasImage, HasBitmapImage, Initials, ShowInitials, ShowIcon, IconData, OnlineIndicatorSize, OnlineIndicatorCornerRadius, ShowOnlineStatus. Computed: ImageSource (валидация расширения через `ImageExtensions` HashSet — защита от non-image URL), HasImage (valid source && no bitmap), HasBitmapImage (bitmap priority), Initials (ФИ/Ии/?), ShowInitials/ShowIcon (учитывает и bitmap и source). Panel wrapper для AsyncImageLoader (предотвращает загрузку collapsed Image). ToAbsoluteUrl для relative paths. Adaptive OnlineIndicator (8–16px). CornerRadius: circular=Size/2, else=8. Size classes: Small(32)/Medium(40)/Large(56)/XLarge(80)/XXLarge(100).
-
-**`Views/Controls/Admin/DepartmentCardView.axaml(.cs)`** — DataType=HierarchicalDepartmentViewModel. StyledProperty: EditCommand (ICommand). Рекурсивная карточка отдела: кнопка expand с ChevronIcon + RotateTransform анимация, иконка (OrganizationIcon для root, FolderIcon для child), HeadName/«Нет руководителя», бейджи UserCount (AccentMuted) / «Пусто» (WarningBg) / Children.Count. LevelToMargin indent, Canvas hierarchy line (StrokeLineCap.Round). Actions: Edit (DepartmentActions class). Дочерние элементы: ItemsControl с рекурсивным DepartmentCardView, вертикальная линия HierarchyLineBrush.
-
-**`Views/Controls/Admin/DepartmentGroupView.axaml(.cs)`** — DataType=DepartmentGroup. StyledProperties: EditUserCommand, BanUserCommand (ICommand). Заголовок с OrganizationIcon + DepartmentName + разделитель. ItemsControl → UserCardView с проброской команд.
-
-**`Views/Controls/Admin/UserCardView.axaml(.cs)`** — DataType=UserDto. StyledProperties: EditCommand, BanCommand (ICommand). Border.Hoverable: аватар-заглушка (PersonIcon 40×40), DisplayName + @Username. Actions: Edit (EditIcon) + Ban (BlockIcon, Danger class).
-
-**`Views/Controls/ChatInfoSkeleton.axaml`** — Skeleton-заглушка для панели информации о чате. ScrollViewer: аватар (100×100 круг), имя, статус, два поля, toggle, 3 участника (аватар 40×40 + имя + статус). Классы `Skeleton`, разделители `DynamicResource BorderDefault`.
-
-**`Views/Controls/ChatItemView.axaml`** — DataType=`ChatListItemViewModel`. Grid(Auto,\*,Auto) высотой 52px: AvatarControl + имя/превью + `UnreadBadge` справа. ChatPreview (Run: Sender + Content) с fallback "Нет сообщений"; видимость превью/заглушки через `StringConverters.IsNotNullOrEmpty/IsNullOrEmpty`, бейдж через `GreaterThanZero`.
-
-**`Views/Controls/ChatListSkeleton.axaml`** — Skeleton-заглушка для списка чатов. 6 элементов (Height=68): аватар 44×44 + имя + превью + время. Варьирующиеся ширины.
-
-**`Views/Controls/ChatMessagesSkeleton.axaml`** — Skeleton-заглушка для области сообщений. 6 блоков в формате чата — аватары 36×36, пузыри с BoxShadow, 1–3 строки разной ширины, промежуточные «продолжения».
-
-**`Views/Controls/RichMessageTextBlock.cs`** — Наследует `SelectableTextBlock`. StyledProperty `RawText`. URL Regex `(https?://[^\s<>"')\]]+)` (Compiled, 1s timeout). RebuildInlines: Run обычный + Run с LinkBrush=#4A9EEA + Underline. Hit-testing через `_linkRanges` + TextLayout.HitTestPoint (рефлексия + fallback GetCharIndexByPosition). Клик → `Process.Start(UseShellExecute)`, Hand cursor на ховере.
-
-**`Views/Controls/Shared/CircularProgress.cs`** — Custom `Control`. StyledProperties: Value, Maximum(100), Minimum, StrokeWidth(4), Size(32), Foreground(DodgerBlue), BackgroundTrack, IsIndeterminate. Анимация: DispatcherTimer.Run 16ms (~60fps), `_animationAngle += 6` mod 360. Render: StreamGeometry arc — background track (ellipse) + foreground arc. `DrawArc` с PenLineCap.Round, isLargeArc при >180°.
-
-**`Views/Controls/Shared/ThemeSelectorControl.axaml`** — 3-колоночный Grid. Resources: LightPreview/DarkPreview ControlTemplate — мини-превью мессенджера. RadioButton.ThemeOption с custom template, `:checked`→Accent. System: preview по IsSystemDarkNow + badge "AUTO".
-
-**`Views/Controls/Shared/ThemeSelectorControl.axaml.cs`** — StyledProperties: SelectedTheme (AppTheme enum), IsLightSelected, IsDarkSelected, IsSystemSelected. DirectProperty: IsSystemDarkNow. Двухсторонняя синхронизация enum↔bool. Подписка ActualThemeVariantChanged.
-
-### Converters
-
-**`Converters/ConverterExtension.cs`** — Два MarkupExtension: Converter и MultiConverter — резолв по строковому имени через ConverterLocator.
-
-**`Converters/ConverterLocator.cs`** — Singleton-реестр ~35 конвертеров (case-insensitive). Категории: Bool, Comparison, DateTime, Domain, Enum, Level, Message, Generic. Multi: BooleanAnd/Or, LastSeen, HasTextOrAttachments, PercentToWidth.
-
-**`Converters/Base/ConverterBase.cs`** — ConverterBase\<TIn,TOut\> — типизированный IValueConverter. AllowNull, DefaultValue, SupportsConvertBack. ConverterBase (нетипизированный) — упрощённый.
-
-**`Converters/Boolean/`** — BoolToValueConverter\<T\> (абстрактный), BoolToStringConverter (Split по `|`), BoolToDoubleConverter, BoolToColorConverter, BoolToHAlignmentConverter, BooleanAndConverter (IMultiValueConverter AND), BooleanOrConverter (OR), BoolToBrushConverter (TryFindResource), BoolToThicknessConverter (Thickness.Parse), EnumEqualsConverter (OrdinalIgnoreCase).
-
-**`Converters/Comparison/ComparisonConverter.cs`** — Enum ComparisonMode: Equal, NotEqual, GreaterThanZero, Zero.
-
-**`Converters/DateTime/DateTimeFormatConverter.cs`** — Enum DateTimeFormat (7 режимов). FormatChatTime: сегодня→HH:mm, вчера→"Вчера", год→"d MMMM"/"d MMMM yyyy". FormatRelativeTime: "только что"/мин/ч/д/dd.MM.yy.
-
-**`Converters/DateTime/LastMessageDateConverter.cs`** — Делегация в DateTimeFormatConverter(Chat).
-
-**`Converters/DateTime/LastSeenTextConverter.cs`** — IMultiValueConverter. IsOnline→"в сети", else→"был(а)...".
-
-**`Converters/Domain/`** — DisplayOrUsernameConverter, InitialsConverter (?/1/2 буквы), PollToPollViewModelConverter (Service Locator), ThemeToDisplayConverter.
-
-**`Converters/Enum/UserRoleToVisibilityConverter.cs`** — Резолв IAuthManager, сравнение HasRole.
-
-**`Converters/Generic/`** — IndexToTextConverter (Split по Separator), PercentToWidthConverter (IMultiValueConverter, Clamp, MinVisibleWidth=8), PluralizeConverter (русская плюрализация: mod10).
-
-**`Converters/Hierarchy/LevelConverters.cs`** — LevelToMarginConverter (indent=20), LevelToVisibilityConverter (>0).
-
-**`Converters/Message/MessageConverters.cs`** — MessageAlignmentConverter (Own→Right), MessageMarginConverter (60/10 margins), HasContentConverter, HasTextOrAttachmentsMultiConverter.
-
-### Data — Локальный кеш (SQLite)
-
-**`Data/LocalDatabase.cs`** — sqlite-net-pcl. PRAGMA: WAL, synchronous=NORMAL, cache_size=-8000, temp_store=MEMORY, mmap_size=256MB. Schema migration (user_version), downgrade→drop. FTS5: messages_fts + триггеры. ClearAll, Vacuum, GetDatabaseSizeBytes.
-
-**`Data/Entities/`** — CachedChat (chats), CachedMessage (messages, indexed ChatId/SenderId, flatten all), CachedReadPointer (read_pointers), CachedUser (users), ChatSyncState (chat_sync_state, OldestLoadedId/NewestLoadedId/HasMore).
-
-**`Data/Mappers/CacheMapper.cs`** — Статический. MessageDto↔CachedMessage (flatten/unflatten, JSON poll/files). ChatDto↔CachedChat (Type int↔enum). UserDto↔CachedUser.
-
-**`Data/Repositories/`** — IChatCacheRepository/ChatCacheRepository (Upsert, GetByType, batch transactions). IMessageCacheRepository/MessageCacheRepository (GetLatest DESC→Reverse, Before/After/Around, FTS5 MATCH + fallback LIKE, MarkDeleted). ILocalCacheService/LocalCacheService (фасад: координация repos, SyncState-aware IsComplete, CachedMessagesResult).
+## MessengerDesktop
 
 ### Infrastructure
 
-**`Infrastructure/AuthenticatedImageLoader.cs`** — Наследует RamCachedWebImageLoader. JWT Bearer для apiBaseUrl, проверка расширения + Content-Type, fallback для внешних URL.
+**App** — Dark default. ApiUrl (debug/release). DI: singleton services (DB, repos, cache, platform, hub, notification, AudioPlayerService), HttpClient 30s, auth chain, navigation/dialog, VMs (main singleton, rest transient). AuthenticatedImageLoader. Dispose: sequential cleanup (notification→platform→mainVM→apiClient→authManager→session→dialog→nav→localDb→audioPlayer→ServiceProvider).
 
-**`Infrastructure/ServiceCollectionExtensions.cs`** — AddMessengerCoreServices: LocalDatabase, repos, cache, platform, settings, hub, notification — singleton. HttpClient 30s. Auth chain. Navigation, Dialog — singleton. AddMessengerViewModels: MainWindowVM singleton, Factories singleton, VMs transient.
+**ViewLocator** — "ViewModel"→"View" convention.
 
-**`Infrastructure/Configuration/ApiEndPoints.cs`** — Статические классы по контроллерам с параметризованными URL-методами. Auth (Login/Refresh/Revoke), User (GetAll/Online/StatusBatch/ById/Status/Avatar/Username/Password), Chat (Create/ById/Members/MembersDetailed/RemoveMember/MemberRole/Leave/Avatar/UserChats/UserDialogs/UserGroups/UserContact), Message (Create/ById/Transcription/TranscriptionRetry/ForChat/Around/Before/After/Search/ChatSearch), File (Upload), Poll (Create/Vote/ById), Department (GetAll/Create/ById/Members/RemoveMember/CanManage), Notification (AllSettings/SetMute/ChatSettings), ReadReceipt (MarkRead/AllUnreadCounts/UnreadCount), Admin (Users/ToggleBan).
+**ApiEndpoints** — Статические URL-билдеры по контроллерам.
 
-**`Infrastructure/Configuration/AppConstants.cs`** — MaxFileSize=20MB, Debounce=300ms, PageSize=50, LoadMore=30, Search=20, Highlight=3000ms, MarkAsRead debounce=300ms/cooldown=1s, Typing send=1200ms/indicator=3500ms.
+**AppConstants** — MaxFileSize=20MB, Debounce=300ms, PageSize=50, LoadMore=30, Search=20, Highlight=3000ms, MarkAsRead debounce=300ms/cooldown=1s, Typing send=1200ms/indicator=3500ms.
 
-**`Infrastructure/Helpers/AvatarHelper.cs`** — GetSafeUri (avares:// default), GetUriWithCacheBuster (?v=Ticks). MimeTypeHelper.GetMimeType.
+### Services
 
-### Services — Сервисный слой клиента
+**ApiClientService** — HttpClient + auth headers. Auto-refresh: SendWithRefreshAsync (Func<> для retry), перехват 401 (кроме Login/Refresh/Revoke), TryRefreshTokenAsync, lambda retry с новым токеном. Upload: stream rewind при retry. GetStream: >10MB→temp file, ≤10MB→memory.
 
-**`Services/Api/ApiClientService.cs`** — IApiClientService: Get/Post(3 перегрузки)/Put(3 перегрузки)/Delete + UploadFile + GetStream. HttpClient + ISessionStore + IAuthManager. Двойная подписка: SessionChanged event + INotifyPropertyChanged на Token/IsAuthenticated → UpdateAuthorizationHeader. **Auto-refresh**: `SendWithRefreshAsync` — Func\<Task\<HttpResponseMessage\>\> sendFunc (лямбда для повторного вызова), перехват 401 на всех запросах (кроме NoRefreshUrls: Login/Refresh/Revoke), Dispose ответа 401, вызов `IAuthManager.TryRefreshTokenAsync()`, retry через повторный вызов sendFunc; при неудачном refresh → синтетический 401 с "Сессия истекла". **CreateRequest**: GET/DELETE используют для создания нового HttpRequestMessage с текущим токеном при retry. POST/PUT используют `PostAsJsonAsync`/`PutAsJsonAsync` extension-методы (токен из DefaultRequestHeaders, обновляется через SessionChanged при Session.UpdateTokens). ProcessResponseAsync\<T\>: fallback direct deserialize. GetStreamAsync: >10MB→temp file (DeleteOnClose), ≤10MB→MemoryStream. UploadFileAsync: запоминает startPosition, stream.Position reset при retry, новый MultipartFormDataContent при каждом вызове sendFunc.
+**AuthService (client)** — Login/Refresh/Revoke HTTP calls. IsAccessTokenValid: локальная JWT exp проверка с 30s буфером.
 
-**`Services/Audio/`** — AudioRecordingState (Idle/Recording/Sending/Error). IAudioRecorderService (Start/Stop/Cancel→AudioRecordingResult IDisposable). NAudioRecorderService: WaveInEvent MME, 16kHz/16bit/mono, IgnoreDisposeStream wrapper, Stopwatch, thread-safe lock. TranscriptionPoller: ConcurrentDictionary, exponential backoff [1,2,4,8,16]s, max 60, IDisposable.
+**AuthManager** — LoadStoredSession: SecureStorage → local JWT check → SetSession или Refresh. Login: SemaphoreSlim, cache clear on user change, SaveAuth. Logout: RevokeAsync (best-effort), cache clear; RememberMe→сохранить токены, !RememberMe→очистить. TryRefreshTokenAsync: SemaphoreSlim + shared Task<bool> (все 401 ожидают один refresh); неудача→ForceLogout. SecureStorage keys: token, refresh_token, user_id, role, remember_me, saved_username.
 
-**`Services/Auth/AuthService.cs`** — HttpClient. **LoginAsync**: PostAsJsonAsync, двойная десериализация (ApiResponse → fallback direct). **RefreshTokenAsync**: POST RefreshTokenRequest → ApiResponse\<TokenResponseDto\>. **RevokeAsync**: POST с Bearer header (ручной HttpRequestMessage), отзыв refresh tokens на сервере. **IsAccessTokenValid**: локальная проверка без сетевого запроса — `JwtSecurityTokenHandler.ReadJwtToken`, проверка `ValidTo > UtcNow + 30s` буфер; используется при загрузке сохранённой сессии вместо сетевой валидации.
+**SecureStorage** — AES-256 + PBKDF2 100K SHA256, machine-bound salt, random IV.
 
-**`Services/Auth/AuthManager.cs`** — InitializeInternalAsync (constructor). **LoadStoredSession**: SecureStorage → IsAccessTokenValid (локальная проверка exp claim с 30s буфером); если access token действителен → SetSession; если истёк → RefreshTokenAsync; при успехе → SaveAuth+SetSession, при неудаче → ClearStoredAuth. LoginAsync: SemaphoreSlim, cache clear on user change, SaveAuth (token+refreshToken+userId+role). LogoutAsync: RevokeAsync (отзыв refresh tokens на сервере), clear cache+credentials+stored auth. **TryRefreshTokenAsync**: SemaphoreSlim `_refreshLock` (timeout 10s) + `_isRefreshing` guard, вызов AuthService.RefreshTokenAsync, при успехе → SaveAuth + Session.UpdateTokens; при неудаче → ForceLogoutAsync (ClearStoredAuth + ClearSession, UI реагирует на SessionChanged). **ForceLogoutAsync**: ClearStoredAuth + ClearSession (без RevokeAsync — refresh token уже скомпрометирован/недействителен на сервере). TaskCompletionSource для инициализации. SecureStorage ключи: auth\_token, auth\_refresh\_token, user\_id, user\_role, cached\_user\_id, remember\_me, saved\_username, saved\_password.
+**SessionStore** — ObservableObject. RoleHierarchy (User<Head<Admin). SetSession, UpdateTokens, ClearSession, SessionChanged event.
 
-**`Services/Auth/SecureStorage.cs`** — AES-256 + PBKDF2 (100K, SHA256). Machine-bound salt (.salt файл). AppData/SecureStorage/{base64key}.secure. Random IV prepend. SemaphoreSlim, auto-remove corrupted.
+**GlobalHubConnection** — Единственный SignalR hub (app-wide). Unread tracking: Dictionary<int,int> + totalUnread with lock. Debounce: lastSentReadMessageId/Time, lastSentTypingTime — reset при SetCurrentChat. Hub subscriptions: List<IDisposable>. Events для UI: UnreadCountChanged, TotalUnreadChanged, MessageReceived/Updated/DeletedGlobally, UserTyping, MessageRead, MemberJoined/Left, Reconnected, NotificationReceived, UserStatusChanged, UserProfileUpdated. Handlers: cache incoming messages, increment unread, forward events. Methods: Connect/Disconnect, SetCurrentChat, MarkChatAsRead, MarkMessageAsRead (debounce + monotonic), SendTyping (debounce), GetReadInfo, GetUnreadCounts. Reconnecting: 401→TryRefresh. Reconnected: reload unread + reconcile.
 
-**`Services/Auth/SessionStore.cs`** — ObservableObject. RoleHierarchy dict (User=0, Head=1, Admin=2). HasRole→hierarchy comparison (≥). Properties: UserId, Token, RefreshToken, UserRole. `SetSession(token, refreshToken, userId, role)` — полная установка сессии. `UpdateTokens(token, refreshToken)` — обновление только токенов без смены userId/role (используется при refresh). ClearSession, SessionChanged event.
+**Audio**: NAudioRecorderService (WaveInEvent 16kHz/16bit/mono, lock, Stopwatch, IgnoreDisposeStream wrapper). AudioPlayerService (singleton): NAudio WaveOutEvent, play/pause/resume/stop/seek, CurrentMessageId tracking, Timer position updates 50ms, events (PlaybackStarted/Paused/Resumed/Stopped, PositionChanged). TranscriptionPoller: ConcurrentDictionary, exponential backoff [1,2,4,8,16]s max 60, safe dispose (StopPolling only cancels, finally does cleanup).
 
-**`Services/Cache/CacheMaintenanceService.cs`** — RunMaintenance (size+timing), ClearAllData (cache+vacuum), ClearChatCache (reset SyncState).
+**NavigationService** — Stack<Type> history, NavigateTo/GoBack.
 
-**`Services/Navigation/NavigationService.cs`** — Stack\<Type\> history. NavigateTo→Push. GoBack→Pop. NavigateToMainMenu→auth check.
+**DialogService** — Stack dialogs, Channel<CloseRequest> + background processing. Animation: TaskCompletionSource + 1s timeout, nested-aware (animate only first/last dialog transition). Dispose: 2s timeout wait for lock.
 
-**`Services/Navigation/DialogService.cs`** — List\<DialogBaseViewModel\> stack. Channel\<CloseRequest\> (Bounded=10, SingleReader) + background processing. ShowAsync: SemaphoreSlim, анимация открытия только при первом диалоге (guard `hadOpenDialogs`). CloseAsync: анимация закрытия только если нет нижележащего диалога (guard `hasUnderlyingDialog`), при возврате к предыдущему диалогу без повторной анимации. RequestAnimationAsync: TaskCompletionSource + 1s timeout.
-
-**`Services/Platform/PlatformService.cs`** — MainWindow (explicit/ApplicationLifetime fallback). Clipboard (TopLevel). Copy/Get/Clear с try-catch.
-
-**`Services/Realtime/ChatHubConnection.cs`** — Per-chat SignalR. Handlers: ReceiveMessageDto, MessageUpdated/Deleted, MessageRead, UnreadCountUpdated, UserTyping, MemberJoined/Left. MarkMessageAsReadAsync: debounce. SendTypingAsync: debounce. Reconnecting: при 401/Unauthorized в ошибке→TryRefreshTokenAsync перед reconnect. Reconnected→rejoin+LoadUnreadCounts+Reconcile. AccessTokenProvider динамически берёт Session.Token (автоматически подхватывает обновлённый токен после refresh).
-
-**`Services/Realtime/GlobalHubConnection.cs`** — App-wide SignalR. Dictionary\<int,int\> unreadCounts + totalUnread с lock. События для UI: `UnreadCountChanged`, `TotalUnreadChanged`, `MessageReceivedGlobally`, `MessageUpdatedGlobally`, `MessageDeletedGlobally`. Handlers: ReceiveNotification (filter+ShowWindow 5s), ReceiveMessageDto (CacheIncoming + publish `MessageReceivedGlobally` + IncrementUnread для чужих/неактивных чатов), MessageUpdated/Deleted, UserOnline/Offline, UserProfileUpdated, UnreadCountUpdated. LoadUnreadCountsAsync, MarkChatAsReadAsync, ReconcileAfterReconnectAsync.
-
-**`Services/Storage/SettingsService.cs`** — JSON файл settings.json. Dictionary\<string, JsonElement\>. Generic Get\<T\>/Set\<T\>.
-
-**`Services/UI/NotificationService.cs`** — WindowNotificationManager (TopRight, MaxItems=3). ShowWindow, ShowBothAsync, ShowCopyableErrorAsync.
-
-**`Services/ChatInfoPanelStateStore.cs`** — Делегация в SettingsService по ключу "ChatInfoPanelIsOpen".
-
-**`Services/ChatNotificationApiService.cs`** — GetChatSettings, SetChatMute, GetAllSettings через ApiEndpoints.Notification.
-
-**`Services/IFileDownloadService.cs`** — DownloadFileAsync (80KB buffer, progress 1%), GetDownloadsFolder (OS-specific), OpenFileAsync (UseShellExecute), OpenFolderAsync (explorer/open/xdg-open).
-
-**`Services/ThemeService.cs`** — Toggle Dark↔Light + SaveTheme. LoadFromSettings default dark.
+**Other services**: PlatformService (clipboard, MainWindow), SettingsService (JSON file), NotificationService (WindowNotificationManager), FileDownloadService (80KB buffer, progress, OS-specific folders), ThemeService (Dark/Light toggle), CacheMaintenanceService (size+timing+vacuum), ChatInfoPanelStateStore.
 
 ### ViewModels
 
-**`ViewModels/BaseViewModel.cs`** — ObservableObject + IDisposable. IsBusy, ErrorMessage, SuccessMessage с virtual hook-методами. GetCancellationToken(), SafeExecuteAsync (2 перегрузки). GetAbsoluteUrl. ClearMessagesCommand.
+**BaseViewModel** — ObservableObject + IDisposable. IsBusy, Error/SuccessMessage, SafeExecuteAsync, CancellationToken.
 
-**`ViewModels/IRefreshable.cs`** — `IAsyncRelayCommand RefreshCommand`.
+**MainWindowViewModel** — CurrentViewModel, dialog system (ShowDialogAsync), logout, theme toggle, refresh.
 
-#### Shell
+**MainMenuViewModel** — Lazy tab VMs. Navigation: Stack back/forward. Search with CTS. SwitchToTabAndOpenChat/Message. Dialog actions: CreateGroup (create→add members→set roles→avatar), EditGroup (diff members add/remove, roles promote/demote). InitializeGlobalHub.
 
-**`ViewModels/Shell/MainWindowViewModel.cs`** — Deps: INavigationService, IDialogService, IAuthManager, IThemeService. CurrentViewModel, CurrentDialog, HasOpenDialogs, IsDialogVisible. Logout→CloseAllDialogs→LogoutAsync→Login. ShowDialogAsync\<T\>. ToggleTheme, RefreshCurrentView (IRefreshable).
+**LoginViewModel** — IsInitializing. InitializeAsync: wait auth→restore session or load saved username. Login [CanExecute guard].
 
-**`ViewModels/Shell/MainMenuViewModel.cs`** — Lazy VMs для каждой вкладки. Navigation: Stack\<int\> back/forward с GoBack/GoForward (CanExecute). NavigateToMenu(0–6) с addToHistory flag. SetActiveMenu→NavigateToMenu. Search с CTS. SwitchToTabAndOpenChatAsync (определение вкладки по ChatType), SwitchToTabAndOpenMessageAsync (GlobalSearchMessageDto). ShowUserProfileAsync, ShowPollDialogAsync, ShowCreateGroupDialogAsync (SaveAction с CreateGroupChatAsync: create→add members→set roles→upload avatar→OpenChat), ShowEditGroupDialogAsync (MembersDetailed→UpdateGroupChatAsync: update→diff members add/remove→diff roles promote/demote→avatar). ShowDialogAction→nested dialogs (ChatUserPickerDialog). OpenOrCreateChatAsync→contacts tab. InitializeGlobalHubAsync. LoadContactsAndChatsAsync parallel. GetMimeType helper.
+**ChatsViewModel** — IRefreshable. Stale-while-revalidate: cached chats → server refresh. On new message: update preview/date, move chat to top. OpenOrCreateDialog. GlobalSearchManager (dual mode: global chats+messages, chat-local).
 
-#### Auth
+**ChatViewModel** — Partial class (8 files). Managers: ChatMessageManager, ChatAttachmentManager, ChatMemberLoader. All realtime via GlobalHubConnection.
 
-**`ViewModels/Auth/LoginViewModel.cs`** — IsInitializing(true). InitializeAsync: WaitForInitialization (15s timeout), auto-login if RememberMe. LoadSavedCredentials/SaveCredentials через SecureStorage. LoginAsync [RelayCommand, CanExecute=!IsBusy&&!IsInitializing]: validate→LoginAsync→SaveCredentials→Navigate. ClearCredentialsAsync.
+- **Lifecycle**: InitializeChatAsync (LoadChat→Members→SubscribeEvents→ReadInfo→Messages→Notifications→Polls→Voice→InfoPanel). Event subscription with _chatEventsSubscribed flag, cleanup on error (prevent leak of transient VM via delegates on singleton hub). Dispose: cleanup subscriptions, cancel CTS, dispose voice/attachments.
+- **Messages**: All Dispatcher.UIThread.Post handlers check _disposed. OnMessageReceived→add+transcription polling. OnMessageVisible→MarkMessageAsRead (debounce). Send: forward content inheritance, upload→POST. LoadOlder/Newer with _disposed guard.
+- **Commands**: attachments, emoji, info panel toggle, leave chat, create poll, edit chat (diff sync), profile, notifications toggle.
+- **Edit/Reply/Forward**: edit (unchanged→cancel, empty→delete), reply (cancel edit+forward), forward with preview (deleted/voice/poll/files/text).
+- **Search**: ScrollToMessage (find→scroll+highlight, else LoadAround), HighlightMessage (auto-reset).
+- **Typing**: Dictionary<int,DateTime>, cleanup loop (auto-starts, auto-stops when empty, no CTS recreation).
+- **InfoPanel**: Subscribe 4 sources (UserStatus, UserProfile, Members.CollectionChanged, MemberJoined/Left). Online/profile updates, member dedup.
+- **Voice**: Record (0.5s–300s), auto-stop with cancellable timer. SendVoice: upload→create MessageDto with voice fields. TranscriptionPoller callback checks _disposed.
 
-#### Chats
+**ChatMessageManager** — Cache-first + revalidation. LoadInitial: unread→LoadAround, else cache→render + background revalidate. LoadOlder/Newer: cache-first + server + dedup. GapFillAfterReconnect: iterative, MaxGapFillBatches=5, exceed→ResetToLatestAsync (clear cache + reload). DateSeparators. Grouping: 2min threshold, CanGroup excludes system messages.
 
-**`ViewModels/Chats/ChatsViewModel.cs`** — IRefreshable. IsGroupMode, IsInitialLoading. **Stale-while-revalidate**: Phase1 ShowCachedChatsAsync (мгновенный показ + unread из GlobalHub), Phase2 LoadFreshChatsFromServerAsync (сервер + кеширование). Smart update: сохранение selectedId. Подписки GlobalHub: unread (`UnreadCountChanged`/`TotalUnreadChanged`) + `MessageReceivedGlobally`. На новое сообщение обновляет `LastMessageSenderName` (`"Вы"`, если sender=current user), `LastMessagePreview`, `LastMessageDate` и двигает чат наверх (`MoveChatToTop`). OnSelectedChatChanged: SyncSearchScope, MarkAsRead, create ChatViewModel. OpenOrCreateDialogWithUserAsync. CreateGroup→Parent.ShowCreateGroupDialogAsync. OpenChatByIdAsync (find/GET/insert, optional scroll). Search integration: GlobalSearchManager, OpenSearchedChat/Result.
+**ChatAttachmentManager** — File picker, size/MIME check, thumbnail with resize (maxDimension=200, dispose full-size), upload all.
 
-**`ViewModels/Chats/ChatListItemViewModel.cs`** — ObservableObject. Constructor from ChatDto. Read-only: Id, Type, CreatedById. Observable: Name, LastMessageDate, Avatar, Preview, SenderName, UnreadCount. ToDto(), Apply(ChatDto).
+**MessageViewModel** — IDisposable, ~30 computed properties. System messages suppress: text, sender, delivery status, edit/delete, files, IsOwn. Voice player: subscribes to singleton AudioPlayerService events (Started/Paused/Resumed/Stopped/PositionChanged), filters by messageId. States: IsVoicePlaying/Paused/Loading, VoicePositionPercent/Text, VoiceError. Computed: ShowPlayButton/ShowPauseButton/ShowResumeButton. Commands: PlayVoice (load via GetStreamAsync→cache MemoryStream→Play copy), PauseVoice, StopVoice, SeekVoice(percent), DownloadVoice (via FileDownloadService). Audio cache: _cachedAudioStream (MemoryStream, disposed on Dispose/MarkAsDeleted). UpdateTranscription, MarkAsDeleted (stop player, reset voice state, dispose cache), MarkAsRead. Static grouping: Alone/First/Middle/Last.
 
-**`ViewModels/Chats/GlobalSearchManager.cs`** — ObservableObject + IDisposable. Debounce search. Dual mode: global (chats+messages via GlobalSearchResponseDto) и chat-local (per-chat via SearchMessagesResponseDto→adapt). Collections: ChatResults, MessageResults. LoadMoreMessagesAsync pagination. EnterSearchMode/ExitSearch/Clear.
+**MessageFileViewModel** — IDisposable. Download state machine (5 states) with CTS. Progress on UIThread with disposed guard. Open file/folder.
 
-#### Chat — Экран чата
+**PollViewModel/PollOptionViewModel** — Parent-child. Single-selection enforcement. Vote/CancelVote via API.
 
-**`ViewModels/Chat/ChatScreen/ChatViewModel.cs`** — Partial-класс (8 файлов). BaseViewModel + IAsyncDisposable. Managers: ChatMessageManager, ChatAttachmentManager, ChatMemberLoader, ChatHubConnection. Events: ScrollToMessage/Index/BottomRequested. ~20 ObservableProperties. ~15 Computed. Constructor: SetCurrentChat, init managers, placeholder Chat, fire-and-forget InitializeChatAsync. WaitForInitializationAsync (TaskCompletionSource). PopularEmojis (32).
+**ProfileViewModel** — IRefreshable. Edit states for profile/username/password. Upload avatar.
 
-**`ChatViewModel.Lifecycle.cs`** — InitializeChatAsync: LoadChat→LoadMembers→InitHub→GetReadInfo→LoadInitialMessages→LoadNotifications→UpdatePolls→InitVoice→SubscribeInfoPanel→scroll. DisposeAsync: unsubscribe all, cancel CTS, dispose hub/voice/attachments.
+**SettingsViewModel** — Theme, notifications. 800ms debounce auto-save.
 
-**`ChatViewModel.Messages.cs`** — OnMessageReceived→AddReceivedMessage→TranscriptionPolling→HasNewMessages/MarkAsRead. OnMessageUpdated/Deleted→delegate. OnMessageRead→mark IsRead. OnMessageVisibleAsync→MarkLocally+hub. SendMessage: forward content/files inheritance, upload→POST→clear. LoadOlder/Newer commands.
+**AdminViewModel** — Users+Departments tabs. Parallel init + cross-reference. Search propagation. Commands route to tabs.
 
-**`ChatViewModel.Commands.cs`** — RemoveAttachment, InsertEmoji, AttachFile, ToggleInfoPanel, LeaveChat, OpenCreatePoll, OpenEditChat (update ChatsList + ReloadMembers), OpenProfile, ToggleChatNotifications.
+**Dialog VMs**: ChatEditDialog (create/edit group, ManageParticipants/Admins→UserPicker, avatar), UserPickerDialog (dual-mode: multi-select with callback, single-select with TaskCompletionSource), ConfirmDialog (TCS<bool>), DepartmentDialog (cycle check delegated to server), DepartmentHeadDialog, PollDialog, UserEditDialog, UserProfileDialog.
 
-**`ChatViewModel.Edit.cs`** — StartEditMessage, SaveEditMessage (unchanged→cancel, empty→delete, else PUT), CancelEditMessage, DeleteMessage (soft), CopyMessageText (clipboard).
+### Views (summary)
 
-**`ChatViewModel.Reply.cs`** — StartReply (cancel edit+forward), CancelReply, ScrollToReplyOriginal (find/LoadAround→HighlightAndScroll, 2s reset).
+MainWindow: acrylic blur, 3-column grid, dialog overlay with open/close animation. MainMenu, Login (Enter→submit). ChatsView: CompactMode 72px with hysteresis, GridSplitter, InfoPanel hide <820px. ChatView: scroll preservation, visibility tracking debounced. MessageControl: triple mode — system (centered, italic, no bubble) / voice (play/pause button + slider + position/duration + error + transcription panel) / normal (avatar, bubble, context menu, files, polls). Voice player UI: VoicePlayBtn (36px circle, accent bg), VoiceSlider (0-100%), time display (position/duration), CircularProgress for loading, context menu «Скачать аудио». AdminView: 2-column sidebar+content, DepartmentCardView (recursive with Canvas hierarchy lines), UserCardView. Dialogs: UserPickerDialog (multi→checkbox, single→click-to-select).
 
-**`ChatViewModel.Forward.cs`** — ForwardingMessage, ForwardPreviewText (switch: deleted/voice/poll/files/text/fallback). StartForward (cancel edit+reply), CancelForward.
+### Controls
 
-**`ChatViewModel.Search.cs`** — ScrollToMessageAsync: find→scroll+highlight, else LoadAround→delay→scroll+highlight. HighlightMessage: clear all→set→auto-reset (HighlightDurationMs). GoToSearchResult→exit search→scroll.
+AvatarControl: StyledProperties (Size, Source, DisplayName, IsOnline, etc), bitmap priority, initials fallback, async image loader panel wrapper, size classes (Small 32→XXLarge 100). RichMessageTextBlock: URL regex, LinkBrush, hit-testing via TextLayout. CircularProgress: arc rendering, indeterminate animation. ThemeSelectorControl: 3 options with mini-previews, bidirectional enum↔bool sync.
 
-**`ChatViewModel.Typing.cs`** — Dictionary\<int,DateTime\> _typingUsers. TypingText: 0→"", 1→"{name} печатает...", >1→"Несколько человек печатают...". OnNewMessage→SendTypingAsync. Cleanup loop: 500ms interval, expire по TypingIndicatorDurationMs.
+### Data (Local SQLite Cache)
 
-**`ChatViewModel.InfoPanel.cs`** — Subscribe/Unsubscribe 4 event sources. OnUserStatusChanged: contact IsOnline+LastSeen, members replace-at-index. OnUserProfileUpdated: contact+Chat.Name/Avatar, members replace. OnMemberJoined/Left: dedup add/remove. ReloadMembersAfterEditAsync, RefreshInfoPanelDataAsync, InvalidateAllInfoPanelProperties (10 notifications).
+**LocalDatabase** — sqlite-net-pcl. WAL, synchronous=NORMAL, cache_size=-4000, mmap_size=32MB. Schema migration via user_version, downgrade→drop. FTS5 with triggers.
 
-**`ChatViewModel.Voice.cs`** — IAudioRecorderService + TranscriptionPoller. Min=0.5s, Max=300s. StartVoiceRecording→StartTimer→AutoStopAfterLimit. StopAndSendVoice→validate→SendVoiceMessageAsync (upload+POST IsVoiceMessage). CancelVoiceRecording. StartTranscriptionPollingIfNeeded, RetryTranscription. DisposeVoiceAsync.
+**Entities**: CachedChat, CachedMessage (flattened: voice, system, sender, reply, forward, poll/files JSON), CachedReadPointer, CachedUser, ChatSyncState (OldestLoadedId/NewestLoadedId/HasMore).
 
-#### Chat — Менеджеры
+**Repositories**: ChatCache (upsert, batch transactions), MessageCache (Latest/Before/After/Around, FTS5+LIKE fallback, MarkDeleted). LocalCacheService facade: SyncState-aware, ClearChatMessages.
 
-**`Managers/ChatMessageManager.cs`** — Cache-first с revalidation. LoadInitial: unread→LoadAround, else cache→RenderMessages + background RevalidateNewest, fallback server. LoadOlder/Newer: cache-first + server дозагрузка + dedup. GapFillAfterReconnect: recursive After-endpoint загрузка пропущенных. AddReceivedMessage: dedup→CreateVM→bounds/dates/grouping→background cache. HandleDeleted/Updated→cache sync. DateSeparators (Сегодня/Вчера/d MMMM). Grouping→delegate to MessageViewModel statics.
+**CacheMapper** — Static. DTO↔Cache (flatten/unflatten, JSON for poll/files, voice/system field mapping, ChatType int↔enum).
 
-**`Managers/ChatMemberLoader.cs`** — GET Chat.Members, fallback Contact→parse Name as userId→GET individual users.
+### Converters
 
-**`Managers/ChatAttachmentManager.cs`** — IDisposable. PickAndAddFilesAsync (FilePickerOpenOptions AllowMultiple). AddFileAsync: size check, MIME, MemoryStream, TryCreateThumbnail. UploadAllAsync→List\<MessageFileDto\>. Safe dispose in finally.
-
-**`Managers/LocalFileAttachment.cs`** — IDisposable. FileName, ContentType, FilePath, Data (MemoryStream), Thumbnail (Bitmap?). FileSizeFormatted (B/KB/MB).
-
-#### Chat — Сообщения
-
-**`Messages/MessageViewModel.cs`** — ObservableObject. ~25 computed properties. Constructor: map DTO, Reply/Forward, CreatePollViewModel (Service Locator), FileViewModels. UpdateTranscription, UpdatePoll, ApplyUpdate, MarkAsDeleted/Read. 14 partial property handlers. UpdateGroupPosition: (IsContinuation, HasNextFromSame)→Alone/First/Middle/Last. **Statics**: GroupingThreshold=2min, CanGroup (sender+deleted+date+threshold), RecalculateGrouping, UpdateGroupingAround.
-
-**`Messages/MessageFileViewModel.cs`** — ObservableObject. DownloadState enum (5 states). FileIcon (emoji by MIME). DownloadAsync: CTS с lock, Progress→UIThread, downloadService. CancelDownload: lock+guard. OpenFileAsync: download-if-needed→open. OpenInFolderAsync. RetryDownload. FormatFileSize (B/KB/MB/GB).
-
-**`Messages/MessageGroupPosition.cs`** — Enum: Alone, First, Middle, Last.
-
-#### Chat — Опросы
-
-**`Polls/PollViewModel.cs`** — BaseViewModel. Options, AllowsMultipleAnswers, CanVote, TotalVotes, HasVoted. Single-selection enforcement. ApplyDto: UpdateOptions (match/add/remove), ApplySelectedOptions. Vote/CancelVote [RelayCommand]: POST PollVoteDto→ApplyDto.
-
-**`Polls/PollOptionViewModel.cs`** — ObservableObject. Parent reference (PollViewModel). IsSelected, VotesCount, VotesPercentage. UpdateVotes: recalculate percentage. ToggleSelection.
-
-**`VoiceRecordingViewModel.cs`** — ObservableObject + IDisposable. State (AudioRecordingState). DispatcherTimer 200ms→format m:ss.
-
-#### Profile & Settings
-
-**`ViewModels/ProfileViewModel.cs`** — IRefreshable. User (UserDto), editing states (Profile/Username/Password), temp fields, validation. LoadUser, SaveProfile, SaveUsername, SavePassword, UploadAvatar, Logout.
-
-**`ViewModels/SettingsViewModel.cs`** — SelectedTheme, NotificationsEnabled. Timer 800ms debounce auto-save. LoadSettings, SaveSettings, ApplyTheme, ClearCache.
-
-#### Admin
-
-**`ViewModels/Admin/AdminViewModel.cs`** — IRefreshable. UsersTab + DepartmentsTab. Parallel init (Task.WhenAll) + cross-reference (SetDepartments/SetUsers). SearchQuery propagation to both tabs. SelectedTabIndex → CurrentTab computed. FilteredGroupedUsers/FilteredHierarchicalDepartments delegates. Commands: OpenEditUserDialog→UsersTab.Edit, ToggleBan→UsersTab.ToggleBan, OpenEditDepartment (FindDepartmentItem recursive→DepartmentsTab.Edit), Create (route by tab), Refresh (parallel reload + cross-reference). Error/Success message bubbling via PropagateMessages.
-
-**`ViewModels/Admin/UsersTabViewModel.cs`** — GroupBy DepartmentId→DepartmentGroup. Create/Edit (UserEditDialogVM, TaskCompletionSource), ToggleBan (ConfirmDialog). ApplyFilter LINQ.
-
-**`ViewModels/Admin/DepartmentsTabViewModel.cs`** — BuildHierarchy recursive. Create/Edit/Delete (DepartmentHeadDialogVM, ConfirmDialog). ApplyFilter recursive (child propagation). ExpandAll/CollapseAll.
-
-**`ViewModels/Admin/DepartmentGroup.cs`** — departmentName, departmentId?, ObservableCollection\<UserDto\>. Computed: counts, summary.
-
-**`ViewModels/Admin/HierarchicalDepartmentViewModel.cs`** — ObservableObject. Level, IsExpanded(true)→ExpanderRotation. Children. UserCountText (русское склонение).
-
-#### Department
-
-**`ViewModels/Department/DepartmentManagementViewModel.cs`** — LoadAsync: user department→CanManage→members (exclude self, sort online→name)→available users. AddMember/RemoveMember via action delegates. SearchQuery→FilteredMembers.
-
-**`ViewModels/Department/DepartmentMemberViewModel.cs`** — UserId, DisplayName, AvatarUrl, IsOnline, LastSeen. FormatLastSeen.
-
-**`ViewModels/Department/SelectUserDialogViewModel.cs`** — TaskCompletionSource\<UserDto?\>. FilteredUsers (Contains query). Confirm→TrySetResult.
-
-#### Dialogs
-
-**`ViewModels/Dialog/DialogViewModelBase.cs`** — DialogBaseViewModel : BaseViewModel. CloseRequested event. InitializeAsync, Cancel, CloseOnBackgroundClick.
-
-**`ViewModels/Dialog/ChatEditDialogViewModel.cs`** — Create/Edit group. SelectableUserItem (IsSelected, Clone). CurrentUserRole, SelectedAdminIds. CanManageParticipants (Admin/Owner), CanManageAdmins (Owner). ManageParticipants→ChatUserPickerDialogViewModel (via ShowDialogAction). ManageAdmins→ChatUserPickerDialogViewModel (from selected users, clone with admin state). Avatar picker (5MB limit, LoadExistingAvatarAsync). SaveAction delegate with (ChatDto, memberIds, adminIds, Stream?, fileName). Explicit property notifications после обновления AvailableUsers: SelectedUsersCount, ParticipantsCount, AdminsCount. Dispose: unsubscribe + stream + bitmap.
-
-**`ViewModels/Dialog/ChatUserPickerDialogViewModel.cs`** — Nested dialog for user selection. Source items cloned. SearchQuery→ApplyFilter. AllowEdit flag. SelectedCount computed. Save→applySelection callback with selected IDs→RequestClose.
-
-**`ViewModels/Dialog/ConfirmDialogViewModel.cs`** — TaskCompletionSource\<bool\>. Message, ConfirmText, CancelText.
-
-**`ViewModels/Dialog/DepartmentDialogViewModel.cs`** — Упрощённая фильтрация доступных родительских отделов: исключается только сам редактируемый отдел (`d.Id != currentDepartmentId`), проверка циклов делегирована серверу (BFS в DepartmentService). SaveAction delegate.
-
-**`ViewModels/Dialog/DepartmentHeadDialogViewModel.cs`** — Head management + Confirm dialogs. CanDelete guard (hasChildren, userCount).
-
-**`ViewModels/Dialog/PollDialogViewModel.cs`** — MinOptions=2, MaxOptions=10. OptionItem (ObservableObject). CreatePollDto→CreateAction.
-
-**`ViewModels/Dialog/UserEditDialogViewModel.cs`** — Create/Edit user. Validation chain. CreateAction/UpdateAction.
-
-**`ViewModels/Dialog/UserProfileDialogViewModel.cs`** — Avatar loading (GetStreamAsync→Bitmap). SendMessage→OpenChatWithUserAction.
-
-#### Factories
-
-**`ViewModels/Factories/ChatsViewModelFactory.cs`** — IChatsViewModelFactory: Create(parent, isGroupMode) с DI-зависимостями.
-
-**`ViewModels/Factories/ChatViewModelFactory.cs`** — IChatViewModelFactory: Create(chatId, parent) с 11 зависимостями.
-
-### Views — UI-представления
-
-**`Views/Shell/MainWindow.axaml`** — ExtendClientAreaToDecorationsHint, AcrylicBlur, MinWidth=700. Styles: DialogOverlay (opacity transition), DialogAnimWrapper (scale+translate), TitleBarHelp. Layout: 3-column Grid, TitleBar drag zones + Help button (ZIndex=1000). ContentControl с 8 DataTemplates. Dialog system: overlay ZIndex=10000 + wrapper ZIndex=10001, 9 dialog DataTemplates (UserProfile, Poll, ChatEdit, UserEdit, Department, Confirm, SelectUser, DepartmentHead, ChatUserPicker→UserPickerDialog).
-
-**`Views/Shell/MainWindow.axaml.cs`** — Анимация диалогов (Open/Closing CSS-классы, 250ms). TitleBar drag. Maximized padding +7px.
-
-**`Views/Shell/MainMenu.axaml(.cs)`** — Простой UserControl.
-
-**`Views/Auth/LoginView.axaml(.cs)`** — Enter в PasswordBox → LoginCommand.
-
-**`Views/Chat/ChatsView.axaml(.cs)`** — CompactMode (72px) с гистерезисом. GridSplitter. InfoPanel hide <820px.
-
-**`Views/Chat/ChatView.axaml(.cs)`** — FindScrollViewer (retry), DoScrollToEnd (10 retries), LoadOlderWithPreserve (offset compensation). Visibility tracking: debounced 300ms → OnMessageVisibleAsync.
-
-**`Views/Chat/ChatInfoPanel.axaml(.cs)`**, **`MessageControl.axaml(.cs)`** (7 StyledProperty ICommand), **`FileAttachmentControl`**, **`PollView`**, **`ChatEditDialogView`** (Loaded→Initialize) — UI-представления чата.
-
-**`Views/AdminView.axaml(.cs)`** — 2-колоночный layout: sidebar (260px) с NavMenu ListBox (Сотрудники/Отделы) + main content area. Toolbar: Search TextBox + Refresh + Create (динамический текст через IndexToText). Loading overlay с ProgressBar. Alert banners (Error/Success). Tab content: Users tab → DepartmentGroupView (EditUserCommand/BanUserCommand из Root.DataContext), Departments tab → DepartmentCardView (EditCommand из Root.DataContext). Visibility по SelectedTabIndex через Equality converter.
-
-**`Views/ProfileView`**, **`Views/SettingsView`**, **`Views/DepartmentManagementView`** — простые UserControl/AvaloniaXamlLoader.
-
-**Dialogs**: DepartmentDialog, DepartmentHeadDialog, PollDialog (RemoveOption via Tag), SelectUserDialog (PointerPressed→SelectUser), UserEditDialog, UserProfileDialog (Loaded→Initialize), ConfirmDialog, UserPickerDialog (PointerPressed→toggle IsSelected, AllowEdit guard).
+ConverterLocator singleton ~35 converters. Categories: Bool (BoolToValue<T>, And/Or multi), Comparison, DateTime (7 formats, relative time, LastSeen multi), Domain (Initials, PollToVM), Enum, Level (margin/visibility), Message (alignment/margin), Generic (pluralize Russian, PercentToWidth).
 
 ---
 
-## MessengerShared — Общие модели
+## MessengerShared
 
-### DTO
+**DTOs**: Auth (Login/Refresh request, AuthResponse, TokenResponse), Chat (ChatDto, ChatMemberDto, NotificationSettings, Update), Department (DepartmentDto), Message (MessageDto with reply/forward/poll/files/voice/system fields, PagedMessages, Search results), Notification, Online (OnlineStatusDto), Poll (Create/Vote/PollDto), ReadReceipt (MarkAsRead, UnreadCount, AllUnread, ChatReadInfo), User (UserDto, Create, ChangePassword/Username, Avatar).
 
-**Auth** — `LoginRequest` record(Username, Password). `RefreshTokenRequest` record(AccessToken, RefreshToken). `AuthResponseDto` (Id, Username, DisplayName, Token, RefreshToken, Role). `TokenResponseDto` (Token, RefreshToken, UserId, Role).
+**Enums**: ChatRole (Member/Admin/Owner), ChatType (Chat/Department/Contact/DepartmentHeads), Theme (light/dark/system), UserRoles (User/Head/Admin), SystemEventTypes (chat_created, member_added/removed/left, role_changed).
 
-**Chat** — `ChatDto` (Id, Name, Type, CreatedById, LastMessageDate, Avatar, Preview, SenderName, UnreadCount). `ChatMemberDto` (UserId, Role, JoinedAt, NotificationsEnabled, LastReadMessageId). `ChatNotificationSettingsDto`, `UpdateChatDto`, `UpdateChatMemberDto`.
-
-**Department** — `DepartmentDto` (Id, Name, ParentDepartmentId, Head, HeadName, UserCount). `UpdateDepartmentMemberDto`.
-
-**Message** — `MessageDto` (полное сообщение с ReplyTo, Forward, Poll, Files, IsVoiceMessage, TranscriptionStatus; computed ShowSenderName). `MessageFileDto`, `MessageForwardInfoDto`, `MessageReplyPreviewDto`, `PagedMessagesDto`, `UpdateMessageDto`, `VoiceTranscriptionDto`.
-
-**Notification** — `NotificationDto` (Type, ChatId/Name/Avatar, MessageId, Sender, Preview, CreatedAt).
-
-**Online** — `OnlineStatusDto` record(UserId, IsOnline, LastOnline). `OnlineUsersResponseDto`.
-
-**Poll** — `CreatePollDto`, `PollDto` (Options, SelectedOptionIds, CanVote), `PollOptionDto`, `PollVoteDto`.
-
-**ReadReceipt** — `MarkAsReadDto`, `ReadReceiptResponseDto`, `UnreadCountDto`, `AllUnreadCountsDto`, `ChatReadInfoDto`.
-
-**Search** — `GlobalSearchMessageDto` (message + chat info + HighlightedContent). `GlobalSearchResponseDto`, `SearchMessagesResponseDto`.
-
-**User** — `UserDto` (Id, Username, DisplayName, ФИО, Department, Avatar, IsOnline, IsBanned, LastOnline, Theme?, Notifications?). `CreateUserDto`, `ChangePasswordDto`, `ChangeUsernameDto`, `AvatarResponseDto`.
-
-### Enum
-
-`ChatRole` (Member, Admin, Owner [PgName]). `ChatType` (Chat, Department, Contact, DepartmentHeads). `Theme` (light, dark, system [JsonStringEnumConverter]). `UserRoles` (User, Head, Admin).
-
-### Response
-
-`ApiResponse<T>` (Success, Data, Message, Error, Details, Timestamp). `ApiResponseHelper` (static Ok/Fail).
+**Response**: ApiResponse<T> (Success, Data, Message, Error, Details, Timestamp).
 
 ---
 
 ## Архитектурные паттерны
 
-**Структурные**
-- MVVM — Avalonia, конвенционный ViewLocator
-- Partial ViewModel decomposition — ChatViewModel разделён на 8 файлов по ответственностям
-- Manager delegation — ChatViewModel делегирует в ChatMessageManager, ChatAttachmentManager, ChatMemberLoader
-- Factory — ViewModel с DI (ChatsViewModelFactory, ChatViewModelFactory)
-- Repository + Facade — SQLite кеш с ILocalCacheService
-- Service Locator (Converters) — ConverterLocator singleton + MarkupExtension
-- Recursive UI Controls — DepartmentCardView рекурсивно рендерит дочерние через ItemsControl
-- Command Propagation — StyledProperty ICommand пробрасывается через вложенные UserControl ($parent[...]) и #Root.DataContext
-- Nested Dialog Pattern — ChatEditDialog→ChatUserPickerDialog через ShowDialogAction delegate
+**Структура**: MVVM + ViewLocator convention. Partial VM decomposition (ChatViewModel 8 files). Manager delegation. Factory pattern для VM DI. Repository+Facade (SQLite). Recursive UI controls (DepartmentCard). Command propagation via StyledProperty. Nested dialogs via delegates.
 
-**Коммуникация**
-- SignalR Hub — real-time (сообщения, typing, online, read receipts); AccessTokenProvider динамически резолвит токен (поддержка refresh)
-- Dual Hub Pattern — ChatHubConnection (per-chat) + GlobalHubConnection (app-wide)
-- Channel\<T\> + BackgroundService — очередь транскрибации (server) + dialog close queue (client)
+**Realtime**: Single GlobalHubConnection (app-wide), server-side ChatHub с группами chat_{id}/user_{id}. ChatViewModel фильтрует события по chatId через обёртки. Channel<T>+BackgroundService для transcription queue и dialog close queue.
 
-**Данные**
-- Result Pattern — сервисный слой возвращает Result\<T\>
-- Soft Delete — сообщения
-- Cursor-based navigation — Around/Before/After по ID
-- Stale-while-revalidate — ChatsViewModel: мгновенный показ кэша + фоновая загрузка
-- Cache-first message loading — ChatMessageManager: cache→render→background revalidate
-- Gap fill after reconnect — recursive After-endpoint загрузка пропущенных
-- L1+L2 cache — per-request Dict + IMemoryCache (access control)
-- FTS5 — полнотекстовый поиск SQLite + триггеры + fallback LIKE
-- WAL + PRAGMA — production SQLite
-- Schema migration — user_version + downgrade detection
-- Orphan file cleanup — MissingFileCleanupMiddleware: 404→DB cleanup (MessageFiles, User/Chat avatars)
+**Data flow**: Result pattern — единый для всех серверных сервисов. BaseController.ExecuteAsync маппит ResultErrorType→HTTP. ExceptionHandlingMiddleware — чистый safety net. BaseService.SaveChangesAsync — единственная точка конвертации EF exceptions→Result. AccessControlService: bool-методы для условий, Result-методы для guards. Hub: ResultExtensions (TryUnwrap/UnwrapOrDefault/UnwrapOrFallback). Fire-and-forget (HubNotifier, FileService.Delete, NotificationService.Send): try-catch без Result.
 
-**Безопасность**
-- Timing-safe auth — dummy BCrypt.Verify
-- Local JWT validation — IsAccessTokenValid читает exp claim через JwtSecurityTokenHandler без сетевого запроса, 30-секундный буфер для превентивного refresh
-- Refresh Token Rotation — при каждом использовании refresh token выдаётся новый (старый помечается UsedAt), replay attack detection (повторное использование → отзыв всей семьи FamilyId), SHA-256 хеширование для хранения в БД
-- Short-lived access tokens — 15 минут, автоматический refresh при 401 (ApiClientService SendWithRefreshAsync interceptor с lambda-based retry)
-- Dual auth header sync — SessionChanged event + INotifyPropertyChanged подписка для гарантированного обновления DefaultRequestHeaders.Authorization
-- ForceLogout without revoke — при неудачном refresh только ClearStoredAuth+ClearSession (без RevokeAsync — скомпрометированный refresh token уже недействителен на сервере)
-- AES-256 + PBKDF2 — SecureStorage, machine-bound key derivation
-- Role Hierarchy — SessionStore с числовой иерархией (User < Head < Admin)
-- Credential persistence — RememberMe + SecureStorage + auto-login с token refresh fallback
-- Container security — non-root user, ZAProxy baseline scan
+**Caching**: Stale-while-revalidate (ChatsVM). Cache-first messages (ChatMessageManager). L1(per-request Dict)+L2(MemoryCache) access control. FTS5+LIKE fallback. WAL+PRAGMA SQLite. Schema migration user_version. Voice audio: per-MessageViewModel MemoryStream cache (download once, play many).
 
-**UI/UX**
-- Adaptive UI — CompactMode с гистерезисом, responsive InfoPanel
-- Scroll preservation — offset compensation при подгрузке истории
-- Visibility tracking — debounced для read receipts
-- Animation coordination — TaskCompletionSource + timeout для dialog open/close; nested-aware (анимация только при переходе между «нет диалогов» ↔ «есть диалоги»)
-- Message grouping — 2-минутный порог, Alone/First/Middle/Last для bubble radius
-- Typing indicator cleanup loop — background 500ms interval, expire threshold
-- Hierarchy visualization — Canvas lines + LevelToMargin indent + expand/collapse animation
-- Bitmap-priority avatar — ImageBitmap > Source URL, Panel wrapper prevents AsyncImageLoader on collapsed
+**Security**: Timing-safe auth. JWT 15min + refresh rotation (FamilyId, replay detection→revoke family, SHA-256 storage). Session limit 5. Concurrent refresh: SemaphoreSlim + shared Task. Auto-refresh: 401 intercept + lambda retry. Local JWT exp check (30s buffer). AES-256+PBKDF2 SecureStorage. Role hierarchy. RememberMe controls token persistence. Rate limiting (global + named). Non-root container + ZAP scan. Static files served without auth (before UseAuthentication).
 
-**Асинхронные паттерны**
-- Fire-and-forget initialization — конструктор → InitializeChatAsync с TaskCompletionSource
-- Exponential backoff polling — TranscriptionPoller [1,2,4,8,16]s, max 60 attempts
-- Auto-save debounce — SettingsViewModel Timer 800ms
-- TaskCompletionSource dialog results — ConfirmDialog, SelectUserDialog возвращают Task\<T\>
-- Download state machine — NotStarted→Downloading→Completed/Failed/Cancelled с CTS и lock
-- Navigation history — Stack-based back/forward с CanExecute guards
-- Concurrent refresh prevention — SemaphoreSlim(timeout 10s) + _isRefreshing bool guard в AuthManager.TryRefreshTokenAsync, предотвращение параллельных refresh-запросов при множественных 401
-- Lambda-based retry — SendWithRefreshAsync принимает Func\<Task\<HttpResponseMessage\>\> для создания нового запроса при каждом retry (поддержка обновлённого токена)
-- Stream-safe retry — UploadFileAsync запоминает начальную позицию stream, перематывает при retry, создаёт новый MultipartFormDataContent
+**UI/UX**: Adaptive layout (CompactMode, responsive InfoPanel). Scroll preservation. Visibility tracking (debounced read receipts). Dialog animation (TCS+timeout, nested-aware). Message grouping (2min, Alone/First/Middle/Last). Typing cleanup loop (auto-start/stop). System messages: centered inline blocks, excluded from grouping/search. Voice messages: inline player with play/pause/seek/progress, download via context menu.
 
-**Медиа**
-- Voice recording pipeline — Start→Record→Stop→Validate (0.5s–300s)→Upload→Send
-- Whisper CLI — speech-to-text (NAudio PCM 16kHz/16bit/mono)
-- Large file streaming — >10MB→temp file (DeleteOnClose), ≤10MB→MemoryStream
-- IgnoreDisposeStream — NAudioRecorderService wrapper для WaveFileWriter
-- AuthenticatedImageLoader — JWT + extension filtering
+**Async**: Fire-and-forget init with TCS. Exponential backoff polling. Debounce (settings 800ms, typing, mark-read). TCS dialog results. Download state machine with CTS. Navigation history stack. Bounded gap fill (5 batches→reset). Stream-safe retry (rewind+new content).
 
-**Domain-specific**
-- BFS cycle prevention — Department hierarchy (server DepartmentService), клиент делегирует проверку серверу
-- Forward with content inheritance — копирование content/files оригинала
-- Dual-scope search — global (chats+messages) и chat-local режимы
-- Reactive InfoPanel — подписки GlobalHub + ChatHub → InvalidateAllInfoPanelProperties
-- Poll parent-child architecture — PollOptionViewModel→PollViewModel для TotalVotes и single-selection
-- Optimistic unread tracking — локальный increment/set + серверная синхронизация
-- Cross-reference initialization — Admin parallel load + SetDepartments/SetUsers
-- Hierarchical filtering — recursive clone with child propagation
-- Group chat management — diff-based member/role sync (add/remove members, promote/demote admins)
-- Nested user picker — ChatUserPickerDialog reusable for participants and admins with AllowEdit flag
-
-**Тестируемость**
-- Injectable TimeProvider — AppDateTime с DI-инъекцией TimeProvider для детерминированного времени в тестах
-
-**Deployment**
-- Docker multi-stage build — SDK→publish→aspnet runtime, non-root user
-- Docker Compose orchestration — API + PostgreSQL (healthcheck) + persistent volumes
-- Security scanning — ZAProxy baseline (profile-gated)
+**Domain**: Voice pipeline (record WAV 16kHz/16bit/mono → validate 0.5-300s → upload → create message with voice metadata → transcribe via Whisper CLI → poll status with exponential backoff). Inline voice playback (singleton AudioPlayerService, per-VM event filtering, cached audio streams, exclusive playback — new play stops previous). System messages via centralized SystemMessageService (ChatService+ChatMemberService→create→broadcast). Diff-based group management. Dual-scope search. Optimistic unread tracking. BFS cycle prevention (departments). Forward content inheritance. Universal UserPicker (multi/single select).

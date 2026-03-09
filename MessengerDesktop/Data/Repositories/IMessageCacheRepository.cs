@@ -44,4 +44,8 @@ public interface IMessageCacheRepository
 
     /// <summary>Удалить все сообщения чата</summary>
     Task DeleteForChatAsync(int chatId);
+    /// <summary>
+    /// Удаляет все кэшированные сообщения для указанного чата.
+    /// </summary>
+    Task DeleteByChatIdAsync(int chatId);
 }

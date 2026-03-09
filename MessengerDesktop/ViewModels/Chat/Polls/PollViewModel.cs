@@ -137,7 +137,7 @@ public partial class PollViewModel : BaseViewModel
                 OptionIds = selectedIds
             };
 
-            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Poll.Vote, voteDto);
+            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Polls.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
             {
@@ -164,7 +164,7 @@ public partial class PollViewModel : BaseViewModel
                 OptionIds = []
             };
 
-            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Poll.Vote, voteDto);
+            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Polls.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
             {

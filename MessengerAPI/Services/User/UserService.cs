@@ -50,10 +50,11 @@ public partial class UserService(
         var user = await _context.Users
             .Include(u => u.UserSetting)
             .Include(u => u.Department)
-            .AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id, ct);
 
-        if (user == null)
-            return Result<UserDto>.Failure($"Пользователь с ID {id} не найден");
+        if (user is null)
+            return Result<UserDto>.NotFound($"Пользователь с ID {id} не найден");
 
         return Result<UserDto>.Success(
             user.ToDto(urlBuilder, onlineService.IsOnline(id)));
@@ -67,11 +68,14 @@ public partial class UserService(
         var user = await _context.Users.Include(u => u.UserSetting)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
 
-        if (user == null)
-            return Result.Failure($"Пользователь с ID {id} не найден");
+        if (user is null)
+            return Result.NotFound($"Пользователь с ID {id} не найден");
 
         user.UpdateProfile(dto);
-        await SaveChangesAsync(ct);
+
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
 
         _logger.LogInformation("Пользователь {UserId} обновлён", id);
         return Result.Success();
@@ -82,19 +86,27 @@ public partial class UserService(
         if (file is null || file.Length == 0)
             return Result<AvatarResponseDto>.Failure("Файл не предоставлен");
 
-        var user = await _context.Users.FindAsync([id], ct);
-        if (user is null)
-            return Result<AvatarResponseDto>.Failure($"Пользователь с ID {id} не найден");
+        var userResult = await FindEntityAsync<Model.User>(id, ct);
+        if (userResult.IsFailure)
+            return Result<AvatarResponseDto>.FromFailure(userResult);
 
-        var avatarPath = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
-        user.Avatar = avatarPath;
-        await SaveChangesAsync(ct);
+        var user = userResult.Value!;
+
+        var saveResult = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
+        if (saveResult.IsFailure)
+            return Result<AvatarResponseDto>.FromFailure(saveResult);
+
+        user.Avatar = saveResult.Value;
+
+        var dbSaveResult = await SaveChangesAsync(ct);
+        if (dbSaveResult.IsFailure)
+            return Result<AvatarResponseDto>.FromFailure(dbSaveResult);
 
         _logger.LogInformation("Аватар обновлён для пользователя {UserId}", id);
 
         return Result<AvatarResponseDto>.Success(new AvatarResponseDto
         {
-            AvatarUrl = urlBuilder.BuildUrl(avatarPath)!
+            AvatarUrl = urlBuilder.BuildUrl(saveResult.Value)!
         });
     }
 
@@ -119,7 +131,8 @@ public partial class UserService(
             new OnlineStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
     }
 
-    public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)
+    public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(
+        List<int> userIds, CancellationToken ct = default)
     {
         if (userIds is null || userIds.Count == 0)
             return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
@@ -129,7 +142,8 @@ public partial class UserService(
 
         var onlineIds = onlineService.FilterOnline(userIds);
 
-        var result = users.ConvertAll(u => new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+        var result = users.ConvertAll(u =>
+            new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
         return Result<List<OnlineStatusDto>>.Success(result);
     }
@@ -145,16 +159,18 @@ public partial class UserService(
             return Result.Failure("Username должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
-
         if (exists)
-            return Result.Failure("Этот username уже занят");
+            return Result.Conflict("Этот username уже занят");
 
-        var user = await _context.Users.FindAsync([id], ct);
-        if (user == null)
-            return Result.Failure($"Пользователь с ID {id} не найден");
+        var userResult = await FindEntityAsync<Model.User>(id, ct);
+        if (userResult.IsFailure)
+            return Result.FromFailure(userResult);
 
-        user.Username = username;
-        await SaveChangesAsync(ct);
+        userResult.Value!.Username = username;
+
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
 
         _logger.LogInformation("Username изменён для пользователя {UserId}", id);
         return Result.Success();
@@ -171,15 +187,20 @@ public partial class UserService(
         if (dto.NewPassword.Length < 6)
             return Result.Failure("Пароль должен содержать минимум 6 символов");
 
-        var user = await _context.Users.FindAsync([id], ct);
-        if (user == null)
-            return Result.Failure($"Пользователь с ID {id} не найден");
+        var userResult = await FindEntityAsync<Model.User>(id, ct);
+        if (userResult.IsFailure)
+            return Result.FromFailure(userResult);
+
+        var user = userResult.Value!;
 
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
-            return Result.Failure("Неверный текущий пароль");
+            return Result.Unauthorized("Неверный текущий пароль");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        await SaveChangesAsync(ct);
+
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
 
         _logger.LogInformation("Пароль изменён для пользователя {UserId}", id);
         return Result.Success();

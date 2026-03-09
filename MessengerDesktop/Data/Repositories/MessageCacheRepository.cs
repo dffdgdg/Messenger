@@ -109,6 +109,8 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     public async Task<int> GetTotalCountAsync()
         => await Db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM messages");
 
+    public async Task DeleteByChatIdAsync(int chatId)
+        => await Db.ExecuteAsync("DELETE FROM messages WHERE ChatId = ?", chatId);
     public async Task<List<CachedMessage>> SearchAsync(string query, int limit)
     {
         if (string.IsNullOrWhiteSpace(query)) return [];

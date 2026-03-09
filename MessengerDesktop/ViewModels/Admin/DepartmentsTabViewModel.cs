@@ -30,7 +30,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     public async Task LoadAsync() =>
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.GetAsync<List<DepartmentDto>>(ApiEndpoints.Department.GetAll);
+            var result = await _apiClient.GetAsync<List<DepartmentDto>>(ApiEndpoints.Departments.GetAll);
 
             if (result is { Success: true, Data: not null })
             {
@@ -59,7 +59,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PostAsync<DepartmentDto>(ApiEndpoints.Department.Create, dto);
+                var result = await _apiClient.PostAsync<DepartmentDto>(ApiEndpoints.Departments.Create, dto);
 
                 if (result.Success)
                 {
@@ -92,7 +92,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Department.ById(item.Id),dto);
+                var result = await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id),dto);
 
                 if (result.Success)
                 {
@@ -106,7 +106,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             },
             DeleteAction = async dialogVm =>
             {
-                var result = await _apiClient.DeleteAsync(ApiEndpoints.Department.ById((int)dialogVm.EditId));
+                var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById((int)dialogVm.EditId));
 
                 if (result.Success)
                 {
@@ -147,7 +147,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.DeleteAsync(ApiEndpoints.Department.ById(item.Id));
+            var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(item.Id));
 
             if (result.Success)
             {

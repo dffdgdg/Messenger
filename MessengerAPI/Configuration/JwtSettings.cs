@@ -15,13 +15,6 @@ public sealed class JwtSettings
     /// </summary>
     public int RefreshTokenLifetimeDays { get; set; } = 30;
 
-    /// <summary>
-    /// Устаревшее. Оставлено для обратной совместимости конфигурации.
-    /// Используйте AccessTokenLifetimeMinutes.
-    /// </summary>
-    [Obsolete("Use AccessTokenLifetimeMinutes instead")]
-    public int LifetimeHours { get; set; } = 24;
-
     public string Issuer { get; set; } = "MessengerAPI";
     public string Audience { get; set; } = "MessengerClient";
 }

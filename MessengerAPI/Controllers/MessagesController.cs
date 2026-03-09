@@ -1,4 +1,5 @@
 ﻿using MessengerAPI.Services.Messaging;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
@@ -6,6 +7,7 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
     ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
+    [EnableRateLimiting("messaging")]
     public async Task<ActionResult<ApiResponse<MessageDto>>> CreateMessage([FromBody] MessageDto messageDto)
     {
         messageDto.SenderId = GetCurrentUserId();
@@ -26,12 +28,10 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
         => await ExecuteAsync(() => messageService.DeleteMessageAsync(id, GetCurrentUserId()),"Сообщение успешно удалено");
 
     [HttpGet("chat/{chatId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetChatMessages(int chatId,[FromQuery] int page = 1,
-        [FromQuery] int pageSize = 15)
+    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetChatMessages(int chatId,[FromQuery] int page = 1,[FromQuery] int pageSize = 15)
     {
         var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => messageService.GetChatMessagesAsync(chatId, userId, page, pageSize),
-            "Сообщения получены успешно");
+        return await ExecuteAsync(() => messageService.GetChatMessagesAsync(chatId, userId, page, pageSize), "Сообщения получены успешно");
     }
 
     [HttpGet("chat/{chatId}/around/{messageId}")]
@@ -56,17 +56,16 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
     }
 
     [HttpGet("chat/{chatId}/search")]
+    [EnableRateLimiting("search")]
     public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(
-        int chatId,
-        [FromQuery] string query = "",
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        int chatId, [FromQuery] string query = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = GetCurrentUserId();
         return await ExecuteAsync(() => messageService.SearchMessagesAsync(chatId, userId, query, page, pageSize));
     }
 
     [HttpGet("user/{userId}/search")]
+    [EnableRateLimiting("search")]
     public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(
         int userId,
         [FromQuery] string query = "",

@@ -1,15 +1,12 @@
-﻿using MessengerAPI.Hubs;
+﻿using System.Threading.RateLimiting;
+using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
-
-AppContext.SetSwitch("Npgsql.Enable TimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuration binding
 builder.Services.Configure<MessengerSettings>(builder.Configuration.GetSection(MessengerSettings.SectionName));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 
-// Services
 builder.Services
     .AddMessengerDatabase(builder.Configuration, builder.Environment)
     .AddInfrastructureServices()
@@ -18,14 +15,101 @@ builder.Services
     .AddMessengerAuth(builder.Configuration)
     .AddMessengerSwagger();
 
-// SignalR & CORS
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromSeconds(10),
+                SegmentsPerWindow = 5,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 5
+            }));
+
+    options.AddPolicy("login", context =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 3,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("upload", context =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? context.Connection.RemoteIpAddress?.ToString()
+                          ?? "unknown",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 3,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 2
+            }));
+
+    options.AddPolicy("search", context =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? context.Connection.RemoteIpAddress?.ToString()
+                          ?? "unknown",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 15,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 3,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("messaging", context =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? context.Connection.RemoteIpAddress?.ToString()
+                          ?? "unknown",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 3
+            }));
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+            ? retryAfterValue
+            : TimeSpan.FromSeconds(10);
+
+        context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            success = false,
+            error = "Слишком много запросов. Попробуйте позже.",
+            retryAfterSeconds = (int)retryAfter.TotalSeconds,
+            timestamp = DateTime.UtcNow
+        }, cancellationToken);
+    };
+});
+
 builder.Services.AddSignalR();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy
     => policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials()));
 
 var app = builder.Build();
 
-// Middleware pipeline
 app.UseExceptionHandling();
 
 if (app.Environment.IsDevelopment())
@@ -39,6 +123,7 @@ if (!disableHttpsRedirection)
 {
     app.UseHttpsRedirection();
 }
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers.TryAdd("Cross-Origin-Embedder-Policy", "require-corp");
@@ -52,6 +137,9 @@ app.Use(async (context, next) =>
 app.UseMessengerStaticFiles();
 app.UseMissingFileCleanup();
 app.UseCors();
+
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

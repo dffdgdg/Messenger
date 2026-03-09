@@ -7,14 +7,15 @@ namespace MessengerAPI.Services.Messaging;
 
 public interface IFileService
 {
-    Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null);
-    Task<MessageFileDto> SaveMessageFileAsync(IFormFile file, int chatId);
+    Task<Result<string>> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null);
+    Task<Result<MessageFileDto>> SaveMessageFileAsync(IFormFile file, int chatId, int userId);
     void DeleteFile(string? filePath);
     bool IsValidImage(IFormFile file);
 }
 
 public class FileService(
     MessengerDbContext context,
+    IAccessControlService accessControl,
     IWebHostEnvironment env,
     IUrlBuilder urlBuilder,
     IOptions<MessengerSettings> settings,
@@ -25,10 +26,10 @@ public class FileService(
 
     private static readonly HashSet<string> AllowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
 
-    public async Task<string> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null)
+    public async Task<Result<string>> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null)
     {
         if (!IsValidImage(file))
-            throw new ArgumentException("Некорректный файл изображения");
+            return Result<string>.Failure("Некорректный файл изображения");
 
         if (!string.IsNullOrEmpty(oldFilePath))
             DeleteFile(oldFilePath);
@@ -56,16 +57,20 @@ public class FileService(
 
         _logger.LogInformation("Изображение сохранено: {FilePath}", resultPath);
 
-        return resultPath;
+        return Result<string>.Success(resultPath);
     }
 
-    public async Task<MessageFileDto> SaveMessageFileAsync(IFormFile file, int chatId)
+    public async Task<Result<MessageFileDto>> SaveMessageFileAsync(IFormFile file, int chatId, int userId)
     {
+        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
+        if (accessResult.IsFailure)
+            return Result<MessageFileDto>.FromFailure(accessResult);
+
         if (file is null || file.Length == 0)
-            throw new ArgumentException("Файл не предоставлен");
+            return Result<MessageFileDto>.Failure("Файл не предоставлен");
 
         if (file.Length > _settings.MaxFileSizeBytes)
-            throw new ArgumentException($"Файл слишком большой. Максимум: {_settings.MaxFileSizeBytes / 1024 / 1024} MB");
+            return Result<MessageFileDto>.Failure($"Файл слишком большой. Максимум: {_settings.MaxFileSizeBytes / 1024 / 1024} MB");
 
         var ext = Path.GetExtension(file.FileName) ?? string.Empty;
         var fileName = $"{Guid.NewGuid()}{ext}";
@@ -81,7 +86,7 @@ public class FileService(
 
         _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}", fileName, chatId);
 
-        return new MessageFileDto
+        return Result<MessageFileDto>.Success(new MessageFileDto
         {
             Id = 0,
             MessageId = 0,
@@ -90,7 +95,7 @@ public class FileService(
             Url = urlBuilder.BuildUrl(resultRelativePath)!,
             PreviewType = FileMappings.DeterminePreviewType(file.ContentType),
             FileSize = file.Length
-        };
+        });
     }
 
     public void DeleteFile(string? filePath)

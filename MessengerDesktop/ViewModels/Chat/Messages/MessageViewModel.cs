@@ -1,20 +1,23 @@
 ﻿using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.UI;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class MessageViewModel : ObservableObject
+public sealed partial class MessageViewModel : ObservableObject, IDisposable
 {
     public int Id { get; set; }
     public int ChatId { get; set; }
     public int SenderId { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsOwn { get; set; }
+    public bool IsSystemMessage { get; set; }
 
     [ObservableProperty] private int? _replyToMessageId;
     [ObservableProperty] private string? _replyToSenderName;
@@ -23,9 +26,9 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private DateTime? _editedAt;
     [ObservableProperty] private bool _isContinuation;
     [ObservableProperty] private bool _hasNextFromSame;
-    [ObservableProperty] private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
+    [ObservableProperty]
+    private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
 
-    // ── Forward ──
     [ObservableProperty] private int? _forwardedFromMessageId;
     [ObservableProperty] private string? _forwardedFromSenderName;
 
@@ -33,56 +36,124 @@ public partial class MessageViewModel : ObservableObject
     [ObservableProperty] private PollViewModel? _poll;
     public List<MessageFileDto> Files { get; set; } = [];
 
-    [ObservableProperty] private string? _senderAvatar, _senderName, _content;
-    [ObservableProperty] private bool _isHighlighted, _isUnread, _isRead, _isEdited, _isDeleted;
-    [ObservableProperty] private ObservableCollection<MessageFileViewModel> _fileViewModels = [];
+    [ObservableProperty] private string? _senderAvatar;
+    [ObservableProperty] private string? _senderName;
+    [ObservableProperty] private string? _content;
+    [ObservableProperty] private bool _isHighlighted;
+    [ObservableProperty] private bool _isUnread;
+    [ObservableProperty] private bool _isRead;
+    [ObservableProperty] private bool _isEdited;
+    [ObservableProperty] private bool _isDeleted;
+    [ObservableProperty]
+    private ObservableCollection<MessageFileViewModel> _fileViewModels = [];
     [ObservableProperty] private bool _showDateSeparator;
     [ObservableProperty] private string? _dateSeparatorText;
 
-    // Voice message
     [ObservableProperty] private bool _isVoiceMessage;
+    [ObservableProperty] private double? _voiceDurationSeconds;
     [ObservableProperty] private string? _transcriptionStatus;
     [ObservableProperty] private string? _transcriptionText;
+    [ObservableProperty] private string? _voiceFileUrl;
+
+    [ObservableProperty] private bool _isVoicePlaying;
+    [ObservableProperty] private bool _isVoicePaused;
+    [ObservableProperty] private bool _isVoiceLoading;
+    [ObservableProperty] private double _voicePositionPercent;
+    [ObservableProperty] private string _voicePositionText = "0:00";
+    [ObservableProperty] private string? _voiceError;
+
+    [ObservableProperty] private bool _isTranscriptionExpanded;
+    [ObservableProperty] private bool _isTranscriptionLoading;
+
+    private readonly IFileDownloadService? _downloadService;
+    private readonly INotificationService? _notificationService;
+    private readonly IApiClientService? _apiClient;
+    private readonly IAudioPlayerService? _audioPlayer;
+
+    private MemoryStream? _cachedAudioStream;
+    private bool _disposed;
+    private bool _subscribedToPlayer;
 
     #region Computed Properties
 
     public bool HasFiles => Files.Count > 0;
     public bool HasPoll => Poll != null;
-    public bool HasImages => Files.Any(f => f.PreviewType == "image");
+    public bool HasImages
+        => Files.Any(f => f.PreviewType == "image");
     public bool HasReply => ReplyToMessageId.HasValue;
-    public bool HasTextContent => !IsDeleted && !string.IsNullOrWhiteSpace(Content) && !HasPoll && !IsVoiceMessage;
-    public bool ShowNonVoiceFiles => HasFiles && !IsVoiceMessage && !IsDeleted;
-    public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
-    public bool ShowDeliveryStatus => IsOwn && !IsDeleted;
-    public bool CanDelete => IsOwn && !IsDeleted;
-    public string DisplayContent => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
+
+    public bool HasTextContent
+        => !IsDeleted && !IsSystemMessage && !string.IsNullOrWhiteSpace(Content)
+           && !HasPoll && !IsVoiceMessage;
+
+    public bool ShowSenderName
+        => !IsOwn && !IsContinuation && !IsSystemMessage;
+
+    public bool ShowDeliveryStatus
+        => IsOwn && !IsDeleted && !IsSystemMessage;
+
+    public bool CanDelete
+        => IsOwn && !IsDeleted && !IsSystemMessage;
+
+    public bool ShowNonVoiceFiles
+        => HasFiles && !IsDeleted && !IsSystemMessage;
+
+    public bool CanEdit
+        => IsOwn && !IsDeleted && !IsSystemMessage
+           && Poll == null && !IsVoiceMessage && !HasForward;
+
+    public bool ShowFilesOnlyMeta
+        => !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
+
+    public string DisplayContent
+        => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
+
     public string EditedLabel => IsEdited ? "изм." : string.Empty;
-    public string? EditedLabelFull => IsEdited && EditedAt.HasValue
-        ? $"изменено {EditedAt.Value:HH:mm}" : null;
-    public bool ShowSenderName => !IsOwn && !IsContinuation;
 
-    // ── Forward ──
+    public string? EditedLabelFull
+        => IsEdited && EditedAt.HasValue ? $"изменено {EditedAt.Value:HH:mm}" : null;
+
     public bool HasForward => ForwardedFromMessageId.HasValue;
-    public string ForwardedFromHeader => HasForward
-        ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}"
-        : string.Empty;
-    public bool CanEdit => IsOwn && !IsDeleted && Poll == null && !IsVoiceMessage && !HasForward;
 
-    // Voice computed
-    public bool ShowVoiceMessage => IsVoiceMessage && !IsDeleted;
-    public bool IsTranscriptionPending => TranscriptionStatus is "pending" or "processing";
-    public bool IsTranscriptionDone => TranscriptionStatus == "done";
-    public bool IsTranscriptionFailed => TranscriptionStatus == "failed";
-    public bool HasTranscriptionText => !string.IsNullOrWhiteSpace(TranscriptionText);
+    public string ForwardedFromHeader
+        => HasForward ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}" : string.Empty;
 
-    public string TranscriptionStatusDisplay => TranscriptionStatus switch
-    {
-        "pending" => "Ожидает расшифровки...",
-        "processing" => "Расшифровка...",
-        "done" => "Расшифровано",
-        "failed" => "Ошибка расшифровки",
-        _ => ""
-    };
+    public bool CanTranscribe
+        => ShowVoiceMessage;
+
+    public bool ShowVoiceMessage
+        => IsVoiceMessage && !IsDeleted;
+
+    public bool IsTranscriptionPending
+        => TranscriptionStatus is "pending" or "processing";
+    public bool IsTranscriptionDone
+        => TranscriptionStatus == "done";
+    public bool IsTranscriptionFailed
+        => TranscriptionStatus == "failed";
+    public bool HasTranscriptionText
+        => !string.IsNullOrWhiteSpace(TranscriptionText);
+    public bool ShowTranscriptionPlaceholder
+        => !HasTranscriptionText && !IsTranscriptionLoading && !IsTranscriptionFailed;
+    public bool ShowPlayButton
+        => ShowVoiceMessage && !IsVoicePlaying && !IsVoicePaused && !IsVoiceLoading;
+    public bool ShowPauseButton
+        => IsVoicePlaying && !IsVoicePaused;
+    public bool ShowResumeButton
+        => IsVoicePaused;
+
+    public string TranscriptionStatusDisplay
+        => TranscriptionStatus switch
+        {
+            "pending" => "Ожидает расшифровки...",
+            "processing" => "Расшифровка...",
+            "done" => "Расшифровано",
+            "failed" => "Ошибка расшифровки",
+            _ => ""
+        };
+
+    public string VoiceDurationFormatted
+        => VoiceDurationSeconds.HasValue ? FormatTime(TimeSpan.FromSeconds(VoiceDurationSeconds.Value))
+        : "0:00";
 
     #endregion
 
@@ -96,6 +167,19 @@ public partial class MessageViewModel : ObservableObject
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
     {
+        _downloadService = downloadService;
+        _notificationService = notificationService;
+
+        try
+        {
+            _apiClient = App.Current.Services.GetService<IApiClientService>();
+            _audioPlayer = App.Current.Services.GetService<IAudioPlayerService>();
+        }
+        catch
+        {
+
+        }
+
         Message = message;
         Id = message.Id;
         ChatId = message.ChatId;
@@ -112,23 +196,22 @@ public partial class MessageViewModel : ObservableObject
         SenderName = message.SenderName;
         SenderAvatar = message.SenderAvatarUrl;
 
-        // Voice message
         IsVoiceMessage = message.IsVoiceMessage;
+        VoiceDurationSeconds = message.VoiceDurationSeconds;
         TranscriptionStatus = message.TranscriptionStatus;
-        TranscriptionText = message.IsVoiceMessage ? message.Content : null;
+        TranscriptionText = message.TranscriptionText;
+        VoiceFileUrl = message.VoiceFileUrl;
 
-        // Reply
+        IsSystemMessage = message.IsSystemMessage;
+
         ReplyToMessageId = message.ReplyToMessageId;
         if (message.ReplyToMessage != null)
         {
             ReplyToSenderName = message.ReplyToMessage.SenderName;
-            ReplyToContent = message.ReplyToMessage.IsDeleted
-                ? "[Сообщение удалено]"
-                : message.ReplyToMessage.Content;
+            ReplyToContent = message.ReplyToMessage.IsDeleted ? "[Сообщение удалено]" : message.ReplyToMessage.Content;
             ReplyToIsDeleted = message.ReplyToMessage.IsDeleted;
         }
 
-        // Forward
         ForwardedFromMessageId = message.ForwardedFromMessageId;
         if (message.ForwardedFrom != null)
         {
@@ -143,17 +226,231 @@ public partial class MessageViewModel : ObservableObject
             FileViewModels = new ObservableCollection<MessageFileViewModel>(
                 message.Files.Select(f => new MessageFileViewModel(f, downloadService, notificationService)));
         }
+
+        SubscribeToAudioPlayer();
     }
+
+    #region Transcription Toggle
+
+    [RelayCommand]
+    private async Task ToggleTranscription()
+        => IsTranscriptionExpanded = !IsTranscriptionExpanded;
+
+    #endregion
+    #region Audio Player
+
+    private void SubscribeToAudioPlayer()
+    {
+        if (_audioPlayer == null || !IsVoiceMessage || _subscribedToPlayer) return;
+
+        _audioPlayer.PlaybackStarted += OnPlaybackStarted;
+        _audioPlayer.PlaybackPaused += OnPlaybackPaused;
+        _audioPlayer.PlaybackResumed += OnPlaybackResumed;
+        _audioPlayer.PlaybackStopped += OnPlaybackStopped;
+        _audioPlayer.PositionChanged += OnPositionChanged;
+        _subscribedToPlayer = true;
+    }
+
+    private void UnsubscribeFromAudioPlayer()
+    {
+        if (_audioPlayer == null || !_subscribedToPlayer) return;
+
+        _audioPlayer.PlaybackStarted -= OnPlaybackStarted;
+        _audioPlayer.PlaybackPaused -= OnPlaybackPaused;
+        _audioPlayer.PlaybackResumed -= OnPlaybackResumed;
+        _audioPlayer.PlaybackStopped -= OnPlaybackStopped;
+        _audioPlayer.PositionChanged -= OnPositionChanged;
+        _subscribedToPlayer = false;
+    }
+
+    private void OnPlaybackStarted(int messageId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+
+            if (messageId == Id)
+            {
+                IsVoicePlaying = true;
+                IsVoicePaused = false;
+                VoiceError = null;
+            }
+            else
+            {
+                ResetPlayerState();
+            }
+        });
+    }
+
+    private void OnPlaybackPaused(int messageId)
+    {
+        if (messageId != Id) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            IsVoicePaused = true;
+        });
+    }
+
+    private void OnPlaybackResumed(int messageId)
+    {
+        if (messageId != Id) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            IsVoicePaused = false;
+        });
+    }
+
+    private void OnPlaybackStopped(int messageId)
+    {
+        if (messageId != Id) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            ResetPlayerState();
+        });
+    }
+
+    private void OnPositionChanged(int messageId, TimeSpan position)
+    {
+        if (messageId != Id) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+
+            var duration = _audioPlayer?.Duration ?? TimeSpan.Zero;
+            VoicePositionPercent = duration.TotalMilliseconds > 0
+                ? position.TotalMilliseconds / duration.TotalMilliseconds * 100
+                : 0;
+
+            VoicePositionText = FormatTime(position);
+        });
+    }
+
+    private void ResetPlayerState()
+    {
+        IsVoicePlaying = false;
+        IsVoicePaused = false;
+        IsVoiceLoading = false;
+        VoicePositionPercent = 0;
+        VoicePositionText = "0:00";
+    }
+
+    [RelayCommand]
+    private async Task PlayVoice()
+    {
+        if (_audioPlayer == null || _apiClient == null || _disposed) return;
+
+        if (string.IsNullOrEmpty(VoiceFileUrl))
+        {
+            VoiceError = "URL аудио недоступен";
+            return;
+        }
+
+        VoiceError = null;
+
+        // Если это наше сообщение на паузе — возобновить
+        if (_audioPlayer.CurrentMessageId == Id && _audioPlayer.IsPaused)
+        {
+            _audioPlayer.Resume();
+            return;
+        }
+
+        // Загрузить аудио если ещё не кешировано
+        if (_cachedAudioStream == null)
+        {
+            IsVoiceLoading = true;
+
+            try
+            {
+                var stream = await _apiClient.GetStreamAsync(VoiceFileUrl);
+                if (stream == null)
+                {
+                    VoiceError = "Не удалось загрузить аудио";
+                    IsVoiceLoading = false;
+                    return;
+                }
+
+                // Копируем в MemoryStream для повторного воспроизведения
+                var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                await stream.DisposeAsync();
+
+                if (_disposed)
+                {
+                    await memoryStream.DisposeAsync();
+                    return;
+                }
+
+                _cachedAudioStream = memoryStream;
+            }
+            catch (Exception ex)
+            {
+                VoiceError = $"Ошибка: {ex.Message}";
+                IsVoiceLoading = false;
+                return;
+            }
+
+            IsVoiceLoading = false;
+        }
+
+        // Создаём новый поток-копию для NAudio (он владеет потоком)
+        var playStream = new MemoryStream(_cachedAudioStream.ToArray());
+        _audioPlayer.Play(Id, playStream);
+    }
+
+    [RelayCommand]
+    private void PauseVoice()
+    {
+        if (_audioPlayer?.CurrentMessageId == Id)
+            _audioPlayer.Pause();
+    }
+
+    [RelayCommand]
+    private void StopVoice()
+    {
+        if (_audioPlayer?.CurrentMessageId == Id)
+            _audioPlayer.Stop();
+    }
+
+    [RelayCommand]
+    private void SeekVoice(double percent)
+    {
+        if (_audioPlayer?.CurrentMessageId == Id)
+            _audioPlayer.Seek(percent / 100.0);
+    }
+
+    [RelayCommand]
+    private async Task DownloadVoice()
+    {
+        if (string.IsNullOrEmpty(VoiceFileUrl) || _downloadService == null)
+            return;
+
+        try
+        {
+            var fileName = $"voice_{Id}_{CreatedAt:yyyyMMdd_HHmmss}.wav";
+            var path = await _downloadService.DownloadFileAsync(VoiceFileUrl, fileName);
+
+            if (path != null)
+                _notificationService?.ShowSuccessAsync($"Голосовое сохранено: {fileName}", copyToClipboard: false);
+        }
+        catch (Exception ex)
+        {
+            _notificationService?.ShowErrorAsync(
+                $"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
+        }
+    }
+
+    private static string FormatTime(TimeSpan time)
+        => time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss") : time.ToString(@"m\:ss");
+
+    #endregion
 
     public void UpdateTranscription(string? status, string? transcription)
     {
         TranscriptionStatus = status;
         TranscriptionText = transcription;
-
-        if (!string.IsNullOrWhiteSpace(transcription))
-        {
-            Content = transcription;
-        }
     }
 
     public void UpdatePoll(PollDto pollDto)
@@ -161,8 +458,10 @@ public partial class MessageViewModel : ObservableObject
         PollDto = pollDto;
         Message.Poll = pollDto;
 
-        if (Poll != null) Poll.ApplyDto(pollDto);
-        else Poll = CreatePollViewModel(pollDto);
+        if (Poll != null)
+            Poll.ApplyDto(pollDto);
+        else
+            Poll = CreatePollViewModel(pollDto);
 
         _ = PersistPollStateToCacheAsync();
 
@@ -199,8 +498,21 @@ public partial class MessageViewModel : ObservableObject
 
     public void MarkAsDeleted()
     {
+        if (_audioPlayer?.CurrentMessageId == Id)
+            _audioPlayer.Stop();
+
         IsDeleted = true;
         Content = null;
+        IsVoiceMessage = false;
+        TranscriptionStatus = null;
+        TranscriptionText = null;
+        VoiceFileUrl = null;
+        VoiceDurationSeconds = null;
+        ResetPlayerState();
+
+        _cachedAudioStream?.Dispose();
+        _cachedAudioStream = null;
+
         OnPropertyChanged(nameof(DisplayContent));
         OnPropertyChanged(nameof(HasTextContent));
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
@@ -209,6 +521,7 @@ public partial class MessageViewModel : ObservableObject
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanDelete));
         OnPropertyChanged(nameof(ShowVoiceMessage));
+        OnPropertyChanged(nameof(VoiceDurationFormatted));
     }
 
     public void MarkAsRead() => IsRead = true;
@@ -223,7 +536,10 @@ public partial class MessageViewModel : ObservableObject
             if (userId == 0) return null;
             return new PollViewModel(pollDto, userId, apiClient);
         }
-        catch { return null; }
+        catch
+        {
+            return null;
+        }
     }
 
     #region Property Changed Handlers
@@ -265,7 +581,8 @@ public partial class MessageViewModel : ObservableObject
         OnPropertyChanged(nameof(CanDelete));
     }
 
-    partial void OnIsReadChanged(bool value) => OnPropertyChanged(nameof(ShowDeliveryStatus));
+    partial void OnIsReadChanged(bool value)
+        => OnPropertyChanged(nameof(ShowDeliveryStatus));
 
     partial void OnIsContinuationChanged(bool value)
     {
@@ -273,7 +590,8 @@ public partial class MessageViewModel : ObservableObject
         UpdateGroupPosition();
     }
 
-    partial void OnHasNextFromSameChanged(bool value) => UpdateGroupPosition();
+    partial void OnHasNextFromSameChanged(bool value)
+        => UpdateGroupPosition();
 
     partial void OnIsVoiceMessageChanged(bool value)
     {
@@ -282,7 +600,11 @@ public partial class MessageViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowFilesOnlyMeta));
         OnPropertyChanged(nameof(ShowNonVoiceFiles));
         OnPropertyChanged(nameof(CanEdit));
+        OnPropertyChanged(nameof(ShowPlayButton));
     }
+
+    partial void OnVoiceDurationSecondsChanged(double? value)
+        => OnPropertyChanged(nameof(VoiceDurationFormatted));
 
     partial void OnTranscriptionStatusChanged(string? value)
     {
@@ -293,9 +615,23 @@ public partial class MessageViewModel : ObservableObject
     }
 
     partial void OnTranscriptionTextChanged(string? value)
+        => OnPropertyChanged(nameof(HasTranscriptionText));
+
+    partial void OnIsVoicePlayingChanged(bool value)
     {
-        OnPropertyChanged(nameof(HasTranscriptionText));
+        OnPropertyChanged(nameof(ShowPlayButton));
+        OnPropertyChanged(nameof(ShowPauseButton));
     }
+
+    partial void OnIsVoicePausedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowPlayButton));
+        OnPropertyChanged(nameof(ShowPauseButton));
+        OnPropertyChanged(nameof(ShowResumeButton));
+    }
+
+    partial void OnIsVoiceLoadingChanged(bool value)
+        => OnPropertyChanged(nameof(ShowPlayButton));
 
     partial void OnForwardedFromMessageIdChanged(int? value)
     {
@@ -305,9 +641,7 @@ public partial class MessageViewModel : ObservableObject
     }
 
     partial void OnForwardedFromSenderNameChanged(string? value)
-    {
-        OnPropertyChanged(nameof(ForwardedFromHeader));
-    }
+        => OnPropertyChanged(nameof(ForwardedFromHeader));
 
     private void UpdateGroupPosition()
     {
@@ -328,10 +662,12 @@ public partial class MessageViewModel : ObservableObject
 
     public static bool CanGroup(MessageViewModel a, MessageViewModel b)
     {
+        if (a.IsSystemMessage || b.IsSystemMessage) return false;
         if (a.SenderId != b.SenderId) return false;
         if (a.IsDeleted || b.IsDeleted) return false;
         if (a.CreatedAt.Date != b.CreatedAt.Date) return false;
-        if ((b.CreatedAt - a.CreatedAt).Duration() > GroupingThreshold) return false;
+        if ((b.CreatedAt - a.CreatedAt).Duration() > GroupingThreshold)
+            return false;
         return true;
     }
 
@@ -359,6 +695,24 @@ public partial class MessageViewModel : ObservableObject
             current.IsContinuation = prev != null && CanGroup(prev, current);
             current.HasNextFromSame = next != null && CanGroup(current, next);
         }
+    }
+
+    #endregion
+
+    #region IDisposable
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_audioPlayer?.CurrentMessageId == Id)
+            _audioPlayer.Stop();
+
+        UnsubscribeFromAudioPlayer();
+
+        _cachedAudioStream?.Dispose();
+        _cachedAudioStream = null;
     }
 
     #endregion

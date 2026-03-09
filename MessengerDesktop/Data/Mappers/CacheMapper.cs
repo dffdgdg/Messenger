@@ -17,6 +17,8 @@ public static class CacheMapper
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
+    // Data/Mappers/CacheMapper.cs — только region MessageDto ↔ CachedMessage
+
     #region MessageDto ↔ CachedMessage
 
     public static CachedMessage ToEntity(this MessageDto dto)
@@ -30,11 +32,25 @@ public static class CacheMapper
             CreatedAtTicks = dto.CreatedAt.ToUniversalTime().Ticks,
             EditedAtTicks = dto.EditedAt?.ToUniversalTime().Ticks,
             IsDeleted = dto.IsDeleted,
-            IsVoiceMessage = dto.IsVoiceMessage,
-            TranscriptionStatus = dto.TranscriptionStatus,
             ReplyToMessageId = dto.ReplyToMessageId,
             ForwardedFromMessageId = dto.ForwardedFromMessageId,
             IsOwn = dto.IsOwn,
+
+            // Voice
+            IsVoiceMessage = dto.IsVoiceMessage,
+            VoiceDurationSeconds = dto.VoiceDurationSeconds,
+            TranscriptionStatus = dto.TranscriptionStatus,
+            TranscriptionText = dto.TranscriptionText,
+            VoiceFileUrl = dto.VoiceFileUrl,
+            VoiceFileName = dto.VoiceFileName,
+            VoiceContentType = dto.VoiceContentType,
+            VoiceFileSize = dto.VoiceFileSize,
+
+            // System
+            IsSystemMessage = dto.IsSystemMessage,
+            SystemEventTypeInt = dto.SystemEventType.HasValue ? (int)dto.SystemEventType.Value : null,
+            TargetUserId = dto.TargetUserId,
+            TargetUserName = dto.TargetUserName,
 
             // Sender
             SenderName = dto.SenderName,
@@ -73,13 +89,27 @@ public static class CacheMapper
             EditedAt = entity.EditedAt,
             IsEdited = entity.EditedAtTicks.HasValue,
             IsDeleted = entity.IsDeleted,
-            IsVoiceMessage = entity.IsVoiceMessage,
-            TranscriptionStatus = entity.TranscriptionStatus,
             ReplyToMessageId = entity.ReplyToMessageId,
             ForwardedFromMessageId = entity.ForwardedFromMessageId,
             IsOwn = entity.IsOwn,
             SenderName = entity.SenderName,
             SenderAvatarUrl = entity.SenderAvatarUrl,
+
+            // Voice
+            IsVoiceMessage = entity.IsVoiceMessage,
+            VoiceDurationSeconds = entity.VoiceDurationSeconds,
+            TranscriptionStatus = entity.TranscriptionStatus,
+            TranscriptionText = entity.TranscriptionText,
+            VoiceFileUrl = entity.VoiceFileUrl,
+            VoiceFileName = entity.VoiceFileName,
+            VoiceContentType = entity.VoiceContentType,
+            VoiceFileSize = entity.VoiceFileSize,
+
+            // System
+            IsSystemMessage = entity.IsSystemMessage,
+            SystemEventType = entity.SystemEventTypeInt.HasValue ? (SystemEventType)entity.SystemEventTypeInt.Value : null,
+            TargetUserId = entity.TargetUserId,
+            TargetUserName = entity.TargetUserName,
         };
 
         // Reply preview
@@ -111,30 +141,18 @@ public static class CacheMapper
             };
         }
 
-        // Poll (JSON → DTO)
+        // Poll
         if (!string.IsNullOrEmpty(entity.PollJson))
         {
-            try
-            {
-                dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts);
-            }
-            catch
-            {
-                // Corrupted JSON — пропускаем, не ломаем приложение
-            }
+            try { dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts); }
+            catch { /* corrupted */ }
         }
 
-        // Files (JSON → List<DTO>)
+        // Files
         if (!string.IsNullOrEmpty(entity.FilesJson))
         {
-            try
-            {
-                dto.Files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts) ?? [];
-            }
-            catch
-            {
-                dto.Files = [];
-            }
+            try { dto.Files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts) ?? []; }
+            catch { dto.Files = []; }
         }
 
         return dto;

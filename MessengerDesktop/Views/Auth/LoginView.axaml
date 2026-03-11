@@ -100,14 +100,14 @@
 				<StackPanel Spacing="18" IsEnabled="{Binding !IsBusy}">
 					<StackPanel Spacing="8">
 						<TextBlock Text="Логин" Classes="FieldLabel"/>
-						<TextBox Classes="LoginInput"
+						<TextBox Classes="Input"
 								 Text="{Binding Username}"
 								 Watermark="Введите логин"/>
 					</StackPanel>
 
 					<StackPanel Spacing="8">
 						<TextBlock Text="Пароль" Classes="FieldLabel"/>
-						<TextBox Classes="LoginInput"
+						<TextBox Classes="Input"
 								 Text="{Binding Password}"
 								 Watermark="Введите пароль"
 								 PasswordChar="•"

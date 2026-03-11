@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="clr-namespace:MessengerDesktop.Controls"
+             xmlns:controls="clr-namespace:MessengerDesktop.Views.Controls"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             x:Class="MessengerDesktop.Controls.AvatarControl"
+             x:Class="MessengerDesktop.Views.Controls.AvatarControl"
              x:Name="Root">
 
     <UserControl.Styles>

@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace MessengerDesktop.Controls.Admin;
+namespace MessengerDesktop.Views.Controls.Admin;
 
 public partial class DepartmentCardView : UserControl
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MessengerDesktop.Controls;
+namespace MessengerDesktop.Views.Controls;
 
 public partial class AvatarControl : UserControl
 {

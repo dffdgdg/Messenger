@@ -3,9 +3,10 @@
 			 xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:shared="using:MessengerShared.Dto"
+             xmlns:skeleton="using:MessengerDesktop.Views.Controls.Skeleton"
 			 xmlns:user="using:MessengerShared.Dto.User"
 			 xmlns:userShared="using:MessengerShared.Dto"
-			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 x:Class="MessengerDesktop.Views.ChatInfoPanel"
 			 x:DataType="vm:ChatViewModel"
 			 Width="320"
@@ -32,7 +33,7 @@
 			</Border>
 
 			<Grid Grid.Row="1">
-				<controls:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
+				<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
 							  IsVisible="{Binding !IsInitialLoading}">
 					<StackPanel Spacing="20" Margin="16,16,16,32">

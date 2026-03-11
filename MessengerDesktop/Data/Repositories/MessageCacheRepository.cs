@@ -120,8 +120,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
 
         try
         {
-            return await Db.QueryAsync<CachedMessage>(
-                @"SELECT m.* FROM messages m INNER JOIN messages_fts fts ON m.id = fts.rowid WHERE messages_fts MATCH ?
+            return await Db.QueryAsync<CachedMessage>(@"SELECT m.* FROM messages m INNER JOIN messages_fts fts ON m.id = fts.rowid WHERE messages_fts MATCH ?
                   AND m.is_deleted = 0 ORDER BY m.id DESC LIMIT ?", $"\"{ftsQuery}\"", limit);
         }
         catch (SQLiteException ex)
@@ -129,8 +128,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
             // FTS ошибка синтаксиса — fallback на LIKE
             Debug.WriteLine($"[MsgCache] FTS search failed, falling back to LIKE: {ex.Message}");
 
-            return await Db.QueryAsync<CachedMessage>(
-                "SELECT * FROM messages WHERE content LIKE ? AND is_deleted = 0 ORDER BY id DESC LIMIT ?",
+            return await Db.QueryAsync<CachedMessage>("SELECT * FROM messages WHERE content LIKE ? AND is_deleted = 0 ORDER BY id DESC LIMIT ?",
                 $"%{query}%", limit);
         }
     }

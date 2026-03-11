@@ -3,9 +3,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 mc:Ignorable="d"
-			 d:DesignHeight="600"
-			 d:DesignWidth="1200"
+			 xmlns:messengerdesktop="using:MessengerDesktop"
 			 x:Class="MessengerDesktop.Views.ChatsView"
 			 Background="{DynamicResource PrimaryBG}"
 			 x:DataType="vm:ChatsViewModel"
@@ -13,13 +11,14 @@
 			 xmlns:chat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:views="using:MessengerDesktop.Views"
-			 xmlns:controls="using:MessengerDesktop.Controls"
-			 xmlns:shared="using:MessengerDesktop.Controls.Shared"
 			 xmlns:dto="using:MessengerShared.Dto"
 			 xmlns:search="using:MessengerShared.Dto.Search"
+			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
 			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+			 xmlns:conChat="using:MessengerDesktop.Views.Controls.Chat"
 			 xmlns:chatDTO="using:MessengerShared.Dto.Chat"
-			 xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats">
+			 xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats"
+			 xmlns:controls="using:MessengerDesktop.Views.Controls">
 
 	<UserControl.Resources>
 		<x:Double x:Key="ChatItemHeight">52</x:Double>
@@ -35,22 +34,16 @@
 			<Grid Height="{StaticResource ChatItemHeight}"
 				  ColumnDefinitions="*,Auto"
 				  HorizontalAlignment="Stretch">
-				<controls:ChatItemView Grid.Column="0"
-									   HorizontalAlignment="Stretch"/>
 
-				<TextBlock Grid.Column="1"
-						   Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
-						   Foreground="{DynamicResource TextMuted}"
-						   FontSize="{StaticResource FontSizeSmall}"
-						   VerticalAlignment="Top"
-						   HorizontalAlignment="Right"
-						   Margin="8,4,0,0"/>
+				<conChat:ChatItemView Grid.Column="0"
+									  HorizontalAlignment="Stretch"/>
 
-				<StackPanel Grid.Column="2"
+				<StackPanel Grid.Column="1"
 							VerticalAlignment="Top"
 							HorizontalAlignment="Right"
 							Margin="{StaticResource TimeMargin}"
 							MinWidth="40">
+
 					<TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
 							   Foreground="{DynamicResource TextMuted}"
 							   FontSize="{StaticResource FontSizeSmall}"
@@ -224,31 +217,9 @@
 						Margin="8"
 						Height="40">
 					<Panel>
-						<Border Classes="SearchContainer"
-								IsVisible="{Binding !IsCompactMode, ElementName=Root}"
-								CornerRadius="8"
-								Height="36">
-							<Grid ColumnDefinitions="Auto,*">
-								<PathIcon Grid.Column="0"
-										  Data="{StaticResource SearchIcon}"
-										  Width="16" Height="16"
-										  Foreground="{DynamicResource TextMuted}"
-										  Margin="10,0,8,0"/>
-
-								<TextBox x:Name="SearchTextBox"
-										 Grid.Column="1"
-										 Classes="Borderless"
-										 Text="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
-										 Watermark="Поиск..."
-										 AutomationProperties.Name="Поиск по чатам и сообщениям"
-										 Background="Transparent"
-										 BorderThickness="0"
-										 VerticalContentAlignment="Center"
-										 VerticalAlignment="Center"
-										 Padding="0,0,10,0"
-										 FontSize="{StaticResource FontSizeBody}"/>
-							</Grid>
-						</Border>
+						<controls:SearchBox x:Name="SearchTextBox"
+											SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
+											IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
 						<Button Classes="IconButton CompactSearchButton"
 								IsVisible="{Binding IsCompactMode, ElementName=Root}"

@@ -1,10 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="using:MessengerDesktop.Controls.Admin"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="using:MessengerDesktop.Views.Controls.Admin"
              xmlns:user="using:MessengerShared.Dto.User"
-             x:Class="MessengerDesktop.Controls.Admin.UserCardView"
+             x:Class="MessengerDesktop.Views.Controls.Admin.UserCardView"
              x:DataType="user:UserDto">
   <Border Classes="Hoverable HoverActions"
             CornerRadius="8" Padding="12,10">

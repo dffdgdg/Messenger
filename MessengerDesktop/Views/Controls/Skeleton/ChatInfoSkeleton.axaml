@@ -1,10 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
-             Design.Width="320" Design.Height="720"
-             x:Class="MessengerDesktop.Controls.ChatInfoSkeleton">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+             x:Class="MessengerDesktop.Views.Controls.Skeleton.ChatInfoSkeleton">
 
     <ScrollViewer VerticalScrollBarVisibility="Hidden"
                   HorizontalScrollBarVisibility="Disabled">

@@ -4,11 +4,8 @@ public static class PollMappings
 {
     public static PollDto ToDto(this Poll poll, int? currentUserId = null)
     {
-        var selectedOptionIds = currentUserId.HasValue
-            ? poll.PollOptions?.SelectMany(o => o.PollVotes ?? [])
-                .Where(v => v.UserId == currentUserId)
-                .Select(v => v.OptionId).ToList() ?? []
-            : [];
+        var selectedOptionIds = currentUserId.HasValue? poll.PollOptions?.SelectMany(o => o.PollVotes ?? [])
+            .Where(v => v.UserId == currentUserId).Select(v => v.OptionId).ToList() ?? [] : [];
 
         return new PollDto
         {

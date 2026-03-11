@@ -30,7 +30,7 @@ public sealed class ExceptionHandlingMiddleware(
             {
                 Success = false,
                 Error = "Произошла внутренняя ошибка",
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.UtcNow
             };
 
             if (env.IsDevelopment())

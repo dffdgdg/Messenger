@@ -10,7 +10,7 @@
 		<StackPanel Spacing="16">
 			<TextBlock Text="Создать опрос" FontWeight="Bold" FontSize="20"/>
 
-			<TextBox Watermark="Вопрос" Text="{Binding Question}" Classes="DialogInput"/>
+			<TextBox Watermark="Вопрос" Text="{Binding Question}" Classes="Input"/>
 
 			<TextBlock Text="Варианты ответа" FontWeight="DemiBold"/>
 
@@ -18,7 +18,7 @@
 				<ItemsControl.ItemTemplate>
 					<DataTemplate x:DataType="vmDialog:PollDialogViewModel+OptionItem">
 						<Grid ColumnDefinitions="*,Auto" Margin="0,4">
-							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="DialogInput"/>
+							<TextBox Grid.Column="0" Text="{Binding Text}" Classes="Input"/>
 							<Button Grid.Column="1" Classes="IconButton Small" Margin="8,0,0,0"
 									Click="RemoveOption_Click" Tag="{Binding}">
 								<Path Data="{StaticResource CloseIcon}" Fill="{DynamicResource TextSecondary}"

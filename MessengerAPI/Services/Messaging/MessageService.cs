@@ -1,5 +1,4 @@
-﻿// Services/Messaging/MessageService.cs
-using MessengerAPI.Services.Base;
+﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.ReadReceipt;
 
@@ -88,7 +87,6 @@ public class MessageService(
         if (saveResult.IsFailure)
             return Result<MessageDto>.FromFailure(saveResult);
 
-        // ── Voice message ──
         if (dto.IsVoiceMessage)
         {
             if (string.IsNullOrEmpty(dto.VoiceFileUrl))
@@ -98,7 +96,7 @@ public class MessageService(
             {
                 MessageId = message.Id,
                 DurationSeconds = dto.VoiceDurationSeconds ?? 0,
-                TranscriptionStatus = "pending",
+                TranscriptionStatus = TranscriptionStatus.Pending,
                 FilePath = StripBaseUrl(dto.VoiceFileUrl),
                 FileName = dto.VoiceFileName ?? "voice.wav",
                 ContentType = dto.VoiceContentType ?? "audio/wav",
@@ -112,7 +110,6 @@ public class MessageService(
                 return Result<MessageDto>.FromFailure(voiceSaveResult);
         }
 
-        // ── Regular files ──
         if (dto.Files?.Count > 0)
         {
             var filesResult = await SaveMessageFilesAsync(message.Id, dto.Files);
@@ -336,7 +333,6 @@ public class MessageService(
         message.Content = null;
         message.EditedAt = appDateTime.UtcNow;
 
-        // Удаляем аудиофайл голосового сообщения
         if (message.VoiceMessage != null)
         {
             fileService.DeleteFile(message.VoiceMessage.FilePath);

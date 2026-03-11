@@ -51,7 +51,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private bool _isVoiceMessage;
     [ObservableProperty] private double? _voiceDurationSeconds;
-    [ObservableProperty] private string? _transcriptionStatus;
+    [ObservableProperty] private TranscriptionStatus? _transcriptionStatus;
     [ObservableProperty] private string? _transcriptionText;
     [ObservableProperty] private string? _voiceFileUrl;
 
@@ -125,11 +125,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         => IsVoiceMessage && !IsDeleted;
 
     public bool IsTranscriptionPending
-        => TranscriptionStatus is "pending" or "processing";
+        => TranscriptionStatus is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
     public bool IsTranscriptionDone
-        => TranscriptionStatus == "done";
+        => TranscriptionStatus == MessengerShared.Enum.TranscriptionStatus.Done;
     public bool IsTranscriptionFailed
-        => TranscriptionStatus == "failed";
+        => TranscriptionStatus == MessengerShared.Enum.TranscriptionStatus.Failed;
     public bool HasTranscriptionText
         => !string.IsNullOrWhiteSpace(TranscriptionText);
     public bool ShowTranscriptionPlaceholder
@@ -144,10 +144,10 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public string TranscriptionStatusDisplay
         => TranscriptionStatus switch
         {
-            "pending" => "Ожидает расшифровки...",
-            "processing" => "Расшифровка...",
-            "done" => "Расшифровано",
-            "failed" => "Ошибка расшифровки",
+            MessengerShared.Enum.TranscriptionStatus.Pending => "Ожидает расшифровки...",
+            MessengerShared.Enum.TranscriptionStatus.Processing => "Расшифровка...",
+            MessengerShared.Enum.TranscriptionStatus.Done => "Расшифровано",
+            MessengerShared.Enum.TranscriptionStatus.Failed => "Ошибка расшифровки",
             _ => ""
         };
 
@@ -350,14 +350,12 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         VoiceError = null;
 
-        // Если это наше сообщение на паузе — возобновить
         if (_audioPlayer.CurrentMessageId == Id && _audioPlayer.IsPaused)
         {
             _audioPlayer.Resume();
             return;
         }
 
-        // Загрузить аудио если ещё не кешировано
         if (_cachedAudioStream == null)
         {
             IsVoiceLoading = true;
@@ -372,7 +370,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                // Копируем в MemoryStream для повторного воспроизведения
                 var memoryStream = new MemoryStream();
                 await stream.CopyToAsync(memoryStream);
                 await stream.DisposeAsync();
@@ -395,7 +392,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             IsVoiceLoading = false;
         }
 
-        // Создаём новый поток-копию для NAudio (он владеет потоком)
         var playStream = new MemoryStream(_cachedAudioStream.ToArray());
         _audioPlayer.Play(Id, playStream);
     }
@@ -447,7 +443,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #endregion
 
-    public void UpdateTranscription(string? status, string? transcription)
+    public void UpdateTranscription(TranscriptionStatus? status, string? transcription)
     {
         TranscriptionStatus = status;
         TranscriptionText = transcription;
@@ -606,7 +602,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     partial void OnVoiceDurationSecondsChanged(double? value)
         => OnPropertyChanged(nameof(VoiceDurationFormatted));
 
-    partial void OnTranscriptionStatusChanged(string? value)
+    partial void OnTranscriptionStatusChanged(TranscriptionStatus? value)
     {
         OnPropertyChanged(nameof(IsTranscriptionPending));
         OnPropertyChanged(nameof(IsTranscriptionDone));

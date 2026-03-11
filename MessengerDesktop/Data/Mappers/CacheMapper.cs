@@ -5,10 +5,6 @@ using System.Text.Json;
 
 namespace MessengerDesktop.Data.Mappers;
 
-/// <summary>
-/// Маппинг между сетевыми DTO и локальными entity-классами.
-/// Статический, без состояния, без зависимостей.
-/// </summary>
 public static class CacheMapper
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -16,8 +12,6 @@ public static class CacheMapper
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
-
-    // Data/Mappers/CacheMapper.cs — только region MessageDto ↔ CachedMessage
 
     #region MessageDto ↔ CachedMessage
 
@@ -197,7 +191,7 @@ public static class CacheMapper
 
     #region UserDTO ↔ CachedUser
 
-    public static CachedUser ToEntity(this MessengerShared.Dto.User.UserDto dto)
+    public static CachedUser ToEntity(this UserDto dto)
     {
         return new CachedUser
         {
@@ -209,9 +203,9 @@ public static class CacheMapper
         };
     }
 
-    public static MessengerShared.Dto.User.UserDto ToDto(this CachedUser entity)
+    public static UserDto ToDto(this CachedUser entity)
     {
-        return new MessengerShared.Dto.User.UserDto
+        return new UserDto
         {
             Id = entity.Id,
             Username = entity.Username,

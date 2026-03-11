@@ -31,7 +31,7 @@
 			<StackPanel Spacing="12">
 				<StackPanel Spacing="6">
 					<TextBlock Text="Логин" FontSize="13" FontWeight="Medium"/>
-					<TextBox Text="{Binding Username}" Classes="DialogInput"
+					<TextBox Text="{Binding Username}" Classes="Input"
 							 Watermark="username" IsEnabled="{Binding IsNewUser}">
 						<TextBox.InnerLeftContent>
 							<TextBlock Text="@" Margin="12,0,4,0"
@@ -48,11 +48,11 @@
 					<TextBlock Text="ФИО" FontSize="13" FontWeight="Medium"/>
 					<Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
 						<TextBox Grid.Column="0" Text="{Binding Surname}"
-								 Classes="DialogInput" Watermark="Фамилия"/>
+								 Classes="Input" Watermark="Фамилия"/>
 						<TextBox Grid.Column="1" Text="{Binding Name}"
-								 Classes="DialogInput" Watermark="Имя"/>
+								 Classes="Input" Watermark="Имя"/>
 						<TextBox Grid.Column="2" Text="{Binding Midname}"
-								 Classes="DialogInput" Watermark="Отчество"/>
+								 Classes="Input" Watermark="Отчество"/>
 					</Grid>
 					<StackPanel Orientation="Horizontal" Spacing="4"
 								IsVisible="{Binding DisplayNamePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -87,7 +87,7 @@
 						<TextBox Grid.Column="0"
 								 Text="{Binding Password}"
 								 PasswordChar="•"
-								 Classes="DialogInput"
+								 Classes="Input"
 								 Watermark="Пароль">
 							<TextBox.InnerLeftContent>
 								<PathIcon Data="{StaticResource LockClosedIcon}"
@@ -99,7 +99,7 @@
 						<TextBox Grid.Column="1"
 								 Text="{Binding ConfirmPassword}"
 								 PasswordChar="•"
-								 Classes="DialogInput"
+								 Classes="Input"
 								 Watermark="Подтверждение">
 							<TextBox.InnerLeftContent>
 								<PathIcon Data="{StaticResource LockClosedIcon}"

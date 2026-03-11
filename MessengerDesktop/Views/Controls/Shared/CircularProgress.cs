@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MessengerDesktop.Controls.Shared;
+namespace MessengerDesktop.Views.Controls.Shared;
 
 public class CircularProgress : Control
 {

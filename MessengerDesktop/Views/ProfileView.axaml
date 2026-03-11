@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
-			 xmlns:controls="using:MessengerDesktop.Controls"
 			 x:Class="MessengerDesktop.Views.ProfileView"
 			 x:DataType="vm:ProfileViewModel"
 			 Background="{DynamicResource PrimaryBG}">
@@ -9,14 +9,6 @@
 	<UserControl.Styles>
 		<Style Selector="Button.AvatarButton:pointerover Border#AvatarOverlay">
 			<Setter Property="Opacity" Value="1"/>
-		</Style>
-
-		<Style Selector="TextBox.HasError">
-			<Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-		</Style>
-
-		<Style Selector="TextBox.HasSuccess">
-			<Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
 		</Style>
 	</UserControl.Styles>
 
@@ -36,7 +28,7 @@
 								   Classes="PageTitle"
 								   Margin="0,0,0,8"/>
 
-						<Border Classes="ProfileSection">
+						<Border Classes="Section">
 							<Grid ColumnDefinitions="Auto,*">
 
 								<Button Classes="AvatarButton IconButton"
@@ -86,7 +78,7 @@
 							</Grid>
 						</Border>
 
-						<Border Classes="ProfileSection">
+						<Border Classes="Section">
 							<StackPanel Spacing="16">
 
 								<Grid ColumnDefinitions="Auto,*,Auto">
@@ -166,7 +158,7 @@
 													   Classes="FieldLabel"
 													   FontSize="12"/>
 											<TextBox Text="{Binding TempSurname}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 Watermark="Иванов"/>
 										</StackPanel>
 
@@ -175,7 +167,7 @@
 													   Classes="FieldLabel"
 													   FontSize="12"/>
 											<TextBox Text="{Binding TempName}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 Watermark="Иван"/>
 										</StackPanel>
 
@@ -184,7 +176,7 @@
 													   Classes="FieldLabel"
 													   FontSize="12"/>
 											<TextBox Text="{Binding TempMidname}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 Watermark="Иванович"/>
 										</StackPanel>
 									</Grid>
@@ -203,7 +195,7 @@
 							</StackPanel>
 						</Border>
 
-						<Border Classes="ProfileSection">
+						<Border Classes="Section">
 							<StackPanel Spacing="16">
 
 								<Grid ColumnDefinitions="Auto,*,Auto">
@@ -260,7 +252,7 @@
 											</Border>
 											<TextBox Grid.Column="1"
 													 Text="{Binding TempUsername}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 CornerRadius="0,8,8,0"
 													 Watermark="username"
 													 MaxLength="30"/>
@@ -293,7 +285,7 @@
 							</StackPanel>
 						</Border>
 
-						<Border Classes="ProfileSection">
+						<Border Classes="Section">
 							<StackPanel Spacing="16">
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -335,7 +327,7 @@
 												   Classes="FieldLabel"
 												   FontSize="12"/>
 										<TextBox Text="{Binding CurrentPassword}"
-												 Classes="DialogInput"
+												 Classes="Input"
 												 PasswordChar="•"
 												 Watermark="Введите текущий пароль"
 												 MaxWidth="320"
@@ -351,7 +343,7 @@
 													   Classes="FieldLabel"
 													   FontSize="12"/>
 											<TextBox Text="{Binding NewPassword}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 PasswordChar="•"
 													 Watermark="Минимум 6 символов"/>
 											<TextBlock Text="{Binding NewPasswordValidationMessage}"
@@ -365,7 +357,7 @@
 													   Classes="FieldLabel"
 													   FontSize="12"/>
 											<TextBox Text="{Binding ConfirmPassword}"
-													 Classes="DialogInput"
+													 Classes="Input"
 													 PasswordChar="•"
 													 Watermark="Повторите пароль"/>
 
@@ -414,7 +406,7 @@
 							</StackPanel>
 						</Border>
 
-						<Border Classes="ProfileSection"
+						<Border Classes="Section"
 								IsVisible="{Binding HasDepartment}">
 							<Grid ColumnDefinitions="Auto,*">
 								<PathIcon Data="{StaticResource OrganizationIcon}"
@@ -432,7 +424,7 @@
 							</Grid>
 						</Border>
 
-						<Border Classes="ProfileSection">
+						<Border Classes="Section">
 							<Grid ColumnDefinitions="Auto,*,Auto">
 								<PathIcon Data="{StaticResource SignOutIcon}"
 										  Width="18" Height="18"

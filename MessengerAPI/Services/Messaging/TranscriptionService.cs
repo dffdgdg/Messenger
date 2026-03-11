@@ -65,7 +65,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
         try
         {
-            await SetStatusAsync(context, hubNotifier, voiceMessage, "processing", ct);
+            await SetStatusAsync(context, hubNotifier, voiceMessage, TranscriptionStatus.Processing, ct);
 
             var filePath = GetAbsolutePath(voiceMessage.FilePath);
             if (!File.Exists(filePath))
@@ -77,7 +77,9 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
             var transcription = await RecognizeAsync(filePath, ct);
 
             voiceMessage.TranscriptionText = transcription;
-            voiceMessage.TranscriptionStatus = string.IsNullOrWhiteSpace(transcription) ? "failed" : "done";
+            voiceMessage.TranscriptionStatus = string.IsNullOrWhiteSpace(transcription)
+                ? TranscriptionStatus.Failed
+                : TranscriptionStatus.Done;
 
             await context.SaveChangesAsync(ct);
 
@@ -136,12 +138,13 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-        var voiceMessage = await context.VoiceMessages.AsNoTracking().FirstOrDefaultAsync(v => v.MessageId == messageId, ct);
+        var voiceMessage = await context.VoiceMessages.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.MessageId == messageId, ct);
 
         if (voiceMessage is null)
             return Result.Failure("Голосовое сообщение не найдено");
 
-        if (voiceMessage.TranscriptionStatus == "processing")
+        if (voiceMessage.TranscriptionStatus == TranscriptionStatus.Processing)
             return Result.Failure("Расшифровка уже выполняется");
 
         await _transcriptionQueue.EnqueueAsync(messageId, ct);
@@ -287,7 +290,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
     private static async Task SetStatusAsync(
         MessengerDbContext context, IHubNotifier hubNotifier,
-        VoiceMessage voiceMessage, string status, CancellationToken ct)
+        VoiceMessage voiceMessage, TranscriptionStatus status, CancellationToken ct)
     {
         voiceMessage.TranscriptionStatus = status;
         await context.SaveChangesAsync(ct);
@@ -306,7 +309,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
     {
         try
         {
-            voiceMessage.TranscriptionStatus = "failed";
+            voiceMessage.TranscriptionStatus = TranscriptionStatus.Failed;
             await context.SaveChangesAsync(CancellationToken.None);
 
             await hubNotifier.SendToChatAsync(voiceMessage.Message.ChatId, "TranscriptionStatusChanged",
@@ -314,12 +317,12 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
                 {
                     MessageId = voiceMessage.MessageId,
                     ChatId = voiceMessage.Message.ChatId,
-                    Status = "failed"
+                    Status = TranscriptionStatus.Failed
                 });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,"Не удалось установить статус failed для сообщения {MessageId}", voiceMessage.MessageId);
+            _logger.LogError(ex, "Не удалось установить статус failed для сообщения {MessageId}", voiceMessage.MessageId);
         }
     }
 

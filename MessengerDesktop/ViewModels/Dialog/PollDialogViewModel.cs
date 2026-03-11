@@ -28,10 +28,8 @@ public partial class PollDialogViewModel : DialogBaseViewModel
 
     public bool CanAddOption => Options.Count < MaxOptions;
     public bool CanRemoveOption => Options.Count > MinOptions;
-    public bool CanCreate =>
-        !string.IsNullOrWhiteSpace(Question) &&
-        Options.Count >= MinOptions &&
-        Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
+    public bool CanCreate => !string.IsNullOrWhiteSpace(Question) &&
+        Options.Count >= MinOptions && Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
 
     public PollDialogViewModel(int chatId)
     {
@@ -49,9 +47,7 @@ public partial class PollDialogViewModel : DialogBaseViewModel
         NotifyStateChanged();
     }
 
-    partial void OnOptionsChanged(
-        ObservableCollection<OptionItem>? oldValue,
-        ObservableCollection<OptionItem> newValue)
+    partial void OnOptionsChanged(ObservableCollection<OptionItem>? oldValue, ObservableCollection<OptionItem> newValue)
     {
         if (oldValue != null)
             UnsubscribeFromOptions(oldValue);

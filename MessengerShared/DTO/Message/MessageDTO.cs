@@ -46,7 +46,7 @@ public class MessageDto
     // ── Voice message ──
     public bool IsVoiceMessage { get; set; }
     public double? VoiceDurationSeconds { get; set; }
-    public string? TranscriptionStatus { get; set; }
+    public TranscriptionStatus? TranscriptionStatus { get; set; }
     public string? TranscriptionText { get; set; }
     public string? VoiceFileUrl { get; set; }
     public string? VoiceFileName { get; set; }

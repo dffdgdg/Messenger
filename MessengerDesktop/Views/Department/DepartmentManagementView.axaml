@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 xmlns:vm="using:MessengerDesktop.ViewModels.Department"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 x:Class="MessengerDesktop.Views.Department.DepartmentManagementView"
@@ -107,7 +107,7 @@
 						  IsVisible="{Binding CanManage}">
 				<StackPanel Spacing="24" MaxWidth="1200" HorizontalAlignment="Center">
 
-					<Border Classes="ProfileSection" Width="600">
+					<Border Classes="Section" Width="600">
 						<StackPanel Spacing="16">
 							<Grid ColumnDefinitions="*,Auto">
 								<StackPanel Orientation="Horizontal" Spacing="10">
@@ -125,24 +125,7 @@
 											   Foreground="{DynamicResource Accent}"/>
 								</StackPanel>
 
-								<Border Grid.Column="1"
-										Classes="SearchContainer"
-										Width="250"
-										Height="36">
-									<Grid ColumnDefinitions="Auto,*">
-										<PathIcon Grid.Column="0"
-												  Data="{StaticResource SearchIcon}"
-												  Width="14" Height="14"
-												  Foreground="{DynamicResource TextMuted}"
-												  Margin="10,0,8,0"/>
-										<TextBox Grid.Column="1"
-												 Classes="Borderless"
-												 Text="{Binding SearchQuery}"
-												 Watermark="Поиск..."
-												 FontSize="13"
-												 VerticalContentAlignment="Center"/>
-									</Grid>
-								</Border>
+								<controls:SearchBox Grid.Column="1" SearchText="{Binding SearchQuery}" Width="250"/>
 							</Grid>
 
 							<Border IsVisible="{Binding !FilteredMembers.Count}"
@@ -233,7 +216,7 @@
 						</StackPanel>
 					</Border>
 
-					<Border Classes="ProfileSection"
+					<Border Classes="Section"
 							Width="600">
 						<StackPanel Spacing="16">
 							<StackPanel Orientation="Horizontal" Spacing="10">

@@ -1,0 +1,1667 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 x:Class="MessengerDesktop.Views.StyleGuideView"
+			 x:DataType="vm:StyleGuideViewModel"
+			 Background="{DynamicResource PrimaryBG}">
+
+	<UserControl.Styles>
+		<Style Selector="Border.StyleLabel">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+			<Setter Property="CornerRadius" Value="4"/>
+			<Setter Property="Padding" Value="6,2"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+		</Style>
+
+		<Style Selector="Border.StyleLabel TextBlock">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontFamily" Value="Consolas, monospace"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		</Style>
+	</UserControl.Styles>
+
+	<Border Classes="PageContainer">
+		<Grid ColumnDefinitions="260,*">
+
+			<Border Grid.Column="0" Background="{DynamicResource SecondaryBG}"
+					BorderThickness="0,0,1,0"
+					BorderBrush="{DynamicResource BorderDefault}">
+				<DockPanel>
+					<Border DockPanel.Dock="Top" Padding="20,24,20,16">
+						<StackPanel Spacing="4">
+							<TextBlock Text="Style Guide" FontSize="20" FontWeight="Bold"/>
+							<TextBlock Text="Каталог UI-компонентов" FontSize="12"
+									   Foreground="{DynamicResource TextSecondary}"/>
+						</StackPanel>
+					</Border>
+
+					<Border DockPanel.Dock="Top" Height="1"
+							Background="{DynamicResource BorderDefault}" Margin="16,0"/>
+
+					<ScrollViewer DockPanel.Dock="Top" Margin="12,16">
+						<StackPanel Spacing="4">
+							<TextBlock Text="РАЗДЕЛЫ" Classes="CategoryHeader"/>
+							<ListBox SelectedIndex="{Binding SelectedTabIndex}"
+									 Classes="NavMenu">
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="📝" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Типография"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="🔘" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Кнопки"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="✏️" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Поля ввода"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="🏷️" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Бейджи"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="💬" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Сообщения"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="🧭" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Навигация"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="📦" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Контейнеры"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="✨" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Hover и карточки"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+								<ListBoxItem>
+									<StackPanel Orientation="Horizontal" Spacing="12">
+										<TextBlock Text="📋" FontSize="16"
+												   VerticalAlignment="Center"/>
+										<TextBlock Text="Контекстное меню"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+								</ListBoxItem>
+							</ListBox>
+						</StackPanel>
+					</ScrollViewer>
+				</DockPanel>
+			</Border>
+
+			<Border Grid.Column="1" Background="{DynamicResource PrimaryBG}">
+				<Grid>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=0}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Типография" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Все текстовые стили из MainStyle.axaml"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Заголовки"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="CategoryHeader"/>
+											</Border>
+											<TextBlock Classes="CategoryHeader" Text="КАТЕГОРИЯ"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="SectionHeader"/>
+											</Border>
+											<TextBlock Classes="SectionHeader"
+													   Text="Заголовок секции"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="SectionHeader Large"/>
+											</Border>
+											<TextBlock Classes="SectionHeader Large"
+													   Text="Большой заголовок секции"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="PanelTitle"/>
+											</Border>
+											<TextBlock Classes="PanelTitle"
+													   Text="Заголовок панели"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="PageTitle"/>
+											</Border>
+											<TextBlock Classes="PageTitle"
+													   Text="Заголовок страницы"/>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Размеры текста"/>
+										<Separator Opacity="0.15"/>
+										<TextBlock Text="По умолчанию (наследуется из темы)"/>
+										<TextBlock Text="11px — мелкий текст" FontSize="11"/>
+										<TextBlock Text="13px — основной текст" FontSize="13"/>
+										<TextBlock Text="15px — средний текст" FontSize="15"/>
+										<TextBlock Text="18px — крупный текст" FontSize="18"/>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Специальные текстовые стили"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="FieldLabel"/>
+											</Border>
+											<TextBlock Classes="FieldLabel"
+													   Text="Подпись к полю ввода"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="ChatName"/>
+											</Border>
+											<TextBlock Classes="ChatName" Text="Иван Петров"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="ChatPreview"/>
+											</Border>
+											<TextBlock Classes="ChatPreview"
+													   Text="Привет, как дела? Давно не виделись..."/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoiceTime"/>
+											</Border>
+											<TextBlock Classes="VoiceTime" Text="1:23 / 3:45"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoiceError"/>
+											</Border>
+											<TextBlock Classes="VoiceError"
+													   Text="Не удалось загрузить аудиофайл"/>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=1}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Кнопки" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Все варианты кнопок и их состояния"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Primary"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="4" Margin="0,0,12,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="Primary"/>
+												</Border>
+												<Button Classes="Primary" Content="Primary"/>
+											</StackPanel>
+
+											<StackPanel Spacing="4" Margin="0,0,12,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="Primary (disabled)"/>
+												</Border>
+												<Button Classes="Primary" Content="Disabled"
+														IsEnabled="False"/>
+											</StackPanel>
+										</WrapPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Primary FullWidth"/>
+											</Border>
+											<Button Classes="Primary FullWidth"
+													Content="Primary FullWidth" Width="360"/>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Dialog кнопки"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="4" Margin="0,0,12,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="DialogOutline"/>
+												</Border>
+												<Button Classes="DialogOutline" Content="Outline"/>
+											</StackPanel>
+
+											<StackPanel Spacing="4" Margin="0,0,12,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="DialogAccent"/>
+												</Border>
+												<Button Classes="DialogAccent" Content="Accent"/>
+											</StackPanel>
+
+											<StackPanel Spacing="4" Margin="0,0,12,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="DialogDanger"/>
+												</Border>
+												<Button Classes="DialogDanger" Content="Danger"/>
+											</StackPanel>
+										</WrapPanel>
+
+										<TextBlock Classes="SectionHeader" Text="DISABLED"
+												   Margin="0,4,0,0"/>
+										<WrapPanel Orientation="Horizontal">
+											<Button Classes="DialogOutline" Content="Disabled"
+													IsEnabled="False" Margin="0,0,8,8"/>
+											<Button Classes="DialogAccent" Content="Disabled"
+													IsEnabled="False" Margin="0,0,8,8"/>
+											<Button Classes="DialogDanger" Content="Disabled"
+													IsEnabled="False" Margin="0,0,8,8"/>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Специальные"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="4" Margin="0,0,16,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="EmojiButton"/>
+												</Border>
+												<Button Classes="EmojiButton" Content="🙂"/>
+											</StackPanel>
+
+											<StackPanel Spacing="4" Margin="0,0,16,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="ClearButton"/>
+												</Border>
+												<Button Classes="ClearButton" Content="Очистить"/>
+											</StackPanel>
+
+											<StackPanel Spacing="4" Margin="0,0,16,12">
+												<Border Classes="StyleLabel">
+													<TextBlock Text="CompactSearchButton"/>
+												</Border>
+												<Button Classes="CompactSearchButton"
+														Content="Поиск" Padding="12,8"/>
+											</StackPanel>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Иконочные кнопки"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="IconButton"/>
+												</Border>
+												<Button Classes="IconButton">
+													<PathIcon
+													Data="{StaticResource SettingsIcon}"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Small"/>
+												</Border>
+												<Button Classes="IconButton Small">
+													<PathIcon Data="{StaticResource AddIcon}"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Subtle"/>
+												</Border>
+												<Button Classes="IconButton Subtle">
+													<PathIcon
+													Data="{StaticResource SearchIcon}"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Danger"/>
+												</Border>
+												<Button Classes="IconButton Danger">
+													<PathIcon
+													Data="{StaticResource DeleteIcon}"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Disabled"/>
+												</Border>
+												<Button Classes="IconButton" IsEnabled="False">
+													<PathIcon
+													Data="{StaticResource SettingsIcon}"/>
+												</Button>
+											</StackPanel>
+										</WrapPanel>
+
+										<TextBlock Classes="SectionHeader" Text="TOGGLE BUTTON"
+												   Margin="0,4,0,0"/>
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Toggle Off"/>
+												</Border>
+												<ToggleButton Classes="IconButton"
+															  IsChecked="False">
+													<PathIcon
+													Data="{StaticResource CheckmarkIcon}"/>
+												</ToggleButton>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Toggle On"/>
+												</Border>
+												<ToggleButton Classes="IconButton"
+															  IsChecked="True">
+													<PathIcon
+													Data="{StaticResource CheckmarkIcon}"/>
+												</ToggleButton>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="Disabled"/>
+												</Border>
+												<ToggleButton Classes="IconButton"
+															  IsEnabled="False">
+													<PathIcon
+													Data="{StaticResource CheckmarkIcon}"/>
+												</ToggleButton>
+											</StackPanel>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Кнопки профиля"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="6" Margin="0,0,20,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="AvatarButton"/>
+												</Border>
+												<Button Classes="AvatarButton">
+													<Border Width="44" Height="44"
+															CornerRadius="22"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="ИП" FontWeight="SemiBold"
+																   FontSize="16"
+																   Foreground="{DynamicResource Accent}"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,20,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="SenderNameButton"/>
+												</Border>
+												<Button Classes="SenderNameButton">
+													<TextBlock Text="Иван Петров"
+															   FontWeight="SemiBold"
+															   Foreground="{DynamicResource Accent}"/>
+												</Button>
+											</StackPanel>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Voice Message кнопки"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="VoicePlayBtn"/>
+												</Border>
+												<Button Classes="VoicePlayBtn">
+													<PathIcon
+													Data="M8,5.14V19.14L19,12.14L8,5.14Z"
+													Width="16" Height="16"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="TranscribeBtn"/>
+												</Border>
+												<Button Classes="TranscribeBtn">
+													<PathIcon
+													Data="M9,5A4,4 0 0,1 13,9H11A2,2 0 0,0 9,7V5Z"
+													Width="14" Height="14"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="TranscribeBtn Active"/>
+												</Border>
+												<Button Classes="TranscribeBtn Active">
+													<PathIcon
+													Data="M9,5A4,4 0 0,1 13,9H11A2,2 0 0,0 9,7V5Z"
+													Width="14" Height="14"/>
+												</Button>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,16,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="RetryTranscription"/>
+												</Border>
+												<Button Classes="RetryTranscription"
+														Content="Повторить"/>
+											</StackPanel>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="InfoPanelItem"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="2" Width="350"
+													HorizontalAlignment="Left">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Button.InfoPanelItem"/>
+											</Border>
+											<Button Classes="InfoPanelItem">
+												<StackPanel Orientation="Horizontal" Spacing="12">
+													<PathIcon
+													Data="{StaticResource SettingsIcon}"
+													Width="16" Height="16"
+													Foreground="{DynamicResource TextSecondary}"/>
+													<TextBlock
+													Text="Элемент информационной панели"
+													VerticalAlignment="Center"/>
+												</StackPanel>
+											</Button>
+											<Button Classes="InfoPanelItem">
+												<StackPanel Orientation="Horizontal" Spacing="12">
+													<PathIcon
+													Data="{StaticResource ContactsIcon}"
+													Width="16" Height="16"
+													Foreground="{DynamicResource TextSecondary}"/>
+													<TextBlock Text="Ещё один элемент"
+															   VerticalAlignment="Center"/>
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=2}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Поля ввода" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Текстовы�� поля, комбобоксы, переключатели"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Текстовые поля"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Input"/>
+											</Border>
+											<TextBox Classes="Input"
+													 Watermark="Введите текст..."
+													 Width="360" HorizontalAlignment="Left"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Input"/>
+											</Border>
+											<TextBox Classes="Input"
+													 Watermark="Логин или email"
+													 Width="360" HorizontalAlignment="Left"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Borderless"/>
+											</Border>
+											<Border Background="{DynamicResource ThirdBG}"
+													CornerRadius="8" Padding="8,4"
+													Width="360" HorizontalAlignment="Left">
+												<TextBox Classes="Borderless"
+														 Watermark="Borderless внутри контейнера"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="ChatInput"/>
+											</Border>
+											<Border Background="{DynamicResource ThirdBG}"
+													CornerRadius="12"
+													Width="460" HorizontalAlignment="Left">
+												<TextBox Classes="ChatInput"
+														 Watermark="Напишите сообщение..."/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Селекторы и переключатели"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="DialogCombo"/>
+											</Border>
+											<ComboBox Classes="DialogCombo" Width="360"
+													  SelectedIndex="0"
+													  HorizontalAlignment="Left">
+												<ComboBoxItem Content="Опция 1"/>
+												<ComboBoxItem Content="Опция 2"/>
+												<ComboBoxItem Content="Опция 3"/>
+											</ComboBox>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="ToggleSwitch (on)"/>
+											</Border>
+											<ToggleSwitch IsChecked="True"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="ToggleSwitch (off)"/>
+											</Border>
+											<ToggleSwitch IsChecked="False"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="CheckBox.RememberMe"/>
+											</Border>
+											<CheckBox Classes="RememberMe"
+													  Content="Запомнить меня"
+													  IsChecked="True"/>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Voice Slider"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoiceSlider"/>
+											</Border>
+											<Slider Classes="VoiceSlider" Value="40" Width="300"
+													HorizontalAlignment="Left"/>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoiceSlider (disabled)"/>
+											</Border>
+											<Slider Classes="VoiceSlider" Value="20" Width="300"
+													IsEnabled="False"
+													HorizontalAlignment="Left"/>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Chat Input элементы"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="EditModePanel"/>
+											</Border>
+											<Border Classes="EditModePanel" Width="460"
+													HorizontalAlignment="Left">
+												<StackPanel Orientation="Horizontal" Spacing="8">
+													<PathIcon
+													Data="{StaticResource EditIcon}"
+													Width="14" Height="14"
+													Foreground="{DynamicResource Accent}"/>
+													<TextBlock
+													Text="Редактирование сообщения..."
+													Foreground="{DynamicResource TextSecondary}"
+													FontSize="13"
+													VerticalAlignment="Center"/>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="AttachmentPreview"/>
+											</Border>
+											<Border Classes="AttachmentPreview" Width="200"
+													HorizontalAlignment="Left">
+												<StackPanel Orientation="Horizontal" Spacing="8">
+													<Border Width="40" Height="40"
+															CornerRadius="6"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="📎" FontSize="18"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+													<StackPanel VerticalAlignment="Center">
+														<TextBlock Text="document.pdf"
+																   FontSize="13"
+																   FontWeight="Medium"/>
+														<TextBlock Text="2.4 MB" FontSize="11"
+																   Foreground="{DynamicResource TextSecondary}"/>
+													</StackPanel>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=3}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Бейджи" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Счётчики непрочитанных и метки"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Бейджи"/>
+										<Separator Opacity="0.15"/>
+
+										<WrapPanel Orientation="Horizontal">
+											<StackPanel Spacing="6" Margin="0,0,24,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="UnreadBadge"/>
+												</Border>
+												<Border Classes="UnreadBadge"
+														HorizontalAlignment="Center">
+													<TextBlock Text="3"
+															   Foreground="{DynamicResource TextOnAccent}"
+															   FontSize="11"
+															   FontWeight="SemiBold"
+															   HorizontalAlignment="Center"
+															   VerticalAlignment="Center"/>
+												</Border>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,24,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="UnreadBadge (99+)"/>
+												</Border>
+												<Border Classes="UnreadBadge"
+														HorizontalAlignment="Center">
+													<TextBlock Text="99+"
+															   Foreground="{DynamicResource TextOnAccent}"
+															   FontSize="11"
+															   FontWeight="SemiBold"
+															   HorizontalAlignment="Center"
+															   VerticalAlignment="Center"/>
+												</Border>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,24,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="CountBadge"/>
+												</Border>
+												<Border Classes="CountBadge"
+														HorizontalAlignment="Center">
+													<TextBlock Text="12"/>
+												</Border>
+											</StackPanel>
+
+											<StackPanel Spacing="6" Margin="0,0,24,12"
+														HorizontalAlignment="Center">
+												<Border Classes="StyleLabel"
+														HorizontalAlignment="Center">
+													<TextBlock Text="CompactBadge"/>
+												</Border>
+												<Border Classes="CompactBadge"
+														Background="{DynamicResource Accent}"
+														Padding="6,2"
+														HorizontalAlignment="Center">
+													<TextBlock Text="5"
+															   Foreground="{DynamicResource TextOnAccent}"
+															   FontSize="10" FontWeight="Bold"
+															   HorizontalAlignment="Center"/>
+												</Border>
+											</StackPanel>
+										</WrapPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=4}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Сообщения" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Баблы, алерты, голосовые сообщения"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Уведомления и алерты"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="AlertError / MessageError"/>
+											</Border>
+											<Border Classes="AlertError">
+												<TextBlock Text="⛔  Что-то пошло не так"
+														   TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock
+												Text="AlertSuccess / MessageSuccess"/>
+											</Border>
+											<Border Classes="AlertSuccess">
+												<TextBlock
+												Text="✅  Операция выполнена успешно"
+												TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="AlertInfo"/>
+											</Border>
+											<Border Classes="AlertInfo">
+												<TextBlock
+												Text="ℹ️  Информационное сообщение"
+												TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Баблы — Own (свои сообщения)"/>
+										<TextBlock Classes="SectionHeader"
+												   Text="Группировка: First → Middle → Last. Одиночное: Alone"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="2" HorizontalAlignment="Right">
+											<Border Classes="StyleLabel"
+													HorizontalAlignment="Right">
+												<TextBlock Text="Own.First"/>
+											</Border>
+											<Border Classes="MessageBubble Own First"
+													HorizontalAlignment="Right">
+												<TextBlock Text="Привет! Как дела?"
+														   TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+
+										<Border Classes="MessageBubble Own Middle"
+												HorizontalAlignment="Right">
+											<TextBlock Text="Давно не виделись"
+													   TextWrapping="Wrap"/>
+										</Border>
+
+										<Border Classes="MessageBubble Own Last"
+												HorizontalAlignment="Right">
+											<TextBlock Text="Может встретимся?"
+													   TextWrapping="Wrap"/>
+										</Border>
+
+										<StackPanel Spacing="2" HorizontalAlignment="Right"
+													Margin="0,12,0,0">
+											<Border Classes="StyleLabel"
+													HorizontalAlignment="Right">
+												<TextBlock Text="Own.Alone"/>
+											</Border>
+											<Border Classes="MessageBubble Own Alone"
+													HorizontalAlignment="Right">
+												<TextBlock Text="Одиночное сообщение 👋"
+														   TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Баблы — Other (чужие сообщения)"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="2" HorizontalAlignment="Left">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Other.First"/>
+											</Border>
+											<Border Classes="MessageBubble Other First"
+													HorizontalAlignment="Left">
+												<TextBlock Text="Привет!"
+														   TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+
+										<Border Classes="MessageBubble Other Middle"
+												HorizontalAlignment="Left">
+											<TextBlock Text="Всё отлично, спасибо"
+													   TextWrapping="Wrap"/>
+										</Border>
+
+										<Border Classes="MessageBubble Other Last"
+												HorizontalAlignment="Left">
+											<TextBlock Text="Давай в субботу?"
+													   TextWrapping="Wrap"/>
+										</Border>
+
+										<StackPanel Spacing="2" HorizontalAlignment="Left"
+													Margin="0,12,0,0">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Other.Alone"/>
+											</Border>
+											<Border Classes="MessageBubble Other Alone"
+													HorizontalAlignment="Left">
+												<TextBlock Text="Одиночное сообщение"
+														   TextWrapping="Wrap"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="MessageHighlight и Wrapper"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="MessageHighlight"/>
+											</Border>
+											<Border Classes="MessageHighlight" Padding="12">
+												<TextBlock Text="Обычное состояние"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="MessageHighlight Highlighted"/>
+											</Border>
+											<Border Classes="MessageHighlight Highlighted"
+													Padding="12">
+												<TextBlock Text="Подсвеченное сообщение"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="MessageWrapper (hover)"/>
+											</Border>
+											<Border Classes="MessageWrapper" Padding="12">
+												<TextBlock
+												Text="Наведите курсор для hover-эффекта"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Voice Message Player"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoicePlayerContainer"/>
+											</Border>
+											<Border Classes="VoicePlayerContainer" Padding="8"
+													Background="{DynamicResource ThirdBG}"
+													CornerRadius="18"
+													HorizontalAlignment="Left">
+												<StackPanel Orientation="Horizontal" Spacing="10">
+													<Button Classes="VoicePlayBtn">
+														<PathIcon
+														Data="M8,5.14V19.14L19,12.14L8,5.14Z"
+														Width="16" Height="16"/>
+													</Button>
+													<StackPanel VerticalAlignment="Center"
+																Spacing="2" Width="180">
+														<Slider Classes="VoiceSlider"
+																Value="35"/>
+														<Grid>
+															<TextBlock Classes="VoiceTime"
+																	   Text="0:12"
+																	   HorizontalAlignment="Left"/>
+															<TextBlock Classes="VoiceTime"
+																	   Text="0:45"
+																	   HorizontalAlignment="Right"/>
+														</Grid>
+													</StackPanel>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="VoiceLoadingContainer"/>
+											</Border>
+											<Border Classes="VoiceLoadingContainer"
+													HorizontalAlignment="Left">
+												<TextBlock Text="..."
+														   HorizontalAlignment="Center"
+														   VerticalAlignment="Center"
+														   FontSize="14" Opacity="0.5"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="TranscriptionPanel"/>
+											</Border>
+											<Border Classes="TranscriptionPanel" MaxWidth="340"
+													HorizontalAlignment="Left">
+												<TextBlock
+												Text="Расшифровка голосового сообщения..."
+												TextWrapping="Wrap" FontSize="13"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=5}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Навигация" FontSize="24" FontWeight="Bold"/>
+									<TextBlock Text="Элементы навигации и списки"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="NavButton (RadioButton)"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock
+												Text="RadioButton.NavButton — горизонтально"/>
+											</Border>
+											<StackPanel Orientation="Horizontal" Spacing="8">
+												<RadioButton Classes="NavButton"
+															 IsChecked="True"
+															 GroupName="GuideH"
+															 Tag="{StaticResource ChatsIcon}"
+															 Content="Чаты"/>
+												<RadioButton Classes="NavButton"
+															 GroupName="GuideH"
+															 Tag="{StaticResource ContactsIcon}"
+															 Content="Контакты"/>
+												<RadioButton Classes="NavButton"
+															 GroupName="GuideH"
+															 Tag="{StaticResource SettingsIcon}"
+															 Content="Настройки"/>
+												<RadioButton Classes="NavButton"
+															 GroupName="GuideH"
+															 Tag="{StaticResource SettingsIcon}"
+															 Content="Disabled"
+															 IsEnabled="False"/>
+											</StackPanel>
+										</StackPanel>
+
+										<StackPanel Spacing="4" Margin="0,8,0,0">
+											<Border Classes="StyleLabel">
+												<TextBlock
+												Text="RadioButton.NavButton — вертикально"/>
+											</Border>
+											<StackPanel Spacing="4" Width="200"
+														HorizontalAlignment="Left">
+												<RadioButton Classes="NavButton"
+															 IsChecked="True"
+															 GroupName="GuideV"
+															 Tag="{StaticResource ChatsIcon}"
+															 Content="Чаты"
+															 HorizontalAlignment="Stretch"/>
+												<RadioButton Classes="NavButton"
+															 GroupName="GuideV"
+															 Tag="{StaticResource ContactsIcon}"
+															 Content="Контакты"
+															 HorizontalAlignment="Stretch"/>
+												<RadioButton Classes="NavButton"
+															 GroupName="GuideV"
+															 Tag="{StaticResource SettingsIcon}"
+															 Content="Настройки"
+															 HorizontalAlignment="Stretch"/>
+											</StackPanel>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="NavMenu (ListBox)"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock Text="ListBox.NavMenu"/>
+										</Border>
+										<ListBox Classes="NavMenu" Width="280"
+												 HorizontalAlignment="Left" SelectedIndex="0">
+											<ListBoxItem>
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<PathIcon
+													Data="{StaticResource ChatsIcon}"
+													Width="16" Height="16"/>
+													<TextBlock Text="Общие"/>
+												</StackPanel>
+											</ListBoxItem>
+											<ListBoxItem>
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<PathIcon
+													Data="{StaticResource SettingsIcon}"
+													Width="16" Height="16"/>
+													<TextBlock Text="Настройки"/>
+												</StackPanel>
+											</ListBoxItem>
+											<ListBoxItem>
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<PathIcon
+													Data="{StaticResource ContactsIcon}"
+													Width="16" Height="16"/>
+													<TextBlock Text="Контакты"/>
+												</StackPanel>
+											</ListBoxItem>
+										</ListBox>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="ChatListItem"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock Text="Button.ChatListItem"/>
+										</Border>
+										<StackPanel Spacing="2" Width="350"
+													HorizontalAlignment="Left">
+											<Button Classes="ChatListItem">
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<Border Width="36" Height="36"
+															CornerRadius="18"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="ОЧ" FontSize="12"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource Accent}"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+													<StackPanel VerticalAlignment="Center">
+														<TextBlock Classes="ChatName"
+																   Text="Общий чат"/>
+														<TextBlock Classes="ChatPreview"
+																   Text="Иван: Всем привет!"/>
+													</StackPanel>
+												</StackPanel>
+											</Button>
+											<Button Classes="ChatListItem">
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<Border Width="36" Height="36"
+															CornerRadius="18"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="Д" FontSize="12"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource Accent}"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+													<StackPanel VerticalAlignment="Center">
+														<TextBlock Classes="ChatName"
+																   Text="Дизайн"/>
+														<TextBlock Classes="ChatPreview"
+																   Text="Новый макет готов"/>
+													</StackPanel>
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="MemberItem"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock Text="Button.MemberItem"/>
+										</Border>
+										<StackPanel Spacing="2" Width="300"
+													HorizontalAlignment="Left">
+											<Button Classes="MemberItem">
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<Border Width="36" Height="36"
+															CornerRadius="18"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="ИП" FontSize="12"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource Accent}"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+													<StackPanel VerticalAlignment="Center">
+														<TextBlock Text="Иван Петров"
+																   FontWeight="Medium"/>
+														<TextBlock Text="Онлайн" FontSize="12"
+																   Foreground="{DynamicResource Accent}"/>
+													</StackPanel>
+												</StackPanel>
+											</Button>
+											<Button Classes="MemberItem">
+												<StackPanel Orientation="Horizontal"
+															Spacing="10">
+													<Border Width="36" Height="36"
+															CornerRadius="18"
+															Background="{DynamicResource AccentMuted}">
+														<TextBlock Text="МС" FontSize="12"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource Accent}"
+																   HorizontalAlignment="Center"
+																   VerticalAlignment="Center"/>
+													</Border>
+													<StackPanel VerticalAlignment="Center">
+														<TextBlock Text="Мария Сидорова"
+																   FontWeight="Medium"/>
+														<TextBlock Text="Была 5 мин назад"
+																   FontSize="12"
+																   Foreground="{DynamicResource TextSecondary}"/>
+													</StackPanel>
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=6}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Контейнеры" FontSize="24"
+											   FontWeight="Bold"/>
+									<TextBlock Text="Обёртки, секции, панели" FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="Контейнеры-обёртки"/>
+										<Separator Opacity="0.15"/>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="PageContainer"/>
+											</Border>
+											<Border Classes="PageContainer" Padding="16"
+													Height="50">
+												<TextBlock Text="Border.PageContainer"
+														   VerticalAlignment="Center"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Section"/>
+											</Border>
+											<Border Classes="Section" Padding="16"
+													Height="50">
+												<TextBlock
+												Text="Border.Section (hover → BorderHover)"
+												VerticalAlignment="Center"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="Section"/>
+											</Border>
+											<Border Classes="Section" Padding="16"
+													Height="50">
+												<TextBlock
+												Text="Border.Section (hover → BorderHover)"
+												VerticalAlignment="Center"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="DialogContainer"/>
+											</Border>
+											<Border Classes="DialogContainer" Padding="16"
+													Height="50">
+												<TextBlock
+												Text="Border.DialogContainer (с тенью)"
+												VerticalAlignment="Center"/>
+											</Border>
+										</StackPanel>
+
+										<StackPanel Spacing="4">
+											<Border Classes="StyleLabel">
+												<TextBlock Text="PanelHeader"/>
+											</Border>
+											<Border Classes="PanelHeader">
+												<TextBlock Classes="PanelTitle"
+														   Text="Border.PanelHeader"/>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=7}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Hover-эффекты и карточки" FontSize="24"
+											   FontWeight="Bold"/>
+									<TextBlock
+									Text="Hoverable, HoverActions, DepartmentCard"
+									FontSize="13"
+									Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="Hoverable"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock Text="Border.Hoverable"/>
+										</Border>
+										<TextBlock Classes="SectionHeader"
+												   Text="Наведите курсор на элементы ниже"/>
+
+										<Border Classes="Hoverable" CornerRadius="8"
+												Padding="16">
+											<TextBlock
+											Text="Transparent → CardHoverBrush при наведении"/>
+										</Border>
+										<Border Classes="Hoverable" CornerRadius="8"
+												Padding="16">
+											<TextBlock Text="Ещё один Hoverable элемент"/>
+										</Border>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="HoverActions"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock
+											Text="Border.HoverActions + StackPanel.Actions"/>
+										</Border>
+										<TextBlock Classes="SectionHeader"
+												   Text="Кнопки появляются при наведении"/>
+
+										<Border Classes="HoverActions" CornerRadius="8"
+												Padding="12"
+												BorderBrush="{DynamicResource BorderDefault}"
+												BorderThickness="1">
+											<Grid ColumnDefinitions="*,Auto">
+												<TextBlock Text="Элемент с действиями"
+														   VerticalAlignment="Center"/>
+												<StackPanel Classes="Actions" Grid.Column="1"
+															Orientation="Horizontal"
+															Spacing="4">
+													<Button Classes="IconButton Small">
+														<PathIcon
+														Data="{StaticResource EditIcon}"
+														Width="14" Height="14"/>
+													</Button>
+													<Button Classes="IconButton Small Danger">
+														<PathIcon
+														Data="{StaticResource DeleteIcon}"
+														Width="14" Height="14"/>
+													</Button>
+												</StackPanel>
+											</Grid>
+										</Border>
+
+										<Border Classes="HoverActions" CornerRadius="8"
+												Padding="12"
+												BorderBrush="{DynamicResource BorderDefault}"
+												BorderThickness="1">
+											<Grid ColumnDefinitions="*,Auto">
+												<TextBlock Text="Ещё один элемент"
+														   VerticalAlignment="Center"/>
+												<StackPanel Classes="Actions" Grid.Column="1"
+															Orientation="Horizontal"
+															Spacing="4">
+													<Button Classes="IconButton Small">
+														<PathIcon
+														Data="{StaticResource SettingsIcon}"
+														Width="14" Height="14"/>
+													</Button>
+												</StackPanel>
+											</Grid>
+										</Border>
+									</StackPanel>
+								</Border>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle"
+												   Text="DepartmentCard"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock
+											Text="Border.DepartmentCard + StackPanel.DepartmentActions"/>
+										</Border>
+
+										<Border Classes="DepartmentCard" Padding="14">
+											<Grid ColumnDefinitions="*,Auto">
+												<StackPanel Spacing="4">
+													<TextBlock Text="Отдел разработки"
+															   FontWeight="SemiBold"/>
+													<TextBlock Text="12 сотрудников"
+															   FontSize="12"
+															   Foreground="{DynamicResource TextSecondary}"/>
+												</StackPanel>
+												<StackPanel Classes="DepartmentActions"
+															Grid.Column="1"
+															Orientation="Horizontal"
+															Spacing="4"
+															VerticalAlignment="Center">
+													<Button Classes="IconButton Small">
+														<PathIcon
+														Data="{StaticResource EditIcon}"
+														Width="14" Height="14"/>
+													</Button>
+													<Button Classes="IconButton Small Danger">
+														<PathIcon
+														Data="{StaticResource DeleteIcon}"
+														Width="14" Height="14"/>
+													</Button>
+												</StackPanel>
+											</Grid>
+										</Border>
+
+										<Border Classes="DepartmentCard" Padding="14">
+											<Grid ColumnDefinitions="*,Auto">
+												<StackPanel Spacing="4">
+													<TextBlock Text="Отдел дизайна"
+															   FontWeight="SemiBold"/>
+													<TextBlock Text="5 сотрудников"
+															   FontSize="12"
+															   Foreground="{DynamicResource TextSecondary}"/>
+												</StackPanel>
+												<StackPanel Classes="DepartmentActions"
+															Grid.Column="1"
+															Orientation="Horizontal"
+															Spacing="4"
+															VerticalAlignment="Center">
+													<Button Classes="IconButton Small">
+														<PathIcon
+														Data="{StaticResource EditIcon}"
+														Width="14" Height="14"/>
+													</Button>
+												</StackPanel>
+											</Grid>
+										</Border>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+					<Border IsVisible="{Binding SelectedTabIndex,
+					Converter={conv:Converter Name=Equality}, ConverterParameter=8}">
+						<ScrollViewer>
+							<StackPanel Spacing="16" Margin="24,24,24,32">
+
+								<StackPanel Spacing="4">
+									<TextBlock Text="Контекстное меню" FontSize="24"
+											   FontWeight="Bold"/>
+									<TextBlock Text="MenuFlyout, MenuItem, Separator"
+											   FontSize="13"
+											   Foreground="{DynamicResource TextSecondary}"/>
+								</StackPanel>
+
+								<Border Classes="Section" Padding="20">
+									<StackPanel Spacing="14">
+										<TextBlock Classes="PanelTitle" Text="MenuFlyout"/>
+										<Separator Opacity="0.15"/>
+
+										<Border Classes="StyleLabel">
+											<TextBlock
+											Text="MenuFlyoutPresenter + MenuItem"/>
+										</Border>
+
+										<TextBlock Classes="SectionHeader"
+												   Text="Нажмите правой кнопкой мыши на область ниже"/>
+
+										<Border Background="{DynamicResource ThirdBG}"
+												CornerRadius="8" Padding="20" Height="80">
+											<Border.ContextFlyout>
+												<MenuFlyout>
+													<MenuItem Header="Копировать"/>
+													<MenuItem Header="Вставить"/>
+													<Separator/>
+													<MenuItem Header="Редактировать"/>
+													<MenuItem Header="Удалить"
+															  IsEnabled="False"/>
+												</MenuFlyout>
+											</Border.ContextFlyout>
+											<TextBlock Text="ПКМ → контекстное меню"
+													   VerticalAlignment="Center"
+													   HorizontalAlignment="Center"
+													   Opacity="0.6"/>
+										</Border>
+
+										<Border Classes="AlertInfo">
+											<TextBlock
+											Text="ℹ️  Стили MenuFlyoutPresenter, MenuItem и Separator применяются автоматически из MainStyle.axaml"
+											TextWrapping="Wrap" FontSize="12"/>
+										</Border>
+									</StackPanel>
+								</Border>
+
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
+
+				</Grid>
+			</Border>
+		</Grid>
+	</Border>
+</UserControl>

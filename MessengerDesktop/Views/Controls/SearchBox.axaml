@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
+             x:Class="MessengerDesktop.Views.Controls.SearchBox"
+             x:DataType="controls:SearchBox"
+             x:Name="Root">
+    <UserControl.Styles>
+        <Style Selector="Border.SearchContainer">
+		<Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+
+	<Style Selector="Border.SearchContainer:focus-within">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+	</Style>
+    </UserControl.Styles>
+
+    <Border Classes="SearchContainer" Height="36">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <PathIcon Grid.Column="0"
+                      Data="{StaticResource SearchIcon}"
+                      Width="14" Height="14"
+                      Foreground="{DynamicResource TextMuted}"
+                      Margin="10,0,8,0"/>
+
+            <TextBox Grid.Column="1"
+                     Classes="Borderless"
+                     Text="{Binding #Root.SearchText, Mode=TwoWay}"
+                     Watermark="{Binding #Root.Watermark}"
+                     FontSize="13"
+                     VerticalContentAlignment="Center"/>
+
+            <Button Grid.Column="2"
+                    Classes="ClearButton"
+                    IsVisible="{Binding #Root.SearchText, 
+                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Command="{Binding #Root.ClearCommand}"
+                    Margin="0,0,6,0">
+                <PathIcon Data="{StaticResource CloseIcon}"
+                          Width="10" Height="10"
+                          Foreground="{DynamicResource TextMuted}"/>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

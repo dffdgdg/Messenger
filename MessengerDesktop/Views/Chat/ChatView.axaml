@@ -4,6 +4,7 @@
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:chat="using:MessengerDesktop.Views.Chat"
 			 xmlns:managers="using:MessengerDesktop.ViewModels.Chat.Managers"
+             xmlns:skeleton="using:MessengerDesktop.Views.Controls.Skeleton"
 			 xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
 			 x:Class="MessengerDesktop.Views.Chat.ChatView"
 			 x:DataType="vmChat:ChatViewModel"
@@ -193,7 +194,7 @@
 
 				<!-- ═══ ОБЛАСТЬ СООБЩЕНИЙ ═══ -->
 				<Panel Grid.Row="2">
-					<controls:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
+					<skeleton:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
 					<ListBox x:Name="MessagesList"
 							 Classes="MessagesList"

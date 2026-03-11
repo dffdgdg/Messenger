@@ -5,7 +5,7 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
 			 xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
-			 xmlns:controls="using:MessengerDesktop.Controls"
+			 xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 x:Class="MessengerDesktop.Views.ChatEditDialog"
 			 x:DataType="vmDialog:ChatEditDialogViewModel"
 			 mc:Ignorable="d"
@@ -49,7 +49,7 @@
 						<TextBlock Text="Название группы" FontWeight="DemiBold" FontSize="12"
 								   Foreground="{DynamicResource TextSecondary}"/>
 						<TextBox Text="{Binding Name}" Watermark="Введите название..."
-								 Classes="DialogInput" MaxLength="100"/>
+								 Classes="Input" MaxLength="100"/>
 					</StackPanel>
 				</Grid>
 			</StackPanel>
@@ -61,7 +61,7 @@
 
 					<TextBlock Text="УПРАВЛЕНИЕ" Classes="CategoryHeader" Margin="0"/>
 
-					<Border Classes="SettingsSection" Padding="4">
+					<Border Classes="Section" Padding="4">
 						<StackPanel Spacing="0">
 							<Button Classes="MemberItem"
 									Command="{Binding ManageParticipantsCommand}"
@@ -134,7 +134,7 @@
 					<StackPanel Spacing="12" IsVisible="{Binding !IsNewChat}">
 						<TextBlock Text="НАСТРОЙКИ" Classes="CategoryHeader" Margin="0,8,0,0"/>
 
-						<Border Classes="SettingsSection" Padding="4">
+						<Border Classes="Section" Padding="4">
 							<Border Padding="12,10" CornerRadius="8">
 								<Grid ColumnDefinitions="Auto,*,Auto">
 									<PathIcon Data="{StaticResource HistoryIcon}"

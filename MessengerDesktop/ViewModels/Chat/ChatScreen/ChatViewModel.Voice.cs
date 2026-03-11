@@ -105,8 +105,7 @@ public partial class ChatViewModel
 
         try
         {
-            await Task.Delay(
-                TimeSpan.FromSeconds(MaxVoiceDurationSeconds), ct);
+            await Task.Delay(TimeSpan.FromSeconds(MaxVoiceDurationSeconds), ct);
 
             if (IsVoiceRecording && !_disposed)
                 await StopAndSendVoice();
@@ -272,7 +271,7 @@ public partial class ChatViewModel
     public void StartTranscriptionPollingIfNeeded(MessageViewModel message)
     {
         if (!message.IsVoiceMessage) return;
-        if (message.TranscriptionStatus is "done" or null) return;
+        if (message.TranscriptionStatus is TranscriptionStatus.Done or null) return;
 
         _transcriptionPoller.StartPolling(message.Id, result =>
         {
@@ -289,13 +288,13 @@ public partial class ChatViewModel
     {
         if (message?.IsVoiceMessage != true) return;
 
-        message.UpdateTranscription("pending", null);
+        message.UpdateTranscription(TranscriptionStatus.Pending, null);
 
         var result = await _apiClient.PostAsync(ApiEndpoints.Messages.TranscriptionRetry(message.Id), null);
 
         if (result.Success)
             StartTranscriptionPollingIfNeeded(message);
         else
-            message.UpdateTranscription("failed", null);
+            message.UpdateTranscription(TranscriptionStatus.Failed, null);
     }
 }

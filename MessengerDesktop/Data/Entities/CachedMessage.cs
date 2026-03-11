@@ -46,8 +46,25 @@ public class CachedMessage
     [SQLite.Column("voice_duration_seconds")]
     public double? VoiceDurationSeconds { get; set; }
 
+    /// <summary>
+    /// SQLite хранит как строку. Типизированный доступ через TranscriptionStatus.
+    /// </summary>
     [SQLite.Column("transcription_status")]
-    public string? TranscriptionStatus { get; set; }
+    public string? TranscriptionStatusRaw { get; set; }
+
+    [Ignore]
+    public TranscriptionStatus? TranscriptionStatus
+    {
+        get => System.Enum.TryParse<TranscriptionStatus>(TranscriptionStatusRaw, true, out var s) ? s : null;
+        set => TranscriptionStatusRaw = value switch
+        {
+            MessengerShared.Enum.TranscriptionStatus.Pending => "pending",
+            MessengerShared.Enum.TranscriptionStatus.Processing => "processing",
+            MessengerShared.Enum.TranscriptionStatus.Done => "done",
+            MessengerShared.Enum.TranscriptionStatus.Failed => "failed",
+            _ => null
+        };
+    }
 
     [SQLite.Column("transcription_text")]
     public string? TranscriptionText { get; set; }

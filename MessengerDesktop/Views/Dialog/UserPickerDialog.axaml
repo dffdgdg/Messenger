@@ -1,14 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
-             xmlns:controls="using:MessengerDesktop.Controls"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
              x:Class="MessengerDesktop.Views.Dialog.UserPickerDialog"
-             x:DataType="vmDialog:UserPickerDialogViewModel"
-             mc:Ignorable="d"
-             d:DesignWidth="450" d:DesignHeight="600">
+             x:DataType="vmDialog:UserPickerDialogViewModel">
     <Border Classes="DialogContainer" Width="450" MaxHeight="650" Background="{DynamicResource SecondaryBG}">
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <!-- Заголовок -->
@@ -32,7 +28,7 @@
             <TextBox Grid.Row="1"
                      Text="{Binding SearchQuery}"
                      Watermark="Поиск по имени или логину..."
-                     Classes="DialogInput Search">
+                     Classes="Input Search">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource SearchIcon}"
                               Width="16" Height="16"

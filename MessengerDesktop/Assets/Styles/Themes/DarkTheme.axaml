@@ -1,115 +1,92 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-	<Color x:Key="TopBg">#0A0A0F</Color>
-	<Color x:Key="BaseBg">#0F0F14</Color>
-	
-	<SolidColorBrush x:Key="PrimaryBG" Color="#0A0A0F"/>
-	<SolidColorBrush x:Key="SecondaryBG" Color="#12121A"/>
-	<SolidColorBrush x:Key="ThirdBG" Color="#1A1A24"/>
-	<SolidColorBrush x:Key="FourthBG" Color="#22222E"/>
 
-	<SolidColorBrush x:Key="Accent" Color="#3390EC"/>
-	<SolidColorBrush x:Key="AccentHover" Color="#50A0F0"/>
-	<SolidColorBrush x:Key="AccentPressed" Color="#2B7DD2"/>
-	<SolidColorBrush x:Key="AccentMuted" Color="#3390EC40"/>
+    <!-- ── Градиенты чата ── -->
+    <Color x:Key="TopBg">#0A0A0F</Color>
+    <Color x:Key="BaseBg">#0F0F14</Color>
 
-	<SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="TextSecondary" Color="#AAAABC"/>
-	<SolidColorBrush x:Key="TextMuted" Color="#6B6B7A"/>
-	<SolidColorBrush x:Key="TextOnAccent" Color="#FFFFFF"/>
+    <!-- ── Фоны ── -->
+    <SolidColorBrush x:Key="PrimaryBG" Color="#0A0A0F"/>
+    <SolidColorBrush x:Key="SecondaryBG" Color="#12121A"/>
+    <SolidColorBrush x:Key="ThirdBG" Color="#1A1A24"/>
+    <SolidColorBrush x:Key="FourthBG" Color="#22222E"/>
 
-	<SolidColorBrush x:Key="Icon" Color="#8888A0"/>
-	<SolidColorBrush x:Key="IconHover" Color="#AAAABC"/>
-	<SolidColorBrush x:Key="IconAccent" Color="#3390EC"/>
-	<SolidColorBrush x:Key="IconActive" Color="#FFFFFF"/>
+    <!-- ── Акцент ── -->
+    <SolidColorBrush x:Key="Accent" Color="#3390EC"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#50A0F0"/>
+    <SolidColorBrush x:Key="AccentPressed" Color="#2B7DD2"/>
+    <SolidColorBrush x:Key="AccentMuted" Color="#3390EC40"/>
 
-	<SolidColorBrush x:Key="BorderDefault" Color="#2A2A38"/>
-	<SolidColorBrush x:Key="BorderHover" Color="#3A3A4A"/>
-	<SolidColorBrush x:Key="BorderFocus" Color="#3390EC"/>
-	<SolidColorBrush x:Key="BorderSubtle" Color="#1F1F2A"/>
+    <!-- ── Текст ── -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#AAAABC"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#6B6B7A"/>
+    <SolidColorBrush x:Key="TextOnAccent" Color="#FFFFFF"/>
 
-	<SolidColorBrush x:Key="ControlBg" Color="#1A1A24"/>
-	<SolidColorBrush x:Key="ControlBorder" Color="#2A2A38"/>
-	<SolidColorBrush x:Key="ControlHover" Color="#22222E"/>
-	<SolidColorBrush x:Key="AvatarPlaceholderBG" Color="#3A3A4A"/>
-	<SolidColorBrush x:Key="TransparentBrush" Color="Transparent"/>
+    <!-- ── Иконки ── -->
+    <SolidColorBrush x:Key="Icon" Color="#8888A0"/>
 
-	<SolidColorBrush x:Key="HoverOverlay" Color="#15FFFFFF"/>
-	<SolidColorBrush x:Key="PressedOverlay" Color="#0AFFFFFF"/>
-	<SolidColorBrush x:Key="DialogOverlay" Color="#D0000000"/>
-	<SolidColorBrush x:Key="ShadowLight" Color="#40000000"/>
+    <!-- ── Границы ── -->
+    <SolidColorBrush x:Key="BorderDefault" Color="#2A2A38"/>
+    <SolidColorBrush x:Key="BorderHover" Color="#3A3A4A"/>
 
-	<SolidColorBrush x:Key="OnlineStatus" Color="#2CC56F"/>
-	<SolidColorBrush x:Key="AwayStatus" Color="#F5A623"/>
-	<SolidColorBrush x:Key="DndStatus" Color="#E53935"/>
-	<SolidColorBrush x:Key="OfflineStatus" Color="#6B6B7A"/>
+    <!-- ── Контролы ── -->
+    <SolidColorBrush x:Key="ControlBg" Color="#1A1A24"/>
+    <SolidColorBrush x:Key="ControlBorder" Color="#2A2A38"/>
+    <SolidColorBrush x:Key="AvatarPlaceholderBG" Color="#3A3A4A"/>
+    <SolidColorBrush x:Key="TransparentBrush" Color="Transparent"/>
 
-	<SolidColorBrush x:Key="DangerBrush" Color="#E53935"/>
-	<SolidColorBrush x:Key="DangerBgBrush" Color="#2DE53935"/>
-	<SolidColorBrush x:Key="DangerBorderBrush" Color="#E5393580"/>
-	<SolidColorBrush x:Key="DangerHoverBrush" Color="#FF5252"/>
-	<SolidColorBrush x:Key="ErrorBrush" Color="#FF6B6B"/>
+    <!-- ── Overlays ── -->
+    <SolidColorBrush x:Key="HoverOverlay" Color="#15FFFFFF"/>
+    <SolidColorBrush x:Key="DialogOverlay" Color="#D0000000"/>
 
-	<SolidColorBrush x:Key="SuccessBrush" Color="#2CC56F"/>
-	<SolidColorBrush x:Key="SuccessBgBrush" Color="#2D2CC56F"/>
-	<SolidColorBrush x:Key="SuccessBorderBrush" Color="#2CC56F80"/>
+    <!-- ── Online ── -->
+    <SolidColorBrush x:Key="OnlineStatus" Color="#2CC56F"/>
 
-	<SolidColorBrush x:Key="WarningBrush" Color="#F5A623"/>
-	<SolidColorBrush x:Key="WarningBgBrush" Color="#2DF5A623"/>
+    <!-- ── Danger ── -->
+    <SolidColorBrush x:Key="DangerBrush" Color="#E53935"/>
+    <SolidColorBrush x:Key="DangerBgBrush" Color="#2DE53935"/>
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#E5393580"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#FF5252"/>
+    <SolidColorBrush x:Key="DangerPressedBrush" Color="#D32F2F"/>
 
-	<SolidColorBrush x:Key="MessageOwnBackground" Color="#2B5378"/>
-	<SolidColorBrush x:Key="MessageOwnText" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="MessageOwnTimestamp" Color="#FFFFFFB0"/>
+    <!-- ── Success ── -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#2CC56F"/>
+    <SolidColorBrush x:Key="SuccessBgBrush" Color="#2D2CC56F"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#2CC56F80"/>
 
-	<SolidColorBrush x:Key="MessageOtherBackground" Color="#22222E"/>
-	<SolidColorBrush x:Key="MessageOtherText" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="MessageTimestamp" Color="#6B6B7A"/>
-	<SolidColorBrush x:Key="MessageSenderName" Color="#3390EC"/>
+    <!-- ── Warning ── -->
+    <SolidColorBrush x:Key="WarningBrush" Color="#F5A623"/>
+    <SolidColorBrush x:Key="WarningBgBrush" Color="#2DF5A623"/>
 
-	<SolidColorBrush x:Key="DateDividerBackground" Color="#1A1A24"/>
-	<SolidColorBrush x:Key="DateDividerText" Color="#6B6B7A"/>
+    <!-- ── Info ── -->
+    <SolidColorBrush x:Key="InfoBgBrush" Color="#2D3390EC"/>
+    <SolidColorBrush x:Key="InfoBorderBrush" Color="#3390EC80"/>
 
-	<SolidColorBrush x:Key="MessageHighlight" Color="#3390EC30"/>
-	<SolidColorBrush x:Key="ReplyBorderColor" Color="#3390EC"/>
+    <!-- ── Сообщения ── -->
+    <SolidColorBrush x:Key="MessageOwnBackground" Color="#2B5378"/>
 
-	<SolidColorBrush x:Key="CardBgBrush" Color="#1A1A24"/>
-	<SolidColorBrush x:Key="CardHoverBrush" Color="#22222E"/>
-	<SolidColorBrush x:Key="ItemBgBrush" Color="#12121A"/>
-	<SolidColorBrush x:Key="ItemHoverBrush" Color="#1A1A24"/>
-	<SolidColorBrush x:Key="ItemSelectedBrush" Color="#3390EC20"/>
+    <!-- ── Карточки ── -->
+    <SolidColorBrush x:Key="CardBgBrush" Color="#1A1A24"/>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#22222E"/>
+    <SolidColorBrush x:Key="ItemBgBrush" Color="#12121A"/>
+    <SolidColorBrush x:Key="HierarchyLineBrush" Color="#3A3A4A"/>
 
-	<SolidColorBrush x:Key="BorderBrush" Color="#2A2A38"/>
-	<SolidColorBrush x:Key="HierarchyLineBrush" Color="#3A3A4A"/>
-	<SolidColorBrush x:Key="DividerBrush" Color="#1F1F2A"/>
+    <!-- ── Login ── -->
+    <Color x:Key="LoginBgStart">#0a0f18</Color>
+    <Color x:Key="LoginBgMiddle">#0d1520</Color>
+    <Color x:Key="LoginBgEnd">#111827</Color>
+    <SolidColorBrush x:Key="LoginGlowPrimary" Color="#15366cd9"/>
+    <SolidColorBrush x:Key="LoginGlowSecondary" Color="#102563eb"/>
+    <SolidColorBrush x:Key="LoginGridLine" Color="#08FFFFFF"/>
+    <SolidColorBrush x:Key="LoginCardBg" Color="#F0161922"/>
+    <SolidColorBrush x:Key="LoginCardBorder" Color="#25FFFFFF"/>
+    <Color x:Key="LoginLogoStart">#3B82F6</Color>
+    <Color x:Key="LoginLogoEnd">#1D4ED8</Color>
 
-	<SolidColorBrush x:Key="BadgeBg" Color="#E53935"/>
-	<SolidColorBrush x:Key="BadgeText" Color="#FFFFFF"/>
-	<SolidColorBrush x:Key="MentionBg" Color="#F5A623"/>
-	<SolidColorBrush x:Key="UnreadIndicator" Color="#3390EC"/>
+    <!-- ── Тени ── -->
+    <BoxShadows x:Key="DialogShadow">0 8 32 #70000000</BoxShadows>
+    <BoxShadows x:Key="MessageBubbleShadow">0 1 3 0 #15000000</BoxShadows>
+    <SolidColorBrush x:Key="MessageHighlightBrush" Color="#30FFD700"/>
 
-	<SolidColorBrush x:Key="Outline" Color="#2CC56F"/>
-	<SolidColorBrush x:Key="OutlineHover" Color="#3DD680"/>
-	<SolidColorBrush x:Key="OutlinePressed" Color="#25B060"/>
-
-	<SolidColorBrush x:Key="PrimaryBrdr" Color="#2A2A38"/>
-	<SolidColorBrush x:Key="SecondaryBrdr" Color="#1F1F2A"/>
-
-	<Color x:Key="LoginBgStart">#0a0f18</Color>
-	<Color x:Key="LoginBgMiddle">#0d1520</Color>
-	<Color x:Key="LoginBgEnd">#111827</Color>
-
-	<SolidColorBrush x:Key="LoginGlowPrimary" Color="#15366cd9"/>
-	<SolidColorBrush x:Key="LoginGlowSecondary" Color="#102563eb"/>
-	<SolidColorBrush x:Key="LoginGridLine" Color="#08FFFFFF"/>
-	<SolidColorBrush x:Key="LoginCardBg" Color="#F0161922"/>
-	<SolidColorBrush x:Key="LoginCardBorder" Color="#25FFFFFF"/>
-	<SolidColorBrush x:Key="LoginShadow" Color="#66000000"/>
-
-	<Color x:Key="LoginLogoStart">#3B82F6</Color>
-	<Color x:Key="LoginLogoEnd">#1D4ED8</Color>
-
-	<BoxShadows	x:Key="DialogShadow">0 8 32 #70000000</BoxShadows >
-	<BoxShadows x:Key="MessageBubbleShadow">0 1 3 0 #15000000</BoxShadows >
-	<SolidColorBrush x:Key="MessageHighlightBrush" Color="#30FFD700"/>
-	<SolidColorBrush x:Key="DangerPressedBrush" Color="#D32F2F"/>
 </ResourceDictionary>

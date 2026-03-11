@@ -32,8 +32,7 @@ public partial class PollViewModel : BaseViewModel
         IsAnonymous = poll.IsAnonymous;
         TotalVotes = poll.Options.Sum(o => o.VotesCount);
 
-        Options = new ObservableCollection<PollOptionViewModel>(
-            poll.Options.Select(o => new PollOptionViewModel(o, this)));
+        Options = new ObservableCollection<PollOptionViewModel>(poll.Options.Select(o => new PollOptionViewModel(o, this)));
 
         foreach (var opt in Options)
             opt.PropertyChanged += OnOptionPropertyChanged;

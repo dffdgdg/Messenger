@@ -27,6 +27,7 @@ public partial class MainMenuViewModel : BaseViewModel
     private ProfileViewModel? _profileViewModel;
     private AdminViewModel? _adminViewModel;
     private SettingsViewModel? _settingsViewModel;
+    private StyleGuideViewModel? _styleGuideViewModel;
 
     private CancellationTokenSource? _searchCts;
 
@@ -161,6 +162,10 @@ public partial class MainMenuViewModel : BaseViewModel
                 CurrentMenuViewModel = _contactsViewModel;
                 break;
             case 6:
+                _styleGuideViewModel ??= _serviceProvider.GetRequiredService<StyleGuideViewModel>();
+                CurrentMenuViewModel = _styleGuideViewModel;
+                break;
+            case 7:
                 if (_departmentViewModel == null)
                 {
                     _departmentViewModel = _serviceProvider.GetRequiredService<DepartmentManagementViewModel>();

@@ -244,7 +244,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
             {
                 Success = false,
                 Error = $"Ошибка входа: {ex.Message}",
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.UtcNow
             };
         }
         finally
@@ -292,7 +292,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
             {
                 Success = true,
                 Message = "Выход выполнен",
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.UtcNow
             };
         }
         catch (Exception ex)
@@ -302,7 +302,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
             {
                 Success = false,
                 Error = $"Ошибка выхода: {ex.Message}",
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.UtcNow
             };
         }
         finally

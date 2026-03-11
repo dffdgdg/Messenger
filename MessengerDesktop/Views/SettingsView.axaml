@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
-			 xmlns:controls="using:MessengerDesktop.Controls"
 			 x:Class="MessengerDesktop.Views.SettingsView"
 			 x:DataType="vm:SettingsViewModel"
 			 Background="{DynamicResource PrimaryBG}">
@@ -25,7 +25,7 @@
 					<StackPanel Spacing="12">
 						<TextBlock Text="Внешний вид" Classes="SectionHeader Large"/>
 
-						<Border Classes="SettingsSection">
+						<Border Classes="Section">
 							<StackPanel Spacing="16">
 								<StackPanel Spacing="2">
 									<TextBlock Text="Тема оформления"
@@ -46,7 +46,7 @@
 					<StackPanel Spacing="12">
 						<TextBlock Text="Уведомления" Classes="SectionHeader Large"/>
 
-						<Border Classes="SettingsSection">
+						<Border Classes="Section">
 							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
 								<PathIcon Data="{DynamicResource NotificationsIcon}"
 										  Width="20" Height="20"/>
@@ -70,7 +70,7 @@
 					<StackPanel Spacing="12">
 						<TextBlock Text="Данные" Classes="SectionHeader Large"/>
 
-						<Border Classes="SettingsSection">
+						<Border Classes="Section">
 							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
 								<PathIcon Data="{DynamicResource DeleteIcon}"
 										  Width="20" Height="20"/>
@@ -96,7 +96,7 @@
 					<StackPanel Spacing="12">
 						<TextBlock Text="О приложении" Classes="SectionHeader Large"/>
 
-						<Border Classes="SettingsSection">
+						<Border Classes="Section">
 							<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
 								<StackPanel Grid.Row="0" Spacing="4">
 									<TextBlock Text="ВнутрьСвязь"

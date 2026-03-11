@@ -2,7 +2,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:controls="using:MessengerDesktop.Controls"
              xmlns:converters="using:MessengerDesktop.Converters"
-			 xmlns:shared="using:MessengerDesktop.Controls.Shared"
+			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
 			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
 			 x:Class="MessengerDesktop.Views.Chat.FileAttachmentControl"

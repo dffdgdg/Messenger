@@ -6,7 +6,7 @@ public class VoiceMessage
 
     public double DurationSeconds { get; set; }
 
-    public string TranscriptionStatus { get; set; } = "pending";
+    public TranscriptionStatus TranscriptionStatus { get; set; } = TranscriptionStatus.Pending;
 
     public string? TranscriptionText { get; set; }
 

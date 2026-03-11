@@ -74,7 +74,7 @@ public sealed class TranscriptionPoller(IApiClientService apiClient) : IDisposab
                     }
 
                     var status = result.Data.Status;
-                    if (status is "done" or "failed")
+                    if (status is TranscriptionStatus.Done or TranscriptionStatus.Failed)
                     {
                         return;
                     }
@@ -132,6 +132,6 @@ public class TranscriptionResult
 {
     public int MessageId { get; set; }
     public int ChatId { get; set; }
-    public string? Status { get; set; }
+    public TranscriptionStatus? Status { get; set; }
     public string? Transcription { get; set; }
 }

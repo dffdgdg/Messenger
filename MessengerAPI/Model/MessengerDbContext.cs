@@ -42,7 +42,8 @@ public partial class MessengerDbContext : DbContext
             .HasPostgresEnum<ChatRole>("chat_role")
             .HasPostgresEnum<ChatType>("chat_type")
             .HasPostgresEnum<Theme>("theme")
-            .HasPostgresEnum<SystemEventType>("system_event_type");
+            .HasPostgresEnum<SystemEventType>("system_event_type")
+            .HasPostgresEnum<TranscriptionStatus>("transcription_status");
 
         modelBuilder.Entity<Chat>(entity =>
         {
@@ -229,9 +230,9 @@ public partial class MessengerDbContext : DbContext
                 .HasColumnName("duration_seconds");
 
             entity.Property(e => e.TranscriptionStatus)
-                .HasMaxLength(20)
-                .HasDefaultValue("pending")
-                .HasColumnName("transcription_status");
+                .HasColumnName("transcription_status")
+                .HasColumnType("transcription_status")
+                .HasDefaultValue(TranscriptionStatus.Pending);
 
             entity.Property(e => e.TranscriptionText)
                 .HasColumnName("transcription_text");

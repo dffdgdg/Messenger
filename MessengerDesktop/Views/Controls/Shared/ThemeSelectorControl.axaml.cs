@@ -2,7 +2,7 @@ using Avalonia.Styling;
 
 using AppTheme = MessengerShared.Enum.Theme;
 
-namespace MessengerDesktop.Controls;
+namespace MessengerDesktop.Views.Controls;
 
 public partial class ThemeSelectorControl : UserControl
 {

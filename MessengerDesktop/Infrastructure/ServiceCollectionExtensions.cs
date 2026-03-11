@@ -94,6 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProfileViewModel>();
         services.AddTransient<DepartmentManagementViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<StyleGuideViewModel>();
 
         return services;
     }

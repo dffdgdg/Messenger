@@ -1,4 +1,6 @@
-﻿namespace MessengerAPI.Mapping;
+﻿// MessengerAPI/Mapping/MessageMappings.cs
+
+namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {

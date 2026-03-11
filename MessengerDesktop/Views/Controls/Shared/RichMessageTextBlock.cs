@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-namespace MessengerDesktop.Controls.Shared;
+namespace MessengerDesktop.Views.Controls.Shared;
 
 public class RichMessageTextBlock : SelectableTextBlock
 {

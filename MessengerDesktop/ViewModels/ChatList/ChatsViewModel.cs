@@ -174,10 +174,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         {
             return chatType == ChatType.Chat || chatType == ChatType.Department;
         }
-        else
-        {
-            return chatType == ChatType.Contact;
-        }
+
+        return chatType == ChatType.Contact;
     }
 
     [RelayCommand]

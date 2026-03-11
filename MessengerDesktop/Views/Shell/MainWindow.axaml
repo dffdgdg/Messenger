@@ -9,11 +9,6 @@
 		xmlns:chat="using:MessengerDesktop.Views.Chat"
 		xmlns:department="using:MessengerDesktop.Views.Department"
         xmlns:dialog="using:MessengerDesktop.Views.Dialog"
-		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		mc:Ignorable="d"
-		d:DesignWidth="800"
-		d:DesignHeight="600"
 		x:Class="MessengerDesktop.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		x:Name="MainWindowRoot"
@@ -141,6 +136,9 @@
 				</DataTemplate>
 				<DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
 					<department:DepartmentManagementView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:StyleGuideViewModel">
+					<views:StyleGuideView/>
 				</DataTemplate>
 			</ContentControl.DataTemplates>
 		</ContentControl>

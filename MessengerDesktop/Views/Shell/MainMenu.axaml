@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:sys="using:System"
              xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="MessengerDesktop.Views.MainMenuView"
              x:Name="Root"
@@ -19,20 +20,10 @@
         <sys:Int32 x:Key="Index4">4</sys:Int32>
         <sys:Int32 x:Key="Index5">5</sys:Int32>
         <sys:Int32 x:Key="Index6">6</sys:Int32>
+        <sys:Int32 x:Key="Index7">7</sys:Int32>
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <Style Selector="Button.ClearButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="CornerRadius" Value="4"/>
-        </Style>
-        <Style Selector="Button.ClearButton:pointerover">
-            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-        </Style>
-
         <Style Selector="Button.NavArrowButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -120,6 +111,16 @@
                                          ConverterParameter=5}"
                              Command="{Binding SetItemCommand}"
                              CommandParameter="{StaticResource Index5}"/>
+                <RadioButton Classes="NavButton"
+                             GroupName="MainNav"
+                             Tag="{DynamicResource HelpIcon}"
+                             Content="Стили"
+                             ToolTip.Tip="Галерея стилей"
+                             IsChecked="{Binding SelectedMenuIndex, Mode=OneWay,
+                                         Converter={conv:Converter Name=Equality},
+                                         ConverterParameter=6}"
+                             Command="{Binding SetItemCommand}"
+                             CommandParameter="{StaticResource Index6}"/>
 
                 <RadioButton Classes="NavButton"
                              GroupName="MainNav"
@@ -128,9 +129,9 @@
                              ToolTip.Tip="Управление отделом"
                              IsChecked="{Binding SelectedMenuIndex, Mode=OneWay,
                                          Converter={conv:Converter Name=Equality},
-                                         ConverterParameter=6}"
+                                         ConverterParameter=7}"
                              Command="{Binding SetItemCommand}"
-                             CommandParameter="{StaticResource Index6}"
+                             CommandParameter="{StaticResource Index7}"
                              IsVisible="{Binding,
                                          Converter={conv:Converter Name=HasRole},
                                          ConverterParameter=Admin}"/>
@@ -205,39 +206,10 @@
                           Stretch="Uniform"/>
                 </Button>
 
-                <Border Classes="SearchContainer"
-                        Width="420"
-                        Padding="4,0">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Path Grid.Column="0"
-                              Data="{StaticResource SearchIcon}"
-                              Width="16" Height="16"
-                              Fill="{DynamicResource TextMuted}"
-                              Stretch="Uniform"
-                              Margin="8,0,6,0"
-                              VerticalAlignment="Center"/>
+                <controls:SearchBox Width="420"
+                                    SearchText="{Binding SearchText, Mode=TwoWay}"
+                                    Watermark="Поиск чатов и контактов..."/>
 
-                        <TextBox Grid.Column="1"
-                                 Classes="Borderless"
-                                 Text="{Binding SearchText, Mode=TwoWay}"
-                                 Watermark="Поиск чатов и контактов..."
-                                 Padding="4,8"
-                                 FontSize="14"
-                                 VerticalContentAlignment="Center"/>
-
-                        <Button Grid.Column="2"
-                                Classes="ClearButton"
-                                IsVisible="{Binding HasSearchText}"
-                                Command="{Binding ClearSearchCommand}"
-                                ToolTip.Tip="Очистить"
-                                Margin="0,4,4,4">
-                            <Path Data="{StaticResource CloseIcon}"
-                                  Fill="{DynamicResource TextMuted}"
-                                  Width="10" Height="10"
-                                  Stretch="Uniform"/>
-                        </Button>
-                    </Grid>
-                </Border>
             </StackPanel>
 
             <Border Background="{DynamicResource SecondaryBG}"

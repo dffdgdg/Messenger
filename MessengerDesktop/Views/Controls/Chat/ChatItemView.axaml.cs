@@ -1,4 +1,4 @@
-namespace MessengerDesktop.Controls;
+namespace MessengerDesktop.Views.Controls.Chat;
 
 public partial class ChatItemView : UserControl
 {

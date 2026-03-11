@@ -176,7 +176,6 @@
 	</UserControl.Styles>
 
 	<StackPanel>
-		<!-- Date separator -->
 		<Border IsVisible="{Binding ShowDateSeparator}"
 				HorizontalAlignment="Center"
 				Margin="0,16,0,12">
@@ -193,7 +192,6 @@
 			</Border>
 		</Border>
 
-		<!-- System message -->
 		<Border IsVisible="{Binding IsSystemMessage}"
 				HorizontalAlignment="Center"
 				Margin="0,8">
@@ -211,7 +209,6 @@
 			</Border>
 		</Border>
 
-		<!-- Normal message -->
 		<Border Classes="MessageHighlight MessageWrapper"
 				Classes.Highlighted="{Binding IsHighlighted}"
 				Classes.DeletedMessage="{Binding IsDeleted}"
@@ -319,7 +316,6 @@
 
 			<Grid ColumnDefinitions="Auto,*,Auto">
 
-				<!-- Avatar -->
 				<Panel Grid.Column="0"
 					   Width="40"
 					   VerticalAlignment="Bottom"
@@ -338,7 +334,6 @@
 					</Button>
 				</Panel>
 
-				<!-- Message content -->
 				<StackPanel Grid.Column="1"
 							HorizontalAlignment="{Binding IsOwn,
 							Converter={conv:Converter Name=BoolToHAlignment},
@@ -353,7 +348,6 @@
 								   Text="{Binding SenderName}"/>
 					</Button>
 
-					<!-- ══════════ Message bubble (non-poll) ══════════ -->
 					<Border Classes="MessageBubble"
 							Classes.Own="{Binding IsOwn}"
 							Classes.Other="{Binding !IsOwn}"
@@ -372,12 +366,10 @@
 							IsVisible="{Binding !HasPoll}">
 						<StackPanel>
 
-							<!-- Forward header -->
 							<TextBlock Classes="ForwardLabel"
 									   Text="{Binding ForwardedFromHeader}"
 									   IsVisible="{Binding HasForward}"/>
 
-							<!-- Reply preview -->
 							<Button Classes="ReplyPreviewButton"
 									IsVisible="{Binding HasReply}"
 									Command="{Binding #BubbleRoot.ScrollToReplyCommand}"

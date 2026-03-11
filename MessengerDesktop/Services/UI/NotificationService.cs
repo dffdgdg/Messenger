@@ -94,7 +94,7 @@ public class NotificationService(IPlatformService platformService) : INotificati
 
         ShowWindow("Ошибка", message, AvaloniaNotificationType.Error);
 
-        var clipboardText = $"Ошибка: {message}\nВремя: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+        var clipboardText = $"Ошибка: {message}\nВремя: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
         await _platformService.CopyToClipboardAsync(clipboardText);
     }
 

@@ -10,11 +10,8 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public class ChatMessageManager(
-    int chatId,
-    int userId,
-    IApiClientService apiClient,
-    Func<ObservableCollection<UserDto>> getMembersFunc,
+public class ChatMessageManager(int chatId,int userId,
+    IApiClientService apiClient, Func<ObservableCollection<UserDto>> getMembersFunc,
     IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null,
     ILocalCacheService? cacheService = null)
@@ -45,9 +42,7 @@ public class ChatMessageManager(
         LastReadMessageId = info.LastReadMessageId;
         FirstUnreadMessageId = info.FirstUnreadMessageId;
 
-        Debug.WriteLine(
-            "[MessageManager] ReadInfo: " +
-            $"lastRead={LastReadMessageId}, " +
+        Debug.WriteLine("[MessageManager] ReadInfo: lastRead={LastReadMessageId}, " +
             $"firstUnread={FirstUnreadMessageId}");
     }
 
@@ -815,8 +810,7 @@ public class ChatMessageManager(
         }
     }
 
-    private void UpdateDateSeparatorForNewMessage(
-        MessageViewModel newMessage)
+    private void UpdateDateSeparatorForNewMessage(MessageViewModel newMessage)
     {
         var messageDate = newMessage.CreatedAt.Date;
 

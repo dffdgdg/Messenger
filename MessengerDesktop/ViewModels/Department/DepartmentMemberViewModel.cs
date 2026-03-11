@@ -36,7 +36,7 @@ public partial class DepartmentMemberViewModel : ObservableObject
     {
         if (LastSeen == null) return "Не в сети";
 
-        var diff = DateTime.Now - LastSeen.Value;
+        var diff = DateTime.UtcNow - LastSeen.Value;
 
         return diff.TotalMinutes < 1 ? "Только что" :
                diff.TotalMinutes < 60 ? $"Был {(int)diff.TotalMinutes} мин назад" :

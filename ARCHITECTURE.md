@@ -1,4 +1,4 @@
-﻿# Контекстный документ проекта: Корпоративный мессенджер
+﻿# Контекстный документ проекта: Локальный корпоративный мессенджер
 
 ## 1. Общее описание и стек
 
@@ -26,7 +26,9 @@ MessengerDesktop/
   ViewModels/
     Admin/            — UsersTab, DepartmentsTab, AdminViewModel
     Auth/             — LoginViewModel
-    Chat/             — ChatViewModel (partial), MessageVM, PollVM, Managers/
+    Chat/             — ChatViewModel, ChatContext, MessageVM, PollVM
+      Handlers/       — EditDelete, Reply, Forward, Typing, Voice, InfoPanel, Search, Notification handlers
+      Managers/       — ChatMessageManager, ChatAttachmentManager, ChatMemberLoader
     Chats/            — ChatsViewModel, ChatListItemViewModel
     Department/       — DepartmentManagementViewModel
     Dialog/           — все диалоговые VM
@@ -53,6 +55,7 @@ MessengerShared/
 - Hub-события на клиенте: `On{EventName}`, сервер→клиент: `{EventName}`
 - Кеш-сущности: `Cached{Entity}`
 - Маппинг: `MapTo{Target}(source)` или `To{Target}(source)` — статические методы
+- Feature handlers: `Chat{Feature}Handler` (наследуют `ChatFeatureHandler`)
 
 ---
 
@@ -348,7 +351,7 @@ MessageDto ↔ CachedMessage (полный маппинг, Poll/Files → JSON).
 
 ### Factories
 - **ChatsViewModelFactory**: `Create(parent, isGroupMode)` → ChatsViewModel
-- **ChatViewModelFactory**: `Create(chatId, parent)` → ChatViewModel (10 зависимостей)
+- **ChatViewModelFactory**: `Create(chatId, parent)` → ChatViewModel (11 зависимостей)
 
 ### Shell/MainWindowViewModel
 - CurrentViewModel, CurrentDialog, HasOpenDialogs, IsDialogVisible
@@ -384,31 +387,117 @@ MessageDto ↔ CachedMessage (полный маппинг, Poll/Files → JSON).
 ### Chats/ChatListItemViewModel
 - ChatDto wrapper. Observable: Name, LastMessageDate, Avatar, Preview, UnreadCount. ToDto(), Apply(ChatDto)
 
-### Chat/ChatViewModel (10 partial files, sealed, IAsyncDisposable)
+---
 
-**Core**: Dependencies (7 сервисов), _chatId, managers (Message/Attachment/Member), Parent (ChatsViewModel). 15+ observable properties, 25+ computed. PopularEmojis (32).
+### Chat Architecture (Handler-based decomposition)
 
-**Init**: LoadChat → LoadMembers → SubscribeChatEvents → GetReadInfo → LoadInitialMessages → LoadNotificationSettings → UpdatePollsCount → InitializeVoice → SubscribeInfoPanelEvents. Scroll to unread or bottom.
+#### ChatContext (ObservableObject, IDisposable)
+Shared state for all handlers. Contains:
+- **Identity**: ChatId, CurrentUserId
+- **Observable state**: Chat (ChatDto?), Members (ObservableCollection\<UserDto\>) — both use SetProperty for auto PropertyChanged
+- **Services**: Api, Hub, Notifications, NotificationApi, FileDownload, Cache
+- **Scroll coordination**: events ScrollToMessageRequested, ScrollToIndexRequested, ScrollToBottomRequested + Request* methods
+- **Composition mode reset**: event CompositionModeReset + ResetCompositionModes() — for mutual exclusive edit/reply/forward
+- **Lifecycle**: IsDisposed, LifetimeToken (CancellationTokenSource), Dispose cancels token
 
-**Messages**: OnMessageReceived → AddReceivedMessage + transcription polling. OnMessageUpdated/Deleted. OnMessageVisible: mark unread=false + hub MarkMessageAsRead. MarkMessagesAsRead с 1s cooldown. LoadOlder/Newer. SendMessage: edit redirect, forward handling, upload attachments → POST.
+#### ChatFeatureHandler (abstract, ObservableObject, IDisposable)
+Base class for all feature handlers:
+- Protected `Ctx` (ChatContext), `Disposed` flag
+- `IsAlive` computed: !Disposed && !Ctx.IsDisposed
+- Virtual Dispose
 
-**EditDelete**: StartEdit/SaveEdit/CancelEdit. Delete (soft). CopyMessageText (clipboard). **Mutual exclusive**: edit/reply/forward — starting one cancels others.
+#### ChatViewModel (sealed, IAsyncDisposable) — Thin Coordinator (~300 lines)
+**Role**: Creates handlers, wires PropertyChanged forwarding, coordinates initialization and SendMessage.
 
-**Reply**: Start/Cancel. ScrollToReplyOriginal: find or LoadMessagesAround. HighlightAndScroll (2s reset).
+**Public handler properties** (for XAML binding via `{Binding Handler.Property}`):
+- MessageManager, Attachments, MemberLoader
+- EditDelete, Reply, Forward, Typing, Voice, InfoPanel, Search, Notification
+- ChatHubSubscriber (private)
 
-**Forward**: Start/Cancel. ForwardPreviewText (deleted/voice/poll/files/text).
+**Proxy properties** (for XAML that binds directly to ChatViewModel):
+- From Context: Chat, Members
+- From InfoPanel: IsGroupChat, IsContactChat, InfoPanelTitle, InfoPanelSubtitle, ContactAvatar/DisplayName/Username/Department/LastSeen, IsContactOnline
+- From Search: IsSearchMode
+- From InfoPanel: IsInfoPanelOpen
+- From Notification: IsLoadingMuteState, IsChatNotificationsEnabled
+- From EditDelete: IsEditMode
+- From Reply: IsReplyMode
+- From Forward: IsForwardMode
+- From Typing: TypingText
+- From Voice: IsVoiceRecording
 
-**Typing**: `Dictionary<int, DateTime>`, cleanup loop 500ms, 3.5s expiry, self-terminating. TypingText computed.
+**Own state**: NewMessage, IsInitialLoading, IsLoadingOlderMessages, HasNewMessages, IsScrolledToBottom, UnreadCount, PollsCount, UserId, UserProfileDialog
 
-**Voice**: Start/Stop/Cancel/Send. AutoStop 300s. Min 0.5s. Transcription polling + retry.
+**PropertyChanged forwarding**: Constructor subscribes to each handler's PropertyChanged and calls OnPropertyChanged for proxy properties. Also subscribes to Context.PropertyChanged for Chat/Members changes.
 
-**InfoPanel**: Subscribe UserStatusChanged, UserProfileUpdated, MemberJoined/Left. Reload after edit.
+**InitializeAsync**: LoadChat → set Context.Chat → LoadMembers → set Context.Members → LoadContactUser → GetReadInfo → LoadInitialMessages → LoadNotificationSettings → UpdatePollsCount → InitializeVoice → Subscribe InfoPanel → scroll to unread or bottom.
 
-**Search**: ScrollToMessageAsync (find or LoadAround). HighlightMessage auto-reset. GoToSearchResult.
+**SendMessage**: if EditMode → delegate to EditDelete.SaveEdit. Else: upload attachments → build MessageDto (with Reply/Forward refs) → POST → clear state + cancel reply/forward.
 
-**Commands**: RemoveAttachment, InsertEmoji, AttachFile, ToggleInfoPanel, LeaveChat, OpenCreatePoll, OpenEditChat, OpenProfile, ToggleChatNotifications.
+**Commands**: LoadOlder/Newer, ScrollToBottom, ScrollToLatest, RemoveAttachment, InsertEmoji, AttachFile, LeaveChat, OpenCreatePoll, OpenEditChat, OpenProfile, ToggleInfoPanel.
 
-### Chat/Managers/ChatMessageManager
+**Message visibility**: OnMessageVisibleAsync, MarkMessagesAsReadAsync (1s cooldown).
+
+**Hub reconnect**: parallel GapFill + RefreshInfoPanel.
+
+**Dispose**: dispose all handlers + hub subscriber + attachments + context.
+
+#### ChatEditDeleteHandler
+- State: EditingMessage, EditMessageContent, IsEditMode
+- Commands: StartEdit, SaveEdit, CancelEdit, DeleteMessage, CopyMessageText
+- Subscribes to CompositionModeReset → CancelEdit
+
+#### ChatReplyHandler
+- State: ReplyingToMessage, IsReplyMode
+- Commands: StartReply, CancelReply, ScrollToReplyOriginal (find or LoadAround + highlight 2s)
+- Subscribes to CompositionModeReset → CancelReply
+
+#### ChatForwardHandler
+- State: ForwardingMessage, IsForwardMode, ForwardPreviewText, ForwardingSenderName
+- Commands: StartForward, CancelForward
+- Subscribes to CompositionModeReset → CancelForward
+
+#### ChatTypingHandler
+- State: TypingText, Dictionary\<int, DateTime\> typingUsers
+- Self-terminating cleanup loop (500ms interval, 3.5s expiry)
+- NotifyTextChanged → Hub.SendTypingAsync
+- Subscribes to Hub.UserTyping → filter by chatId
+
+#### ChatVoiceHandler
+- State: IsVoiceRecording, IsVoiceSending, VoiceRecording (VM), VoiceError, IsVoiceSupported
+- Commands: StartRecording, StopAndSend, CancelRecording, RetryTranscription
+- AutoStop 300s, MinDuration 0.5s
+- Initialize(IAudioRecorderService) called from ChatViewModel.InitializeAsync
+- TranscriptionPoller: StartPollingIfNeeded
+- Receives cancelReply Action for post-send cleanup
+
+#### ChatInfoPanelHandler
+- State: ContactUser, IsContactOnline, ContactLastSeen, IsInfoPanelOpen
+- Computed: IsContactChat, IsGroupChat, InfoPanelTitle, InfoPanelSubtitle, ContactAvatar/DisplayName/Username/Department
+- Subscribe(): Hub UserStatusChanged, UserProfileUpdated, MemberJoined, MemberLeft + Members.CollectionChanged
+- LoadContactUser, ReloadMembersAfterEditAsync, InvalidateAll
+- FormatLastSeen static helper
+- Toggle command
+
+#### ChatSearchHandler
+- State: IsSearchMode, HighlightedMessageId
+- ScrollToMessageAsync: find existing or LoadAround + highlight (auto-reset via AppConstants.HighlightDurationMs)
+- GoToSearchResult command
+
+#### ChatNotificationHandler
+- State: IsNotificationEnabled, IsLoadingMuteState
+- LoadSettingsAsync, Toggle command
+
+#### ChatHubSubscriber (IDisposable)
+Centralized hub event subscriptions:
+- MessageReceivedGlobally → MessageManager.AddReceivedMessage + Voice.StartTranscriptionPolling
+- MessageUpdatedGlobally → MessageManager.HandleMessageUpdated
+- MessageDeletedGlobally → MessageManager.HandleMessageDeleted
+- MessageRead → update IsRead on matching messages
+- UnreadCountChanged → callback to ChatViewModel
+- Reconnected → callback to ChatViewModel
+
+#### Chat/Managers/ChatMessageManager
 - State: bounds (oldest/newest loaded ID), hasMore flags, loadedMessageIds HashSet, ReadInfo. MaxGapFillBatches=5
 - **LoadInitialMessages**: FirstUnreadId → LoadAround. Else cache (+ background RevalidateNewest). Else server page 1
 - **LoadOlder/Newer**: cache-first + server fallback, merge/dedup. Insert/Append. UpdateBounds/DateSeparators/Grouping/SyncState
@@ -418,12 +507,14 @@ MessageDto ↔ CachedMessage (полный маппинг, Poll/Files → JSON).
 - **Grouping**: RecalculateGrouping, CanGroup (2min threshold, same sender, not system/deleted, same date)
 - **DateSeparators**: "Сегодня"/"Вчера"/"d MMMM"/"d MMMM yyyy" (ru-RU)
 
-### Chat/Managers/ChatAttachmentManager (IDisposable)
+#### Chat/Managers/ChatAttachmentManager (IDisposable)
 - PickAndAddFilesAsync (AllowMultiple), AddFileAsync (size check, thumbnail 200px)
 - UploadAllAsync, Remove/Clear/Dispose
 
-### Chat/Managers/ChatMemberLoader
+#### Chat/Managers/ChatMemberLoader
 - LoadMembersAsync: GET Chats.Members. Contact fallback: parse Name → GET Users.ById
+
+---
 
 ### Chat/MessageViewModel (sealed, IDisposable)
 - 30+ observable, 25+ computed. Retains original MessageDto
@@ -487,6 +578,11 @@ MessageDto ↔ CachedMessage (полный маппинг, Poll/Files → JSON).
 ### ChatView (code-behind — scroll management)
 Scroll management: LoadOlderWithPreserve (сохранение позиции при подгрузке старых), retry-based DoScrollToEnd, visibility tracking через TransformToVisual. CollectionChanged: auto-scroll если внизу, иначе UnreadCount++. Подгрузка: offset<100 → older, distBottom<100 → newer. Extent compensation при layout-изменениях.
 
+### XAML binding patterns (post-refactor)
+- Direct handler binding: `{Binding Typing.TypingText}`, `{Binding Search.IsSearchMode}`, `{Binding InfoPanel.IsInfoPanelOpen}`
+- Handler commands from ItemTemplate: `{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).EditDelete.StartEditCommand}`
+- Proxy properties: `{Binding IsEditMode}`, `{Binding Members}` — forwarded from handlers via PropertyChanged subscription
+
 ### Ключевые контролы
 - **AvatarControl**: ImageBitmap/Source/DisplayName/IsOnline/Size/IsCircular. Адаптивный OnlineIndicatorSize
 - **RichMessageTextBlock**: URL regex → кликабельные Inlines (#4A9EEA + Underline)
@@ -498,7 +594,7 @@ Scroll management: LoadOlderWithPreserve (сохранение позиции п
 - Window padding: Maximized → Thickness(7). Title bar drag
 
 ### Converters
-ConverterBase\<TIn,TOut\> (типизирован��ый) и ConverterBase (нетипизированный). ConverterLocator (singleton, Dictionary по именам). XAML: `{c:Converter Name=X}`. Категории: Boolean (8), Comparison (1), DateTime (3), Domain (2), Enum (1), Generic (4), Hierarchy (2), Message (2).
+ConverterBase\<TIn,TOut\> (типизированный) и ConverterBase (нетипизированный). ConverterLocator (singleton, Dictionary по именам). XAML: `{c:Converter Name=X}`. Категории: Boolean (8), Comparison (1), DateTime (3), Domain (2), Enum (1), Generic (4), Hierarchy (2), Message (2).
 
 ### App.axaml.cs
 - ApiUrl: DEBUG → `https://localhost:7190/`, Release → `https://localhost:5274/`
@@ -516,9 +612,10 @@ ConverterBase\<TIn,TOut\> (типизирован��ый) и ConverterBase (�
 6. **Изображения → WebP** через ImageSharp (Quality из настроек)
 7. **MissingFileCleanup**: middleware автоочистки БД при 404 на файлы
 8. **Cache strategy**: stale-while-revalidate, gap-fill max 5 batches → reset to latest
-9. **Mutual exclusive modes**: edit/reply/forward — начало одного отменяет другие
+9. **Mutual exclusive modes**: edit/reply/forward — starting one resets others via CompositionModeReset event in ChatContext
 10. **Message grouping**: 2min threshold, same sender, not system/deleted, same date
 11. **Транскрипция**: whisper.cpp, SemaphoreSlim(1), PCM 16kHz/16bit/mono, timeout 5мин
 12. **Poll vote**: replace-стратегия (удаление старых + добавление новых)
 13. **Contact chat**: имя = имя собеседника, аватар = аватар собеседника, максимум 2 участника, дедупликация
 14. **SystemMessages**: пропускаются для Contact чатов, fire-and-forget safe
+15. **Handler-based decomposition**: ChatViewModel is thin coordinator, business logic in ChatFeatureHandler subclasses, shared state in ChatContext (ObservableObject)

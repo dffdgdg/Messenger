@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class MessageFileViewModel(
-    MessageFileDto file,
+public partial class MessageFileViewModel(MessageFileDto file,
     IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null) : ObservableObject, IDisposable
 {

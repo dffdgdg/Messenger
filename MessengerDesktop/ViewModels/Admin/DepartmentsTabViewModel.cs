@@ -68,7 +68,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                 }
                 else
                 {
-                    throw new Exception(result.Error ?? "Ошибка создания отдела");
+                    throw new InvalidOperationException(result.Error ?? "Ошибка создания отдела");
                 }
             }
         };
@@ -101,7 +101,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                 }
                 else
                 {
-                    throw new Exception(result.Error ?? "Ошибка обновления отдела");
+                    throw new InvalidOperationException(result.Error ?? "Ошибка обновления отдела");
                 }
             },
             DeleteAction = async dialogVm =>
@@ -115,7 +115,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                 }
                 else
                 {
-                    throw new Exception(result.Error ?? "Ошибка удаления отдела");
+                    throw new InvalidOperationException(result.Error ?? "Ошибка удаления отдела");
                 }
             }
         };

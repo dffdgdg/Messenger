@@ -1,8 +1,7 @@
-﻿namespace MessengerDesktop.ViewModels
+﻿namespace MessengerDesktop.ViewModels;
+
+public partial class StyleGuideViewModel : BaseViewModel
 {
-    public partial class StyleGuideViewModel : BaseViewModel
-    {
-        [ObservableProperty]
-        private int _selectedTabIndex;
-    }
+    [ObservableProperty]
+    private int _selectedTabIndex;
 }

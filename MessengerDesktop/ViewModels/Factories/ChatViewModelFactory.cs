@@ -27,16 +27,10 @@ public class ChatViewModelFactory(
         var storageProvider = platformService.MainWindow?.StorageProvider;
 
         return new ChatViewModel(
-            chatId,
-            parent,
-            apiClient,
-            authManager,
-            chatInfoPanelStateStore,
-            notificationService,
-            notificationApiService,
-            globalHub,
-            fileDownloadService,
-            storageProvider,
-            cacheService);
+            chatId, parent,
+            apiClient, authManager, chatInfoPanelStateStore,
+            notificationService, notificationApiService,
+            globalHub, fileDownloadService,
+            storageProvider, cacheService);
     }
 }

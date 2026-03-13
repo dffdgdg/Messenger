@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.Shared.MessageQuickActions"
+             x:DataType="vmChat:MessageViewModel"
+             x:Name="ActionsRoot">
+
+    <StackPanel Classes="QuickActions"
+                Orientation="Horizontal"
+                Spacing="2"
+                VerticalAlignment="Top"
+                Margin="4,4,0,0"
+                IsVisible="{Binding !IsDeleted}">
+
+        <StackPanel.Styles>
+            <Style Selector="Button.QuickAction">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Width" Value="28"/>
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+            <Style Selector="Button.QuickAction /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+            <Style Selector="Button.QuickAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+            </Style>
+            <Style Selector="Button.QuickAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+            </Style>
+        </StackPanel.Styles>
+
+        <Button Classes="QuickAction"
+                Command="{Binding #ActionsRoot.ReplyCommand}"
+                CommandParameter="{Binding}"
+                ToolTip.Tip="Ответить">
+            <Path Data="{StaticResource ReplyIcon}"
+                  Fill="{DynamicResource TextSecondary}"
+                  Width="14" Height="14"
+                  Stretch="Uniform"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"/>
+        </Button>
+        <Button Classes="QuickAction"
+                Command="{Binding #ActionsRoot.ForwardCommand}"
+                CommandParameter="{Binding}"
+                ToolTip.Tip="Переслать">
+            <Path Data="{StaticResource ForwardIcon}"
+                  Fill="{DynamicResource TextSecondary}"
+                  Width="14" Height="14"
+                  Stretch="Uniform"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"/>
+        </Button>
+    </StackPanel>
+</UserControl>

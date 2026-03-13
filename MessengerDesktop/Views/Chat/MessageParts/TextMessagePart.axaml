@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
+             xmlns:chat="using:MessengerDesktop.Views.Chat"
+             xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts.Shared"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.TextMessagePart"
+             x:DataType="vmChat:MessageViewModel"
+             x:Name="TextPartRoot">
+
+    <StackPanel>
+        <!-- Текст -->
+        <Panel IsVisible="{Binding HasTextContent}">
+            <Grid>
+                <shared:RichMessageTextBlock
+                    FontSize="15"
+                    LineHeight="22"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Top"
+                    RawText="{Binding DisplayContent}"
+                    Margin="0,0,60,0"/>
+                <parts:MessageMetaBlock HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        Margin="8,0,0,0"
+                                        Opacity="0.7"/>
+            </Grid>
+        </Panel>
+
+        <!-- Файлы: без дополнительного Margin сверху если нет текста -->
+        <ItemsControl ItemsSource="{Binding FileViewModels}"
+                      IsVisible="{Binding ShowNonVoiceFiles}">
+            <ItemsControl.Styles>
+                <!-- Добавляем отступ только если есть текст перед файлами -->
+                <Style Selector="ItemsControl">
+                    <Setter Property="Margin" Value="0"/>
+                </Style>
+            </ItemsControl.Styles>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="6"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vmChat:MessageFileViewModel">
+                    <chat:FileAttachmentControl/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Мета для файлов без текста -->
+        <StackPanel Orientation="Horizontal"
+                    Spacing="3"
+                    HorizontalAlignment="Right"
+                    Margin="0,2,0,0"
+                    IsVisible="{Binding ShowFilesOnlyMeta}">
+            <parts:MessageMetaBlock/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

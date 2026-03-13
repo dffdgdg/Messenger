@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:chat="using:MessengerDesktop.Views.Chat"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.PollMessagePart"
+             x:DataType="vmChat:MessageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.PollBubble">
+            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="MaxWidth" Value="360"/>
+            <Setter Property="MinWidth" Value="280"/>
+        </Style>
+        <Style Selector="Border.PollBubble.Own">
+            <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes="PollBubble"
+            Classes.Own="{Binding IsOwn}"
+            IsVisible="{Binding HasPoll}">
+        <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Content}"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       LineHeight="20"
+                       Margin="0,2,0,4"/>
+            <chat:PollView DataContext="{Binding Poll}"/>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="3"
+                        HorizontalAlignment="Right"
+                        Margin="0,2,0,0">
+                <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextMuted}"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,1"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.DeletedMessagePart"
+             x:DataType="vmChat:MessageViewModel">
+
+    <Panel IsVisible="{Binding IsDeleted}">
+        <Grid>
+            <TextBlock Text="{Binding DisplayContent}"
+                       FontStyle="Italic"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       FontSize="15"
+                       LineHeight="22"
+                       Margin="0,0,50,0"/>
+            <TextBlock Text="{Binding CreatedAt, StringFormat=HH:mm}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextMuted}"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,0,1"/>
+        </Grid>
+    </Panel>
+</UserControl>

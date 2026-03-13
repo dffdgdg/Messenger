@@ -60,7 +60,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     [ObservableProperty]
     private int totalUnreadCount;
 
-    public bool IsSearchMode => SearchManager?.IsSearchMode ?? false;
+    public bool IsSearchMode => SearchManager?.IsSearchMode is true;
 
     public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient,
         IAuthManager authManager, IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub,
@@ -79,7 +79,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
 
         InitializeSearchManager();
-        _ = LoadChats();
+
+        _ = LoadChats().ContinueWith(t =>
+        {
+            if (t.Exception != null)
+                Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}");
+        }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private void InitializeSearchManager()
@@ -100,7 +105,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             OnPropertyChanged(nameof(IsChatLocalSearchMode));
     }
 
-    public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode ?? false;
+    public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode is true;
 
     #region Unread Count Handlers
 
@@ -119,9 +124,9 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (chat == null) return;
 
         var currentUserId = _authManager.Session.UserId;
-        chat.LastMessageSenderName = currentUserId.HasValue
-            && message.SenderId == currentUserId.Value ? "Вы"
-                : message.SenderName;
+        chat.LastMessageSenderName = (currentUserId.HasValue && message.SenderId == currentUserId.Value)
+            ? "Вы"
+            : message.SenderName;
         chat.LastMessagePreview = BuildLastMessagePreview(message);
         chat.LastMessageDate = message.CreatedAt;
 
@@ -334,7 +339,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             {
                 var item = new ChatListItemViewModel(createdChat);
 
-                if (!Chats.Any(c => c.Id == createdChat.Id))
+                if (Chats.All(c => c.Id != createdChat.Id))
                     Chats.Insert(0, item);
 
                 SelectedChat = Chats.FirstOrDefault(c => c.Id == createdChat.Id) ?? item;

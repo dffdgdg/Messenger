@@ -87,6 +87,9 @@
 	  <Compile Update="Views\Chat\ChatEditDialogView.axaml.cs">
 	    <DependentUpon>ChatEditDialogView.axaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Views\Chat\MessageParts\Shared\MessageMetaBlock.axaml.cs">
+	    <DependentUpon>MessageMetaBlock.axaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Views\Department\DepartmentManagementView.axaml.cs">
 	    <DependentUpon>DepartmentManagementView.axaml</DependentUpon>
 	  </Compile>

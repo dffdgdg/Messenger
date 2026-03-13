@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.Shared.ReplyPreviewBlock"
+             x:DataType="vmChat:MessageViewModel"
+             x:Name="ReplyRoot">
+
+    <UserControl.Styles>
+        <Style Selector="Button.ReplyPreviewButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
+            <Setter Property="Opacity" Value="0.75"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Button Classes="ReplyPreviewButton"
+            IsVisible="{Binding HasReply}"
+            Command="{Binding #ReplyRoot.ScrollToReplyCommand}"
+            CommandParameter="{Binding}">
+        <Border Classes="ReplyPreview"
+                Classes.Own="{Binding IsOwn}"
+                CornerRadius="8"
+                Padding="8,6"
+                Margin="0,0,0,6"
+                Background="#0A000000">
+            <Border.Styles>
+                <Style Selector="Border.ReplyPreview.Own">
+                    <Setter Property="Background" Value="#12FFFFFF"/>
+                </Style>
+                <Style Selector="Border.ReplyPreview">
+                    <Setter Property="Transitions">
+                        <Transitions>
+                            <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                        </Transitions>
+                    </Setter>
+                </Style>
+            </Border.Styles>
+
+            <Grid ColumnDefinitions="Auto,*">
+                <Border Grid.Column="0"
+                        Width="3"
+                        Background="{DynamicResource Accent}"
+                        CornerRadius="2"
+                        Margin="0,2,8,2"/>
+                <StackPanel Grid.Column="1" Spacing="1">
+                    <TextBlock Text="{Binding ReplyToSenderName, FallbackValue=''}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource Accent}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"/>
+                    <TextBlock Text="{Binding ReplyToContent, FallbackValue=''}"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextSecondary}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1"
+                               Margin="0,1,0,0"
+                               Classes.Deleted="{Binding ReplyToIsDeleted}">
+                        <TextBlock.Styles>
+                            <Style Selector="TextBlock.Deleted">
+                                <Setter Property="FontStyle" Value="Italic"/>
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Style>
+                        </TextBlock.Styles>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Button>
+</UserControl>

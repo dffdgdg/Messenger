@@ -34,14 +34,18 @@ public partial class DepartmentMemberViewModel : ObservableObject
 
     private string FormatLastSeen()
     {
-        if (LastSeen == null) return "Не в сети";
+        if (LastSeen == null)
+            return "Не в сети";
 
         var diff = DateTime.UtcNow - LastSeen.Value;
 
-        return diff.TotalMinutes < 1 ? "Только что" :
-               diff.TotalMinutes < 60 ? $"Был {(int)diff.TotalMinutes} мин назад" :
-               diff.TotalHours < 24 ? $"Был {(int)diff.TotalHours} ч назад" :
-               diff.TotalDays < 2 ? "Был вчера" :
-               $"Был {LastSeen.Value:dd.MM.yyyy}";
+        return diff.TotalMinutes switch
+        {
+            < 1 => "Только что",
+            < 60 => $"Был {(int)diff.TotalMinutes} мин назад",
+            < 1440 => $"Был {(int)diff.TotalHours} ч назад",
+            < 2880 => "Был вчера",
+            _ => $"Был {LastSeen.Value:dd.MM.yyyy}"
+        };
     }
 }

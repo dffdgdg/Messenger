@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.Shared.ForwardHeaderBlock"
+             x:DataType="vmChat:MessageViewModel">
+
+    <TextBlock Text="{Binding ForwardedFromHeader}"
+               IsVisible="{Binding HasForward}"
+               FontSize="12"
+               FontStyle="Italic"
+               Foreground="{DynamicResource TextMuted}"
+               Margin="0,0,0,4"
+               TextTrimming="CharacterEllipsis"
+               MaxLines="1"/>
+</UserControl>

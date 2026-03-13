@@ -10,6 +10,7 @@ public partial class ChatsView : UserControl
     private readonly Grid? _mainGrid;
     private bool _isDragging;
     private bool _forceCompactMode;
+    private bool _compactModeWasForced;
     private bool _hideInfoPanelForWidth;
 
     private const double COMPACT_WIDTH = 72;
@@ -119,6 +120,14 @@ public partial class ChatsView : UserControl
         {
             column.Width = new GridLength(COMPACT_WIDTH);
             IsCompactMode = true;
+            _compactModeWasForced = true;
+        }
+        else if (!_forceCompactMode && _compactModeWasForced && _mainGrid?.ColumnDefinitions[0] is ColumnDefinition expandedColumn)
+        {
+            expandedColumn.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
+            IsCompactMode = false;
+            _compactModeWasForced = false;
+
         }
 
         if (layoutChanged && DataContext is ChatsViewModel vm)
@@ -141,10 +150,12 @@ public partial class ChatsView : UserControl
             {
                 column.Width = new GridLength(COMPACT_WIDTH);
                 IsCompactMode = true;
+                _compactModeWasForced = false;
             }
             else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
             {
                 IsCompactMode = false;
+                _compactModeWasForced = false;
             }
             else if (IsCompactMode && currentWidth < EXIT_COMPACT_THRESHOLD)
             {
@@ -181,11 +192,13 @@ public partial class ChatsView : UserControl
             {
                 column.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
                 IsCompactMode = false;
+                _compactModeWasForced = false;
             }
             else
             {
                 column.Width = new GridLength(COMPACT_WIDTH);
                 IsCompactMode = true;
+                _compactModeWasForced = false;
             }
         }
     }

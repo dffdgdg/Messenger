@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             x:Class="MessengerDesktop.Views.Chat.MessageParts.SystemMessagePart"
+             x:DataType="vmChat:MessageViewModel">
+
+    <Border IsVisible="{Binding IsSystemMessage}"
+            HorizontalAlignment="Center"
+            Margin="0,8">
+        <Border Background="{DynamicResource SecondaryBG}"
+                CornerRadius="12"
+                Padding="16,5"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}">
+            <TextBlock Text="{Binding Content}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       FontStyle="Italic"/>
+        </Border>
+    </Border>
+</UserControl>

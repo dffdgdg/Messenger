@@ -2,6 +2,7 @@
 using MessengerShared.Dto.Auth;
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,11 +44,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
 
-    public AuthManager(
-        IAuthService authService,
-        ISecureStorageService secureStorage,
-        ISessionStore sessionStore,
-        ICacheMaintenanceService cacheMaintenance)
+    public AuthManager(IAuthService authService, ISecureStorageService secureStorage,
+        ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
@@ -63,9 +61,17 @@ public sealed class AuthManager : IAuthManager, IDisposable
         {
             await LoadStoredSessionAsync();
         }
+        catch (HttpRequestException ex)
+        {
+            Debug.WriteLine($"AuthManager: Сетевая ошибка при инициализации (токены сохранены): {ex.Message}");
+        }
+        catch (TaskCanceledException ex)
+        {
+            Debug.WriteLine($"AuthManager: Таймаут при инициализации (токены сохранены): {ex.Message}");
+        }
         catch (Exception ex)
         {
-            Debug.WriteLine($"AuthManager: Ошибка инициализации: {ex.Message}");
+            Debug.WriteLine($"AuthManager: Критическая ошибка инициализации: {ex.Message}");
             await ClearStoredAuthAsync();
         }
         finally
@@ -93,7 +99,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
         if (_authService.IsAccessTokenValid(storedToken))
         {
             Debug.WriteLine("AuthManager: Access token действителен (локальная проверка)");
-            Session.SetSession(storedToken, storedRefreshToken,storedUserId.Value, storedUserRole);
+            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
             return;
         }
 
@@ -112,14 +118,53 @@ public sealed class AuthManager : IAuthManager, IDisposable
         else
         {
             Debug.WriteLine($"AuthManager: Refresh неудачен: {refreshResult.Error}");
-            await ClearStoredAuthAsync();
+
+            if (IsServerAuthRejection(refreshResult.Error))
+            {
+                Debug.WriteLine("AuthManager: Сервер отклонил токен, очищаем сохранённые данные");
+                await ClearStoredAuthAsync();
+            }
+            else
+            {
+                Debug.WriteLine("AuthManager: Предполагаемая сетевая ошибка, токены сохранены для повторной попытки");
+            }
         }
     }
 
-    /// <summary>
-    /// Shared Task pattern с SemaphoreSlim вместо lock.
-    /// Все параллельные вызовы ожидают один и тот же Task.
-    /// </summary>
+    private static bool IsServerAuthRejection(string? error)
+    {
+        if (string.IsNullOrEmpty(error))
+            return false;
+
+        if (error.Contains("401") || error.Contains("403"))
+            return true;
+
+        string[] authKeywords =
+        [
+            "Unauthorized",
+            "Forbidden",
+            "Недействительный",
+            "недействительный",
+            "истёк",
+            "Истёк",
+            "отозван",
+            "Отозван",
+            "заблокирован",
+            "Заблокирован",
+            "использован",
+            "Использован",
+            "Сессия истекла"
+        ];
+
+        foreach (var keyword in authKeywords)
+        {
+            if (error.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     public async Task<bool> TryRefreshTokenAsync()
     {
         Task<bool> taskToAwait;
@@ -177,7 +222,22 @@ public sealed class AuthManager : IAuthManager, IDisposable
             }
 
             Debug.WriteLine($"AuthManager: Refresh неудачен: {result.Error}");
-            await ForceLogoutAsync();
+
+            if (IsServerAuthRejection(result.Error))
+            {
+                await ForceLogoutAsync();
+            }
+
+            return false;
+        }
+        catch (HttpRequestException ex)
+        {
+            Debug.WriteLine($"AuthManager: Сетевая ошибка при refresh: {ex.Message}");
+            return false;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Debug.WriteLine($"AuthManager: Таймаут при refresh: {ex.Message}");
             return false;
         }
         catch (Exception ex)
@@ -219,8 +279,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
                 await SaveAuthAsync(result.Data.Token, result.Data.RefreshToken, result.Data.Id, result.Data.Role);
                 Session.SetSession(result.Data.Token, result.Data.RefreshToken, result.Data.Id, result.Data.Role);
 
-                await _secureStorage.SaveAsync(
-                    RememberMeKey, rememberMe);
+                await _secureStorage.SaveAsync(RememberMeKey, rememberMe);
                 if (rememberMe)
                 {
                     await _secureStorage.SaveAsync(SavedUsernameKey, username);
@@ -278,10 +337,11 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
             await ClearCacheOnLogoutAsync();
 
+            await ClearStoredAuthAsync();
+
             var rememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
             if (!rememberMe)
             {
-                await ClearStoredAuthAsync();
                 await _secureStorage.RemoveAsync(RememberMeKey);
                 await _secureStorage.RemoveAsync(SavedUsernameKey);
             }
@@ -322,18 +382,15 @@ public sealed class AuthManager : IAuthManager, IDisposable
     {
         try
         {
-            var cachedUserId =
-                await _secureStorage.GetAsync<int?>(CachedUserIdKey);
+            var cachedUserId = await _secureStorage.GetAsync<int?>(CachedUserIdKey);
 
-            if (cachedUserId.HasValue &&
-                cachedUserId.Value != newUserId)
+            if (cachedUserId.HasValue && cachedUserId.Value != newUserId)
             {
                 Debug.WriteLine($"AuthManager: User changed ({cachedUserId.Value} → {newUserId}), clearing cache");
                 await _cacheMaintenance.ClearAllDataAsync();
             }
 
-            await _secureStorage.SaveAsync(
-                CachedUserIdKey, newUserId);
+            await _secureStorage.SaveAsync(CachedUserIdKey, newUserId);
         }
         catch (Exception ex)
         {

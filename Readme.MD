@@ -39,10 +39,10 @@
 
 ### Организация
 - Иерархическая структура отделов с защитой от циклов (BFS)
-- Роли: пользователь, руководитель отдела, администратор
+- Динамические роли: пользователь, руководитель отдела, администратор
 - Управление составом отделов (руководитель / администратор)
 - Глобальный поиск по чатам и сообщениям с подсветкой совпадений
-- Поиск внутри отдельного чата (курсорная пагинация)
+- Поиск внутри отдельного чата
 - Профили пользователей с аватарами
 - Отслеживание онлайн-статуса в реальном времени
 
@@ -51,13 +51,15 @@
 - Темы оформления: светлая, тёмная, системная
 - Офлайн-доступ к истории сообщений (SQLite кеш, FTS5 полнотекстовый поиск)
 - Мгновенное отображение кеша с фоновой синхронизацией (stale-while-revalidate)
-- Безопасное хранение учётных данных (AES-256 + PBKDF2, привязка к машине)
-- Адаптивный интерфейс с поддержкой компактного режима
+- Безопасное хранение учётных данных (DPAPI / Keychain / libsecret)
+- Скачивание файлов с прогрессом и открытие в системном приложении
+- Адаптивный интерфейс с группировкой сообщений
 
 ### Администрирование
 - Панель управления пользователями (создание, блокировка)
 - Управление структурой отделов
-- JWT-аутентификация с ролевой авторизацией
+- JWT-аутентификация с ротацией refresh-токенов и защитой от replay-атак
+- Rate limiting (sliding window) для защиты от перегрузки
 - Контейнеризация серверной части (Docker Compose)
 - Сканирование безопасности (OWASP ZAP)
 
@@ -68,11 +70,11 @@
 | Компонент | Технологии |
 |-----------|-----------|
 | **Сервер** | ASP.NET Core 8, Entity Framework Core, SignalR, PostgreSQL 16 |
-| **Клиент** | Avalonia UI 11.3, CommunityToolkit.Mvvm, sqlite-net-pcl, SignalR Client |
-| **Медиа** | ImageSharp (ресайз/WebP), NAudio (запись аудио), Whisper.cpp (транскрибация) |
-| **Безопасность** | JWT Bearer, BCrypt, AES-256 + PBKDF2, OWASP ZAP |
+| **Клиент** | Avalonia UI 11.3, CommunityToolkit.Mvvm, sqlite-net-pcl, SignalR Client, NAudio |
+| **Медиа** | SixLabors.ImageSharp (ресайз/WebP), NAudio (запись/воспроизведение аудио), whisper.cpp (транскрибация) |
+| **Безопасность** | JWT Bearer (ротация + FamilyId), BCrypt, Rate Limiting, DPAPI/Keychain/libsecret |
 | **Инфраструктура** | Docker, Docker Compose, multi-stage build |
-| **Общие** | .NET 8 Class Library (DTO, Enum, ApiResponse) |
+| **Общие** | .NET 8 Class Library (DTO, Enums, ApiResponse\<T\>) |
 
 ---
 
@@ -193,7 +195,7 @@ GRANT ALL PRIVILEGES ON DATABASE messenger_db TO messenger_user;
 
 ##### 3. Транскрибация голосовых сообщений (опционально)
 
-Для работы транскрибации необходим [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) и модель `ggml-small-q5_1.bin`.
+Для работы транскрибации необходим [whisper.cpp](https://github.com/ggerganov/whisper.cpp) и модель `ggml-small-q5_1.bin`.
 
 ##### 4. Запуск
 
@@ -212,7 +214,7 @@ dotnet run --configuration Release
 ```
 📦 Messenger
 ├── 📂 MessengerShared/              # Общие компоненты (Class Library)
-│   ├── 📂 Dto/                      # Объекты передачи данных
+│   ├── 📂 DTOs/                     # Объекты передачи данных
 │   │   ├── 📂 Auth/                 # LoginRequest, AuthResponseDto
 │   │   ├── 📂 Chat/                 # ChatDto, ChatMemberDto, UpdateChatDto
 │   │   ├── 📂 Department/           # DepartmentDto, UpdateDepartmentMemberDto
@@ -223,36 +225,36 @@ dotnet run --configuration Release
 │   │   ├── 📂 ReadReceipt/          # MarkAsReadDto, UnreadCountDto
 │   │   ├── 📂 Search/               # GlobalSearchResponseDto, SearchMessagesResponseDto
 │   │   └── 📂 User/                 # UserDto, CreateUserDto, ChangePasswordDto
-│   ├── 📂 Enum/                     # ChatRole, ChatType, Theme, UserRoles
-│   └── 📂 Response/                 # ApiResponse<T>, ApiResponseHelper
+│   ├── 📂 Enums/                    # ChatRole, ChatType, Theme, UserRole, SystemEventType
+│   └── 📄 ApiResponse.cs            # ApiResponse<T>, ApiResponseHelper
 │
 ├── 📂 MessengerAPI/                 # Серверная часть (ASP.NET Core)
-│   ├── 📂 Common/                   # AppDateTime, Result<T>, ValidationHelper
+│   ├── 📂 Common/                   # BaseService<T>, Result<T>, ValidationHelper
 │   ├── 📂 Configuration/            # DI, JWT, Swagger, StaticFiles, MessengerSettings
 │   ├── 📂 Controllers/              # REST API эндпоинты
 │   │   ├── BaseController           # ExecuteAsync, GetCurrentUserId
-│   │   ├── AuthController           # Авторизация (AllowAnonymous)
+│   │   ├── AuthController           # Авторизация, refresh, revoke
 │   │   ├── AdminController          # Управление пользователями (Admin)
 │   │   ├── ChatsController          # CRUD чатов, участники, аватары
 │   │   ├── MessagesController       # CRUD сообщений, поиск, пагинация
-│   │   ├── FilesController          # Загрузка файлов (до 100 МБ)
+│   │   ├── FilesController          # Загрузка файлов
 │   │   ├── PollController           # Опросы и голосование
 │   │   ├── ReadReceiptsController   # Статусы прочтения
 │   │   ├── NotificationController   # Настройки уведомлений
 │   │   ├── UserController           # Профили, онлайн-статусы
 │   │   └── DepartmentController     # Управление отделами
 │   ├── 📂 Hubs/                     # SignalR (ChatHub)
-│   ├── 📂 Mapping/                  # Маппинг Entity → DTO
-│   ├── 📂 Middleware/               # Глобальная обработка исключений
-│   ├── 📂 Model/                    # EF Core сущности + DbContext
+│   ├── 📂 Mapping/                  # Маппинг Entity ↔ DTO (статические методы)
+│   ├── 📂 Middleware/               # ExceptionHandling, MissingFileCleanup
+│   ├── 📂 Models/                   # EF Core сущности + DbContext
 │   ├── 📄 Dockerfile                # Multi-stage build, non-root user
 │   └── 📂 Services/                 # Бизнес-логика
 │       ├── 📂 Auth/                 # AuthService, TokenService
 │       ├── 📂 Base/                 # BaseService (SaveChanges, Paginate)
 │       ├── 📂 Chat/                 # ChatService, ChatMemberService, NotificationService
 │       ├── 📂 Department/           # DepartmentService (BFS, иерархия)
-│       ├── 📂 Infrastructure/       # AccessControl, Cache, HubNotifier, OnlineUserService
-│       ├── 📂 Messaging/            # MessageService, FileService, PollService, Transcription
+│       ├── 📂 Infrastructure/       # AccessControl, CacheService, HubNotifier, OnlineUserService
+│       ├── 📂 Messaging/            # MessageService, FileService, PollService, TranscriptionService
 │       ├── 📂 ReadReceipt/          # ReadReceiptService
 │       └── 📂 User/                 # UserService, AdminService
 │
@@ -260,38 +262,53 @@ dotnet run --configuration Release
 │   ├── 📂 Controls/                 # Кастомные контролы
 │   │   ├── AvatarControl            # Аватар с инициалами и онлайн-индикатором
 │   │   ├── RichMessageTextBlock     # Кликабельные ссылки в сообщениях
+│   │   ├── MessageControl           # Контрол сообщения (8 StyledProperty-команд)
+│   │   ├── SearchBox                # Поле поиска с очисткой
 │   │   ├── CircularProgress         # Круговой прогресс-бар
 │   │   ├── ThemeSelectorControl     # Переключатель тем с превью
 │   │   └── *Skeleton                # Skeleton-заглушки (чаты, сообщения, инфо-панель)
-│   ├── 📂 Converters/               # XAML конвертеры (~35 штук)
+│   ├── 📂 Converters/               # XAML конвертеры (ConverterBase, ConverterLocator)
 │   ├── 📂 Data/                     # Локальный кеш (SQLite)
-│   │   ├── LocalDatabase            # WAL, FTS5, schema migration
-│   │   ├── 📂 Entities/             # CachedChat, CachedMessage, CachedUser, ChatSyncState
-│   │   ├── 📂 Mappers/              # CacheMapper (DTO ↔ Entity)
-│   │   └── 📂 Repositories/         # ChatCache, MessageCache, LocalCacheService (фасад)
+│   │   ├── LocalDatabase            # WAL, FTS5, schema versioning (user_version)
+│   │   ├── 📂 Entities/             # CachedChat, CachedMessage, CachedUser, CachedReadPointer, ChatSyncState
+│   │   ├── 📂 Mappers/              # CacheMapper (DTO ↔ Entity, Poll/Files → JSON)
+│   │   └── 📂 Repositories/         # ChatCacheRepository, MessageCacheRepository, LocalCacheService
 │   ├── 📂 Infrastructure/           # DI, ApiEndpoints, AppConstants, Helpers
+│   │   ├── ApiEndpoints             # Параметризованные URL-шаблоны
+│   │   ├── AppConstants             # Debounce, пагинация, таймауты
+│   │   ├── AuthenticatedImageLoader # Bearer token для загрузки изображений
+│   │   ├── AvatarHelper             # Safe URI, cache buster
+│   │   └── MimeTypeHelper           # Расширение → MIME type
 │   ├── 📂 Services/                 # Клиентские сервисы
-│   │   ├── 📂 Api/                  # ApiClientService (HTTP + auth)
-│   │   ├── 📂 Audio/                # NAudioRecorderService, TranscriptionPoller
-│   │   ├── 📂 Auth/                 # AuthManager, SecureStorage (AES-256), SessionStore
+│   │   ├── 📂 Api/                  # ApiClientService (auto-refresh при 401)
+│   │   ├── 📂 Audio/                # AudioPlayerService, NAudioRecorderService, TranscriptionPoller
+│   │   ├── 📂 Auth/                 # AuthManager, SecureStorageService, SessionStore
 │   │   ├── 📂 Cache/                # CacheMaintenanceService
-│   │   ├── 📂 Navigation/           # NavigationService, DialogService
-│   │   ├── 📂 Platform/             # PlatformService (clipboard, window)
-│   │   ├── 📂 Realtime/             # GlobalHubConnection, ChatHubConnection
-│   │   ├── 📂 Storage/              # SettingsService (JSON)
+│   │   ├── 📂 Navigation/           # NavigationService, DialogService (stack-based)
+│   │   ├── 📂 Platform/             # PlatformService, FileDownloadService
+│   │   ├── 📂 Realtime/             # GlobalHubConnection (auto-reconnect)
+│   │   ├── 📂 Storage/              # SettingsService
 │   │   └── 📂 UI/                   # NotificationService, ThemeService
 │   ├── 📂 ViewModels/               # MVVM логика
 │   │   ├── 📂 Shell/                # MainWindowVM, MainMenuVM
-│   │   ├── 📂 Auth/                 # LoginViewModel (auto-login, SecureStorage)
+│   │   ├── 📂 Auth/                 # LoginViewModel (auto-login)
 │   │   ├── 📂 Chats/                # ChatsVM, ChatListItemVM, GlobalSearchManager
-│   │   ├── 📂 Chat/                 # ChatViewModel (8 partial-файлов)
+│   │   ├── 📂 Chat/                 # Handler-based архитектура
+│   │   │   ├── ChatViewModel        # Тонкий координатор (~300 строк)
+│   │   │   ├── ChatContext           # Shared state (ObservableObject)
+│   │   │   ├── ChatFeatureHandler    # Абстрактный базовый класс
+│   │   │   ├── 📂 Handlers/         # EditDelete, Reply, Forward, Typing, Voice,
+│   │   │   │                        # InfoPanel, Search, Notification, HubSubscriber
 │   │   │   ├── 📂 Managers/         # ChatMessageManager, ChatAttachmentManager, ChatMemberLoader
-│   │   │   ├── 📂 Messages/         # MessageVM, MessageFileVM, MessageGroupPosition
-│   │   │   └── 📂 Polls/            # PollVM, PollOptionVM
+│   │   │   ├── MessageViewModel     # 30+ observable, аудио, опросы
+│   │   │   ├── MessageFileViewModel # Скачивание с прогрессом
+│   │   │   ├── PollViewModel        # Голосование, ApplyDto
+│   │   │   └── VoiceRecordingVM     # Запись, таймер, статусы
 │   │   ├── 📂 Admin/                # AdminVM, UsersTabVM, DepartmentsTabVM
-│   │   ├── 📂 Department/           # DepartmentManagementVM, SelectUserDialogVM
-│   │   ├── 📂 Dialog/               # ChatEdit, Confirm, Poll, UserEdit, UserProfile, Department
-│   │   └── 📂 Factories/            # ChatsViewModelFactory, ChatViewModelFactory
+│   │   ├── 📂 Department/           # DepartmentManagementVM
+│   │   ├── 📂 Dialog/               # ChatEdit, Confirm, Poll, UserEdit, UserPicker,
+│   │   │                            # UserProfile, Department, DepartmentHead
+│   │   └── 📂 Factories/            # ChatViewModelFactory, ChatsViewModelFactory
 │   └── 📂 Views/                    # XAML разметка (зеркалирует ViewModels)
 │
 ├── 📂 Messenger.Tests/              # Тесты
@@ -389,6 +406,8 @@ dotnet run --configuration Release
 | Метод | Endpoint | Описание |
 |-------|----------|----------|
 | `POST` | `/api/auth/login` | Авторизация (AllowAnonymous) |
+| `POST` | `/api/auth/refresh` | Обновление токенов (ротация) |
+| `POST` | `/api/auth/revoke` | Отзыв refresh-токенов |
 
 #### Пользователи
 
@@ -419,6 +438,7 @@ dotnet run --configuration Release
 | `GET` | `/api/chats/{chatId}/members` | Участники чата |
 | `POST` | `/api/chats/{chatId}/members` | Добавление участника |
 | `DELETE` | `/api/chats/{chatId}/members/{userId}` | Удаление участника |
+| `PUT` | `/api/chats/{chatId}/members/{userId}/role` | Изменение роли (Owner) |
 
 #### Сообщения
 
@@ -433,18 +453,21 @@ dotnet run --configuration Release
 | `GET` | `/api/messages/chat/{chatId}/after/{messageId}` | Сообщения после |
 | `GET` | `/api/messages/chat/{chatId}/search` | Поиск в чате |
 | `GET` | `/api/messages/user/{userId}/search` | Глобальный поиск |
-| `GET` | `/api/messages/{id}/transcription` | Транскрибация голосового |
+| `GET` | `/api/messages/{id}/transcription` | Статус транскрибации |
 | `POST` | `/api/messages/{id}/transcription/retry` | Повтор транскрибации |
 
-#### Файлы, опросы, прочтения
+#### Файлы, опросы, прочтения, уведомления
 
 | Метод | Endpoint | Описание |
 |-------|----------|----------|
-| `POST` | `/api/files/upload?chatId={id}` | Загрузка файла (до 100 МБ) |
+| `POST` | `/api/files/upload?chatId={id}` | Загрузка файла |
 | `POST` | `/api/poll` | Создание опроса |
 | `POST` | `/api/poll/vote` | Голосование |
+| `GET` | `/api/poll/{id}` | Информация об опросе |
 | `POST` | `/api/readreceipts/mark-read` | Отметить прочитанным |
 | `GET` | `/api/readreceipts/unread-counts` | Счётчики непрочитанных |
+| `GET` | `/api/notifications/{chatId}` | Настройки уведомлений чата |
+| `PUT` | `/api/notifications/{chatId}` | Изменение настроек уведомлений |
 
 #### Администрирование
 
@@ -470,7 +493,7 @@ dotnet run --configuration Release
 
 | Endpoint | Описание |
 |----------|----------|
-| `/chatHub` | Real-time: сообщения, typing, online/offline, read receipts |
+| `/chatHub` | Real-time: сообщения, typing, online/offline, read receipts, опросы, транскрибация |
 
 ---
 
@@ -479,22 +502,27 @@ dotnet run --configuration Release
 ### Серверная часть
 - **Result-паттерн** — сервисы возвращают `Result<T>`, контроллеры маппят в HTTP-коды через `ExecuteAsync`
 - **Двухуровневый кеш доступа** — per-request Dictionary (L1) + IMemoryCache (L2) для проверки членства в чатах
-- **Транскрибация** — Channel\<int\> очередь + BackgroundService + Whisper CLI с SemaphoreSlim(1)
+- **Транскрибация** — Channel\<int\> очередь + BackgroundService + whisper.cpp CLI с SemaphoreSlim(1), timeout 5 минут
 - **Timing-safe аутентификация** — dummy BCrypt.Verify при несуществующем пользователе
+- **Refresh-токены** — ротация с FamilyId, replay detection (повторное использование → отзыв всей семьи), лимит 5 сессий
+- **Rate limiting** — Sliding Window: глобально 100/10с, login 5/1мин, upload 10/1мин, search 15/1мин, messaging 30/1мин
+- **Системные сообщения** — автоматические при создании чата, добавлении/удалении участников, смене ролей
 - **Контейнеризация** — multi-stage Docker build, non-root user, healthcheck PostgreSQL
 
 ### Клиентская часть
+- **Handler-based декомпозиция** — ChatViewModel как тонкий координатор (~300 строк), бизнес-логика в `ChatFeatureHandler`-подклассах (EditDelete, Reply, Forward, Typing, Voice, InfoPanel, Search, Notification), shared state в `ChatContext`
 - **Stale-while-revalidate** — мгновенный показ кеша, фоновая загрузка актуальных данных
-- **Cache-first сообщения** — SQLite → рендер → revalidate, заполнение пробелов после реконнекта
-- **Два SignalR-хаба** — GlobalHubConnection (app-wide: уведомления, unread, online) + ChatHubConnection (per-chat: сообщения, typing, read receipts)
-- **Partial ViewModel** — ChatViewModel разбит на 8 файлов по ответственностям (Lifecycle, Messages, Commands, Edit, Reply, Forward, Search, Typing, InfoPanel, Voice)
-- **Группировка сообщений** — порог 2 минуты → позиции Alone/First/Middle/Last для стилизации
-- **SecureStorage** — AES-256 + PBKDF2, машинно-привязанная соль
+- **Cache-first сообщения** — SQLite → рендер → revalidate с заполнением пробелов после реконнекта (gap-fill, max 5 батчей → reset)
+- **Mutual exclusive modes** — edit/reply/forward: активация одного режима сбрасывает остальные через событие CompositionModeReset
+- **Группировка сообщений** — порог 2 минуты → позиции Alone/First/Middle/Last для визуальной стилизации
+- **Воспроизведение аудио** — Singleton AudioPlayerService с фильтрацией по messageId, кеширование потока
+- **Скачивание файлов** — прогресс, уникальные имена, открытие в системном приложении / папке (кроссплатформенно)
 
 ### Инфраструктура
 - **Docker Compose** — оркестрация API + PostgreSQL + опциональный ZAP-сканер
 - **Персистентные volumes** — данные БД, загруженные файлы и аватары сохраняются между перезапусками
 - **OWASP ZAP** — автоматизированное baseline-сканирование безопасности (профиль `security`)
+- **Security headers** — COEP, COOP, CORP, X-Content-Type-Options
 
 ---
 
@@ -539,6 +567,7 @@ docker compose -f docker-compose.server.yml --profile security up zap-baseline
 | **WAL** | Write-Ahead Logging | Режим журналирования SQLite для конкурентности |
 | **BFS** | Breadth-First Search | Поиск в ширину (проверка циклов в иерархии) |
 | **ZAP** | Zed Attack Proxy | Инструмент OWASP для сканирования безопасности |
+| **DPAPI** | Data Protection API | Windows API для шифрования данных пользователя |
 
 ---
 

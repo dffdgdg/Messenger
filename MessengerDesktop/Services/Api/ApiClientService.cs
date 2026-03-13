@@ -1,11 +1,11 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -37,9 +37,6 @@ public sealed class ApiClientService : IApiClientService
 
     private const long LargeFileThreshold = 10 * 1024 * 1024;
 
-    /// <summary>
-    /// URLs, для которых НЕ нужно делать auto-refresh (чтобы избежать бесконечного цикла).
-    /// </summary>
     private static readonly string[] NoRefreshUrls =
     [
         ApiEndpoints.Auth.Login,
@@ -60,49 +57,29 @@ public sealed class ApiClientService : IApiClientService
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
-
-        UpdateAuthorizationHeader();
-        _sessionStore.SessionChanged += OnSessionChanged;
-
-        if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-            notifyPropertyChanged.PropertyChanged += OnSessionPropertyChanged;
-    }
-
-    private void OnSessionChanged() => UpdateAuthorizationHeader();
-
-    private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(ISessionStore.Token) or nameof(ISessionStore.IsAuthenticated))
-            UpdateAuthorizationHeader();
-    }
-
-    private void UpdateAuthorizationHeader()
-    {
-        try
-        {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                !string.IsNullOrEmpty(_sessionStore.Token)
-                    ? new AuthenticationHeaderValue("Bearer", _sessionStore.Token)
-                    : null;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error updating authorization header: {ex.Message}");
-        }
     }
 
     private HttpRequestMessage CreateRequest(HttpMethod method, string url)
     {
         var request = new HttpRequestMessage(method, url);
-        var token = _sessionStore.Token;
-        if (!string.IsNullOrEmpty(token))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        AttachAuth(request);
         return request;
     }
 
-    /// <summary>
-    /// Проверяет, нужно ли пробовать refresh для данного URL.
-    /// </summary>
+    private void AttachAuth(HttpRequestMessage request)
+    {
+        var token = _sessionStore.Token;
+        if (!string.IsNullOrEmpty(token))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    private HttpRequestMessage CreateJsonRequest<T>(HttpMethod method, string url, T data)
+    {
+        var request = CreateRequest(method, url);
+        request.Content = JsonContent.Create(data, options: _jsonOptions);
+        return request;
+    }
+
     private static bool ShouldAttemptRefresh(string url)
     {
         foreach (var noRefreshUrl in NoRefreshUrls)
@@ -113,33 +90,23 @@ public sealed class ApiClientService : IApiClientService
         return true;
     }
 
-    /// <summary>
-    /// Центральный метод отправки запроса с поддержкой auto-refresh.
-    /// sendFunc вызывается повторно при retry — он должен создавать новый request.
-    /// [UPD] После refresh ожидаем обновления токена перед retry.
-    /// </summary>
-    private async Task<HttpResponseMessage> SendWithRefreshAsync(Func<Task<HttpResponseMessage>> sendFunc, string url)
+    private async Task<HttpResponseMessage> SendWithRefreshAsync(Func<Task<HttpResponseMessage>> createAndSendRequest, string url)
     {
-        var response = await sendFunc();
+        var response = await createAndSendRequest();
 
         if (response.StatusCode != HttpStatusCode.Unauthorized || !ShouldAttemptRefresh(url))
             return response;
 
         Debug.WriteLine($"[ApiClient] Got 401 for {url}, attempting token refresh...");
 
-        // Dispose ответ 401 — он нам больше не нужен
         response.Dispose();
 
-        // TryRefreshTokenAsync теперь безопасен для параллельных вызовов —
-        // все ждут один и тот же Task
         var refreshed = await _authManager.TryRefreshTokenAsync();
 
         if (refreshed)
         {
             Debug.WriteLine("[ApiClient] Token refreshed, retrying...");
-            // sendFunc создаёт новый запрос с актуальным токеном
-            // (DefaultRequestHeaders уже обновлён через SessionChanged)
-            return await sendFunc();
+            return await createAndSendRequest();
         }
 
         Debug.WriteLine("[ApiClient] Token refresh failed");
@@ -152,7 +119,7 @@ public sealed class ApiClientService : IApiClientService
                     Error = "Сессия истекла. Войдите заново.",
                     Timestamp = DateTime.UtcNow
                 }, _jsonOptions),
-                System.Text.Encoding.UTF8,
+                Encoding.UTF8,
                 "application/json")
         };
     }
@@ -183,7 +150,11 @@ public sealed class ApiClientService : IApiClientService
         try
         {
             var response = await SendWithRefreshAsync(
-                () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
                 url);
 
             return await ProcessResponseAsync<TResponse>(response, ct);
@@ -198,7 +169,11 @@ public sealed class ApiClientService : IApiClientService
         try
         {
             var response = await SendWithRefreshAsync(
-                () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
                 url);
 
             return await ProcessResponseAsync<T>(response, ct);
@@ -213,7 +188,11 @@ public sealed class ApiClientService : IApiClientService
         try
         {
             var response = await SendWithRefreshAsync(
-                () => _httpClient.PostAsJsonAsync(url, data, _jsonOptions, ct),
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
                 url);
 
             return await ProcessResponseAsync(response, ct);
@@ -228,7 +207,11 @@ public sealed class ApiClientService : IApiClientService
         try
         {
             var response = await SendWithRefreshAsync(
-                () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
                 url);
 
             return await ProcessResponseAsync<T>(response, ct);
@@ -244,7 +227,11 @@ public sealed class ApiClientService : IApiClientService
         try
         {
             var response = await SendWithRefreshAsync(
-                () => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct),
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
                 url);
 
             return await ProcessResponseAsync<TResponse>(response, ct);
@@ -258,7 +245,13 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(() => _httpClient.PutAsJsonAsync(url, data, _jsonOptions, ct), url);
+            var response = await SendWithRefreshAsync(
+                () =>
+                {
+                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
+                    return _httpClient.SendAsync(request, ct);
+                },
+                url);
 
             return await ProcessResponseAsync(response, ct);
         }
@@ -271,7 +264,6 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            // [UPD] Используем CreateRequest для консистентности с GET
             var response = await SendWithRefreshAsync(
                 () =>
                 {
@@ -291,8 +283,6 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            // Убран using — request создаётся заново при каждом вызове лямбды,
-            // не нужно dispose раньше времени (HttpClient.SendAsync не владеет request)
             var response = await SendWithRefreshAsync(
                 () =>
                 {
@@ -347,7 +337,7 @@ public sealed class ApiClientService : IApiClientService
             var startPosition = fileStream.CanSeek ? fileStream.Position : -1;
 
             var response = await SendWithRefreshAsync(
-                async () =>
+                () =>
                 {
                     if (startPosition >= 0 && fileStream.Position != startPosition)
                         fileStream.Position = startPosition;
@@ -359,7 +349,7 @@ public sealed class ApiClientService : IApiClientService
 
                     var request = CreateRequest(HttpMethod.Post, url);
                     request.Content = content;
-                    return await _httpClient.SendAsync(request, ct);
+                    return _httpClient.SendAsync(request, ct);
                 },
                 url);
 
@@ -505,12 +495,6 @@ public sealed class ApiClientService : IApiClientService
     public void Dispose()
     {
         if (_disposed) return;
-
-        _sessionStore.SessionChanged -= OnSessionChanged;
-
-        if (_sessionStore is INotifyPropertyChanged notifyPropertyChanged)
-            notifyPropertyChanged.PropertyChanged -= OnSessionPropertyChanged;
-
         _disposed = true;
     }
 }

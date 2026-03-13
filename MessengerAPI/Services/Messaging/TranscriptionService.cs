@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using System.Diagnostics;
 
 namespace MessengerAPI.Services.Messaging;
@@ -168,8 +169,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
         }
     }
 
-    private async Task<string?> ProcessAudioWithWhisper(
-        string audioFilePath, CancellationToken ct)
+    private async Task<string?> ProcessAudioWithWhisper(string audioFilePath, CancellationToken ct)
     {
         var pcmData = ConvertToPcm16Mono16K(audioFilePath, ct);
         if (pcmData.Length == 0)
@@ -263,19 +263,30 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
     {
         using var reader = new AudioFileReader(audioFilePath);
 
-        var targetFormat = new WaveFormat(
-            TargetSampleRate, TargetBitsPerSample, TargetChannels);
+        ISampleProvider sampleProvider = reader;
 
-        using var resampler = new MediaFoundationResampler(reader, targetFormat)
+        sampleProvider = reader.WaveFormat.Channels switch
         {
-            ResamplerQuality = 60
+            1 => sampleProvider,
+            2 => new StereoToMonoSampleProvider(sampleProvider)
+            {
+                LeftVolume = 0.5f,
+                RightVolume = 0.5f
+            },
+            _ => throw new NotSupportedException(
+                $"Неподдерживаемое количество каналов: {reader.WaveFormat.Channels}")
         };
+
+        if (sampleProvider.WaveFormat.SampleRate != TargetSampleRate)
+            sampleProvider = new WdlResamplingSampleProvider(sampleProvider, TargetSampleRate);
+
+        var pcm16Provider = new SampleToWaveProvider16(sampleProvider);
 
         using var ms = new MemoryStream();
         var buffer = new byte[8192];
         int bytesRead;
 
-        while ((bytesRead = resampler.Read(buffer, 0, buffer.Length)) > 0)
+        while ((bytesRead = pcm16Provider.Read(buffer, 0, buffer.Length)) > 0)
         {
             ct.ThrowIfCancellationRequested();
             ms.Write(buffer, 0, bytesRead);
@@ -288,8 +299,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
 
     #region Helpers
 
-    private static async Task SetStatusAsync(
-        MessengerDbContext context, IHubNotifier hubNotifier,
+    private static async Task SetStatusAsync(MessengerDbContext context, IHubNotifier hubNotifier,
         VoiceMessage voiceMessage, TranscriptionStatus status, CancellationToken ct)
     {
         voiceMessage.TranscriptionStatus = status;
@@ -304,8 +314,7 @@ public sealed class TranscriptionService : ITranscriptionService, IDisposable
             });
     }
 
-    private async Task SetFailedSafeAsync(
-        MessengerDbContext context, IHubNotifier hubNotifier, VoiceMessage voiceMessage)
+    private async Task SetFailedSafeAsync(MessengerDbContext context, IHubNotifier hubNotifier, VoiceMessage voiceMessage)
     {
         try
         {

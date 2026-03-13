@@ -208,7 +208,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     private static HierarchicalDepartmentViewModel? FilterHierarchy(HierarchicalDepartmentViewModel item, string query)
     {
         var nameMatches = item.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
-        var headMatches = item.HeadName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false;
+        var headMatches = item.HeadName?.Contains(query, StringComparison.OrdinalIgnoreCase) is true;
 
         var filteredChildren = item.Children.Select(c => FilterHierarchy(c, query)).Where(c => c is not null).ToList();
 

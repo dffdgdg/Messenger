@@ -1,16 +1,29 @@
 ﻿using MessengerDesktop.Services.UI;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class MessageFileViewModel(MessageFileDto file,
-    IFileDownloadService? downloadService = null,
+public partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
+    private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"
+    };
+    private static readonly HashSet<string> PdfExtensions = new(StringComparer.OrdinalIgnoreCase) { ".pdf" };
+    private static readonly HashSet<string> WordExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".doc", ".docx", ".rtf", ".odt"
+    };
+    private static readonly HashSet<string> ExcelExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".xls", ".xlsx", ".csv", ".ods"
+    };
 
     private CancellationTokenSource? _downloadCts;
     private readonly object _ctsLock = new();
@@ -42,19 +55,39 @@ public partial class MessageFileViewModel(MessageFileDto file,
 
     public string? ImageUrl => IsImage ? Url : null;
 
+    private string FileExtension => Path.GetExtension(FileName) ?? string.Empty;
+
+    private bool IsPdfFile =>
+        ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || PdfExtensions.Contains(FileExtension);
+
+    private bool IsWordFile =>
+        ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase)
+        || WordExtensions.Contains(FileExtension);
+
+    private bool IsExcelFile =>
+        ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase)
+        || ExcelExtensions.Contains(FileExtension);
+
+    private bool IsArchiveFile =>
+        ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("archive", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("compressed", StringComparison.OrdinalIgnoreCase)
+        || ArchiveExtensions.Contains(FileExtension);
+
     public string FileIconResourceKey => PreviewType switch
     {
         "image" => "FileTypeImageIcon",
         "video" => "FileTypeVideoIcon",
         "audio" => "FileTypeAudioIcon",
-        "file" when ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) => "FileTypePdfIcon",
-        "file" when ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase) => "FileTypeWordIcon",
-        "file" when ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) => "FileTypeExcelIcon",
-        "file" when ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase) => "FileTypeArchiveIcon",
+        "file" when IsPdfFile => "FileTypePdfIcon",
+        "file" when IsWordFile => "FileTypeWordIcon",
+        "file" when IsExcelFile => "FileTypeExcelIcon",
+        "file" when IsArchiveFile => "FileTypeArchiveIcon",
         _ => "FileTypeDefaultIcon"
     };
 

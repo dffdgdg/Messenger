@@ -26,6 +26,9 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isInitializing = true;
 
+    [ObservableProperty]
+    private bool _canRetryAutoLogin;
+
     public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage)
     {
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
@@ -38,8 +41,6 @@ public partial class LoginViewModel : BaseViewModel
                 Debug.WriteLine($"Login init failed: {t.Exception?.Flatten().Message}");
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
-
-    // ========== Хуки из BaseViewModel ==========
 
     protected override void OnIsBusyUpdated(bool value) => LoginCommand.NotifyCanExecuteChanged();
 
@@ -55,35 +56,36 @@ public partial class LoginViewModel : BaseViewModel
             ErrorMessage = null;
     }
 
-    partial void OnIsInitializingChanged(bool value) => LoginCommand.NotifyCanExecuteChanged();
+    partial void OnIsInitializingChanged(bool value)
+    {
+        LoginCommand.NotifyCanExecuteChanged();
+        RetryAutoLoginCommand.NotifyCanExecuteChanged();
+    }
 
-    // ========== Init ==========
 
     private async Task InitializeAsync()
     {
         try
         {
-            // Ждём завершения AuthManager.LoadStoredSessionAsync()
             var initTask = _authManager.WaitForInitializationAsync();
             var completed = await Task.WhenAny(initTask, Task.Delay(InitTimeout));
 
             if (completed != initTask)
             {
                 ErrorMessage = "Сервер не отвечает. Попробуйте позже.";
+                CanRetryAutoLogin = true;
                 return;
             }
 
             await initTask;
 
-            // Сессия восстановлена через refresh token — переход в MainMenu
             if (_authManager.Session.IsAuthenticated)
             {
-                Debug.WriteLine("LoginVM: Сессия восстановлена через refresh token, переход в MainMenu");
+                Debug.WriteLine("LoginVM: Сессия восстановлена, переход в MainMenu");
                 _navigation.NavigateToMainMenu();
                 return;
             }
 
-            // Сессия не восстановлена — загружаем сохранённый username для предзаполнения
             Debug.WriteLine("LoginVM: Сессия не восстановлена, показываем форму логина");
             await LoadSavedUsernameAsync();
         }
@@ -114,7 +116,43 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-    // ========== Login ==========
+    private bool CanRetryAutoLoginExecute() => CanRetryAutoLogin && !IsBusy && !IsInitializing;
+
+    [RelayCommand(CanExecute = nameof(CanRetryAutoLoginExecute))]
+    private async Task RetryAutoLoginAsync()
+    {
+        ClearMessages();
+        CanRetryAutoLogin = false;
+        IsBusy = true;
+
+        try
+        {
+            Debug.WriteLine("LoginVM: Повторная попытка auto-login...");
+
+            var refreshed = await _authManager.TryRefreshTokenAsync();
+
+            if (refreshed && _authManager.Session.IsAuthenticated)
+            {
+                Debug.WriteLine("LoginVM: Retry auto-login успешен, переход в MainMenu");
+                _navigation.NavigateToMainMenu();
+                return;
+            }
+
+            Debug.WriteLine("LoginVM: Retry auto-login неудачен");
+            ErrorMessage = "Не удалось восстановить сессию. Войдите заново.";
+            await LoadSavedUsernameAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка подключения: {ex.Message}";
+            CanRetryAutoLogin = true;
+            Debug.WriteLine($"Retry auto-login error: {ex}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     private bool CanLogin() => !IsBusy && !IsInitializing;
 
@@ -122,6 +160,7 @@ public partial class LoginViewModel : BaseViewModel
     private async Task LoginAsync()
     {
         ClearMessages();
+        CanRetryAutoLogin = false;
 
         if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
         {
@@ -169,7 +208,6 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
-    // ========== Clear ==========
 
     [RelayCommand]
     private async Task ClearCredentialsAsync()
@@ -187,6 +225,7 @@ public partial class LoginViewModel : BaseViewModel
         Username = string.Empty;
         Password = string.Empty;
         RememberMe = false;
+        CanRetryAutoLogin = false;
         ClearMessages();
     }
 }

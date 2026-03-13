@@ -25,15 +25,24 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         }
     }
 
-    // Computed
     public bool IsContactChat => Ctx.Chat?.Type == ChatType.Contact;
     public bool IsGroupChat
         => Ctx.Chat?.Type is ChatType.Chat or ChatType.Department;
 
     public string InfoPanelTitle => IsContactChat ? "Информация о пользователе" : "Информация о группе";
 
-    public string InfoPanelSubtitle => IsContactChat ? IsContactOnline ? "в сети" :
-        ContactLastSeen ?? "не в сети" : $"{Ctx.Members.Count} участников";
+    public string InfoPanelSubtitle => GetInfoPanelSubtitle();
+
+    private string GetInfoPanelSubtitle()
+    {
+        if (!IsContactChat)
+            return $"{Ctx.Members.Count} участников";
+
+        if (IsContactOnline)
+            return "в сети";
+
+        return ContactLastSeen ?? "не в сети";
+    }
 
     public string? ContactAvatar => ContactUser?.Avatar;
     public string? ContactDisplayName => ContactUser?.DisplayName;
@@ -155,7 +164,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         Dispatcher.UIThread.Post(() =>
         {
-            if (!Ctx.Members.Any(m => m.Id == user.Id))
+            if (!IsAlive) return;
+            if (Ctx.Members.All(m => m.Id != user.Id))
                 Ctx.Members.Add(user);
         });
     }

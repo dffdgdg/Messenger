@@ -10,10 +10,11 @@
 
 	<UserControl.Styles>
 		<Style Selector="Border.FileAttachment">
-			<Setter Property="Background" Value="#08000000"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Padding" Value="10,8"/>
-			<Setter Property="MinWidth" Value="220"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="6,6"/>
+			<Setter Property="Margin" Value="-6,-2"/>
+			<Setter Property="MinWidth" Value="200"/>
 			<Setter Property="MaxWidth" Value="320"/>
 			<Setter Property="Transitions">
 				<Transitions>
@@ -23,7 +24,7 @@
 		</Style>
 
 		<Style Selector="Border.FileAttachment:pointerover">
-			<Setter Property="Background" Value="#10000000"/>
+			<Setter Property="Background" Value="#0A000000"/>
 		</Style>
 
 		<Style Selector="Border.FileIcon">
@@ -94,8 +95,8 @@
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Width" Value="32"/>
-			<Setter Property="Height" Value="32"/>
+			<Setter Property="Width" Value="28"/>
+			<Setter Property="Height" Value="28"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
@@ -116,7 +117,7 @@
 			<Setter Property="Background" Value="#15FF4444"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="8,4"/>
-			<Setter Property="Margin" Value="0,6,0,0"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
 		</Style>
 
 		<Style Selector="TextBlock.FileErrorText">
@@ -127,13 +128,13 @@
 		</Style>
 
 		<Style Selector="ProgressBar.FileDownloadProgress">
-			<Setter Property="Height" Value="3"/>
-			<Setter Property="Margin" Value="0,6,0,0"/>
+			<Setter Property="Height" Value="2"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
 			<Setter Property="Minimum" Value="0"/>
 			<Setter Property="Maximum" Value="100"/>
 			<Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
 			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-			<Setter Property="CornerRadius" Value="2"/>
+			<Setter Property="CornerRadius" Value="1"/>
 		</Style>
 	</UserControl.Styles>
 
@@ -203,7 +204,7 @@
 		</Border>
 
 		<Border Classes="FileAttachment"
-				HorizontalAlignment="Left"
+				HorizontalAlignment="Stretch"
 				IsVisible="{Binding !IsImage}"
 				AutomationProperties.Name="{Binding FileName}"
 				AutomationProperties.HelpText="Вложенный файл">
@@ -212,21 +213,20 @@
 					<Border Grid.Column="0" Classes="FileIcon">
 						<Path Data="{Binding FileIconResourceKey, Converter={converters:Converter Name=ResourceGeometry}}"
 							  Fill="White"
-							  Width="24" Height="24"
+							  Width="20" Height="20"
 							  Stretch="Uniform"
 							  HorizontalAlignment="Center"
 							  VerticalAlignment="Center"/>
 					</Border>
 
 					<StackPanel Grid.Column="1"
-								Margin="10,0,8,0"
+								Margin="10,0,6,0"
 								VerticalAlignment="Center"
 								Spacing="1">
 						<TextBlock Text="{Binding DisplayFileName}"
 								   FontWeight="Medium"
 								   FontSize="13"
 								   TextTrimming="CharacterEllipsis"
-								   MaxWidth="160"
 								   Foreground="{DynamicResource TextPrimary}"/>
 						<TextBlock Text="{Binding FileSizeFormatted}"
 							   FontSize="11"
@@ -265,19 +265,19 @@
 							</Panel>
 						</Button>
 
-						<Grid Width="32" Height="32"
+						<Grid Width="28" Height="28"
 							  IsVisible="{Binding IsDownloading}">
 							<shared:CircularProgress Value="{Binding DownloadProgress}"
 													 Maximum="100"
 													 StrokeWidth="2.5"
-													 Size="24"
+													 Size="22"
 													 Foreground="{DynamicResource Accent}"/>
 							<Button Classes="FileActionButton"
 									Command="{Binding CancelDownloadCommand}"
 									ToolTip.Tip="Отменить"
 									AutomationProperties.Name="Отменить загрузку"
-									Width="18" Height="18"
-									CornerRadius="9">
+									Width="16" Height="16"
+									CornerRadius="8">
 								<TextBlock Text="✕"
 										   FontSize="9"
 										   Foreground="{DynamicResource TextMuted}"

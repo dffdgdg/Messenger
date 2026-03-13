@@ -70,7 +70,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
 
     private async Task AutoStopAfterLimitAsync()
     {
-        _autoStopCts?.Cancel();
+        _autoStopCts?.CancelAsync();
         _autoStopCts?.Dispose();
         _autoStopCts = new CancellationTokenSource();
         var ct = _autoStopCts.Token;
@@ -92,7 +92,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
         VoiceError = null;
         VoiceRecording?.StopTimer();
 
-        _autoStopCts?.Cancel();
+        _autoStopCts?.CancelAsync();
         _autoStopCts?.Dispose();
         _autoStopCts = null;
 
@@ -122,7 +122,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
     {
         if (!IsVoiceRecording && !IsVoiceSending) return;
 
-        _autoStopCts?.Cancel();
+        _autoStopCts?.CancelAsync();
         _autoStopCts?.Dispose();
         _autoStopCts = null;
 
@@ -132,7 +132,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
             await _audioRecorder.CancelAsync();
         }
 
-        _voiceSendCts?.Cancel();
+        _voiceSendCts?.CancelAsync();
         ResetState();
     }
 
@@ -142,7 +142,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
         if (VoiceRecording != null)
             VoiceRecording.State = AudioRecordingState.Sending;
 
-        _voiceSendCts?.Cancel();
+        _voiceSendCts?.CancelAsync();
         _voiceSendCts?.Dispose();
         _voiceSendCts = new CancellationTokenSource();
         var ct = _voiceSendCts.Token;

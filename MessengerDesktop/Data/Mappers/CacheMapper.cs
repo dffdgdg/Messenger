@@ -42,7 +42,7 @@ public static class CacheMapper
 
             // System
             IsSystemMessage = dto.IsSystemMessage,
-            SystemEventTypeInt = dto.SystemEventType.HasValue ? (int)dto.SystemEventType.Value : null,
+            SystemEventTypeInt = (int?)dto.SystemEventType,
             TargetUserId = dto.TargetUserId,
             TargetUserName = dto.TargetUserName,
 
@@ -101,7 +101,7 @@ public static class CacheMapper
 
             // System
             IsSystemMessage = entity.IsSystemMessage,
-            SystemEventType = entity.SystemEventTypeInt.HasValue ? (SystemEventType)entity.SystemEventTypeInt.Value : null,
+            SystemEventType = (SystemEventType?)entity.SystemEventTypeInt,
             TargetUserId = entity.TargetUserId,
             TargetUserName = entity.TargetUserName,
         };

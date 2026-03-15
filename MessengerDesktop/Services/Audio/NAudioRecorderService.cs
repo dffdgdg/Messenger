@@ -132,7 +132,7 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
         }
     }
 
-    private void OnRecordingStopped(object? sender, StoppedEventArgs e)
+    private static void OnRecordingStopped(object? sender, StoppedEventArgs e)
     {
         if (e.Exception != null)
         {

@@ -105,7 +105,10 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            //Expected when user navigates away before load completes
+        }
         catch (Exception ex)
         {
             Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}");
@@ -127,7 +130,10 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            //Expected when user navigates away before load completes
+        }
         catch (Exception ex)
         {
             Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}");
@@ -140,24 +146,33 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         {
             if (!IsAlive) return;
 
-            if (IsContactChat && ContactUser?.Id == userId)
-            {
-                IsContactOnline = isOnline;
-                ContactUser.IsOnline = isOnline;
-                ContactUser.LastOnline = DateTime.UtcNow;
-                ContactLastSeen = isOnline ? null : FormatLastSeen(ContactUser);
-                OnPropertyChanged(nameof(InfoPanelSubtitle));
-            }
-
-            var member = Ctx.Members.FirstOrDefault(m => m.Id == userId);
-            if (member != null)
-            {
-                member.IsOnline = isOnline;
-                if (!isOnline) member.LastOnline = DateTime.UtcNow;
-                var idx = Ctx.Members.IndexOf(member);
-                if (idx >= 0) Ctx.Members[idx] = member;
-            }
+            UpdateContactStatus(userId, isOnline);
+            UpdateMemberStatus(userId, isOnline);
         });
+    }
+
+    private void UpdateContactStatus(int userId, bool isOnline)
+    {
+        if (!IsContactChat || ContactUser?.Id != userId)
+            return;
+
+        IsContactOnline = isOnline;
+        ContactUser.IsOnline = isOnline;
+        ContactUser.LastOnline = DateTime.UtcNow;
+        ContactLastSeen = isOnline ? null : FormatLastSeen(ContactUser);
+        OnPropertyChanged(nameof(InfoPanelSubtitle));
+    }
+
+    private void UpdateMemberStatus(int userId, bool isOnline)
+    {
+        var member = Ctx.Members.FirstOrDefault(m => m.Id == userId);
+        if (member == null) return;
+
+        member.IsOnline = isOnline;
+        if (!isOnline) member.LastOnline = DateTime.UtcNow;
+
+        var idx = Ctx.Members.IndexOf(member);
+        if (idx >= 0) Ctx.Members[idx] = member;
     }
 
     private void OnUserProfileUpdated(UserDto updated)
@@ -166,32 +181,44 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         {
             if (!IsAlive) return;
 
-            if (IsContactChat && ContactUser?.Id == updated.Id)
-            {
-                ContactUser = updated;
-                IsContactOnline = updated.IsOnline;
-                ContactLastSeen = FormatLastSeen(updated);
-
-                if (Ctx.Chat != null)
-                {
-                    Ctx.Chat.Name = updated.DisplayName
-                        ?? updated.Username ?? Ctx.Chat.Name;
-                    if (!string.IsNullOrEmpty(updated.Avatar))
-                        Ctx.Chat.Avatar = updated.Avatar;
-                }
-
-                InvalidateAll();
-            }
-
-            for (int i = 0; i < Ctx.Members.Count; i++)
-            {
-                if (Ctx.Members[i].Id == updated.Id)
-                {
-                    Ctx.Members[i] = updated;
-                    break;
-                }
-            }
+            UpdateContactProfile(updated);
+            ReplaceMemberInList(updated);
         });
+    }
+
+    private void UpdateContactProfile(UserDto updated)
+    {
+        if (!IsContactChat || ContactUser?.Id != updated.Id)
+            return;
+
+        ContactUser = updated;
+        IsContactOnline = updated.IsOnline;
+        ContactLastSeen = FormatLastSeen(updated);
+
+        UpdateChatHeaderFromContact(updated);
+        InvalidateAll();
+    }
+
+    private void UpdateChatHeaderFromContact(UserDto contact)
+    {
+        if (Ctx.Chat == null) return;
+
+        Ctx.Chat.Name = contact.DisplayName
+                        ?? contact.Username
+                        ?? Ctx.Chat.Name;
+
+        if (!string.IsNullOrEmpty(contact.Avatar))
+            Ctx.Chat.Avatar = contact.Avatar;
+    }
+
+    private void ReplaceMemberInList(UserDto updated)
+    {
+        for (var i = 0; i < Ctx.Members.Count; i++)
+        {
+            if (Ctx.Members[i].Id != updated.Id) continue;
+            Ctx.Members[i] = updated;
+            return;
+        }
     }
 
     private void OnMemberJoined(int chatId, UserDto user)

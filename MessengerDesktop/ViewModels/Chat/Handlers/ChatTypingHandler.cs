@@ -78,7 +78,10 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
                     }
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                // Ignore cancellation
+            }
             finally { _cleanupRunning = false; }
         }, ct);
     }

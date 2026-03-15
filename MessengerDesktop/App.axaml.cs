@@ -126,7 +126,7 @@ public sealed class App : Application, IDisposable
         Debug.WriteLine("[App] Platform services initialized");
     }
 
-    private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) =>
+    private static void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) =>
         Debug.WriteLine("[App] Shutdown requested");
 
     private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)

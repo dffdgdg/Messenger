@@ -12,9 +12,9 @@ public abstract class BaseService<T>(MessengerDbContext context, ILogger<T> logg
             await _context.SaveChangesAsync(ct);
             return Result.Success();
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
-            _logger.LogWarning("Конфликт конкурентного обновления");
+            _logger.LogWarning(ex, "Конфликт конкурентного обновления");
             return Result.Conflict("Данные были изменены другим пользователем. Попробуйте снова.");
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
@@ -38,10 +38,10 @@ public abstract class BaseService<T>(MessengerDbContext context, ILogger<T> logg
             : Result<TEntity>.NotFound($"{typeof(TEntity).Name} с ID {id} не найден");
     }
 
-    protected IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize)
+    protected static IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize)
         => query.Skip((page - 1) * pageSize).Take(pageSize);
 
-    protected (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxSize = 100)
+    protected static (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxSize = 100)
         => (Page: Math.Max(1, page), PageSize: Math.Clamp(pageSize, 1, maxSize));
 
     private static bool IsUniqueViolation(DbUpdateException ex)

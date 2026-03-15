@@ -75,6 +75,6 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
             ResultErrorType.Conflict => Conflict(response),
             ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
             _ => BadRequest(response)
-        } as ObjectResult ?? new ObjectResult(response) { StatusCode = StatusCodes.Status400BadRequest };
+        } ?? new ObjectResult(response) { StatusCode = StatusCodes.Status400BadRequest };
     }
 }

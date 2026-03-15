@@ -163,7 +163,10 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
         lock (_ctsLock)
         {
             try { _downloadCts?.Cancel(); }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException)
+            {
+                // CTS уже был удалён, ничего делать не нужно
+            }
         }
     }
 
@@ -226,7 +229,10 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
                 _downloadCts?.Cancel();
                 _downloadCts?.Dispose();
             }
-            catch { /* best-effort */ }
+            catch 
+            {
+                // Игнорируем исключения при очистке, так как объект уже может быть в процессе удаления
+            }
             _downloadCts = null;
         }
     }

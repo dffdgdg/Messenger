@@ -76,7 +76,7 @@ public sealed class SecureStorageService : ISecureStorageService, IDisposable
         }
         catch
         {
-
+            // Игнорируем ошибки установки атрибута, так как это не критично для безопасности
         }
     }
 

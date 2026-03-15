@@ -81,7 +81,10 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
             if (IsVoiceRecording && IsAlive)
                 await StopAndSend();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Отмена нормальная, не считаем ошибкой
+        }
     }
 
     [RelayCommand]
@@ -185,7 +188,10 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
             else
                 VoiceError = $"Ошибка отправки: {sendResult.Error}";
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Отмена пользователем, не считаем ошибкой
+        }
         catch (Exception ex)
         {
             VoiceError = $"Ошибка: {ex.Message}";

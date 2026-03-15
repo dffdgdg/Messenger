@@ -640,7 +640,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             await InfoPanel.ReloadMembersAfterEditAsync();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Игнорируем отмену, так как это может произойти при закрытии чата
+        }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatViewModel] RefreshInfoPanel error: {ex.Message}");

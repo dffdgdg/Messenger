@@ -16,7 +16,7 @@ public sealed class LastSeenTextConverter : IMultiValueConverter
         if (isOnline) return "в сети";
         if (!lastOnline.HasValue) return "";
 
-        var diff = System.DateTime.Now - lastOnline.Value;
+        var diff = System.DateTime.UtcNow - lastOnline.Value;
 
         return diff.TotalMinutes switch
         {

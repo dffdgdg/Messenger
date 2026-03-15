@@ -178,7 +178,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
         catch
         {
-
+            // Если сервисы не зарегистрированы, просто продолжим без них. Функциональность, зависящая от них, будет отключена.
         }
 
         Message = message;
@@ -434,8 +434,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _notificationService?.ShowErrorAsync(
-                $"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
+            _notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
         }
     }
 

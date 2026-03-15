@@ -25,13 +25,8 @@ public static class FileMappings
             Path.Combine(AppContext.BaseDirectory, "wwwroot", normalized)
         };
 
-        foreach (var path in candidatePaths)
-        {
-            if (File.Exists(path))
-                return new FileInfo(path).Length;
-        }
-
-        return 0;
+        return candidatePaths.Where(File.Exists).Select(p => new FileInfo(p).Length)
+            .FirstOrDefault();
     }
 
     public static string DeterminePreviewType(string? contentType)

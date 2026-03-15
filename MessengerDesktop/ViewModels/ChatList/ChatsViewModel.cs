@@ -62,9 +62,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     public bool IsSearchMode => SearchManager?.IsSearchMode is true;
 
-    public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient,
-        IAuthManager authManager, IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub,
-        ILocalCacheService cacheService)
+    public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient, IAuthManager authManager,
+        IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub, ILocalCacheService cacheService)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _isGroupMode = isGroupMode;
@@ -125,8 +124,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         var currentUserId = _authManager.Session.UserId;
         chat.LastMessageSenderName = (currentUserId.HasValue && message.SenderId == currentUserId.Value)
-            ? "Вы"
-            : message.SenderName;
+            ? "Вы" : message.SenderName;
         chat.LastMessagePreview = BuildLastMessagePreview(message);
         chat.LastMessageDate = message.CreatedAt;
 
@@ -151,8 +149,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
             return "Вложение";
         if (string.IsNullOrWhiteSpace(message.Content)) return "Сообщение";
-        return message.Content.Length > 100 ? message.Content[..100] + "..."
-            : message.Content;
+        return message.Content.Length > 100 ? message.Content[..100] + "..." : message.Content;
     }
 
     #endregion
@@ -394,13 +391,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
             var userId = _authManager.Session.UserId ?? 0;
 
-            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(
-                ApiEndpoints.Chats.Create, new ChatDto
-                {
-                    Name = user.Id.ToString(),
-                    Type = ChatType.Contact,
-                    CreatedById = userId
-                });
+            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create, new ChatDto
+            {
+                Name = user.Id.ToString(),
+                Type = ChatType.Contact,
+                CreatedById = userId
+            });
 
             if (result.Success && result.Data != null)
             {
@@ -481,8 +477,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 TotalUnreadCount = _globalHub.GetTotalUnread();
 
                 sw.Stop();
-                Debug.WriteLine($"[ChatsVM] Showed {cachedChats.Count} cached" +
-                    $"{(IsGroupMode ? "groups" : "dialogs")} in {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"[ChatsVM] Showed {cachedChats.Count} cached {(IsGroupMode ? "groups" : "dialogs")} in {sw.ElapsedMilliseconds}ms");
 
                 IsInitialLoading = false;
             }

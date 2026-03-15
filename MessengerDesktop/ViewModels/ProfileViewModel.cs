@@ -4,6 +4,7 @@ using Avalonia.Platform.Storage;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace MessengerDesktop.ViewModels;
 
@@ -20,7 +21,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [NotifyPropertyChangedFor(nameof(MidnameDisplay))]
     [NotifyPropertyChangedFor(nameof(HasDepartment))]
     [NotifyPropertyChangedFor(nameof(DepartmentDisplay))]
-
+    [NotifyPropertyChangedFor(nameof(HasAvatar))]
     private UserDto? _user;
 
     [ObservableProperty] private int _userId;
@@ -84,8 +85,13 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     public string DepartmentDisplay => User?.Department ?? string.Empty;
 
+    /// <summary>
+    /// Есть ли у пользователя аватар (для показа кнопки удаления)
+    /// </summary>
+    public bool HasAvatar => !string.IsNullOrWhiteSpace(User?.Avatar);
+
     public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
-        System.Text.RegularExpressions.Regex.IsMatch(TempUsername.Trim(), "^[a-zA-Z0-9_]{3,30}$");
+        UsernameRegex().IsMatch(TempUsername.Trim());
 
     public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername)
                                    && TempUsername.Trim().Length >= 3
@@ -355,8 +361,34 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             {
                 User.Avatar = result.Data!.Avatar;
                 OnPropertyChanged(nameof(AvatarUrl));
+                OnPropertyChanged(nameof(HasAvatar));
                 await LoadAvatarAsync();
                 SuccessMessage = "Аватар обновлён";
+            }
+        });
+    }
+
+    [RelayCommand]
+    private async Task DeleteAvatar()
+    {
+        if (User == null || !HasAvatar) return;
+
+        await SafeExecuteAsync(async () =>
+        {
+            var result = await _apiClient.DeleteAsync(
+                ApiEndpoints.Users.Avatar(User.Id));
+
+            if (result.Success)
+            {
+                User.Avatar = null;
+                AvatarBitmap = null;
+                OnPropertyChanged(nameof(AvatarUrl));
+                OnPropertyChanged(nameof(HasAvatar));
+                SuccessMessage = "Аватар удалён";
+            }
+            else
+            {
+                ErrorMessage = result.Error ?? "Не удалось удалить аватар";
             }
         });
     }
@@ -390,4 +422,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     protected void ClearSuccess() => SuccessMessage = null;
 
     #endregion
+
+    [GeneratedRegex("^[a-zA-Z0-9_]{3,30}$", RegexOptions.None)]
+    private static partial Regex UsernameRegex();
 }

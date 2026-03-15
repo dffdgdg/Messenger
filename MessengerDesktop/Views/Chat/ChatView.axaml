@@ -9,7 +9,6 @@
              x:Class="MessengerDesktop.Views.Chat.ChatView"
              x:DataType="vmChat:ChatViewModel"
              x:Name="Root"
-             Design.Width="1280" Design.Height="720"
              Background="Transparent">
 
     <UserControl.Styles>
@@ -326,42 +325,6 @@
                                         Classes="IconButton Small"
                                         Command="{Binding Reply.CancelReplyCommand}"
                                         ToolTip.Tip="Отменить ответ">
-                                    <PathIcon Data="{StaticResource CloseIcon}"
-                                              Width="14" Height="14"
-                                              Foreground="{DynamicResource TextSecondary}"/>
-                                </Button>
-                            </Grid>
-                        </Border>
-
-                        <Border Grid.Row="2"
-                                Classes="EditModePanel"
-                                IsVisible="{Binding Forward.IsForwardMode}">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Background="#FF9800"
-                                        CornerRadius="2"
-                                        Margin="0,0,12,0"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBlock FontWeight="SemiBold" FontSize="12"
-                                               Foreground="#FF9800">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="Переслать от {0}">
-                                                <Binding Path="Forward.ForwardingSenderName"
-                                                         FallbackValue="..."/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
-                                    <TextBlock Text="{Binding Forward.ForwardPreviewText}"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="2"/>
-                                </StackPanel>
-                                <Button Grid.Column="2"
-                                        Classes="IconButton Small"
-                                        Command="{Binding Forward.CancelForwardCommand}"
-                                        ToolTip.Tip="Отменить пересылку">
                                     <PathIcon Data="{StaticResource CloseIcon}"
                                               Width="14" Height="14"
                                               Foreground="{DynamicResource TextSecondary}"/>

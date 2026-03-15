@@ -47,11 +47,8 @@ public partial class UserService(
 
     public async Task<Result<UserDto>> GetUserAsync(int id, CancellationToken ct = default)
     {
-        var user = await _context.Users
-            .Include(u => u.UserSetting)
-            .Include(u => u.Department)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == id, ct);
+        var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.Department)
+            .AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {id} не найден");

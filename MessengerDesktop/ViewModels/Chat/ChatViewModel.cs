@@ -160,6 +160,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         IChatInfoPanelStateStore chatInfoPanelStateStore,
         INotificationService notificationService,
         IChatNotificationApiService notificationApiService,
+        IDialogService dialogService,
         IGlobalHubConnection globalHub,
         IFileDownloadService fileDownloadService,
         IStorageProvider? storageProvider = null,
@@ -174,6 +175,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             chatId,
             currentUserId,
             apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
+            dialogService ?? throw new ArgumentNullException(nameof(dialogService)),
             globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
             notificationService ?? throw new ArgumentNullException(nameof(notificationService)),
             notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService)),
@@ -192,8 +194,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members,
             fileDownloadService, notificationService, cacheService);
 
-        Attachments = new ChatAttachmentManager(
-            chatId, apiClient, storageProvider);
+        Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
 
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
 
@@ -267,6 +268,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         Context.PropertyChanged += (_, e) =>
         {
+            if (e.PropertyName == nameof(ChatContext.Chat))
+                OnPropertyChanged(nameof(Chat));
+
             if (e.PropertyName == nameof(ChatContext.Members))
             {
                 OnPropertyChanged(nameof(Members));
@@ -327,7 +331,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 Context.Chat, Context.LifetimeToken);
 
             if (InfoPanel.IsContactChat)
-                InfoPanel.LoadContactUser();
+                await InfoPanel.LoadContactUserAsync();
 
             OnPropertyChanged(nameof(InfoPanel));
 

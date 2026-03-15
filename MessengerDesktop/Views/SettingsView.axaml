@@ -1,25 +1,24 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:controls="using:MessengerDesktop.Views.Controls"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:vm="using:MessengerDesktop.ViewModels"
-			 x:Class="MessengerDesktop.Views.SettingsView"
-			 x:DataType="vm:SettingsViewModel"
-			 Background="{DynamicResource PrimaryBG}">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MessengerDesktop.ViewModels"
+             x:Class="MessengerDesktop.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             Background="{DynamicResource PrimaryBG}">
 
 	<Border Classes="PageContainer">
 		<ScrollViewer VerticalScrollBarVisibility="Auto"
 					  HorizontalScrollBarVisibility="Disabled"
 					  Classes="ThinScrollbar">
 			<Border Padding="32,24,32,56">
-				<StackPanel MaxWidth="560"
+				<StackPanel Width="480"
 							HorizontalAlignment="Center"
 							Spacing="24">
 
 					<StackPanel Spacing="4">
 						<TextBlock Text="Настройки" Classes="PageTitle"/>
 						<TextBlock Text="Параметры внешнего вида и поведения приложения"
-								   FontSize="13"
-								   Foreground="{DynamicResource TextSecondary}"/>
+								   Classes="SectionSubtitle"/>
 					</StackPanel>
 
 					<StackPanel Spacing="12">
@@ -29,16 +28,14 @@
 							<StackPanel Spacing="16">
 								<StackPanel Spacing="2">
 									<TextBlock Text="Тема оформления"
-											   FontWeight="Medium"
-											   FontSize="14"/>
+											   Classes="SectionItemTitle"/>
 									<TextBlock Text="Выберите предпочтительную цветовую схему"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextSecondary}"/>
+											   Classes="SectionItemDesc"/>
 								</StackPanel>
 
 								<controls:ThemeSelectorControl
-								SelectedTheme="{Binding SelectedTheme, Mode=TwoWay}"
-								Margin="0,8,0,0"/>
+									SelectedTheme="{Binding SelectedTheme, Mode=TwoWay}"
+									Margin="0,8,0,0"/>
 							</StackPanel>
 						</Border>
 					</StackPanel>
@@ -53,11 +50,9 @@
 
 								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 									<TextBlock Text="Push-уведомления"
-											   FontWeight="Medium"
-											   FontSize="14"/>
+											   Classes="SectionItemTitle"/>
 									<TextBlock Text="Получать уведомления о новых сообщениях"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextSecondary}"/>
+											   Classes="SectionItemDesc"/>
 								</StackPanel>
 
 								<ToggleSwitch Grid.Column="2"
@@ -77,11 +72,9 @@
 
 								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
 									<TextBlock Text="Очистить кэш"
-											   FontWeight="Medium"
-											   FontSize="14"/>
+											   Classes="SectionItemTitle"/>
 									<TextBlock Text="Удалить локальные данные и освободить место"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextSecondary}"/>
+											   Classes="SectionItemDesc"/>
 								</StackPanel>
 
 								<Button Grid.Column="2"
@@ -103,8 +96,8 @@
 											   FontWeight="SemiBold"
 											   FontSize="16"/>
 									<TextBlock Text="Версия 1.0.0"
-											   FontSize="13"
-											   Foreground="{DynamicResource TextSecondary}"/>
+											   Classes="TextSecondary"
+											   FontSize="13"/>
 								</StackPanel>
 
 								<Border Grid.Row="1"
@@ -113,8 +106,8 @@
 
 								<TextBlock Grid.Row="2"
 										   Text="© 2026 Все права защищены"
-										   FontSize="12"
-										   Foreground="{DynamicResource TextMuted}"/>
+										   Classes="TextMuted"
+										   FontSize="12"/>
 							</Grid>
 						</Border>
 					</StackPanel>

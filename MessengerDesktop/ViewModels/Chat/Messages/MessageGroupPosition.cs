@@ -1,4 +1,4 @@
-﻿namespace MessengerDesktop.ViewModels.Chat;
+﻿namespace MessengerDesktop.ViewModels.Chat.Messages;
 
 /// <summary>
 /// Позиция сообщения в группе для определения радиусов пузыря

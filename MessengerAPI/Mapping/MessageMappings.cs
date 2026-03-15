@@ -1,6 +1,4 @@
-﻿// MessengerAPI/Mapping/MessageMappings.cs
-
-namespace MessengerAPI.Mapping;
+﻿namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {
@@ -42,9 +40,7 @@ public static class MessageMappings
             VoiceContentType = voice?.ContentType,
             VoiceFileSize = voice?.FileSize,
 
-            Files = isDeleted
-                ? []
-                : message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
+            Files = isDeleted ? [] : message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
             Poll = isDeleted ? null : message.Polls?.FirstOrDefault()?.ToDto(currentUserId)
         };
     }

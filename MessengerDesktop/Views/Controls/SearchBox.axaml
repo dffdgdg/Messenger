@@ -40,7 +40,7 @@
             <Button Grid.Column="2"
                     Classes="ClearButton"
                     IsVisible="{Binding #Root.SearchText, 
-                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                     Command="{Binding #Root.ClearCommand}"
                     Margin="0,0,6,0">
                 <PathIcon Data="{StaticResource CloseIcon}"

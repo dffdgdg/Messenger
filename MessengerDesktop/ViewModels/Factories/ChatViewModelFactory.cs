@@ -17,6 +17,7 @@ public class ChatViewModelFactory(
     IChatInfoPanelStateStore chatInfoPanelStateStore,
     INotificationService notificationService,
     IChatNotificationApiService notificationApiService,
+    IDialogService dialogService,
     IGlobalHubConnection globalHub,
     IFileDownloadService fileDownloadService,
     IPlatformService platformService,
@@ -30,7 +31,7 @@ public class ChatViewModelFactory(
             chatId, parent,
             apiClient, authManager, chatInfoPanelStateStore,
             notificationService, notificationApiService,
-            globalHub, fileDownloadService,
+            dialogService, globalHub, fileDownloadService,
             storageProvider, cacheService);
     }
 }

@@ -3,8 +3,7 @@ using MessengerAPI.Services.User;
 namespace MessengerAPI.Controllers;
 
 [Authorize(Roles = "Admin")]
-public sealed class AdminController(IAdminService adminService, ILogger<AdminController> logger)
-    : BaseController<AdminController>(logger)
+public sealed class AdminController(IAdminService adminService, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
 {
     [HttpGet("users")]
     public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetUsers(CancellationToken ct)

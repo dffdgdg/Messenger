@@ -394,7 +394,7 @@ public partial class MainMenuViewModel : BaseViewModel
         {
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
             {
-                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName)
+                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, _)
                     => await CreateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupCreated),
                 ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
             };
@@ -448,8 +448,8 @@ public partial class MainMenuViewModel : BaseViewModel
 
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
             {
-                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName)
-                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupUpdated),
+                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved)
+                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved, onGroupUpdated),
                 ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
             };
 
@@ -478,15 +478,12 @@ public partial class MainMenuViewModel : BaseViewModel
 
             foreach (var userId in memberIds)
             {
-                await _apiClient.PostAsync(
-                    ApiEndpoints.Chats.Members(createdChat.Id),
-                    new UpdateChatMemberDto { UserId = userId });
+                await _apiClient.PostAsync(ApiEndpoints.Chats.Members(createdChat.Id), new UpdateChatMemberDto { UserId = userId });
             }
 
             foreach (var adminId in adminIds)
             {
-                await _apiClient.PutAsync(
-                    ApiEndpoints.Chats.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
+                await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
             }
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
@@ -519,7 +516,7 @@ public partial class MainMenuViewModel : BaseViewModel
 
 
     private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
-        Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
+        Stream? avatarStream, string? avatarFileName, bool isAvatarRemoved, Action<ChatDto>? onSuccess)
     {
         try
         {
@@ -586,6 +583,18 @@ public partial class MainMenuViewModel : BaseViewModel
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
                     updatedChat.Avatar = avatarResult.Data.AvatarUrl;
+                }
+                else if (isAvatarRemoved)
+                {
+                    var deleteAvatarResult = await _apiClient.DeleteAsync(ApiEndpoints.Chats.Avatar(chatDto.Id));
+
+                    if (!deleteAvatarResult.Success)
+                    {
+                        ErrorMessage = $"Ошибка удаления аватара: {deleteAvatarResult.Error}";
+                        return false;
+                    }
+
+                    updatedChat.Avatar = string.Empty;
                 }
             }
 

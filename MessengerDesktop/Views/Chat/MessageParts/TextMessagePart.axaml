@@ -9,7 +9,6 @@
              x:Name="TextPartRoot">
 
     <StackPanel>
-        <!-- Текст -->
         <Panel IsVisible="{Binding HasTextContent}">
             <Grid>
                 <shared:RichMessageTextBlock
@@ -26,11 +25,9 @@
             </Grid>
         </Panel>
 
-        <!-- Файлы: без дополнительного Margin сверху если нет текста -->
         <ItemsControl ItemsSource="{Binding FileViewModels}"
                       IsVisible="{Binding ShowNonVoiceFiles}">
             <ItemsControl.Styles>
-                <!-- Добавляем отступ только если есть текст перед файлами -->
                 <Style Selector="ItemsControl">
                     <Setter Property="Margin" Value="0"/>
                 </Style>
@@ -47,7 +44,6 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Мета для файлов без текста -->
         <StackPanel Orientation="Horizontal"
                     Spacing="3"
                     HorizontalAlignment="Right"

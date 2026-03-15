@@ -22,6 +22,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private MemoryStream? _avatarStream;
     private string? _avatarFileName;
+    private bool _isAvatarRemoved;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -52,7 +53,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     public bool CanManageAdmins => IsNewChat || CurrentUserRole == ChatRole.Owner;
     public bool CanSave => !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
 
-    public Func<ChatDto, List<int>, List<int>, Stream?, string?, Task<bool>>? SaveAction { get; set; }
+    public Func<ChatDto, List<int>, List<int>, Stream?, string?, bool, Task<bool>>? SaveAction { get; set; }
 
     public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
 
@@ -296,6 +297,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             await using var fileStream = File.OpenRead(path);
             await fileStream.CopyToAsync(_avatarStream);
             _avatarStream.Position = 0;
+            _isAvatarRemoved = false;
 
             _avatarFileName = Path.GetFileName(path);
 
@@ -314,11 +316,13 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private void ClearAvatar()
     {
+        var hadAvatar = AvatarPreview != null;
         _avatarStream?.Dispose();
         _avatarStream = null;
         _avatarFileName = null;
         AvatarPreview?.Dispose();
         AvatarPreview = null;
+        _isAvatarRemoved = hadAvatar;
     }
 
     #endregion
@@ -366,7 +370,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             {
                 _avatarStream?.Seek(0, SeekOrigin.Begin);
 
-                var success = await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds], _avatarStream, _avatarFileName);
+                var success = await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds], _avatarStream, _avatarFileName, _isAvatarRemoved);
 
                 if (success)
                 {

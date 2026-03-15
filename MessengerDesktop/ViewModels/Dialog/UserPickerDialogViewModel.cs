@@ -43,14 +43,11 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Конструктор для multi-select (используется в ChatEditDialog)
     /// </summary>
-    public UserPickerDialogViewModel(
-        string title,
-        IEnumerable<ChatEditDialogViewModel.SelectableUserItem> items,
-        bool allowEdit,
-        Action<List<int>> applySelection)
+    public UserPickerDialogViewModel(string title, IEnumerable<ChatEditDialogViewModel.SelectableUserItem> items,
+        bool allowEdit, Action<List<int>> applySelection)
     {
         Title = title;
-        _sourceItems = items.Select(x => x.Clone()).ToList();
+        _sourceItems = [.. items.Select(x => x.Clone())];
         _applySelection = applySelection;
         _singleSelectTcs = null;
         AllowEdit = allowEdit;
@@ -68,10 +65,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Конструктор для single-select (замена SelectUserDialog)
     /// </summary>
-    public UserPickerDialogViewModel(
-        string title,
-        IEnumerable<UserDto> users,
-        string? emptyMessage = null)
+    public UserPickerDialogViewModel(string title, IEnumerable<UserDto> users, string? emptyMessage = null)
     {
         Title = title;
         _applySelection = null;
@@ -124,7 +118,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private void Save()
     {
-        _applySelection?.Invoke(Items.Where(x => x.IsSelected).Select(x => x.Id).ToList());
+        _applySelection?.Invoke([.. Items.Where(x => x.IsSelected).Select(x => x.Id)]);
         RequestClose();
     }
 

@@ -83,7 +83,7 @@ public static class ApiEndpoints
         /// <summary>POST api/chats/{chatId}/leave?userId={userId}</summary>
         public static string Leave(int chatId, int userId) => $"{Base}/{chatId}/leave?userId={userId}";
 
-        /// <summary>GET/PUT api/chats/{chatId}/avatar</summary>
+        /// <summary>POST/DELETE api/chats/{chatId}/avatar</summary>
         public static string Avatar(int chatId) => $"{Base}/{chatId}/avatar";
 
         /// <summary>GET api/chats/user/{userId}</summary>

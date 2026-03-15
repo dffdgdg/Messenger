@@ -14,9 +14,7 @@ public static class PollMappings
             IsAnonymous = poll.IsAnonymous ?? false,
             AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
             ClosesAt = poll.ClosesAt,
-            Options = poll.PollOptions?.OrderBy(o => o.Position)
-                .Select(o => o.ToDto(poll.IsAnonymous ?? false))
-                .ToList() ?? [],
+            Options = poll.PollOptions?.OrderBy(o => o.Position).Select(o => o.ToDto(poll.IsAnonymous ?? false)).ToList() ?? [],
             SelectedOptionIds = selectedOptionIds,
             CanVote = selectedOptionIds.Count == 0
         };

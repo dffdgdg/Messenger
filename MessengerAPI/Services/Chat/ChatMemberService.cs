@@ -15,8 +15,6 @@ public sealed class ChatMemberService(
     MessengerDbContext context,
     ICacheService cache,
     IAccessControlService accessControl,
-    IHubNotifier hubNotifier,
-    IUrlBuilder urlBuilder,
     ISystemMessageService systemMessages,
     AppDateTime appDateTime,
     ILogger<ChatMemberService> logger)

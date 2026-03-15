@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;

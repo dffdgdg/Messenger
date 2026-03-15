@@ -30,6 +30,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHead))]
     [NotifyPropertyChangedFor(nameof(HeadDisplayText))]
+    [NotifyPropertyChangedFor(nameof(HeadAvatar))]
     private UserDto? _selectedHead;
 
     public int? EditId { get; }
@@ -40,8 +41,8 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
 
     public bool HasHead => SelectedHead != null;
     public string HeadDisplayText => SelectedHead?.DisplayName ?? "Не назначен";
+    public string? HeadAvatar => SelectedHead?.Avatar;
 
-    // Свойства для удаления
     public int UserCount { get; }
     public bool HasChildren { get; }
     public bool CanDelete => !IsNewDepartment && !HasChildren && UserCount == 0;

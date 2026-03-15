@@ -80,7 +80,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     private async Task Edit(HierarchicalDepartmentViewModel item)
     {
         var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)],
-            Users,_dialogService,item.Department,item.HasChildren)  // Передаем информацию о дочерних отделах
+            Users,_dialogService,item.Department,item.HasChildren)
         {
             SaveAction = async dialogVm =>
             {
@@ -106,7 +106,10 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             },
             DeleteAction = async dialogVm =>
             {
-                var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById((int)dialogVm.EditId));
+                if (!dialogVm.EditId.HasValue)
+                    throw new InvalidOperationException("Идентификатор отдела не задан.");
+
+                var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value));
 
                 if (result.Success)
                 {

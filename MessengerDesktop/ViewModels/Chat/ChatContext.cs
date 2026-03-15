@@ -12,14 +12,19 @@ namespace MessengerDesktop.ViewModels.Chat;
 /// и события координации между handlers.
 /// Не содержит бизнес-логики.
 /// </summary>
-public sealed class ChatContext(int chatId, int currentUserId, IApiClientService api,
+public sealed class ChatContext(int chatId, int currentUserId, IApiClientService api, IDialogService dialogs,
     IGlobalHubConnection hub,INotificationService notifications, IChatNotificationApiService notificationApi,
     IFileDownloadService fileDownload, ILocalCacheService? cache) : ObservableObject, IDisposable
 {
     public int ChatId { get; } = chatId;
     public int CurrentUserId { get; } = currentUserId;
 
-    public ChatDto? Chat { get; set; }
+    private ChatDto? _chat;
+    public ChatDto? Chat
+    {
+        get => _chat;
+        set => SetProperty(ref _chat, value);
+    }
 
     private ObservableCollection<UserDto> _members = [];
 
@@ -30,6 +35,7 @@ public sealed class ChatContext(int chatId, int currentUserId, IApiClientService
     }
 
     public IApiClientService Api { get; } = api;
+    public IDialogService Dialogs { get; } = dialogs;
     public IGlobalHubConnection Hub { get; } = hub;
     public INotificationService Notifications { get; } = notifications;
     public IChatNotificationApiService NotificationApi { get; } = notificationApi;

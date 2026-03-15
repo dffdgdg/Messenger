@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:admin="using:MessengerDesktop.ViewModels.Admin"
              xmlns:adminCon="using:MessengerDesktop.Views.Controls.Admin"
+             xmlns:views="using:MessengerDesktop.Views"
              xmlns:controls="using:MessengerDesktop.Views.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MessengerDesktop.ViewModels"
@@ -130,8 +131,8 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="admin:DepartmentGroup">
                                             <adminCon:DepartmentGroupView
-                                                EditUserCommand="{Binding #Root.DataContext.OpenEditUserDialogCommand}"
-                                                BanUserCommand="{Binding #Root.DataContext.ToggleBanCommand}"/>
+                                                EditUserCommand="{Binding $parent[views:AdminView].DataContext.OpenEditUserDialogCommand}"
+                                                BanUserCommand="{Binding $parent[views:AdminView].DataContext.ToggleBanCommand}"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -152,7 +153,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="vm:HierarchicalDepartmentViewModel">
                                             <adminCon:DepartmentCardView
-                                                EditCommand="{Binding #Root.DataContext.OpenEditDepartmentCommand}"/>
+                                                EditCommand="{Binding $parent[views:AdminView].DataContext.OpenEditDepartmentCommand}"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

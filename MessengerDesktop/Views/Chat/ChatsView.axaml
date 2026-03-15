@@ -1,8 +1,6 @@
 <UserControl x:Name="Root"
 			 xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:messengerdesktop="using:MessengerDesktop"
 			 x:Class="MessengerDesktop.Views.ChatsView"
 			 Background="{DynamicResource PrimaryBG}"
@@ -471,7 +469,7 @@
 										   HorizontalAlignment="Center"
 										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 								<TextBlock Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString},
-								ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениям'}"
+								ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениями'}"
 								FontSize="{StaticResource FontSizeSmall}"
 								Foreground="{DynamicResource TextMuted}"
 								HorizontalAlignment="Center"
@@ -563,7 +561,8 @@
 		</Border>
 
 		<views:ChatInfoPanel x:Name="InfoPanel"
-							 Grid.Column="3"
-							 DataContext="{Binding CurrentChatViewModel}"/>
-	</Grid>
+					 Grid.Column="3"
+					 DataContext="{Binding CurrentChatViewModel}"
+					 OpenProfileCommand="{Binding OpenProfileCommand}"/>
+		</Grid>
 </UserControl>

@@ -14,5 +14,12 @@ public abstract class ChatFeatureHandler(ChatContext context) : ObservableObject
 
     protected bool IsAlive => !Disposed && !Ctx.IsDisposed;
 
-    public virtual void Dispose() => Disposed = true;
+    public virtual void Dispose()
+    {
+        if (Disposed)
+            return;
+
+        Disposed = true;
+        GC.SuppressFinalize(this);
+    }
 }

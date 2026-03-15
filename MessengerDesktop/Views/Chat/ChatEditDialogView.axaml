@@ -1,15 +1,11 @@
 <UserControl x:Name="Root"
 			 xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
 			 xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
 			 xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 x:Class="MessengerDesktop.Views.ChatEditDialog"
-			 x:DataType="vmDialog:ChatEditDialogViewModel"
-			 mc:Ignorable="d"
-			 d:DesignWidth="450" d:DesignHeight="800">
+			 x:DataType="vmDialog:ChatEditDialogViewModel">
 
 	<Border Classes="DialogContainer" Width="450" MaxHeight="800"
 			Background="{DynamicResource SecondaryBG}">
@@ -19,30 +15,44 @@
 
 				<Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0">
 					<Grid Grid.Column="0" Width="80" Height="80" Margin="0,0,16,0">
-						<controls:AvatarControl Classes="XLarge"
-												ImageBitmap="{Binding AvatarPreview}"
-												FallbackIcon="{StaticResource GroupIcon}"
-												ShowOnlineIndicator="False"
-												PlaceholderBackground="{DynamicResource SurfaceVariant}"
-												PlaceholderForeground="White"/>
-						<Button Classes="IconButton" Width="28" Height="28" CornerRadius="14"
-								HorizontalAlignment="Right" VerticalAlignment="Bottom"
-								Command="{Binding SelectAvatarCommand}"
-								ToolTip.Tip="Выбрать аватар">
-							<Path Data="{StaticResource CameraIcon}"
-								  Width="14" Height="14" Stretch="Uniform"
-								  Fill="{DynamicResource TextPrimary}"/>
-						</Button>
-						<Button Classes="IconButton" Width="20" Height="20" CornerRadius="10"
-								HorizontalAlignment="Right" VerticalAlignment="Top"
-								Margin="0,-4,-4,0"
-								Command="{Binding ClearAvatarCommand}"
-								IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
-								ToolTip.Tip="Удалить аватар">
-							<Path Data="{StaticResource CloseIcon}"
-								  Width="8" Height="8" Stretch="Uniform"
-								  Fill="{DynamicResource TextSecondary}"/>
-						</Button>
+						<Panel Classes="AvatarEditContainer"
+							   Grid.Column="0" Width="88" Height="88" Margin="0,0,12,0">
+							<controls:AvatarControl Classes="XLarge"
+													ImageBitmap="{Binding AvatarPreview}"
+													FallbackIcon="{StaticResource GroupIcon}"
+													ShowOnlineIndicator="False"
+													PlaceholderBackground="{DynamicResource SurfaceVariant}"
+													PlaceholderForeground="White"
+													HorizontalAlignment="Center"
+													VerticalAlignment="Center"/>
+
+							<Button Classes="AvatarEditOverlay"
+									Width="80" Height="80" CornerRadius="40"
+									HorizontalAlignment="Center"
+									VerticalAlignment="Center"
+									Command="{Binding SelectAvatarCommand}"
+									ToolTip.Tip="Изменить аватар">
+								<Border Classes="AvatarOverlay"
+										Width="80" Height="80"
+										CornerRadius="40"
+										Background="#66000000">
+									<PathIcon Data="{StaticResource CameraIcon}"
+											  Width="22" Height="22"
+											  Foreground="White"/>
+								</Border>
+							</Button>
+
+							<Button Classes="AvatarDeleteBadge"
+									Width="22" Height="22" CornerRadius="11"
+									HorizontalAlignment="Right" VerticalAlignment="Top"
+									Command="{Binding ClearAvatarCommand}"
+									IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
+									ToolTip.Tip="Удалить аватар">
+								<Path Data="{StaticResource CloseIcon}"
+									  Width="8" Height="8" Stretch="Uniform"
+									  Fill="White"/>
+							</Button>
+						</Panel>
 					</Grid>
 
 					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">

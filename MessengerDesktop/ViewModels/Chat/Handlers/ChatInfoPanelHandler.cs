@@ -58,7 +58,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         Ctx.Members.CollectionChanged += OnMembersCollectionChanged;
     }
 
-    public void LoadContactUser()
+    public async Task LoadContactUserAsync()
     {
         var contact = Ctx.Members.FirstOrDefault(m => m.Id != Ctx.CurrentUserId);
         if (contact == null) return;
@@ -76,6 +76,41 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         }
 
         InvalidateAll();
+
+
+        if (!string.IsNullOrWhiteSpace(contact.Department))
+            return;
+
+        try
+        {
+            var profileResult = await Ctx.Api.GetAsync<UserDto>(ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
+            if (profileResult is not { Success: true, Data: not null })
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!IsAlive) return;
+
+                ContactUser = profileResult.Data;
+                IsContactOnline = profileResult.Data.IsOnline;
+                ContactLastSeen = FormatLastSeen(profileResult.Data);
+
+                var memberIndex = Ctx.Members
+                    .Select((member, index) => new { member, index })
+                    .FirstOrDefault(x => x.member.Id == profileResult.Data.Id)?.index;
+
+                if (memberIndex.HasValue)
+                    Ctx.Members[memberIndex.Value] = profileResult.Data;
+
+                InvalidateAll();
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}");
+        }
+
     }
 
     public async Task ReloadMembersAfterEditAsync()
@@ -87,7 +122,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
             Dispatcher.UIThread.Post(() =>
             {
                 Ctx.Members = freshMembers;
-                if (IsContactChat) LoadContactUser();
+                if (IsContactChat)
+                    _ = LoadContactUserAsync();
                 InvalidateAll();
             });
         }

@@ -134,7 +134,6 @@ public class RichMessageTextBlock : SelectableTextBlock
     {
         var pos = e.GetPosition(this);
 
-        // В Avalonia 11.3 используем TextLayout.HitTestPoint
         var textLayout = TextLayout;
         if (textLayout is null)
             return null;
@@ -142,8 +141,6 @@ public class RichMessageTextBlock : SelectableTextBlock
         int charIndex;
         try
         {
-            // Avalonia 11.3: HitTestPoint возвращает TextHitTestResult
-            // Пробуем получить позицию через рефлексию если прямой доступ не работает
             charIndex = GetCharacterIndex(pos, textLayout);
         }
         catch
@@ -165,13 +162,10 @@ public class RichMessageTextBlock : SelectableTextBlock
 
     private static int GetCharacterIndex(Point pos, TextLayout layout)
     {
-        // Индекс получаем через HitTestTextPosition
         var textPosition = layout.HitTestPoint(pos);
 
-        // Используем свойства напрямую через dynamic для совместимости
         var type = textPosition.GetType();
 
-        // Пробуем разные имена свойств
         var prop = type.GetProperty("TextPosition")
                    ?? type.GetProperty("CharacterHit")
                    ?? type.GetProperty("Position");
@@ -183,7 +177,6 @@ public class RichMessageTextBlock : SelectableTextBlock
             if (val is CharacterHit ch) return ch.FirstCharacterIndex;
         }
 
-        // Fallback: вычисляем позицию по X координатам строк
         return GetCharIndexByPosition(layout, pos);
     }
 
@@ -197,7 +190,6 @@ public class RichMessageTextBlock : SelectableTextBlock
         {
             if (pos.Y >= y && pos.Y < y + line.Height)
             {
-                // Нашли строку, ищем символ по X
                 var lineHit = line.GetCharacterHitFromDistance(pos.X);
                 return globalIndex + lineHit.FirstCharacterIndex;
             }

@@ -2,8 +2,7 @@ using MessengerAPI.Services.Messaging;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class FilesController(IFileService fileService, ILogger<FilesController> logger)
-    : BaseController<FilesController>(logger)
+public sealed class FilesController(IFileService fileService, ILogger<FilesController> logger) : BaseController<FilesController>(logger)
 {
     private const long MaxFileSizeBytes = 100 * 1024 * 1024;
 

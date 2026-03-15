@@ -16,10 +16,9 @@ public sealed class SystemMessageService(
     IHubNotifier hubNotifier,
     IUrlBuilder urlBuilder,
     AppDateTime appDateTime,
-    ILogger<SystemMessageService> logger)
-    : BaseService<SystemMessageService>(context, logger), ISystemMessageService
+    ILogger<SystemMessageService> logger) : BaseService<SystemMessageService>(context, logger), ISystemMessageService
 {
-    public async Task CreateAsync(int chatId, int senderId, string content,
+     public async Task CreateAsync(int chatId, int senderId, string content,
         SystemEventType eventType, int? targetUserId = null)
     {
         try
@@ -55,7 +54,7 @@ public sealed class SystemMessageService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex,"Ошибка создания системного сообщения [{EventType}] в чате {ChatId}",
+            _logger.LogWarning(ex, "Ошибка создания системного сообщения [{EventType}] в чате {ChatId}",
                 eventType, chatId);
         }
     }

@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-/// <param name="cancelReply">
+/// <summary> <param name="cancelReply">
 /// ReplyHandler нужен для CancelReply после отправки голосового.
 /// Передаётся как Func для избежания циклических зависимостей.
-/// </param>
+/// </param> </summary>
 public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelReply) : ChatFeatureHandler(context)
 {
     private IAudioRecorderService _audioRecorder = null!;

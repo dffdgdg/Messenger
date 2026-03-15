@@ -1,7 +1,4 @@
-﻿using MessengerAPI.Model;
-using Microsoft.EntityFrameworkCore;
-
-namespace MessengerAPI.Middleware;
+﻿namespace MessengerAPI.Middleware;
 
 public sealed class MissingFileCleanupMiddleware(RequestDelegate next)
 {
@@ -58,10 +55,7 @@ public sealed class MissingFileCleanupMiddleware(RequestDelegate next)
 
         logger.LogInformation(
             "Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}",
-            relativePath,
-            messageFiles.Count,
-            usersWithAvatar.Count,
-            chatsWithAvatar.Count);
+            relativePath,messageFiles.Count,usersWithAvatar.Count,chatsWithAvatar.Count);
     }
 
     private static bool IsWatchedRequest(PathString path)

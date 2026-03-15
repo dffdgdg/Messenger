@@ -2,10 +2,7 @@
 
 public static class UserMappings
 {
-    public static UserDto ToDto(
-        this User user,
-        IUrlBuilder? urlBuilder = null,
-        bool? isOnline = null) => new()
+    public static UserDto ToDto(this User user, IUrlBuilder? urlBuilder = null, bool? isOnline = null) => new()
         {
             Id = user.Id,
             Username = user.Username,

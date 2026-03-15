@@ -2,9 +2,7 @@
 
 namespace MessengerAPI.Middleware;
 
-public sealed class ExceptionHandlingMiddleware(
-    RequestDelegate next,
-    ILogger<ExceptionHandlingMiddleware> logger,
+public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger,
     IWebHostEnvironment env)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

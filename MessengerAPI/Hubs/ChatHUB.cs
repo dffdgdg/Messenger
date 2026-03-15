@@ -4,11 +4,8 @@ using System.Security.Claims;
 namespace MessengerAPI.Hubs;
 
 [Authorize]
-public sealed class ChatHub(
-    IServiceScopeFactory scopeFactory,
-    IOnlineUserService onlineUserService,
-    AppDateTime appDateTime,
-    ILogger<ChatHub> logger) : Hub
+public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
+    AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
 
@@ -95,8 +92,7 @@ public sealed class ChatHub(
     public async Task LeaveChat(int chatId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chat_{chatId}");
-        logger.LogDebug("Соединение {ConnectionId} покинуло чат {ChatId}",
-            Context.ConnectionId, chatId);
+        logger.LogDebug("Соединение {ConnectionId} покинуло чат {ChatId}", Context.ConnectionId, chatId);
     }
 
     #endregion

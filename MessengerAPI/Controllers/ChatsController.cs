@@ -112,4 +112,11 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
         var userId = GetCurrentUserId();
         return await ExecuteAsync(() => chatService.UploadChatAvatarAsync(id, userId, file), "Аватар обновлён");
     }
+
+    [HttpDelete("{id}/avatar")]
+    public async Task<IActionResult> RemoveAvatar(int id)
+    {
+        var userId = GetCurrentUserId();
+        return await ExecuteAsync(() => chatService.RemoveChatAvatarAsync(id, userId), "Аватар удалён");
+    }
 }

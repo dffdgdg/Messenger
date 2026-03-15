@@ -96,8 +96,8 @@
 					<Grid ColumnDefinitions="Auto,*,Auto,Auto">
 						<controls:AvatarControl Grid.Column="0"
 												Classes="Small"
-												Source="{Binding SelectedHead.Avatar}"
-												DisplayName="{Binding SelectedHead.DisplayName}"
+												Source="{Binding HeadAvatar}"
+												DisplayName="{Binding HeadDisplayText}"
 												IsVisible="{Binding HasHead}"
 												Margin="0,0,12,0"/>
 

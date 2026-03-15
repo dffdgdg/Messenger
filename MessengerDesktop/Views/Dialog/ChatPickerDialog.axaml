@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
+             xmlns:chatDto="using:MessengerShared.Dto.Chat"
+             x:Class="MessengerDesktop.Views.Dialog.ChatPickerDialog"
+             x:DataType="vmDialog:ChatPickerDialogViewModel">
+
+    <Border Classes="DialogContainer" Width="520" MaxHeight="640" Background="{DynamicResource SecondaryBG}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+            <StackPanel Grid.Row="0" Spacing="4">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="20"
+                           FontWeight="Bold"/>
+                <TextBlock Text="Выберите чат из списка"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextSecondary}"/>
+            </StackPanel>
+
+            <TextBox Grid.Row="1"
+                     Text="{Binding SearchQuery, Mode=TwoWay}"
+                     Watermark="Поиск по названию чата..."
+                     Classes="Input Search">
+                <TextBox.InnerLeftContent>
+                    <PathIcon Data="{StaticResource SearchIcon}"
+                              Width="16" Height="16"
+                              Margin="12,0,8,0"
+                              Opacity="0.5"/>
+                </TextBox.InnerLeftContent>
+            </TextBox>
+
+            <Border Grid.Row="2"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    CornerRadius="8"
+                    ClipToBounds="True">
+                <Grid>
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Spacing="12"
+                                IsVisible="{Binding !FilteredItems.Count}">
+                        <PathIcon Data="{StaticResource GroupIcon}"
+                                  Width="48" Height="48"
+                                  Foreground="{DynamicResource TextMuted}"
+                                  HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding EmptyMessage}"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  IsVisible="{Binding FilteredItems.Count}">
+                        <ItemsControl ItemsSource="{Binding FilteredItems}" Margin="4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="chatDto:ChatDto">
+                                    <Border Padding="10,8"
+                                            Margin="0,2"
+                                            CornerRadius="6"
+                                            Cursor="Hand"
+                                            Background="Transparent"
+                                            PointerPressed="OnChatItemPressed">
+                                        <Border.Styles>
+                                            <Style Selector="Border:pointerover">
+                                                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                            </Style>
+                                        </Border.Styles>
+
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <controls:AvatarControl Grid.Column="0"
+                                                                    Size="36"
+                                                                    Source="{Binding Avatar}"
+                                                                    DisplayName="{Binding Name}"
+                                                                    ShowOnlineIndicator="False"/>
+
+                                            <StackPanel Grid.Column="1"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="2">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="Medium"
+                                                           FontSize="14"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding LastMessagePreview}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextSecondary}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxLines="1"/>
+                                            </StackPanel>
+
+                                            <PathIcon Grid.Column="2"
+                                                      Data="{StaticResource ChevronForwardIcon}"
+                                                      Width="14" Height="14"
+                                                      Foreground="{DynamicResource TextMuted}"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="12"
+                        Margin="0,12,0,0">
+                <Button Content="Отмена"
+                        Classes="DialogOutline"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="100"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

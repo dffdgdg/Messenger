@@ -16,6 +16,7 @@ public interface IChatService
     Task<Result<ChatDto>> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
     Task<Result> DeleteChatAsync(int chatId, int userId);
     Task<Result<string>> UploadChatAvatarAsync(int chatId, int userId, IFormFile file);
+    Task<Result> RemoveChatAvatarAsync(int chatId, int userId);
 }
 
 public class ChatService(
@@ -26,7 +27,6 @@ public class ChatService(
     IReadReceiptService readReceiptService,
     IUrlBuilder urlBuilder,
     ICacheService cacheService,
-    IHubNotifier hubNotifier,
     ISystemMessageService systemMessages,
     AppDateTime appDateTime,
     ILogger<ChatService> logger)
@@ -374,6 +374,35 @@ public class ChatService(
         }
 
         _logger.LogInformation("Чат {ChatId} удалён пользователем {UserId}", chatId, userId);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> RemoveChatAvatarAsync(int chatId, int userId)
+    {
+        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
+        if (adminResult.IsFailure)
+            return Result.FromFailure(adminResult);
+
+        var chatResult = await FindEntityAsync<Model.Chat>(chatId);
+        if (chatResult.IsFailure)
+            return Result.FromFailure(chatResult);
+
+        var chat = chatResult.Value!;
+
+        if (chat.Type == ChatType.Contact)
+            return Result.Failure("Нельзя удалить аватар у диалога");
+
+        if (!string.IsNullOrEmpty(chat.Avatar))
+            fileService.DeleteFile(chat.Avatar);
+
+        chat.Avatar = null;
+
+        var dbSaveResult = await SaveChangesAsync();
+        if (dbSaveResult.IsFailure)
+            return Result.FromFailure(dbSaveResult);
+
+        _logger.LogInformation("Аватар удалён для чата {ChatId}", chatId);
 
         return Result.Success();
     }

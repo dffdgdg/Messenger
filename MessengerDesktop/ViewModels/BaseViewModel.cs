@@ -66,7 +66,10 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
             if (!string.IsNullOrEmpty(successMessage))
                 SuccessMessage = successMessage;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Не считаем отмену ошибкой, просто игнорируем.
+        }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
@@ -90,7 +93,10 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
             if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
                 SuccessMessage = successMessage;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Не считаем отмену ошибкой, просто игнорируем.
+        }
         catch (Exception ex)
         {
             if (!ct.IsCancellationRequested)

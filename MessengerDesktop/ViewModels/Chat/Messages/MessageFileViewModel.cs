@@ -229,7 +229,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
                 _downloadCts?.Cancel();
                 _downloadCts?.Dispose();
             }
-            catch 
+            catch
             {
                 // Игнорируем исключения при очистке, так как объект уже может быть в процессе удаления
             }

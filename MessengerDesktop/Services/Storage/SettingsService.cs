@@ -130,6 +130,7 @@ public class SettingsService : ISettingsService
         }
         catch
         {
+            // Игнорируем ошибки сохранения, так как это не критично для работы приложения
         }
     }
 

@@ -22,6 +22,7 @@
 					Padding="16,0">
 				<Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
 					<TextBlock Text="{Binding InfoPanelTitle}"
+							   VerticalAlignment="Center"
 							   FontWeight="SemiBold"
 							   FontSize="16"/>
 					<Button Grid.Column="1"

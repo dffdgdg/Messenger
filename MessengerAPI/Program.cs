@@ -1,4 +1,5 @@
-﻿using System.Threading.RateLimiting;
+﻿using System.Security.Claims;
+using System.Threading.RateLimiting;
 using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
 
@@ -19,7 +20,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: RateLimitKey.GetIpPartitionKey(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 100,
@@ -31,7 +32,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("login", context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: RateLimitKey.GetIpPartitionKey(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 5,
@@ -43,9 +44,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("upload", context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                          ?? context.Connection.RemoteIpAddress?.ToString()
-                          ?? "unknown",
+            partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 10,
@@ -57,9 +56,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("search", context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                          ?? context.Connection.RemoteIpAddress?.ToString()
-                          ?? "unknown",
+            partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 15,
@@ -71,9 +68,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("messaging", context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                          ?? context.Connection.RemoteIpAddress?.ToString()
-                          ?? "unknown",
+            partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 30,
@@ -165,3 +160,14 @@ app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
 
 await app.RunAsync();
+ 
+internal static class RateLimitKey
+{
+    internal static string GetIpPartitionKey(HttpContext context) =>
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    internal static string GetUserOrIpPartitionKey(HttpContext context) =>
+        context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        ?? context.Connection.RemoteIpAddress?.ToString()
+        ?? "unknown";
+}

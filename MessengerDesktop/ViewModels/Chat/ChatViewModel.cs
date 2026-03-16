@@ -664,9 +664,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public void ScrollToIndexSilent(int index)
         => Context.RequestScrollToIndex(index, false);
 
-    private void UpdatePollsCount()
-        => PollsCount = MessageManager.GetPollsCount();
-
     private void CleanupOnError()
     {
         _hubSubscriber.Dispose();

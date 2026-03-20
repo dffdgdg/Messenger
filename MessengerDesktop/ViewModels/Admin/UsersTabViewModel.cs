@@ -96,7 +96,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.Users.ById(user.Id), updateDto);
+                var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.Admin.UserById(user.Id), updateDto);
 
                 if (result.Success)
                 {

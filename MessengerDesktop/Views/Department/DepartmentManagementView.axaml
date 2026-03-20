@@ -150,7 +150,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate DataType="vm:DepartmentMemberViewModel">
-										<Border Classes="Hoverable HoverActions"
+										<Border Classes="Hoverable DepartmentCard"
 												Background="{DynamicResource ItemBgBrush}"
 												CornerRadius="10"
 												Padding="14,12">

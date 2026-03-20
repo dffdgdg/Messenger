@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MessengerDesktop.Services.Auth;
 
@@ -119,11 +120,7 @@ public partial class SessionStore : ObservableObject, ISessionStore
     public bool HasAnyRole(params UserRole[] roles)
     {
         if (roles.Length == 0 || !IsAuthenticated) return false;
-        foreach (var role in roles)
-        {
-            if (IsInRole(role)) return true;
-        }
-        return false;
+        return roles.Any(IsInRole);
     }
 
     public bool IsInRole(UserRole role) => IsAuthenticated && UserRole == role;

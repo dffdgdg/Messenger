@@ -23,6 +23,8 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
         ctx.Hub.MessageDeletedGlobally += OnMessageDeleted;
         ctx.Hub.MessageRead += OnMessageRead;
         ctx.Hub.UnreadCountChanged += OnUnreadCountChanged;
+        ctx.Hub.TranscriptionStatusChanged += OnTranscriptionStatusChanged;
+        ctx.Hub.TranscriptionCompleted += OnTranscriptionCompleted;
         ctx.Hub.Reconnected += OnReconnected;
 
         // Typing подписывается внутри ChatTypingHandler
@@ -79,6 +81,31 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
         onUnreadCountChanged(count);
     }
 
+    private void OnTranscriptionStatusChanged(VoiceTranscriptionDto transcription)
+    {
+        if (ctx.IsDisposed || transcription.ChatId != ctx.ChatId) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var message = messageManager.Messages.FirstOrDefault(m => m.Id == transcription.MessageId);
+            if (message == null) return;
+
+            message.UpdateTranscription(transcription.Status, transcription.Transcription);
+            voice.StartTranscriptionPollingIfNeeded(message);
+        });
+    }
+
+    private void OnTranscriptionCompleted(VoiceTranscriptionDto transcription)
+    {
+        if (ctx.IsDisposed || transcription.ChatId != ctx.ChatId) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var message = messageManager.Messages.FirstOrDefault(m => m.Id == transcription.MessageId);
+            message?.UpdateTranscription(transcription.Status, transcription.Transcription);
+        });
+    }
+
     private void OnReconnected()
     {
         if (ctx.IsDisposed) return;
@@ -94,6 +121,8 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
         ctx.Hub.MessageDeletedGlobally -= OnMessageDeleted;
         ctx.Hub.MessageRead -= OnMessageRead;
         ctx.Hub.UnreadCountChanged -= OnUnreadCountChanged;
+        ctx.Hub.TranscriptionStatusChanged -= OnTranscriptionStatusChanged;
+        ctx.Hub.TranscriptionCompleted -= OnTranscriptionCompleted;
         ctx.Hub.Reconnected -= OnReconnected;
 
         _subscribed = false;

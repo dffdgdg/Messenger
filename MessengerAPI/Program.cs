@@ -1,7 +1,6 @@
-﻿using System.Security.Claims;
-using System.Threading.RateLimiting;
-using MessengerAPI.Hubs;
+﻿using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -160,14 +159,3 @@ app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
 
 await app.RunAsync();
- 
-internal static class RateLimitKey
-{
-    internal static string GetIpPartitionKey(HttpContext context) =>
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-    internal static string GetUserOrIpPartitionKey(HttpContext context) =>
-        context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-        ?? context.Connection.RemoteIpAddress?.ToString()
-        ?? "unknown";
-}

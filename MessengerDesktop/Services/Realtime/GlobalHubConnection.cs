@@ -27,6 +27,8 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, int, int?, DateTime?>? MessageRead;
     event Action<int, UserDto>? MemberJoined;
     event Action<int, int>? MemberLeft;
+    event Action<VoiceTranscriptionDto>? TranscriptionStatusChanged;
+    event Action<VoiceTranscriptionDto>? TranscriptionCompleted;
     event Action? Reconnected;
 
     bool IsConnected { get; }
@@ -79,6 +81,8 @@ public sealed class GlobalHubConnection(
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, UserDto>? MemberJoined;
     public event Action<int, int>? MemberLeft;
+    public event Action<VoiceTranscriptionDto>? TranscriptionStatusChanged;
+    public event Action<VoiceTranscriptionDto>? TranscriptionCompleted;
     public event Action? Reconnected;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
@@ -146,6 +150,8 @@ public sealed class GlobalHubConnection(
         _hubSubscriptions.Add(_hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageReadReceived));
         _hubSubscriptions.Add(_hubConnection.On<int, UserDto>("MemberJoined", OnMemberJoinedReceived));
         _hubSubscriptions.Add(_hubConnection.On<int, int>("MemberLeft", OnMemberLeftReceived));
+        _hubSubscriptions.Add(_hubConnection.On<VoiceTranscriptionDto>("TranscriptionStatusChanged", OnTranscriptionStatusChangedReceived));
+        _hubSubscriptions.Add(_hubConnection.On<VoiceTranscriptionDto>("TranscriptionCompleted", OnTranscriptionCompletedReceived));
     }
 
     /// <summary>
@@ -462,6 +468,12 @@ public sealed class GlobalHubConnection(
 
     private void OnMemberLeftReceived(int chatId, int userId)
         => Dispatcher.UIThread.Post(() => MemberLeft?.Invoke(chatId, userId));
+
+    private void OnTranscriptionStatusChangedReceived(VoiceTranscriptionDto transcription)
+       => Dispatcher.UIThread.Post(() => TranscriptionStatusChanged?.Invoke(transcription));
+
+    private void OnTranscriptionCompletedReceived(VoiceTranscriptionDto transcription)
+        => Dispatcher.UIThread.Post(() => TranscriptionCompleted?.Invoke(transcription));
 
     #endregion
 

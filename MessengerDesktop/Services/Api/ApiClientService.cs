@@ -90,7 +90,8 @@ public sealed class ApiClientService : IApiClientService
         return true;
     }
 
-    private async Task<HttpResponseMessage> SendWithRefreshAsync(Func<Task<HttpResponseMessage>> createAndSendRequest, string url)
+    private async Task<HttpResponseMessage> SendWithRefreshAsync(
+        Func<Task<HttpResponseMessage>> createAndSendRequest, string url)
     {
         var response = await createAndSendRequest();
 
@@ -112,15 +113,12 @@ public sealed class ApiClientService : IApiClientService
         Debug.WriteLine("[ApiClient] Token refresh failed");
         return new HttpResponseMessage(HttpStatusCode.Unauthorized)
         {
-            Content = new StringContent(
-                JsonSerializer.Serialize(new ApiResponse<object>
-                {
-                    Success = false,
-                    Error = "Сессия истекла. Войдите заново.",
-                    Timestamp = DateTime.UtcNow
-                }, _jsonOptions),
-                Encoding.UTF8,
-                "application/json")
+            Content = new StringContent(JsonSerializer.Serialize(new ApiResponse<object>
+            {
+                Success = false,
+                Error = "Сессия истекла. Войдите заново.",
+                Timestamp = DateTime.UtcNow
+            }, _jsonOptions), Encoding.UTF8, "application/json")
         };
     }
 
@@ -309,14 +307,16 @@ public sealed class ApiClientService : IApiClientService
             {
                 await response.Content.CopyToAsync(memoryStream, ct);
                 memoryStream.Position = 0;
-                response.Dispose();
                 return memoryStream;
             }
             catch
             {
                 await memoryStream.DisposeAsync();
-                response.Dispose();
                 throw;
+            }
+            finally
+            {
+                response.Dispose();
             }
         }
         catch (OperationCanceledException) { throw; }
@@ -361,80 +361,86 @@ public sealed class ApiClientService : IApiClientService
 
     #region Response Processing
 
-    private async Task<ApiResponse<T>> ProcessResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
+    private async Task<ApiResponse<T>> ProcessResponseAsync<T>(
+        HttpResponseMessage response, CancellationToken ct)
     {
-        var json = await response.Content.ReadAsStringAsync(ct);
-
-        if (!response.IsSuccessStatusCode)
+        using (response)
         {
-            return new ApiResponse<T>
-            {
-                Success = false,
-                Error = $"HTTP {response.StatusCode}",
-                Details = json,
-                Timestamp = DateTime.UtcNow
-            };
-        }
+            var json = await response.Content.ReadAsStringAsync(ct);
 
-        try
-        {
-            var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(json, _jsonOptions);
-            if (apiResponse != null) return apiResponse;
+            if (!response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    Error = $"HTTP {response.StatusCode}",
+                    Details = json,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
 
-            var directData = JsonSerializer.Deserialize<T>(json, _jsonOptions);
-            return new ApiResponse<T>
+            try
             {
-                Success = true,
-                Data = directData,
-                Timestamp = DateTime.UtcNow
-            };
-        }
-        catch (JsonException ex)
-        {
-            return new ApiResponse<T>
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(json, _jsonOptions);
+                if (apiResponse != null) return apiResponse;
+
+                var directData = JsonSerializer.Deserialize<T>(json, _jsonOptions);
+                return new ApiResponse<T>
+                {
+                    Success = true,
+                    Data = directData,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+            catch (JsonException ex)
             {
-                Success = false,
-                Error = $"Ошибка десериализации: {ex.Message}",
-                Details = json,
-                Timestamp = DateTime.UtcNow
-            };
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    Error = $"Ошибка десериализации: {ex.Message}",
+                    Details = json,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
         }
     }
 
-    private async Task<ApiResponse<object>> ProcessResponseAsync(
-        HttpResponseMessage response, CancellationToken ct)
+    private async Task<ApiResponse<object>> ProcessResponseAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var json = await response.Content.ReadAsStringAsync(ct);
+        using (response)
+        {
+            var json = await response.Content.ReadAsStringAsync(ct);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            return new ApiResponse<object>
+            if (!response.IsSuccessStatusCode)
             {
-                Success = false,
-                Error = $"HTTP {response.StatusCode}",
-                Details = json,
-                Timestamp = DateTime.UtcNow
-            };
-        }
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = $"HTTP {response.StatusCode}",
+                    Details = json,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
 
-        try
-        {
-            var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(json, _jsonOptions);
-            return apiResponse ?? new ApiResponse<object>
+            try
             {
-                Success = true,
-                Timestamp = DateTime.UtcNow
-            };
-        }
-        catch (JsonException ex)
-        {
-            return new ApiResponse<object>
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(json, _jsonOptions);
+                return apiResponse ?? new ApiResponse<object>
+                {
+                    Success = true,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+            catch (JsonException ex)
             {
-                Success = false,
-                Error = $"Ошибка десериализации: {ex.Message}",
-                Details = json,
-                Timestamp = DateTime.UtcNow
-            };
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = $"Ошибка десериализации: {ex.Message}",
+                    Details = json,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
         }
     }
 
@@ -442,8 +448,7 @@ public sealed class ApiClientService : IApiClientService
 
     #region Helpers
 
-    private static async Task<Stream> CreateTempFileStreamAsync(
-        HttpResponseMessage response, CancellationToken ct)
+    private static async Task<Stream> CreateTempFileStreamAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
@@ -455,21 +460,21 @@ public sealed class ApiClientService : IApiClientService
                 await response.Content.CopyToAsync(fileStream, ct);
             }
 
-            response.Dispose();
-
-            return new FileStream(tempPath, FileMode.Open, FileAccess.Read,
-                FileShare.Read, 81920,
-                FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+            return new FileStream(tempPath, FileMode.Open, FileAccess.Read,FileShare.Read,
+                81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous);
         }
         catch
         {
-            response.Dispose();
             if (File.Exists(tempPath))
             {
                 try { File.Delete(tempPath); }
-                catch { /* ignore */ }
+                catch {  /* Если удаление не удалось, файл будет удалён при следующей очистке temp */ }
             }
             throw;
+        }
+        finally
+        {
+            response.Dispose();
         }
     }
 
@@ -487,8 +492,7 @@ public sealed class ApiClientService : IApiClientService
         Timestamp = DateTime.UtcNow
     };
 
-    private void ThrowIfDisposed() =>
-        ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(ApiClientService));
 
     #endregion
 

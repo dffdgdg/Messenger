@@ -53,7 +53,7 @@ public class FileService(
 
         await image.SaveAsWebpAsync(absolutePath, new WebpEncoder { Quality = _settings.ImageQuality });
 
-        var resultPath = "/" + relativePath.Replace('\\', '/');
+        var resultPath = NormalizeToWebPath(relativePath);
 
         _logger.LogInformation("Изображение сохранено: {FilePath}", resultPath);
 
@@ -82,7 +82,7 @@ public class FileService(
         await using (var fs = new FileStream(absolutePath, FileMode.Create))
             await file.CopyToAsync(fs);
 
-        var resultRelativePath = "/" + relativePath.Replace('\\', '/');
+        var resultRelativePath = NormalizeToWebPath(relativePath);
 
         _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}", fileName, chatId);
 
@@ -139,10 +139,20 @@ public class FileService(
     private string GetAbsolutePath(string relativePath)
         => Path.Combine(env.WebRootPath ?? "wwwroot", relativePath);
 
+    private static string NormalizeToWebPath(string relativePath)
+    {
+        var normalizedPath = relativePath.Replace(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar);
+
+        return string.Concat(Path.AltDirectorySeparatorChar, normalizedPath);
+    }
+
     private static void EnsureDirectoryExists(string filePath)
     {
         var directory = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             Directory.CreateDirectory(directory);
     }
+
 }

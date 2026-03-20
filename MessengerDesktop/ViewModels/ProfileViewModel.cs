@@ -1,10 +1,12 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using MessengerDesktop.Infrastructure;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using MessengerDesktop.Infrastructure;
 
 namespace MessengerDesktop.ViewModels;
 
@@ -13,7 +15,6 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     private readonly IApiClientService _apiClient;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(FullName))]
     [NotifyPropertyChangedFor(nameof(Username))]
     [NotifyPropertyChangedFor(nameof(SurnameDisplay))]
@@ -67,7 +68,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     [ObservableProperty] private Bitmap? _avatarBitmap;
 
-    public string? AvatarUrl => GetAbsoluteUrl(User?.Avatar);
+    [ObservableProperty]
+    private string? _avatarUrl;
 
     public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname)
                               ?? User?.Username ?? "Пользователь";
@@ -133,7 +135,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager)
     {
         _apiClient = apiClient;
-        UserId = authManager.Session.UserId ?? throw new Exception("Not auth");
+        UserId = authManager.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
         _ = LoadUser();
     }
 
@@ -153,19 +155,49 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         if (result.Success)
         {
             User = result.Data;
+            RefreshAvatarUrl();
             await LoadAvatarAsync();
         }
     });
 
     private async Task LoadAvatarAsync()
     {
-        if (string.IsNullOrEmpty(AvatarUrl)) { AvatarBitmap = null; return; }
+        if (string.IsNullOrEmpty(AvatarUrl))
+        {
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
+            return;
+        }
         try
         {
-            var stream = await _apiClient.GetStreamAsync(AvatarUrl);
-            if (stream != null) AvatarBitmap = new Bitmap(stream);
+            await using var stream = await _apiClient.GetStreamAsync(AvatarUrl);
+            if (stream == null)
+            {
+                AvatarBitmap?.Dispose();
+                AvatarBitmap = null;
+                return;
+            }
+
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = new Bitmap(stream);
         }
-        catch { AvatarBitmap = null; }
+        catch
+        {
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
+        }
+    }
+
+
+    partial void OnUserChanged(UserDto? value)
+        => RefreshAvatarUrl();
+
+    private void RefreshAvatarUrl(bool forceCacheBuster = false)
+    {
+        var rawAvatarUrl = User?.Avatar;
+        AvatarUrl = forceCacheBuster
+            ? AvatarHelper.GetUrlWithCacheBuster(rawAvatarUrl)
+            : GetAbsoluteUrl(rawAvatarUrl);
     }
 
     #region Редактирование профиля (ФИО)
@@ -360,7 +392,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             if (result.Success)
             {
                 User.Avatar = result.Data!.Avatar;
-                OnPropertyChanged(nameof(AvatarUrl));
+                RefreshAvatarUrl(forceCacheBuster: true);
                 OnPropertyChanged(nameof(HasAvatar));
                 await LoadAvatarAsync();
                 SuccessMessage = "Аватар обновлён";
@@ -381,8 +413,9 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             if (result.Success)
             {
                 User.Avatar = null;
+                AvatarBitmap?.Dispose();
                 AvatarBitmap = null;
-                OnPropertyChanged(nameof(AvatarUrl));
+                RefreshAvatarUrl();
                 OnPropertyChanged(nameof(HasAvatar));
                 SuccessMessage = "Аватар удалён";
             }
@@ -422,6 +455,17 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     protected void ClearSuccess() => SuccessMessage = null;
 
     #endregion
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
+        }
+
+        base.Dispose(disposing);
+    }
 
     [GeneratedRegex("^[a-zA-Z0-9_]{3,30}$", RegexOptions.None)]
     private static partial Regex UsernameRegex();

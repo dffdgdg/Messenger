@@ -235,7 +235,31 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private async Task ToggleTranscription()
-        => IsTranscriptionExpanded = !IsTranscriptionExpanded;
+    {
+        IsTranscriptionExpanded = !IsTranscriptionExpanded;
+
+        if (!IsTranscriptionExpanded || !IsVoiceMessage || _apiClient == null)
+            return;
+
+        if (HasTranscriptionText || IsTranscriptionDone)
+            return;
+
+        try
+        {
+            IsTranscriptionLoading = true;
+            var result = await _apiClient.GetAsync<TranscriptionResult>(ApiEndpoints.Messages.Transcription(Id));
+            if (result is { Success: true, Data: not null })
+                UpdateTranscription(result.Data.Status, result.Data.Transcription);
+        }
+        catch
+        {
+            // Ошибки при загрузке статуса транскрипции не критичны, просто отобразим статус как "Ошибка"
+        }
+        finally
+        {
+            IsTranscriptionLoading = IsTranscriptionPending;
+        }
+    }
 
     #endregion
     #region Audio Player
@@ -447,6 +471,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         TranscriptionStatus = status;
         TranscriptionText = transcription;
+        IsTranscriptionLoading = status is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
     }
 
     public void UpdatePoll(PollDto pollDto)
@@ -604,14 +629,19 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     partial void OnTranscriptionStatusChanged(TranscriptionStatus? value)
     {
+        IsTranscriptionLoading = value is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
         OnPropertyChanged(nameof(IsTranscriptionPending));
         OnPropertyChanged(nameof(IsTranscriptionDone));
         OnPropertyChanged(nameof(IsTranscriptionFailed));
         OnPropertyChanged(nameof(TranscriptionStatusDisplay));
+        OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
     }
 
     partial void OnTranscriptionTextChanged(string? value)
-        => OnPropertyChanged(nameof(HasTranscriptionText));
+    {
+        OnPropertyChanged(nameof(HasTranscriptionText));
+        OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
+    }
 
     partial void OnIsVoicePlayingChanged(bool value)
     {
@@ -628,6 +658,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     partial void OnIsVoiceLoadingChanged(bool value)
         => OnPropertyChanged(nameof(ShowPlayButton));
+
+    partial void OnIsTranscriptionLoadingChanged(bool value)
+        => OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
 
     partial void OnForwardedFromMessageIdChanged(int? value)
     {

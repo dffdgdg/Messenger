@@ -13,6 +13,10 @@ public sealed class AdminController(IAdminService adminService, ILogger<AdminCon
     public async Task<ActionResult<ApiResponse<UserDto>>> CreateUser([FromBody] CreateUserDto dto, CancellationToken ct)
         => await ExecuteAsync(() => adminService.CreateUserAsync(dto, ct), "Пользователь создан успешно");
 
+    [HttpPut("users/{id}")]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateUser(int id, [FromBody] UserDto dto, CancellationToken ct)
+        => await ExecuteAsync(() => adminService.UpdateUserAsync(id, dto, ct), "  ");
+
     [HttpPost("users/{id}/toggle-ban")]
     public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)
         => await ExecuteAsync(() => adminService.ToggleBanAsync(id, ct), "Статус блокировки изменён");

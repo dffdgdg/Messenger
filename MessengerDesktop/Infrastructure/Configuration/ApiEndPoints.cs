@@ -242,6 +242,10 @@ public static class ApiEndpoints
         /// <summary>GET api/admin/users</summary>
         public const string Users = $"{Base}/users";
 
+        /// <summary>PUT api/admin/users/{userId}</summary>
+        public static string UserById(int userId) => $"{Base}/users/{userId}";
+
+
         /// <summary>POST api/admin/users/{userId}/toggle-ban</summary>
         public static string ToggleBan(int userId) => $"{Base}/users/{userId}/toggle-ban";
     }

@@ -2,6 +2,7 @@
 using MessengerShared.Dto.Auth;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -140,29 +141,19 @@ public sealed class AuthManager : IAuthManager, IDisposable
             return true;
 
         string[] authKeywords =
-        [
-            "Unauthorized",
-            "Forbidden",
-            "Недействительный",
-            "недействительный",
-            "истёк",
-            "Истёк",
-            "отозван",
-            "Отозван",
-            "заблокирован",
-            "Заблокирован",
-            "использован",
-            "Использован",
-            "Сессия истекла"
-        ];
+            [
+                "Unauthorized",
+                "Forbidden",
+                "Недействительный",
+                "Истёк",
+                "Отозван",
+                "Заблокирован",
+                "Использован",
+                "Сессия истекла"
+            ];
 
-        foreach (var keyword in authKeywords)
-        {
-            if (error.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
+        return authKeywords.Any(keyword =>
+            error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> TryRefreshTokenAsync()

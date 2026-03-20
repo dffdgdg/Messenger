@@ -347,6 +347,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
             Voice.Initialize(audioRecorder);
 
+            foreach (var message in Messages.Where(m => m.IsVoiceMessage))
+                Voice.StartTranscriptionPollingIfNeeded(message);
+
             InfoPanel.Subscribe();
 
             _initTcs.TrySetResult();

@@ -11,18 +11,21 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessengerShared", "Messenge
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}"
 	ProjectSection(SolutionItems) = preProject
-		Architecture.md = Architecture.md
 		Readme.MD = Readme.MD
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{ABC5CEB3-D286-47B5-BFCA-AFE5B5C4A372}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{B14842C5-FE3A-4765-B4BC-451ACC7955D5}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{B14842C5-FE3A-4765-B4BC-451ACC7955D5}"
 	ProjectSection(SolutionItems) = preProject
-		Architecture.md = Architecture.md
+		API_REFERENCE.md = API_REFERENCE.md
+		ARCHITECTURE.md = ARCHITECTURE.md
 		CONVENTIONS.md = CONVENTIONS.md
 		DATA_MODEL.md = DATA_MODEL.md
+		DESKTOP_CLIENT.md = DESKTOP_CLIENT.md
+		DTO_CONTRACTS.md = DTO_CONTRACTS.md
 		GLOSSARY.md = GLOSSARY.md
+		REALTIME.md = REALTIME.md
 		TECH_STACK.md = TECH_STACK.md
 	EndProjectSection
 EndProject

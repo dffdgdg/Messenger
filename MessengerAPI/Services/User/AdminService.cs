@@ -10,10 +10,7 @@ public interface IAdminService
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
 }
 
-public class AdminService(
-    MessengerDbContext context,
-    AppDateTime appDateTime,
-    ILogger<AdminService> logger)
+public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
@@ -44,7 +41,7 @@ public class AdminService(
         if (string.IsNullOrWhiteSpace(dto.Name))
             return Result<UserDto>.Failure("Имя не может быть пустым");
 
-        var username = dto.Username!.Trim().ToLower();
+        var username = dto.Username!.Trim().ToLowerInvariant();
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username, ct);
         if (exists)
@@ -106,7 +103,7 @@ public class AdminService(
         if (string.IsNullOrWhiteSpace(dto.Name))
             return Result<UserDto>.Failure("Имя не может быть пустым");
 
-        var username = dto.Username!.Trim().ToLower();
+        var username = dto.Username!.Trim().ToLowerInvariant();
 
         var user = await _context.Users
             .Include(u => u.Department)

@@ -27,8 +27,7 @@ public sealed class NotificationService(
         }
     }
 
-    public async Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(
-        int userId, int chatId)
+    public async Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(int userId, int chatId)
     {
         var member = await context.ChatMembers.AsNoTracking()
             .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
@@ -43,8 +42,7 @@ public sealed class NotificationService(
         });
     }
 
-    public async Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(
-        int userId, ChatNotificationSettingsDto request)
+    public async Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request)
     {
         var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == request.ChatId);
 

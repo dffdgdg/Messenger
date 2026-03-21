@@ -1,12 +1,13 @@
 ﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.ReadReceipt;
+using MessengerShared.DTO.Message;
 
 namespace MessengerAPI.Services.Messaging;
 
 public interface IMessageService
 {
-    Task<Result<MessageDto>> CreateMessageAsync(MessageDto dto);
+    Task<Result<MessageDto>> CreateMessageAsync(int senderId, CreateMessageRequest request);
     Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto);
     Task<Result> DeleteMessageAsync(int messageId, int userId);
     Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize);
@@ -16,7 +17,6 @@ public interface IMessageService
     Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize);
     Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize);
 }
-
 public class MessageService(
     MessengerDbContext context,
     IAccessControlService accessControl,
@@ -47,83 +47,132 @@ public class MessageService(
 
     #endregion
 
-    public async Task<Result<MessageDto>> CreateMessageAsync(MessageDto dto)
+    #region Create
+
+    public async Task<Result<MessageDto>> CreateMessageAsync(int senderId, CreateMessageRequest request)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(dto.SenderId, dto.ChatId);
+        var accessResult = await accessControl.CheckIsMemberAsync(senderId, request.ChatId);
         if (accessResult.IsFailure)
             return Result<MessageDto>.FromFailure(accessResult);
 
-        if (dto.ReplyToMessageId.HasValue)
-        {
-            var replyExists = await _context.Messages.AnyAsync(m =>
-                m.Id == dto.ReplyToMessageId.Value && m.ChatId == dto.ChatId && m.IsDeleted != true);
+        var contentValidation = ValidateContent(request);
+        if (contentValidation.IsFailure)
+            return Result<MessageDto>.FromFailure(contentValidation);
 
-            if (!replyExists)
-                return Result<MessageDto>.NotFound("Сообщение для ответа не найдено в этом чате");
-        }
+        var referencesValidation = await ValidateReferencesAsync(request);
+        if (referencesValidation.IsFailure)
+            return Result<MessageDto>.FromFailure(referencesValidation);
 
-        if (dto.ForwardedFromMessageId.HasValue)
-        {
-            var originalExists = await _context.Messages.AnyAsync(m =>
-                m.Id == dto.ForwardedFromMessageId.Value && m.IsDeleted != true);
-
-            if (!originalExists)
-                return Result<MessageDto>.NotFound("Оригинальное сообщение для пересылки не найдено");
-        }
-
-        var message = new Message
-        {
-            ChatId = dto.ChatId,
-            SenderId = dto.SenderId,
-            Content = dto.IsVoiceMessage ? null : dto.Content,
-            IsDeleted = false,
-            ReplyToMessageId = dto.ReplyToMessageId,
-            ForwardedFromMessageId = dto.ForwardedFromMessageId,
-        };
-
+        var message = BuildMessage(senderId, request);
         _context.Messages.Add(message);
+
+        if (request.IsVoiceMessage)
+        {
+            var voiceResult = AttachVoiceMessage(message, request);
+            if (voiceResult.IsFailure)
+                return Result<MessageDto>.FromFailure(voiceResult);
+        }
+
+        AttachFiles(message, request.Files);
+        await MarkChatUpdatedAsync(request.ChatId);
 
         var saveResult = await SaveChangesAsync();
         if (saveResult.IsFailure)
             return Result<MessageDto>.FromFailure(saveResult);
 
-        if (dto.IsVoiceMessage)
-        {
-            if (string.IsNullOrEmpty(dto.VoiceFileUrl))
-                return Result<MessageDto>.Failure("Голосовое сообщение должно содержать аудиофайл");
+        return await PostCreateAsync(message, senderId);
+    }
 
-            var voiceMessage = new VoiceMessage
+    private static Result ValidateContent(CreateMessageRequest request)
+    {
+        if (request.IsVoiceMessage)
+            return Result.Success();
+
+        if (request.ForwardedFromMessageId.HasValue)
+            return Result.Success();
+
+        if (string.IsNullOrWhiteSpace(request.Content) && request.Files is not { Count: > 0 })
+            return Result.Failure("Сообщение должно содержать текст или файлы");
+
+        return Result.Success();
+    }
+
+    private async Task<Result> ValidateReferencesAsync(CreateMessageRequest request)
+    {
+        if (request.ReplyToMessageId.HasValue)
+        {
+            var replyExists = await _context.Messages.AnyAsync(m =>
+                m.Id == request.ReplyToMessageId.Value
+                && m.ChatId == request.ChatId
+                && m.IsDeleted != true);
+
+            if (!replyExists)
+                return Result.NotFound("Сообщение для ответа не найдено в этом чате");
+        }
+
+        if (request.ForwardedFromMessageId.HasValue)
+        {
+            var originalExists = await _context.Messages.AnyAsync(m =>
+                m.Id == request.ForwardedFromMessageId.Value
+                && m.IsDeleted != true);
+
+            if (!originalExists)
+                return Result.NotFound("Оригинальное сообщение для пересылки не найдено");
+        }
+
+        return Result.Success();
+    }
+
+    private static Message BuildMessage(int senderId, CreateMessageRequest request) => new()
+    {
+        ChatId = request.ChatId,
+        SenderId = senderId,
+        Content = request.IsVoiceMessage ? null : request.Content,
+        IsDeleted = false,
+        ReplyToMessageId = request.ReplyToMessageId,
+        ForwardedFromMessageId = request.ForwardedFromMessageId,
+    };
+
+    private Result AttachVoiceMessage(Message message, CreateMessageRequest request)
+    {
+        if (string.IsNullOrEmpty(request.VoiceFileUrl))
+            return Result.Failure("Голосовое сообщение должно содержать аудиофайл");
+
+        message.VoiceMessage = new VoiceMessage
+        {
+            DurationSeconds = request.VoiceDurationSeconds ?? 0,
+            TranscriptionStatus = TranscriptionStatus.Pending,
+            FilePath = StripBaseUrl(request.VoiceFileUrl),
+            FileName = request.VoiceFileName ?? "voice.wav",
+            ContentType = request.VoiceContentType ?? "audio/wav",
+            FileSize = request.VoiceFileSize ?? 0
+        };
+
+        return Result.Success();
+    }
+
+    private void AttachFiles(Message message, List<MessageFileDto>? files)
+    {
+        if (files is not { Count: > 0 })
+            return;
+
+        foreach (var f in files)
+        {
+            message.MessageFiles.Add(new MessageFile
             {
-                MessageId = message.Id,
-                DurationSeconds = dto.VoiceDurationSeconds ?? 0,
-                TranscriptionStatus = TranscriptionStatus.Pending,
-                FilePath = StripBaseUrl(dto.VoiceFileUrl),
-                FileName = dto.VoiceFileName ?? "voice.wav",
-                ContentType = dto.VoiceContentType ?? "audio/wav",
-                FileSize = dto.VoiceFileSize ?? 0
-            };
-
-            _context.VoiceMessages.Add(voiceMessage);
-
-            var voiceSaveResult = await SaveChangesAsync();
-            if (voiceSaveResult.IsFailure)
-                return Result<MessageDto>.FromFailure(voiceSaveResult);
+                FileName = f.FileName,
+                ContentType = f.ContentType,
+                Path = StripFileUrl(f.Url)
+            });
         }
+    }
 
-        if (dto.Files?.Count > 0)
-        {
-            var filesResult = await SaveMessageFilesAsync(message.Id, dto.Files);
-            if (filesResult.IsFailure)
-                return Result<MessageDto>.FromFailure(filesResult);
-        }
-
-        await UpdateChatLastMessageTimeAsync(dto.ChatId);
-
+    private async Task<Result<MessageDto>> PostCreateAsync(Message message, int senderId)
+    {
         var createdMessage = await MessagesWithIncludes().FirstAsync(m => m.Id == message.Id);
-        var messageDto = createdMessage.ToDto(dto.SenderId, urlBuilder);
+        var messageDto = createdMessage.ToDto(senderId, urlBuilder);
 
-        await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDto", messageDto);
-
+        await hubNotifier.SendToChatAsync(message.ChatId, "ReceiveMessageDto", messageDto);
         await NotifyAndUpdateUnreadAsync(messageDto);
 
         if (createdMessage.IsVoiceMessage)
@@ -133,10 +182,12 @@ public class MessageService(
         }
 
         _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}",
-            message.Id, dto.ChatId);
+            message.Id, message.ChatId);
 
         return Result<MessageDto>.Success(messageDto);
     }
+
+    #endregion
 
     #region Get Messages
 
@@ -149,15 +200,20 @@ public class MessageService(
 
         var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
-        var query = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true)
-            .OrderByDescending(m => m.CreatedAt).AsNoTracking();
+        var query = MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+            .OrderByDescending(m => m.CreatedAt)
+            .AsNoTracking();
 
         var totalCount = await query.CountAsync();
         var skipCount = (normalizedPage - 1) * normalizedPageSize;
 
         var messages = await Paginate(query, normalizedPage, normalizedPageSize).ToListAsync();
 
-        var messageDtos = messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse().ToList();
+        var messageDtos = messages
+            .Select(m => m.ToDto(userId, urlBuilder))
+            .Reverse()
+            .ToList();
 
         return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
@@ -180,15 +236,23 @@ public class MessageService(
 
         var beforeAndTarget = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
-            .OrderByDescending(m => m.Id).Take(halfCount + 1).AsNoTracking().ToListAsync();
+            .OrderByDescending(m => m.Id)
+            .Take(halfCount + 1)
+            .AsNoTracking()
+            .ToListAsync();
 
         var after = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
-            .OrderBy(m => m.Id).Take(halfCount).AsNoTracking().ToListAsync();
+            .OrderBy(m => m.Id)
+            .Take(halfCount)
+            .AsNoTracking()
+            .ToListAsync();
 
         var messages = beforeAndTarget
-            .OrderBy(m => m.Id).Concat(after)
-            .Select(m => m.ToDto(userId, urlBuilder)).ToList();
+            .OrderBy(m => m.Id)
+            .Concat(after)
+            .Select(m => m.ToDto(userId, urlBuilder))
+            .ToList();
 
         var oldestLoadedId = beforeAndTarget.Count > 0 ? beforeAndTarget.Min(m => m.Id) : messageId;
         var hasOlder = await _context.Messages.AnyAsync(m =>
@@ -208,7 +272,8 @@ public class MessageService(
         });
     }
 
-    public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(
+        int chatId, int messageId, int userId, int count)
     {
         var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
         if (accessResult.IsFailure)
@@ -217,7 +282,9 @@ public class MessageService(
         var messages = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true)
             .OrderByDescending(m => m.Id)
-            .Take(count).AsNoTracking().ToListAsync();
+            .Take(count)
+            .AsNoTracking()
+            .ToListAsync();
 
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
         var hasMore = await _context.Messages.AnyAsync(m =>
@@ -233,7 +300,8 @@ public class MessageService(
         });
     }
 
-    public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(
+        int chatId, int messageId, int userId, int count)
     {
         var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
         if (accessResult.IsFailure)
@@ -242,7 +310,9 @@ public class MessageService(
         var messages = await MessagesWithIncludes()
             .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
             .OrderBy(m => m.Id)
-            .Take(count).AsNoTracking().ToListAsync();
+            .Take(count)
+            .AsNoTracking()
+            .ToListAsync();
 
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
         var hasNewer = await _context.Messages.AnyAsync(m =>
@@ -260,7 +330,10 @@ public class MessageService(
 
     #endregion
 
-    public async Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto)
+    #region Update
+
+    public async Task<Result<MessageDto>> UpdateMessageAsync(
+        int messageId, int userId, UpdateMessageDto dto)
     {
         var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
 
@@ -306,6 +379,10 @@ public class MessageService(
         return Result<MessageDto>.Success(messageDto);
     }
 
+    #endregion
+
+    #region Delete
+
     public async Task<Result> DeleteMessageAsync(int messageId, int userId)
     {
         var message = await _context.Messages
@@ -350,6 +427,8 @@ public class MessageService(
         return Result.Success();
     }
 
+    #endregion
+
     #region Search
 
     public async Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(
@@ -378,7 +457,8 @@ public class MessageService(
             .Where(m => m.IsDeleted != true)
             .Where(m => !m.IsSystemMessage)
             .Where(m => m.Content != null && EF.Functions.ILike(m.Content, $"%{escapedQuery}%"))
-            .OrderByDescending(m => m.CreatedAt).AsNoTracking();
+            .OrderByDescending(m => m.CreatedAt)
+            .AsNoTracking();
 
         var totalCount = await baseQuery.CountAsync();
         var messages = await Paginate(baseQuery, normalizedPage, normalizedPageSize).ToListAsync();
@@ -412,7 +492,8 @@ public class MessageService(
 
         var userChatIds = await _context.ChatMembers
             .Where(cm => cm.UserId == userId)
-            .Select(cm => cm.ChatId).ToListAsync();
+            .Select(cm => cm.ChatId)
+            .ToListAsync();
 
         if (userChatIds.Count == 0)
         {
@@ -442,7 +523,8 @@ public class MessageService(
             });
     }
 
-    private async Task<List<ChatDto>> SearchChatsAsync(List<int> userChatIds, string query, int userId)
+    private async Task<List<ChatDto>> SearchChatsAsync(
+        List<int> userChatIds, string query, int userId)
     {
         const int maxResults = 5;
         var result = new List<ChatDto>();
@@ -451,7 +533,8 @@ public class MessageService(
             .Where(c => userChatIds.Contains(c.Id))
             .Where(c => c.Type == ChatType.Contact)
             .Include(c => c.ChatMembers).ThenInclude(cm => cm.User)
-            .AsNoTracking().ToListAsync();
+            .AsNoTracking()
+            .ToListAsync();
 
         foreach (var chat in dialogs)
         {
@@ -480,7 +563,8 @@ public class MessageService(
             .Where(c => c.Type != ChatType.Contact)
             .Where(c => EF.Functions.ILike(c.Name ?? string.Empty, $"%{query}%"))
             .Take(maxResults)
-            .AsNoTracking().ToListAsync();
+            .AsNoTracking()
+            .ToListAsync();
 
         result.AddRange(groupChats.Select(c => c.ToDto(urlBuilder)));
 
@@ -499,14 +583,17 @@ public class MessageService(
             .Include(m => m.Sender)
             .Include(m => m.Chat)
             .Include(m => m.MessageFiles)
-            .OrderByDescending(m => m.CreatedAt).AsNoTracking();
+            .OrderByDescending(m => m.CreatedAt)
+            .AsNoTracking();
 
         var totalCount = await messagesQuery.CountAsync();
         var messages = await Paginate(messagesQuery, page, pageSize).ToListAsync();
 
         var dialogChatIds = messages
             .Where(m => m.Chat.Type == ChatType.Contact)
-            .Select(m => m.ChatId).Distinct().ToList();
+            .Select(m => m.ChatId)
+            .Distinct()
+            .ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
@@ -523,14 +610,18 @@ public class MessageService(
 
         var partners = await _context.ChatMembers
             .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
-            .Include(cm => cm.User).AsNoTracking().ToListAsync();
+            .Include(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync();
 
         return partners.Where(p => p.User != null).ToDictionary(
             p => p.ChatId,
             p => (Name: p.User!.FormatDisplayName(), Avatar: urlBuilder.BuildUrl(p.User.Avatar)));
     }
 
-    private GlobalSearchMessageDto CreateGlobalSearchMessageDto(Message message, string searchTerm,
+    private GlobalSearchMessageDto CreateGlobalSearchMessageDto(
+        Message message,
+        string searchTerm,
         Dictionary<int, (string Name, string? Avatar)> dialogPartners)
     {
         var dto = new GlobalSearchMessageDto
@@ -585,33 +676,29 @@ public class MessageService(
         if (string.IsNullOrEmpty(pattern))
             return pattern;
 
-        return pattern.Replace("\\", "\\\\")
-            .Replace("%", "\\%").Replace("_", "\\_");
+        return pattern
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
     }
 
     #endregion
 
     #region Private Methods
 
-    private async Task<Result> SaveMessageFilesAsync(int messageId, List<MessageFileDto> files)
+    private string StripFileUrl(string? url)
     {
-        foreach (var f in files)
-        {
-            var path = f.Url;
-            var baseUrl = urlBuilder.BuildUrl("/");
-            if (baseUrl != null && path?.StartsWith(baseUrl) == true)
-                path = path[baseUrl.Length..];
+        if (string.IsNullOrEmpty(url))
+            return string.Empty;
 
-            _context.MessageFiles.Add(new MessageFile
-            {
-                MessageId = messageId,
-                FileName = f.FileName,
-                ContentType = f.ContentType,
-                Path = path
-            });
+        var baseUrl = urlBuilder.BuildUrl("/");
+        if (baseUrl != null && url.StartsWith(baseUrl))
+        {
+            var relative = url[baseUrl.Length..];
+            return relative.StartsWith('/') ? relative : "/" + relative;
         }
 
-        return await SaveChangesAsync();
+        return url.StartsWith('/') ? url : "/" + url;
     }
 
     private string StripBaseUrl(string? url)
@@ -629,14 +716,11 @@ public class MessageService(
         return url.StartsWith('/') ? url : "/" + url;
     }
 
-    private async Task UpdateChatLastMessageTimeAsync(int chatId)
+    private async Task MarkChatUpdatedAsync(int chatId)
     {
         var chat = await _context.Chats.FindAsync(chatId);
         if (chat != null)
-        {
             chat.LastMessageTime = appDateTime.UtcNow;
-            await _context.SaveChangesAsync();
-        }
     }
 
     private async Task NotifyAndUpdateUnreadAsync(MessageDto message)
@@ -651,7 +735,8 @@ public class MessageService(
                     cm.NotificationsEnabled,
                     GlobalEnabled = cm.User.UserSetting == null
                         || cm.User.UserSetting.NotificationsEnabled
-                }).ToListAsync();
+                })
+                .ToListAsync();
 
             foreach (var member in usersToNotify)
             {

@@ -8,7 +8,7 @@
 		xmlns:dialogs="using:MessengerDesktop.Views.Dialogs"
 		xmlns:chat="using:MessengerDesktop.Views.Chat"
 		xmlns:department="using:MessengerDesktop.Views.Department"
-        xmlns:dialog="using:MessengerDesktop.Views.Dialog"
+		xmlns:dialog="using:MessengerDesktop.Views.Dialog"
 		x:Class="MessengerDesktop.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		x:Name="MainWindowRoot"
@@ -142,6 +142,145 @@
 				</DataTemplate>
 			</ContentControl.DataTemplates>
 		</ContentControl>
+
+		<ItemsControl ItemsSource="{Binding ActiveNotifications}"
+					  Grid.ColumnSpan="3"
+					  HorizontalAlignment="Right"
+					  VerticalAlignment="Top"
+					  Margin="0,56,16,0"
+					  IsHitTestVisible="True"
+					  ZIndex="9500">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<StackPanel Orientation="Vertical" Spacing="8"/>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Border IsVisible="{Binding IsVisible}"
+							Background="{DynamicResource SecondaryBG}"
+							BorderBrush="{DynamicResource BorderDefault}"
+							BorderThickness="1"
+							CornerRadius="14"
+							BoxShadow="{DynamicResource DialogShadow}"
+							Width="340"
+							ClipToBounds="True"
+							RenderTransformOrigin="1,0"
+							Opacity="1">
+						<Border.Transitions>
+							<Transitions>
+								<DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+								<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+							</Transitions>
+						</Border.Transitions>
+
+						<Grid RowDefinitions="Auto,*">
+							<Border Background="{Binding AccentHex}"
+									Height="3"
+									CornerRadius="14,14,0,0"
+									Grid.Row="0"/>
+
+							<Grid Grid.Row="1"
+								  ColumnDefinitions="*,Auto"
+								  Margin="0">
+
+								<Button Grid.Column="0"
+										Command="{Binding ActivateCommand}"
+										Background="Transparent"
+										BorderThickness="0"
+										Padding="16,14,8,14"
+										HorizontalContentAlignment="Stretch"
+										VerticalContentAlignment="Stretch"
+										Cursor="Hand"
+										CornerRadius="0">
+									<Button.Styles>
+										<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+											<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+										</Style>
+										<Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+											<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+										</Style>
+									</Button.Styles>
+
+									<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+										<Border Grid.Row="0"
+												Grid.Column="0"
+												Background="{Binding AccentHex}"
+												Width="28"
+												Height="28"
+												CornerRadius="8"
+												Margin="0,0,10,0"
+												Grid.RowSpan="2"
+												VerticalAlignment="Top">
+											<TextBlock Text="{Binding IconGlyph}"
+													   HorizontalAlignment="Center"
+													   VerticalAlignment="Center"
+													   Foreground="{DynamicResource TextOnAccent}"
+													   FontWeight="Bold"
+													   FontSize="13"/>
+										</Border>
+
+										<TextBlock Grid.Row="0"
+												   Grid.Column="1"
+												   Text="{Binding Title}"
+												   FontWeight="SemiBold"
+												   FontSize="13"
+												   Foreground="{DynamicResource TextPrimary}"
+												   TextTrimming="CharacterEllipsis"
+												   MaxLines="1"/>
+
+										<TextBlock Grid.Row="1"
+												   Grid.Column="1"
+												   Text="{Binding Message}"
+												   TextWrapping="Wrap"
+												   FontSize="12"
+												   Foreground="{DynamicResource TextSecondary}"
+												   MaxHeight="48"
+												   Margin="0,2,0,0"
+												   LineHeight="16"/>
+
+										<TextBlock Grid.Row="2"
+												   Grid.Column="1"
+												   Text="Нажмите, чтобы открыть"
+												   IsVisible="{Binding IsClickable}"
+												   FontSize="11"
+												   FontWeight="Medium"
+												   Foreground="{Binding AccentHex}"
+												   Margin="0,6,0,0"
+												   Opacity="0.85"/>
+									</Grid>
+								</Button>
+
+								<Button Grid.Column="1"
+										Command="{Binding CloseCommand}"
+										Background="Transparent"
+										BorderThickness="0"
+										Padding="0"
+										Width="32"
+										Height="32"
+										Margin="0,8,8,0"
+										VerticalAlignment="Top"
+										CornerRadius="8"
+										Cursor="Hand">
+									<Button.Styles>
+										<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+											<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+										</Style>
+										<Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+											<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+										</Style>
+									</Button.Styles>
+									<PathIcon Width="10"
+											  Height="10"
+											  Foreground="{DynamicResource TextMuted}"
+											  Data="{StaticResource CloseIcon}"/>
+								</Button>
+							</Grid>
+						</Grid>
+					</Border>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
 
 		<Border x:Name="DialogOverlay"
 				Classes="DialogOverlay"

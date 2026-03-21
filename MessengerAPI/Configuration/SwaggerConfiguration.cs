@@ -1,4 +1,4 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi;
 
 namespace MessengerAPI.Configuration;
 
@@ -25,18 +25,17 @@ public static class SwaggerConfiguration
                 Scheme = "Bearer"
             });
 
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement{
+            c.AddSecurityRequirement(_ =>
+            {
+                var schemeRef = new OpenApiSecuritySchemeReference("Bearer");
+
+                var requirement = new OpenApiSecurityRequirement
                 {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }});
+                    [schemeRef] = []
+                };
+
+                return requirement;
+            });
         });
 
         return services;

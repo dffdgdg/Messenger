@@ -158,6 +158,22 @@
 
 ## Message
 
+### CreateMessageRequest
+```json
+{
+  "chatId": 1,
+  "content": "Привет!",
+  "replyToMessageId": null,
+  "forwardedFromMessageId": null,
+  "isVoiceMessage": false,
+  "voiceFileUrl": null,
+  "voiceFileName": null,
+  "voiceContentType": null,
+  "voiceFileSize": null,
+  "voiceDurationSeconds": null,
+  "files": []
+}
+
 ### MessageDto
 ```json
 {

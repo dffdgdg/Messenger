@@ -85,7 +85,7 @@
 
 | Метод | Endpoint | Auth | Rate Limit | Запрос | Ответ | Описание |
 |-------|----------|------|------------|--------|-------|----------|
-| POST | `/api/messages` | ✅ | `messaging` (30/мин) | `MessageDto` | `MessageDto` | Отправить сообщение |
+| POST | `/api/messages` | ✅ | `messaging` (30/мин) | `CreateMessageRequest` | `MessageDto` | Отправить сообщение |
 | PUT | `/api/messages/{id}` | ✅ | — | `UpdateMessageDto` | `MessageDto` | Редактировать |
 | DELETE | `/api/messages/{id}` | ✅ | — | — | — | Удалить (soft delete) |
 

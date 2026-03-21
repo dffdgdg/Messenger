@@ -1,4 +1,5 @@
 ﻿using MessengerAPI.Services.Messaging;
+using MessengerShared.DTO.Message;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
@@ -8,10 +9,10 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
 {
     [HttpPost]
     [EnableRateLimiting("messaging")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> CreateMessage([FromBody] MessageDto messageDto)
+    public async Task<ActionResult<ApiResponse<MessageDto>>> CreateMessage([FromBody] CreateMessageRequest request)
     {
-        messageDto.SenderId = GetCurrentUserId();
-        return await ExecuteAsync(() => messageService.CreateMessageAsync(messageDto),"Сообщение успешно отправлено");
+        var userId = GetCurrentUserId();
+        return await ExecuteAsync(() => messageService.CreateMessageAsync(userId, request),"Сообщение успешно отправлено");
     }
 
     [HttpPut("{id}")]

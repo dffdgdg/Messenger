@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.ViewModels.Dialog;
+﻿using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Dialog;
 using System;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ public partial class MainWindowViewModel : BaseViewModel
     private readonly IDialogService _dialogService;
     private readonly IAuthManager _authManager;
     private readonly IThemeService _themeService;
+    private readonly INotificationService _notificationService;
 
     [ObservableProperty]
     private BaseViewModel? _currentViewModel;
@@ -23,16 +25,20 @@ public partial class MainWindowViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isDialogVisible;
 
+    public ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications => _notificationService.ActiveNotifications;
+
     public MainWindowViewModel(
         INavigationService navigation,
         IDialogService dialogService,
         IAuthManager authManager,
-        IThemeService themeService)
+        IThemeService themeService,
+        INotificationService notificationService)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
         _navigation.CurrentViewModelChanged += OnNavigationViewModelChanged;
         _dialogService.OnDialogStackChanged += OnDialogStackChanged;

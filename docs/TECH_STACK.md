@@ -103,7 +103,7 @@
 - **Scrutor 7.0.0** — автоматическая регистрация сервисов (scan assemblies)
 
 ### Уведомления
-- **Avalonia.Labs.Notifications 11.3.1**
+- **Custom in-app notification host** — собственные overlay-уведомления поверх `MainWindow` для Windows/Linux
 
 ### Дополнительно
 - **Avalonia.Markup.Declarative 11.1.3**
@@ -116,11 +116,11 @@
 - .NET 8.0 Class Library
 
 ### Зависимости
-- **Npgsql 10.0.1** — для атрибутов `[PgName]` на enum-ах
+- Прямых runtime-зависимостей на `Npgsql` нет; библиотека остаётся переносимой и не знает о Postgres-специфике
 
 ### Содержимое
 - DTO-контракты (Auth, Chat, Message, User, Poll, и др.)
-- Enum-ы с Npgsql-маппингом (ChatRole, ChatType, TranscriptionStatus)
+- DTO и enum-ы без прямых зависимостей на `Npgsql`; Postgres-маппинг для `ChatRole`, `ChatType`, `TranscriptionStatus` вынесен в `MessengerAPI`
 - Enum-ы с JSON-сериализацией (SystemEventType, Theme)
 - ApiResponse / ApiResponseHelper — обёртка ответов
 

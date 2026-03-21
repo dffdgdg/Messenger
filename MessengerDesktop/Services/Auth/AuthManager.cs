@@ -141,19 +141,9 @@ public sealed class AuthManager : IAuthManager, IDisposable
             return true;
 
         string[] authKeywords =
-            [
-                "Unauthorized",
-                "Forbidden",
-                "Недействительный",
-                "Истёк",
-                "Отозван",
-                "Заблокирован",
-                "Использован",
-                "Сессия истекла"
-            ];
+            ["Unauthorized","Forbidden","Недействительный","Истёк", "Отозван","Заблокирован","Использован","Сессия истекла"];
 
-        return authKeywords.Any(keyword =>
-            error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        return authKeywords.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> TryRefreshTokenAsync()
@@ -417,8 +407,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
         await _secureStorage.RemoveAsync(UserRoleKey);
     }
 
-    public Task WaitForInitializationAsync()
-        => _initializationTcs.Task;
+    public Task WaitForInitializationAsync() => _initializationTcs.Task;
 
     public async Task<bool> WaitForInitializationAsync(TimeSpan timeout)
     {
@@ -427,8 +416,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
         return completedTask == _initializationTcs.Task;
     }
 
-    private void ThrowIfDisposed()
-        => ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(AuthManager));
 
     public void Dispose()
     {

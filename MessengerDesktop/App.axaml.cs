@@ -67,7 +67,6 @@ public sealed class App : Application, IDisposable
             InitializePlatformServices(mainWindow);
             ConfigureImageLoader();
 
-            // Инициализация БД + maintenance в фоне
             _ = InitializeLocalDatabaseAndMaintenanceAsync();
 
             var themeService = Services.GetRequiredService<IThemeService>();

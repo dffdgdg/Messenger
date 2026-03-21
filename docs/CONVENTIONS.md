@@ -41,7 +41,7 @@
 
 | Элемент | Шаблон | Пример |
 |---------|--------|--------|
-| DTO | `{Entity}Dto` / `{Action}{Entity}Dto` | `MessageDto`, `CreatePollDto`, `UpdateChatDto` |
+| DTO | `{Entity}Dto` / `{Action}{Entity}Dto` / `{Action}{Entity}Request` | `MessageDto`, `CreatePollDto`, `UpdateChatDto`, `CreateMessageRequest` |
 | Enum | `{Name}` (без суффикса) | `ChatRole`, `ChatType`, `Theme` |
 | Response wrapper | `ApiResponse<T>` | — |
 
@@ -240,7 +240,7 @@ await SafeExecuteAsync(async ct =>
 
 ### Backend (`DependencyInjection.cs`)
 Группировка по слоям:
-- `AddMessengerDatabase()` — DbContext + Npgsql enum mappings
+- `AddMessengerDatabase()` — DbContext + Npgsql enum mappings (через API-side `MapEnum`/`HasPostgresEnum` и кастомные name translator-ы)
 - `AddInfrastructureServices()` — Cache, AccessControl, FileService, TokenService, HubNotifier, OnlineUserService
 - `AddBusinessServices()` — Auth, Users, Chats, Messaging, Departments
 - `AddMessengerJson()` — JSON serialization (IgnoreCycles, WriteIndented в Dev)
@@ -289,8 +289,7 @@ new HttpClient(new HttpClientHandler
 
 ### Shared DTO
 - Enum-ы сериализуются как строки (`[JsonConverter(typeof(JsonStringEnumConverter))]`)
-- PostgreSQL enum-ы маппятся через `[PgName("value")]`
-
+- PostgreSQL enum-ы маппятся на стороне API через `MapEnum` / `HasPostgresEnum` и `FixedEnumNameTranslator`; `MessengerShared` не содержит `Npgsql`-атрибутов
 ---
 
 ## Обработка ошибок

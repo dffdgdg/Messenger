@@ -32,7 +32,7 @@
 #### Сервисы
 - **Бизнес-сервисы**:
   - `ChatService`: Управление чатами (CRUD), аватарами, инвайдитами участников, инвалидацией кэша после записей.
-  - `MessageService`: CRUD сообщений, пагинация (окно вокруг сообщения, до/после), галочка поиска (GlobalSearch, FTS-style ILike), обновления непрочитанных, уведомления.
+  - `MessageService`: CRUD сообщений (создание через `CreateMessageRequest`, отдельный от `MessageDto` входной контракт), пагинация (окно вокруг сообщения, до/после), поиск (GlobalSearch, FTS-style ILike), обновления непрочитанных, уведомления. Создание сообщения атомарно — один `SaveChanges` для Message, VoiceMessage, файлов и обновления чата.  
   - `PollService`: Создание опросов, голосование.
   - `UserService` / `AdminService`: Пользователи, роли.
   - `DepartmentService`: Департаментская иерархия.
@@ -45,8 +45,8 @@
 #### База данных
 - **СУБД**: PostgreSQL.
 - **ORM**: EF Core 9 с миграциями.
-- **Энум-ы**: Кастомные типы Postgres mapped через `[PgName]`.
-- **Конфигурация**: `UseNpgsql(..., npgsql => npgsql.MapEnum...)`.
+- **Энум-ы**: Postgres enum-ы регистрируются в API; `MessengerShared` не содержит `PgName`, а специальные label-ы задаются через API-side name translator-ы.
+- **Конфигурация**: `UseNpgsql(..., npgsql => npgsql.MapEnum(..., nameTranslator: ...))` + `HasPostgresEnum(..., nameTranslator: ...)` в `MessengerDbContext`.
 
 #### Безопасность и потоки токенов
 - **Password Hashing**: BCrypt.Net-Next.

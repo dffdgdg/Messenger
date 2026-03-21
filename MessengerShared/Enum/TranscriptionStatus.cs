@@ -1,18 +1,3 @@
-﻿using NpgsqlTypes;
+﻿namespace MessengerShared.Enum;
 
-namespace MessengerShared.Enum;
-
-public enum TranscriptionStatus
-{
-    [PgName("pending")]
-    Pending,
-
-    [PgName("processing")]
-    Processing,
-
-    [PgName("done")]
-    Done,
-
-    [PgName("failed")]
-    Failed
-}
+public enum TranscriptionStatus { Pending,Processing,Done,Failed }

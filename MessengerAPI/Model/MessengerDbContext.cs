@@ -1,4 +1,5 @@
-﻿using MessengerShared.Enum;
+﻿using MessengerAPI.Services.Infrastructure.Postgres;
+using MessengerShared.Enum;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Model;
@@ -39,11 +40,11 @@ public partial class MessengerDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder
-            .HasPostgresEnum<ChatRole>("chat_role")
-            .HasPostgresEnum<ChatType>("chat_type")
+            .HasPostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
+            .HasPostgresEnum<ChatType>(name: "chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator)
             .HasPostgresEnum<Theme>("theme")
             .HasPostgresEnum<SystemEventType>("system_event_type")
-            .HasPostgresEnum<TranscriptionStatus>("transcription_status");
+            .HasPostgresEnum<TranscriptionStatus>(name: "transcription_status", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.TranscriptionStatusNameTranslator);
 
         modelBuilder.Entity<Chat>(entity =>
         {

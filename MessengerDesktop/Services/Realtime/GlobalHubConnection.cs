@@ -1,5 +1,4 @@
 ﻿using Avalonia.Controls.Notifications;
-using Avalonia.Threading;
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
@@ -7,7 +6,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -378,7 +376,7 @@ public sealed class GlobalHubConnection(
                 var title = notification.ChatName ?? "Новое сообщение";
                 var message = FormatNotificationMessage(notification);
                 _notificationService.ShowWindow(
-                    title, message, NotificationType.Information, 5000);
+                    title, message, DesktopNotificationType.Information, 5000);
                 NotificationReceived?.Invoke(notification);
             }
             catch (Exception ex)

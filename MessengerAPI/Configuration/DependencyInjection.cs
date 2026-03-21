@@ -1,6 +1,7 @@
 ﻿using MessengerAPI.Services.Auth;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Department;
+using MessengerAPI.Services.Infrastructure.Postgres;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
 using MessengerAPI.Services.User;
@@ -19,10 +20,10 @@ public static class DependencyInjection
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), npgsql =>
             {
                 npgsql.MapEnum<Theme>("theme");
-                npgsql.MapEnum<ChatRole>("chat_role");
-                npgsql.MapEnum<ChatType>("chat_type");
+                npgsql.MapEnum<ChatRole>("chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator);
+                npgsql.MapEnum<ChatType>("chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator);
                 npgsql.MapEnum<SystemEventType>("system_event_type");
-                npgsql.MapEnum<TranscriptionStatus>("transcription_status");
+                npgsql.MapEnum<TranscriptionStatus>("transcription_status", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.TranscriptionStatusNameTranslator);
             });
 
             if (environment.IsDevelopment())

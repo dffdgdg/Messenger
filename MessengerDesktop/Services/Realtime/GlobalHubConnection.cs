@@ -1,5 +1,4 @@
-﻿using Avalonia.Controls.Notifications;
-using MessengerDesktop.Data.Repositories;
+﻿using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -43,11 +42,8 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     Task SendTypingAsync(int chatId);
 }
 
-public sealed class GlobalHubConnection(
-    IAuthManager authManager,
-    INotificationService notificationService,
-    ISettingsService settingsService,
-    ILocalCacheService cacheService) : IGlobalHubConnection
+public sealed class GlobalHubConnection(IAuthManager authManager,INotificationService notificationService,
+    ISettingsService settingsService, ILocalCacheService cacheService) : IGlobalHubConnection
 {
     private readonly IAuthManager _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
     private readonly INotificationService _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
@@ -268,8 +264,9 @@ public sealed class GlobalHubConnection(
 
             Dispatcher.UIThread.Post(() =>
             {
-                Dictionary<int, int> snapshot;
-                int total;
+                Dictionary<int, int> snapshot = [];
+                int total = 0;
+
                 lock (_lock)
                 {
                     snapshot = new Dictionary<int, int>(_unreadCounts);
@@ -342,7 +339,9 @@ public sealed class GlobalHubConnection(
 
         Dispatcher.UIThread.Post(() =>
         {
-            int count, total;
+            int count = 0;
+            int total = 0;
+
             lock (_lock)
             {
                 count = _unreadCounts.GetValueOrDefault(chatId, 0);
@@ -438,7 +437,8 @@ public sealed class GlobalHubConnection(
 
     private void OnUnreadCountUpdated(int chatId, int unreadCount)
     {
-        int total;
+        int total = 0;
+
         lock (_lock)
         {
             var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
@@ -519,7 +519,8 @@ public sealed class GlobalHubConnection(
 
     private void IncrementUnreadCount(int chatId)
     {
-        int newCount, total;
+        int newCount = 0;
+        int total = 0;
 
         lock (_lock)
         {
@@ -614,8 +615,7 @@ public sealed class GlobalHubConnection(
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(
-                    $"[GlobalHub] DisposeAsync error: {ex.Message}");
+                Debug.WriteLine($"[GlobalHub] DisposeAsync error: {ex.Message}");
             }
             _hubConnection = null;
         }

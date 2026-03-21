@@ -105,6 +105,8 @@ public class NotificationService : INotificationService
         var notification = new DesktopNotificationViewModel(title, message, type, durationMs, CloseNotificationAsync, onClick);
         var cts = new CancellationTokenSource();
 
+        List<DesktopNotificationViewModel>? stale = null;
+
         await _sync.WaitAsync();
         try
         {
@@ -112,16 +114,23 @@ public class NotificationService : INotificationService
             _activeNotifications.Insert(0, notification);
             notification.IsVisible = true;
 
-            while (_activeNotifications.Count > 3)
+            for (var i = _activeNotifications.Count - 1; i >= 3; i--)
             {
-                var staleNotification = _activeNotifications[^1];
-                _ = CloseNotificationAsync(staleNotification);
-                break;
+                stale ??= [];
+                stale.Add(_activeNotifications[i]);
             }
         }
         finally
         {
             _sync.Release();
+        }
+
+        if (stale is not null)
+        {
+            foreach (var staleNotification in stale)
+            {
+                await CloseNotificationAsync(staleNotification);
+            }
         }
 
         _ = RunLifetimeAsync(notification, cts.Token);
@@ -136,6 +145,7 @@ public class NotificationService : INotificationService
         }
         catch (OperationCanceledException)
         {
+            // Уведомление закрыто досрочно
         }
     }
 
@@ -159,7 +169,7 @@ public class NotificationService : INotificationService
             _sync.Release();
         }
 
-        cts.Cancel();
+        await cts.CancelAsync();
         cts.Dispose();
 
         await Task.Delay(180);

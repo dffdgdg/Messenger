@@ -148,7 +148,7 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
 
         if (!File.Exists(filePath))
         {
-            Debug.WriteLine($"File not found: {filePath}");
+            Debug.WriteLine($"Файл не найден: {filePath}");
             throw new FileNotFoundException("Файл не найден", filePath);
         }
 
@@ -162,7 +162,7 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error opening file: {ex.Message}");
+            Debug.WriteLine($"Не удалось открыть файл: {ex.Message}");
             throw new InvalidOperationException($"Не удалось открыть файл: {ex.Message}", ex);
         }
 
@@ -197,8 +197,7 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
                     const string xdgOpenSecondaryPath = "/bin/xdg-open";
 
                     var xdgOpenPath = File.Exists(xdgOpenPrimaryPath)
-                        ? xdgOpenPrimaryPath
-                        : xdgOpenSecondaryPath;
+                        ? xdgOpenPrimaryPath : xdgOpenSecondaryPath;
 
                     Process.Start(CreateSafeProcessStartInfo(xdgOpenPath, directory));
                 }

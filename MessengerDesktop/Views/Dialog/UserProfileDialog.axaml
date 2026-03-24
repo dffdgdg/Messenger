@@ -1,119 +1,102 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:vm="using:MessengerDesktop.ViewModels"
-			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-			 xmlns:controls="using:MessengerDesktop.Views.Controls"
-			 x:Class="MessengerDesktop.Views.UserProfileDialog"
-			 x:DataType="vmDialog:UserProfileDialogViewModel">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
+             x:Class="MessengerDesktop.Views.UserProfileDialog"
+             x:DataType="vmDialog:UserProfileDialogViewModel">
 
-	<Border Width="400"
-			Background="{DynamicResource SecondaryBG}"
-			CornerRadius="16"
-			BorderThickness="1"
-			BorderBrush="{DynamicResource BorderDefault}"
-			BoxShadow="0 8 32 #50000000">
+    <Border Classes="DialogContainer" Width="400" MinHeight="450" Padding="0">
 
-		<Grid RowDefinitions="Auto,*,Auto">
+        <Grid RowDefinitions="Auto,*,Auto">
 
-			<Border Background="{DynamicResource PrimaryBG}"
-					CornerRadius="12,12,0,0"
-					Padding="24,18">
-				<Grid ColumnDefinitions="*,Auto">
-					<TextBlock Text="Профиль пользователя"
-							   FontSize="17"
-							   FontWeight="SemiBold"
-							   Foreground="{DynamicResource TextPrimary}"/>
+            <Border Grid.Row="0"
+                    Background="{DynamicResource PrimaryBG}"
+                    CornerRadius="16,16,0,0"
+                    Padding="24,18">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Профиль пользователя"
+                               FontSize="17"
+                               FontWeight="SemiBold"/>
 
-					<Button Grid.Column="1"
-							Command="{Binding CloseOnBackgroundClickCommand}"
-							Background="Transparent"
-							Padding="4"
-							CornerRadius="6">
-						<PathIcon Data="{StaticResource CloseIcon}"
-								  Width="16" Height="16"
-								  Foreground="{DynamicResource TextSecondary}"/>
-					</Button>
-				</Grid>
-			</Border>
+                    <Button Grid.Column="1"
+                            Classes="IconButton Small"
+                            Command="{Binding CloseOnBackgroundClickCommand}"
+                            ToolTip.Tip="Закрыть">
+                        <PathIcon Data="{StaticResource CloseIcon}"
+                                  Width="14" Height="14"
+                                  Foreground="{DynamicResource TextSecondary}"/>
+                    </Button>
+                </Grid>
+            </Border>
 
-			<ScrollViewer Grid.Row="1"
-						  VerticalScrollBarVisibility="Auto"
-						  HorizontalScrollBarVisibility="Disabled">
-				<StackPanel Margin="24,20,24,24" Spacing="20">
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="24,20,24,24" Spacing="20">
 
-					<Grid ColumnDefinitions="Auto,*" HorizontalAlignment="Stretch">
-						<controls:AvatarControl Classes="XLarge"
-												Source="{Binding User.Avatar}"
-												DisplayName="{Binding User.DisplayName}"
-												IsOnline="{Binding User.IsOnline}"
-												Margin="0,0,16,0"/>
+                    <Grid ColumnDefinitions="Auto,*" HorizontalAlignment="Stretch">
+                        <controls:AvatarControl Classes="XLarge"
+                                                Source="{Binding User.Avatar}"
+                                                DisplayName="{Binding User.DisplayName}"
+                                                IsOnline="{Binding User.IsOnline}"
+                                                Margin="0,0,16,0"/>
 
-						<StackPanel Grid.Column="1"
-									VerticalAlignment="Center"
-									Spacing="4">
-							<TextBlock Text="{Binding User.DisplayName}"
-									   FontSize="18"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource TextPrimary}"
-									   TextWrapping="Wrap"/>
-							<TextBlock FontSize="13"/>
-						</StackPanel>
-					</Grid>
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                            <TextBlock Text="{Binding User.DisplayName}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
 
-					<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+                    <Border Height="1" Background="{DynamicResource BorderDefault}"/>
 
-					<StackPanel Spacing="12">
-						<TextBlock Text="ИНФОРМАЦИЯ"
-								   FontSize="12"
-								   FontWeight="SemiBold"
-								   Foreground="{DynamicResource TextSecondary}"
-								   Opacity="0.7"/>
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="ИНФОРМАЦИЯ" Classes="SectionHeader"/>
 
-						<Grid ColumnDefinitions="*,*">
-							<TextBlock Text="Имя пользователя"
-									   FontSize="14"
-									   Foreground="{DynamicResource TextSecondary}"/>
-							<TextBlock Grid.Column="1"
-									   Text="{Binding User.Username, StringFormat='@{0}'}"
-									   FontSize="14"
-									   Foreground="{DynamicResource AccentColor}"
-									   HorizontalAlignment="Right"/>
-						</Grid>
+                        <Grid ColumnDefinitions="*,*">
+                            <TextBlock Text="Имя пользователя"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding User.Username, StringFormat='@{0}'}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
 
-						<Grid ColumnDefinitions="*,*"
-							  IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
-							<TextBlock Text="Отдел"
-									   FontSize="14"
-									   Foreground="{DynamicResource TextSecondary}"/>
-							<TextBlock Grid.Column="1"
-									   Text="{Binding Department}"
-									   FontSize="14"
-									   Foreground="{DynamicResource TextPrimary}"
-									   HorizontalAlignment="Right"
-									   TextTrimming="CharacterEllipsis"/>
-						</Grid>
-					</StackPanel>
+                        <Grid ColumnDefinitions="*,*"
+                              IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="Отдел"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Department}"
+                                       FontSize="14"
+                                       HorizontalAlignment="Right"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
 
-				</StackPanel>
-			</ScrollViewer>
+            <Border Grid.Row="2"
+                    Background="{DynamicResource PrimaryBG}"
+                    CornerRadius="0,0,16,16"
+                    Padding="24,16">
+                <Button HorizontalAlignment="Stretch"
+                        Command="{Binding SendMessageCommand}"
+                        HorizontalContentAlignment="Center"
+                        Classes="Primary FullWidth">
+                    <TextBlock Text="Написать сообщение"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextOnAccent}"/>
+                </Button>
+            </Border>
 
-			<Border Grid.Row="2"
-					Background="{DynamicResource PrimaryBG}"
-					CornerRadius="0,0,12,12"
-					Padding="24,16">
-				<Button
-				HorizontalAlignment="Stretch"
-				Command="{Binding SendMessageCommand}"
-				HorizontalContentAlignment="Center"
-				Classes="AccentButton"
-				Padding="16,12"
-				CornerRadius="10">
-					<TextBlock Text="Написать сообщение"
-							   FontSize="15"
-							   FontWeight="SemiBold"/>
-				</Button>
-			</Border>
-
-		</Grid>
-	</Border>
+        </Grid>
+    </Border>
 </UserControl>

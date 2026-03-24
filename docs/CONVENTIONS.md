@@ -32,6 +32,7 @@
 | View | `{Name}View.axaml` | `ChatView.axaml`, `LoginView.axaml` |
 | Dialog VM | `{Name}DialogViewModel` | `PollDialogViewModel` |
 | Dialog View | `{Name}Dialog.axaml` | `PollDialog.axaml` |
+| Reusable user item VM | `UserListItemViewModel` | `UserListItemViewModel` |
 | Handler | `Chat{Feature}Handler` | `ChatReplyHandler`, `ChatSearchHandler` |
 | Manager | `Chat{Feature}Manager` | `ChatMessageManager`, `ChatAttachmentManager` |
 | Converter | `{Purpose}Converter` | `BoolToBrushConverter`, `LastSeenTextConverter` |

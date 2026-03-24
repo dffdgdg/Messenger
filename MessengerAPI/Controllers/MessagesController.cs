@@ -67,11 +67,8 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
 
     [HttpGet("user/{userId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(
-        int userId,
-        [FromQuery] string query = "",
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId, [FromQuery] string query = "",
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<GlobalSearchResponseDto>();

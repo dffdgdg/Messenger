@@ -60,8 +60,7 @@ public sealed class ChatsController(IChatService chatService, IChatMemberService
     {
         var currentUserId = GetCurrentUserId();
         return await ExecuteAsync(
-            () => chatMemberService.GetMembersAsync(chatId, currentUserId),
-            "Участники чата получены успешно");
+            () => chatMemberService.GetMembersAsync(chatId, currentUserId), "Участники чата получены успешно");
     }
 
     [HttpPost("{chatId}/members")]

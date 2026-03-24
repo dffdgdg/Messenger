@@ -57,6 +57,23 @@
 		<Setter Property="FontWeight" Value="SemiBold"/>
 	</Style>
 
+	<!-- ── Заголовок диалога ── -->
+	<Style Selector="TextBlock.DialogTitle">
+		<Setter Property="FontSize" Value="20"/>
+		<Setter Property="FontWeight" Value="Bold"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+	</Style>
+
+	<Style Selector="TextBlock.DialogTitle.Small">
+		<Setter Property="FontSize" Value="18"/>
+	</Style>
+
+	<!-- ── Подзаголовок диалога ── -->
+	<Style Selector="TextBlock.DialogSubtitle">
+		<Setter Property="FontSize" Value="13"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+	</Style>
+
 	<!-- ── Заголовок категории ── -->
 	<Style Selector="TextBlock.CategoryHeader">
 		<Setter Property="FontSize" Value="11"/>
@@ -69,8 +86,14 @@
 	<Style Selector="TextBlock.FieldLabel">
 		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="FontWeight" Value="Medium"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
 		<Setter Property="VerticalAlignment" Value="Center"/>
+	</Style>
+
+	<!-- ── Подпись поля формы (серый, для секций с иконками) ── -->
+	<Style Selector="TextBlock.FieldLabel.Secondary">
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		<Setter Property="FontWeight" Value="SemiBold"/>
 	</Style>
 
 	<!-- ── Имя чата / превью ── -->
@@ -149,7 +172,7 @@
 
 	<!-- ═══════════════════════════════════════════════════════════════
 	3. ПОЛЯ ВВОДА
-	TextBox, ComboBox, CheckBox
+	TextBox, ComboBox, CheckBox, InputIcon
 	═══════════════════════════════════════════════════════════════ -->
 
 	<!-- ── Стандартный Input ── -->
@@ -218,6 +241,13 @@
 		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
 		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="Cursor" Value="Hand"/>
+	</Style>
+
+	<!-- ── Иконка внутри поля ввода ── -->
+	<Style Selector="PathIcon.InputIcon">
+		<Setter Property="Width" Value="16"/>
+		<Setter Property="Height" Value="16"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
 	</Style>
 
 	<!-- ═══════════════════════════════════════════════════════════════
@@ -650,7 +680,7 @@
 
 	<!-- ═══════════════════════════════════════════════════════════════
 	9. КОНТЕЙНЕРЫ И СЕКЦИИ
-	PageContainer, Section, DialogContainer, PanelHeader
+	PageContainer, Section, DialogContainer, PanelHeader, DialogDivider
 	═══════════════════════════════════════════════════════════════ -->
 
 	<!-- ── Контейнер страницы ── -->
@@ -712,6 +742,14 @@
 		<Setter Property="Padding" Value="12,0"/>
 		<Setter Property="Height" Value="40"/>
 	</Style>
+
+	<!-- ── Разделитель в диалоге ── -->
+	<Style Selector="Border.DialogDivider">
+		<Setter Property="Height" Value="1"/>
+		<Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="Margin" Value="-24,0"/>
+	</Style>
+
 	<!-- ═══════════════════════════════════════════════════════════════
 	10. АЛЕРТЫ И УВЕДОМЛЕНИЯ
 	Error, Success, Info
@@ -743,7 +781,7 @@
 
 	<!-- ═══════════════════════════════════════════════════════════════
 	11. БЕЙДЖИ
-	Непрочитанные, счётчики
+	Непрочитанные, счётчики, иконка-бейдж
 	═══════════════════════════════════════════════════════════════ -->
 
 	<Style Selector="Border.UnreadBadge">
@@ -763,6 +801,14 @@
 	<Style Selector="Border.CountBadge TextBlock">
 		<Setter Property="FontSize" Value="12"/>
 		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+	</Style>
+
+	<!-- ── Иконка-бейдж в заголовке диалога ── -->
+	<Style Selector="Border.HeaderIconBadge">
+		<Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+		<Setter Property="Width" Value="44"/>
+		<Setter Property="Height" Value="44"/>
+		<Setter Property="CornerRadius" Value="12"/>
 	</Style>
 
 	<!-- ═══════════════════════════════════════════════════════════════
@@ -851,7 +897,7 @@
 
 	<!-- ═══════════════════════════════════════════════════════════════
 	13. СПИСКИ
-	NavMenu, ChatListItem, MemberItem, MessagesList
+	NavMenu, ChatListItem, MemberItem, PickerItem, MessagesList
 	═══════════════════════════════════════════════════════════════ -->
 
 	<!-- ── Навигационное меню (настройки и пр.) ── -->
@@ -970,6 +1016,24 @@
 
 	<Style Selector="Button.InfoPanelItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+	</Style>
+
+	<!-- ── Элемент списка в пикере ── -->
+	<Style Selector="Border.PickerItem">
+		<Setter Property="Padding" Value="10,8"/>
+		<Setter Property="Margin" Value="0,2"/>
+		<Setter Property="CornerRadius" Value="6"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+
+	<Style Selector="Border.PickerItem:pointerover">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
 	</Style>
 
 	<!-- ── Список сообщений ── -->

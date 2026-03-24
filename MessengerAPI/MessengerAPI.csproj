@@ -7,11 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>27e926d2-2584-4b47-81f9-9358da32f217</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
+	<ItemGroup>
     <Compile Include="dockerfile" />
   </ItemGroup>
-	
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />
@@ -37,19 +35,15 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
     <PackageReference Include="Vosk" Version="0.3.38" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
   </ItemGroup>
-	
 	<ItemGroup>
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
 		<None Include="Dockerfile" />
 	</ItemGroup>
-	
   <ItemGroup>
     <Folder Include="Whisper\Models\" />
   </ItemGroup>
-
 </Project>

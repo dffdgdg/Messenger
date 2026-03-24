@@ -50,7 +50,7 @@ public sealed class TokenService : ITokenService
         }
 
         if (_settings.Secret.Length < 32)
-            throw new InvalidOperationException("JWT Secret must be at least 32 characters");
+            throw new InvalidOperationException("JWT Secret должен содержать не менее 32 символов");
 
         _signingKey = CreateSigningKey(_settings.Secret);
     }
@@ -185,7 +185,7 @@ public sealed class TokenService : ITokenService
         }
 
         if (keyMaterial.Length < 32)
-            throw new InvalidOperationException("Jwt:Secret must be at least 32 characters");
+            throw new InvalidOperationException("Jwt:Secret должен содержать не менее 32 символов");
 
         var issuer = config["Jwt:Issuer"] ?? "MessengerAPI";
         var audience = config["Jwt:Audience"] ?? "MessengerClient";

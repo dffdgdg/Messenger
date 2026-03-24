@@ -1,36 +1,41 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:department="using:MessengerShared.Dto.Department"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:vm="using:MessengerDesktop.ViewModels"
-			 xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
-			 xmlns:shared="using:MessengerShared.Dto"
-			 x:Class="MessengerDesktop.Views.DepartmentDialog"
-			 x:DataType="vmDialog:DepartmentDialogViewModel">
+             xmlns:department="using:MessengerShared.Dto.Department"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
+             x:Class="MessengerDesktop.Views.DepartmentDialog"
+             x:DataType="vmDialog:DepartmentDialogViewModel">
 
-	<Border Classes="DialogContainer" Width="400">
-		<StackPanel Spacing="16">
-			<TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold"/>
+    <Border Classes="DialogContainer" Width="400">
+        <StackPanel Spacing="16">
+            <TextBlock Text="{Binding Title}" Classes="DialogTitle"/>
 
-			<TextBox Text="{Binding Name}" Classes="Input" Watermark="Название отдела">
-				<TextBox.InnerLeftContent>
-					<PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16"
-							  Margin="12,0,8,0" Opacity="0.5"/>
-				</TextBox.InnerLeftContent>
-			</TextBox>
+            <TextBox Text="{Binding Name}" Classes="Input" Watermark="Название отдела">
+                <TextBox.InnerLeftContent>
+                    <PathIcon Data="{StaticResource FolderIcon}"
+                              Classes="InputIcon"
+                              Margin="12,0,8,0"/>
+                </TextBox.InnerLeftContent>
+            </TextBox>
 
-			<ComboBox ItemsSource="{Binding AvailableParents}" SelectedItem="{Binding SelectedParent}"
-					  Classes="DialogCombo" PlaceholderText="Выбрать родительский отдел" HorizontalAlignment="Stretch">
-				<ComboBox.ItemTemplate>
-					<DataTemplate x:DataType="department:DepartmentDto">
-						<TextBlock Text="{Binding Name}"/>
-					</DataTemplate>
-				</ComboBox.ItemTemplate>
-			</ComboBox>
+            <ComboBox ItemsSource="{Binding AvailableParents}"
+                      SelectedItem="{Binding SelectedParent}"
+                      Classes="DialogCombo"
+                      PlaceholderText="Выбрать родительский отдел"
+                      HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="department:DepartmentDto">
+                        <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
-			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
-				<Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
-				<Button Content="Сохранить" Classes="DialogAccent" Command="{Binding SaveCommand}"/>
-			</StackPanel>
-		</StackPanel>
-	</Border>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="12"
+                        Margin="0,8,0,0">
+                <Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
+                <Button Content="Сохранить" Classes="DialogAccent" Command="{Binding SaveCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
 </UserControl>

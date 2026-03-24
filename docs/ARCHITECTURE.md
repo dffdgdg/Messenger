@@ -89,6 +89,7 @@ Services / Repositories (Local DB, Network)
 - **ApiClientService**: Обёртка над HttpClient. Реализует логику повторного входа при 401 (с учетом исключений `NoRefreshUrls`).
   - Поток загрузки файлов (>10MB) отправляется во временный файл (Temp File), чтобы не перегружать память.
 - **Hub Connection**: Единожды при запуске. Фильтрация событий происходит внутри `ChatHubSubscriber`.
+- **Notification Navigation**: Клик по overlay-уведомлению обрабатывается в `GlobalHubConnection`, а переход выполняется через уже активный `MainMenuViewModel` без отдельного navigation-layer для уведомлений.
 - **Authentication**: `SessionStore` хранит ID юзера и токены. Токен инжектится в каждый запрос (`Authorization: Bearer ...`).
 
 ---

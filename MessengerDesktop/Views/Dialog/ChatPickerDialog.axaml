@@ -6,15 +6,12 @@
              x:Class="MessengerDesktop.Views.Dialog.ChatPickerDialog"
              x:DataType="vmDialog:ChatPickerDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="520" MaxHeight="640" Background="{DynamicResource SecondaryBG}">
+    <Border Classes="DialogContainer" Width="520" MaxHeight="640">
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+
             <StackPanel Grid.Row="0" Spacing="4">
-                <TextBlock Text="{Binding Title}"
-                           FontSize="20"
-                           FontWeight="Bold"/>
-                <TextBlock Text="Выберите чат из списка"
-                           FontSize="13"
-                           Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Text="{Binding Title}" Classes="DialogTitle"/>
+                <TextBlock Text="Выберите чат из списка" Classes="DialogSubtitle"/>
             </StackPanel>
 
             <TextBox Grid.Row="1"
@@ -23,9 +20,8 @@
                      Classes="Input Search">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource SearchIcon}"
-                              Width="16" Height="16"
-                              Margin="12,0,8,0"
-                              Opacity="0.5"/>
+                              Classes="InputIcon"
+                              Margin="12,0,8,0"/>
                 </TextBox.InnerLeftContent>
             </TextBox>
 
@@ -44,7 +40,7 @@
                                   Foreground="{DynamicResource TextMuted}"
                                   HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding EmptyMessage}"
-                                   Foreground="{DynamicResource TextSecondary}"
+                                   Classes="TextSecondary"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
@@ -54,18 +50,8 @@
                         <ItemsControl ItemsSource="{Binding FilteredItems}" Margin="4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="chatDto:ChatDto">
-                                    <Border Padding="10,8"
-                                            Margin="0,2"
-                                            CornerRadius="6"
-                                            Cursor="Hand"
-                                            Background="Transparent"
+                                    <Border Classes="PickerItem"
                                             PointerPressed="OnChatItemPressed">
-                                        <Border.Styles>
-                                            <Style Selector="Border:pointerover">
-                                                <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
-                                            </Style>
-                                        </Border.Styles>
-
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                             <controls:AvatarControl Grid.Column="0"
                                                                     Size="36"
@@ -82,7 +68,7 @@
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding LastMessagePreview}"
                                                            FontSize="12"
-                                                           Foreground="{DynamicResource TextSecondary}"
+                                                           Classes="TextSecondary"
                                                            TextTrimming="CharacterEllipsis"
                                                            MaxLines="1"/>
                                             </StackPanel>

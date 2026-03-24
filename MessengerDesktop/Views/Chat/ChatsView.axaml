@@ -148,7 +148,12 @@
 			<ColumnDefinition MinWidth="400"/>
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
-
+		<Border Grid.Column="0"
+		  Background="{DynamicResource BorderDefault}"
+		  Width="1"
+		  HorizontalAlignment="Left"
+		  VerticalAlignment="Stretch"
+		  ZIndex="1" />
 		<Grid x:Name="ChatListPanel" Grid.Column="0">
 			<DockPanel>
 				<Border DockPanel.Dock="Top"
@@ -156,7 +161,7 @@
 						BorderThickness="0,0,0,1"
 						BorderBrush="{DynamicResource BorderDefault}">
 					<Panel>
-						<Grid ColumnDefinitions="*,Auto" Height="35"
+						<Grid ColumnDefinitions="*,Auto" Height="33" Margin="0"
 							  IsVisible="{Binding !IsCompactMode, ElementName=Root}">
 							<Panel Grid.Column="0">
 								<TextBlock Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString},

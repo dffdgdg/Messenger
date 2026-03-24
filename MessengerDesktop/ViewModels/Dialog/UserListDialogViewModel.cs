@@ -1,0 +1,128 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace MessengerDesktop.ViewModels.Dialog;
+
+public partial class UserListDialogViewModel : DialogBaseViewModel
+{
+    private readonly List<UserListItemViewModel> _allItems;
+    private readonly Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> _reviewSelector;
+    private readonly Action<List<int>> _applySelection;
+
+    [ObservableProperty]
+    private ObservableCollection<UserListItemViewModel> _items = [];
+
+    [ObservableProperty]
+    private ObservableCollection<UserListItemViewModel> _filteredItems = [];
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private bool _allowEdit;
+
+    [ObservableProperty]
+    private bool _isEditMode;
+
+    [ObservableProperty]
+    private string _emptyMessage = "Пользователи не найдены";
+
+    [ObservableProperty]
+    private string _editButtonText = "Изменить";
+
+    public bool ShowEditButton => AllowEdit && !IsEditMode;
+    public bool ShowSaveButton => IsEditMode;
+    public int SelectedCount => Items.Count(x => x.IsSelected);
+
+    public UserListDialogViewModel(
+        string title,
+        IEnumerable<UserListItemViewModel> allItems,
+        bool allowEdit,
+        Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> reviewSelector,
+        Action<List<int>> applySelection,
+        string editButtonText,
+        string emptyMessage)
+    {
+        Title = title;
+        _allItems = [.. allItems.Select(x => x.Clone())];
+        _reviewSelector = reviewSelector;
+        _applySelection = applySelection;
+        AllowEdit = allowEdit;
+        EditButtonText = editButtonText;
+        EmptyMessage = emptyMessage;
+        CanCloseOnBackgroundClick = true;
+
+        LoadReviewItems();
+    }
+
+    partial void OnSearchQueryChanged(string value) => ApplyFilter();
+
+    partial void OnIsEditModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowEditButton));
+        OnPropertyChanged(nameof(ShowSaveButton));
+    }
+
+    private void ReplaceItems(IEnumerable<UserListItemViewModel> items)
+    {
+        Items = new ObservableCollection<UserListItemViewModel>(items);
+        foreach (var item in Items)
+            item.PropertyChanged += (_, _) => OnPropertyChanged(nameof(SelectedCount));
+
+        OnPropertyChanged(nameof(SelectedCount));
+        ApplyFilter();
+    }
+
+    private void LoadReviewItems()
+    {
+        IsEditMode = false;
+        ReplaceItems(_reviewSelector(_allItems).Select(x => x.Clone()));
+    }
+
+    private void LoadEditItems()
+    {
+        IsEditMode = true;
+        ReplaceItems(_allItems.Select(x => x.Clone()));
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
+            return;
+        }
+
+        var filtered = Items.Where(u =>
+            u.DisplayName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+            u.Username.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+        FilteredItems = new ObservableCollection<UserListItemViewModel>(filtered);
+    }
+
+    [RelayCommand]
+    private void BeginEdit() => LoadEditItems();
+
+    [RelayCommand]
+    private void Save()
+    {
+        if (!IsEditMode)
+            return;
+
+        _applySelection([.. Items.Where(x => x.IsSelected).Select(x => x.Id)]);
+        RequestClose();
+    }
+
+    protected override void Cancel()
+    {
+        if (IsEditMode)
+        {
+            LoadReviewItems();
+            SearchQuery = string.Empty;
+            return;
+        }
+
+        base.Cancel();
+    }
+}

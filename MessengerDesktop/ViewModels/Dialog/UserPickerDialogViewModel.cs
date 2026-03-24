@@ -7,15 +7,14 @@ namespace MessengerDesktop.ViewModels.Dialog;
 
 public partial class UserPickerDialogViewModel : DialogBaseViewModel
 {
-    private readonly List<ChatEditDialogViewModel.SelectableUserItem> _sourceItems;
+    private readonly List<UserListItemViewModel> _sourceItems;
     private readonly Action<List<int>>? _applySelection;
     private readonly TaskCompletionSource<UserDto?>? _singleSelectTcs;
 
     [ObservableProperty]
-    private ObservableCollection<ChatEditDialogViewModel.SelectableUserItem> _items = [];
-
+    private ObservableCollection<UserListItemViewModel> _items = [];
     [ObservableProperty]
-    private ObservableCollection<ChatEditDialogViewModel.SelectableUserItem> _filteredItems = [];
+    private ObservableCollection<UserListItemViewModel> _filteredItems = [];
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -43,7 +42,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Конструктор для multi-select (используется в ChatEditDialog)
     /// </summary>
-    public UserPickerDialogViewModel(string title, IEnumerable<ChatEditDialogViewModel.SelectableUserItem> items,
+    public UserPickerDialogViewModel(string title, IEnumerable<UserListItemViewModel> items,
         bool allowEdit, Action<List<int>> applySelection)
     {
         Title = title;
@@ -53,7 +52,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
         AllowEdit = allowEdit;
         IsMultiSelect = true;
 
-        Items = new ObservableCollection<ChatEditDialogViewModel.SelectableUserItem>(_sourceItems);
+        Items = new ObservableCollection<UserListItemViewModel>(_sourceItems);
         foreach (var item in Items)
         {
             item.PropertyChanged += (_, _) => OnPropertyChanged(nameof(SelectedCount));
@@ -77,9 +76,9 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
         if (emptyMessage != null)
             EmptyMessage = emptyMessage;
 
-        _sourceItems = [.. users.Select(u => new ChatEditDialogViewModel.SelectableUserItem(u, false))];
+        _sourceItems = [.. users.Select(u => new UserListItemViewModel(u, false))];
 
-        Items = new ObservableCollection<ChatEditDialogViewModel.SelectableUserItem>(_sourceItems);
+        Items = new ObservableCollection<UserListItemViewModel>(_sourceItems);
         ApplyFilter();
     }
 
@@ -89,7 +88,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     {
         if (string.IsNullOrWhiteSpace(SearchQuery))
         {
-            FilteredItems = new ObservableCollection<ChatEditDialogViewModel.SelectableUserItem>(Items);
+            FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
             return;
         }
 
@@ -97,14 +96,14 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
             u.DisplayName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
             u.Username.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
-        FilteredItems = new ObservableCollection<ChatEditDialogViewModel.SelectableUserItem>(filtered);
+        FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
     }
 
     /// <summary>
     /// Выбор пользователя в single-select режиме
     /// </summary>
     [RelayCommand]
-    private void SelectSingleUser(ChatEditDialogViewModel.SelectableUserItem item)
+    private void SelectSingleUser(UserListItemViewModel item)
     {
         if (IsMultiSelect) return;
 

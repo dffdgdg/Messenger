@@ -284,6 +284,43 @@ public partial class MainMenuViewModel : BaseViewModel
 
         await targetViewModel.OpenChatByIdAsync(message.ChatId, message.Id);
     }
+
+    public async Task OpenNotificationAsync(NotificationDto notification)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        ChatDto? chat = UserChats.FirstOrDefault(c => c.Id == notification.ChatId);
+
+        if (chat == null)
+        {
+            var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(notification.ChatId));
+            if (!result.Success || result.Data == null)
+            {
+                throw new InvalidOperationException(result.Error ?? "Не удалось загрузить чат из уведомления.");
+            }
+
+            chat = result.Data;
+
+            if (UserChats.All(c => c.Id != chat.Id))
+            {
+                UserChats.Insert(0, chat);
+            }
+        }
+
+        if (notification.MessageId.HasValue)
+        {
+            await SwitchToTabAndOpenMessageAsync(new GlobalSearchMessageDto
+            {
+                Id = notification.MessageId.Value,
+                ChatId = notification.ChatId,
+                ChatType = chat.Type
+            });
+            return;
+        }
+
+        await SwitchToTabAndOpenChatAsync(chat);
+    }
+
     [RelayCommand]
     public async Task OpenOrCreateChatAsync(UserDto user)
     {

@@ -43,10 +43,11 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
 }
 
 public sealed class GlobalHubConnection(IAuthManager authManager,INotificationService notificationService,
-    ISettingsService settingsService, ILocalCacheService cacheService) : IGlobalHubConnection
+    INavigationService navigationService, ISettingsService settingsService, ILocalCacheService cacheService) : IGlobalHubConnection
 {
     private readonly IAuthManager _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
     private readonly INotificationService _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+    private readonly INavigationService _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
     private readonly ISettingsService _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
     private readonly ILocalCacheService _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
 
@@ -374,8 +375,9 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             {
                 var title = notification.ChatName ?? "Новое сообщение";
                 var message = FormatNotificationMessage(notification);
-                _notificationService.ShowWindow(
-                    title, message, DesktopNotificationType.Information, 5000);
+                _notificationService.ShowWindow(title, message, DesktopNotificationType.Information, 5000,
+                    () => OpenNotificationAsync(notification));
+
                 NotificationReceived?.Invoke(notification);
             }
             catch (Exception ex)
@@ -539,10 +541,16 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     }
 
     private static string FormatNotificationMessage(NotificationDto notification)
-        => notification.Type == "poll"
-            ? notification.Preview ?? "Новый опрос"
+        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос"
             : $"{notification.SenderName}: {notification.Preview}";
 
+    private Task OpenNotificationAsync(NotificationDto notification)
+    {
+        if (_navigationService.CurrentViewModel is not MainMenuViewModel mainMenuViewModel)
+            return Task.CompletedTask;
+
+        return mainMenuViewModel.OpenNotificationAsync(notification);
+    }
     #endregion
 
     public void SetCurrentChat(int? chatId)
@@ -588,7 +596,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
                     await _hubConnection.StopAsync();
                     await _hubConnection.DisposeAsync();
                 }
-                catch { /* best-effort */ }
+                catch { /* не блокируем Dispose на случай ошибок при остановке/уничтожении соединения */ }
             });
             _hubConnection = null;
         }

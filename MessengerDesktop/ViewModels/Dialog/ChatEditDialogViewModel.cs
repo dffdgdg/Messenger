@@ -28,10 +28,10 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<SelectableUserItem> _availableUsers = [];
+    private ObservableCollection<UserListItemViewModel> _availableUsers = [];
 
     [ObservableProperty]
-    private ObservableCollection<SelectableUserItem> _filteredUsers = [];
+    private ObservableCollection<UserListItemViewModel> _filteredUsers = [];
 
     [ObservableProperty]
     private string _searchUserQuery = string.Empty;
@@ -102,15 +102,15 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         CurrentUserRole = currentMember?.Role ?? ChatRole.Owner;
 
         var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username)
-            .Select(u => new SelectableUserItem(u, existingMemberIds.Contains(u.Id))).ToList();
+            .Select(u => new UserListItemViewModel(u, existingMemberIds.Contains(u.Id))).ToList();
 
         SetAvailableUsers(users);
     }
 
-    private void SetAvailableUsers(List<SelectableUserItem> users)
+    private void SetAvailableUsers(List<UserListItemViewModel> users)
     {
         UnsubscribeFromUsers(AvailableUsers);
-        AvailableUsers = new ObservableCollection<SelectableUserItem>(users);
+        AvailableUsers = new ObservableCollection<UserListItemViewModel>(users);
         SubscribeToUsers(AvailableUsers);
         ApplyUserFilter();
         OnPropertyChanged(nameof(SelectedUsersCount));
@@ -119,13 +119,13 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         NotifyCanSaveChanged();
     }
 
-    private void SubscribeToUsers(IEnumerable<SelectableUserItem> users)
+    private void SubscribeToUsers(IEnumerable<UserListItemViewModel> users)
     {
         foreach (var user in users)
             user.PropertyChanged += OnUserSelectionChanged;
     }
 
-    private void UnsubscribeFromUsers(IEnumerable<SelectableUserItem> users)
+    private void UnsubscribeFromUsers(IEnumerable<UserListItemViewModel> users)
     {
         foreach (var user in users)
             user.PropertyChanged -= OnUserSelectionChanged;
@@ -133,7 +133,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private void OnUserSelectionChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SelectableUserItem.IsSelected))
+        if (e.PropertyName == nameof(UserListItemViewModel.IsSelected))
         {
             OnPropertyChanged(nameof(SelectedUsersCount));
             OnPropertyChanged(nameof(ParticipantsCount));
@@ -142,7 +142,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         }
     }
 
-    partial void OnAvailableUsersChanged(ObservableCollection<SelectableUserItem>? oldValue, ObservableCollection<SelectableUserItem> newValue)
+    partial void OnAvailableUsersChanged(ObservableCollection<UserListItemViewModel>? oldValue, ObservableCollection<UserListItemViewModel> newValue)
     {
         if (oldValue != null)
             UnsubscribeFromUsers(oldValue);
@@ -158,7 +158,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         if (string.IsNullOrWhiteSpace(SearchUserQuery))
         {
-            FilteredUsers = new ObservableCollection<SelectableUserItem>(AvailableUsers);
+            FilteredUsers = new ObservableCollection<UserListItemViewModel>(AvailableUsers);
             return;
         }
 
@@ -167,7 +167,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             (u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
             (u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false));
 
-        FilteredUsers = new ObservableCollection<SelectableUserItem>(filtered);
+        FilteredUsers = new ObservableCollection<UserListItemViewModel>(filtered);
     }
 
     [RelayCommand]
@@ -176,10 +176,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         if (ShowDialogAction == null)
             return;
 
-        var dialog = new UserPickerDialogViewModel(
-            "Участники",
-            AvailableUsers,
-            CanManageParticipants,
+        var dialog = new UserListDialogViewModel("Участники",AvailableUsers, CanManageParticipants,items => items.Where(x => x.IsSelected),
             selectedIds =>
             {
                 foreach (var user in AvailableUsers)
@@ -189,7 +186,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(selectedSet.Contains));
                 OnPropertyChanged(nameof(ParticipantsCount));
                 OnPropertyChanged(nameof(AdminsCount));
-            });
+            }, "Изменить состав", "Участники не выбраны");
+
 
         await ShowDialogAction(dialog);
     }
@@ -204,15 +202,16 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             .Select(x => x.Clone(SelectedAdminIds.Contains(x.Id)))
             .ToList();
 
-        var dialog = new UserPickerDialogViewModel(
-            "Администраторы",
+        var dialog = new UserListDialogViewModel("Администраторы",
             adminsSource,
             CanManageAdmins,
+            items => items.Where(x => x.IsSelected),
             selectedIds =>
             {
                 SelectedAdminIds = new ObservableCollection<int>(selectedIds);
                 OnPropertyChanged(nameof(AdminsCount));
-            });
+            }, "Изменить роли", "Администраторы не назначены");
+
 
         await ShowDialogAction(dialog);
     }
@@ -399,20 +398,4 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     }
 
     partial void OnSelectedAdminIdsChanged(ObservableCollection<int> value) => OnPropertyChanged(nameof(AdminsCount));
-
-    public partial class SelectableUserItem(UserDto user, bool isSelected = false) : ObservableObject
-    {
-        public UserDto User { get; } = user ?? throw new ArgumentNullException(nameof(user));
-
-        [ObservableProperty]
-        private bool _isSelected = isSelected;
-
-        public int Id => User.Id;
-        public string DisplayName => User.DisplayName ?? User.Username ?? "Пользователь";
-        public string Username => $"@{User.Username}";
-        public string? AvatarUrl => User.Avatar;
-        public bool HasAvatar => !string.IsNullOrEmpty(AvatarUrl);
-
-        public SelectableUserItem Clone(bool? isSelected = null) => new(User, isSelected ?? IsSelected);
-    }
 }

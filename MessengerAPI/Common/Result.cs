@@ -92,10 +92,7 @@ public static class ResultExtensions
     /// Извлекает значение или возвращает null с логированием ошибки.
     /// Для reference types в Hub/fire-and-forget контекстах.
     /// </summary>
-    public static T? UnwrapOrDefault<T>(
-        this Result<T> result,
-        ILogger logger,
-        [CallerMemberName] string caller = "") where T : class
+    public static T? UnwrapOrDefault<T>(this Result<T> result, ILogger logger, [CallerMemberName] string caller = "") where T : class
     {
         if (result.IsSuccess)
             return result.Value;
@@ -108,11 +105,7 @@ public static class ResultExtensions
     /// Извлекает значение или возвращает fallback с логированием ошибки.
     /// Для value types и случаев с осмысленным default.
     /// </summary>
-    public static T UnwrapOrFallback<T>(
-        this Result<T> result,
-        T fallback,
-        ILogger logger,
-        [CallerMemberName] string caller = "")
+    public static T UnwrapOrFallback<T>(this Result<T> result, T fallback,ILogger logger, [CallerMemberName] string caller = "")
     {
         if (result.IsSuccess)
             return result.Value!;
@@ -124,11 +117,7 @@ public static class ResultExtensions
     /// <summary>
     /// Try-паттерн для Result. Возвращает true при успехе и out-значение.
     /// </summary>
-    public static bool TryUnwrap<T>(
-        this Result<T> result,
-        [NotNullWhen(true)] out T? value,
-        ILogger? logger = null,
-        [CallerMemberName] string caller = "")
+    public static bool TryUnwrap<T>(this Result<T> result,[NotNullWhen(true)] out T? value,ILogger? logger = null, [CallerMemberName] string caller = "")
     {
         if (result.IsSuccess && result.Value is not null)
         {

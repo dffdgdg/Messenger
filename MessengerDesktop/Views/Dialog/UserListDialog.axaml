@@ -2,31 +2,52 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmDialog="using:MessengerDesktop.ViewModels.Dialog"
              xmlns:controls="using:MessengerDesktop.Views.Controls"
-             x:Class="MessengerDesktop.Views.Dialog.UserPickerDialog"
-             x:DataType="vmDialog:UserPickerDialogViewModel">
+             xmlns:conv="clr-namespace:MessengerDesktop.Converters;assembly=MessengerDesktop"
+             x:Class="MessengerDesktop.Views.Dialog.UserListDialog"
+             x:DataType="vmDialog:UserListDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="450" MaxHeight="650" MinHeight="450">
-        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+    <Border Classes="DialogContainer" Width="480" MinHeight="450" MaxHeight="680">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="0">
 
-            <!-- Заголовок -->
-            <StackPanel Grid.Row="0" Spacing="4">
-                <Grid>
-                    <TextBlock Text="{Binding Title}" Classes="DialogTitle"/>
-                    <TextBlock HorizontalAlignment="Right"
-                               Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}"
-                               Classes="TextSecondary"
-                               IsVisible="{Binding IsMultiSelect}"/>
-                </Grid>
-                <TextBlock Text="Выберите пользователя из списка"
-                           Classes="DialogSubtitle"
-                           IsVisible="{Binding !IsMultiSelect}"/>
-            </StackPanel>
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,16">
+                <Border Grid.Column="0" Classes="HeaderIconBadge" Margin="0,0,14,0">
+                    <PathIcon Data="{StaticResource PersonIcon}"
+                              Width="22" Height="22"
+                              Foreground="{DynamicResource TextOnAccent}"/>
+                </Border>
 
-            <!-- Поиск -->
-            <TextBox Grid.Row="1"
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Title}"
+                           Classes="DialogTitle Small"
+                           VerticalAlignment="Center"/>
+
+                <Border Grid.Column="2"
+                        Classes="CountBadge"
+                        VerticalAlignment="Center"
+                        Margin="0,0,8,0"
+                        IsVisible="{Binding IsEditMode}">
+                    <TextBlock Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}"
+                               FontSize="11"
+                               FontWeight="SemiBold"/>
+                </Border>
+
+                <Button Grid.Column="3"
+                        Classes="IconButton"
+                        Command="{Binding CancelCommand}"
+                        ToolTip.Tip="Закрыть">
+                    <PathIcon Data="{StaticResource CloseIcon}"
+                              Width="14" Height="14"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                </Button>
+            </Grid>
+
+            <Border Grid.Row="1" Classes="DialogDivider" Margin="-24,0,-24,16"/>
+
+            <TextBox Grid.Row="2"
                      Text="{Binding SearchQuery}"
                      Watermark="Поиск по имени или логину..."
-                     Classes="Input Search">
+                     Classes="Input Search"
+                     Margin="0,0,0,12">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource SearchIcon}"
                               Classes="InputIcon"
@@ -34,8 +55,7 @@
                 </TextBox.InnerLeftContent>
             </TextBox>
 
-            <!-- Список -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource BorderDefault}"
                     CornerRadius="8"
@@ -62,13 +82,14 @@
                                 <DataTemplate x:DataType="vmDialog:UserListItemViewModel">
                                     <Border Classes="PickerItem"
                                             PointerPressed="OnUserItemPressed">
-                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                              ColumnSpacing="12">
 
                                             <CheckBox Grid.Column="0"
                                                       IsChecked="{Binding IsSelected}"
                                                       IsEnabled="{Binding $parent[UserControl].DataContext.AllowEdit}"
                                                       VerticalAlignment="Center"
-                                                      IsVisible="{Binding $parent[UserControl].DataContext.IsMultiSelect}"/>
+                                                      IsVisible="{Binding $parent[UserControl].DataContext.IsEditMode}"/>
 
                                             <controls:AvatarControl Grid.Column="1"
                                                                     Size="36"
@@ -105,22 +126,60 @@
                 </Grid>
             </Border>
 
-            <!-- Футер -->
-            <StackPanel Grid.Row="3"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Spacing="12"
-                        Margin="0,12,0,0">
-                <Button Content="Отмена"
+            <Border Grid.Row="4" Classes="DialogDivider" Margin="-24,16,-24,16"/>
+
+            <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto,Auto">
+
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding IsEditMode}">
+                    <PathIcon Data="{StaticResource EditIcon}"
+                              Width="14" Height="14"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                    <TextBlock Text="Редактирование"
+                               FontSize="12"
+                               Classes="TextSecondary"/>
+                </StackPanel>
+
+                <Border Grid.Column="1"/>
+
+                <Button Grid.Column="2"
+                        Content="{Binding IsEditMode,
+                        Converter={conv:Converter Name=BoolToString},
+                        ConverterParameter='Назад|Отмена'}"
                         Classes="DialogOutline"
                         Command="{Binding CancelCommand}"
-                        MinWidth="100"/>
-                <Button Content="Сохранить"
-                        Classes="DialogAccent"
-                        Command="{Binding SaveCommand}"
-                        IsVisible="{Binding IsMultiSelect}"
-                        MinWidth="100"/>
-            </StackPanel>
+                        MinWidth="100"
+                        Margin="0,0,12,0"/>
+
+                <Panel Grid.Column="3" MinWidth="100">
+                    <Button Classes="DialogAccent"
+                            Command="{Binding BeginEditCommand}"
+                            IsVisible="{Binding ShowEditButton}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource EditIcon}"
+                                      Width="14" Height="14"
+                                      Foreground="{DynamicResource TextOnAccent}"/>
+                            <TextBlock Text="{Binding EditButtonText}"
+                                       Foreground="{DynamicResource TextOnAccent}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="DialogAccent"
+                            Command="{Binding SaveCommand}"
+                            IsVisible="{Binding ShowSaveButton}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource CheckmarkIcon}"
+                                      Width="14" Height="14"
+                                      Foreground="{DynamicResource TextOnAccent}"/>
+                            <TextBlock Text="Сохранить"
+                                       Foreground="{DynamicResource TextOnAccent}"/>
+                        </StackPanel>
+                    </Button>
+                </Panel>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>

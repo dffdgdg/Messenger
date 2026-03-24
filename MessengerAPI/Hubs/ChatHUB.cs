@@ -216,7 +216,7 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
     }
 
     private int GetRequiredUserId()
-        => GetCurrentUserId() ?? throw new HubException("User not authenticated");
+        => GetCurrentUserId() ?? throw new HubException("Пользователь не аутентифицирован");
 
     #endregion
 }

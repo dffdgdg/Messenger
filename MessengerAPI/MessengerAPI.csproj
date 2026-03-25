@@ -5,12 +5,6 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>27e926d2-2584-4b47-81f9-9358da32f217</UserSecretsId>
-		<EnableNETAnalyzers>true</EnableNETAnalyzers>
-		<AnalysisLevel>preview</AnalysisLevel>
-		<AnalysisMode>All</AnalysisMode>
-		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
-		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
-		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="dockerfile" />

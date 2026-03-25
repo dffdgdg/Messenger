@@ -2,23 +2,35 @@ using System;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public partial class PollOptionViewModel(PollOptionDto option, PollViewModel pollViewModel) : ObservableObject
+public partial class PollOptionViewModel : ObservableObject
 {
-    [ObservableProperty] public partial bool IsSelected { get; set; } = false;
-    [ObservableProperty] public partial int VotesCount { get; set; } = option.VotesCount;
-    [ObservableProperty] public partial double VotesPercentage { get; set; } = pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / pollViewModel.TotalVotes * 100.0, 1);
+    private readonly PollViewModel _pollViewModel;
+    private readonly PollOptionDto _option;
 
-    public int Id => option.Id;
-    public string OptionText => option.Text;
-    public int Position => option.Position;
-    public bool CanVote => pollViewModel.CanVote;
+    [ObservableProperty] public partial bool IsSelected { get; set; }
+    [ObservableProperty] public partial int VotesCount { get; set; }
+    [ObservableProperty] public partial double VotesPercentage { get; set; }
+
+    public int Id => _option.Id;
+    public string OptionText => _option.Text;
+    public int Position => _option.Position;
+    public bool CanVote => _pollViewModel.CanVote;
 
     public void UpdateVotes(int newVotesCount)
     {
         VotesCount = newVotesCount;
-        VotesPercentage = pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / pollViewModel.TotalVotes * 100.0, 1);
+        VotesPercentage = _pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / _pollViewModel.TotalVotes * 100.0, 1);
     }
 
     [RelayCommand]
     private void ToggleSelection() => IsSelected = !IsSelected;
+
+    public PollOptionViewModel(PollOptionDto option, PollViewModel pollViewModel)
+    {
+        _option = option;
+        _pollViewModel = pollViewModel;
+        VotesCount = option.VotesCount;
+        IsSelected = false;
+        VotesPercentage = pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / pollViewModel.TotalVotes * 100.0, 1);
+    }
 }

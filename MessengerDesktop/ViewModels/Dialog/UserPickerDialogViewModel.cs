@@ -83,10 +83,6 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var filtered = Items.Where(u =>
-            u.DisplayName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-            u.Username.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
-
         FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
     }
 

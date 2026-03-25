@@ -26,7 +26,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
     };
 
     private CancellationTokenSource? _downloadCts;
-    private readonly object _ctsLock = new();
+    private readonly Lock _ctsLock = new();
     private bool _disposed;
 
     public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));

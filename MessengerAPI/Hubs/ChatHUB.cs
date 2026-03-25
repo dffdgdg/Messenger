@@ -1,5 +1,6 @@
 ﻿using MessengerAPI.Services.ReadReceipt;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace MessengerAPI.Hubs;
 
@@ -31,8 +32,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
         await Clients.Others.SendAsync("UserOnline", userId.Value);
 
-        logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
-            userId.Value, chatIds.Count);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
+                userId.Value, chatIds.Count);
+        }
 
         await base.OnConnectedAsync();
     }
@@ -60,10 +64,16 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Ошибка при обработке отключения {UserId}", userId.Value);
+                    if (logger.IsEnabled(LogLevel.Error))
+                    {
+                        logger.LogError(ex, "Ошибка при обработке отключения {UserId}", userId.Value);
+                    }
                 }
 
-                logger.LogInformation("Пользователь {UserId} отключился", userId.Value);
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Пользователь {UserId} отключился", userId.Value);
+                }
             }
         }
 
@@ -86,13 +96,19 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
             throw new HubException(result.Error);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}");
-        logger.LogDebug("Пользователь {UserId} присоединился к чату {ChatId}", userId, chatId);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Пользователь {UserId} присоединился к чату {ChatId}", userId, chatId);
+        }
     }
 
     public async Task LeaveChat(int chatId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chat_{chatId}");
-        logger.LogDebug("Соединение {ConnectionId} покинуло чат {ChatId}", Context.ConnectionId, chatId);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Соединение {ConnectionId} покинуло чат {ChatId}", Context.ConnectionId, chatId);
+        }
     }
 
     #endregion
@@ -128,12 +144,14 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
         await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
 
-        await Clients.OthersInGroup($"chat_{chatId}").SendAsync(
-            "MessageRead", chatId, userId.Value,
+        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value,
             receipt.LastReadMessageId, receipt.LastReadAt);
 
-        logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
-            userId.Value, chatId, receipt.UnreadCount);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
+                userId.Value, chatId, receipt.UnreadCount);
+        }
     }
 
     public async Task MarkMessageAsRead(int chatId, int messageId)
@@ -154,8 +172,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value,
             receipt.LastReadMessageId, receipt.LastReadAt);
 
-        logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-            userId.Value, messageId, chatId);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
+                userId.Value, messageId, chatId);
+        }
     }
 
     public async Task<AllUnreadCountsDto> GetUnreadCounts()

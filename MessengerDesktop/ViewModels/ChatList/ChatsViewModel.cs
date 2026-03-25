@@ -30,11 +30,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     public UserProfileDialogViewModel? UserProfileDialog
     {
         get => CurrentChatViewModel?.UserProfileDialog;
-        set
-        {
-            if (CurrentChatViewModel != null)
-                CurrentChatViewModel.UserProfileDialog = value;
-        }
+        set => CurrentChatViewModel?.UserProfileDialog = value;
     }
 
     [ObservableProperty]
@@ -113,8 +109,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     private void OnUnreadCountChanged(int chatId, int unreadCount)
     {
         var chat = Chats.FirstOrDefault(c => c.Id == chatId);
-        if (chat != null)
-            chat.UnreadCount = unreadCount;
+        chat?.UnreadCount = unreadCount;
     }
 
     private void OnMessageReceivedGlobally(MessageDto message)
@@ -492,6 +487,22 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
+    public void UpdateChatInList(ChatDto updatedChat)
+    {
+        for (var i = 0; i < Chats.Count; i++)
+        {
+            if (Chats[i].Id != updatedChat.Id) continue;
+            Chats[i] = new ChatListItemViewModel(updatedChat);
+            break;
+        }
+
+        if (SelectedChat?.Id == updatedChat.Id)
+        {
+            SelectedChat = Chats.FirstOrDefault(c => c.Id == updatedChat.Id)
+                           ?? new ChatListItemViewModel(updatedChat);
+        }
+    }
+
     private async Task LoadFreshChatsFromServerAsync(int userId)
     {
         var endpoint = IsGroupMode
@@ -550,11 +561,9 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
 
-            if (SearchManager != null)
-                SearchManager.PropertyChanged -= OnSearchManagerPropertyChanged;
+            SearchManager?.PropertyChanged -= OnSearchManagerPropertyChanged;
 
-            if (_subscribedChatVm != null)
-                _subscribedChatVm.PropertyChanged -= SubscribedChatVm_PropertyChanged;
+            _subscribedChatVm?.PropertyChanged -= SubscribedChatVm_PropertyChanged;
         }
 
         _disposed = true;

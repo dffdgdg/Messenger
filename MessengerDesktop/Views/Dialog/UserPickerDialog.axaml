@@ -5,7 +5,7 @@
              x:Class="MessengerDesktop.Views.Dialog.UserPickerDialog"
              x:DataType="vmDialog:UserPickerDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="450" MaxHeight="650" MinHeight="450">
+    <Border Classes="DialogContainer" Width="450">
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
 
             <!-- Заголовок -->

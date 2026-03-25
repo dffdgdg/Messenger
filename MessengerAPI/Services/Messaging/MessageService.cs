@@ -719,8 +719,7 @@ public class MessageService(
     private async Task MarkChatUpdatedAsync(int chatId)
     {
         var chat = await _context.Chats.FindAsync(chatId);
-        if (chat != null)
-            chat.LastMessageTime = appDateTime.UtcNow;
+        chat?.LastMessageTime = appDateTime.UtcNow;
     }
 
     private async Task NotifyAndUpdateUnreadAsync(MessageDto message)

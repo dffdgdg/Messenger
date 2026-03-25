@@ -7,7 +7,7 @@
 			 x:Class="MessengerDesktop.Views.ChatEditDialog"
 			 x:DataType="vmDialog:ChatEditDialogViewModel">
 
-	<Border Classes="DialogContainer" Width="450" MaxHeight="800"
+	<Border Classes="DialogContainer" MaxHeight="800"
 			Background="{DynamicResource SecondaryBG}">
 		<Grid RowDefinitions="Auto,*,Auto">
 			<StackPanel Grid.Row="0" Spacing="16" Margin="0,0,0,16">

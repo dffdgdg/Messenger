@@ -58,7 +58,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     private readonly Dictionary<int, int> _unreadCounts = [];
     private int _totalUnread;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private int _lastSentReadMessageId;
     private DateTime _lastSentReadTime = DateTime.MinValue;

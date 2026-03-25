@@ -31,7 +31,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
     private WaveOutEvent? _waveOut;
     private WaveStream? _waveStream;
     private Timer? _positionTimer;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private bool _disposed;
 
     public bool IsPlaying => _waveOut?.PlaybackState == PlaybackState.Playing;

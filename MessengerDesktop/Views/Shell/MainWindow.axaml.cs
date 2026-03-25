@@ -22,7 +22,7 @@ public partial class MainWindow : Window
     private const string ClosingClass = "Closing";
 
     private CancellationTokenSource? _animationCts;
-    private readonly object _animationLock = new();
+    private readonly Lock _animationLock = new();
 
     public MainWindow()
     {

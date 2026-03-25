@@ -6,7 +6,7 @@
              x:Class="MessengerDesktop.Views.Dialog.UserListDialog"
              x:DataType="vmDialog:UserListDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="480" MinHeight="450" MaxHeight="680">
+    <Border Classes="DialogContainer" MaxHeight="680">
         <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="0">
 
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,16">

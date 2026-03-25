@@ -6,7 +6,7 @@
              x:Class="MessengerDesktop.Views.UserEditDialog"
              x:DataType="vmDialog:UserEditDialogViewModel">
 
-    <Border Classes="DialogContainer" MinHeight="450" Width="480">
+    <Border Classes="DialogContainer">
         <StackPanel Spacing="20">
 
             <StackPanel Spacing="4">

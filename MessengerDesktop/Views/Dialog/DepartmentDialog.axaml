@@ -5,7 +5,7 @@
              x:Class="MessengerDesktop.Views.DepartmentDialog"
              x:DataType="vmDialog:DepartmentDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="400">
+    <Border Classes="DialogContainer">
         <StackPanel Spacing="16">
             <TextBlock Text="{Binding Title}" Classes="DialogTitle"/>
 

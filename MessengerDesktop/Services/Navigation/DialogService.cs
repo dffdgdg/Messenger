@@ -29,7 +29,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
 {
     private readonly List<DialogBaseViewModel> _dialogStack = [];
     private readonly SemaphoreSlim _operationLock = new(1, 1);
-    private readonly object _animationLock = new();
+    private readonly Lock _animationLock = new();
     private readonly Channel<CloseRequest> _closeRequests;
     private readonly CancellationTokenSource _processingCts = new();
 
@@ -102,8 +102,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
         {
             var hadOpenDialogs = HasOpenDialogs;
 
-            if (CurrentDialog != null)
-                CurrentDialog.CloseRequested -= OnDialogClosed;
+            CurrentDialog?.CloseRequested -= OnDialogClosed;
 
             _dialogStack.Add(dialogViewModel);
             CurrentDialog = dialogViewModel;

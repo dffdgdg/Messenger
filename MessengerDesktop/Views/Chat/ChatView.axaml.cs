@@ -112,8 +112,7 @@ public partial class ChatView : UserControl
         _vm.ScrollToIndexRequested += OnScrollToIndex;
         _vm.ScrollToBottomRequested += OnScrollToBottom;
 
-        if (_vm.Messages != null)
-            _vm.Messages.CollectionChanged += OnMessagesChanged;
+        _vm.Messages?.CollectionChanged += OnMessagesChanged;
     }
 
     /// <summary>Отписка от событий ViewModel.</summary>
@@ -126,8 +125,7 @@ public partial class ChatView : UserControl
         _vm.ScrollToIndexRequested -= OnScrollToIndex;
         _vm.ScrollToBottomRequested -= OnScrollToBottom;
 
-        if (_vm.Messages != null)
-            _vm.Messages.CollectionChanged -= OnMessagesChanged;
+        _vm.Messages?.CollectionChanged -= OnMessagesChanged;
 
         _vm = null;
     }
@@ -642,8 +640,7 @@ public partial class ChatView : UserControl
     {
         _visibilityTimer.Stop();
 
-        if (_sv != null)
-            _sv.ScrollChanged -= OnScrollChanged;
+        _sv?.ScrollChanged -= OnScrollChanged;
 
         Detach();
 

@@ -142,8 +142,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
     private async Task SendVoiceMessageAsync(AudioRecordingResult recording)
     {
         IsVoiceSending = true;
-        if (VoiceRecording != null)
-            VoiceRecording.State = AudioRecordingState.Sending;
+        VoiceRecording?.State = AudioRecordingState.Sending;
 
         _voiceSendCts?.CancelAsync();
         _voiceSendCts?.Dispose();

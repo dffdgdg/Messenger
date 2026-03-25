@@ -5,7 +5,7 @@
              x:Class="MessengerDesktop.Views.PollDialog"
              x:DataType="vmDialog:PollDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="420" MinHeight="450">
+    <Border Classes="DialogContainer">
         <StackPanel Spacing="16">
             <TextBlock Text="Создать опрос" Classes="DialogTitle"/>
 

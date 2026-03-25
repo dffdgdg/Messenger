@@ -15,7 +15,7 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     private MemoryStream? _buffer;
     private WaveFileWriter? _writer;
     private readonly Stopwatch _stopwatch = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private bool _disposed;
 
     public bool IsSupported => CheckSupported();

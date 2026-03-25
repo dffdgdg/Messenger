@@ -5,7 +5,7 @@
              x:Class="MessengerDesktop.Views.UserProfileDialog"
              x:DataType="vmDialog:UserProfileDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="400" MinHeight="450" Padding="0">
+    <Border Classes="DialogContainer" Padding="0" Width="400">
 
         <Grid RowDefinitions="Auto,*,Auto">
 
@@ -90,7 +90,7 @@
                         Command="{Binding SendMessageCommand}"
                         HorizontalContentAlignment="Center"
                         Classes="Primary FullWidth">
-                    <TextBlock Text="Написать сообщение"
+                    <TextBlock Text="Отправить сообщение"
                                FontSize="15"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextOnAccent}"/>

@@ -6,7 +6,7 @@
              x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
              x:DataType="vmDialog:DepartmentHeadDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="440">
+    <Border Classes="DialogContainer">
         <StackPanel Spacing="20">
 
             <Grid ColumnDefinitions="Auto,*,Auto">

@@ -79,8 +79,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     public bool HasFiles => Files.Count > 0;
     public bool HasPoll => Poll != null;
-    public bool HasImages
-        => Files.Any(f => f.PreviewType == "image");
+    public bool HasImages => Files.Any(f => f.PreviewType == "image");
     public bool HasReply => ReplyToMessageId.HasValue;
 
     public bool HasTextContent
@@ -176,10 +175,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             _apiClient = App.Current.Services.GetService<IApiClientService>();
             _audioPlayer = App.Current.Services.GetService<IAudioPlayerService>();
         }
-        catch
-        {
-            // Если сервисы не зарегистрированы, просто продолжим без них. Функциональность, зависящая от них, будет отключена.
-        }
+        catch { /* Если сервисы не зарегистрированы, просто продолжим без них. */ }
 
         Message = message;
         Id = message.Id;

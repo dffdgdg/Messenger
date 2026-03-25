@@ -6,7 +6,7 @@
              x:Class="MessengerDesktop.Views.Dialog.ChatPickerDialog"
              x:DataType="vmDialog:ChatPickerDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="520" MaxHeight="640">
+    <Border Classes="DialogContainer" MaxHeight="640">
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
 
             <StackPanel Grid.Row="0" Spacing="4">

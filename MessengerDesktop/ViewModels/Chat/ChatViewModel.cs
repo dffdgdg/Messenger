@@ -10,6 +10,7 @@ using MessengerDesktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -19,7 +20,10 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 {
+    #region Зависимости и хэндлеры
+
     public ChatContext Context { get; }
+    public ChatsViewModel Parent { get; }
 
     public ChatMessageManager MessageManager { get; }
     public ChatAttachmentManager Attachments { get; }
@@ -33,29 +37,57 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public ChatSearchHandler Search { get; }
     public ChatNotificationHandler Notification { get; }
 
+    private readonly IChatNavigator _navigator;
     private readonly ChatHubSubscriber _hubSubscriber;
+    private readonly TaskCompletionSource _initTcs = new();
+    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
 
-    public ChatsViewModel Parent { get; }
+    #endregion
 
-    public ObservableCollection<MessageViewModel> Messages
-        => MessageManager.Messages;
+    #region Проксированные коллекции и свойства
 
-    public ObservableCollection<LocalFileAttachment> LocalAttachments
-        => Attachments.Attachments;
+    public ObservableCollection<MessageViewModel> Messages => MessageManager.Messages;
+    public ObservableCollection<LocalFileAttachment> LocalAttachments => Attachments.Attachments;
+    public ObservableCollection<UserDto> Members => Context.Members;
 
     public string InfoPanelTitle => InfoPanel.InfoPanelTitle;
     public string InfoPanelSubtitle => InfoPanel.InfoPanelSubtitle;
-
     public string? ContactAvatar => InfoPanel.ContactAvatar;
     public string? ContactDisplayName => InfoPanel.ContactDisplayName;
     public string? ContactUsername => InfoPanel.ContactUsername;
     public string? ContactDepartment => InfoPanel.ContactDepartment;
     public string? ContactLastSeen => InfoPanel.ContactLastSeen;
     public bool IsContactOnline => InfoPanel.IsContactOnline;
-
-    public ObservableCollection<UserDto> Members => Context.Members;
-
+    public bool IsGroupChat => InfoPanel.IsGroupChat;
+    public bool IsContactChat => InfoPanel.IsContactChat;
+    public string TypingText => Typing.TypingText;
+    public bool IsEditMode => EditDelete.IsEditMode;
+    public bool IsReplyMode => Reply.IsReplyMode;
+    public bool IsForwardMode => Forward.IsForwardMode;
+    public bool IsVoiceRecording => Voice.IsVoiceRecording;
     public bool IsLoadingMuteState => Notification.IsLoadingMuteState;
+    public bool HasMoreNewer => MessageManager.HasMoreNewer;
+    public bool ShowScrollToBottom => !IsScrolledToBottom;
+
+    public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
+
+    public ChatDto? Chat
+    {
+        get => Context.Chat;
+        set => Context.Chat = value;
+    }
+
+    public bool IsSearchMode
+    {
+        get => Search.IsSearchMode;
+        set => Search.IsSearchMode = value;
+    }
+
+    public bool IsInfoPanelOpen
+    {
+        get => InfoPanel.IsInfoPanelOpen;
+        set => InfoPanel.IsInfoPanelOpen = value;
+    }
 
     public bool IsChatNotificationsEnabled
     {
@@ -67,75 +99,19 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
-    [RelayCommand]
-    private void ToggleInfoPanel()
-    => IsInfoPanelOpen = !IsInfoPanelOpen;
+    #endregion
 
-    public ChatDto? Chat
-    {
-        get => Context.Chat;
-        set => Context.Chat = value;
-    }
+    #region Observable свойства (State)
 
-    public bool IsSearchMode
-    {
-        get => Search.IsSearchMode;
-        set
-        {
-            Search.IsSearchMode = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool IsInfoPanelOpen
-    {
-        get => InfoPanel.IsInfoPanelOpen;
-        set
-        {
-            InfoPanel.IsInfoPanelOpen = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool IsGroupChat => InfoPanel.IsGroupChat;
-
-    public bool IsContactChat => InfoPanel.IsContactChat;
-
-    public Task ScrollToMessageAsync(int messageId)
-        => Search.ScrollToMessageAsync(messageId);
-
-    [ObservableProperty]
-    private string _newMessage = string.Empty;
-
-    [ObservableProperty]
-    private bool _isInitialLoading = true;
-
-    [ObservableProperty]
-    private bool _isLoadingOlderMessages;
-
-    [ObservableProperty]
-    private bool _hasNewMessages;
-
-    [ObservableProperty]
-    private bool _isScrolledToBottom = true;
-
-    [ObservableProperty]
-    private int _unreadCount;
-
-    [ObservableProperty]
-    private int _pollsCount;
-
-    [ObservableProperty]
-    private int _userId;
-
-    [ObservableProperty]
-    private UserProfileDialogViewModel? _userProfileDialog;
-
-    public bool ShowScrollToBottom => !IsScrolledToBottom;
-    public bool HasMoreNewer => MessageManager.HasMoreNewer;
-
-    public bool IsMultiLine
-        => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
+    [ObservableProperty] private string _newMessage = string.Empty;
+    [ObservableProperty] private bool _isInitialLoading = true;
+    [ObservableProperty] private bool _isLoadingOlderMessages;
+    [ObservableProperty] private bool _hasNewMessages;
+    [ObservableProperty] private bool _isScrolledToBottom = true;
+    [ObservableProperty] private int _unreadCount;
+    [ObservableProperty] private int _pollsCount;
+    [ObservableProperty] private int _userId;
+    [ObservableProperty] private UserProfileDialogViewModel? _userProfileDialog;
 
     public List<string> PopularEmojis { get; } =
     [
@@ -145,16 +121,22 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"
     ];
 
+    #endregion
+
+    #region Events
+
     public event Action<MessageViewModel, bool>? ScrollToMessageRequested;
     public event Action<int, bool>? ScrollToIndexRequested;
     public event Action? ScrollToBottomRequested;
 
-    private readonly TaskCompletionSource _initTcs = new();
-    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
+    #endregion
+
+    #region Конструктор и инициализация
 
     public ChatViewModel(
         int chatId,
         ChatsViewModel parent,
+        IChatNavigator navigator,
         IApiClientService apiClient,
         IAuthManager authManager,
         IChatInfoPanelStateStore chatInfoPanelStateStore,
@@ -167,13 +149,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         ILocalCacheService? cacheService = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
 
         var currentUserId = authManager?.Session.UserId ?? 0;
         UserId = currentUserId;
 
         Context = new ChatContext(
-            chatId,
-            currentUserId,
+            chatId, currentUserId,
             apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
             dialogService ?? throw new ArgumentNullException(nameof(dialogService)),
             globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
@@ -182,20 +164,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)),
             cacheService);
 
-        Context.ScrollToMessageRequested += (msg, hl)
-            => ScrollToMessageRequested?.Invoke(msg, hl);
-        Context.ScrollToIndexRequested += (idx, hl)
-            => ScrollToIndexRequested?.Invoke(idx, hl);
-        Context.ScrollToBottomRequested += ()
-            => ScrollToBottomRequested?.Invoke();
+        Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
+        Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
+        Context.ScrollToBottomRequested += () => ScrollToBottomRequested?.Invoke();
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members,
-            fileDownloadService, notificationService, cacheService);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient,
+            () => Context.Members, fileDownloadService, notificationService, cacheService);
 
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
-
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
 
         EditDelete = new ChatEditDeleteHandler(Context);
@@ -207,90 +185,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, Voice, count => UnreadCount = count, OnHubReconnectedAsync);
+        _hubSubscriber = new ChatHubSubscriber(
+            Context, MessageManager, Voice,
+            count => UnreadCount = count,
+            OnHubReconnectedAsync);
+
         _hubSubscriber.Subscribe();
-
-        Typing.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatTypingHandler.TypingText))
-                OnPropertyChanged(nameof(TypingText));
-        };
-
-        EditDelete.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatEditDeleteHandler.IsEditMode))
-                OnPropertyChanged(nameof(IsEditMode));
-        };
-
-        Reply.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatReplyHandler.IsReplyMode))
-                OnPropertyChanged(nameof(IsReplyMode));
-        };
-
-        Forward.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatForwardHandler.IsForwardMode))
-                OnPropertyChanged(nameof(IsForwardMode));
-        };
-
-        Search.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatSearchHandler.IsSearchMode))
-                OnPropertyChanged(nameof(IsSearchMode));
-        };
-
-        InfoPanel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.IsInfoPanelOpen))
-                OnPropertyChanged(nameof(IsInfoPanelOpen));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.IsGroupChat))
-                OnPropertyChanged(nameof(IsGroupChat));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.IsContactChat))
-                OnPropertyChanged(nameof(IsContactChat));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.InfoPanelTitle))
-                OnPropertyChanged(nameof(InfoPanelTitle));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.InfoPanelSubtitle))
-                OnPropertyChanged(nameof(InfoPanelSubtitle));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.ContactAvatar))
-                OnPropertyChanged(nameof(ContactAvatar));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.ContactDisplayName))
-                OnPropertyChanged(nameof(ContactDisplayName));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.ContactUsername))
-                OnPropertyChanged(nameof(ContactUsername));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.ContactDepartment))
-                OnPropertyChanged(nameof(ContactDepartment));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.ContactLastSeen))
-                OnPropertyChanged(nameof(ContactLastSeen));
-            if (e.PropertyName == nameof(ChatInfoPanelHandler.IsContactOnline))
-                OnPropertyChanged(nameof(IsContactOnline));
-        };
-
-        Context.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatContext.Chat))
-                OnPropertyChanged(nameof(Chat));
-
-            if (e.PropertyName == nameof(ChatContext.Members))
-            {
-                OnPropertyChanged(nameof(Members));
-                OnPropertyChanged(nameof(InfoPanelSubtitle));
-            }
-        };
-
-        Notification.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatNotificationHandler.IsLoadingMuteState))
-                OnPropertyChanged(nameof(IsLoadingMuteState));
-            if (e.PropertyName == nameof(ChatNotificationHandler.IsNotificationEnabled))
-                OnPropertyChanged(nameof(IsChatNotificationsEnabled));
-        };
-
-        Voice.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ChatVoiceHandler.IsVoiceRecording))
-                OnPropertyChanged(nameof(IsVoiceRecording));
-        };
+        SubscribePropertyForwarding();
 
         Context.Chat = new ChatDto
         {
@@ -302,19 +203,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _ = InitializeAsync();
     }
 
-    public string TypingText => Typing.TypingText;
-    public bool IsEditMode => EditDelete.IsEditMode;
-    public bool IsReplyMode => Reply.IsReplyMode;
-    public bool IsForwardMode => Forward.IsForwardMode;
-    public bool IsVoiceRecording => Voice.IsVoiceRecording;
-
     private async Task InitializeAsync()
     {
         try
         {
             IsInitialLoading = true;
 
-            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(
+                ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
 
             if (chatResult is { Success: true, Data: not null })
             {
@@ -324,11 +220,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
             else
             {
-                throw new System.Net.Http.HttpRequestException($"Ошибка загрузки чата: {chatResult.Error}");
+                throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
 
-            Context.Members = await MemberLoader.LoadMembersAsync(
-                Context.Chat, Context.LifetimeToken);
+            Context.Members = await MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
 
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
@@ -354,6 +249,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             _initTcs.TrySetResult();
 
+            // даем UI немного времени на рендер списка перед скроллом
             await Task.Delay(150, Context.LifetimeToken);
 
             if (scrollToIndex < Messages.Count - 1)
@@ -367,11 +263,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ChatViewModel] Init error: {ex.Message}");
-            ErrorMessage = $"Ошибка инициализации чата: {ex.Message}";
-
-            CleanupOnError();
-
+            Debug.WriteLine($"[ChatVM] Ошибка инициализации: {ex.Message}");
+            ErrorMessage = $"Не удалось открыть чат: {ex.Message}";
+            DisposeCore();
             _initTcs.TrySetException(ex);
         }
         finally
@@ -380,19 +274,78 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
-    partial void OnNewMessageChanged(string value)
-        => Typing.NotifyTextChanged(value);
+    #endregion
+
+    #region Проброс свойств (Property Forwarding)
+
+    // подписываемся на изменения в дочерних хэндлерах, чтобы дергать OnPropertyChanged у себя
+    private void ForwardProperties(INotifyPropertyChanged source, params (string sourceProp, string targetProp)[] mappings)
+    {
+        var lookup = mappings
+            .GroupBy(m => m.sourceProp)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
+
+        source.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != null && lookup.TryGetValue(e.PropertyName, out var targets))
+            {
+                foreach (var target in targets)
+                    OnPropertyChanged(target);
+            }
+        };
+    }
+
+    private void SubscribePropertyForwarding()
+    {
+        ForwardProperties(Typing, (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
+        ForwardProperties(EditDelete, (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
+        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
+        ForwardProperties(Forward, (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)));
+        ForwardProperties(Search, (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
+        ForwardProperties(Voice, (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
+
+        ForwardProperties(InfoPanel,
+            (nameof(ChatInfoPanelHandler.IsInfoPanelOpen), nameof(IsInfoPanelOpen)),
+            (nameof(ChatInfoPanelHandler.IsGroupChat), nameof(IsGroupChat)),
+            (nameof(ChatInfoPanelHandler.IsContactChat), nameof(IsContactChat)),
+            (nameof(ChatInfoPanelHandler.InfoPanelTitle), nameof(InfoPanelTitle)),
+            (nameof(ChatInfoPanelHandler.InfoPanelSubtitle), nameof(InfoPanelSubtitle)),
+            (nameof(ChatInfoPanelHandler.ContactAvatar), nameof(ContactAvatar)),
+            (nameof(ChatInfoPanelHandler.ContactDisplayName), nameof(ContactDisplayName)),
+            (nameof(ChatInfoPanelHandler.ContactUsername), nameof(ContactUsername)),
+            (nameof(ChatInfoPanelHandler.ContactDepartment), nameof(ContactDepartment)),
+            (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(ContactLastSeen)),
+            (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(IsContactOnline)));
+
+        ForwardProperties(Context,
+            (nameof(ChatContext.Chat), nameof(Chat)),
+            (nameof(ChatContext.Members), nameof(Members)),
+            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
+
+        ForwardProperties(Notification,
+            (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
+            (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
+    }
+
+    #endregion
+
+    #region Перехватчики изменений (Partial hooks)
+
+    partial void OnNewMessageChanged(string value) => Typing.NotifyTextChanged(value);
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowScrollToBottom));
-
         if (!value) return;
 
         HasNewMessages = false;
         UnreadCount = 0;
         _ = MarkMessagesAsReadAsync();
     }
+
+    #endregion
+
+    #region Сообщения
 
     [RelayCommand]
     private async Task SendMessage()
@@ -410,8 +363,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         var hasText = !string.IsNullOrWhiteSpace(NewMessage);
         var hasAttachments = LocalAttachments.Count > 0;
 
-        if (!hasText && !hasAttachments && !hasForward)
-            return;
+        if (!hasText && !hasAttachments && !hasForward) return;
 
         await SafeExecuteAsync(async ct =>
         {
@@ -431,13 +383,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 ForwardedFromMessageId = forwarding?.Id
             };
 
+            // если пересылаем без добавления своих вложений, цепляем файлы из оригинала
             if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
-            {
                 msg.Files = forwarding.Files;
-            }
 
-            var result = await Context.Api.PostAsync<MessageDto, MessageDto>
-            (ApiEndpoints.Messages.Create, msg, ct);
+            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
 
             if (result.Success)
             {
@@ -448,7 +398,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
             else
             {
-                ErrorMessage = $"Ошибка отправки: {result.Error}";
+                ErrorMessage = $"Не удалось отправить сообщение: {result.Error}";
             }
         });
     }
@@ -480,6 +430,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         PollsCount = MessageManager.GetPollsCount();
     }
 
+    #endregion
+
+    #region UI и Вложения
+
+    [RelayCommand]
+    private void ToggleInfoPanel() => IsInfoPanelOpen = !IsInfoPanelOpen;
+
     [RelayCommand]
     private void ScrollToBottom()
     {
@@ -497,12 +454,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     [RelayCommand]
-    private void RemoveAttachment(LocalFileAttachment attachment)
-        => Attachments.Remove(attachment);
+    private void RemoveAttachment(LocalFileAttachment attachment) => Attachments.Remove(attachment);
 
     [RelayCommand]
-    private void InsertEmoji(string emoji)
-        => NewMessage += emoji;
+    private void InsertEmoji(string emoji) => NewMessage += emoji;
 
     [RelayCommand]
     private async Task AttachFile()
@@ -510,6 +465,30 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (!await Attachments.PickAndAddFilesAsync())
             ErrorMessage = "Не удалось выбрать файлы";
     }
+
+    #endregion
+
+    #region Навигация
+
+    [RelayCommand]
+    private async Task OpenCreatePoll()
+        => await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
+
+    [RelayCommand]
+    private async Task OpenEditChat()
+    {
+        if (!InfoPanel.IsGroupChat || Context.Chat == null) return;
+
+        await _navigator.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
+        {
+            Context.Chat = updatedChat;
+            Parent.UpdateChatInList(updatedChat);
+            _ = InfoPanel.ReloadMembersAfterEditAsync();
+        });
+    }
+
+    [RelayCommand]
+    public async Task OpenProfile(int userId) => await _navigator.ShowUserProfileAsync(userId);
 
     [RelayCommand]
     private async Task LeaveChat()
@@ -521,82 +500,21 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (result.Success)
                 SuccessMessage = "Вы покинули чат";
             else
-                ErrorMessage = $"Ошибка при выходе из чата: {result.Error}";
+                ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
         });
     }
 
-    [RelayCommand]
-    private async Task OpenCreatePoll()
-    {
-        if (Parent?.Parent is MainMenuViewModel menu)
-        {
-            await menu.ShowPollDialogAsync(Context.ChatId, async () => await MessageManager.LoadInitialMessagesAsync());
-            return;
-        }
+    #endregion
 
-        await Context.Notifications.ShowErrorAsync("Не удалось открыть диалог опроса", copyToClipboard: false);
-    }
-
-    [RelayCommand]
-    private async Task OpenEditChat()
-    {
-        if (!InfoPanel.IsGroupChat || Context.Chat == null)
-            return;
-
-        if (Parent?.Parent is MainMenuViewModel menu)
-        {
-            await menu.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
-            {
-                Context.Chat = updatedChat;
-                OnPropertyChanged(nameof(Chat));
-
-                for (var i = 0; i < Parent.Chats.Count; i++)
-                {
-                    if (Parent.Chats[i].Id != updatedChat.Id)
-                        continue;
-                    Parent.Chats[i] = new ChatListItemViewModel(updatedChat);
-                    break;
-                }
-
-                if (Parent.SelectedChat?.Id == updatedChat.Id)
-                {
-                    Parent.SelectedChat = Parent.Chats.FirstOrDefault(c => c.Id == updatedChat.Id)
-                        ?? new ChatListItemViewModel(updatedChat);
-                }
-
-                _ = InfoPanel.ReloadMembersAfterEditAsync();
-
-                OnPropertyChanged(nameof(IsGroupChat));
-                OnPropertyChanged(nameof(IsContactChat));
-            });
-            return;
-        }
-
-        await Context.Notifications.ShowErrorAsync("Не удалось открыть редактирование чата", copyToClipboard: false);
-    }
-
-    [RelayCommand]
-    public async Task OpenProfile(int userId)
-    {
-        if (Parent?.Parent is MainMenuViewModel menu)
-        {
-            await menu.ShowUserProfileAsync(userId);
-            return;
-        }
-
-        await Context.Notifications.ShowErrorAsync("Не удалось открыть профиль", copyToClipboard: false);
-    }
+    #region Чтение и скроллинг
 
     public async Task OnMessageVisibleAsync(MessageViewModel message)
     {
         if (Context.IsDisposed) return;
-
-        if (!message.IsUnread || message.SenderId == Context.CurrentUserId)
-            return;
+        if (!message.IsUnread || message.SenderId == Context.CurrentUserId) return;
 
         message.IsUnread = false;
         MessageManager.MarkAsReadLocally(message.Id);
-
         await Context.Hub.MarkMessageAsReadAsync(Context.ChatId, message.Id);
     }
 
@@ -604,27 +522,41 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         if (Context.IsDisposed) return;
 
+        // защита от спама на сервер при быстром скролле
         var now = DateTime.UtcNow;
         if ((now - _lastMarkAsReadTime).TotalSeconds < AppConstants.MarkAsReadCooldownSeconds)
             return;
 
-        _lastMarkAsReadTime = DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
+        _lastMarkAsReadTime = now;
         await Context.Hub.MarkChatAsReadAsync(Context.ChatId);
     }
 
-    public async Task OnMessagesVisibleAsync()
-        => await MarkMessagesAsReadAsync();
+    public Task OnMessagesVisibleAsync() => MarkMessagesAsReadAsync();
+
+    public Task ScrollToMessageAsync(int messageId) => Search.ScrollToMessageAsync(messageId);
+    public void ScrollToMessageFromSearch(MessageViewModel message) => Context.RequestScrollToMessage(message, true);
+    public void ScrollToIndexFromSearch(int index) => Context.RequestScrollToIndex(index, true);
+    public void ScrollToMessageSilent(MessageViewModel message) => Context.RequestScrollToMessage(message, false);
+    public void ScrollToIndexSilent(int index) => Context.RequestScrollToIndex(index, false);
+
+    #endregion
+
+    #region Переподключение
+
+    public Task WaitForInitializationAsync() => _initTcs.Task;
 
     private async Task OnHubReconnectedAsync()
     {
         try
         {
             var ct = Context.LifetimeToken;
-            await Task.WhenAll(MessageManager.GapFillAfterReconnectAsync(ct), RefreshInfoPanelAsync(ct));
+            await Task.WhenAll(
+                MessageManager.GapFillAfterReconnectAsync(ct),
+                RefreshInfoPanelAsync(ct));
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ChatViewModel] Reconnect error: {ex.Message}");
+            Debug.WriteLine($"[ChatVM] Ошибка при переподключении: {ex.Message}");
         }
     }
 
@@ -632,53 +564,29 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         try
         {
-            var chatResult = await Context.Api.GetAsync<ChatDto>
-                (ApiEndpoints.Chats.ById(Context.ChatId), ct);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), ct);
 
             if (chatResult is { Success: true, Data: not null })
-            {
                 Context.Chat = chatResult.Data;
-                OnPropertyChanged(nameof(Chat));
-            }
 
             await InfoPanel.ReloadMembersAfterEditAsync();
         }
-        catch (OperationCanceledException)
-        {
-            // Игнорируем отмену, так как это может произойти при закрытии чата
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ChatViewModel] RefreshInfoPanel error: {ex.Message}");
+            Debug.WriteLine($"[ChatVM] Не удалось обновить инфопанель: {ex.Message}");
         }
     }
 
-    public Task WaitForInitializationAsync() => _initTcs.Task;
+    #endregion
 
-    public void ScrollToMessageFromSearch(MessageViewModel message)
-        => Context.RequestScrollToMessage(message, true);
+    #region Очистка ресурсов (Dispose)
 
-    public void ScrollToIndexFromSearch(int index)
-        => Context.RequestScrollToIndex(index, true);
-
-    public void ScrollToMessageSilent(MessageViewModel message)
-        => Context.RequestScrollToMessage(message, false);
-
-    public void ScrollToIndexSilent(int index)
-        => Context.RequestScrollToIndex(index, false);
-
-    private void CleanupOnError()
-    {
-        _hubSubscriber.Dispose();
-        InfoPanel.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
+    private void DisposeCore()
     {
         if (Context.IsDisposed) return;
 
         _hubSubscriber.Dispose();
-
         Context.Hub.SetCurrentChat(null);
 
         EditDelete.Dispose();
@@ -689,11 +597,24 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         InfoPanel.Dispose();
         Search.Dispose();
         Notification.Dispose();
-
         Attachments.Dispose();
 
         Context.Dispose();
-
-        await Task.CompletedTask;
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            DisposeCore();
+
+        base.Dispose(disposing);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
 }

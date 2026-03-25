@@ -5,13 +5,14 @@ namespace MessengerDesktop.ViewModels.Dialog;
 
 public abstract partial class DialogBaseViewModel : BaseViewModel
 {
-    public Action? CloseRequested { get; set; }
+    public Func<Task>? CloseRequested { get; set; }
 
     [ObservableProperty] public partial string Title { get; set; } = "Диалог";
     [ObservableProperty] public partial bool CanCloseOnBackgroundClick { get; set; } = true;
     [ObservableProperty] public partial bool IsInitialized { get; set; }
 
-    protected void RequestClose() => CloseRequested?.Invoke();
+    protected Task RequestCloseAsync() => CloseRequested?.Invoke() ?? Task.CompletedTask;
+    protected void RequestClose() => _ = RequestCloseAsync();
 
     /// <summary>
     /// Обёртка для безопасной инициализации
@@ -28,12 +29,14 @@ public abstract partial class DialogBaseViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    protected virtual void Cancel() => RequestClose();
+    protected virtual Task Cancel() => RequestCloseAsync();
 
     [RelayCommand]
-    protected virtual void CloseOnBackgroundClick()
+    protected virtual Task CloseOnBackgroundClick()
     {
         if (CanCloseOnBackgroundClick)
-            RequestClose();
+            return RequestCloseAsync();
+
+        return Task.CompletedTask;
     }
 }

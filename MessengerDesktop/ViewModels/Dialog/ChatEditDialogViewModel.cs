@@ -151,8 +151,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
         var query = SearchUserQuery;
         var filtered = AvailableUsers.Where(u =>
-            (u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
-            (u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false));
+            u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
+            u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true);
 
         FilteredUsers = new ObservableCollection<UserListItemViewModel>(filtered);
     }
@@ -361,12 +361,12 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 if (success)
                 {
                     SuccessMessage = IsNewChat ? "Группа создана" : "Группа обновлена";
-                    RequestClose();
+                    await RequestCloseAsync();
                 }
             }
             else
             {
-                RequestClose();
+                await RequestCloseAsync();
             }
         });
     }

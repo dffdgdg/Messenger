@@ -108,18 +108,18 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
         RequestClose();
     }
 
-    protected override void Cancel()
+    protected override Task Cancel()
     {
         _singleSelectTcs?.TrySetResult(null);
-        base.Cancel();
+        return base.Cancel();
     }
 
-    protected override void CloseOnBackgroundClick()
+    protected override Task CloseOnBackgroundClick()
     {
         if (CanCloseOnBackgroundClick)
         {
             _singleSelectTcs?.TrySetResult(null);
         }
-        base.CloseOnBackgroundClick();
+        return base.CloseOnBackgroundClick();
     }
 }

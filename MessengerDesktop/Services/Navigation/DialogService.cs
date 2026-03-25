@@ -100,11 +100,11 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
         {
             var hadOpenDialogs = HasOpenDialogs;
 
-            CurrentDialog?.CloseRequested -= OnDialogClosed;
+            CurrentDialog?.CloseRequested -= OnDialogClosedAsync;
 
             _dialogStack.Add(dialogViewModel);
             CurrentDialog = dialogViewModel;
-            dialogViewModel.CloseRequested += OnDialogClosed;
+            dialogViewModel.CloseRequested += OnDialogClosedAsync;
 
             IsDialogVisible = true;
             OnDialogStackChanged?.Invoke();
@@ -151,14 +151,14 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
             if (!hasUnderlyingDialog)
                 await RequestAnimationAsync(isOpening: false);
 
-            closingDialog.CloseRequested -= OnDialogClosed;
+            closingDialog.CloseRequested -= OnDialogClosedAsync;
             _dialogStack.Remove(closingDialog);
 
             CurrentDialog = _dialogStack.Count > 0
                 ? _dialogStack[^1] : null;
 
             if (CurrentDialog != null)
-                CurrentDialog.CloseRequested += OnDialogClosed;
+                CurrentDialog.CloseRequested += OnDialogClosedAsync;
             else
                 IsDialogVisible = false;
 
@@ -182,7 +182,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
             await RequestAnimationAsync(isOpening: false);
 
             foreach (var dialog in _dialogStack)
-                dialog.CloseRequested -= OnDialogClosed;
+                dialog.CloseRequested -= OnDialogClosedAsync;
 
             _dialogStack.Clear();
             CurrentDialog = null;
@@ -198,17 +198,15 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
 
     private async Task RequestAnimationAsync(bool isOpening)
     {
-        TaskCompletionSource tcs;
-        CancellationTokenSource cts;
+        var tcs = new TaskCompletionSource();
+        var cts = new CancellationTokenSource();
+
         CancellationTokenSource? previousCts;
 
         lock (_animationLock)
         {
             previousCts = _animationCts;
             _animationTcs?.TrySetCanceled();
-
-            tcs = new TaskCompletionSource();
-            cts = new CancellationTokenSource();
 
             _animationTcs = tcs;
             _animationCts = cts;
@@ -260,7 +258,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
         }
     }
 
-    private async void OnDialogClosed()
+    private async Task OnDialogClosedAsync()
     {
         try
         {
@@ -289,7 +287,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
             try
             {
                 foreach (var dialog in _dialogStack)
-                    dialog.CloseRequested -= OnDialogClosed;
+                    dialog.CloseRequested -= OnDialogClosedAsync;
                 _dialogStack.Clear();
             }
             finally
@@ -301,7 +299,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
         {
             Debug.WriteLine($"[DialogService] Dispose lock timeout: {ex.Message}");
             foreach (var dialog in _dialogStack)
-                dialog.CloseRequested -= OnDialogClosed;
+                dialog.CloseRequested -= OnDialogClosedAsync;
             _dialogStack.Clear();
         }
 

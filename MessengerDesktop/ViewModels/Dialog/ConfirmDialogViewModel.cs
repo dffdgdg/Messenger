@@ -34,15 +34,15 @@ public partial class ConfirmDialogViewModel : DialogBaseViewModel
         _resultTcs.TrySetResult(true);
         RequestClose();
     }
-    protected override void CloseOnBackgroundClick()
+    protected override Task CloseOnBackgroundClick()
     {
         _resultTcs.TrySetResult(false);
-        base.CloseOnBackgroundClick();
+        return base.CloseOnBackgroundClick();
     }
 
-    protected override void Cancel()
+    protected override Task Cancel()
     {
         _resultTcs.TrySetResult(false);
-        base.Cancel();
+        return base.Cancel();
     }
 }

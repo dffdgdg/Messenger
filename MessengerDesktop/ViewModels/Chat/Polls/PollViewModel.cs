@@ -35,7 +35,9 @@ public partial class PollViewModel : BaseViewModel
         Options = new ObservableCollection<PollOptionViewModel>(poll.Options.Select(o => new PollOptionViewModel(o, this)));
 
         foreach (var opt in Options)
+        {
             opt.PropertyChanged += OnOptionPropertyChanged;
+        }
 
         ApplySelectedOptions(poll.SelectedOptionIds);
         CanVote = poll.CanVote;
@@ -45,17 +47,23 @@ public partial class PollViewModel : BaseViewModel
     private void OnOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(PollOptionViewModel.IsSelected))
+        {
             return;
+        }
 
         OnPropertyChanged(nameof(HasSelection));
 
         if (sender is not PollOptionViewModel { IsSelected: true } changed)
+        {
             return;
+        }
 
         if (!AllowsMultipleAnswers)
         {
-            foreach (var opt in Options.Where(o => o != changed && o.IsSelected))
+            foreach (PollOptionViewModel? opt in Options.Where(o => o != changed && o.IsSelected))
+            {
                 opt.IsSelected = false;
+            }
         }
     }
 
@@ -90,7 +98,7 @@ public partial class PollViewModel : BaseViewModel
             }
             else
             {
-                PollOptionViewModel newVm = new PollOptionViewModel(optDto, this);
+                var newVm = new PollOptionViewModel(optDto, this);
                 newVm.PropertyChanged += OnOptionPropertyChanged;
                 Options.Add(newVm);
             }

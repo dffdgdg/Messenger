@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Dialog;
 
@@ -105,15 +106,15 @@ public partial class UserListDialogViewModel : DialogBaseViewModel
         RequestClose();
     }
 
-    protected override void Cancel()
+    protected override Task Cancel()
     {
         if (IsEditMode)
         {
             LoadReviewItems();
             SearchQuery = string.Empty;
-            return;
+            return Task.CompletedTask;
         }
 
-        base.Cancel();
+        return base.Cancel();
     }
 }

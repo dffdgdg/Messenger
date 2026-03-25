@@ -31,13 +31,13 @@ public sealed class SecureStorageService : ISecureStorageService, IDisposable
     public SecureStorageService()
     {
         _storagePath = GetStoragePath();
-        Directory.CreateDirectory(_storagePath);
+        _ = Directory.CreateDirectory(_storagePath);
         _key = GetOrCreateKey();
     }
 
     private byte[] GetOrCreateKey()
     {
-        var saltPath = Path.Combine(_storagePath, SaltFileName);
+        string saltPath = Path.Combine(_storagePath, SaltFileName);
         byte[] salt;
 
         if (File.Exists(saltPath))
@@ -58,10 +58,10 @@ public sealed class SecureStorageService : ISecureStorageService, IDisposable
             SetHiddenAttribute(saltPath);
         }
 
-        var machineData = $"{Environment.MachineName}{Environment.UserName}{Environment.OSVersion}";
-        var baseKey = Encoding.UTF8.GetBytes(machineData);
+        string machineData = $"{Environment.MachineName}{Environment.UserName}{Environment.OSVersion}";
+        byte[] baseKey = Encoding.UTF8.GetBytes(machineData);
 
-        using var pbkdf2 = new Rfc2898DeriveBytes(baseKey, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+        using Rfc2898DeriveBytes pbkdf2 = new(baseKey, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
         return pbkdf2.GetBytes(32);
     }
 

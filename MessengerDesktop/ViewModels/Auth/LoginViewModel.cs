@@ -15,13 +15,9 @@ public partial class LoginViewModel : BaseViewModel
     private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);
 
     [ObservableProperty] public partial string Username { get; set; } = string.Empty;
-
     [ObservableProperty] public partial string Password { get; set; } = string.Empty;
-
     [ObservableProperty] public partial bool RememberMe { get; set; }
-
     [ObservableProperty] public partial bool IsInitializing { get; set; } = true;
-
     [ObservableProperty] public partial bool CanRetryAutoLogin { get; set; }
 
     public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage)

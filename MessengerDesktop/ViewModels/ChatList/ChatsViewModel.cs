@@ -376,7 +376,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 var existingItem = Chats.FirstOrDefault(c => c.Id == existingChat.Id)
                     ?? new ChatListItemViewModel(existingChat);
 
-                if (!Chats.Any(c => c.Id == existingItem.Id))
+                if (Chats.All(c => c.Id != existingItem.Id))
                     Chats.Insert(0, existingItem);
 
                 OpenChatCommand.Execute(existingItem);

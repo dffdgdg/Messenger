@@ -9,11 +9,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentTab))]
-    private int _selectedTabIndex;
-
-    [ObservableProperty]
-    private string _searchQuery = string.Empty;
-
+    public partial int SelectedTabIndex { get; set; }
+    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
     public UsersTabViewModel UsersTab { get; }
     public DepartmentsTabViewModel DepartmentsTab { get; }
 

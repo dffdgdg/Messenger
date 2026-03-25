@@ -11,25 +11,16 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     private readonly Action<List<int>>? _applySelection;
     private readonly TaskCompletionSource<UserDto?>? _singleSelectTcs;
 
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _items = [];
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _filteredItems = [];
-
-    [ObservableProperty]
-    private string _searchQuery = string.Empty;
-
-    [ObservableProperty]
-    private bool _allowEdit;
-
-    [ObservableProperty]
-    private string _emptyMessage = "Пользователи не найдены";
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredItems { get; set; } = [];
+    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool AllowEdit { get; set; }
+    [ObservableProperty] public partial string EmptyMessage { get; set; } = "Пользователи не найдены";
 
     /// <summary>
     /// true = множественный выбор (чекбоксы), false = одиночный выбор (клик)
     /// </summary>
-    [ObservableProperty]
-    private bool _isMultiSelect;
+    [ObservableProperty] public partial bool IsMultiSelect { get; set; }
 
     public int SelectedCount => Items.Count(x => x.IsSelected);
 

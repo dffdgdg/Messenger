@@ -11,10 +11,10 @@ public sealed partial class VoiceRecordingViewModel(IAudioRecorderService record
     private DispatcherTimer? _timer;
     private bool _disposed;
 
-    [ObservableProperty] private AudioRecordingState _state = AudioRecordingState.Idle;
-    [ObservableProperty] private TimeSpan _elapsed;
-    [ObservableProperty] private string _elapsedFormatted = "0:00";
-    [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] public partial AudioRecordingState State { get; set; } = AudioRecordingState.Idle;
+    [ObservableProperty] public partial TimeSpan Elapsed { get; set; }
+    [ObservableProperty] public partial string ElapsedFormatted { get; set; } = "0:00";
+    [ObservableProperty] public partial string? ErrorMessage { get; set; }
 
     public bool IsIdle => State == AudioRecordingState.Idle;
     public bool IsRecording => State == AudioRecordingState.Recording;

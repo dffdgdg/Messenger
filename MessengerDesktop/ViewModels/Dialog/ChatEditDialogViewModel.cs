@@ -24,29 +24,16 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     private string? _avatarFileName;
     private bool _isAvatarRemoved;
 
-    [ObservableProperty]
-    private string _name = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _availableUsers = [];
-
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _filteredUsers = [];
-
-    [ObservableProperty]
-    private string _searchUserQuery = string.Empty;
-
-    [ObservableProperty]
-    private Bitmap? _avatarPreview;
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> AvailableUsers { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredUsers { get; set; } = [];
+    [ObservableProperty] public partial string SearchUserQuery { get; set; } = string.Empty;
+    [ObservableProperty] public partial Bitmap? AvatarPreview { get; set; }
+    [ObservableProperty] public partial ChatRole CurrentUserRole { get; set; } = ChatRole.Owner;
+    [ObservableProperty] public partial ObservableCollection<int> SelectedAdminIds { get; set; } = [];
 
     public bool IsNewChat => _originalChat == null;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
-    [ObservableProperty]
-    private ChatRole _currentUserRole = ChatRole.Owner;
-
-    [ObservableProperty]
-    private ObservableCollection<int> _selectedAdminIds = [];
-
     public int ParticipantsCount => AvailableUsers.Count(u => u.IsSelected);
     public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
     public bool CanManageParticipants => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner;

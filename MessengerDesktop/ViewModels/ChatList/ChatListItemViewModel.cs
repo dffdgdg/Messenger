@@ -24,22 +24,22 @@ public partial class ChatListItemViewModel : ObservableObject
     public int CreatedById { get; }
 
     [ObservableProperty]
-    private string? _name;
+    public partial string? Name { get; set; }
 
     [ObservableProperty]
-    private DateTime? _lastMessageDate;
+    public partial DateTime? LastMessageDate { get; set; }
 
     [ObservableProperty]
-    private string? _avatar;
+    public partial string? Avatar { get; set; }
 
     [ObservableProperty]
-    private string? _lastMessagePreview;
+    public partial string? LastMessagePreview { get; set; }
 
     [ObservableProperty]
-    private string? _lastMessageSenderName;
+    public partial string? LastMessageSenderName { get; set; }
 
     [ObservableProperty]
-    private int _unreadCount;
+    public partial int UnreadCount { get; set; }
 
     public ChatDto ToDto() => new()
     {

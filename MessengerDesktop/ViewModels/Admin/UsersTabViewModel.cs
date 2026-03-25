@@ -13,15 +13,12 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-    [ObservableProperty]
-    private ObservableCollection<UserDto> _users = [];
-
-    [ObservableProperty]
-    private ObservableCollection<DepartmentGroup> _groupedUsers = [];
+    [ObservableProperty] public partial ObservableCollection<UserDto> Users { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<DepartmentGroup> GroupedUsers { get; set; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredGroups))]
-    private string _searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     private IReadOnlyList<DepartmentDto> _departments = [];
 

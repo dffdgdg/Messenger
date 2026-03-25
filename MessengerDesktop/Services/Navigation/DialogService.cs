@@ -39,11 +39,9 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
 
     private record CloseRequest(bool CloseAll, TaskCompletionSource Completion);
 
-    [ObservableProperty]
-    private DialogBaseViewModel? _currentDialog;
+    [ObservableProperty] public partial DialogBaseViewModel? CurrentDialog { get; set; }
 
-    [ObservableProperty]
-    private bool _isDialogVisible;
+    [ObservableProperty] public partial bool IsDialogVisible { get; set; }
 
     public IReadOnlyList<DialogBaseViewModel> DialogStack => _dialogStack.AsReadOnly();
     public event Action? OnDialogStackChanged;

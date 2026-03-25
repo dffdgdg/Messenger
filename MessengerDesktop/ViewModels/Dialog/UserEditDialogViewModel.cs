@@ -13,18 +13,18 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private string _username = string.Empty;
+    public partial string Username { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private string _surname = string.Empty;
+    public partial string Surname { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _midname = string.Empty;
+    public partial string Midname { get; set; } = string.Empty;
 
     #endregion
 
@@ -32,21 +32,21 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private string _password = string.Empty;
+    public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private string _confirmPassword = string.Empty;
+    public partial string ConfirmPassword { get; set; } = string.Empty;
 
     #endregion
 
     #region Отдел
 
     [ObservableProperty]
-    private ObservableCollection<DepartmentDto> _departments = [];
+    public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
 
     [ObservableProperty]
-    private DepartmentDto? _selectedDepartment;
+    public partial DepartmentDto? SelectedDepartment { get; set; }
 
     #endregion
 

@@ -6,14 +6,9 @@ public partial class ConfirmDialogViewModel : DialogBaseViewModel
 {
     private readonly TaskCompletionSource<bool> _resultTcs = new();
 
-    [ObservableProperty]
-    private string _message = string.Empty;
-
-    [ObservableProperty]
-    private string _confirmText = "Да";
-
-    [ObservableProperty]
-    private string _cancelText = "Отмена";
+    [ObservableProperty] public partial string Message { get; set; } = string.Empty;
+    [ObservableProperty] public partial string ConfirmText { get; set; } = "Да";
+    [ObservableProperty] public partial string CancelText { get; set; } = "Отмена";
 
     /// <summary>
     /// Ожидание результата диалога: true = подтверждено, false = отменено

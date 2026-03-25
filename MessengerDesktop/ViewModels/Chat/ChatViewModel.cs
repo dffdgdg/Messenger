@@ -103,16 +103,32 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Observable свойства (State)
 
-    [ObservableProperty] private string _newMessage = string.Empty;
-    [ObservableProperty] private bool _isInitialLoading = true;
-    [ObservableProperty] private bool _isLoadingOlderMessages;
-    [ObservableProperty] private bool _hasNewMessages;
-    [ObservableProperty] private bool _isScrolledToBottom = true;
-    [ObservableProperty] private int _unreadCount;
-    [ObservableProperty] private int _pollsCount;
-    [ObservableProperty] private int _userId;
-    [ObservableProperty] private UserProfileDialogViewModel? _userProfileDialog;
+    [ObservableProperty]
+    public partial string NewMessage { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool IsInitialLoading { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsLoadingOlderMessages { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNewMessages { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsScrolledToBottom { get; set; } = true;
+
+    [ObservableProperty]
+    public partial int UnreadCount { get; set; }
+
+    [ObservableProperty]
+    public partial int PollsCount { get; set; }
+
+    [ObservableProperty]
+    public partial int UserId { get; set; }
+
+    [ObservableProperty]
+    public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
     public List<string> PopularEmojis { get; } =
     [
         "😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅",

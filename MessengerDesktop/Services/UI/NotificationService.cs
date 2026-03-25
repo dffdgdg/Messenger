@@ -247,8 +247,7 @@ public sealed partial class DesktopNotificationViewModel(
         _ => "i"
     };
 
-    [ObservableProperty]
-    private bool _isVisible;
+    [ObservableProperty] public partial bool IsVisible { get; set; }
 
     [RelayCommand]
     private async Task ActivateAsync()

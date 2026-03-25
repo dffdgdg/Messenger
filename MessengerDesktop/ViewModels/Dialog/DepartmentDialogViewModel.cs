@@ -16,15 +16,9 @@ public partial class DepartmentDialogViewModel : DialogBaseViewModel
 
     private readonly IReadOnlyList<DepartmentDto> _allDepartments;
 
-    [ObservableProperty]
-    private string _name = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<DepartmentDto> _availableParents = [];
-
-    [ObservableProperty]
-    private DepartmentDto _selectedParent = NoParentPlaceholder;
-
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<DepartmentDto> AvailableParents { get; set; } = [];
+    [ObservableProperty] public partial DepartmentDto SelectedParent { get; set; } = NoParentPlaceholder;
     public int? EditId { get; }
     public bool IsNewDepartment => EditId == null;
     public int? ParentDepartmentId => SelectedParent.Id > 0 ? SelectedParent.Id : null;

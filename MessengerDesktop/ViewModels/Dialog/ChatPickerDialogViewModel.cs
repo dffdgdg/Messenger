@@ -9,17 +9,10 @@ public partial class ChatPickerDialogViewModel : DialogBaseViewModel
 {
     private readonly TaskCompletionSource<ChatDto?> _singleSelectTcs = new();
 
-    [ObservableProperty]
-    private ObservableCollection<ChatDto> _items = [];
-
-    [ObservableProperty]
-    private ObservableCollection<ChatDto> _filteredItems = [];
-
-    [ObservableProperty]
-    private string _searchQuery = string.Empty;
-
-    [ObservableProperty]
-    private string _emptyMessage = "Чаты не найдены";
+    [ObservableProperty]public partial ObservableCollection<ChatDto> Items { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<ChatDto> FilteredItems { get; set; } = [];
+    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
+    [ObservableProperty] public partial string EmptyMessage { get; set; } = "Чаты не найдены";
 
     public Task<ChatDto?> SingleSelectResult => _singleSelectTcs.Task;
 

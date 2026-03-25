@@ -11,12 +11,12 @@ public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
 
-    [ObservableProperty] private ObservableCollection<PollOptionViewModel> _options = [];
-    [ObservableProperty] private bool _allowsMultipleAnswers;
-    [ObservableProperty] private bool _canVote = true;
-    [ObservableProperty] private bool _isAnonymous;
-    [ObservableProperty] private int _totalVotes;
-    [ObservableProperty] private bool _hasVoted;
+    [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
+    [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
+    [ObservableProperty] public partial bool CanVote { get; set; } = true;
+    [ObservableProperty] public partial bool IsAnonymous { get; set; }
+    [ObservableProperty] public partial int TotalVotes { get; set; }
+    [ObservableProperty] public partial bool HasVoted { get; set; }
 
     public int PollId { get; }
     public int UserId { get; }
@@ -81,16 +81,16 @@ public partial class PollViewModel : BaseViewModel
 
     private void UpdateOptions(List<PollOptionDto> optionDtos)
     {
-        foreach (var optDto in optionDtos)
+        foreach (PollOptionDto optDto in optionDtos)
         {
-            var vm = Options.FirstOrDefault(o => o.Id == optDto.Id);
+            PollOptionViewModel? vm = Options.FirstOrDefault(o => o.Id == optDto.Id);
             if (vm != null)
             {
                 vm.UpdateVotes(optDto.VotesCount);
             }
             else
             {
-                var newVm = new PollOptionViewModel(optDto, this);
+                PollOptionViewModel newVm = new PollOptionViewModel(optDto, this);
                 newVm.PropertyChanged += OnOptionPropertyChanged;
                 Options.Add(newVm);
             }

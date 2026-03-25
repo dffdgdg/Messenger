@@ -12,17 +12,10 @@ public partial class PollDialogViewModel : DialogBaseViewModel
 
     private readonly int _chatId;
 
-    [ObservableProperty]
-    private string _question = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<OptionItem> _options;
-
-    [ObservableProperty]
-    private bool _allowsMultipleAnswers;
-
-    [ObservableProperty]
-    private bool _isAnonymous = true;
+    [ObservableProperty] public partial string Question { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<OptionItem> Options { get; set; }
+    [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
+    [ObservableProperty] public partial bool IsAnonymous { get; set; } = true;
 
     public Action<CreatePollDto>? CreateAction { get; set; }
 
@@ -36,9 +29,8 @@ public partial class PollDialogViewModel : DialogBaseViewModel
         _chatId = chatId;
         Title = "Создать опрос";
         CanCloseOnBackgroundClick = true;
-
-        _options = [new(), new()];
-        SubscribeToOptions(_options);
+        Options = [new(), new()];
+        SubscribeToOptions(Options);
     }
 
     partial void OnQuestionChanged(string value)
@@ -151,7 +143,6 @@ public partial class PollDialogViewModel : DialogBaseViewModel
 
     public partial class OptionItem : ObservableObject
     {
-        [ObservableProperty]
-        private string _text = string.Empty;
+        [ObservableProperty] public partial string Text { get; set; } = string.Empty;
     }
 }

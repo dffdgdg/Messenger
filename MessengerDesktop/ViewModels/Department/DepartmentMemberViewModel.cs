@@ -23,11 +23,8 @@ public partial class DepartmentMemberViewModel : ObservableObject
     public string? DisplayName { get; }
     public string? AvatarUrl { get; }
 
-    [ObservableProperty]
-    private bool _isOnline;
-
-    [ObservableProperty]
-    private DateTime? _lastSeen;
+    [ObservableProperty] public partial bool IsOnline { get; set; }
+    [ObservableProperty] public partial DateTime? LastSeen { get; set; }
 
     public string StatusText => IsOnline ? "Онлайн" : FormatLastSeen();
     public bool HasAvatar => !string.IsNullOrEmpty(AvatarUrl);

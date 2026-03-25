@@ -9,14 +9,11 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
 {
     private readonly IApiClientService _apiClient;
 
-    [ObservableProperty]
-    private UserDto _user;
+    [ObservableProperty] public partial UserDto User { get; set; }
 
-    [ObservableProperty]
-    private Bitmap? _avatarBitmap;
+    [ObservableProperty] public partial Bitmap? AvatarBitmap { get; set; }
 
-    [ObservableProperty]
-    private string _department = string.Empty;
+    [ObservableProperty] public partial string Department { get; set; } = string.Empty;
 
     /// <summary>
     /// Callback для открытия/создания чата с пользователем
@@ -32,7 +29,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
 
     public UserProfileDialogViewModel(UserDto user, IApiClientService apiClient)
     {
-        _user = user ?? throw new ArgumentNullException(nameof(user));
+        User = user ?? throw new ArgumentNullException(nameof(user));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
 
         Title = $"Профиль: {user.DisplayName ?? user.Username}";

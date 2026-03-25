@@ -14,20 +14,15 @@ public partial class LoginViewModel : BaseViewModel
     private const string SavedUsernameKey = "saved_username";
     private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);
 
-    [ObservableProperty]
-    private string _username = string.Empty;
+    [ObservableProperty] public partial string Username { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    private string _password = string.Empty;
+    [ObservableProperty] public partial string Password { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    private bool _rememberMe;
+    [ObservableProperty] public partial bool RememberMe { get; set; }
 
-    [ObservableProperty]
-    private bool _isInitializing = true;
+    [ObservableProperty] public partial bool IsInitializing { get; set; } = true;
 
-    [ObservableProperty]
-    private bool _canRetryAutoLogin;
+    [ObservableProperty] public partial bool CanRetryAutoLogin { get; set; }
 
     public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage)
     {

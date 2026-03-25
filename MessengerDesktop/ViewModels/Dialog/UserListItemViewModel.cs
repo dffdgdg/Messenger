@@ -6,8 +6,7 @@ public partial class UserListItemViewModel(UserDto user, bool isSelected = false
 {
     public UserDto User { get; } = user ?? throw new ArgumentNullException(nameof(user));
 
-    [ObservableProperty]
-    private bool _isSelected = isSelected;
+    [ObservableProperty] public partial bool IsSelected { get; set; } = isSelected;
 
     public int Id => User.Id;
     public string DisplayName => User.DisplayName ?? User.Username ?? "Пользователь";

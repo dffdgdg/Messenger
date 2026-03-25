@@ -31,15 +31,25 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
 
     public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
-    [ObservableProperty] private bool _isDownloading;
-    [ObservableProperty] private double _downloadProgress;
-    [ObservableProperty] private bool _isDownloaded;
-    [ObservableProperty] private string? _downloadedFilePath;
-    [ObservableProperty] private string? _errorMessage;
-    [ObservableProperty] private bool _hasError;
+    [ObservableProperty] public partial bool IsDownloading { get; set; }
+
     [ObservableProperty]
-    private DownloadState _state =
-        DownloadState.NotStarted;
+    public partial double DownloadProgress { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDownloaded { get; set; }
+
+    [ObservableProperty]
+    public partial string? DownloadedFilePath { get; set; }
+
+    [ObservableProperty]
+    public partial string? ErrorMessage { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasError { get; set; }
+
+    [ObservableProperty]
+    public partial DownloadState State { get; set; } = DownloadState.NotStarted;
 
     public int Id => File.Id;
     public string FileName => File.FileName;

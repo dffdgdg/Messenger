@@ -33,13 +33,10 @@ public partial class HierarchicalDepartmentViewModel(DepartmentDto department, i
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ExpanderRotation))]
-    private bool _isExpanded = true;
+    public partial bool IsExpanded { get; set; } = true;
 
-    [ObservableProperty]
-    private bool _isSelected;
-
-    [ObservableProperty]
-    private bool _isHighlighted;
+    [ObservableProperty] public partial bool IsSelected { get; set; }
+    [ObservableProperty] public partial bool IsHighlighted { get; set; }
 
     /// <summary>
     /// ”гол поворота шеврона

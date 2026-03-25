@@ -9,6 +9,12 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<AnalysisLevel>preview</AnalysisLevel>
+		<AnalysisMode>All</AnalysisMode>
+		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 	</PropertyGroup>
 
 	<ItemGroup>

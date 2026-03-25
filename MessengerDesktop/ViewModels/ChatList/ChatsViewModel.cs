@@ -34,27 +34,26 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [ObservableProperty]
-    private bool _isGroupMode;
+    public partial bool IsGroupMode { get; set; }
 
     [ObservableProperty]
-    private bool _isInitialLoading = true;
-
+    public partial bool IsInitialLoading { get; set; } = true;
     public MainMenuViewModel Parent { get; }
 
     [ObservableProperty]
-    private ObservableCollection<ChatListItemViewModel> chats = [];
+    public partial ObservableCollection<ChatListItemViewModel> Chats { get; set; } = [];
 
     [ObservableProperty]
-    private ChatListItemViewModel? selectedChat;
+    public partial ChatListItemViewModel? SelectedChat { get; set; }
 
     [ObservableProperty]
-    private ChatViewModel? currentChatViewModel;
+    public partial ChatViewModel? CurrentChatViewModel { get; set; }
 
     [ObservableProperty]
-    private GlobalSearchManager? searchManager;
+    public partial GlobalSearchManager? SearchManager { get; set; }
 
     [ObservableProperty]
-    private int totalUnreadCount;
+    public partial int TotalUnreadCount { get; set; }
 
     public bool IsSearchMode => SearchManager?.IsSearchMode is true;
 
@@ -62,7 +61,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub, ILocalCacheService cacheService)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
-        _isGroupMode = isGroupMode;
+        IsGroupMode = isGroupMode;
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _chatViewModelFactory = chatViewModelFactory ?? throw new ArgumentNullException(nameof(chatViewModelFactory));

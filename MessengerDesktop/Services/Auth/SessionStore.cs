@@ -15,9 +15,7 @@ public interface ISessionStore
     bool IsHead { get; }
     bool IsUser { get; }
 
-    void SetSession(
-        string token, string refreshToken,
-        int userId, UserRole role);
+    void SetSession(string token, string refreshToken, int userId, UserRole role);
     void UpdateTokens(string token, string refreshToken);
     void ClearSession();
 
@@ -37,17 +35,13 @@ public partial class SessionStore : ObservableObject, ISessionStore
         [UserRole.Admin] = 2
     };
 
-    [ObservableProperty]
-    private int? _userId;
+    [ObservableProperty] public partial int? UserId { get; set; }
 
-    [ObservableProperty]
-    private string? _token;
+    [ObservableProperty] public partial string? Token { get; set; }
 
-    [ObservableProperty]
-    private string? _refreshToken;
+    [ObservableProperty] public partial string? RefreshToken { get; set; }
 
-    [ObservableProperty]
-    private UserRole _userRole = UserRole.User;
+    [ObservableProperty] public partial UserRole UserRole { get; set; } = UserRole.User;
 
     public bool IsAuthenticated
         => !string.IsNullOrEmpty(Token) && UserId.HasValue;

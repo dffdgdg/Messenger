@@ -1,49 +1,54 @@
-﻿
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>27e926d2-2584-4b47-81f9-9358da32f217</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>27e926d2-2584-4b47-81f9-9358da32f217</UserSecretsId>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<AnalysisLevel>preview</AnalysisLevel>
+		<AnalysisMode>All</AnalysisMode>
+		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+	</PropertyGroup>
 	<ItemGroup>
-    <Compile Include="dockerfile" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.17.0" />
-    <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
-    <PackageReference Include="SixLabors.ImageSharp.Web" Version="3.2.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.6" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
-    <PackageReference Include="Vosk" Version="0.3.38" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
-  </ItemGroup>
+		<Compile Include="dockerfile" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
+		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.17.0" />
+		<PackageReference Include="NAudio" Version="2.3.0" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+		<PackageReference Include="SixLabors.ImageSharp.Web" Version="3.2.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.6" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
+		<PackageReference Include="Vosk" Version="0.3.38" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
+	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
 		<None Include="Dockerfile" />
 	</ItemGroup>
-  <ItemGroup>
-    <Folder Include="Whisper\Models\" />
-  </ItemGroup>
+	<ItemGroup>
+		<Folder Include="Whisper\Models\" />
+	</ItemGroup>
 </Project>

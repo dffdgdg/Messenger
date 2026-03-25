@@ -7,14 +7,9 @@ public abstract partial class DialogBaseViewModel : BaseViewModel
 {
     public Action? CloseRequested { get; set; }
 
-    [ObservableProperty]
-    private string _title = "Диалог";
-
-    [ObservableProperty]
-    private bool _canCloseOnBackgroundClick = true;
-
-    [ObservableProperty]
-    private bool _isInitialized;
+    [ObservableProperty] public partial string Title { get; set; } = "Диалог";
+    [ObservableProperty] public partial bool CanCloseOnBackgroundClick { get; set; } = true;
+    [ObservableProperty] public partial bool IsInitialized { get; set; }
 
     protected void RequestClose() => CloseRequested?.Invoke();
 

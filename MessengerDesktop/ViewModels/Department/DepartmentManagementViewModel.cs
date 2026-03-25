@@ -33,30 +33,17 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
     #region Observable Properties
 
-    [ObservableProperty]
-    private DepartmentDto? _department;
-
-    [ObservableProperty]
-    private ObservableCollection<DepartmentMemberViewModel> _members = [];
-
+    [ObservableProperty] public partial DepartmentDto? Department { get; set; }
+    [ObservableProperty] public partial ObservableCollection<DepartmentMemberViewModel> Members { get; set; } = [];
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredMembers))]
-    private string _searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private bool _canManage;
-
-    [ObservableProperty]
-    private ObservableCollection<UserDto> _availableUsers = [];
-
-    [ObservableProperty]
-    private bool _hasNoDepartment;
-
-    [ObservableProperty]
-    private string? _noDepartmentMessage;
+    [ObservableProperty] public partial bool IsLoading { get; set; }
+    [ObservableProperty] public partial bool CanManage { get; set; }
+    [ObservableProperty] public partial ObservableCollection<UserDto> AvailableUsers { get; set; } = [];
+    [ObservableProperty] public partial bool HasNoDepartment { get; set; }
+    [ObservableProperty] public partial string? NoDepartmentMessage { get; set; }
 
     #endregion
 

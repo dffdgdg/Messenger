@@ -20,51 +20,68 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool IsOwn { get; set; }
     public bool IsSystemMessage { get; set; }
 
-    [ObservableProperty] private int? _replyToMessageId;
-    [ObservableProperty] private string? _replyToSenderName;
-    [ObservableProperty] private string? _replyToContent;
-    [ObservableProperty] private bool _replyToIsDeleted;
-    [ObservableProperty] private DateTime? _editedAt;
-    [ObservableProperty] private bool _isContinuation;
-    [ObservableProperty] private bool _hasNextFromSame;
-    [ObservableProperty]
-    private MessageGroupPosition _groupPosition = MessageGroupPosition.Alone;
+    [ObservableProperty] public partial int? ReplyToMessageId { get; set; }
 
-    [ObservableProperty] private int? _forwardedFromMessageId;
-    [ObservableProperty] private string? _forwardedFromSenderName;
+    [ObservableProperty] public partial string? ReplyToSenderName { get; set; }
 
+    [ObservableProperty] public partial string? ReplyToContent { get; set; }
+
+    [ObservableProperty] public partial bool ReplyToIsDeleted { get; set; }
+
+    [ObservableProperty] public partial DateTime? EditedAt { get; set; }
+
+    [ObservableProperty] public partial bool IsContinuation { get; set; }
+
+    [ObservableProperty] public partial bool HasNextFromSame { get; set; }
+
+    [ObservableProperty] public partial MessageGroupPosition GroupPosition { get; set; } = MessageGroupPosition.Alone;
+
+    [ObservableProperty] public partial int? ForwardedFromMessageId { get; set; }
+
+    [ObservableProperty] public partial string? ForwardedFromSenderName { get; set; }
     public PollDto? PollDto { get; set; }
-    [ObservableProperty] private PollViewModel? _poll;
+    [ObservableProperty] public partial PollViewModel? Poll { get; set; }
     public List<MessageFileDto> Files { get; set; } = [];
 
-    [ObservableProperty] private string? _senderAvatar;
-    [ObservableProperty] private string? _senderName;
-    [ObservableProperty] private string? _content;
-    [ObservableProperty] private bool _isHighlighted;
-    [ObservableProperty] private bool _isUnread;
-    [ObservableProperty] private bool _isRead;
-    [ObservableProperty] private bool _isEdited;
-    [ObservableProperty] private bool _isDeleted;
-    [ObservableProperty]
-    private ObservableCollection<MessageFileViewModel> _fileViewModels = [];
-    [ObservableProperty] private bool _showDateSeparator;
-    [ObservableProperty] private string? _dateSeparatorText;
+    [ObservableProperty] public partial string? SenderAvatar { get; set; }
 
-    [ObservableProperty] private bool _isVoiceMessage;
-    [ObservableProperty] private double? _voiceDurationSeconds;
-    [ObservableProperty] private TranscriptionStatus? _transcriptionStatus;
-    [ObservableProperty] private string? _transcriptionText;
-    [ObservableProperty] private string? _voiceFileUrl;
+    [ObservableProperty] public partial string? SenderName { get; set; }
 
-    [ObservableProperty] private bool _isVoicePlaying;
-    [ObservableProperty] private bool _isVoicePaused;
-    [ObservableProperty] private bool _isVoiceLoading;
-    [ObservableProperty] private double _voicePositionPercent;
-    [ObservableProperty] private string _voicePositionText = "0:00";
-    [ObservableProperty] private string? _voiceError;
+    [ObservableProperty] public partial string? Content { get; set; }
 
-    [ObservableProperty] private bool _isTranscriptionExpanded;
-    [ObservableProperty] private bool _isTranscriptionLoading;
+    [ObservableProperty] public partial bool IsHighlighted { get; set; }
+
+    [ObservableProperty] public partial bool IsUnread { get; set; }
+
+    [ObservableProperty] public partial bool IsRead { get; set; }
+
+    [ObservableProperty] public partial bool IsEdited { get; set; }
+
+    [ObservableProperty] public partial bool IsDeleted { get; set; }
+
+    [ObservableProperty] public partial ObservableCollection<MessageFileViewModel> FileViewModels { get; set; } = [];
+    [ObservableProperty] public partial bool ShowDateSeparator { get; set; }
+    [ObservableProperty] public partial string? DateSeparatorText { get; set; }
+    [ObservableProperty] public partial bool IsVoiceMessage { get; set; }
+    [ObservableProperty] public partial double? VoiceDurationSeconds { get; set; }
+    [ObservableProperty] public partial TranscriptionStatus? TranscriptionStatus { get; set; }
+    [ObservableProperty] public partial string? TranscriptionText { get; set; }
+    [ObservableProperty] public partial string? VoiceFileUrl { get; set; }
+    [ObservableProperty] public partial bool IsVoicePlaying { get; set; }
+
+    [ObservableProperty] public partial bool IsVoicePaused { get; set; }
+
+    [ObservableProperty] public partial bool IsVoiceLoading { get; set; }
+
+    [ObservableProperty] public partial double VoicePositionPercent { get; set; }
+
+    [ObservableProperty] public partial string VoicePositionText { get; set; } = "0:00";
+
+    [ObservableProperty] public partial string? VoiceError { get; set; }
+
+    [ObservableProperty] public partial bool IsTranscriptionExpanded { get; set; }
+
+    [ObservableProperty] public partial bool IsTranscriptionLoading { get; set; }
 
     private readonly IFileDownloadService? _downloadService;
     private readonly INotificationService? _notificationService;

@@ -18,20 +18,15 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     private readonly ObservableCollection<UserDto> _allUsers;
     private readonly IDialogService _dialogService;
 
-    [ObservableProperty]
-    private string _name = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<DepartmentDto> _availableParents = [];
-
-    [ObservableProperty]
-    private DepartmentDto _selectedParent = NoParentPlaceholder;
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<DepartmentDto> AvailableParents { get; set; } = [];
+    [ObservableProperty] public partial DepartmentDto SelectedParent { get; set; } = NoParentPlaceholder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHead))]
     [NotifyPropertyChangedFor(nameof(HeadDisplayText))]
     [NotifyPropertyChangedFor(nameof(HeadAvatar))]
-    private UserDto? _selectedHead;
+    public partial UserDto? SelectedHead { get; set; }
 
     public int? EditId { get; }
     public bool IsNewDepartment => EditId == null;

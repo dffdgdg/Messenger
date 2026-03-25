@@ -10,26 +10,17 @@ public partial class UserListDialogViewModel : DialogBaseViewModel
     private readonly Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> _reviewSelector;
     private readonly Action<List<int>> _applySelection;
 
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _items = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredItems { get; set; } = [];
+    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    private ObservableCollection<UserListItemViewModel> _filteredItems = [];
+    [ObservableProperty] public partial bool AllowEdit { get; set; }
 
-    [ObservableProperty]
-    private string _searchQuery = string.Empty;
+    [ObservableProperty] public partial bool IsEditMode { get; set; }
 
-    [ObservableProperty]
-    private bool _allowEdit;
+    [ObservableProperty] public partial string EmptyMessage { get; set; } = "Пользователи не найдены";
 
-    [ObservableProperty]
-    private bool _isEditMode;
-
-    [ObservableProperty]
-    private string _emptyMessage = "Пользователи не найдены";
-
-    [ObservableProperty]
-    private string _editButtonText = "Изменить";
+    [ObservableProperty] public partial string EditButtonText { get; set; } = "Изменить";
 
     public bool ShowEditButton => AllowEdit && !IsEditMode;
     public bool ShowSaveButton => IsEditMode;

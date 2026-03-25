@@ -12,19 +12,13 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-    [ObservableProperty]
-    private ObservableCollection<DepartmentDto> _departments = [];
-
-    [ObservableProperty]
-    private ObservableCollection<UserDto> _users = [];
-
-    [ObservableProperty]
-    private ObservableCollection<HierarchicalDepartmentViewModel> _hierarchicalDepartments = [];
+    [ObservableProperty] public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserDto> Users { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<HierarchicalDepartmentViewModel> HierarchicalDepartments { get; set; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredDepartments))]
-    private string _searchQuery = string.Empty;
-
+    public partial string SearchQuery { get; set; } = string.Empty;
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredDepartments => ApplyFilter();
 
     public async Task LoadAsync() =>

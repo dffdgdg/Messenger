@@ -31,27 +31,13 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private StyleGuideViewModel? _styleGuideViewModel;
 
     private CancellationTokenSource? _searchCts;
-
-    [ObservableProperty]
-    private BaseViewModel? _currentMenuViewModel;
-
-    [ObservableProperty]
-    private int _userId;
-
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<UserDto> _allContacts = [];
-
-    [ObservableProperty]
-    private ObservableCollection<ChatDto> _userChats = [];
-
-    [ObservableProperty]
-    private bool _isSearching;
-
-    [ObservableProperty]
-    private int _selectedMenuIndex = 1;
+    [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
+    [ObservableProperty] public partial int UserId { get; set; }
+    [ObservableProperty] public partial string SearchText { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<UserDto> AllContacts { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<ChatDto> UserChats { get; set; } = [];
+    [ObservableProperty] public partial bool IsSearching { get; set; }
+    [ObservableProperty] public partial int SelectedMenuIndex { get; set; } = 1;
 
     private readonly IGlobalHubConnection _globalHub;
     private readonly Stack<int> _backHistory = [];
@@ -62,13 +48,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public bool CanGoBack => _backHistory.Count > 0;
     public bool CanGoForward => _forwardHistory.Count > 0;
 
-    public MainMenuViewModel(
-        MainWindowViewModel mainWindowViewModel,
-        IApiClientService apiClient,
-        IAuthManager authManager,
-        IChatsViewModelFactory chatsViewModelFactory,
-        IServiceProvider serviceProvider,
-        IGlobalHubConnection globalHub)
+    public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,IApiClientService apiClient,IAuthManager authManager,
+        IChatsViewModelFactory chatsViewModelFactory, IServiceProvider serviceProvider, IGlobalHubConnection globalHub)
     {
         _globalHub = globalHub;
         _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));

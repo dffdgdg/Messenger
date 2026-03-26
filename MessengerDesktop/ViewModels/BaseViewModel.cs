@@ -9,15 +9,9 @@ public abstract partial class BaseViewModel : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _cts;
     private bool _disposed;
-
-    [ObservableProperty]
-    private bool _isBusy;
-
-    [ObservableProperty]
-    private string? _errorMessage;
-
-    [ObservableProperty]
-    private string? _successMessage;
+    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty] public partial string? ErrorMessage { get; set; }
+    [ObservableProperty] public partial string? SuccessMessage { get; set; }
 
     // ========== Хуки для подклассов ==========
     // CommunityToolkit генерирует partial void OnXxxChanged в ЭТОМ классе.

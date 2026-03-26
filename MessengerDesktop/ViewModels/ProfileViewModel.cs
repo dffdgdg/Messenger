@@ -22,56 +22,50 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [NotifyPropertyChangedFor(nameof(HasDepartment))]
     [NotifyPropertyChangedFor(nameof(DepartmentDisplay))]
     [NotifyPropertyChangedFor(nameof(HasAvatar))]
-    private UserDto? _user;
+    public partial UserDto? User { get; set; }
 
-    [ObservableProperty] private int _userId;
-
-    [ObservableProperty] private bool _isEditingProfile;
-    [ObservableProperty] private bool _isEditingUsername;
-    [ObservableProperty] private bool _isEditingPassword;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(TempFullName))]
-    private string _tempSurname = string.Empty;
+    [ObservableProperty] public partial int UserId { get; set; }
+    [ObservableProperty] public partial bool IsEditingProfile { get; set; }
+    [ObservableProperty] public partial bool IsEditingUsername { get; set; }
+    [ObservableProperty] public partial bool IsEditingPassword { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TempFullName))]
-    private string _tempName = string.Empty;
+    public partial string TempSurname { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TempFullName))]
-    private string _tempMidname = string.Empty;
+    public partial string TempName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TempFullName))]
+    public partial string TempMidname { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSaveUsername))]
     [NotifyPropertyChangedFor(nameof(UsernameValidationMessage))]
     [NotifyPropertyChangedFor(nameof(IsUsernameValid))]
-    private string _tempUsername = string.Empty;
-
+    public partial string TempUsername { get; set; } = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSavePassword))]
-    private string _currentPassword = string.Empty;
+    public partial string CurrentPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSavePassword))]
     [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     [NotifyPropertyChangedFor(nameof(IsNewPasswordValid))]
     [NotifyPropertyChangedFor(nameof(NewPasswordValidationMessage))]
-    private string _newPassword = string.Empty;
-
+    public partial string NewPassword { get; set; } = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSavePassword))]
     [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     [NotifyPropertyChangedFor(nameof(ShowPasswordMatchIndicator))]
-    private string _confirmPassword = string.Empty;
+    public partial string ConfirmPassword { get; set; } = string.Empty;
+    [ObservableProperty] public partial Bitmap? AvatarBitmap { get; set; }
 
-    [ObservableProperty] private Bitmap? _avatarBitmap;
+    [ObservableProperty] public partial string? AvatarUrl { get; set; }
 
-    [ObservableProperty]
-    private string? _avatarUrl;
-
-    public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname)
-                              ?? User?.Username ?? "Пользователь";
+    public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname) ?? User?.Username ?? "Пользователь";
 
     public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "—";
     public string Username => User?.Username ?? string.Empty;
@@ -90,13 +84,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     /// Есть ли у пользователя аватар (для показа кнопки удаления)
     /// </summary>
     public bool HasAvatar => !string.IsNullOrWhiteSpace(User?.Avatar);
-
-    public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) ||
-        UsernameRegex().IsMatch(TempUsername.Trim());
-
-    public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername)
-                                   && TempUsername.Trim().Length >= 3
-                                   && IsUsernameValid;
+    public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) || UsernameRegex().IsMatch(TempUsername.Trim());
+    public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
 
     public string? UsernameValidationMessage
     {
@@ -238,8 +227,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 Department = User.Department
             };
 
-            var result = await _apiClient.PutAsync<UserDto>(
-                ApiEndpoints.Users.ById(User.Id), update);
+            var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), update);
 
             if (result.Success)
             {

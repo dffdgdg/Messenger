@@ -37,20 +37,16 @@ public class MessageDto
         }
     }
 
-    // ── System messages ──
     public bool IsSystemMessage { get; set; }
     public SystemEventType? SystemEventType { get; set; }
     public int? TargetUserId { get; set; }
     public string? TargetUserName { get; set; }
 
-    // ── Voice message ──
     public bool IsVoiceMessage { get; set; }
     public double? VoiceDurationSeconds { get; set; }
     public string? VoiceFileUrl { get; set; }
     public string? VoiceFileName { get; set; }
     public string? VoiceContentType { get; set; }
     public long? VoiceFileSize { get; set; }
-
-    // ── Regular files ──
     public List<MessageFileDto> Files { get; set; } = [];
 }

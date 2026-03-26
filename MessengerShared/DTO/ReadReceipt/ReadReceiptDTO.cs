@@ -22,9 +22,6 @@ public class AllUnreadCountsDto
     public int TotalUnread { get; set; }
 }
 
-/// <summary>
-/// Информация о прочтении для пользователя в конкретном чате
-/// </summary>
 public class ChatReadInfoDto
 {
     public int ChatId { get; set; }

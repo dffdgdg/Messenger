@@ -104,11 +104,7 @@ public sealed class App : Application, IDisposable
         var httpClient = Services.GetRequiredService<HttpClient>();
         var sessionStore = Services.GetRequiredService<ISessionStore>();
 
-        ImageLoader.AsyncImageLoader = new AuthenticatedImageLoader(
-            httpClient,
-            sessionStore,
-            ApiUrl
-        );
+        ImageLoader.AsyncImageLoader = new AuthenticatedImageLoader(httpClient, sessionStore, ApiUrl);
 
         Debug.WriteLine("[App] AuthenticatedImageLoader configured");
     }

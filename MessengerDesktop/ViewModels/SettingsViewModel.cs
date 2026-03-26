@@ -20,15 +20,11 @@ public partial class SettingsViewModel : BaseViewModel
     private bool _hasPendingChanges;
     private bool _isLoaded;
 
-    [ObservableProperty] private AppTheme _selectedTheme;
-    [ObservableProperty] private bool _notificationsEnabled = true;
-    [ObservableProperty] private bool _canBeFoundInSearch = true;
+    [ObservableProperty] public partial AppTheme SelectedTheme { get; set; }
+    [ObservableProperty] public partial bool NotificationsEnabled { get; set; } = true;
+    [ObservableProperty] public partial bool CanBeFoundInSearch { get; set; } = true;
 
-    public SettingsViewModel(
-        MainMenuViewModel mainMenuViewModel,
-        IApiClientService apiClient,
-        ICacheMaintenanceService cacheMaintenanceService,
-        ISettingsService settingsService)
+    public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient, ICacheMaintenanceService cacheMaintenanceService, ISettingsService settingsService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _cacheMaintenanceService = cacheMaintenanceService ?? throw new ArgumentNullException(nameof(cacheMaintenanceService));
@@ -36,7 +32,7 @@ public partial class SettingsViewModel : BaseViewModel
         _userId = mainMenuViewModel?.UserId ?? throw new ArgumentNullException(nameof(mainMenuViewModel));
 
         _autoSaveTimer = new Timer(async _ => await SaveSettingsAsync(), null, Timeout.Infinite, Timeout.Infinite);
-        _selectedTheme = GetCurrentAppTheme();
+        SelectedTheme = GetCurrentAppTheme();
 
         _ = LoadSettingsAsync();
     }

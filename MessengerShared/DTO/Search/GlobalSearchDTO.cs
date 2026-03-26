@@ -2,9 +2,6 @@
 
 namespace MessengerShared.Dto.Search;
 
-/// <summary>
-/// Сообщение в результатах глобального поиска (с информацией о чате)
-/// </summary>
 public class GlobalSearchMessageDto
 {
     public int Id { get; set; }

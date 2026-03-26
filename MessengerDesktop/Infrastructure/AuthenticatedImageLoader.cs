@@ -20,8 +20,7 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient, ISessionStor
     protected override async Task<byte[]?> LoadDataFromExternalAsync(string url)
     {
         var ext = GetExtension(url);
-        if (!string.IsNullOrEmpty(ext) &&
-            !ImageExtensions.Contains(ext))
+        if (!string.IsNullOrEmpty(ext) && !ImageExtensions.Contains(ext))
         {
             Debug.WriteLine($"[AuthImageLoader] Skipping non-image: {GetFileName(url)}");
             return null;

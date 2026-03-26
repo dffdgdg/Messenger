@@ -52,8 +52,7 @@ public partial class MainWindow : Window
 
     private void UpdateWindowPadding() =>
         Padding = WindowState == WindowState.Maximized
-            ? new Thickness(MaximizedPadding)
-            : default;
+            ? new Thickness(MaximizedPadding) : default;
 
     private void OnDialogAnimationRequested(bool isOpening)
     {

@@ -1,7 +1,5 @@
 ﻿namespace MessengerShared.Dto.Poll;
-/// <summary>
-/// Запрос на создание опроса.
-/// </summary>
+
 public class CreatePollDto
 {
     public int ChatId { get; set; }

@@ -39,7 +39,6 @@ public partial class ThemeSelectorControl : UserControl
         InitializeComponent();
         SelectedThemeProperty.Changed.AddClassHandler<ThemeSelectorControl>((x, e) => x.OnSelectedThemeChanged(e));
 
-        // Подписываемся на изменения темы в системе через Application
         if (Application.Current != null)
         {
             Application.Current.ActualThemeVariantChanged += (s, e) => UpdateSystemThemeInfo();
@@ -63,7 +62,6 @@ public partial class ThemeSelectorControl : UserControl
     {
         base.OnPropertyChanged(change);
 
-        // Когда пользователь кликает на RadioButton, обновляем основной Enum
         if (change.Property == IsLightSelectedProperty && (bool)change.NewValue!) SelectedTheme = AppTheme.light;
         else if (change.Property == IsDarkSelectedProperty && (bool)change.NewValue!) SelectedTheme = AppTheme.dark;
         else if (change.Property == IsSystemSelectedProperty && (bool)change.NewValue!) SelectedTheme = AppTheme.system;

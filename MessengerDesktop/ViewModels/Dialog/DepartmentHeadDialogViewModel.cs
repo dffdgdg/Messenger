@@ -124,9 +124,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     {
         var availableUsers = _allUsers.Where(u => !u.IsBanned);
 
-        var pickerDialog = new UserPickerDialogViewModel(
-            "Выбрать руководителя",
-            availableUsers);
+        var pickerDialog = new UserPickerDialogViewModel("Выбрать руководителя", availableUsers);
 
         await _dialogService.ShowAsync(pickerDialog);
         var selectedUser = await pickerDialog.SingleSelectResult;

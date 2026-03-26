@@ -6,9 +6,6 @@ public class CreatePollOptionDto
     public int Position { get; set; }
 }
 
-/// <summary>
-/// Опрос для отображения.
-/// </summary>
 public class PollDto
 {
     public int Id { get; set; }

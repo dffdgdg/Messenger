@@ -67,7 +67,6 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
         Title = department == null ? "Создать отдел" : $"Редактировать: {department.Name}";
         CanCloseOnBackgroundClick = true;
 
-        // Информация для удаления
         HasChildren = hasChildren;
         UserCount = department?.UserCount ?? 0;
 
@@ -153,7 +152,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
                 await SaveAction(this);
 
             SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлён";
-            RequestClose();
+            await RequestCloseAsync();
         });
     }
 
@@ -179,7 +178,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
             if (DeleteAction != null)
                 await DeleteAction(this);
 
-            RequestClose();
+            await RequestCloseAsync();
         });
     }
 }

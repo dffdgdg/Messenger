@@ -505,10 +505,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
                 ApiEndpoints.Chats.MembersDetailed(chatDto.Id));
             var currentMembers = currentMembersResult.Data ?? [];
             var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
-            var currentAdminIds = currentMembers
-                .Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
-                .Select(x => x.UserId)
-                .ToHashSet();
+            var currentAdminIds = currentMembers.Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
+                .Select(x => x.UserId).ToHashSet();
 
             foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
                 await _apiClient.PostAsync(ApiEndpoints.Chats.Members(chatDto.Id), new UpdateChatMemberDto { UserId = userId });
@@ -527,8 +525,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
                 var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
 
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-                    ApiEndpoints.Chats.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
+                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chats.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
 
                 if (avatarResult.Success && avatarResult.Data != null)
                 {
@@ -566,21 +563,16 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    private static string GetMimeType(string fileName)
+    private static string GetMimeType(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
     {
-        var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        return ext switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            ".gif" => "image/gif",
-            _ => "application/octet-stream"
-        };
-    }
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        _ => "application/octet-stream"
+    };
 
-    public void SetActiveMenu(int index) =>
-        NavigateToMenu(index, addToHistory: true);
+    public void SetActiveMenu(int index) => NavigateToMenu(index, addToHistory: true);
 
     protected override void Dispose(bool disposing)
     {

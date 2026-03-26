@@ -44,10 +44,8 @@ public partial class DepartmentDialogViewModel : DialogBaseViewModel
     {
         var currentDepartmentId = current?.Id;
 
-        var parents = _allDepartments
-                .Where(d => d.Id > 0 && d.Id != currentDepartmentId)
-                .OrderBy(d => d.Name)
-                .Prepend(NoParentPlaceholder);
+        var parents = _allDepartments.Where(d => d.Id > 0 && d.Id != currentDepartmentId)
+            .OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
 
         AvailableParents = new ObservableCollection<DepartmentDto>(parents);
 
@@ -62,8 +60,8 @@ public partial class DepartmentDialogViewModel : DialogBaseViewModel
         SaveCommand.NotifyCanExecuteChanged();
     }
 
-        [RelayCommand(CanExecute = nameof(CanSave))]
-        private async Task Save()
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
@@ -77,7 +75,7 @@ public partial class DepartmentDialogViewModel : DialogBaseViewModel
                 await SaveAction(this);
 
             SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлён";
-            RequestClose();
+            await RequestCloseAsync();
         });
     }
 }

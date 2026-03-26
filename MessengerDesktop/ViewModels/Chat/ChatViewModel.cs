@@ -200,7 +200,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, Voice, count => UnreadCount = count, OnHubReconnectedAsync);
+        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
 
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();

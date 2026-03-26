@@ -10,7 +10,7 @@ namespace MessengerDesktop.ViewModels.Chat;
 /// Маршрутизирует входящие события к handlers.
 /// </summary>
 public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messageManager,
-    ChatVoiceHandler voice, Action<int> onUnreadCountChanged, Func<Task> onReconnected) : IDisposable
+    Action<int> onUnreadCountChanged, Func<Task> onReconnected) : IDisposable
 {
     private bool _subscribed;
 

@@ -54,7 +54,7 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
 
         try
         {
-            RequestClose();
+            await RequestCloseAsync();
             await OpenChatWithUserAction.Invoke(User);
         }
         catch (Exception ex)

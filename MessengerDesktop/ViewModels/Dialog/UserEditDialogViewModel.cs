@@ -96,7 +96,6 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         Name = user.Name ?? string.Empty;
         Midname = user.Midname ?? string.Empty;
 
-        // Находим отдел по ID
         if (user.DepartmentId.HasValue)
         {
             SelectedDepartment = Departments.FirstOrDefault(d => d.Id == user.DepartmentId.Value);
@@ -135,7 +134,6 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        // Валидация
         if (string.IsNullOrWhiteSpace(Username))
         {
             ErrorMessage = "Введите логин";
@@ -216,7 +214,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
                 await UpdateAction(updateDto);
             }
 
-            RequestClose();
+            await RequestCloseAsync();
         });
     }
 }

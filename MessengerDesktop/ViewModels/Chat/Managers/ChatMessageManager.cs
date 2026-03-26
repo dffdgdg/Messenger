@@ -311,7 +311,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
                 Debug.WriteLine($"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batchesLoaded} батчей");
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* expected */ }
         catch (Exception ex)
         {
             Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}");

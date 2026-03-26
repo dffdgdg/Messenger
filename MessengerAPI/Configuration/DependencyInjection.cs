@@ -23,7 +23,6 @@ public static class DependencyInjection
                 npgsql.MapEnum<ChatRole>("chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator);
                 npgsql.MapEnum<ChatType>("chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator);
                 npgsql.MapEnum<SystemEventType>("system_event_type");
-                npgsql.MapEnum<TranscriptionStatus>("transcription_status", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.TranscriptionStatusNameTranslator);
             });
 
             if (environment.IsDevelopment())
@@ -79,9 +78,6 @@ public static class DependencyInjection
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IReadReceiptService, ReadReceiptService>();
-        services.AddSingleton<TranscriptionQueue>();
-        services.AddSingleton<ITranscriptionService, TranscriptionService>();
-        services.AddHostedService<TranscriptionBackgroundService>();
 
         // Departments
         services.AddScoped<IDepartmentService, DepartmentService>();
@@ -101,7 +97,6 @@ public static class DependencyInjection
         }
 
         services.ConfigureHttpJsonOptions(options => configureJson(options.SerializerOptions));
-
         services.AddControllers().AddJsonOptions(options => configureJson(options.JsonSerializerOptions));
 
         return services;

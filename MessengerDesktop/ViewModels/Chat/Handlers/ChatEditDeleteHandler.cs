@@ -8,10 +8,10 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEditMode))]
-    private MessageViewModel? _editingMessage;
+    public partial MessageViewModel? EditingMessage { get; set; }
 
     [ObservableProperty]
-    private string _editMessageContent = string.Empty;
+    public partial string EditMessageContent { get; set; } = string.Empty;
 
     public bool IsEditMode => EditingMessage != null;
 

@@ -29,13 +29,10 @@ public abstract class BaseService<T>(MessengerDbContext context, ILogger<T> logg
         }
     }
 
-    protected async Task<Result<TEntity>> FindEntityAsync<TEntity>(int id, CancellationToken ct = default)
-        where TEntity : class
+    protected async Task<Result<TEntity>> FindEntityAsync<TEntity>(int id, CancellationToken ct = default) where TEntity : class
     {
         var entity = await _context.FindAsync<TEntity>([id], ct);
-        return entity is not null
-            ? Result<TEntity>.Success(entity)
-            : Result<TEntity>.NotFound($"{typeof(TEntity).Name} с ID {id} не найден");
+        return entity is not null ? Result<TEntity>.Success(entity) : Result<TEntity>.NotFound($"{typeof(TEntity).Name} с ID {id} не найден");
     }
 
     protected static IQueryable<TEntity> Paginate<TEntity>(IQueryable<TEntity> query, int page, int pageSize)
@@ -47,8 +44,7 @@ public abstract class BaseService<T>(MessengerDbContext context, ILogger<T> logg
     private static bool IsUniqueViolation(DbUpdateException ex)
     {
         var message = ex.InnerException?.Message ?? "";
-        return message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("unique", StringComparison.OrdinalIgnoreCase)
+        return message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) || message.Contains("unique", StringComparison.OrdinalIgnoreCase)
             || message.Contains("23505");
     }
 }

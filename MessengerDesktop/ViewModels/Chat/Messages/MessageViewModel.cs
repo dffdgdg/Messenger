@@ -19,75 +19,43 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public DateTime CreatedAt { get; set; }
     public bool IsOwn { get; set; }
     public bool IsSystemMessage { get; set; }
-
     [ObservableProperty] public partial int? ReplyToMessageId { get; set; }
-
     [ObservableProperty] public partial string? ReplyToSenderName { get; set; }
-
     [ObservableProperty] public partial string? ReplyToContent { get; set; }
-
     [ObservableProperty] public partial bool ReplyToIsDeleted { get; set; }
-
     [ObservableProperty] public partial DateTime? EditedAt { get; set; }
-
     [ObservableProperty] public partial bool IsContinuation { get; set; }
-
     [ObservableProperty] public partial bool HasNextFromSame { get; set; }
-
     [ObservableProperty] public partial MessageGroupPosition GroupPosition { get; set; } = MessageGroupPosition.Alone;
-
     [ObservableProperty] public partial int? ForwardedFromMessageId { get; set; }
-
     [ObservableProperty] public partial string? ForwardedFromSenderName { get; set; }
     public PollDto? PollDto { get; set; }
     [ObservableProperty] public partial PollViewModel? Poll { get; set; }
     public List<MessageFileDto> Files { get; set; } = [];
-
     [ObservableProperty] public partial string? SenderAvatar { get; set; }
-
     [ObservableProperty] public partial string? SenderName { get; set; }
-
     [ObservableProperty] public partial string? Content { get; set; }
-
     [ObservableProperty] public partial bool IsHighlighted { get; set; }
-
     [ObservableProperty] public partial bool IsUnread { get; set; }
-
     [ObservableProperty] public partial bool IsRead { get; set; }
-
     [ObservableProperty] public partial bool IsEdited { get; set; }
-
     [ObservableProperty] public partial bool IsDeleted { get; set; }
-
     [ObservableProperty] public partial ObservableCollection<MessageFileViewModel> FileViewModels { get; set; } = [];
     [ObservableProperty] public partial bool ShowDateSeparator { get; set; }
     [ObservableProperty] public partial string? DateSeparatorText { get; set; }
     [ObservableProperty] public partial bool IsVoiceMessage { get; set; }
     [ObservableProperty] public partial double? VoiceDurationSeconds { get; set; }
-    [ObservableProperty] public partial TranscriptionStatus? TranscriptionStatus { get; set; }
-    [ObservableProperty] public partial string? TranscriptionText { get; set; }
     [ObservableProperty] public partial string? VoiceFileUrl { get; set; }
     [ObservableProperty] public partial bool IsVoicePlaying { get; set; }
-
     [ObservableProperty] public partial bool IsVoicePaused { get; set; }
-
     [ObservableProperty] public partial bool IsVoiceLoading { get; set; }
-
     [ObservableProperty] public partial double VoicePositionPercent { get; set; }
-
     [ObservableProperty] public partial string VoicePositionText { get; set; } = "0:00";
-
     [ObservableProperty] public partial string? VoiceError { get; set; }
-
-    [ObservableProperty] public partial bool IsTranscriptionExpanded { get; set; }
-
-    [ObservableProperty] public partial bool IsTranscriptionLoading { get; set; }
-
     private readonly IFileDownloadService? _downloadService;
     private readonly INotificationService? _notificationService;
     private readonly IApiClientService? _apiClient;
     private readonly IAudioPlayerService? _audioPlayer;
-
     private MemoryStream? _cachedAudioStream;
     private bool _disposed;
     private bool _subscribedToPlayer;
@@ -135,22 +103,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public string ForwardedFromHeader
         => HasForward ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}" : string.Empty;
 
-    public bool CanTranscribe
-        => ShowVoiceMessage;
-
     public bool ShowVoiceMessage
         => IsVoiceMessage && !IsDeleted;
 
-    public bool IsTranscriptionPending
-        => TranscriptionStatus is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
-    public bool IsTranscriptionDone
-        => TranscriptionStatus == MessengerShared.Enum.TranscriptionStatus.Done;
-    public bool IsTranscriptionFailed
-        => TranscriptionStatus == MessengerShared.Enum.TranscriptionStatus.Failed;
-    public bool HasTranscriptionText
-        => !string.IsNullOrWhiteSpace(TranscriptionText);
-    public bool ShowTranscriptionPlaceholder
-        => !HasTranscriptionText && !IsTranscriptionLoading && !IsTranscriptionFailed;
     public bool ShowPlayButton
         => ShowVoiceMessage && !IsVoicePlaying && !IsVoicePaused && !IsVoiceLoading;
     public bool ShowPauseButton
@@ -158,19 +113,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool ShowResumeButton
         => IsVoicePaused;
 
-    public string TranscriptionStatusDisplay
-        => TranscriptionStatus switch
-        {
-            MessengerShared.Enum.TranscriptionStatus.Pending => "Ожидает расшифровки...",
-            MessengerShared.Enum.TranscriptionStatus.Processing => "Расшифровка...",
-            MessengerShared.Enum.TranscriptionStatus.Done => "Расшифровано",
-            MessengerShared.Enum.TranscriptionStatus.Failed => "Ошибка расшифровки",
-            _ => ""
-        };
-
     public string VoiceDurationFormatted
-        => VoiceDurationSeconds.HasValue ? FormatTime(TimeSpan.FromSeconds(VoiceDurationSeconds.Value))
-        : "0:00";
+        => VoiceDurationSeconds.HasValue ? FormatTime(TimeSpan.FromSeconds(VoiceDurationSeconds.Value)) : "0:00";
 
     #endregion
 
@@ -212,8 +156,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         IsVoiceMessage = message.IsVoiceMessage;
         VoiceDurationSeconds = message.VoiceDurationSeconds;
-        TranscriptionStatus = message.TranscriptionStatus;
-        TranscriptionText = message.TranscriptionText;
         VoiceFileUrl = message.VoiceFileUrl;
 
         IsSystemMessage = message.IsSystemMessage;
@@ -237,44 +179,12 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         if (message.Files?.Count > 0)
         {
-            FileViewModels = new ObservableCollection<MessageFileViewModel>(
-                message.Files.Select(f => new MessageFileViewModel(f, downloadService, notificationService)));
+            FileViewModels = new ObservableCollection<MessageFileViewModel>(message.Files.Select(f => new MessageFileViewModel(f, downloadService, notificationService)));
         }
 
         SubscribeToAudioPlayer();
     }
 
-    #region Transcription Toggle
-
-    [RelayCommand]
-    private async Task ToggleTranscription()
-    {
-        IsTranscriptionExpanded = !IsTranscriptionExpanded;
-
-        if (!IsTranscriptionExpanded || !IsVoiceMessage || _apiClient == null)
-            return;
-
-        if (HasTranscriptionText || IsTranscriptionDone)
-            return;
-
-        try
-        {
-            IsTranscriptionLoading = true;
-            var result = await _apiClient.GetAsync<TranscriptionResult>(ApiEndpoints.Messages.Transcription(Id));
-            if (result is { Success: true, Data: not null })
-                UpdateTranscription(result.Data.Status, result.Data.Transcription);
-        }
-        catch
-        {
-            // Ошибки при загрузке статуса транскрипции не критичны, просто отобразим статус как "Ошибка"
-        }
-        finally
-        {
-            IsTranscriptionLoading = IsTranscriptionPending;
-        }
-    }
-
-    #endregion
     #region Audio Player
 
     private void SubscribeToAudioPlayer()
@@ -359,8 +269,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
             var duration = _audioPlayer?.Duration ?? TimeSpan.Zero;
             VoicePositionPercent = duration.TotalMilliseconds > 0
-                ? position.TotalMilliseconds / duration.TotalMilliseconds * 100
-                : 0;
+                ? position.TotalMilliseconds / duration.TotalMilliseconds * 100 : 0;
 
             VoicePositionText = FormatTime(position);
         });
@@ -480,13 +389,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #endregion
 
-    public void UpdateTranscription(TranscriptionStatus? status, string? transcription)
-    {
-        TranscriptionStatus = status;
-        TranscriptionText = transcription;
-        IsTranscriptionLoading = status is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
-    }
-
     public void UpdatePoll(PollDto pollDto)
     {
         PollDto = pollDto;
@@ -508,13 +410,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var cacheService = App.Current.Services.GetRequiredService<ILocalCacheService>();
-            await cacheService.UpsertMessageAsync(Message);
+            await App.Current.Services.GetRequiredService<ILocalCacheService>().UpsertMessageAsync(Message);
         }
-        catch
-        {
-            // cache update is best-effort only
-        }
+        catch { /* best-effort only */ }
     }
 
     public void ApplyUpdate(MessageDto updated)
@@ -538,8 +436,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         IsDeleted = true;
         Content = null;
         IsVoiceMessage = false;
-        TranscriptionStatus = null;
-        TranscriptionText = null;
         VoiceFileUrl = null;
         VoiceDurationSeconds = null;
         ResetPlayerState();
@@ -640,22 +536,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     partial void OnVoiceDurationSecondsChanged(double? value)
         => OnPropertyChanged(nameof(VoiceDurationFormatted));
 
-    partial void OnTranscriptionStatusChanged(TranscriptionStatus? value)
-    {
-        IsTranscriptionLoading = value is MessengerShared.Enum.TranscriptionStatus.Pending or MessengerShared.Enum.TranscriptionStatus.Processing;
-        OnPropertyChanged(nameof(IsTranscriptionPending));
-        OnPropertyChanged(nameof(IsTranscriptionDone));
-        OnPropertyChanged(nameof(IsTranscriptionFailed));
-        OnPropertyChanged(nameof(TranscriptionStatusDisplay));
-        OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
-    }
-
-    partial void OnTranscriptionTextChanged(string? value)
-    {
-        OnPropertyChanged(nameof(HasTranscriptionText));
-        OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
-    }
-
     partial void OnIsVoicePlayingChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowPlayButton));
@@ -671,9 +551,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     partial void OnIsVoiceLoadingChanged(bool value)
         => OnPropertyChanged(nameof(ShowPlayButton));
-
-    partial void OnIsTranscriptionLoadingChanged(bool value)
-        => OnPropertyChanged(nameof(ShowTranscriptionPlaceholder));
 
     partial void OnForwardedFromMessageIdChanged(int? value)
     {

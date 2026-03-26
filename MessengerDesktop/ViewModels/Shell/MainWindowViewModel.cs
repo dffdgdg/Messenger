@@ -13,26 +13,15 @@ public partial class MainWindowViewModel : BaseViewModel
     private readonly IThemeService _themeService;
     private readonly INotificationService _notificationService;
 
-    [ObservableProperty]
-    private BaseViewModel? _currentViewModel;
-
-    [ObservableProperty]
-    private DialogBaseViewModel? _currentDialog;
-
-    [ObservableProperty]
-    private bool _hasOpenDialogs;
-
-    [ObservableProperty]
-    private bool _isDialogVisible;
+    [ObservableProperty] public partial BaseViewModel? CurrentViewModel { get; set; }
+    [ObservableProperty] public partial DialogBaseViewModel? CurrentDialog { get; set; }
+    [ObservableProperty] public partial bool HasOpenDialogs { get; set; }
+    [ObservableProperty] public partial bool IsDialogVisible { get; set; }
 
     public ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications => _notificationService.ActiveNotifications;
 
-    public MainWindowViewModel(
-        INavigationService navigation,
-        IDialogService dialogService,
-        IAuthManager authManager,
-        IThemeService themeService,
-        INotificationService notificationService)
+    public MainWindowViewModel(INavigationService navigation, IDialogService dialogService, IAuthManager authManager,
+        IThemeService themeService, INotificationService notificationService)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));

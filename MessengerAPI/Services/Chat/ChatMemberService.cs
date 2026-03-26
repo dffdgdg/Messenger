@@ -11,14 +11,8 @@ public interface IChatMemberService
     Task<Result> LeaveAsync(int chatId, int userId);
 }
 
-public sealed class ChatMemberService(
-    MessengerDbContext context,
-    ICacheService cache,
-    IAccessControlService accessControl,
-    ISystemMessageService systemMessages,
-    AppDateTime appDateTime,
-    ILogger<ChatMemberService> logger)
-    : BaseService<ChatMemberService>(context, logger), IChatMemberService
+public sealed class ChatMemberService(MessengerDbContext context,ICacheService cache,IAccessControlService accessControl,ISystemMessageService systemMessages,
+    AppDateTime appDateTime, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
@@ -151,8 +145,7 @@ public sealed class ChatMemberService(
             ? $"{actorName} назначил {targetName} администратором"
             : $"{actorName} снял роль администратора с {targetName}";
 
-        await systemMessages.CreateAsync(chatId, updatedByUserId, content,
-            SystemEventType.RoleChanged, userId);
+        await systemMessages.CreateAsync(chatId, updatedByUserId, content, SystemEventType.RoleChanged, userId);
 
         return Result<ChatMemberDto>.Success(MapToDto(member));
     }
@@ -163,11 +156,7 @@ public sealed class ChatMemberService(
         if (accessResult.IsFailure)
             return Result<List<ChatMemberDto>>.FromFailure(accessResult);
 
-        var members = await _context.ChatMembers
-            .Where(cm => cm.ChatId == chatId)
-            .Include(cm => cm.User)
-            .AsNoTracking()
-            .ToListAsync();
+        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 
         return Result<List<ChatMemberDto>>.Success(members.ConvertAll(MapToDto));
     }

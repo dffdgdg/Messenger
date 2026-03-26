@@ -14,16 +14,9 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     private readonly IChatCacheRepository _chatRepo = chatRepo ?? throw new ArgumentNullException(nameof(chatRepo));
     private readonly LocalDatabase _localDb = localDb ?? throw new ArgumentNullException(nameof(localDb));
 
-    // ═══════════════════════════════════════════════════════
-    //  Messages
-    // ═══════════════════════════════════════════════════════
-
     public async Task ClearChatMessagesAsync(int chatId)
     {
-        // Удаляем все сообщения чата
         await _messageRepo.DeleteByChatIdAsync(chatId);
-
-        // Сбрасываем SyncState — чат будет загружен заново
         await _localDb.Connection.DeleteAsync<ChatSyncState>(chatId);
     }
     public async Task UpsertMessageAsync(MessageDto message)
@@ -39,13 +32,12 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         await _messageRepo.UpsertBatchAsync(entities);
     }
 
-    public async Task MarkMessageDeletedAsync(int messageId)
-        => await _messageRepo.MarkDeletedAsync(messageId);
+    public async Task MarkMessageDeletedAsync(int messageId) => await _messageRepo.MarkDeletedAsync(messageId);
 
     public async Task<CachedMessagesResult?> GetMessagesAsync(int chatId, int count)
     {
         var syncState = await GetSyncStateAsync(chatId);
-        if (syncState == null) return null; // Нет sync state = кэш пуст для этого чата
+        if (syncState == null) return null;
 
         var cached = await _messageRepo.GetLatestAsync(chatId, count);
         if (cached.Count == 0) return null;
@@ -68,18 +60,13 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
 
         var syncState = await GetSyncStateAsync(chatId);
 
-        // IsComplete = кэш покрывает весь запрос
-        // либо это самое старое что есть и сервер тоже пуст
-        var isComplete = cached.Count >= count
-            || (syncState is { HasMoreOlder: false }
-                && cached.Count > 0
-                && cached[0].Id == (syncState.OldestLoadedId ?? 0));
+        var isComplete = cached.Count >= count || (syncState is { HasMoreOlder: false } && cached.Count > 0 && cached[0].Id == (syncState.OldestLoadedId ?? 0));
 
         return new CachedMessagesResult
         {
             Messages = cached.ConvertAll(m => m.ToDto()),
             HasMoreOlder = syncState?.HasMoreOlder ?? true,
-            HasMoreNewer = true, // Если мы смотрим "before" — newer точно есть
+            HasMoreNewer = true,
             IsComplete = isComplete,
             CacheOldestId = syncState?.OldestLoadedId,
             CacheNewestId = syncState?.NewestLoadedId
@@ -112,7 +99,6 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
 
         var syncState = await GetSyncStateAsync(chatId);
 
-        // IsComplete = target message найден в кэше
         var hasTarget = cached.Any(m => m.Id == messageId);
 
         return new CachedMessagesResult
@@ -132,15 +118,9 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         return cached.ConvertAll(m => m.ToDto());
     }
 
-    // ═══════════════════════════════════════════════════════
-    //  Chats
-    // ═══════════════════════════════════════════════════════
-
     public async Task<List<ChatDto>> GetChatsAsync(bool isGroupMode)
     {
-        int[] typeFilter = isGroupMode
-            ? [(int)ChatType.Chat, (int)ChatType.Department]
-            : [(int)ChatType.Contact];
+        int[] typeFilter = isGroupMode ? [(int)ChatType.Chat, (int)ChatType.Department] : [(int)ChatType.Contact];
 
         var cached = await _chatRepo.GetByTypeAsync(typeFilter);
         return cached.ConvertAll(c => c.ToDto());
@@ -159,10 +139,6 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         await _chatRepo.UpdateLastMessageAsync(chatId, preview, senderName, dateTicks);
     }
 
-    // ═══════════════════════════════════════════════════════
-    //  Sync State
-    // ═══════════════════════════════════════════════════════
-
     public async Task<ChatSyncState?> GetSyncStateAsync(int chatId)
         => await _localDb.Connection.FindAsync<ChatSyncState>(chatId);
 
@@ -171,10 +147,6 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         state.LastSyncAtTicks = DateTime.UtcNow.Ticks;
         await _localDb.Connection.InsertOrReplaceAsync(state);
     }
-
-    // ═══════════════════════════════════════════════════════
-    //  Read Pointers
-    // ═══════════════════════════════════════════════════════
 
     public async Task UpdateReadPointerAsync(int chatId, int? lastReadMessageId, int unreadCount)
     {
@@ -191,10 +163,6 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     public async Task<CachedReadPointer?> GetReadPointerAsync(int chatId)
         => await _localDb.Connection.FindAsync<CachedReadPointer>(chatId);
 
-    // ═══════════════════════════════════════════════════════
-    //  Users
-    // ═══════════════════════════════════════════════════════
-
     public async Task UpsertUsersAsync(IEnumerable<UserDto> users)
     {
         var entities = users.Select(u => u.ToEntity()).ToList();
@@ -209,9 +177,6 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
         });
     }
 
-    // ═══════════════════════════════════════════════════════
-    //  Maintenance
-    // ═══════════════════════════════════════════════════════
     public async Task ClearAllAsync() => await _localDb.ClearAllAsync();
 
     public async Task<long> GetDatabaseSizeBytesAsync() => await _localDb.GetDatabaseSizeBytesAsync();

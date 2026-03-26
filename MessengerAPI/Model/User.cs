@@ -13,7 +13,6 @@ public partial class User
     public string? Midname { get; set; }
     public string? Surname { get; set; }
     public bool IsBanned { get; set; }
-
     public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
     public virtual ICollection<Chat> Chats { get; set; } = [];
     public virtual Department? Department { get; set; }

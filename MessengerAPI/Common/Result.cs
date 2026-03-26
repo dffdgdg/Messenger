@@ -3,15 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace MessengerAPI.Common;
 
-public enum ResultErrorType
-{
-    Validation,
-    Unauthorized,
-    Forbidden,
-    NotFound,
-    Conflict,
-    Internal
-}
+public enum ResultErrorType { Validation, Unauthorized, Forbidden, NotFound, Conflict, Internal }
 
 public class Result
 {

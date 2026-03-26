@@ -186,8 +186,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient,
-            () => Context.Members, fileDownloadService, notificationService, cacheService);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService);
 
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
@@ -201,10 +200,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(
-            Context, MessageManager, Voice,
-            count => UnreadCount = count,
-            OnHubReconnectedAsync);
+        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, Voice, count => UnreadCount = count, OnHubReconnectedAsync);
 
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
@@ -225,8 +221,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         {
             IsInitialLoading = true;
 
-            var chatResult = await Context.Api.GetAsync<ChatDto>(
-                ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
 
             if (chatResult is { Success: true, Data: not null })
             {
@@ -257,9 +252,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
             Voice.Initialize(audioRecorder);
-
-            foreach (var message in Messages.Where(m => m.IsVoiceMessage))
-                Voice.StartTranscriptionPollingIfNeeded(message);
 
             InfoPanel.Subscribe();
 
@@ -297,9 +289,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     // подписываемся на изменения в дочерних хэндлерах, чтобы дергать OnPropertyChanged у себя
     private void ForwardProperties(INotifyPropertyChanged source, params (string sourceProp, string targetProp)[] mappings)
     {
-        var lookup = mappings
-            .GroupBy(m => m.sourceProp)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
+        var lookup = mappings.GroupBy(m => m.sourceProp).ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
 
         source.PropertyChanged += (_, e) =>
         {
@@ -333,14 +323,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(ContactLastSeen)),
             (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(IsContactOnline)));
 
-        ForwardProperties(Context,
-            (nameof(ChatContext.Chat), nameof(Chat)),
-            (nameof(ChatContext.Members), nameof(Members)),
-            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
+        ForwardProperties(Context, (nameof(ChatContext.Chat), nameof(Chat)), (nameof(ChatContext.Members), nameof(Members)), (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
 
-        ForwardProperties(Notification,
-            (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
-            (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
+        ForwardProperties(Notification, (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)), (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
     }
 
     #endregion

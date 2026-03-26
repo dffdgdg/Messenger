@@ -10,7 +10,7 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsReplyMode))]
-    private MessageViewModel? _replyingToMessage;
+    public partial MessageViewModel? ReplyingToMessage { get; set; }
 
     public bool IsReplyMode => ReplyingToMessage != null;
 
@@ -60,8 +60,7 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
         target.IsHighlighted = true;
         Ctx.RequestScrollToMessage(target, true);
 
-        _ = Task.Delay(AppConstants.HighlightDurationMs).ContinueWith(_ =>
-            Dispatcher.UIThread.Post(() => target.IsHighlighted = false));
+        _ = Task.Delay(AppConstants.HighlightDurationMs).ContinueWith(_ => Dispatcher.UIThread.Post(() => target.IsHighlighted = false));
     }
 
     private void OnCompositionReset()

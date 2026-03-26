@@ -21,13 +21,8 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
     private readonly string _dummyHash;
     private const int MaxActiveSessions = 5;
 
-    public AuthService(
-        MessengerDbContext context,
-        ITokenService tokenService,
-        IOptions<MessengerSettings> settings,
-        IOptions<JwtSettings> jwtSettings,
-        AppDateTime appDateTime,
-        ILogger<AuthService> logger) : base(context, logger)
+    public AuthService(MessengerDbContext context,ITokenService tokenService,IOptions<MessengerSettings> settings,
+        IOptions<JwtSettings> jwtSettings,AppDateTime appDateTime, ILogger<AuthService> logger) : base(context, logger)
     {
         _tokenService = tokenService;
         _settings = settings.Value;
@@ -103,10 +98,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
         var storedToken = await _context.RefreshTokens
-            .Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt =>
-                rt.TokenHash == refreshTokenHash &&
-                rt.UserId == userId, ct);
+            .Include(rt => rt.User).FirstOrDefaultAsync(rt =>rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
 
         if (storedToken is null)
         {
@@ -116,8 +108,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
 
         if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
         {
-            _logger.LogWarning("Обнаружено повторное использование refresh token! UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.",
-                userId, storedToken.FamilyId);
+            _logger.LogWarning("Обнаружено повторное использование refresh token! UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.", userId, storedToken.FamilyId);
 
             await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
 
@@ -139,7 +130,6 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         var role = await DetermineUserRoleAsync(storedToken.User, ct);
         var newTokenPair = _tokenService.GenerateTokenPair(userId, role);
 
-        // Ротация: помечаем старый как использованный
         storedToken.UsedAt = _appDateTime.UtcNow;
 
         var newRefreshToken = new Model.RefreshToken
@@ -213,36 +203,22 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         var now = _appDateTime.UtcNow;
 
         var activeFamilies = await _context.RefreshTokens
-            .Where(rt =>
-                rt.UserId == userId &&
-                rt.RevokedAt == null &&
-                rt.UsedAt == null &&
-                rt.ExpiresAt > now)
+            .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
             .GroupBy(rt => rt.FamilyId)
-            .Select(g => new
-            {
-                FamilyId = g.Key,
-                LatestCreatedAt = g.Max(rt => rt.CreatedAt)
-            })
+            .Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) })
             .OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
 
         if (activeFamilies.Count >= MaxActiveSessions)
         {
-            var familiesToRevoke = activeFamilies
-                .Skip(MaxActiveSessions - 1)
-                .Select(f => f.FamilyId).ToList();
+            var familiesToRevoke = activeFamilies.Skip(MaxActiveSessions - 1).Select(f => f.FamilyId).ToList();
 
             if (familiesToRevoke.Count > 0)
             {
-                var revokedCount = await _context.RefreshTokens
-                    .Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
+                var revokedCount = await _context.RefreshTokens.Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
                     .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
 
-                _logger.LogInformation(
-                    "Превышен лимит сессий для пользователя {UserId}: " +
-                    "отозвано {RevokedCount} токенов из {FamilyCount} старых сессий " +
-                    "(лимит: {MaxSessions})",
-                    userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
+                _logger.LogInformation("Превышен лимит сессий для пользователя {UserId}: отозвано {RevokedCount} токенов из {FamilyCount} старых сессий"
+                    + " (лимит: {MaxSessions})", userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
             }
         }
     }
@@ -261,14 +237,11 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
     {
         var cutoff = _appDateTime.UtcNow.AddDays(-60);
 
-        var expiredCount = await _context.RefreshTokens
-            .Where(rt => rt.UserId == userId && rt.ExpiresAt < cutoff)
-            .ExecuteDeleteAsync(ct);
+        var expiredCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiresAt < cutoff).ExecuteDeleteAsync(ct);
 
         if (expiredCount > 0)
         {
-            _logger.LogDebug("Очищено {Count} истёкших refresh tokens для пользователя {UserId}",
-                expiredCount, userId);
+            _logger.LogDebug("Очищено {Count} истёкших refresh tokens для пользователя {UserId}", expiredCount, userId);
         }
     }
 

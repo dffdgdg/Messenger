@@ -29,12 +29,10 @@ public static class SwaggerConfiguration
             {
                 var schemeRef = new OpenApiSecuritySchemeReference("Bearer");
 
-                var requirement = new OpenApiSecurityRequirement
+                return new OpenApiSecurityRequirement
                 {
                     [schemeRef] = []
                 };
-
-                return requirement;
             });
         });
 

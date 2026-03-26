@@ -10,9 +10,9 @@ namespace MessengerDesktop.ViewModels.Chat;
 public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore,
     ChatMemberLoader memberLoader) : ChatFeatureHandler(context)
 {
-    [ObservableProperty] private UserDto? _contactUser;
-    [ObservableProperty] private bool _isContactOnline;
-    [ObservableProperty] private string? _contactLastSeen;
+    [ObservableProperty] public partial UserDto? ContactUser { get; set; }
+    [ObservableProperty] public partial bool IsContactOnline { get; set; }
+    [ObservableProperty]public partial string? ContactLastSeen { get; set; }
 
     public bool IsInfoPanelOpen
     {
@@ -95,9 +95,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 IsContactOnline = profileResult.Data.IsOnline;
                 ContactLastSeen = FormatLastSeen(profileResult.Data);
 
-                var memberIndex = Ctx.Members
-                    .Select((member, index) => new { member, index })
-                    .FirstOrDefault(x => x.member.Id == profileResult.Data.Id)?.index;
+                var memberIndex = Ctx.Members.Select((member, index) => new { member, index }).FirstOrDefault(x => x.member.Id == profileResult.Data.Id)?.index;
 
                 if (memberIndex.HasValue)
                     Ctx.Members[memberIndex.Value] = profileResult.Data;
@@ -105,14 +103,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException)
-        {
-            //Expected when user navigates away before load completes
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}");
-        }
+        catch (OperationCanceledException) { /* Expected when user navigates away before load completes */ }
+        catch (Exception ex) { Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}"); }
 
     }
 
@@ -130,14 +122,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException)
-        {
-            //Expected when user navigates away before load completes
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}");
-        }
+        catch (OperationCanceledException) { /* Expected when user navigates away before load completes */ }
+        catch (Exception ex) { Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}"); }
     }
 
     private void OnUserStatusChanged(int userId, bool isOnline)
@@ -203,9 +189,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     {
         if (Ctx.Chat == null) return;
 
-        Ctx.Chat.Name = contact.DisplayName
-                        ?? contact.Username
-                        ?? Ctx.Chat.Name;
+        Ctx.Chat.Name = contact.DisplayName ?? contact.Username ?? Ctx.Chat.Name;
 
         if (!string.IsNullOrEmpty(contact.Avatar))
             Ctx.Chat.Avatar = contact.Avatar;

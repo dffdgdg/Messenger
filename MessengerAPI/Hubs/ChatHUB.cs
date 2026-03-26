@@ -1,6 +1,5 @@
 ﻿using MessengerAPI.Services.ReadReceipt;
 using System.Security.Claims;
-using Microsoft.Extensions.Logging;
 
 namespace MessengerAPI.Hubs;
 
@@ -34,8 +33,7 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}",
-                userId.Value, chatIds.Count);
+            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
         }
 
         await base.OnConnectedAsync();
@@ -135,22 +133,18 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         using var scope = scopeFactory.CreateScope();
         var readReceiptService = scope.ServiceProvider.GetRequiredService<IReadReceiptService>();
 
-        var result = await readReceiptService.MarkAsReadAsync(
-            userId.Value,
-            new MarkAsReadDto { ChatId = chatId, MessageId = messageId });
+        var result = await readReceiptService.MarkAsReadAsync(userId.Value, new MarkAsReadDto { ChatId = chatId, MessageId = messageId });
 
         if (!result.TryUnwrap(out var receipt, logger))
             return;
 
         await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
 
-        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value,
-            receipt.LastReadMessageId, receipt.LastReadAt);
+        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}",
-                userId.Value, chatId, receipt.UnreadCount);
+            logger.LogDebug("Пользователь {UserId} прочитал чат {ChatId}, unread={UnreadCount}", userId.Value, chatId, receipt.UnreadCount);
         }
     }
 
@@ -169,13 +163,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
         await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
 
-        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value,
-            receipt.LastReadMessageId, receipt.LastReadAt);
+        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}",
-                userId.Value, messageId, chatId);
+            logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}", userId.Value, messageId, chatId);
         }
     }
 

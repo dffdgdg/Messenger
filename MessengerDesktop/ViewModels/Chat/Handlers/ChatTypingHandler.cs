@@ -13,7 +13,7 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
     private bool _cleanupRunning;
 
     [ObservableProperty]
-    private string _typingText = string.Empty;
+    public partial string TypingText { get; set; } = string.Empty;
 
     public ChatTypingHandler(ChatContext context) : base(context)
         => Ctx.Hub.UserTyping += OnUserTyping;
@@ -56,10 +56,7 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
                     await Task.Delay(500, ct);
 
                     var now = DateTime.UtcNow;
-                    var expired = _typingUsers
-                        .Where(p => (now - p.Value).TotalMilliseconds
-                            > AppConstants.TypingIndicatorDurationMs)
-                        .Select(p => p.Key).ToList();
+                    var expired = _typingUsers.Where(p => (now - p.Value).TotalMilliseconds > AppConstants.TypingIndicatorDurationMs).Select(p => p.Key).ToList();
 
                     if (expired.Count > 0)
                     {
@@ -78,10 +75,7 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Ignore cancellation
-            }
+            catch (OperationCanceledException) { /* Ignore cancellation */ }
             finally { _cleanupRunning = false; }
         }, ct);
     }
@@ -94,10 +88,7 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
             return;
         }
 
-        var names = _typingUsers.Keys
-            .Select(ResolveDisplayName)
-            .Where(n => !string.IsNullOrWhiteSpace(n))
-            .Distinct().ToList();
+        var names = _typingUsers.Keys.Select(ResolveDisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
 
         TypingText = names.Count switch
         {

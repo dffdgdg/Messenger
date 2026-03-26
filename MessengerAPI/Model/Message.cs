@@ -18,7 +18,6 @@ public class Message
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsVoiceMessage => VoiceMessage != null;
-
     public virtual Chat Chat { get; set; } = null!;
     public virtual User Sender { get; set; } = null!;
     public virtual User? TargetUser { get; set; }

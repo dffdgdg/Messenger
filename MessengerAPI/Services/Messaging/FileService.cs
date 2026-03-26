@@ -13,14 +13,8 @@ public interface IFileService
     bool IsValidImage(IFormFile file);
 }
 
-public class FileService(
-    MessengerDbContext context,
-    IAccessControlService accessControl,
-    IWebHostEnvironment env,
-    IUrlBuilder urlBuilder,
-    IOptions<MessengerSettings> settings,
-    ILogger<FileService> logger)
-    : BaseService<FileService>(context, logger), IFileService
+public class FileService(MessengerDbContext context,IAccessControlService accessControl,IWebHostEnvironment env,
+    IUrlBuilder urlBuilder, IOptions<MessengerSettings> settings, ILogger<FileService> logger) : BaseService<FileService>(context, logger), IFileService
 {
     private readonly MessengerSettings _settings = settings.Value;
 
@@ -44,11 +38,7 @@ public class FileService(
 
         if (image.Width > _settings.MaxImageDimension || image.Height > _settings.MaxImageDimension)
         {
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(_settings.MaxImageDimension, _settings.MaxImageDimension),
-                Mode = ResizeMode.Max
-            }));
+            image.Mutate(x => x.Resize(new ResizeOptions { Size = new Size(_settings.MaxImageDimension, _settings.MaxImageDimension), Mode = ResizeMode.Max }));
         }
 
         await image.SaveAsWebpAsync(absolutePath, new WebpEncoder { Quality = _settings.ImageQuality });

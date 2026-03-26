@@ -60,10 +60,13 @@ public sealed class SecureStorageService : ISecureStorageService, IDisposable
 
         string machineData = $"{Environment.MachineName}{Environment.UserName}{Environment.OSVersion}";
         byte[] baseKey = Encoding.UTF8.GetBytes(machineData);
+        byte[] derivedKey = new byte[32];
+        Rfc2898DeriveBytes.Pbkdf2(baseKey, salt, derivedKey,Pbkdf2Iterations,HashAlgorithmName.SHA256);
 
-        using Rfc2898DeriveBytes pbkdf2 = new(baseKey, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
-        return pbkdf2.GetBytes(32);
+        return derivedKey;
     }
+
+
 
     private static void SetHiddenAttribute(string filePath)
     {
@@ -182,8 +185,7 @@ public sealed class SecureStorageService : ISecureStorageService, IDisposable
 
     private string GetFilePath(string key)
     {
-        var safeKey = Convert.ToBase64String(Encoding.UTF8.GetBytes(key))
-            .Replace('/', '_').Replace('+', '-').Replace('=', '.');
+        var safeKey = Convert.ToBase64String(Encoding.UTF8.GetBytes(key)).Replace('/', '_').Replace('+', '-').Replace('=', '.');
 
         return Path.Combine(_storagePath, $"{safeKey}.secure");
     }

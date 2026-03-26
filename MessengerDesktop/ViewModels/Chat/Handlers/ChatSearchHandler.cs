@@ -8,15 +8,14 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public sealed partial class ChatSearchHandler(ChatContext context, ChatMessageManager messageManager) : ChatFeatureHandler(context)
 {
-    [ObservableProperty] private bool _isSearchMode;
-    [ObservableProperty] private int? _highlightedMessageId;
+    [ObservableProperty] public partial bool IsSearchMode { get; set; }
+    [ObservableProperty] public partial int? HighlightedMessageId { get; set; }
 
     public async Task ScrollToMessageAsync(int messageId)
     {
         try
         {
-            var existing = messageManager.Messages.FirstOrDefault(
-                m => m.Id == messageId);
+            var existing = messageManager.Messages.FirstOrDefault(m => m.Id == messageId);
 
             if (existing != null)
             {
@@ -26,16 +25,14 @@ public sealed partial class ChatSearchHandler(ChatContext context, ChatMessageMa
                 return;
             }
 
-            var targetIndex = await messageManager
-                .LoadMessagesAroundAsync(messageId);
+            var targetIndex = await messageManager.LoadMessagesAroundAsync(messageId);
 
             if (targetIndex.HasValue)
             {
                 await Task.Delay(100);
                 Ctx.RequestScrollToIndex(targetIndex.Value);
 
-                var target = messageManager.Messages
-                    .FirstOrDefault(m => m.Id == messageId);
+                var target = messageManager.Messages.FirstOrDefault(m => m.Id == messageId);
                 if (target != null) Highlight(target);
             }
         }

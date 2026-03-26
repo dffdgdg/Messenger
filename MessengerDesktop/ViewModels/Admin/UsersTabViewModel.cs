@@ -76,6 +76,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             if (!tcs.Task.IsCompleted)
                 tcs.TrySetResult(false);
+            return Task.CompletedTask;
         };
 
         await _dialogService.ShowAsync(userDialog);
@@ -113,6 +114,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             if (!tcs.Task.IsCompleted)
                 tcs.TrySetResult(false);
+            return Task.CompletedTask;
         };
 
         await _dialogService.ShowAsync(userDialog);
@@ -138,8 +140,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         var action = user.IsBanned ? "разблокировать" : "заблокировать";
         var confirmText = user.IsBanned ? "Разблокировать" : "Заблокировать";
 
-        var confirmDialog = new ConfirmDialogViewModel("Подтверждение",
-            $"Вы уверены, что хотите {action} пользователя {user.DisplayName ?? user.Username}?",confirmText,"Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Подтверждение", $"Вы уверены, что хотите {action} пользователя {user.DisplayName ?? user.Username}?",confirmText,"Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
 

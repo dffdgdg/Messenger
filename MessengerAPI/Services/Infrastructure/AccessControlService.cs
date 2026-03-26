@@ -81,8 +81,7 @@ public sealed class AccessControlService(MessengerDbContext context, ICacheServi
         if (_requestCache.TryGetValue(key, out var requestCached))
             return requestCached;
 
-        var member = await cache.GetMembershipAsync(userId, chatId, () =>
-            context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
+        var member = await cache.GetMembershipAsync(userId, chatId, () => context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
 
         _requestCache[key] = member;
 

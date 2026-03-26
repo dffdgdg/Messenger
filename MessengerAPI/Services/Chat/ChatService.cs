@@ -19,18 +19,9 @@ public interface IChatService
     Task<Result> RemoveChatAvatarAsync(int chatId, int userId);
 }
 
-public class ChatService(
-    MessengerDbContext context,
-    IAccessControlService accessControl,
-    IFileService fileService,
-    IOnlineUserService onlineService,
-    IReadReceiptService readReceiptService,
-    IUrlBuilder urlBuilder,
-    ICacheService cacheService,
-    ISystemMessageService systemMessages,
-    AppDateTime appDateTime,
-    ILogger<ChatService> logger)
-    : BaseService<ChatService>(context, logger), IChatService
+public class ChatService(MessengerDbContext context, IAccessControlService accessControl, IFileService fileService, IOnlineUserService onlineService,
+    IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, ICacheService cacheService, ISystemMessageService systemMessages,
+    AppDateTime appDateTime, ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     #region Get Chats
 
@@ -58,8 +49,7 @@ public class ChatService(
 
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
-        var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact)
-            .Select(c => c.Chat.Id).ToList();
+        var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact).Select(c => c.Chat.Id).ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
@@ -93,8 +83,7 @@ public class ChatService(
             return dto;
         });
 
-        var sorted = result.OrderByDescending(c => c.UnreadCount > 0)
-            .ThenByDescending(c => c.LastMessageDate).ToList();
+        var sorted = result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate).ToList();
 
         return Result<List<ChatDto>>.Success(sorted);
     }
@@ -158,12 +147,8 @@ public class ChatService(
 
     public async Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId)
     {
-        var chat = await _context.Chats
-            .Include(c => c.ChatMembers)
-            .Where(c => c.Type == ChatType.Contact)
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId))
-            .FirstOrDefaultAsync();
+        var chat = await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
+            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
 
         if (chat is null)
             return Result<ChatDto>.NotFound("Диалог не найден");
@@ -190,11 +175,7 @@ public class ChatService(
         if (accessResult.IsFailure)
             return Result<List<UserDto>>.FromFailure(accessResult);
 
-        var members = await _context.ChatMembers
-            .Where(cm => cm.ChatId == chatId)
-            .Include(cm => cm.User)
-            .AsNoTracking()
-            .ToListAsync();
+        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 
         var memberIds = members.ConvertAll(m => m.UserId);
         var onlineIds = onlineService.FilterOnline(memberIds);
@@ -284,13 +265,10 @@ public class ChatService(
         if (chat.Type != ChatType.Contact)
         {
             var creator = await _context.Users.FindAsync(dto.CreatedById);
-            await systemMessages.CreateAsync(chat.Id, dto.CreatedById,
-                $"{creator?.FormatDisplayName() ?? "Пользователь"} создал группу",
-                SystemEventType.ChatCreated);
+            await systemMessages.CreateAsync(chat.Id, dto.CreatedById, $"{creator?.FormatDisplayName() ?? "Пользователь"} создал группу", SystemEventType.ChatCreated);
         }
 
-        _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}",
-            chat.Id, dto.CreatedById);
+        _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
 
         return Result<ChatDto>.Success(new ChatDto
         {
@@ -349,9 +327,7 @@ public class ChatService(
         if (ownerResult.IsFailure)
             return ownerResult;
 
-        var chat = await _context.Chats
-            .Include(c => c.ChatMembers)
-            .FirstOrDefaultAsync(c => c.Id == chatId);
+        var chat = await _context.Chats.Include(c => c.ChatMembers).FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat is null)
             return Result.NotFound($"Чат с ID {chatId} не найден");
@@ -449,12 +425,8 @@ public class ChatService(
 
     private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
     {
-        return await _context.Chats
-            .Include(c => c.ChatMembers)
-            .Where(c => c.Type == ChatType.Contact)
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId))
-            .FirstOrDefaultAsync();
+        return await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
+            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
     }
 
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
@@ -468,22 +440,17 @@ public class ChatService(
         if (chatIds.Count == 0)
             return [];
 
-        var partners = await _context.ChatMembers
-            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId)
-            .Include(cm => cm.User)
-            .AsNoTracking()
-            .ToListAsync();
+        var partners = await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId).Include(cm => cm.User)
+            .AsNoTracking().ToListAsync();
 
-        return partners
-            .Where(p => p.User is not null)
-            .ToDictionary(
-                p => p.ChatId,
-                p => new DialogPartnerInfo
-                {
-                    UserId = p.User!.Id,
-                    DisplayName = p.User.FormatDisplayName(),
-                    AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar)
-                });
+        return partners.Where(p => p.User is not null).ToDictionary(
+            p => p.ChatId,
+            p => new DialogPartnerInfo
+            {
+                UserId = p.User!.Id,
+                DisplayName = p.User.FormatDisplayName(),
+                AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar)
+            });
     }
 
     private static string? Truncate(string? text, int maxLength)

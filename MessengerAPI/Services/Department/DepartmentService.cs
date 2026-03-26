@@ -16,10 +16,7 @@ public interface IDepartmentService
     Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default);
 }
 
-public class DepartmentService(
-    MessengerDbContext context,
-    IOptions<MessengerSettings> settings,
-    ILogger<DepartmentService> logger)
+public class DepartmentService(MessengerDbContext context,IOptions<MessengerSettings> settings,ILogger<DepartmentService> logger)
     : BaseService<DepartmentService>(context, logger), IDepartmentService
 {
     private readonly MessengerSettings _settings = settings.Value;
@@ -28,11 +25,8 @@ public class DepartmentService(
     {
         var departments = await _context.Departments.Include(d => d.Head).AsNoTracking().ToListAsync(ct);
 
-        var userCounts = await _context.Users
-            .Where(u => u.Department != null)
-            .GroupBy(u => u.DepartmentId)
-            .Select(g => new { DepartmentId = g.Key!.Value, Count = g.Count() })
-            .ToDictionaryAsync(x => x.DepartmentId, x => x.Count, ct);
+        var userCounts = await _context.Users.Where(u => u.Department != null).GroupBy(u => u.DepartmentId)
+            .Select(g => new { DepartmentId = g.Key!.Value, Count = g.Count() }).ToDictionaryAsync(x => x.DepartmentId, x => x.Count, ct);
 
         var result = departments.ConvertAll(d => new DepartmentDto
         {
@@ -74,8 +68,7 @@ public class DepartmentService(
 
         if (dto.ParentDepartmentId.HasValue)
         {
-            var parentExists = await _context.Departments
-                .AnyAsync(d => d.Id == dto.ParentDepartmentId.Value, ct);
+            var parentExists = await _context.Departments.AnyAsync(d => d.Id == dto.ParentDepartmentId.Value, ct);
             if (!parentExists)
                 return Result<DepartmentDto>.NotFound("Родительский отдел не существует");
         }
@@ -222,14 +215,12 @@ public class DepartmentService(
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} добавлен в отдел {DepartmentId}",
-            userId, departmentId);
+        _logger.LogInformation("Пользователь {UserId} добавлен в отдел {DepartmentId}", userId, departmentId);
 
         return Result.Success();
     }
 
-    public async Task<Result> RemoveUserFromDepartmentAsync(
-        int departmentId, int userId, int requesterId, CancellationToken ct = default)
+    public async Task<Result> RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default)
     {
         var canManageResult = await CheckCanManageAsync(requesterId, departmentId, ct);
         if (canManageResult.IsFailure)
@@ -254,8 +245,7 @@ public class DepartmentService(
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} удалён из отдела {DepartmentId}",
-            userId, departmentId);
+        _logger.LogInformation("Пользователь {UserId} удалён из отдела {DepartmentId}", userId, departmentId);
 
         return Result.Success();
     }
@@ -289,10 +279,7 @@ public class DepartmentService(
 
     private async Task<Result> CheckNoCycleAsync(int departmentId, int parentId, CancellationToken ct)
     {
-        var allDepartments = await _context.Departments
-            .AsNoTracking()
-            .Select(d => new { d.Id, d.ParentDepartmentId })
-            .ToListAsync(ct);
+        var allDepartments = await _context.Departments.AsNoTracking().Select(d => new { d.Id, d.ParentDepartmentId }).ToListAsync(ct);
 
         var visited = new HashSet<int> { departmentId };
         var queue = new Queue<int>();
@@ -312,6 +299,5 @@ public class DepartmentService(
 
         return Result.Success();
     }
-
     #endregion
 }

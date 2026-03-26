@@ -45,8 +45,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
 
-    public AuthManager(IAuthService authService, ISecureStorageService secureStorage,
-        ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
+    public AuthManager(IAuthService authService, ISecureStorageService secureStorage, ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
@@ -140,8 +139,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
         if (error.Contains("401") || error.Contains("403"))
             return true;
 
-        string[] authKeywords =
-            ["Unauthorized","Forbidden","Недействительный","Истёк", "Отозван","Заблокирован","Использован","Сессия истекла"];
+        string[] authKeywords = ["Unauthorized","Forbidden","Недействительный","Истёк", "Отозван","Заблокирован","Использован","Сессия истекла"];
 
         return authKeywords.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }

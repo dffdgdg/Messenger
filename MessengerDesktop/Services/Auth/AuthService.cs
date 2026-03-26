@@ -108,10 +108,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
             return apiResponse ?? ApiResponseHelper.Error<TokenResponseDto>("Не удалось прочитать ответ сервера");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            return ApiResponseHelper.Error<TokenResponseDto>($"Ошибка обновления токена: {ex.Message}");
-        }
+        catch (Exception ex) { return ApiResponseHelper.Error<TokenResponseDto>($"Ошибка обновления токена: {ex.Message}"); }
     }
 
     public async Task<ApiResponse<object>> RevokeAsync(string token, CancellationToken ct = default)
@@ -127,9 +124,6 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 : ApiResponseHelper.Error($"Ошибка выхода: {response.StatusCode}");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            return ApiResponseHelper.Error($"Ошибка выхода: {ex.Message}");
-        }
+        catch (Exception ex) { return ApiResponseHelper.Error($"Ошибка выхода: {ex.Message}"); }
     }
 }

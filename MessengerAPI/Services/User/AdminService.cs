@@ -15,11 +15,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await _context.Users
-            .Include(u => u.Department)
-            .Include(u => u.UserSetting)
-            .AsNoTracking()
-            .ToListAsync(ct);
+        var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync(ct);
 
         var result = users.ConvertAll(u => u.ToDto());
         return Result<List<UserDto>>.Success(result);
@@ -79,11 +75,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
 
         _logger.LogInformation("Создан пользователь {Username} с ID {UserId}", username, user.Id);
 
-        var createdUser = await _context.Users
-            .Include(u => u.Department)
-            .Include(u => u.UserSetting)
-            .AsNoTracking()
-            .FirstAsync(u => u.Id == user.Id, ct);
+        var createdUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
 
         return Result<UserDto>.Success(createdUser.ToDto());
     }
@@ -105,10 +97,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        var user = await _context.Users
-            .Include(u => u.Department)
-            .Include(u => u.UserSetting)
-            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var user = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {userId} не найден");
@@ -134,11 +123,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
 
         _logger.LogInformation("Администратор обновил пользователя {UserId}", userId);
 
-        var updatedUser = await _context.Users
-            .Include(u => u.Department)
-            .Include(u => u.UserSetting)
-            .AsNoTracking()
-            .FirstAsync(u => u.Id == userId, ct);
+        var updatedUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == userId, ct);
 
         return Result<UserDto>.Success(updatedUser.ToDto());
     }

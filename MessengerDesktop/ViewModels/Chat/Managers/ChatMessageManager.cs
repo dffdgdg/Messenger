@@ -80,8 +80,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
     private async Task<int?> LoadInitialFromServerAsync(CancellationToken ct)
     {
-        var url = ApiEndpoints.Messages.ForChat(
-            chatId, userId, 1, AppConstants.DefaultPageSize);
+        var url = ApiEndpoints.Messages.ForChat(chatId, userId, 1, AppConstants.DefaultPageSize);
         var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
         if (result is not { Success: true, Data: not null })
@@ -115,8 +114,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
     {
         if (cacheService != null)
         {
-            var cached = await cacheService.GetMessagesAroundAsync(
-                chatId, messageId, AppConstants.DefaultPageSize);
+            var cached = await cacheService.GetMessagesAroundAsync(chatId, messageId, AppConstants.DefaultPageSize);
 
             if (cached is { IsComplete: true, Messages.Count: > 0 })
             {
@@ -167,13 +165,9 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
                 else
                 {
                     var cacheCount = cached?.Messages.Count ?? 0;
-                    var serverBeforeId = cacheCount > 0
-                        ? cached!.Messages.Min(m => m.Id)
-                        : _oldestLoadedMessageId.Value;
+                    var serverBeforeId = cacheCount > 0 ? cached!.Messages.Min(m => m.Id) : _oldestLoadedMessageId.Value;
 
-                    var url = ApiEndpoints.Messages.Before(
-                        chatId, serverBeforeId, userId,
-                        requestedCount - cacheCount);
+                    var url = ApiEndpoints.Messages.Before(chatId, serverBeforeId, userId, requestedCount - cacheCount);
                     var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                     if (result is not { Success: true, Data: not null })
@@ -187,9 +181,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
             }
             else
             {
-                var url = ApiEndpoints.Messages.Before(
-                    chatId, _oldestLoadedMessageId.Value,
-                    userId, requestedCount);
+                var url = ApiEndpoints.Messages.Before(chatId, _oldestLoadedMessageId.Value, userId, requestedCount);
                 var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                 if (result is not { Success: true, Data: not null })
@@ -225,9 +217,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
             if (cacheService != null)
             {
-                var cached = await cacheService.GetMessagesAfterAsync(
-                    chatId, _newestLoadedMessageId.Value,
-                    AppConstants.LoadMorePageSize);
+                var cached = await cacheService.GetMessagesAfterAsync(chatId, _newestLoadedMessageId.Value, AppConstants.LoadMorePageSize);
 
                 if (cached is { IsComplete: true, Messages.Count: > 0 })
                 {
@@ -236,11 +226,8 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
                 }
                 else
                 {
-                    var url = ApiEndpoints.Messages.After(
-                        chatId, _newestLoadedMessageId.Value,
-                        userId, AppConstants.LoadMorePageSize);
-                    var result =
-                        await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+                    var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
+                    var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                     if (result is not { Success: true, Data: not null })
                         return;
@@ -252,8 +239,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
             }
             else
             {
-                var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId.Value,
-                    userId, AppConstants.LoadMorePageSize);
+                var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId.Value, userId, AppConstants.LoadMorePageSize);
                 var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                 if (result is not { Success: true, Data: not null })
@@ -294,8 +280,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
             {
                 ct.ThrowIfCancellationRequested();
 
-                var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId!.Value,
-                    userId, AppConstants.DefaultPageSize);
+                var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId!.Value, userId, AppConstants.DefaultPageSize);
                 var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
                 if (result is not { Success: true, Data.Messages.Count: > 0 })
@@ -389,9 +374,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
         try
         {
-            var url = ApiEndpoints.Messages.After(
-                chatId, _newestLoadedMessageId.Value,
-                userId, AppConstants.DefaultPageSize);
+            var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId.Value, userId, AppConstants.DefaultPageSize);
             var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
             if (result is not { Success: true, Data.Messages.Count: > 0 })
@@ -452,8 +435,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
         msg.MarkAsDeleted();
         MessageViewModel.UpdateGroupingAround(Messages, index);
 
-        CacheInBackground(
-            cache => cache.MarkMessageDeletedAsync(messageId));
+        CacheInBackground(cache => cache.MarkMessageDeletedAsync(messageId));
     }
 
     public void HandleMessageUpdated(MessageDto updatedDto)
@@ -463,8 +445,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
         msg.ApplyUpdate(updatedDto);
 
-        CacheInBackground(
-            cache => cache.UpsertMessageAsync(updatedDto));
+        CacheInBackground(cache => cache.UpsertMessageAsync(updatedDto));
     }
 
     #endregion
@@ -473,8 +454,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
     public void MarkAsReadLocally(int messageId)
     {
-        foreach (var msg in Messages.Where(
-            m => m.Id <= messageId && m.IsUnread))
+        foreach (var msg in Messages.Where(m => m.Id <= messageId && m.IsUnread))
         {
             msg.IsUnread = false;
         }
@@ -594,16 +574,11 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
         var sender = members.FirstOrDefault(m => m.Id == msg.SenderId);
         var vm = new MessageViewModel(msg, downloadService, notificationService)
         {
-            SenderName = sender?.DisplayName
-                      ?? sender?.Username
-                      ?? msg.SenderName
-                      ?? "Unknown",
+            SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl
         };
 
-        if (LastReadMessageId.HasValue
-            && msg.Id > LastReadMessageId.Value
-            && msg.SenderId != userId)
+        if (LastReadMessageId.HasValue && msg.Id > LastReadMessageId.Value && msg.SenderId != userId)
         {
             vm.IsUnread = true;
         }
@@ -615,8 +590,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
     #region Кеширование
 
-    private async Task SaveToCacheAsync(
-        List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
+    private async Task SaveToCacheAsync(List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
     {
         if (cacheService == null || messages.Count == 0) return;
 
@@ -698,16 +672,9 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
     #region Вспомогательные методы
 
     private static List<MessageDto> MergeAndDeduplicate(List<MessageDto>? first, List<MessageDto> second)
-    {
-        return [.. (first ?? [])
-            .Concat(second)
-            .GroupBy(m => m.Id)
-            .Select(g => g.First())
-            .OrderBy(m => m.Id)];
-    }
+        => [.. (first ?? []).Concat(second).GroupBy(m => m.Id).Select(g => g.First()).OrderBy(m => m.Id)];
 
-    private static int? FindIndexById(
-        ObservableCollection<MessageViewModel> messages, int id)
+    private static int? FindIndexById(ObservableCollection<MessageViewModel> messages, int id)
     {
         for (int i = 0; i < messages.Count; i++)
         {
@@ -784,9 +751,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
         var previousDate = Messages[index - 1].CreatedAt.Date;
         newMessage.ShowDateSeparator = messageDate != previousDate;
-        newMessage.DateSeparatorText = newMessage.ShowDateSeparator
-            ? FormatDateSeparator(messageDate)
-            : null;
+        newMessage.DateSeparatorText = newMessage.ShowDateSeparator ? FormatDateSeparator(messageDate) : null;
     }
 
     private static string FormatDateSeparator(DateTime date)
@@ -798,8 +763,7 @@ public class ChatMessageManager(int chatId, int userId, IApiClientService apiCli
 
         var culture = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
 
-        return date.Year == today.Year ? date.ToString("d MMMM", culture)
-            : date.ToString("d MMMM yyyy", culture);
+        return date.Year == today.Year ? date.ToString("d MMMM", culture) : date.ToString("d MMMM yyyy", culture);
     }
 
     #endregion

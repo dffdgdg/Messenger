@@ -2,6 +2,5 @@
 
 public partial class StyleGuideViewModel : BaseViewModel
 {
-    [ObservableProperty]
-    private int _selectedTabIndex;
+    [ObservableProperty] public partial int SelectedTabIndex { get; set; }
 }

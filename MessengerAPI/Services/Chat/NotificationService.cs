@@ -8,10 +8,7 @@ public interface INotificationService
     Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
 }
 
-public sealed class NotificationService(
-    MessengerDbContext context,
-    IHubNotifier hubNotifier,
-    IUrlBuilder urlBuilder,
+public sealed class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendNotificationAsync(int userId, MessageDto message)
@@ -29,8 +26,7 @@ public sealed class NotificationService(
 
     public async Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
 
         if (member is null)
             return Result<ChatNotificationSettingsDto>.Failure($"Пользователь не является участником чата {chatId}");
@@ -52,8 +48,7 @@ public sealed class NotificationService(
         member.NotificationsEnabled = request.NotificationsEnabled;
         await context.SaveChangesAsync();
 
-        logger.LogInformation("Пользователь {UserId} {Action} уведомления для чата {ChatId}",
-            userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
+        logger.LogInformation("Пользователь {UserId} {Action} уведомления для чата {ChatId}",userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
 
         return Result<ChatNotificationSettingsDto>.Success(new ChatNotificationSettingsDto
         {
@@ -64,15 +59,11 @@ public sealed class NotificationService(
 
     public async Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId)
     {
-        var settings = await context.ChatMembers
-            .Where(cm => cm.UserId == userId)
-            .Select(cm => new ChatNotificationSettingsDto
-            {
-                ChatId = cm.ChatId,
-                NotificationsEnabled = cm.NotificationsEnabled
-            })
-            .AsNoTracking()
-            .ToListAsync();
+        var settings = await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new ChatNotificationSettingsDto
+        {
+            ChatId = cm.ChatId,
+            NotificationsEnabled = cm.NotificationsEnabled
+        }).AsNoTracking().ToListAsync();
 
         return Result<List<ChatNotificationSettingsDto>>.Success(settings);
     }
@@ -87,19 +78,13 @@ public sealed class NotificationService(
         {
             Type = message.Poll != null ? "poll" : "message",
             ChatId = message.ChatId,
-            ChatName = chat?.Type == ChatType.Contact
-                ? message.SenderName
-                : chat?.Name,
-            ChatAvatar = chat?.Type == ChatType.Contact
-                ? message.SenderAvatarUrl
-                : urlBuilder.BuildUrl(chat?.Avatar),
+            ChatName = chat?.Type == ChatType.Contact ? message.SenderName : chat?.Name,
+            ChatAvatar = chat?.Type == ChatType.Contact ? message.SenderAvatarUrl : urlBuilder.BuildUrl(chat?.Avatar),
             MessageId = message.Id,
             SenderId = message.SenderId,
             SenderName = message.SenderName,
             SenderAvatar = message.SenderAvatarUrl,
-            Preview = message.Poll != null
-                ? $"{message.Content}"
-                : TruncateText(message.Content, 100),
+            Preview = message.Poll != null ? $"{message.Content}" : TruncateText(message.Content, 100),
             CreatedAt = message.CreatedAt
         };
     }
@@ -109,10 +94,7 @@ public sealed class NotificationService(
         if (string.IsNullOrEmpty(content))
             return null;
 
-        return content.Length <= maxLength
-            ? content
-            : content[..maxLength] + "...";
+        return content.Length <= maxLength ? content : content[..maxLength] + "...";
     }
-
     #endregion
 }

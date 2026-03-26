@@ -80,8 +80,7 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
 
         var lastReadId = member.LastReadMessageId ?? 0;
 
-        var unreadInfo = await context.Messages.Where(m => m.ChatId == chatId && m.Id > lastReadId
-        && m.IsDeleted != true && m.SenderId != userId).GroupBy(_ => 1).Select(g => new
+        var unreadInfo = await context.Messages.Where(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId).GroupBy(_ => 1).Select(g => new
         {
             Count = g.Count(),
             FirstId = g.Min(m => m.Id)
@@ -100,8 +99,7 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
 
     public async Task<Result<int>> GetUnreadCountAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return Result<int>.Success(0);
@@ -135,19 +133,11 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
     {
         var chatIdList = chatIds.ToList();
 
-        var counts = await context.ChatMembers
-            .Where(cm => cm.UserId == userId && chatIdList.Contains(cm.ChatId))
-            .Select(cm => new
-            {
-                cm.ChatId,
-                UnreadCount = context.Messages.Count(m =>
-                    m.ChatId == cm.ChatId
-                    && m.Id > (cm.LastReadMessageId ?? 0)
-                    && m.IsDeleted != true
-                    && m.SenderId != userId)
-            })
-            .AsNoTracking()
-            .ToDictionaryAsync(x => x.ChatId, x => x.UnreadCount);
+        var counts = await context.ChatMembers.Where(cm => cm.UserId == userId && chatIdList.Contains(cm.ChatId)).Select(cm => new
+        {
+            cm.ChatId,
+            UnreadCount = context.Messages.Count(m => m.ChatId == cm.ChatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true && m.SenderId != userId)})
+            .AsNoTracking().ToDictionaryAsync(x => x.ChatId, x => x.UnreadCount);
 
         foreach (var chatId in chatIdList)
             counts.TryAdd(chatId, 0);
@@ -164,20 +154,13 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
     #region Private
 
     private async Task<int> CountUnreadAsync(int userId, int chatId, int lastReadId)
-        => await context.Messages.CountAsync(m =>
-            m.ChatId == chatId
-            && m.Id > lastReadId
-            && m.IsDeleted != true
-            && m.SenderId != userId);
+        => await context.Messages.CountAsync(m =>m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId);
 
     private async Task<Result<int>> DetermineTargetMessageIdAsync(MarkAsReadDto request)
     {
         if (request.MessageId.HasValue)
         {
-            var exists = await context.Messages.AnyAsync(m =>
-                m.Id == request.MessageId.Value
-                && m.ChatId == request.ChatId
-                && m.IsDeleted != true);
+            var exists = await context.Messages.AnyAsync(m => m.Id == request.MessageId.Value && m.ChatId == request.ChatId && m.IsDeleted != true);
 
             if (!exists)
                 return Result<int>.Failure($"Сообщение {request.MessageId} не найдено в чате {request.ChatId}");
@@ -185,11 +168,7 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
             return Result<int>.Success(request.MessageId.Value);
         }
 
-        var lastId = await context.Messages
-            .Where(m => m.ChatId == request.ChatId && m.IsDeleted != true)
-            .OrderByDescending(m => m.Id)
-            .Select(m => m.Id)
-            .FirstOrDefaultAsync();
+        var lastId = await context.Messages.Where(m => m.ChatId == request.ChatId && m.IsDeleted != true).OrderByDescending(m => m.Id).Select(m => m.Id).FirstOrDefaultAsync();
 
         return Result<int>.Success(lastId);
     }
@@ -201,6 +180,5 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
         LastReadAt = member.LastReadAt,
         UnreadCount = unreadCount
     };
-
     #endregion
 }

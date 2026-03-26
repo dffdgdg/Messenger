@@ -37,12 +37,7 @@ public sealed class ApiClientService : IApiClientService
 
     private const long LargeFileThreshold = 10 * 1024 * 1024;
 
-    private static readonly string[] NoRefreshUrls =
-    [
-        ApiEndpoints.Auth.Login,
-        ApiEndpoints.Auth.Refresh,
-        ApiEndpoints.Auth.Revoke
-    ];
+    private static readonly string[] NoRefreshUrls = [ ApiEndpoints.Auth.Login, ApiEndpoints.Auth.Refresh, ApiEndpoints.Auth.Revoke ];
 
     public ApiClientService(HttpClient httpClient, ISessionStore sessionStore, IAuthManager authManager)
     {
@@ -90,8 +85,7 @@ public sealed class ApiClientService : IApiClientService
         return true;
     }
 
-    private async Task<HttpResponseMessage> SendWithRefreshAsync(
-        Func<Task<HttpResponseMessage>> createAndSendRequest, string url)
+    private async Task<HttpResponseMessage> SendWithRefreshAsync(Func<Task<HttpResponseMessage>> createAndSendRequest, string url)
     {
         var response = await createAndSendRequest();
 
@@ -127,34 +121,18 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateRequest(HttpMethod.Get, url);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
-            return await ProcessResponseAsync<T>(response, ct);
+            return await ProcessResponseAsync<T>(await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateRequest(HttpMethod.Get, url), ct), url), ct);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { return CreateErrorResponse<T>(ex); }
     }
 
-    public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(
-        string url, TRequest data, CancellationToken ct = default)
+    public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
     {
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Post, url, data), ct), url);
             return await ProcessResponseAsync<TResponse>(response, ct);
         }
         catch (OperationCanceledException) { throw; }
@@ -166,13 +144,7 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Post, url, data), ct), url);
 
             return await ProcessResponseAsync<T>(response, ct);
         }
@@ -185,13 +157,7 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Post, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Post, url, data), ct), url);
 
             return await ProcessResponseAsync(response, ct);
         }
@@ -204,34 +170,19 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Put, url, data), ct), url);
             return await ProcessResponseAsync<T>(response, ct);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { return CreateErrorResponse<T>(ex); }
     }
 
-    public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(
-        string url, TRequest data, CancellationToken ct = default)
+    public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default)
     {
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Put, url, data), ct), url);
             return await ProcessResponseAsync<TResponse>(response, ct);
         }
         catch (OperationCanceledException) { throw; }
@@ -243,14 +194,7 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateJsonRequest(HttpMethod.Put, url, data);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateJsonRequest(HttpMethod.Put, url, data), ct), url);
             return await ProcessResponseAsync(response, ct);
         }
         catch (OperationCanceledException) { throw; }
@@ -262,14 +206,7 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateRequest(HttpMethod.Delete, url);
-                    return _httpClient.SendAsync(request, ct);
-                },
-                url);
-
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateRequest(HttpMethod.Delete, url), ct), url);
             return await ProcessResponseAsync(response, ct);
         }
         catch (OperationCanceledException) { throw; }
@@ -281,14 +218,7 @@ public sealed class ApiClientService : IApiClientService
         ThrowIfDisposed();
         try
         {
-            var response = await SendWithRefreshAsync(
-                () =>
-                {
-                    var request = CreateRequest(HttpMethod.Get, url);
-                    return _httpClient.SendAsync(
-                        request, HttpCompletionOption.ResponseHeadersRead, ct);
-                },
-                url);
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateRequest(HttpMethod.Get, url), HttpCompletionOption.ResponseHeadersRead, ct), url);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -327,9 +257,7 @@ public sealed class ApiClientService : IApiClientService
         }
     }
 
-    public async Task<ApiResponse<T>> UploadFileAsync<T>(
-        string url, Stream fileStream, string fileName, string contentType,
-        CancellationToken ct = default)
+    public async Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
     {
         ThrowIfDisposed();
         try
@@ -361,8 +289,7 @@ public sealed class ApiClientService : IApiClientService
 
     #region Response Processing
 
-    private async Task<ApiResponse<T>> ProcessResponseAsync<T>(
-        HttpResponseMessage response, CancellationToken ct)
+    private async Task<ApiResponse<T>> ProcessResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
         using (response)
         {

@@ -14,15 +14,10 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient, ISessionStor
     private readonly ISessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly string _apiBaseUrl = apiBaseUrl?.TrimEnd('/') ?? throw new ArgumentNullException(nameof(apiBaseUrl));
 
-    private static readonly HashSet<string> ImageExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".jpg", ".jpeg", ".png", ".gif", ".webp",
-            ".bmp", ".svg", ".ico", ".avif"
-        };
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico", ".avif" };
 
-    protected override async Task<byte[]?> LoadDataFromExternalAsync(
-        string url)
+    protected override async Task<byte[]?> LoadDataFromExternalAsync(string url)
     {
         var ext = GetExtension(url);
         if (!string.IsNullOrEmpty(ext) &&
@@ -58,8 +53,7 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient, ISessionStor
                 return null;
             }
 
-            var contentType =
-                response.Content.Headers.ContentType?.MediaType ?? "";
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
             if (!string.IsNullOrEmpty(contentType) &&
                 !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
@@ -80,8 +74,7 @@ public sealed class AuthenticatedImageLoader(HttpClient httpClient, ISessionStor
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(
-                $"[AuthImageLoader] Error: {ex.Message}");
+            Debug.WriteLine($"[AuthImageLoader] Error: {ex.Message}");
             return null;
         }
     }

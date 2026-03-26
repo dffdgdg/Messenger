@@ -411,8 +411,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     private async Task<ChatDto?> FindDialogWithUser(int contactUserId)
     {
         var currentUserId = _authManager.Session.UserId ?? 0;
-        var result = await _apiClient.GetAsync<ChatDto?>
-            (ApiEndpoints.Chats.UserContact(currentUserId, contactUserId));
+        var result = await _apiClient.GetAsync<ChatDto?>(ApiEndpoints.Chats.UserContact(currentUserId, contactUserId));
         return result.Success ? result.Data : null;
     }
 
@@ -466,8 +465,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 foreach (var chat in cachedChats)
                     chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
 
-                Chats = new ObservableCollection<ChatListItemViewModel>
-                    (cachedChats.Select(c => new ChatListItemViewModel(c)));
+                Chats = new ObservableCollection<ChatListItemViewModel>(cachedChats.Select(c => new ChatListItemViewModel(c)));
                 TotalUnreadCount = _globalHub.GetTotalUnread();
 
                 sw.Stop();
@@ -497,16 +495,13 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         if (SelectedChat?.Id == updatedChat.Id)
         {
-            SelectedChat = Chats.FirstOrDefault(c => c.Id == updatedChat.Id)
-                           ?? new ChatListItemViewModel(updatedChat);
+            SelectedChat = Chats.FirstOrDefault(c => c.Id == updatedChat.Id) ?? new ChatListItemViewModel(updatedChat);
         }
     }
 
     private async Task LoadFreshChatsFromServerAsync(int userId)
     {
-        var endpoint = IsGroupMode
-            ? ApiEndpoints.Chats.UserGroups(userId)
-            : ApiEndpoints.Chats.UserDialogs(userId);
+        var endpoint = IsGroupMode ? ApiEndpoints.Chats.UserGroups(userId) : ApiEndpoints.Chats.UserDialogs(userId);
 
         var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
 

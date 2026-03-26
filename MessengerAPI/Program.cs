@@ -7,13 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<MessengerSettings>(builder.Configuration.GetSection(MessengerSettings.SectionName));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 
-builder.Services
-    .AddMessengerDatabase(builder.Configuration, builder.Environment)
-    .AddInfrastructureServices()
-    .AddBusinessServices()
-    .AddMessengerJson(builder.Environment)
-    .AddMessengerAuth(builder.Configuration)
-    .AddMessengerSwagger();
+builder.Services.AddMessengerDatabase(builder.Configuration, builder.Environment).AddInfrastructureServices().AddBusinessServices()
+    .AddMessengerJson(builder.Environment).AddMessengerAuth(builder.Configuration).AddMessengerSwagger();
 
 builder.Services.AddRateLimiter(options =>
 {

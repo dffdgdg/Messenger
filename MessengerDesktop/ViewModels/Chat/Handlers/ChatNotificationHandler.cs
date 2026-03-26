@@ -7,15 +7,14 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public sealed partial class ChatNotificationHandler(ChatContext context) : ChatFeatureHandler(context)
 {
-    [ObservableProperty] private bool _isNotificationEnabled;
-    [ObservableProperty] private bool _isLoadingMuteState;
+    [ObservableProperty] public partial bool IsNotificationEnabled { get; set; }
+    [ObservableProperty] public partial bool IsLoadingMuteState { get; set; }
 
     public async Task LoadSettingsAsync(CancellationToken ct = default)
     {
         try
         {
-            var settings = await Ctx.NotificationApi
-                .GetChatSettingsAsync(Ctx.ChatId, ct);
+            var settings = await Ctx.NotificationApi.GetChatSettingsAsync(Ctx.ChatId, ct);
             if (settings != null)
                 IsNotificationEnabled = settings.NotificationsEnabled;
         }

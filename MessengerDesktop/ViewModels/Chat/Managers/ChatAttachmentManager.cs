@@ -11,19 +11,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatAttachmentManager(
-    int chatId,
-    IApiClientService apiClient,
-    IStorageProvider? storageProvider = null) : IDisposable
+public sealed class ChatAttachmentManager(int chatId,IApiClientService apiClient, IStorageProvider? storageProvider = null) : IDisposable
 {
-    private readonly IApiClientService _apiClient = apiClient
-            ?? throw new ArgumentNullException(nameof(apiClient));
+    private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private bool _disposed;
 
     private const int ThumbnailMaxDimension = 200;
 
-    public ObservableCollection<LocalFileAttachment> Attachments { get; }
-        = [];
+    public ObservableCollection<LocalFileAttachment> Attachments { get; } = [];
 
     public async Task<bool> PickAndAddFilesAsync()
     {
@@ -139,9 +134,7 @@ public sealed class ChatAttachmentManager(
 
             var scale = Math.Min((double)maxDimension / width, (double)maxDimension / height);
 
-            var newSize = new Avalonia.PixelSize(
-                Math.Max(1, (int)(width * scale)),
-                Math.Max(1, (int)(height * scale)));
+            var newSize = new Avalonia.PixelSize(Math.Max(1, (int)(width * scale)), Math.Max(1, (int)(height * scale)));
 
             var resized = fullBitmap.CreateScaledBitmap(newSize);
 
@@ -166,13 +159,7 @@ public sealed class ChatAttachmentManager(
             try
             {
                 local.Data.Position = 0;
-                var uploadResult =
-                    await _apiClient.UploadFileAsync<MessageFileDto>(
-                        ApiEndpoints.Files.Upload(chatId),
-                        local.Data,
-                        local.FileName,
-                        local.ContentType,
-                        ct);
+                var uploadResult = await _apiClient.UploadFileAsync<MessageFileDto>(ApiEndpoints.Files.Upload(chatId),local.Data,local.FileName,local.ContentType,ct);
 
                 if (uploadResult is { Success: true, Data: not null })
                 {

@@ -128,10 +128,7 @@ public class SettingsService : ISettingsService
             var json = JsonSerializer.Serialize(_localStorage, _jsonOptions);
             File.WriteAllText(_filePath, json);
         }
-        catch
-        {
-            // Игнорируем ошибки сохранения, так как это не критично для работы приложения
-        }
+        catch { /* Игнорируем ошибки сохранения, так как это не критично для работы приложения */ }
     }
 
     #endregion

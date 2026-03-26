@@ -65,8 +65,7 @@ public static class AvatarHelper
         return builder.Uri;
     }
 
-    public static string GetUrlWithCacheBuster(string? avatarUrl) =>
-        GetUriWithCacheBuster(avatarUrl)?.AbsoluteUri ?? string.Empty;
+    public static string GetUrlWithCacheBuster(string? avatarUrl) => GetUriWithCacheBuster(avatarUrl)?.AbsoluteUri ?? string.Empty;
 }
 
 public static class MimeTypeHelper
@@ -75,24 +74,20 @@ public static class MimeTypeHelper
     /// Определяет MIME-тип по расширению файла.
     /// Для неизвестных расширений возвращает application/octet-stream.
     /// </summary>
-    public static string GetMimeType(string filePath)
+    public static string GetMimeType(string filePath) => Path.GetExtension(filePath).ToLowerInvariant() switch
     {
-        var ext = Path.GetExtension(filePath).ToLowerInvariant();
-        return ext switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".mp4" => "video/mp4",
-            ".webm" => "video/webm",
-            ".mp3" => "audio/mpeg",
-            ".wav" => "audio/wav",
-            ".pdf" => "application/pdf",
-            ".doc" or ".docx" => "application/msword",
-            ".xls" or ".xlsx" => "application/vnd.ms-excel",
-            ".txt" => "text/plain",
-            _ => "application/octet-stream"
-        };
-    }
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        ".mp4" => "video/mp4",
+        ".webm" => "video/webm",
+        ".mp3" => "audio/mpeg",
+        ".wav" => "audio/wav",
+        ".pdf" => "application/pdf",
+        ".doc" or ".docx" => "application/msword",
+        ".xls" or ".xlsx" => "application/vnd.ms-excel",
+        ".txt" => "text/plain",
+        _ => "application/octet-stream"
+    };
 }

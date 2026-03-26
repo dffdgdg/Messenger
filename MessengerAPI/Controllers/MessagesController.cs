@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class MessagesController(IMessageService messageService, ITranscriptionService transcriptionService,
+public sealed class MessagesController(IMessageService messageService,
     ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
@@ -58,8 +58,8 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
 
     [HttpGet("chat/{chatId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(
-        int chatId, [FromQuery] string query = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(int chatId, [FromQuery] string query = "", [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var userId = GetCurrentUserId();
         return await ExecuteAsync(() => messageService.SearchMessagesAsync(chatId, userId, query, page, pageSize));
@@ -75,12 +75,4 @@ public sealed class MessagesController(IMessageService messageService, ITranscri
 
         return await ExecuteAsync(() => messageService.GlobalSearchAsync(userId, query, page, pageSize));
     }
-
-    [HttpGet("{id}/transcription")]
-    public async Task<ActionResult<ApiResponse<VoiceTranscriptionDto>>> GetTranscription(int id, CancellationToken ct)
-        => await ExecuteAsync(() => transcriptionService.GetTranscriptionAsync(id, ct));
-
-    [HttpPost("{id}/transcription/retry")]
-    public async Task<IActionResult> RetryTranscription(int id, CancellationToken ct)
-        => await ExecuteAsync(() => transcriptionService.RetryTranscriptionAsync(id, ct), "Расшифровка запущена повторно");
 }

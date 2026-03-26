@@ -33,8 +33,6 @@ public static class MessageMappings
 
             IsVoiceMessage = voice != null,
             VoiceDurationSeconds = voice?.DurationSeconds,
-            TranscriptionStatus = isDeleted ? null : voice?.TranscriptionStatus,
-            TranscriptionText = isDeleted ? null : voice?.TranscriptionText,
             VoiceFileUrl = isDeleted ? null : voice?.FilePath.BuildFullUrl(urlBuilder),
             VoiceFileName = voice?.FileName,
             VoiceContentType = voice?.ContentType,

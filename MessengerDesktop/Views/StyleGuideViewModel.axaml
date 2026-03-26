@@ -731,44 +731,6 @@
 													Width="16" Height="16"/>
 												</Button>
 											</StackPanel>
-
-											<StackPanel Spacing="6" Margin="0,0,16,12"
-														HorizontalAlignment="Center">
-												<Border Classes="StyleLabel"
-														HorizontalAlignment="Center">
-													<TextBlock Text="TranscribeBtn"/>
-												</Border>
-												<Button Classes="TranscribeBtn">
-													<PathIcon
-													Data="M9,5A4,4 0 0,1 13,9H11A2,2 0 0,0 9,7V5Z"
-													Width="14" Height="14"/>
-												</Button>
-											</StackPanel>
-
-											<StackPanel Spacing="6" Margin="0,0,16,12"
-														HorizontalAlignment="Center">
-												<Border Classes="StyleLabel"
-														HorizontalAlignment="Center">
-													<TextBlock
-													Text="TranscribeBtn Active"/>
-												</Border>
-												<Button Classes="TranscribeBtn Active">
-													<PathIcon
-													Data="M9,5A4,4 0 0,1 13,9H11A2,2 0 0,0 9,7V5Z"
-													Width="14" Height="14"/>
-												</Button>
-											</StackPanel>
-
-											<StackPanel Spacing="6" Margin="0,0,16,12"
-														HorizontalAlignment="Center">
-												<Border Classes="StyleLabel"
-														HorizontalAlignment="Center">
-													<TextBlock
-													Text="RetryTranscription"/>
-												</Border>
-												<Button Classes="RetryTranscription"
-														Content="Повторить"/>
-											</StackPanel>
 										</WrapPanel>
 									</StackPanel>
 								</Border>
@@ -1468,21 +1430,7 @@
 											</Border>
 										</StackPanel>
 
-										<StackPanel Spacing="4">
-											<Border Classes="StyleLabel">
-												<TextBlock
-												Text="TranscriptionPanel"/>
-											</Border>
-											<Border
-											Classes="TranscriptionPanel"
-											MaxWidth="340"
-											HorizontalAlignment="Left">
-												<TextBlock
-												Text="Расшифровка голосового сообщения..."
-												TextWrapping="Wrap"
-												FontSize="13"/>
-											</Border>
-										</StackPanel>
+										
 									</StackPanel>
 								</Border>
 

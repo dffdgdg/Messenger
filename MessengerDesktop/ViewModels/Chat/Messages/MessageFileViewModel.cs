@@ -67,19 +67,13 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
 
     private string FileExtension => Path.GetExtension(FileName) ?? string.Empty;
 
-    private bool IsPdfFile =>
-        ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-        || PdfExtensions.Contains(FileExtension);
+    private bool IsPdfFile => ContentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) || PdfExtensions.Contains(FileExtension);
 
-    private bool IsWordFile =>
-        ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase)
-        || WordExtensions.Contains(FileExtension);
+    private bool IsWordFile => ContentType.Contains("word", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("document", StringComparison.OrdinalIgnoreCase) || WordExtensions.Contains(FileExtension);
 
-    private bool IsExcelFile =>
-        ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
-        || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase)
-        || ExcelExtensions.Contains(FileExtension);
+    private bool IsExcelFile => ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
+        || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) || ExcelExtensions.Contains(FileExtension);
 
     private bool IsArchiveFile =>
         ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
@@ -173,10 +167,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
         lock (_ctsLock)
         {
             try { _downloadCts?.Cancel(); }
-            catch (ObjectDisposedException)
-            {
-                // CTS уже был удалён, ничего делать не нужно
-            }
+            catch (ObjectDisposedException) { /* CTS уже был удалён */ }
         }
     }
 
@@ -194,11 +185,9 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
             else if (!IsDownloaded && !IsDownloading)
             {
                 await DownloadAsync();
-                if (IsDownloaded &&
-                    !string.IsNullOrEmpty(DownloadedFilePath))
+                if (IsDownloaded && !string.IsNullOrEmpty(DownloadedFilePath))
                 {
-                    await downloadService.OpenFileAsync(
-                        DownloadedFilePath);
+                    await downloadService.OpenFileAsync(DownloadedFilePath);
                 }
             }
         }
@@ -239,10 +228,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
                 _downloadCts?.Cancel();
                 _downloadCts?.Dispose();
             }
-            catch
-            {
-                // Игнорируем исключения при очистке, так как объект уже может быть в процессе удаления
-            }
+            catch { /* Объект уже может быть в процессе удаления */ }
             _downloadCts = null;
         }
     }
@@ -276,18 +262,10 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
             return "…" + extension;
 
         var trimmedName = nameWithoutExtension.Length > availableNameLength
-                ? nameWithoutExtension[..availableNameLength]
-                : nameWithoutExtension;
+                ? nameWithoutExtension[..availableNameLength] : nameWithoutExtension;
 
         return $"{trimmedName}…{extension}";
     }
 }
 
-public enum DownloadState
-{
-    NotStarted,
-    Downloading,
-    Completed,
-    Failed,
-    Cancelled
-}
+public enum DownloadState { NotStarted, Downloading, Completed, Failed, Cancelled }

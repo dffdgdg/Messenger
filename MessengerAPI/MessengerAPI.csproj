@@ -32,7 +32,6 @@
 		<PackageReference Include="SixLabors.ImageSharp.Web" Version="3.2.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.6" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
-		<PackageReference Include="Vosk" Version="0.3.38" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\MessengerShared\MessengerShared.csproj" />
@@ -41,8 +40,5 @@
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
 		<None Include="Dockerfile" />
-	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="Whisper\Models\" />
 	</ItemGroup>
 </Project>

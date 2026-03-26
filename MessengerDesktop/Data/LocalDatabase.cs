@@ -21,11 +21,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         if (string.IsNullOrWhiteSpace(dbPath))
             throw new ArgumentNullException(nameof(dbPath));
 
-        _db = new SQLiteAsyncConnection(
-            dbPath,
-            SQLiteOpenFlags.ReadWrite |
-            SQLiteOpenFlags.Create |
-            SQLiteOpenFlags.FullMutex);
+        _db = new SQLiteAsyncConnection(dbPath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
 
         Debug.WriteLine($"[LocalDB] Path: {dbPath}");
     }
@@ -102,8 +98,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 
         if (currentVersion < 1)
         {
-            Debug.WriteLine(
-                "[LocalDB] Migrating to schema v1 (initial)");
+            Debug.WriteLine("[LocalDB] Migrating to schema v1 (initial)");
         }
 
         await _db.ExecuteAsync($"PRAGMA user_version = {SchemaVersion}");
@@ -128,18 +123,10 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
     {
         await _db.RunInTransactionAsync(conn =>
         {
-            conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id " +
-                "ON messages(chat_id, id DESC)");
-            conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc " +
-                "ON messages(chat_id, id ASC)");
-            conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_chats_last_msg " +
-                "ON chats(last_message_date DESC)");
-            conn.Execute(
-                "CREATE INDEX IF NOT EXISTS idx_chats_type_date " +
-                "ON chats(type, last_message_date DESC)");
+            conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id ON messages(chat_id, id DESC)");
+            conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc ON messages(chat_id, id ASC)");
+            conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_last_msg ON chats(last_message_date DESC)");
+            conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
         });
 
         Debug.WriteLine("[LocalDB] Indexes created");
@@ -149,13 +136,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
     {
         try
         {
-            await _db.ExecuteAsync(@"
-                CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts 
-                USING fts5(
-                    content, 
-                    content=messages, 
-                    content_rowid=id
-                )");
+            await _db.ExecuteAsync("CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content, content=messages, content_rowid=id)");
 
             await _db.ExecuteAsync(@"
                 CREATE TRIGGER IF NOT EXISTS trg_msg_fts_ins 

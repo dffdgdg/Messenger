@@ -215,7 +215,6 @@
                                     OpenProfileCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).OpenProfileCommand}"
                                     ReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).Reply.StartReplyCommand}"
                                     ScrollToReplyCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).Reply.ScrollToReplyOriginalCommand}"
-                                    RetryTranscriptionCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).Voice.RetryTranscriptionCommand}"
                                     ForwardCommand="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).Forward.StartForwardCommand}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

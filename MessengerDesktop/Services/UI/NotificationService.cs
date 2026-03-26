@@ -7,13 +7,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.Services.UI;
 
-public enum DesktopNotificationType
-{
-    Information,
-    Success,
-    Warning,
-    Error
-}
+public enum DesktopNotificationType { Information, Success, Warning, Error }
 
 public interface INotificationService : IDisposable
 {
@@ -143,10 +137,7 @@ public class NotificationService : INotificationService
             await Task.Delay(notification.DurationMs, ct);
             await Dispatcher.UIThread.InvokeAsync(() => CloseNotificationAsync(notification));
         }
-        catch (OperationCanceledException)
-        {
-            // Уведомление закрыто досрочно
-        }
+        catch (OperationCanceledException) { /* Уведомление закрыто досрочно */ }
     }
 
     private async Task CloseNotificationAsync(DesktopNotificationViewModel notification)
@@ -213,13 +204,8 @@ public class NotificationService : INotificationService
     }
 }
 
-public sealed partial class DesktopNotificationViewModel(
-    string title,
-    string message,
-    DesktopNotificationType type,
-    int durationMs,
-    Func<DesktopNotificationViewModel, Task> closeAsync,
-    Func<Task>? onClick = null) : ObservableObject, IDisposable
+public sealed partial class DesktopNotificationViewModel(string title,string message,DesktopNotificationType type,int durationMs,
+    Func<DesktopNotificationViewModel, Task> closeAsync, Func<Task>? onClick = null) : ObservableObject, IDisposable
 {
     private readonly Func<DesktopNotificationViewModel, Task> _closeAsync = closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
     private int _disposed;

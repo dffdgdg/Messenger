@@ -24,8 +24,6 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, int, int?, DateTime?>? MessageRead;
     event Action<int, UserDto>? MemberJoined;
     event Action<int, int>? MemberLeft;
-    event Action<VoiceTranscriptionDto>? TranscriptionStatusChanged;
-    event Action<VoiceTranscriptionDto>? TranscriptionCompleted;
     event Action? Reconnected;
 
     bool IsConnected { get; }
@@ -76,8 +74,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, UserDto>? MemberJoined;
     public event Action<int, int>? MemberLeft;
-    public event Action<VoiceTranscriptionDto>? TranscriptionStatusChanged;
-    public event Action<VoiceTranscriptionDto>? TranscriptionCompleted;
     public event Action? Reconnected;
 
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
@@ -104,9 +100,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
         try
         {
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{App.ApiUrl}chatHub", options =>
-                options.AccessTokenProvider = () => Task.FromResult(_authManager.Session.Token))
+            _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options => options.AccessTokenProvider = () => Task.FromResult(_authManager.Session.Token))
                 .WithAutomaticReconnect().Build();
 
             SubscribeHubEvents();
@@ -145,8 +139,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         _hubSubscriptions.Add(_hubConnection.On<int, int, int?, DateTime?>("MessageRead", OnMessageReadReceived));
         _hubSubscriptions.Add(_hubConnection.On<int, UserDto>("MemberJoined", OnMemberJoinedReceived));
         _hubSubscriptions.Add(_hubConnection.On<int, int>("MemberLeft", OnMemberLeftReceived));
-        _hubSubscriptions.Add(_hubConnection.On<VoiceTranscriptionDto>("TranscriptionStatusChanged", OnTranscriptionStatusChangedReceived));
-        _hubSubscriptions.Add(_hubConnection.On<VoiceTranscriptionDto>("TranscriptionCompleted", OnTranscriptionCompletedReceived));
     }
 
     /// <summary>
@@ -469,12 +461,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     private void OnMemberLeftReceived(int chatId, int userId)
         => Dispatcher.UIThread.Post(() => MemberLeft?.Invoke(chatId, userId));
 
-    private void OnTranscriptionStatusChangedReceived(VoiceTranscriptionDto transcription)
-       => Dispatcher.UIThread.Post(() => TranscriptionStatusChanged?.Invoke(transcription));
-
-    private void OnTranscriptionCompletedReceived(VoiceTranscriptionDto transcription)
-        => Dispatcher.UIThread.Post(() => TranscriptionCompleted?.Invoke(transcription));
-
     #endregion
 
     #region Helpers
@@ -506,8 +492,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
                     _currentChatId.Value);
                 if (syncState?.NewestLoadedId != null)
                 {
-                    Debug.WriteLine($"[GlobalHub] Reconcile: checking gap for chat {_currentChatId.Value}, " +
-                        $"newestCached={syncState.NewestLoadedId}");
+                    Debug.WriteLine($"[GlobalHub] Reconcile: checking gap for chat {_currentChatId.Value}, newestCached={syncState.NewestLoadedId}");
                 }
             }
 
@@ -541,8 +526,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     }
 
     private static string FormatNotificationMessage(NotificationDto notification)
-        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос"
-            : $"{notification.SenderName}: {notification.Preview}";
+        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
 
     private Task OpenNotificationAsync(NotificationDto notification)
     {

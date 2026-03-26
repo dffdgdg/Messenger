@@ -18,12 +18,7 @@ public interface IUserService
     Task<Result> ChangePasswordAsync(int id, ChangePasswordDto dto, CancellationToken ct = default);
 }
 
-public partial class UserService(
-    MessengerDbContext context,
-    IFileService fileService,
-    IOnlineUserService onlineService,
-    IUrlBuilder urlBuilder,
-    ILogger<UserService> logger)
+public partial class UserService(MessengerDbContext context,IFileService fileService,IOnlineUserService onlineService,IUrlBuilder urlBuilder,ILogger<UserService> logger)
     : BaseService<UserService>(context, logger), IUserService
 {
     [GeneratedRegex("^[a-z0-9_]{3,30}$")]
@@ -31,30 +26,23 @@ public partial class UserService(
 
     public async Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default)
     {
-        var users = await _context.Users
-            .Include(u => u.Department)
-            .Include(u => u.UserSetting)
-            .AsNoTracking()
-            .ToListAsync(ct);
+        var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync(ct);
 
         var onlineIds = onlineService.GetOnlineUserIds();
 
-        var result = users.ConvertAll(u =>
-            u.ToDto(urlBuilder, onlineIds.Contains(u.Id)));
+        var result = users.ConvertAll(u => u.ToDto(urlBuilder, onlineIds.Contains(u.Id)));
 
         return Result<List<UserDto>>.Success(result);
     }
 
     public async Task<Result<UserDto>> GetUserAsync(int id, CancellationToken ct = default)
     {
-        var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.Department)
-            .AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
+        var user = await _context.Users.Include(u => u.UserSetting).Include(u => u.Department).AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {id} не найден");
 
-        return Result<UserDto>.Success(
-            user.ToDto(urlBuilder, onlineService.IsOnline(id)));
+        return Result<UserDto>.Success(user.ToDto(urlBuilder, onlineService.IsOnline(id)));
     }
 
     public async Task<Result> UpdateUserAsync(int id, UserDto dto, CancellationToken ct = default)
@@ -62,8 +50,7 @@ public partial class UserService(
         if (id != dto.Id)
             return Result.Failure("Несоответствие ID");
 
-        var user = await _context.Users.Include(u => u.UserSetting)
-            .FirstOrDefaultAsync(u => u.Id == id, ct);
+        var user = await _context.Users.Include(u => u.UserSetting).FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user is null)
             return Result.NotFound($"Пользователь с ID {id} не найден");
@@ -108,39 +95,26 @@ public partial class UserService(
     }
 
     public Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default)
-    {
-        var ids = onlineService.GetOnlineUserIds().ToList();
-        return Task.FromResult(Result<OnlineUsersResponseDto>.Success(
-            new OnlineUsersResponseDto
-            {
-                OnlineUserIds = ids,
-                TotalOnline = ids.Count
-            }));
-    }
+        => Task.FromResult(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto { OnlineUserIds = [.. onlineService.GetOnlineUserIds()],
+            TotalOnline = onlineService.GetOnlineUserIds().ToList().Count }));
 
     public async Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _context.Users.AsNoTracking()
-            .Select(u => new { u.Id, u.LastOnline })
-            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline }).FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-        return Result<OnlineStatusDto>.Success(
-            new OnlineStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
+        return Result<OnlineStatusDto>.Success(new OnlineStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
     }
 
-    public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(
-        List<int> userIds, CancellationToken ct = default)
+    public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)
     {
         if (userIds is null || userIds.Count == 0)
             return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
-        var users = await _context.Users.Where(u => userIds.Contains(u.Id)).AsNoTracking()
-            .Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
+        var users = await _context.Users.Where(u => userIds.Contains(u.Id)).AsNoTracking().Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
 
         var onlineIds = onlineService.FilterOnline(userIds);
 
-        var result = users.ConvertAll(u =>
-            new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+        var result = users.ConvertAll(u => new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
         return Result<List<OnlineStatusDto>>.Success(result);
     }

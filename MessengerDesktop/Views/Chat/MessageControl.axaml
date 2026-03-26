@@ -86,16 +86,6 @@
                                   Width="14" Height="14" Stretch="Uniform"/>
                         </MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Копировать расшифровку"
-                              Command="{Binding #BubbleRoot.CopyTextCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding HasTranscriptionText}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CopyIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
                     <MenuItem Header="Скачать аудио"
                               Command="{Binding DownloadVoiceCommand}"
                               IsVisible="{Binding ShowVoiceMessage}">
@@ -186,8 +176,7 @@
                             <shared:ForwardHeaderBlock/>
                             <shared:ReplyPreviewBlock
                                 ScrollToReplyCommand="{Binding #BubbleRoot.ScrollToReplyCommand}"/>
-                            <parts:VoiceMessagePart
-                                RetryTranscriptionCommand="{Binding #BubbleRoot.RetryTranscriptionCommand}"/>
+                            <parts:VoiceMessagePart/>
                             <parts:TextMessagePart/>
                             <parts:DeletedMessagePart/>
                         </StackPanel>

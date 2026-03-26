@@ -9,20 +9,12 @@ public interface IPollService
     Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto);
 }
 
-public class PollService(
-    MessengerDbContext context,
-    IAccessControlService accessControl,
-    IHubNotifier hubNotifier,
-    IUrlBuilder urlBuilder,
-    ILogger<PollService> logger)
-    : BaseService<PollService>(context, logger), IPollService
+public class PollService(MessengerDbContext context,IAccessControlService accessControl,IHubNotifier hubNotifier,
+    IUrlBuilder urlBuilder,ILogger<PollService> logger) : BaseService<PollService>(context, logger), IPollService
 {
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
-        var poll = await _context.Polls
-            .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-            .Include(p => p.Message)
-            .AsNoTracking()
+        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == pollId);
 
         if (poll is null)
@@ -84,10 +76,7 @@ public class PollService(
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        var createdMessage = await _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.Polls).ThenInclude(p => p.PollOptions)
-            .FirstOrDefaultAsync(m => m.Id == message.Id);
+        var createdMessage = await _context.Messages.Include(m => m.Sender).Include(m => m.Polls).ThenInclude(p => p.PollOptions).FirstOrDefaultAsync(m => m.Id == message.Id);
 
         if (createdMessage is null)
             return Result<MessageDto>.Internal("Не удалось загрузить созданное сообщение");
@@ -103,10 +92,7 @@ public class PollService(
 
     public async Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto)
     {
-        var poll = await _context.Polls
-            .Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-            .Include(p => p.Message)
-            .FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
+        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).FirstOrDefaultAsync(p => p.Id == voteDto.PollId);
 
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос {voteDto.PollId} не найден");

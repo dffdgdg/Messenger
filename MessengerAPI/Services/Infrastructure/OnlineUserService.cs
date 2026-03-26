@@ -18,8 +18,7 @@ public sealed class OnlineUserService : IOnlineUserService
 
     public OnlineUserService()
     {
-        _cleanupTimer = new Timer(callback: _ => CleanupEmptyEntries(), state: null,
-            dueTime: TimeSpan.FromMinutes(5), period: TimeSpan.FromMinutes(5));
+        _cleanupTimer = new Timer(callback: _ => CleanupEmptyEntries(), state: null, dueTime: TimeSpan.FromMinutes(5), period: TimeSpan.FromMinutes(5));
     }
 
     public void UserConnected(int userId, string connectionId)
@@ -53,11 +52,8 @@ public sealed class OnlineUserService : IOnlineUserService
         var removedCount = 0;
 
         foreach (var kvp in _connections)
-        {
-            if (kvp.Value.IsEmpty && _connections.TryRemove(kvp))
-            {
-                removedCount++;
-            }
+        { if (kvp.Value.IsEmpty && _connections.TryRemove(kvp))
+            { removedCount++; }
         }
     }
 
@@ -65,7 +61,6 @@ public sealed class OnlineUserService : IOnlineUserService
     {
         if (_disposed) return;
         _disposed = true;
-
         _cleanupTimer.Dispose();
     }
 }

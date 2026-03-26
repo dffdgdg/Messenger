@@ -53,8 +53,7 @@ public sealed class MissingFileCleanupMiddleware(RequestDelegate next)
 
         await dbContext.SaveChangesAsync(context.RequestAborted);
 
-        logger.LogInformation(
-            "Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}",
+        logger.LogInformation("Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}",
             relativePath,messageFiles.Count,usersWithAvatar.Count,chatsWithAvatar.Count);
     }
 

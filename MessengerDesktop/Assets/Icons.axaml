@@ -58,7 +58,6 @@
 	<StreamGeometry x:Key="CameraIcon">M12 15.2c-1.77 0-3.2-1.43-3.2-3.2s1.43-3.2 3.2-3.2 3.2 1.43 3.2 3.2-1.43 3.2-3.2 3.2zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z</StreamGeometry>
 	<StreamGeometry x:Key="PlayIcon">M8 5v14l11-7z</StreamGeometry>
 	<StreamGeometry x:Key="PauseIcon">M6 19h4V5H6v14zm8-14v14h4V5h-4z</StreamGeometry>
-	<StreamGeometry x:Key="TranscribeIcon">M5 17V19H19V17H5ZM9.5 12.8L12 5L14.5 12.8H17L12 3H12L7 12.8H9.5Z</StreamGeometry>
 	<StreamGeometry x:Key="LogoIcon">M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18</StreamGeometry>
 	<StreamGeometry x:Key="HelpIcon">M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z</StreamGeometry>
 

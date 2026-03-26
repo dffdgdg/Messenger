@@ -12,18 +12,17 @@ namespace MessengerDesktop.ViewModels.Chat;
 public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelReply) : ChatFeatureHandler(context)
 {
     private IAudioRecorderService _audioRecorder = null!;
-    private TranscriptionPoller _transcriptionPoller = null!;
     private CancellationTokenSource? _voiceSendCts;
     private CancellationTokenSource? _autoStopCts;
 
     private const double MinDuration = 0.5;
     private const double MaxDuration = 300;
 
-    [ObservableProperty] private bool _isVoiceRecording;
-    [ObservableProperty] private bool _isVoiceSending;
-    [ObservableProperty] private string _voiceElapsed = "0:00";
-    [ObservableProperty] private string? _voiceError;
-    [ObservableProperty] private bool _isVoiceSupported;
+    [ObservableProperty] public partial bool IsVoiceRecording { get; set; }
+    [ObservableProperty] public partial bool IsVoiceSending { get; set; }
+    [ObservableProperty] public partial string VoiceElapsed { get; set; } = "0:00";
+    [ObservableProperty] public partial string? VoiceError { get; set; }
+    [ObservableProperty] public partial bool IsVoiceSupported { get; set; }
 
     private VoiceRecordingViewModel? _voiceRecording;
     public VoiceRecordingViewModel? VoiceRecording
@@ -35,7 +34,6 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
     public void Initialize(IAudioRecorderService audioRecorder)
     {
         _audioRecorder = audioRecorder;
-        _transcriptionPoller = new TranscriptionPoller(Ctx.Api);
         IsVoiceSupported = _audioRecorder.IsSupported;
     }
 
@@ -81,10 +79,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
             if (IsVoiceRecording && IsAlive)
                 await StopAndSend();
         }
-        catch (OperationCanceledException)
-        {
-            // Отмена нормальная, не считаем ошибкой
-        }
+        catch (OperationCanceledException) { /* Отмена нормальная, не считаем ошибкой */ }
     }
 
     [RelayCommand]
@@ -179,58 +174,18 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
                 VoiceFileSize = uploadResult.Data.FileSize
             };
 
-            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(
-                ApiEndpoints.Messages.Create, msg, ct);
+            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
 
-            if (sendResult.Success)
-                cancelReply();
-            else
-                VoiceError = $"Ошибка отправки: {sendResult.Error}";
+            if (sendResult.Success) cancelReply();
+            else VoiceError = $"Ошибка отправки: {sendResult.Error}";
         }
-        catch (OperationCanceledException)
-        {
-            // Отмена пользователем, не считаем ошибкой
-        }
-        catch (Exception ex)
-        {
-            VoiceError = $"Ошибка: {ex.Message}";
-        }
+        catch (OperationCanceledException) { /* Отмена пользователем */ }
+        catch (Exception ex) { VoiceError = $"Ошибка: {ex.Message}"; }
         finally
         {
             recording.Dispose();
             ResetState();
         }
-    }
-
-    public void StartTranscriptionPollingIfNeeded(MessageViewModel message)
-    {
-        if (!message.IsVoiceMessage) return;
-        if (message.TranscriptionStatus is TranscriptionStatus.Done or null)
-            return;
-
-        _transcriptionPoller.StartPolling(message.Id, result =>
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (!IsAlive) return;
-                message.UpdateTranscription(result.Status, result.Transcription);
-            });
-        });
-    }
-
-    [RelayCommand]
-    private async Task RetryTranscription(MessageViewModel? message)
-    {
-        if (message?.IsVoiceMessage != true) return;
-
-        message.UpdateTranscription(TranscriptionStatus.Pending, null);
-
-        var result = await Ctx.Api.PostAsync(ApiEndpoints.Messages.TranscriptionRetry(message.Id), null);
-
-        if (result.Success)
-            StartTranscriptionPollingIfNeeded(message);
-        else
-            message.UpdateTranscription(TranscriptionStatus.Failed, null);
     }
 
     private void ResetState()
@@ -248,7 +203,6 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
         _voiceSendCts?.Cancel();
         _voiceSendCts?.Dispose();
         _voiceRecording?.Dispose();
-        _transcriptionPoller?.Dispose();
         base.Dispose();
     }
 }

@@ -29,7 +29,7 @@
 *   **Real-time:** Мгновенные уведомления, статусы набора текста, чтения, онлайн/офлайн через SignalR.
 *   **Кэширование:** Быстрый оффлайн доступ к истории чатов через SQLite + FTS5 поиск.
 *   **Файлы:** Отправка файлов до 100 МБ, автоконвертация аватаров (WebP).
-*   **Голосовые:** Запись микрофона, автоматическая расшифровка текстом (**Vosk**).
+*   **Голосовые:** Запись микрофона.
 
 ---
 
@@ -74,7 +74,6 @@
 | **ORM (Client)** | sqlite-net-pcl | 1.9.172 |
 | **База данных** | PostgreSQL + Npgsql | 16 / 9.0+ |
 | **Audio** | NAudio | 2.2.1 |
-| **STT** | Vosk | 0.3.38 |
 | **Security** | JwtBearer, BCrypt.Net-Next | 8.0.22 / 4.0.3 |
 | **Images** | SixLabors.ImageSharp.Web | 3.2.0 |
 
@@ -89,7 +88,7 @@
 │   ├── 📂 Dto/                 # Объекты передачи данных
 │   │   ├── Auth/               # LoginRequest, TokenResponseDto
 │   │   ├── Chat/               # ChatDto, ChatMemberDto
-│   │   ├── Message/            # MessageDto, VoiceTranscriptionDto
+│   │   ├── Message/            # MessageDto
 │   │   ├── User/               # UserDto, CreateUserDto
 │   │   └── ...                 # Polls, Notifications, Departments
 │   ├── 📂 Enum/                # Типы данных (ChatType, Role, Theme)
@@ -107,7 +106,7 @@
 │   ├── 📂 Models/              # EF Core Entities + DbContext
 │   ├── 📂 Services/            # Бизнес-логика
 │   │   ├── Infrastructure/     # CacheService, AccessControlService, HubNotifier
-│   │   ├── Messaging/          # MessageService, FileService, TranscriptionService
+│   │   ├── Messaging/          # MessageService, FileService
 │   │   └── ...                 # AuthService, ChatService
 │   ├── 📂 Middleware/          # ExceptionHandling, RateLimiting
 │   ├── 📂 Configuration/       # DI, Swagger, AppSettings

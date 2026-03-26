@@ -37,16 +37,14 @@ public sealed class DepartmentsController(IDepartmentService departmentService, 
     public async Task<IActionResult> AddUserToDepartment(int id, [FromBody] UpdateDepartmentMemberDto dto, CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => departmentService.AddUserToDepartmentAsync(id, dto.UserId, currentUserId, ct),
-            "Пользователь добавлен в отдел");
+        return await ExecuteAsync(() => departmentService.AddUserToDepartmentAsync(id, dto.UserId, currentUserId, ct), "Пользователь добавлен в отдел");
     }
 
     [HttpDelete("{id}/members/{userId}")]
     public async Task<IActionResult> RemoveUserFromDepartment(int id, int userId, CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => departmentService.RemoveUserFromDepartmentAsync(id, userId, currentUserId, ct),
-            "Пользователь удалён из отдела");
+        return await ExecuteAsync(() => departmentService.RemoveUserFromDepartmentAsync(id, userId, currentUserId, ct), "Пользователь удалён из отдела");
     }
 
     [HttpGet("{id}/can-manage")]

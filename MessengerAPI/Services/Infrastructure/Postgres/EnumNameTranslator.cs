@@ -11,8 +11,5 @@ public class EnumNameTranslator(IReadOnlyDictionary<string, string> memberNames)
         => Fallback.TranslateTypeName(clrName);
 
     public string TranslateMemberName(string clrName)
-        => memberNames.TryGetValue(clrName, out var mappedName)
-            ? mappedName
-            : Fallback.TranslateMemberName(clrName);
-
+        => memberNames.TryGetValue(clrName, out var mappedName) ? mappedName : Fallback.TranslateMemberName(clrName);
 }

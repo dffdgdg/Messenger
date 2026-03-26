@@ -43,8 +43,7 @@ public partial class MessengerDbContext : DbContext
             .HasPostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
             .HasPostgresEnum<ChatType>(name: "chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator)
             .HasPostgresEnum<Theme>("theme")
-            .HasPostgresEnum<SystemEventType>("system_event_type")
-            .HasPostgresEnum<TranscriptionStatus>(name: "transcription_status", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.TranscriptionStatusNameTranslator);
+            .HasPostgresEnum<SystemEventType>("system_event_type");
 
         modelBuilder.Entity<Chat>(entity =>
         {
@@ -229,14 +228,6 @@ public partial class MessengerDbContext : DbContext
 
             entity.Property(e => e.DurationSeconds)
                 .HasColumnName("duration_seconds");
-
-            entity.Property(e => e.TranscriptionStatus)
-                .HasColumnName("transcription_status")
-                .HasColumnType("transcription_status")
-                .HasDefaultValue(TranscriptionStatus.Pending);
-
-            entity.Property(e => e.TranscriptionText)
-                .HasColumnName("transcription_text");
 
             entity.Property(e => e.FilePath)
                 .HasColumnName("file_path");

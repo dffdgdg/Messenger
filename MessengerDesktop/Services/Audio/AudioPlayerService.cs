@@ -42,10 +42,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
     {
         get
         {
-            lock (_lock)
-            {
-                return _waveStream?.CurrentTime ?? TimeSpan.Zero;
-            }
+            lock (_lock) { return _waveStream?.CurrentTime ?? TimeSpan.Zero; }
         }
     }
 
@@ -53,10 +50,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
     {
         get
         {
-            lock (_lock)
-            {
-                return _waveStream?.TotalTime ?? TimeSpan.Zero;
-            }
+            lock (_lock) { return _waveStream?.TotalTime ?? TimeSpan.Zero; }
         }
     }
 
@@ -135,10 +129,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
 
     public void Stop()
     {
-        lock (_lock)
-        {
-            StopInternal();
-        }
+        lock (_lock) { StopInternal(); }
     }
 
     public void Seek(double positionPercent)

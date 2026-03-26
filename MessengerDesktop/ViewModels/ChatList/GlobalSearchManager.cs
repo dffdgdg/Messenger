@@ -11,17 +11,16 @@ public sealed partial class GlobalSearchManager(int userId, IApiClientService ap
     private CancellationTokenSource? _searchCts;
     private bool _disposed;
 
-    [ObservableProperty] private string _searchQuery = string.Empty;
-    [ObservableProperty] private bool _isSearching;
-    [ObservableProperty] private bool _isSearchMode;
-    [ObservableProperty] private int _totalMessagesCount;
-    [ObservableProperty] private bool _hasMoreMessages;
-    [ObservableProperty] private int? _chatLocalSearchChatId;
-    [ObservableProperty] private ChatType? _chatLocalSearchChatType;
-    [ObservableProperty] private string? _chatLocalSearchChatName;
-    [ObservableProperty] private string? _chatLocalSearchChatAvatar;
-    [ObservableProperty] private string? _errorMessage;
-
+    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsSearching { get; set; }
+    [ObservableProperty] public partial bool IsSearchMode { get; set; }
+    [ObservableProperty] public partial int TotalMessagesCount { get; set; }
+    [ObservableProperty] public partial bool HasMoreMessages { get; set; }
+    [ObservableProperty] public partial int? ChatLocalSearchChatId { get; set; }
+    [ObservableProperty] public partial ChatType? ChatLocalSearchChatType { get; set; }
+    [ObservableProperty] public partial string? ChatLocalSearchChatName { get; set; }
+    [ObservableProperty] public partial string? ChatLocalSearchChatAvatar { get; set; }
+    [ObservableProperty] public partial string? ErrorMessage { get; set; }
     public ObservableCollection<ChatListItemViewModel> ChatResults { get; } = [];
     public ObservableCollection<GlobalSearchMessageDto> MessageResults { get; } = [];
 
@@ -68,10 +67,7 @@ public sealed partial class GlobalSearchManager(int userId, IApiClientService ap
             if (ct.IsCancellationRequested) return;
             await ExecuteSearchAsync(query, ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Expected debounce cancellation
-        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { /* Expected */ }
     }
 
     public async Task ExecuteSearchAsync(string query, CancellationToken ct = default)

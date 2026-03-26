@@ -50,13 +50,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
 
     public DialogService()
     {
-        _closeRequests = Channel.CreateBounded<CloseRequest>(
-            new BoundedChannelOptions(10)
-            {
-                FullMode = BoundedChannelFullMode.DropOldest,
-                SingleReader = true
-            });
-
+        _closeRequests = Channel.CreateBounded<CloseRequest>(new BoundedChannelOptions(10) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
         _ = ProcessCloseRequestsAsync(_processingCts.Token);
     }
 
@@ -82,14 +76,10 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
                 }
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Expected on disposal
-        }
+        catch (OperationCanceledException) { /* Expected on disposal */ }
     }
 
-    public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel)
-        where TViewModel : DialogBaseViewModel
+    public async Task ShowAsync<TViewModel>(TViewModel dialogViewModel) where TViewModel : DialogBaseViewModel
     {
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(dialogViewModel);
@@ -232,10 +222,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
 
             await tcs.Task;
         }
-        catch (OperationCanceledException)
-        {
-            // Expected
-        }
+        catch (OperationCanceledException) { /* Expected */ }
         finally
         {
             lock (_animationLock)

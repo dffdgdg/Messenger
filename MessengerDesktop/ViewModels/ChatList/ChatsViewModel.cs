@@ -56,6 +56,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     public partial int TotalUnreadCount { get; set; }
 
     public bool IsSearchMode => SearchManager?.IsSearchMode is true;
+    public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode is true;
+    public bool CombinedIsInfoPanelVisible => CurrentChatViewModel?.IsInfoPanelOpen == true;
 
     public ChatsViewModel(MainMenuViewModel parent, bool isGroupMode, IApiClientService apiClient, IAuthManager authManager,
         IChatViewModelFactory chatViewModelFactory, IGlobalHubConnection globalHub, ILocalCacheService cacheService)
@@ -98,10 +100,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (e.PropertyName == nameof(GlobalSearchManager.IsChatLocalMode))
             OnPropertyChanged(nameof(IsChatLocalSearchMode));
     }
-
-    public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode is true;
-
-    #region Unread Count Handlers
 
     private void OnTotalUnreadChanged(int total) => TotalUnreadCount = total;
 
@@ -146,12 +144,10 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         return message.Content.Length > 100 ? message.Content[..100] + "..." : message.Content;
     }
 
-    #endregion
-
     private bool IsChatMatchingCurrentTab(ChatType chatType)
     {
         if (IsGroupMode)
-            return chatType == ChatType.Chat || chatType == ChatType.Department;
+            return chatType is ChatType.Chat or ChatType.Department;
         return chatType == ChatType.Contact;
     }
 
@@ -279,9 +275,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             }
 
             if (CurrentChatViewModel == null || CurrentChatViewModel.Chat?.Id != value.Id)
-            {
                 CurrentChatViewModel = _chatViewModelFactory.Create(value.Id, this);
-            }
         }
     }
 
@@ -359,9 +353,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 SearchManager.ExitSearch();
         }
     }
-
-    public bool CombinedIsInfoPanelVisible
-        => CurrentChatViewModel?.IsInfoPanelOpen == true;
 
     public async Task OpenOrCreateDialogWithUserAsync(UserDto user)
     {
@@ -494,56 +485,63 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
 
         if (SelectedChat?.Id == updatedChat.Id)
-        {
             SelectedChat = Chats.FirstOrDefault(c => c.Id == updatedChat.Id) ?? new ChatListItemViewModel(updatedChat);
-        }
     }
 
     private async Task LoadFreshChatsFromServerAsync(int userId)
     {
-        var endpoint = IsGroupMode ? ApiEndpoints.Chats.UserGroups(userId) : ApiEndpoints.Chats.UserDialogs(userId);
+        var endpoint = IsGroupMode
+            ? ApiEndpoints.Chats.UserGroups(userId)
+            : ApiEndpoints.Chats.UserDialogs(userId);
 
         var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
 
-        if (result.Success && result.Data != null)
+        if (!result.Success || result.Data == null)
         {
-            var orderedChats = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
-
-            foreach (var chat in orderedChats)
-                chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
-
-            var selectedId = SelectedChat?.Id;
-
-            Chats = new ObservableCollection<ChatListItemViewModel>(orderedChats.Select(c => new ChatListItemViewModel(c)));
-            TotalUnreadCount = _globalHub.GetTotalUnread();
-
-            if (selectedId.HasValue)
-            {
-                var restoredChat = Chats.FirstOrDefault(c => c.Id == selectedId.Value);
-                if (restoredChat != null && SelectedChat?.Id != restoredChat.Id)
-                    SelectedChat = restoredChat;
-            }
-
-            try
-            {
-                await _cacheService.UpsertChatsAsync(orderedChats);
-                Debug.WriteLine($"[ChatsVM] Cached {orderedChats.Count} {(IsGroupMode ? "groups" : "dialogs")}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatsVM] Cache write failed (non-critical): {ex.Message}");
-            }
+            HandleLoadError(result.Error);
+            return;
         }
-        else
+
+        var orderedChats = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
+
+        foreach (var chat in orderedChats)
+            chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
+
+        var selectedId = SelectedChat?.Id;
+
+        Chats = new ObservableCollection<ChatListItemViewModel>(orderedChats.Select(c => new ChatListItemViewModel(c)));
+        TotalUnreadCount = _globalHub.GetTotalUnread();
+
+        if (selectedId.HasValue)
         {
-            if (Chats.Count == 0)
-                ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
-            else
-                Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
+            var restoredChat = Chats.FirstOrDefault(c => c.Id == selectedId.Value);
+            if (restoredChat != null && SelectedChat?.Id != restoredChat.Id)
+                SelectedChat = restoredChat;
         }
+
+        await SaveChatsCacheAsync(orderedChats);
     }
 
-    #region IDisposable
+    private void HandleLoadError(string? error)
+    {
+        if (Chats.Count == 0)
+            ErrorMessage = $"Ошибка загрузки чатов: {error}";
+        else
+            Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {error}");
+    }
+
+    private async Task SaveChatsCacheAsync(List<ChatDto> chats)
+    {
+        try
+        {
+            await _cacheService.UpsertChatsAsync(chats);
+            Debug.WriteLine($"[ChatsVM] Cached {chats.Count} {(IsGroupMode ? "groups" : "dialogs")}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatsVM] Cache write failed (non-critical): {ex.Message}");
+        }
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -554,15 +552,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.TotalUnreadChanged -= OnTotalUnreadChanged;
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
-
             SearchManager?.PropertyChanged -= OnSearchManagerPropertyChanged;
-
             _subscribedChatVm?.PropertyChanged -= SubscribedChatVm_PropertyChanged;
         }
 
         _disposed = true;
         base.Dispose(disposing);
     }
-
-    #endregion
 }

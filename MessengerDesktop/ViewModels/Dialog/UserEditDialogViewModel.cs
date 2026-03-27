@@ -9,75 +9,51 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 {
     private readonly UserDto? _originalUser;
 
-    #region Основные данные
+    #region Properties
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Username { get; set; } = string.Empty;
-
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Surname { get; set; } = string.Empty;
-
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Name { get; set; } = string.Empty;
-
     [ObservableProperty]
     public partial string Midname { get; set; } = string.Empty;
-
-    #endregion
-
-    #region Пароль (только для нового пользователя)
-
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Password { get; set; } = string.Empty;
-
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
-    #endregion
+    [ObservableProperty] public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
 
-    #region Отдел
-
-    [ObservableProperty]
-    public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
-
-    [ObservableProperty]
-    public partial DepartmentDto? SelectedDepartment { get; set; }
+    [ObservableProperty] public partial DepartmentDto? SelectedDepartment { get; set; }
 
     #endregion
 
-    #region Состояние и Actions
+    #region Actions
 
-    /// <summary>
-    /// Action для создания нового пользователя
-    /// </summary>
     public Func<CreateUserDto, Task>? CreateAction { get; set; }
-
-    /// <summary>
-    /// Action для обновления существующего пользователя
-    /// </summary>
     public Func<UserDto, Task>? UpdateAction { get; set; }
+
+    #endregion
+
+    #region Computed Properties
 
     public bool IsNewUser => _originalUser == null;
 
-    public bool CanSave => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name) &&
+    public bool CanSave =>
+        !string.IsNullOrWhiteSpace(Username) &&
+        !string.IsNullOrWhiteSpace(Surname) &&
+        !string.IsNullOrWhiteSpace(Name) &&
         (!IsNewUser || (!string.IsNullOrWhiteSpace(Password) && Password == ConfirmPassword));
 
-    /// <summary>
-    /// Предпросмотр отображаемого имени
-    /// </summary>
-    public string DisplayNamePreview
-    {
-        get
-        {
-            var parts = new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
-            return string.Join(" ", parts);
-        }
-    }
+    public string DisplayNamePreview =>
+        string.Join(" ", new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     #endregion
 
@@ -85,12 +61,18 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     {
         _originalUser = user;
         Departments = departments ?? [];
-
-        Title = user == null ? "Создать сотрудника" : "Редактировать сотрудника";
+        Title = user == null ? "РЎРѕР·РґР°С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°" : "Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°";
         CanCloseOnBackgroundClick = true;
 
         if (user == null) return;
 
+        InitializeFromUser(user);
+    }
+
+    #region Initialization
+
+    private void InitializeFromUser(UserDto user)
+    {
         Username = user.Username ?? string.Empty;
         Surname = user.Surname ?? string.Empty;
         Name = user.Name ?? string.Empty;
@@ -101,6 +83,8 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
             SelectedDepartment = Departments.FirstOrDefault(d => d.Id == user.DepartmentId.Value);
         }
     }
+
+    #endregion
 
     #region Property Changed Handlers
 
@@ -124,97 +108,93 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     partial void OnConfirmPasswordChanged(string value) => ClearErrorIfValid();
 
-    private void ClearErrorIfValid()
-    {
-        if (CanSave) ErrorMessage = null;
-    }
+    private void ClearErrorIfValid() => ErrorMessage = CanSave ? null : ErrorMessage;
 
     #endregion
 
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task Save()
+    #region Validation
+
+    private string? Validate()
     {
         if (string.IsNullOrWhiteSpace(Username))
-        {
-            ErrorMessage = "Введите логин";
-            return;
-        }
+            return "Р’РІРµРґРёС‚Рµ Р»РѕРіРёРЅ";
 
         if (Username.Length < 3)
-        {
-            ErrorMessage = "Логин должен содержать минимум 3 символа";
-            return;
-        }
+            return "Р›РѕРіРёРЅ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 3 СЃРёРјРІРѕР»Р°";
 
         if (string.IsNullOrWhiteSpace(Surname))
-        {
-            ErrorMessage = "Введите фамилию";
-            return;
-        }
+            return "Р’РІРµРґРёС‚Рµ С„Р°РјРёР»РёСЋ";
 
         if (string.IsNullOrWhiteSpace(Name))
-        {
-            ErrorMessage = "Введите имя";
-            return;
-        }
+            return "Р’РІРµРґРёС‚Рµ РёРјСЏ";
 
         if (IsNewUser)
         {
             if (string.IsNullOrWhiteSpace(Password))
-            {
-                ErrorMessage = "Введите пароль";
-                return;
-            }
+                return "Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ";
 
             if (Password.Length < 6)
-            {
-                ErrorMessage = "Пароль должен содержать минимум 6 символов";
-                return;
-            }
+                return "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 6 СЃРёРјРІРѕР»РѕРІ";
 
             if (Password != ConfirmPassword)
-            {
-                ErrorMessage = "Пароли не совпадают";
-                return;
-            }
+                return "РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚";
+        }
+
+        return null;
+    }
+
+    #endregion
+
+    #region DTO Builders
+
+    private static string TrimLower(string value) => value.Trim().ToLower();
+
+    private static string? TrimOrNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private CreateUserDto BuildCreateDto() => new()
+    {
+        Username = TrimLower(Username),
+        Password = Password,
+        Surname = Surname.Trim(),
+        Name = Name.Trim(),
+        Midname = TrimOrNull(Midname),
+        DepartmentId = SelectedDepartment?.Id
+    };
+
+    private UserDto BuildUpdateDto() => new()
+    {
+        Id = _originalUser!.Id,
+        Username = TrimLower(Username),
+        Surname = Surname.Trim(),
+        Name = Name.Trim(),
+        Midname = TrimOrNull(Midname),
+        DepartmentId = SelectedDepartment?.Id
+    };
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
+    {
+        var validationError = Validate();
+        if (validationError != null)
+        {
+            ErrorMessage = validationError;
+            return;
         }
 
         await SafeExecuteAsync(async () =>
         {
             if (IsNewUser)
-            {
-                if (CreateAction == null) return;
-
-                var createDto = new CreateUserDto
-                {
-                    Username = Username.Trim().ToLower(),
-                    Password = Password,
-                    Surname = Surname.Trim(),
-                    Name = Name.Trim(),
-                    Midname = string.IsNullOrWhiteSpace(Midname) ? null : Midname.Trim(),
-                    DepartmentId = SelectedDepartment?.Id
-                };
-
-                await CreateAction(createDto);
-            }
+                await CreateAction?.Invoke(BuildCreateDto())!;
             else
-            {
-                if (UpdateAction == null) return;
-
-                var updateDto = new UserDto
-                {
-                    Id = _originalUser!.Id,
-                    Username = Username.Trim().ToLower(),
-                    Surname = Surname.Trim(),
-                    Name = Name.Trim(),
-                    Midname = string.IsNullOrWhiteSpace(Midname) ? null : Midname.Trim(),
-                    DepartmentId = SelectedDepartment?.Id
-                };
-
-                await UpdateAction(updateDto);
-            }
+                await UpdateAction?.Invoke(BuildUpdateDto())!;
 
             await RequestCloseAsync();
         });
     }
+    #endregion
 }

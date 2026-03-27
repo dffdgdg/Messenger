@@ -45,39 +45,38 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
 
         _cleanupCts?.Dispose();
         _cleanupCts = new CancellationTokenSource();
-        var ct = _cleanupCts.Token;
 
-        _ = Task.Run(async () =>
+        _ = RunCleanupLoopAsync(_cleanupCts.Token);
+    }
+
+    private async Task RunCleanupLoopAsync(CancellationToken ct)
+    {
+        try
         {
-            try
+            while (!ct.IsCancellationRequested)
             {
-                while (!ct.IsCancellationRequested)
-                {
-                    await Task.Delay(500, ct);
+                await Task.Delay(500, ct);
 
-                    var now = DateTime.UtcNow;
-                    var expired = _typingUsers.Where(p => (now - p.Value).TotalMilliseconds > AppConstants.TypingIndicatorDurationMs).Select(p => p.Key).ToList();
+                var now = DateTime.UtcNow;
+                var expired = _typingUsers.Where(p => (now - p.Value).TotalMilliseconds > AppConstants.TypingIndicatorDurationMs)
+                    .Select(p => p.Key).ToList();
 
-                    if (expired.Count > 0)
-                    {
-                        await Dispatcher.UIThread.InvokeAsync(() =>
-                        {
-                            foreach (var id in expired)
-                                _typingUsers.Remove(id);
-                            UpdateTypingText();
-                        });
-                    }
+                if (expired.Count > 0)
+                    await Dispatcher.UIThread.InvokeAsync(() => RemoveAndUpdate(expired));
 
-                    if (_typingUsers.Count == 0)
-                    {
-                        _cleanupRunning = false;
-                        return;
-                    }
-                }
+                if (_typingUsers.Count == 0)
+                    break;
             }
-            catch (OperationCanceledException) { /* Ignore cancellation */ }
-            finally { _cleanupRunning = false; }
-        }, ct);
+        }
+        catch (OperationCanceledException) { }
+        finally { _cleanupRunning = false; }
+    }
+
+    private void RemoveAndUpdate(List<int> userIds)
+    {
+        foreach (var id in userIds)
+            _typingUsers.Remove(id);
+        UpdateTypingText();
     }
 
     private void UpdateTypingText()

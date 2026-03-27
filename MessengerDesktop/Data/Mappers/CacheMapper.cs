@@ -41,7 +41,7 @@ public static class CacheMapper
         SenderAvatarUrl = dto.SenderAvatarUrl,
         ReplySenderName = dto.ReplyToMessage?.SenderName,
         ReplyContentPreview = dto.ReplyToMessage?.Content,
-        ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted ?? false,
+        ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
         ReplySenderId = dto.ReplyToMessage?.SenderId,
         ReplyChatId = dto.ReplyToMessage?.ChatId,
         ForwardSenderName = dto.ForwardedFrom?.OriginalSenderName,

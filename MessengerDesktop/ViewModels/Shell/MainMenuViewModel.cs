@@ -22,6 +22,10 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private readonly IAuthManager _authManager;
     private readonly IChatsViewModelFactory _chatsViewModelFactory;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IGlobalHubConnection _globalHub;
+    private readonly Stack<int> _backHistory = [];
+    private readonly Stack<int> _forwardHistory = [];
+
     private ChatsViewModel? _chatsViewModel;
     private ChatsViewModel? _contactsViewModel;
     private DepartmentManagementViewModel? _departmentViewModel;
@@ -29,8 +33,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private AdminViewModel? _adminViewModel;
     private SettingsViewModel? _settingsViewModel;
     private StyleGuideViewModel? _styleGuideViewModel;
-
     private CancellationTokenSource? _searchCts;
+
     [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
     [ObservableProperty] public partial int UserId { get; set; }
     [ObservableProperty] public partial string SearchText { get; set; } = string.Empty;
@@ -39,16 +43,12 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     [ObservableProperty] public partial bool IsSearching { get; set; }
     [ObservableProperty] public partial int SelectedMenuIndex { get; set; } = 1;
 
-    private readonly IGlobalHubConnection _globalHub;
-    private readonly Stack<int> _backHistory = [];
-    private readonly Stack<int> _forwardHistory = [];
-
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool ShowNoResults => HasSearchText && !IsSearching;
     public bool CanGoBack => _backHistory.Count > 0;
     public bool CanGoForward => _forwardHistory.Count > 0;
 
-    public MainMenuViewModel(MainWindowViewModel mainWindowViewModel,IApiClientService apiClient,IAuthManager authManager,
+    public MainMenuViewModel(MainWindowViewModel mainWindowViewModel, IApiClientService apiClient, IAuthManager authManager,
         IChatsViewModelFactory chatsViewModelFactory, IServiceProvider serviceProvider, IGlobalHubConnection globalHub)
     {
         _globalHub = globalHub;
@@ -80,8 +80,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     }
 
     [RelayCommand]
-    private void SetItem(int index)
-        => NavigateToMenu(index, addToHistory: true);
+    private void SetItem(int index) => NavigateToMenu(index, addToHistory: true);
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void GoBack()
@@ -109,6 +108,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         NavigateToMenu(nextIndex, addToHistory: false);
     }
 
+    public void SetActiveMenu(int index) => NavigateToMenu(index, addToHistory: true);
+
     private void NavigateToMenu(int index, bool addToHistory)
     {
         if (addToHistory && SelectedMenuIndex != index)
@@ -120,76 +121,57 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         SelectedMenuIndex = index;
         ClearSearch();
 
-        switch (index)
+        CurrentMenuViewModel = index switch
         {
-            case 0:
-                _settingsViewModel ??= _serviceProvider.GetRequiredService<SettingsViewModel>();
-                CurrentMenuViewModel = _settingsViewModel;
-                break;
-            case 1:
-            case 2:
-                _chatsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: true);
-                CurrentMenuViewModel = _chatsViewModel;
-                break;
-            case 3:
-                _profileViewModel ??= _serviceProvider.GetRequiredService<ProfileViewModel>();
-                CurrentMenuViewModel = _profileViewModel;
-                break;
-            case 4:
-                _adminViewModel ??= _serviceProvider.GetRequiredService<AdminViewModel>();
-                CurrentMenuViewModel = _adminViewModel;
-                break;
-            case 5:
-                _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false);
-                CurrentMenuViewModel = _contactsViewModel;
-                break;
-            case 6:
-                _styleGuideViewModel ??= _serviceProvider.GetRequiredService<StyleGuideViewModel>();
-                CurrentMenuViewModel = _styleGuideViewModel;
-                break;
-            case 7:
-                if (_departmentViewModel == null)
-                {
-                    _departmentViewModel = _serviceProvider.GetRequiredService<DepartmentManagementViewModel>();
+            0 => _settingsViewModel ??= _serviceProvider.GetRequiredService<SettingsViewModel>(),
+            1 or 2 => _chatsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: true),
+            3 => _profileViewModel ??= _serviceProvider.GetRequiredService<ProfileViewModel>(),
+            4 => _adminViewModel ??= _serviceProvider.GetRequiredService<AdminViewModel>(),
+            5 => _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false),
+            6 => _styleGuideViewModel ??= _serviceProvider.GetRequiredService<StyleGuideViewModel>(),
+            7 => GetOrCreateDepartmentViewModel(),
+            _ => CurrentMenuViewModel
+        };
 
-                    _departmentViewModel.OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user);
-
-                    _departmentViewModel.NavigateToChatAction = async chatId =>
-                    {
-                        var chat = UserChats.FirstOrDefault(c => c.Id == chatId);
-                        if (chat != null)
-                            await OpenChatAsync(chat);
-                    };
-
-                    _departmentViewModel.ShowRemoveConfirmAction = async member =>
-                    {
-                        var dialog = new ConfirmDialogViewModel("Удаление из отдела",
-                            $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?",
-                            "Удалить", "Отмена");
-                        await _mainWindowViewModel.ShowDialogAsync(dialog);
-                        return await dialog.Result;
-                    };
-
-                    _departmentViewModel.ShowSelectUserAction = async users =>
-                    {
-                        var pickerDialog = new UserPickerDialogViewModel("Добавить сотрудника", users);
-                        await _mainWindowViewModel.ShowDialogAsync(pickerDialog);
-                        return await pickerDialog.SingleSelectResult;
-                    };
-                }
-                CurrentMenuViewModel = _departmentViewModel;
-                break;
-        }
-
-        UpdateNavigationState();
-    }
-
-    private void UpdateNavigationState()
-    {
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(CanGoForward));
         GoBackCommand.NotifyCanExecuteChanged();
         GoForwardCommand.NotifyCanExecuteChanged();
+    }
+
+    private DepartmentManagementViewModel GetOrCreateDepartmentViewModel()
+    {
+        if (_departmentViewModel != null)
+            return _departmentViewModel;
+
+        _departmentViewModel = _serviceProvider.GetRequiredService<DepartmentManagementViewModel>();
+
+        _departmentViewModel.OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user);
+
+        _departmentViewModel.NavigateToChatAction = async chatId =>
+        {
+            var chat = UserChats.FirstOrDefault(c => c.Id == chatId);
+            if (chat != null)
+                await OpenChatAsync(chat);
+        };
+
+        _departmentViewModel.ShowRemoveConfirmAction = async member =>
+        {
+            var dialog = new ConfirmDialogViewModel("Удаление из отдела",
+                $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?",
+                "Удалить", "Отмена");
+            await _mainWindowViewModel.ShowDialogAsync(dialog);
+            return await dialog.Result;
+        };
+
+        _departmentViewModel.ShowSelectUserAction = async users =>
+        {
+            var pickerDialog = new UserPickerDialogViewModel("Добавить сотрудника", users);
+            await _mainWindowViewModel.ShowDialogAsync(pickerDialog);
+            return await pickerDialog.SingleSelectResult;
+        };
+
+        return _departmentViewModel;
     }
 
     partial void OnSearchTextChanged(string value)
@@ -197,7 +179,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
-
         OnPropertyChanged(nameof(HasSearchText));
     }
 
@@ -208,32 +189,28 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
-        bool isGroupChat = chat.Type == ChatType.Chat || chat.Type == ChatType.Department;
-
-        if (isGroupChat)
+        if (chat.Type is ChatType.Chat or ChatType.Department)
         {
             await OpenChatAsync(chat);
+            return;
         }
-        else
-        {
-            SetActiveMenu(5);
-            await Task.Delay(50);
 
-            _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false);
+        SetActiveMenu(5);
+        await Task.Delay(50);
 
-            if (!_contactsViewModel.Chats.Any(c => c.Id == chat.Id))
-                _contactsViewModel.Chats.Insert(0, new ChatListItemViewModel(chat));
+        _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false);
 
-            _contactsViewModel.SelectedChat = _contactsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
-            CurrentMenuViewModel = _contactsViewModel;
-        }
+        if (!_contactsViewModel.Chats.Any(c => c.Id == chat.Id))
+            _contactsViewModel.Chats.Insert(0, new ChatListItemViewModel(chat));
+
+        _contactsViewModel.SelectedChat = _contactsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
+        CurrentMenuViewModel = _contactsViewModel;
     }
 
     public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto message)
     {
-        bool isGroupChat = message.ChatType == ChatType.Chat || message.ChatType == ChatType.Department;
-        int targetIndex = isGroupChat ? 1 : 5;
-        SetActiveMenu(targetIndex);
+        bool isGroupChat = message.ChatType is ChatType.Chat or ChatType.Department;
+        SetActiveMenu(isGroupChat ? 1 : 5);
         await Task.Delay(50);
 
         var targetViewModel = isGroupChat ? _chatsViewModel : _contactsViewModel;
@@ -260,7 +237,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         ArgumentNullException.ThrowIfNull(notification);
 
-        ChatDto? chat = UserChats.FirstOrDefault(c => c.Id == notification.ChatId);
+        var chat = UserChats.FirstOrDefault(c => c.Id == notification.ChatId);
 
         if (chat == null)
         {
@@ -312,32 +289,25 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         CurrentMenuViewModel = _chatsViewModel;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  IChatNavigator
-    // ═══════════════════════════════════════════════════════════
-
     public async Task ShowUserProfileAsync(int userId) => await SafeExecuteAsync(async () =>
     {
         var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(userId));
-        if (result.Success && result.Data != null)
-        {
-            var currentUserId = _authManager.Session.UserId;
-
-            var dialog = new UserProfileDialogViewModel(result.Data, _apiClient)
-            {
-                CanSendMessage = result.Data.Id != currentUserId,
-                OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user)
-            };
-
-            await _mainWindowViewModel.ShowDialogAsync(dialog);
-        }
-        else
+        if (!result.Success || result.Data == null)
         {
             ErrorMessage = $"Не удалось загрузить профиль: {result.Error}";
+            return;
         }
+
+        var dialog = new UserProfileDialogViewModel(result.Data, _apiClient)
+        {
+            CanSendMessage = result.Data.Id != _authManager.Session.UserId,
+            OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user)
+        };
+
+        await _mainWindowViewModel.ShowDialogAsync(dialog);
     });
 
-    public async Task ShowPollDialogAsync(int chatId, Func<Task>? onPollCreated = null)
+    public async Task ShowPollDialogAsync(int chatId, Func<Task>? onCreated = null)
     {
         try
         {
@@ -346,8 +316,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
                 CreateAction = async createPollDto =>
                 {
                     await CreatePollAsync(createPollDto);
-                    if (onPollCreated != null)
-                        await onPollCreated();
+                    if (onCreated != null)
+                        await onCreated();
                 }
             };
 
@@ -359,7 +329,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    public async Task ShowEditGroupDialogAsync(ChatDto chat, Action<ChatDto>? onGroupUpdated = null)
+    public async Task ShowEditGroupDialogAsync(ChatDto chat, Action<ChatDto>? onUpdated = null)
     {
         try
         {
@@ -370,7 +340,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
             {
                 SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved)
-                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved, onGroupUpdated),
+                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved, onUpdated),
                 ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
             };
 
@@ -382,9 +352,24 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Внутренние методы
-    // ═══════════════════════════════════════════════════════════
+    public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onGroupCreated = null)
+    {
+        try
+        {
+            var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
+            {
+                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, _)
+                    => await CreateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupCreated),
+                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
+            };
+
+            await _mainWindowViewModel.ShowDialogAsync(dialog);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
+        }
+    }
 
     private async Task CreatePollAsync(CreatePollDto dto) => await SafeExecuteAsync(async () =>
     {
@@ -412,27 +397,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             UserChats = new ObservableCollection<ChatDto>(chatsResult.Data);
     });
 
-    public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onGroupCreated = null)
-    {
-        try
-        {
-            var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
-            {
-                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, _)
-                    => await CreateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupCreated),
-                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
-            };
-
-            await _mainWindowViewModel.ShowDialogAsync(dialog);
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
-        }
-    }
-
-    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream, string?
-        avatarFileName, Action<ChatDto>? onSuccess)
+    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
+        Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
     {
         try
         {
@@ -454,11 +420,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
             if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
             {
-                var contentType = GetMimeType(avatarFileName);
                 avatarStream.Position = 0;
-
                 var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-                    ApiEndpoints.Chats.Avatar(createdChat.Id), avatarStream, avatarFileName, contentType);
+                    ApiEndpoints.Chats.Avatar(createdChat.Id), avatarStream, avatarFileName, GetMimeType(avatarFileName));
 
                 if (avatarResult.Success && avatarResult.Data != null)
                     createdChat.Avatar = avatarResult.Data.AvatarUrl;
@@ -478,17 +442,12 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream,
-        string? avatarFileName, bool isAvatarRemoved, Action<ChatDto>? onSuccess)
+    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
+        Stream? avatarStream, string? avatarFileName, bool isAvatarRemoved, Action<ChatDto>? onSuccess)
     {
         try
         {
-            var updateDto = new UpdateChatDto
-            {
-                Id = chatDto.Id,
-                Name = chatDto.Name,
-                ChatType = ChatType.Chat
-            };
+            var updateDto = new UpdateChatDto { Id = chatDto.Id, Name = chatDto.Name, ChatType = ChatType.Chat };
 
             var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(
                 ApiEndpoints.Chats.ById(chatDto.Id), updateDto);
@@ -501,56 +460,23 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
             var updatedChat = updateResult.Data;
 
-            var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
-                ApiEndpoints.Chats.MembersDetailed(chatDto.Id));
-            var currentMembers = currentMembersResult.Data ?? [];
-            var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
-            var currentAdminIds = currentMembers.Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
-                .Select(x => x.UserId).ToHashSet();
+            await SyncChatMembersAsync(chatDto.Id, memberIds, adminIds, chatDto.CreatedById);
 
-            foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
-                await _apiClient.PostAsync(ApiEndpoints.Chats.Members(chatDto.Id), new UpdateChatMemberDto { UserId = userId });
+            var (avatarOk, newAvatarUrl, avatarError) = await UpdateChatAvatarAsync(
+                chatDto.Id, avatarStream, avatarFileName, isAvatarRemoved);
 
-            foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))
-                await _apiClient.DeleteAsync(ApiEndpoints.Chats.RemoveMember(chatDto.Id, userId));
-
-            foreach (var adminId in adminIds.Where(id => currentMemberIds.Contains(id) && !currentAdminIds.Contains(id)))
-                await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatDto.Id, adminId, ChatRole.Admin), null!);
-
-            foreach (var memberId in currentAdminIds.Where(id => id != chatDto.CreatedById && !adminIds.Contains(id) && currentMemberIds.Contains(id)))
-                await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatDto.Id, memberId, ChatRole.Member), null!);
-
-            if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
+            if (!avatarOk)
             {
-                var contentType = GetMimeType(avatarFileName);
-                avatarStream.Position = 0;
-
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chats.Avatar(chatDto.Id), avatarStream, avatarFileName, contentType);
-
-                if (avatarResult.Success && avatarResult.Data != null)
-                {
-                    updatedChat.Avatar = avatarResult.Data.AvatarUrl;
-                }
-                else if (isAvatarRemoved)
-                {
-                    var deleteAvatarResult = await _apiClient.DeleteAsync(ApiEndpoints.Chats.Avatar(chatDto.Id));
-
-                    if (!deleteAvatarResult.Success)
-                    {
-                        ErrorMessage = $"Ошибка удаления аватара: {deleteAvatarResult.Error}";
-                        return false;
-                    }
-
-                    updatedChat.Avatar = string.Empty;
-                }
+                ErrorMessage = avatarError;
+                return false;
             }
+
+            if (newAvatarUrl != null)
+                updatedChat.Avatar = newAvatarUrl;
 
             var existingChat = UserChats.FirstOrDefault(c => c.Id == chatDto.Id);
             if (existingChat != null)
-            {
-                var index = UserChats.IndexOf(existingChat);
-                UserChats[index] = updatedChat;
-            }
+                UserChats[UserChats.IndexOf(existingChat)] = updatedChat;
 
             onSuccess?.Invoke(updatedChat);
             SuccessMessage = "Группа успешно обновлена";
@@ -563,6 +489,51 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
+    private async Task SyncChatMembersAsync(int chatId, List<int> memberIds, List<int> adminIds, int createdById)
+    {
+        var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
+            ApiEndpoints.Chats.MembersDetailed(chatId));
+        var currentMembers = currentMembersResult.Data ?? [];
+        var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
+        var currentAdminIds = currentMembers
+            .Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
+            .Select(x => x.UserId).ToHashSet();
+
+        foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
+            await _apiClient.PostAsync(ApiEndpoints.Chats.Members(chatId), new UpdateChatMemberDto { UserId = userId });
+
+        foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))
+            await _apiClient.DeleteAsync(ApiEndpoints.Chats.RemoveMember(chatId, userId));
+
+        foreach (var adminId in adminIds.Where(id => currentMemberIds.Contains(id) && !currentAdminIds.Contains(id)))
+            await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, adminId, ChatRole.Admin), null!);
+
+        foreach (var memberId in currentAdminIds.Where(id => id != createdById && !adminIds.Contains(id) && currentMemberIds.Contains(id)))
+            await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, memberId, ChatRole.Member), null!);
+    }
+
+    private async Task<(bool Success, string? AvatarUrl, string? Error)> UpdateChatAvatarAsync(
+        int chatId, Stream? avatarStream, string? avatarFileName, bool isAvatarRemoved)
+    {
+        if (avatarStream == null || string.IsNullOrEmpty(avatarFileName))
+            return (true, null, null);
+
+        avatarStream.Position = 0;
+        var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
+            ApiEndpoints.Chats.Avatar(chatId), avatarStream, avatarFileName, GetMimeType(avatarFileName));
+
+        if (avatarResult.Success && avatarResult.Data != null)
+            return (true, avatarResult.Data.AvatarUrl, null);
+
+        if (!isAvatarRemoved)
+            return (true, null, null);
+
+        var deleteResult = await _apiClient.DeleteAsync(ApiEndpoints.Chats.Avatar(chatId));
+        return deleteResult.Success
+            ? (true, string.Empty, null)
+            : (false, null, $"Ошибка удаления аватара: {deleteResult.Error}");
+    }
+
     private static string GetMimeType(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
     {
         ".jpg" or ".jpeg" => "image/jpeg",
@@ -571,8 +542,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         ".gif" => "image/gif",
         _ => "application/octet-stream"
     };
-
-    public void SetActiveMenu(int index) => NavigateToMenu(index, addToHistory: true);
 
     protected override void Dispose(bool disposing)
     {

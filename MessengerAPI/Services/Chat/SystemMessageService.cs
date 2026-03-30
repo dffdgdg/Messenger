@@ -4,17 +4,13 @@ namespace MessengerAPI.Services.Chat;
 
 public interface ISystemMessageService
 {
-    /// <summary>
-    /// Создаёт системное сообщение в чате с broadcast через SignalR.
-    /// Пропускает Contact-чаты. Ошибки логируются, но не пробрасываются.
-    /// </summary>
-    Task CreateAsync(int chatId, int senderId, string content, SystemEventType eventType, int? targetUserId = null);
+    Task CreateAsync(int chatId, int senderId, SystemEventType eventType, int? targetUserId = null);
 }
 
 public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,AppDateTime appDateTime,
     ILogger<SystemMessageService> logger) : BaseService<SystemMessageService>(context, logger), ISystemMessageService
 {
-     public async Task CreateAsync(int chatId, int senderId, string content, SystemEventType eventType, int? targetUserId = null)
+    public async Task CreateAsync(int chatId, int senderId, SystemEventType eventType, int? targetUserId = null)
     {
         try
         {
@@ -26,7 +22,7 @@ public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier
             {
                 ChatId = chatId,
                 SenderId = senderId,
-                Content = content,
+                Content = null,
                 CreatedAt = appDateTime.UtcNow,
                 IsDeleted = false,
                 IsSystemMessage = true,

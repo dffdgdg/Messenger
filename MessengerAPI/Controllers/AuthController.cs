@@ -22,8 +22,5 @@ public sealed class AuthController(IAuthService authService, ILogger<AuthControl
     /// </summary>
     [HttpPost("revoke")]
     public async Task<IActionResult> Revoke(CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => authService.RevokeRefreshTokenAsync(userId, ct), "Все токены отозваны");
-    }
+        => await ExecuteAsync(() => authService.RevokeRefreshTokenAsync(GetCurrentUserId(), ct), "Все токены отозваны");
 }

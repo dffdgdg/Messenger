@@ -30,12 +30,10 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
 
     protected async Task<IActionResult> ExecuteAsync(Func<Task<Result>> action, string? successMessage = null)
     {
-        var result = await action();
-
-        if (result.IsSuccess)
+        if ((await action()).IsSuccess)
             return Ok(ApiResponse<object>.Ok(null, successMessage));
 
-        return MapFailure(result);
+        return MapFailure(await action());
     }
 
     protected ActionResult Forbidden(string error = "Доступ запрещён")

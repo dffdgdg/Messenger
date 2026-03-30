@@ -19,6 +19,10 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public DateTime CreatedAt { get; set; }
     public bool IsOwn { get; set; }
     public bool IsSystemMessage { get; set; }
+    public SystemEventType? SystemEventType { get; set; }
+    public int? TargetUserId { get; set; }
+    public string? TargetUserName { get; set; }
+
     [ObservableProperty] public partial int? ReplyToMessageId { get; set; }
     [ObservableProperty] public partial string? ReplyToSenderName { get; set; }
     [ObservableProperty] public partial string? ReplyToContent { get; set; }
@@ -93,6 +97,43 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public string DisplayContent
         => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
 
+    public bool HasStructuredSystemMessage
+        => IsSystemMessage && SystemEventType.HasValue;
+
+    public bool CanOpenSenderProfile
+        => SenderId > 0;
+
+    public bool HasSystemTargetUser
+        => TargetUserId > 0;
+
+    public int SystemTargetUserId
+        => TargetUserId ?? 0;
+
+    public string SystemActorDisplayName
+        => string.IsNullOrWhiteSpace(SenderName) ? "Пользователь" : SenderName!;
+
+    public string SystemTargetDisplayName
+        => string.IsNullOrWhiteSpace(TargetUserName) ? "пользователя" : TargetUserName!;
+
+    public string SystemActionPrefixText
+        => SystemEventType switch
+        {
+            MessengerShared.Enum.SystemEventType.ChatCreated => " создал(а) группу",
+            MessengerShared.Enum.SystemEventType.MemberAdded => " добавил(а) ",
+            MessengerShared.Enum.SystemEventType.MemberRemoved => " удалил(а) ",
+            MessengerShared.Enum.SystemEventType.MemberLeft => " покинул(а) группу",
+            MessengerShared.Enum.SystemEventType.RoleChanged => " изменил(а) роль участника ",
+            _ => string.Empty
+        };
+
+    public string SystemActionSuffixText
+        => SystemEventType switch
+        {
+            MessengerShared.Enum.SystemEventType.MemberAdded => " в группу",
+            MessengerShared.Enum.SystemEventType.MemberRemoved => " из группы",
+            _ => string.Empty
+        };
+
     public string EditedLabel => IsEdited ? "изм." : string.Empty;
 
     public string? EditedLabelFull
@@ -159,6 +200,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         VoiceFileUrl = message.VoiceFileUrl;
 
         IsSystemMessage = message.IsSystemMessage;
+        SystemEventType = message.SystemEventType;
+        TargetUserId = message.TargetUserId;
+        TargetUserName = message.TargetUserName;
 
         ReplyToMessageId = message.ReplyToMessageId;
         if (message.ReplyToMessage != null)

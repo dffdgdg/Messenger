@@ -10,7 +10,7 @@ public interface ICacheService
     void InvalidateChatMembers(int chatId);
 }
 
-public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : ICacheService
+public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : ICacheService
 {
     private static readonly TimeSpan UserChatsTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MembershipTtl = TimeSpan.FromMinutes(10);
@@ -23,11 +23,11 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
         if (cache.TryGetValue(cacheKey, out List<int>? cachedIds) && cachedIds != null)
         {
-            logger.LogDebug("Cache HIT: user_chats_{UserId}", userId);
+            LogUserChatsHit(userId);
             return cachedIds;
         }
 
-        logger.LogDebug("Cache MISS: user_chats_{UserId}", userId);
+        LogUserChatsMiss(userId);
 
         var chatIds = await factory();
 
@@ -50,21 +50,20 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
         if (cache.TryGetValue(cacheKey, out ChatMember? cached))
         {
-            logger.LogDebug("Cache HIT: membership_{UserId}_{ChatId}", userId, chatId);
+            LogMembershipHit(userId, chatId);
             return cached;
         }
 
-        logger.LogDebug("Cache MISS: membership_{UserId}_{ChatId}", userId, chatId);
+        LogMembershipMiss(userId, chatId);
 
-        var member = await factory();
 
-        cache.Set(cacheKey, member, new MemoryCacheEntryOptions
+        cache.Set(cacheKey, await factory(), new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = MembershipTtl,
             SlidingExpiration = TimeSpan.FromMinutes(3)
         });
 
-        return member;
+        return await factory();
     }
 
     #endregion
@@ -73,33 +72,24 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
     public void InvalidateUserChats(int userId)
     {
-        var key = GetUserChatsKey(userId);
-        cache.Remove(key);
-        logger.LogDebug("Cache invalidated: user_chats_{UserId}", userId);
+        cache.Remove(GetUserChatsKey(userId));
+        LogUserChatsInvalidated(userId);
     }
 
     public void InvalidateMembership(int userId, int chatId)
     {
-        var key = GetMembershipKey(userId, chatId);
-        cache.Remove(key);
+        cache.Remove(GetMembershipKey(userId, chatId));
         InvalidateUserChats(userId);
-        logger.LogDebug("Cache invalidated: membership_{UserId}_{ChatId}", userId, chatId);
+        LogMembershipInvalidated(userId, chatId);
     }
 
     public void InvalidateChat(int chatId)
     {
-        var key = $"chat_{chatId}";
-        cache.Remove(key);
-        logger.LogDebug("Cache invalidated: chat_{ChatId}", chatId);
+        cache.Remove($"chat_{chatId}");
+        LogChatInvalidated(chatId);
     }
 
-    public void InvalidateChatMembers(int chatId)
-    {
-        // Этот метод вызывается при добавлении/удалении участников
-        // К сожалению, IMemoryCache не поддерживает удаление по паттерну,
-        // поэтому инвалидация членства происходит по конкретным ключам
-        logger.LogDebug("Chat {ChatId} members changed - related caches will expire naturally", chatId);
-    }
+    public void InvalidateChatMembers(int chatId) => LogChatMembersChanged(chatId);
 
     #endregion
 
@@ -107,6 +97,34 @@ public class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : IC
 
     private static string GetUserChatsKey(int userId) => $"user_chats_{userId}";
     private static string GetMembershipKey(int userId, int chatId) => $"membership_{userId}_{chatId}";
+
+    #endregion
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache HIT: user_chats_{UserId}")]
+    private partial void LogUserChatsHit(int userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache MISS: user_chats_{UserId}")]
+    private partial void LogUserChatsMiss(int userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache HIT: membership_{UserId}_{ChatId}")]
+    private partial void LogMembershipHit(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache MISS: membership_{UserId}_{ChatId}")]
+    private partial void LogMembershipMiss(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache invalidated: user_chats_{UserId}")]
+    private partial void LogUserChatsInvalidated(int userId);
+
+    [LoggerMessage(Level = LogLevel.Debug,Message = "Cache invalidated: membership_{UserId}_{ChatId}")]
+    private partial void LogMembershipInvalidated(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache invalidated: chat_{ChatId}")]
+    private partial void LogChatInvalidated(int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug,Message = "Chat {ChatId} members changed - related caches will expire naturally")]
+    private partial void LogChatMembersChanged(int chatId);
 
     #endregion
 }

@@ -17,7 +17,7 @@ public interface IMessageService
     Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize);
     Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize);
 }
-public class MessageService(MessengerDbContext context, IAccessControlService accessControl, IHubNotifier hubNotifier, INotificationService notificationService,
+public partial class MessageService(MessengerDbContext context, IAccessControlService accessControl, IHubNotifier hubNotifier, INotificationService notificationService,
     IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, IFileService fileService, IOptions<MessengerSettings> settings, AppDateTime appDateTime,
     ILogger<MessageService> logger) : BaseService<MessageService>(context, logger), IMessageService
 {
@@ -164,7 +164,7 @@ public class MessageService(MessengerDbContext context, IAccessControlService ac
         await hubNotifier.SendToChatAsync(message.ChatId, "ReceiveMessageDto", messageDto);
         await NotifyAndUpdateUnreadAsync(messageDto);
 
-        _logger.LogInformation("Сообщение {MessageId} создано в чате {ChatId}", message.Id, message.ChatId);
+        LogMessageCreated(message.Id, message.ChatId);
 
         return Result<MessageDto>.Success(messageDto);
     }
@@ -173,8 +173,7 @@ public class MessageService(MessengerDbContext context, IAccessControlService ac
 
     #region Get Messages
 
-    public async Task<Result<PagedMessagesDto>> GetChatMessagesAsync(
-        int chatId, int userId, int page, int pageSize)
+    public async Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
     {
         var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
         if (accessResult.IsFailure)
@@ -327,7 +326,7 @@ public class MessageService(MessengerDbContext context, IAccessControlService ac
         var messageDto = message.ToDto(userId, urlBuilder);
         await hubNotifier.SendToChatAsync(message.ChatId, "MessageUpdated", messageDto);
 
-        _logger.LogInformation("Сообщение {MessageId} отредактировано", messageId);
+        LogMessageUpdated(messageId);
         return Result<MessageDto>.Success(messageDto);
     }
 
@@ -372,7 +371,7 @@ public class MessageService(MessengerDbContext context, IAccessControlService ac
         await hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted",
             new { MessageId = messageId, message.ChatId });
 
-        _logger.LogInformation("Сообщение {MessageId} удалено", messageId);
+        LogMessageDeleted(messageId);
         return Result.Success();
     }
 
@@ -654,9 +653,25 @@ public class MessageService(MessengerDbContext context, IAccessControlService ac
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Ошибка уведомлений для чата {ChatId}", message.ChatId);
+            LogNotificationError(message.ChatId,ex);
         }
     }
+
+    #endregion
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Сообщение {MessageId} создано в чате {ChatId}")]
+    private partial void LogMessageCreated(int messageId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Сообщение {MessageId} отредактировано")]
+    private partial void LogMessageUpdated(int messageId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Сообщение {MessageId} удалено")]
+    private partial void LogMessageDeleted(int messageId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ошибка уведомлений для чата {ChatId}")]
+    private partial void LogNotificationError(int chatId, Exception ex);
 
     #endregion
 }

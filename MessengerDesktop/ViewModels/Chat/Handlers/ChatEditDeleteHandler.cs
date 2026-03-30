@@ -122,8 +122,6 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
 
     private void OnCompositionReset()
     {
-        // Вызывается при StartReply/StartForward
-        // Тихо отменяем, без рекурсивного ResetCompositionModes
         if (IsEditMode) CancelEdit();
     }
 

@@ -7,22 +7,13 @@ public sealed class NotificationsController(INotificationService notificationSer
 {
     [HttpGet("chat/{chatId}/settings")]
     public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDto>>> GetChatSettings(int chatId)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => notificationService.GetChatNotificationSettingsAsync(userId, chatId));
-    }
+        => await ExecuteAsync(() => notificationService.GetChatNotificationSettingsAsync(GetCurrentUserId(), chatId));
 
     [HttpPost("chat/mute")]
     public async Task<ActionResult<ApiResponse<ChatNotificationSettingsDto>>> SetChatMute([FromBody] ChatNotificationSettingsDto request)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => notificationService.SetChatMuteAsync(userId, request));
-    }
+        => await ExecuteAsync(() => notificationService.SetChatMuteAsync(GetCurrentUserId(), request));
 
     [HttpGet("settings")]
     public async Task<ActionResult<ApiResponse<List<ChatNotificationSettingsDto>>>> GetAllSettings()
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => notificationService.GetAllChatSettingsAsync(userId));
-    }
+        => await ExecuteAsync(() => notificationService.GetAllChatSettingsAsync(GetCurrentUserId()));
 }

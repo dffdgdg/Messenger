@@ -16,7 +16,7 @@ public interface IDepartmentService
     Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default);
 }
 
-public class DepartmentService(MessengerDbContext context,IOptions<MessengerSettings> settings,ILogger<DepartmentService> logger)
+public sealed partial class DepartmentService(MessengerDbContext context, IOptions<MessengerSettings> settings, ILogger<DepartmentService> logger)
     : BaseService<DepartmentService>(context, logger), IDepartmentService
 {
     private readonly MessengerSettings _settings = settings.Value;
@@ -93,7 +93,7 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
         if (saveResult.IsFailure)
             return Result<DepartmentDto>.FromFailure(saveResult);
 
-        _logger.LogInformation("Отдел создан: {DepartmentId} '{Name}'", entity.Id, entity.Name);
+        LogDepartmentCreated(entity.Id, entity.Name);
 
         dto.Id = entity.Id;
         dto.UserCount = 0;
@@ -137,7 +137,7 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Отдел обновлён: {DepartmentId}", id);
+        LogDepartmentUpdated(id);
         return Result.Success();
     }
 
@@ -159,7 +159,7 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Отдел удалён: {DepartmentId}", id);
+        LogDepartmentDeleted(id);
         return Result.Success();
     }
 
@@ -215,7 +215,7 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} добавлен в отдел {DepartmentId}", userId, departmentId);
+        LogUserAddedToDepartment(userId, departmentId);
 
         return Result.Success();
     }
@@ -245,16 +245,13 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} удалён из отдела {DepartmentId}", userId, departmentId);
+        LogUserRemovedFromDepartment(userId, departmentId);
 
         return Result.Success();
     }
 
     public async Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default)
-    {
-        var canManage = await CanManageDepartmentInternalAsync(userId, departmentId, ct);
-        return Result<bool>.Success(canManage);
-    }
+        => Result<bool>.Success(await CanManageDepartmentInternalAsync(userId, departmentId, ct));
 
     #region Private
 
@@ -299,5 +296,25 @@ public class DepartmentService(MessengerDbContext context,IOptions<MessengerSett
 
         return Result.Success();
     }
+
+    #endregion
+
+    #region Log Messages
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Отдел создан: {DepartmentId} '{Name}'")]
+    private partial void LogDepartmentCreated(int departmentId, string name);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Отдел обновлён: {DepartmentId}")]
+    private partial void LogDepartmentUpdated(int departmentId);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Отдел удалён: {DepartmentId}")]
+    private partial void LogDepartmentDeleted(int departmentId);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Пользователь {UserId} добавлен в отдел {DepartmentId}")]
+    private partial void LogUserAddedToDepartment(int userId, int departmentId);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Пользователь {UserId} удалён из отдела {DepartmentId}")]
+    private partial void LogUserRemovedFromDepartment(int userId, int departmentId);
+
     #endregion
 }

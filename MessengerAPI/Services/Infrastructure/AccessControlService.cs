@@ -12,47 +12,33 @@ public interface IAccessControlService
     Task<List<int>> GetUserChatIdsAsync(int userId);
 }
 
-public sealed class AccessControlService(MessengerDbContext context, ICacheService cache, ILogger<AccessControlService> logger)
-    : IAccessControlService
+public sealed partial class AccessControlService(MessengerDbContext context, ICacheService cache,
+    ILogger<AccessControlService> logger) : IAccessControlService
 {
     private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _requestCache = [];
 
     public async Task<List<int>> GetUserChatIdsAsync(int userId)
-    {
-        return await cache.GetUserChatIdsAsync(userId, () =>
+        => await cache.GetUserChatIdsAsync(userId, () =>
             context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
-    }
 
     public async Task<bool> IsMemberAsync(int userId, int chatId)
-    {
-        var member = await GetMembershipAsync(userId, chatId);
-        return member is not null;
-    }
+        => await GetMembershipAsync(userId, chatId) is not null;
 
     public async Task<bool> IsOwnerAsync(int userId, int chatId)
-    {
-        var member = await GetMembershipAsync(userId, chatId);
-        return member?.Role == ChatRole.Owner;
-    }
+        => (await GetMembershipAsync(userId, chatId))?.Role == ChatRole.Owner;
 
     public async Task<bool> IsAdminAsync(int userId, int chatId)
-    {
-        var member = await GetMembershipAsync(userId, chatId);
-        return member?.Role is ChatRole.Admin or ChatRole.Owner;
-    }
+        => (await GetMembershipAsync(userId, chatId))?.Role is ChatRole.Admin or ChatRole.Owner;
 
     public async Task<ChatRole?> GetRoleAsync(int userId, int chatId)
-    {
-        var member = await GetMembershipAsync(userId, chatId);
-        return member?.Role;
-    }
+        => (await GetMembershipAsync(userId, chatId))?.Role;
 
     public async Task<Result> CheckIsMemberAsync(int userId, int chatId)
     {
         if (await IsMemberAsync(userId, chatId))
             return Result.Success();
 
-        logger.LogWarning("Доступ запрещён: пользователь {UserId} к чату {ChatId}", userId, chatId);
+        LogAccessDenied(userId, chatId);
         return Result.Forbidden("У вас нет доступа к этому чату");
     }
 
@@ -61,7 +47,7 @@ public sealed class AccessControlService(MessengerDbContext context, ICacheServi
         if (await IsOwnerAsync(userId, chatId))
             return Result.Success();
 
-        logger.LogWarning("Требуются права владельца: пользователь {UserId}, чат {ChatId}", userId, chatId);
+        LogOwnerRequired(userId, chatId);
         return Result.Forbidden("Только владелец чата может выполнить это действие");
     }
 
@@ -70,7 +56,7 @@ public sealed class AccessControlService(MessengerDbContext context, ICacheServi
         if (await IsAdminAsync(userId, chatId))
             return Result.Success();
 
-        logger.LogWarning("Требуются права администратора: пользователь {UserId}, чат {ChatId}", userId, chatId);
+        LogAdminRequired(userId, chatId);
         return Result.Forbidden("Требуются права администратора");
     }
 
@@ -81,12 +67,29 @@ public sealed class AccessControlService(MessengerDbContext context, ICacheServi
         if (_requestCache.TryGetValue(key, out var requestCached))
             return requestCached;
 
-        var member = await cache.GetMembershipAsync(userId, chatId, () => context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
+        var member = await cache.GetMembershipAsync(userId, chatId, () =>
+            context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
 
         _requestCache[key] = member;
 
-        logger.LogDebug("Членство пользователя {UserId} в чате {ChatId}: {Role}", userId, chatId, member?.Role.ToString() ?? "не состоит");
+        LogMembershipResult(userId, chatId, member?.Role);
 
         return member;
     }
+
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Доступ запрещён: пользователь {UserId} к чату {ChatId}")]
+    private partial void LogAccessDenied(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Требуются права владельца: пользователь {UserId}, чат {ChatId}")]
+    private partial void LogOwnerRequired(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Требуются права администратора: пользователь {UserId}, чат {ChatId}")]
+    private partial void LogAdminRequired(int userId, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Членство пользователя {UserId} в чате {ChatId}: {Role}")]
+    private partial void LogMembershipResult(int userId, int chatId, ChatRole? role);
+    #endregion
 }

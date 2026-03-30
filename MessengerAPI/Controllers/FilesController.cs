@@ -8,9 +8,6 @@ public sealed class FilesController(IFileService fileService, ILogger<FilesContr
 
     [HttpPost("upload")]
     [RequestSizeLimit(MaxFileSizeBytes)]
-    public async Task<ActionResult<ApiResponse<MessageFileDto>>> Upload([FromQuery] int chatId, IFormFile file)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => fileService.SaveMessageFileAsync(file, chatId, userId), "Файл загружен успешно");
-    }
+    public async Task<ActionResult<ApiResponse<MessageFileDto>>> Upload([FromQuery] int chatId, IFormFile file) => await ExecuteAsync(()
+        => fileService.SaveMessageFileAsync(file, chatId, GetCurrentUserId()), "Файл загружен успешно");
 }

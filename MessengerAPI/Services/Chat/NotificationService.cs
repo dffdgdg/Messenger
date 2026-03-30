@@ -8,7 +8,7 @@ public interface INotificationService
     Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
 }
 
-public sealed class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,
+public sealed partial class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendNotificationAsync(int userId, MessageDto message)
@@ -20,7 +20,7 @@ public sealed class NotificationService(MessengerDbContext context,IHubNotifier 
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Не удалось отправить уведомление пользователю {UserId}", userId);
+            LogNotificationFailed(userId,ex);
         }
     }
 
@@ -48,7 +48,7 @@ public sealed class NotificationService(MessengerDbContext context,IHubNotifier 
         member.NotificationsEnabled = request.NotificationsEnabled;
         await context.SaveChangesAsync();
 
-        logger.LogInformation("Пользователь {UserId} {Action} уведомления для чата {ChatId}",userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
+        LogNotificationSettingsChanged(userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
 
         return Result<ChatNotificationSettingsDto>.Success(new ChatNotificationSettingsDto
         {
@@ -96,5 +96,14 @@ public sealed class NotificationService(MessengerDbContext context,IHubNotifier 
 
         return content.Length <= maxLength ? content : content[..maxLength] + "...";
     }
+    #endregion
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Не удалось отправить уведомление пользователю {UserId}")]
+    private partial void LogNotificationFailed(int userId, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} {Action} уведомления для чата {ChatId}", EventName = "ChatNotificationSettingsChanged")]
+    private partial void LogNotificationSettingsChanged(int userId, string action, int chatId);
     #endregion
 }

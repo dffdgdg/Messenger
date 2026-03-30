@@ -10,7 +10,7 @@ public interface IAdminService
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
 }
 
-public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILogger<AdminService> logger)
+public partial class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
@@ -73,7 +73,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
         if (saveResult.IsFailure)
             return Result<UserDto>.FromFailure(saveResult);
 
-        _logger.LogInformation("Создан пользователь {Username} с ID {UserId}", username, user.Id);
+        LogUserCreated(username, user.Id);
 
         var createdUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
 
@@ -121,7 +121,7 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
         if (saveResult.IsFailure)
             return Result<UserDto>.FromFailure(saveResult);
 
-        _logger.LogInformation("Администратор обновил пользователя {UserId}", userId);
+        LogUserUpdated(userId);
 
         var updatedUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == userId, ct);
 
@@ -141,8 +141,20 @@ public class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILo
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} {Action}", userId, user.IsBanned ? "заблокирован" : "разблокирован");
-
+        LogBanStatusChanged(userId, user.IsBanned ? "заблокирован" : "разблокирован");
         return Result.Success();
     }
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Создан пользователь {Username} с ID {UserId}")]
+    private partial void LogUserCreated(string username, int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Администратор обновил пользователя {UserId}")]
+    private partial void LogUserUpdated(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} {Action}", EventName = "UserBanStatusChanged")]
+    private partial void LogBanStatusChanged(int userId, string action);
+
+    #endregion
 }

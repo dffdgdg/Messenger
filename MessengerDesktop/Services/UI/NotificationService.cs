@@ -12,25 +12,36 @@ public enum DesktopNotificationType { Information, Success, Warning, Error }
 public interface INotificationService : IDisposable
 {
     ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications { get; }
-    void Initialize(Window window);
-    void ShowWindow(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, int durationMs = 3000, Func<Task>? onClick = null);
-    Task ShowBothAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, bool copyToClipboard = false, Func<Task>? onClick = null);
+
+    void Initialize();
+
+    void Show(string title, string message,
+        DesktopNotificationType type = DesktopNotificationType.Information,
+        int durationMs = 3000, Func<Task>? onClick = null);
+
+    Task ShowAsync(string title, string message,
+        DesktopNotificationType type = DesktopNotificationType.Information,
+        bool copyToClipboard = false, Func<Task>? onClick = null);
+
     Task ShowErrorAsync(string message, bool copyToClipboard = false);
     Task ShowSuccessAsync(string message, bool copyToClipboard = false);
     Task ShowWarningAsync(string message, bool copyToClipboard = false);
     Task ShowInfoAsync(string message, bool copyToClipboard = false);
-    Task ShowCopyableErrorAsync(string message);
 }
 
 public class NotificationService : INotificationService
 {
+    private const int MaxVisibleNotifications = 3;
+    private const int AnimationDurationMs = 180;
+    private const int DefaultDurationMs = 3000;
+
     private readonly IPlatformService _platformService;
     private readonly ObservableCollection<DesktopNotificationViewModel> _activeNotifications = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _lifetimes = [];
     private readonly SemaphoreSlim _sync = new(1, 1);
 
-    private bool _disposed;
-    private bool _initialized;
+    private volatile bool _disposed;
+    private volatile bool _initialized;
 
     public NotificationService(IPlatformService platformService)
     {
@@ -40,10 +51,8 @@ public class NotificationService : INotificationService
 
     public ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications { get; }
 
-    public void Initialize(Window window)
+    public void Initialize()
     {
-        ArgumentNullException.ThrowIfNull(window);
-
         if (_initialized)
         {
             Debug.WriteLine("NotificationService already initialized");
@@ -53,7 +62,8 @@ public class NotificationService : INotificationService
         _initialized = true;
     }
 
-    public void ShowWindow(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, int durationMs = 3000, Func<Task>? onClick = null)
+    public void Show(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information,
+        int durationMs = DefaultDurationMs, Func<Task>? onClick = null)
     {
         ThrowIfDisposed();
 
@@ -63,40 +73,47 @@ public class NotificationService : INotificationService
             return;
         }
 
-        _ = Dispatcher.UIThread.InvokeAsync(() => ShowInternalAsync(title, message, type, durationMs, onClick));
+        _ = Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                await ShowInternalAsync(title, message, type, durationMs, onClick);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Debug.WriteLine($"[NotificationService] Failed to show notification: {ex.Message}");
+            }
+        });
     }
 
-    public async Task ShowBothAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information,
+    public async Task ShowAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information,
         bool copyToClipboard = false, Func<Task>? onClick = null)
     {
         ThrowIfDisposed();
 
-        ShowWindow(title, message, type, 3000, onClick);
+        Show(title, message, type, DefaultDurationMs, onClick);
 
         if (copyToClipboard)
-        {
             await _platformService.CopyToClipboardAsync(message);
-        }
     }
 
-    public Task ShowErrorAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
-    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
-    public Task ShowWarningAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
-    public Task ShowInfoAsync(string message, bool copyToClipboard = false) => ShowBothAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
+    public Task ShowErrorAsync(string message, bool copyToClipboard = false) =>
+        ShowAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
 
-    public async Task ShowCopyableErrorAsync(string message)
+    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) =>
+        ShowAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
+
+    public Task ShowWarningAsync(string message, bool copyToClipboard = false) =>
+        ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
+
+    public Task ShowInfoAsync(string message, bool copyToClipboard = false) =>
+        ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
+
+    private async Task ShowInternalAsync(string title, string message,
+        DesktopNotificationType type, int durationMs, Func<Task>? onClick)
     {
-        ThrowIfDisposed();
-
-        ShowWindow("Ошибка", message, DesktopNotificationType.Error);
-
-        var clipboardText = $"Ошибка: {message}\nВремя: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
-        await _platformService.CopyToClipboardAsync(clipboardText);
-    }
-
-    private async Task ShowInternalAsync(string title, string message, DesktopNotificationType type, int durationMs, Func<Task>? onClick)
-    {
-        var notification = new DesktopNotificationViewModel(title, message, type, durationMs, CloseNotificationAsync, onClick);
+        var notification = new DesktopNotificationViewModel(
+            title, message, type, durationMs, CloseNotificationAsync, onClick);
         var cts = new CancellationTokenSource();
 
         List<DesktopNotificationViewModel>? stale = null;
@@ -108,7 +125,7 @@ public class NotificationService : INotificationService
             _activeNotifications.Insert(0, notification);
             notification.IsVisible = true;
 
-            for (var i = _activeNotifications.Count - 1; i >= 3; i--)
+            for (var i = _activeNotifications.Count - 1; i >= MaxVisibleNotifications; i--)
             {
                 stale ??= [];
                 stale.Add(_activeNotifications[i]);
@@ -121,10 +138,8 @@ public class NotificationService : INotificationService
 
         if (stale is not null)
         {
-            foreach (var staleNotification in stale)
-            {
-                await CloseNotificationAsync(staleNotification);
-            }
+            foreach (var s in stale)
+                await CloseNotificationAsync(s);
         }
 
         _ = RunLifetimeAsync(notification, cts.Token);
@@ -137,15 +152,14 @@ public class NotificationService : INotificationService
             await Task.Delay(notification.DurationMs, ct);
             await Dispatcher.UIThread.InvokeAsync(() => CloseNotificationAsync(notification));
         }
-        catch (OperationCanceledException) { /* Уведомление закрыто досрочно */ }
+        catch (OperationCanceledException) { }
     }
 
     private async Task CloseNotificationAsync(DesktopNotificationViewModel notification)
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
 
-        CancellationTokenSource? cts = null;
+        CancellationTokenSource? cts;
 
         await _sync.WaitAsync();
         try
@@ -163,52 +177,53 @@ public class NotificationService : INotificationService
         await cts.CancelAsync();
         cts.Dispose();
 
-        await Task.Delay(180);
+        await Task.Delay(AnimationDurationMs);
 
-        await _sync.WaitAsync();
+        if (_disposed) return;
+
         try
         {
-            _activeNotifications.Remove(notification);
-            notification.Dispose();
+            await _sync.WaitAsync();
+            try
+            {
+                _activeNotifications.Remove(notification);
+            }
+            finally
+            {
+                _sync.Release();
+            }
         }
-        finally
-        {
-            _sync.Release();
-        }
+        catch (ObjectDisposedException) { /* _sync был уничтожен в Dispose() пока мы ждали анимацию */ }
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, nameof(NotificationService));
+    private void ThrowIfDisposed() =>
+        ObjectDisposedException.ThrowIf(_disposed, nameof(NotificationService));
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
 
-        foreach (var lifetime in _lifetimes.Values)
+        foreach (var cts in _lifetimes.Values)
         {
-            lifetime.Cancel();
-            lifetime.Dispose();
+            cts.Cancel();
+            cts.Dispose();
         }
 
         _lifetimes.Clear();
-
-        foreach (var notification in _activeNotifications)
-        {
-            notification.Dispose();
-        }
-
         _activeNotifications.Clear();
         _initialized = false;
         _sync.Dispose();
+
         GC.SuppressFinalize(this);
     }
 }
 
-public sealed partial class DesktopNotificationViewModel(string title,string message,DesktopNotificationType type,int durationMs,
-    Func<DesktopNotificationViewModel, Task> closeAsync, Func<Task>? onClick = null) : ObservableObject, IDisposable
+public sealed partial class DesktopNotificationViewModel(string title, string message, DesktopNotificationType type,
+    int durationMs, Func<DesktopNotificationViewModel, Task> closeAsync, Func<Task>? onClick = null) : ObservableObject
 {
-    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync = closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
-    private int _disposed;
+    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync =
+        closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
 
     public Guid Id { get; } = Guid.NewGuid();
     public string Title { get; } = title;
@@ -233,25 +248,18 @@ public sealed partial class DesktopNotificationViewModel(string title,string mes
         _ => "i"
     };
 
-    [ObservableProperty] public partial bool IsVisible { get; set; }
+    [ObservableProperty]
+    public partial bool IsVisible { get; set; }
 
     [RelayCommand]
     private async Task ActivateAsync()
     {
         if (onClick is not null)
-        {
             await onClick();
-        }
 
         await _closeAsync(this);
     }
 
     [RelayCommand]
     private Task CloseAsync() => _closeAsync(this);
-
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
-            return;
-    }
 }

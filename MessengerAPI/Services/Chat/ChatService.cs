@@ -19,7 +19,7 @@ public interface IChatService
     Task<Result> RemoveChatAvatarAsync(int chatId, int userId);
 }
 
-public class ChatService(MessengerDbContext context, IAccessControlService accessControl, IFileService fileService, IOnlineUserService onlineService,
+public partial class ChatService(MessengerDbContext context, IAccessControlService accessControl, IFileService fileService, IOnlineUserService onlineService,
     IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, ICacheService cacheService, ISystemMessageService systemMessages,
     AppDateTime appDateTime, ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
@@ -31,8 +31,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
         if (chatIds.Count == 0)
             return Result<List<ChatDto>>.Success([]);
 
-        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id))
-            .GroupJoin(_context.Messages.Where(m => m.IsDeleted != true),
+        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id)).GroupJoin(_context.Messages.Where(m => m.IsDeleted != true),
                 chat => chat.Id, msg => msg.ChatId, (chat, msgs) => new
                 {
                     Chat = chat,
@@ -61,7 +60,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
                 Type = item.Chat.Type,
                 CreatedById = item.Chat.CreatedById ?? 0,
                 LastMessageDate = item.LastMessage?.CreatedAt ?? item.Chat.LastMessageTime,
-                LastMessagePreview = Truncate(item.LastMessage?.Content, 50),
+                LastMessagePreview = item.LastMessage?.IsSystemMessage == true ? "Системное сообщение" : Truncate(item.LastMessage?.Content, 50),
                 LastMessageSenderName = item.LastMessage?.IsSystemMessage == true
                     ? null
                     : item.LastMessage?.SenderName,
@@ -263,12 +262,9 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
             cacheService.InvalidateUserChats(contactUserId.Value);
 
         if (chat.Type != ChatType.Contact)
-        {
-            var creator = await _context.Users.FindAsync(dto.CreatedById);
-            await systemMessages.CreateAsync(chat.Id, dto.CreatedById, $"{creator?.FormatDisplayName() ?? "Пользователь"} создал группу", SystemEventType.ChatCreated);
-        }
+            await systemMessages.CreateAsync(chat.Id, dto.CreatedById, SystemEventType.ChatCreated);
 
-        _logger.LogInformation("Чат {ChatId} создан пользователем {UserId}", chat.Id, dto.CreatedById);
+        LogChatCreated(chat.Id, dto.CreatedById);
 
         return Result<ChatDto>.Success(new ChatDto
         {
@@ -308,7 +304,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
         if (saveResult.IsFailure)
             return Result<ChatDto>.FromFailure(saveResult);
 
-        _logger.LogInformation("Чат {ChatId} обновлён пользователем {UserId}", chatId, userId);
+        LogChatUpdated(chatId, userId);
 
         return Result<ChatDto>.Success(new ChatDto
         {
@@ -349,7 +345,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
             cacheService.InvalidateMembership(memberId, chatId);
         }
 
-        _logger.LogInformation("Чат {ChatId} удалён пользователем {UserId}", chatId, userId);
+        LogChatDeleted(chatId,userId);
 
         return Result.Success();
     }
@@ -378,7 +374,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
         if (dbSaveResult.IsFailure)
             return Result.FromFailure(dbSaveResult);
 
-        _logger.LogInformation("Аватар удалён для чата {ChatId}", chatId);
+        LogAvatarRemoved(chatId);
 
         return Result.Success();
     }
@@ -414,7 +410,7 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
         if (dbSaveResult.IsFailure)
             return Result<string>.FromFailure(dbSaveResult);
 
-        _logger.LogInformation("Аватар загружен для чата {ChatId}", chatId);
+        LogAvatarUploaded(chatId);
 
         return Result<string>.Success(urlBuilder.BuildUrl(saveResult.Value)!);
     }
@@ -424,16 +420,11 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
     #region Private Helpers
 
     private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
-    {
-        return await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
-    }
+        => await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact)
+        .Where(c => c.ChatMembers.Any(cm => cm.UserId == userId)).Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
 
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
-    {
-        var partners = await GetDialogPartnersAsync([chatId], currentUserId);
-        return partners.GetValueOrDefault(chatId);
-    }
+        => (await GetDialogPartnersAsync([chatId], currentUserId)).GetValueOrDefault(chatId);
 
     private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(List<int> chatIds, int currentUserId)
     {
@@ -462,6 +453,25 @@ public class ChatService(MessengerDbContext context, IAccessControlService acces
             ? text
             : text[..maxLength] + "...";
     }
+
+    #endregion
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Чат {ChatId} создан пользователем {UserId}")]
+    private partial void LogChatCreated(int chatId, int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Чат {ChatId} обновлён пользователем {UserId}")]
+    private partial void LogChatUpdated(int chatId, int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Чат {ChatId} удалён пользователем {UserId}")]
+    private partial void LogChatDeleted(int chatId, int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Аватар загружен для чата {ChatId}")]
+    private partial void LogAvatarUploaded(int chatId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Аватар удалён для чата {ChatId}")]
+    private partial void LogAvatarRemoved(int chatId);
 
     #endregion
 

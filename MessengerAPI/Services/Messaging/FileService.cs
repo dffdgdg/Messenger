@@ -13,7 +13,7 @@ public interface IFileService
     bool IsValidImage(IFormFile file);
 }
 
-public class FileService(MessengerDbContext context,IAccessControlService accessControl,IWebHostEnvironment env,
+public partial class FileService(MessengerDbContext context,IAccessControlService accessControl,IWebHostEnvironment env,
     IUrlBuilder urlBuilder, IOptions<MessengerSettings> settings, ILogger<FileService> logger) : BaseService<FileService>(context, logger), IFileService
 {
     private readonly MessengerSettings _settings = settings.Value;
@@ -45,7 +45,7 @@ public class FileService(MessengerDbContext context,IAccessControlService access
 
         var resultPath = NormalizeToWebPath(relativePath);
 
-        _logger.LogInformation("Изображение сохранено: {FilePath}", resultPath);
+        LogImageSaved(resultPath);
 
         return Result<string>.Success(resultPath);
     }
@@ -74,7 +74,7 @@ public class FileService(MessengerDbContext context,IAccessControlService access
 
         var resultRelativePath = NormalizeToWebPath(relativePath);
 
-        _logger.LogDebug("Файл сохранён: {FileName} для чата {ChatId}", fileName, chatId);
+        LogFileSaved(fileName, chatId);
 
         return Result<MessageFileDto>.Success(new MessageFileDto
         {
@@ -97,18 +97,18 @@ public class FileService(MessengerDbContext context,IAccessControlService access
 
         if (!File.Exists(fullPath))
         {
-            _logger.LogDebug("Файл не найден для удаления: {FilePath}", filePath);
+            LogFileNotFound(fullPath);
             return;
         }
 
         try
         {
             File.Delete(fullPath);
-            _logger.LogInformation("Файл удалён: {FilePath}", filePath);
+            LogFileDeleted(fullPath);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Не удалось удалить файл: {FilePath}", filePath);
+            LogFileDeletionFailed(fullPath, ex);
         }
     }
 
@@ -130,13 +130,7 @@ public class FileService(MessengerDbContext context,IAccessControlService access
         => Path.Combine(env.WebRootPath ?? "wwwroot", relativePath);
 
     private static string NormalizeToWebPath(string relativePath)
-    {
-        var normalizedPath = relativePath.Replace(
-            Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar);
-
-        return string.Concat(Path.AltDirectorySeparatorChar, normalizedPath);
-    }
+        => string.Concat(Path.AltDirectorySeparatorChar, relativePath.Replace(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar));
 
     private static void EnsureDirectoryExists(string filePath)
     {
@@ -145,4 +139,22 @@ public class FileService(MessengerDbContext context,IAccessControlService access
             Directory.CreateDirectory(directory);
     }
 
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Изображение сохранено: {FilePath}")]
+    private partial void LogImageSaved(string filePath);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Файл сохранён: {FileName} для чата {ChatId}")]
+    private partial void LogFileSaved(string fileName, int chatId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Файл не найден для удаления: {FilePath}")]
+    private partial void LogFileNotFound(string filePath);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Файл удалён: {FilePath}")]
+    private partial void LogFileDeleted(string filePath);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Не удалось удалить файл: {FilePath}")]
+    private partial void LogFileDeletionFailed(string filePath, Exception ex);
+
+    #endregion
 }

@@ -64,7 +64,6 @@ public sealed class App : Application, IDisposable
             var mainWindow = new MainWindow();
             desktop.MainWindow = mainWindow;
 
-            InitializePlatformServices(mainWindow);
             ConfigureImageLoader();
 
             _ = InitializeLocalDatabaseAndMaintenanceAsync();
@@ -107,18 +106,6 @@ public sealed class App : Application, IDisposable
         ImageLoader.AsyncImageLoader = new AuthenticatedImageLoader(httpClient, sessionStore, ApiUrl);
 
         Debug.WriteLine("[App] AuthenticatedImageLoader configured");
-    }
-
-    private void InitializePlatformServices(MainWindow mainWindow)
-    {
-        var platformService = Services.GetRequiredService<IPlatformService>();
-        platformService.Initialize(mainWindow);
-
-        var notificationService = Services.GetRequiredService<INotificationService>();
-        notificationService.Initialize(mainWindow);
-        _notificationService = notificationService;
-
-        Debug.WriteLine("[App] Platform services initialized");
     }
 
     private static void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) =>

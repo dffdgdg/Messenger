@@ -1,8 +1,45 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+             xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts"
              x:Class="MessengerDesktop.Views.Chat.MessageParts.SystemMessagePart"
              x:DataType="vmChat:MessageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.SystemUserLink">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="NaN"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="Button.SystemUserLink /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+
+        <Style Selector="Button.SystemUserLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Button.SystemUserLink:pointerover TextBlock">
+            <Setter Property="TextDecorations" Value="Underline"/>
+        </Style>
+
+        <Style Selector="Button.SystemUserLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Button.SystemUserLink:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </UserControl.Styles>
 
     <Border IsVisible="{Binding IsSystemMessage}"
             HorizontalAlignment="Center"
@@ -12,12 +49,65 @@
                 Padding="16,5"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource BorderDefault}">
-            <TextBlock Text="{Binding Content}"
-                       FontSize="12"
-                       Foreground="{DynamicResource TextSecondary}"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"
-                       FontStyle="Italic"/>
+            <StackPanel>
+                <WrapPanel HorizontalAlignment="Center"
+                           IsVisible="{Binding HasStructuredSystemMessage}">
+
+                    <Button Classes="SystemUserLink"
+                            IsVisible="{Binding CanOpenSenderProfile}"
+                            Command="{Binding $parent[parts:SystemMessagePart].OpenProfileCommand}"
+                            CommandParameter="{Binding SenderId}"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SystemActorDisplayName}"
+                                   FontSize="12"
+                                   FontStyle="Italic"
+                                   Foreground="{DynamicResource Accent}"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+
+                    <TextBlock Text="{Binding SystemActorDisplayName}"
+                               IsVisible="{Binding !CanOpenSenderProfile}"
+                               FontSize="12"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Text="{Binding SystemActionPrefixText}"
+                               FontSize="12"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center"
+                               Margin="3,0,0,0"/>
+
+                    <Button Classes="SystemUserLink"
+                            IsVisible="{Binding HasSystemTargetUser}"
+                            Command="{Binding $parent[parts:SystemMessagePart].OpenProfileCommand}"
+                            CommandParameter="{Binding SystemTargetUserId}"
+                            Margin="3,0,0,0"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SystemTargetDisplayName}"
+                                   FontSize="12"
+                                   FontStyle="Italic"
+                                   Foreground="{DynamicResource Accent}"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+
+                    <TextBlock Text="{Binding SystemActionSuffixText}"
+                               FontSize="12"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center"
+                               Margin="3,0,0,0"/>
+                </WrapPanel>
+
+                <TextBlock Text="{Binding Content}"
+                           IsVisible="{Binding !HasStructuredSystemMessage}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           FontStyle="Italic"/>
+            </StackPanel>
         </Border>
     </Border>
 </UserControl>

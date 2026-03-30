@@ -11,7 +11,7 @@ public interface IChatMemberService
     Task<Result> LeaveAsync(int chatId, int userId);
 }
 
-public sealed class ChatMemberService(MessengerDbContext context,ICacheService cache,IAccessControlService accessControl,ISystemMessageService systemMessages,
+public sealed partial class ChatMemberService(MessengerDbContext context,ICacheService cache,IAccessControlService accessControl,ISystemMessageService systemMessages,
     AppDateTime appDateTime, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
@@ -44,15 +44,9 @@ public sealed class ChatMemberService(MessengerDbContext context,ICacheService c
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
 
-        _logger.LogInformation("Пользователь {UserId} добавлен в чат {ChatId} пользователем {AddedBy}",
-            userId, chatId, addedByUserId);
+        LogMemberAdded(userId, chatId, addedByUserId);
 
-        var actor = await _context.Users.FindAsync(addedByUserId);
-        var target = await _context.Users.FindAsync(userId);
-        await systemMessages.CreateAsync(chatId, addedByUserId,
-            $"{actor?.FormatDisplayName() ?? "Пользователь"} добавил " +
-            $"{target?.FormatDisplayName() ?? "пользователя"} в группу",
-            SystemEventType.MemberAdded, userId);
+        await systemMessages.CreateAsync(chatId, addedByUserId, SystemEventType.MemberAdded, userId);
 
         return Result<ChatMemberDto>.Success(MapToDto(member));
     }
@@ -84,25 +78,12 @@ public sealed class ChatMemberService(MessengerDbContext context,ICacheService c
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
 
-        _logger.LogInformation("Пользователь {UserId} удалён из чата {ChatId} пользователем {RemovedBy}",
-            userId, chatId, removedByUserId);
+        LogMemberRemoved(userId, chatId, removedByUserId);
 
         if (userId == removedByUserId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            await systemMessages.CreateAsync(chatId, userId,
-                $"{user?.FormatDisplayName() ?? "Пользователь"} покинул группу",
-                SystemEventType.MemberLeft);
-        }
+            await systemMessages.CreateAsync(chatId, userId, SystemEventType.MemberLeft);
         else
-        {
-            var actor = await _context.Users.FindAsync(removedByUserId);
-            var target = await _context.Users.FindAsync(userId);
-            await systemMessages.CreateAsync(chatId, removedByUserId,
-                $"{actor?.FormatDisplayName() ?? "Пользователь"} удалил " +
-                $"{target?.FormatDisplayName() ?? "пользователя"} из группы",
-                SystemEventType.MemberRemoved, userId);
-        }
+            await systemMessages.CreateAsync(chatId, removedByUserId, SystemEventType.MemberRemoved, userId);
 
         return Result.Success();
     }
@@ -133,19 +114,9 @@ public sealed class ChatMemberService(MessengerDbContext context,ICacheService c
 
         cache.InvalidateMembership(userId, chatId);
 
-        _logger.LogInformation("Роль пользователя {UserId} в чате {ChatId} изменена на {Role}",
-            userId, chatId, newRole);
+        LogRoleUpdated(userId, chatId, newRole);
 
-        var actor = await _context.Users.FindAsync(updatedByUserId);
-        var target = await _context.Users.FindAsync(userId);
-        var actorName = actor?.FormatDisplayName() ?? "Пользователь";
-        var targetName = target?.FormatDisplayName() ?? "пользователя";
-
-        var content = newRole == ChatRole.Admin
-            ? $"{actorName} назначил {targetName} администратором"
-            : $"{actorName} снял роль администратора с {targetName}";
-
-        await systemMessages.CreateAsync(chatId, updatedByUserId, content, SystemEventType.RoleChanged, userId);
+        await systemMessages.CreateAsync(chatId, updatedByUserId, SystemEventType.RoleChanged, userId);
 
         return Result<ChatMemberDto>.Success(MapToDto(member));
     }
@@ -172,4 +143,16 @@ public sealed class ChatMemberService(MessengerDbContext context,ICacheService c
         JoinedAt = member.JoinedAt,
         NotificationsEnabled = member.NotificationsEnabled
     };
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} добавлен в чат {ChatId} пользователем {AddedBy}")]
+    private partial void LogMemberAdded(int userId, int chatId, int addedBy);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} удалён из чата {ChatId} пользователем {RemovedBy}")]
+    private partial void LogMemberRemoved(int userId, int chatId, int removedBy);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Роль пользователя {UserId} в чате {ChatId} изменена на {Role}")]
+    private partial void LogRoleUpdated(int userId, int chatId, ChatRole role);
+    #endregion
 }

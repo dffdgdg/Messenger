@@ -43,7 +43,6 @@ public partial class HierarchicalDepartmentViewModel(DepartmentDto department, i
     /// </summary>
     public double ExpanderRotation => IsExpanded ? 0 : -90;
 
-    // === Дочерние элементы ===
     public ObservableCollection<HierarchicalDepartmentViewModel> Children { get; } = [];
 
     [RelayCommand]

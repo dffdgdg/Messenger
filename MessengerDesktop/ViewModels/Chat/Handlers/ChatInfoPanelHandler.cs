@@ -69,8 +69,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         if (Ctx.Chat != null)
         {
-            Ctx.Chat.Name = contact.DisplayName
-                ?? contact.Username ?? Ctx.Chat.Name;
+            Ctx.Chat.Name = contact.DisplayName ?? contact.Username ?? Ctx.Chat.Name;
             if (!string.IsNullOrEmpty(contact.Avatar))
                 Ctx.Chat.Avatar = contact.Avatar;
         }
@@ -162,15 +161,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     }
 
     private void OnUserProfileUpdated(UserDto updated)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!IsAlive) return;
-
-            UpdateContactProfile(updated);
-            ReplaceMemberInList(updated);
-        });
-    }
+        => Dispatcher.UIThread.Post(() => { if (!IsAlive) return; UpdateContactProfile(updated); ReplaceMemberInList(updated); });
 
     private void UpdateContactProfile(UserDto updated)
     {

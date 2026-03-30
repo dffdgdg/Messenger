@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         _notificationService = App.Current.Services.GetRequiredService<INotificationService>();
 
         _platformService.Initialize(this);
-        _notificationService.Initialize(this);
+        _notificationService.Initialize();
 
         _dialogService.OnDialogAnimationRequested += OnDialogAnimationRequested;
 
@@ -45,20 +45,17 @@ public partial class MainWindow : Window
         base.OnPropertyChanged(change);
 
         if (change.Property == WindowStateProperty)
-        {
             UpdateWindowPadding();
-        }
     }
 
     private void UpdateWindowPadding() =>
-        Padding = WindowState == WindowState.Maximized
-            ? new Thickness(MaximizedPadding) : default;
+        Padding = WindowState == WindowState.Maximized ? new Thickness(MaximizedPadding) : default;
 
     private void OnDialogAnimationRequested(bool isOpening)
     {
         _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
-            bool completed = false;
+            var completed = false;
 
             try
             {
@@ -66,15 +63,13 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Dialog animation error: {ex}");
+                Debug.WriteLine($"[MainWindow] Dialog animation error: {ex.Message}");
                 ResetAnimationState();
             }
             finally
             {
                 if (completed)
-                {
                     _dialogService.NotifyAnimationComplete();
-                }
             }
         });
     }
@@ -125,25 +120,25 @@ public partial class MainWindow : Window
         DialogAnimWrapper.Classes.Remove(ClosingClass);
     }
 
-    private async Task PlayOpenAnimationAsync(CancellationToken cancellationToken)
+    private async Task PlayOpenAnimationAsync(CancellationToken ct)
     {
-        await Task.Delay(FrameDelayMs, cancellationToken);
+        await Task.Delay(FrameDelayMs, ct);
 
         DialogOverlay.Classes.Add(OpenClass);
         DialogAnimWrapper.Classes.Add(OpenClass);
 
-        await Task.Delay(AnimationDurationMs, cancellationToken);
+        await Task.Delay(AnimationDurationMs, ct);
     }
 
-    private async Task PlayCloseAnimationAsync(CancellationToken cancellationToken)
+    private async Task PlayCloseAnimationAsync(CancellationToken ct)
     {
         DialogOverlay.Classes.Remove(OpenClass);
         DialogAnimWrapper.Classes.Remove(OpenClass);
         DialogAnimWrapper.Classes.Add(ClosingClass);
 
-        await Task.Delay(AnimationDurationMs, cancellationToken);
+        await Task.Delay(AnimationDurationMs, ct);
 
-        cancellationToken.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         DialogAnimWrapper.Classes.Remove(ClosingClass);
     }

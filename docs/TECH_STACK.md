@@ -41,10 +41,6 @@
 - **AsyncImageLoader.Avalonia 3.5.0**
 - Статические файлы через middleware
 
-### Распознавание речи
-- **Vosk 0.3.38** — офлайн STT (Speech-to-Text)
-- **NAudio 2.2.1** — работа с аудио
-
 ### Документация API
 - **Swashbuckle.AspNetCore 6.6.2** (Swagger)
 - Доступен только в Development
@@ -141,7 +137,6 @@
 | Real-time | SignalR | Server 1.2.0 / Client 10.0.1 |
 | Auth | JWT Bearer | 8.0.22 |
 | Passwords | BCrypt.Net-Next | 4.0.3 |
-| STT | Vosk | 0.3.38 |
 | Audio | NAudio | 2.2.1 |
 | Images | SixLabors.ImageSharp.Web | 3.2.0 |
 | API Docs | Swashbuckle (Swagger) | 6.6.2 |

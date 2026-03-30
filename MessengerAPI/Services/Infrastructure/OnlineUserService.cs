@@ -22,10 +22,7 @@ public sealed class OnlineUserService : IOnlineUserService
     }
 
     public void UserConnected(int userId, string connectionId)
-    {
-        var userConnections = _connections.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>());
-        userConnections.TryAdd(connectionId, 0);
-    }
+        => _connections.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>()).TryAdd(connectionId, 0);
 
     public void UserDisconnected(int userId, string connectionId)
     {

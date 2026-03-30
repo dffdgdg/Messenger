@@ -5,10 +5,6 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-/// <summary>
-/// Единая точка подписки/отписки на все hub-события для чата.
-/// Маршрутизирует входящие события к handlers.
-/// </summary>
 public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messageManager,
     Action<int> onUnreadCountChanged, Func<Task> onReconnected) : IDisposable
 {
@@ -35,13 +31,7 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
     {
         if (ctx.IsDisposed || msg.ChatId != ctx.ChatId) return;
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            messageManager.AddReceivedMessage(msg);
-
-            var added = messageManager.Messages.LastOrDefault(
-                m => m.Id == msg.Id);
-        });
+        Dispatcher.UIThread.Post(() => messageManager.AddReceivedMessage(msg));
     }
 
     private void OnMessageUpdated(MessageDto msg)

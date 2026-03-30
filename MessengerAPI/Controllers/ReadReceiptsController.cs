@@ -6,23 +6,14 @@ public sealed class ReadReceiptsController(IReadReceiptService readReceiptServic
     : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]
-    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDto>>> MarkAsRead([FromBody] MarkAsReadDto request)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => readReceiptService.MarkAsReadAsync(userId, request));
-    }
+    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDto>>> MarkAsRead([FromBody] MarkAsReadDto request) => await ExecuteAsync(()
+        => readReceiptService.MarkAsReadAsync(GetCurrentUserId(), request));
 
     [HttpGet("chat/{chatId}/unread-count")]
-    public async Task<ActionResult<ApiResponse<int>>> GetUnreadCount(int chatId)
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => readReceiptService.GetUnreadCountAsync(userId, chatId));
-    }
+    public async Task<ActionResult<ApiResponse<int>>> GetUnreadCount(int chatId) => await ExecuteAsync(()
+        => readReceiptService.GetUnreadCountAsync(GetCurrentUserId(), chatId));
 
     [HttpGet("unread-counts")]
-    public async Task<ActionResult<ApiResponse<AllUnreadCountsDto>>> GetAllUnreadCounts()
-    {
-        var userId = GetCurrentUserId();
-        return await ExecuteAsync(() => readReceiptService.GetAllUnreadCountsAsync(userId));
-    }
+    public async Task<ActionResult<ApiResponse<AllUnreadCountsDto>>> GetAllUnreadCounts() => await ExecuteAsync(()
+        => readReceiptService.GetAllUnreadCountsAsync(GetCurrentUserId()));
 }

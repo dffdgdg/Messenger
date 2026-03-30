@@ -11,31 +11,29 @@ public partial class UserListDialogViewModel : DialogBaseViewModel
     private readonly Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> _reviewSelector;
     private readonly Action<List<int>> _applySelection;
 
-    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; } = [];
-    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredItems { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; }
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredItems { get; set; }
     [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
 
     [ObservableProperty] public partial bool AllowEdit { get; set; }
 
     [ObservableProperty] public partial bool IsEditMode { get; set; }
 
-    [ObservableProperty] public partial string EmptyMessage { get; set; } = "Пользователи не найдены";
+    [ObservableProperty] public partial string EmptyMessage { get; set; }
 
-    [ObservableProperty] public partial string EditButtonText { get; set; } = "Изменить";
+    [ObservableProperty] public partial string EditButtonText { get; set; }
 
     public bool ShowEditButton => AllowEdit && !IsEditMode;
     public bool ShowSaveButton => IsEditMode;
     public int SelectedCount => Items.Count(x => x.IsSelected);
 
-    public UserListDialogViewModel(
-        string title,
-        IEnumerable<UserListItemViewModel> allItems,
-        bool allowEdit,
-        Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> reviewSelector,
-        Action<List<int>> applySelection,
-        string editButtonText,
-        string emptyMessage)
+    public UserListDialogViewModel(string title, IEnumerable<UserListItemViewModel> allItems, bool allowEdit,
+    Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> reviewSelector, Action<List<int>> applySelection,
+    string editButtonText, string emptyMessage)
     {
+        Items = [];
+        FilteredItems = [];
+
         Title = title;
         _allItems = [.. allItems.Select(x => x.Clone())];
         _reviewSelector = reviewSelector;

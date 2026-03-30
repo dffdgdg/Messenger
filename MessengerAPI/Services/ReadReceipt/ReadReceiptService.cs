@@ -11,7 +11,7 @@ public interface IReadReceiptService
     Task<Result<ChatReadInfoDto>> GetChatReadInfoAsync(int userId, int chatId);
 }
 
-public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime,
+public partial class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime,
     ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
     public async Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(int userId, MarkAsReadDto request)
@@ -34,7 +34,7 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
             member.LastReadAt = appDateTime.UtcNow;
             await context.SaveChangesAsync();
 
-            logger.LogDebug("Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}", userId, targetMessageId, request.ChatId);
+            LogReadReceipt(userId, targetMessageId, request.ChatId);
         }
 
         var lastReadId = member.LastReadMessageId ?? 0;
@@ -61,7 +61,7 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
                 member.LastReadAt = appDateTime.UtcNow;
                 await context.SaveChangesAsync();
 
-                logger.LogDebug("Пользователь {UserId} прочитал сообщение {MessageId} в чате {ChatId}", userId, messageId, chatId);
+                LogReadReceipt(userId, messageId, chatId);
             }
         }
 
@@ -180,5 +180,12 @@ public class ReadReceiptService(MessengerDbContext context, AppDateTime appDateT
         LastReadAt = member.LastReadAt,
         UnreadCount = unreadCount
     };
+    #endregion
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}")]
+    private partial void LogReadReceipt(int userId, int messageId, int chatId);
+
     #endregion
 }

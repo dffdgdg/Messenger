@@ -46,14 +46,12 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
         {
             SaveAction = async dialogVm =>
             {
-                var dto = new DepartmentDto
+                var result = await _apiClient.PostAsync<DepartmentDto>(ApiEndpoints.Departments.Create, new DepartmentDto
                 {
                     Name = dialogVm.Name,
                     ParentDepartmentId = dialogVm.ParentDepartmentId,
                     Head = dialogVm.HeadId
-                };
-
-                var result = await _apiClient.PostAsync<DepartmentDto>(ApiEndpoints.Departments.Create, dto);
+                });
 
                 if (result.Success)
                 {
@@ -73,8 +71,8 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Edit(HierarchicalDepartmentViewModel item)
     {
-        var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)],
-            Users,_dialogService,item.Department,item.HasChildren)
+        await _dialogService.ShowAsync(new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)],
+            Users, _dialogService, item.Department, item.HasChildren)
         {
             SaveAction = async dialogVm =>
             {
@@ -86,16 +84,14 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Head = dialogVm.HeadId
                 };
 
-                var result = await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id),dto);
-
-                if (result.Success)
+                if ((await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id), dto)).Success)
                 {
                     await LoadAsync();
                     SuccessMessage = "Отдел обновлён";
                 }
                 else
                 {
-                    throw new InvalidOperationException(result.Error ?? "Ошибка обновления отдела");
+                    throw new InvalidOperationException((await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id), dto)).Error ?? "Ошибка обновления отдела");
                 }
             },
             DeleteAction = async dialogVm =>
@@ -103,21 +99,17 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                 if (!dialogVm.EditId.HasValue)
                     throw new InvalidOperationException("Идентификатор отдела не задан.");
 
-                var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value));
-
-                if (result.Success)
+                if ((await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value))).Success)
                 {
                     await LoadAsync();
                     SuccessMessage = "Отдел успешно удалён";
                 }
                 else
                 {
-                    throw new InvalidOperationException(result.Error ?? "Ошибка удаления отдела");
+                    throw new InvalidOperationException((await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value))).Error ?? "Ошибка удаления отдела");
                 }
             }
-        };
-
-        await _dialogService.ShowAsync(departmentDialog);
+        });
     }
 
     [RelayCommand]

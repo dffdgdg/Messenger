@@ -61,7 +61,7 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пользователь {UserId} обновлён", id);
+        LogUserUpdated(id);
         return Result.Success();
     }
 
@@ -86,7 +86,7 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         if (dbSaveResult.IsFailure)
             return Result<AvatarResponseDto>.FromFailure(dbSaveResult);
 
-        _logger.LogInformation("Аватар обновлён для пользователя {UserId}", id);
+        LogAvatarUpdated(id);
 
         return Result<AvatarResponseDto>.Success(new AvatarResponseDto
         {
@@ -143,7 +143,7 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Username изменён для пользователя {UserId}", id);
+        LogUsernameChanged(id);
         return Result.Success();
     }
 
@@ -173,7 +173,23 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         if (saveResult.IsFailure)
             return saveResult;
 
-        _logger.LogInformation("Пароль изменён для пользователя {UserId}", id);
+        LogPasswordChanged(id);
         return Result.Success();
     }
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} обновлён")]
+    private partial void LogUserUpdated(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Аватар обновлён для пользователя {UserId}")]
+    private partial void LogAvatarUpdated(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Username изменён для пользователя {UserId}")]
+    private partial void LogUsernameChanged(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пароль изменён для пользователя {UserId}")]
+    private partial void LogPasswordChanged(int userId);
+
+    #endregion
 }

@@ -9,7 +9,7 @@ public interface IPollService
     Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto);
 }
 
-public class PollService(MessengerDbContext context,IAccessControlService accessControl,IHubNotifier hubNotifier,
+public partial class PollService(MessengerDbContext context,IAccessControlService accessControl,IHubNotifier hubNotifier,
     IUrlBuilder urlBuilder,ILogger<PollService> logger) : BaseService<PollService>(context, logger), IPollService
 {
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
@@ -85,7 +85,7 @@ public class PollService(MessengerDbContext context,IAccessControlService access
 
         await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDto", messageDto);
 
-        _logger.LogInformation("Опрос создан в чате {ChatId}", dto.ChatId);
+        LogPollCreated(dto.ChatId);
 
         return Result<MessageDto>.Success(messageDto);
     }
@@ -137,8 +137,18 @@ public class PollService(MessengerDbContext context,IAccessControlService access
             await hubNotifier.SendToChatAsync(poll.Message.ChatId, "ReceivePollUpdate", updatedPollResult.Value!);
         }
 
-        _logger.LogInformation("Пользователь {UserId} проголосовал в опросе {PollId}", voteDto.UserId, voteDto.PollId);
+        LogUserVoted(voteDto.UserId, voteDto.PollId);
 
         return updatedPollResult;
     }
+
+    #region Log messages
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Опрос создан в чате {ChatId}")]
+    private partial void LogPollCreated(int chatId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} проголосовал в опросе {PollId}")]
+    private partial void LogUserVoted(int userId, int pollId);
+
+    #endregion
 }

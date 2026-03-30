@@ -12,7 +12,7 @@ public interface IAuthService
     Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default);
 }
 
-public sealed class AuthService : BaseService<AuthService>, IAuthService
+public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 {
     private readonly ITokenService _tokenService;
     private readonly MessengerSettings _settings;
@@ -21,8 +21,8 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
     private readonly string _dummyHash;
     private const int MaxActiveSessions = 5;
 
-    public AuthService(MessengerDbContext context,ITokenService tokenService,IOptions<MessengerSettings> settings,
-        IOptions<JwtSettings> jwtSettings,AppDateTime appDateTime, ILogger<AuthService> logger) : base(context, logger)
+    public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings,
+        IOptions<JwtSettings> jwtSettings, AppDateTime appDateTime, ILogger<AuthService> logger) : base(context, logger)
     {
         _tokenService = tokenService;
         _settings = settings.Value;
@@ -50,13 +50,13 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
 
         if (!VerifyPassword(password, user.PasswordHash))
         {
-            _logger.LogWarning("Неудачная попытка входа: {Username}", username);
+            LogFailedLogin(username);
             return Result<AuthResponseDto>.Failure("Неверное имя пользователя или пароль");
         }
 
         if (user.IsBanned)
         {
-            _logger.LogWarning("Попытка входа заблокированного пользователя: {Username}", username);
+            LogBannedLogin(username);
             return Result<AuthResponseDto>.Forbidden("Учётная запись заблокирована");
         }
 
@@ -77,7 +77,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
             Role = role
         };
 
-        _logger.LogInformation("Успешный вход: {Username} (роль: {Role})", username, role);
+        LogSuccessfulLogin(username, role);
 
         return Result<AuthResponseDto>.Success(response);
     }
@@ -98,26 +98,25 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
         var storedToken = await _context.RefreshTokens
-            .Include(rt => rt.User).FirstOrDefaultAsync(rt =>rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
 
         if (storedToken is null)
         {
-            _logger.LogWarning("Refresh token не найден для пользователя {UserId}", userId);
+            LogRefreshTokenNotFound(userId);
             return Result<TokenResponseDto>.Unauthorized("Недействительный refresh token");
         }
 
         if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
         {
-            _logger.LogWarning("Обнаружено повторное использование refresh token! UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.", userId, storedToken.FamilyId);
-
+            LogTokenReuse(userId, storedToken.FamilyId);
             await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
-
             return Result<TokenResponseDto>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
         }
 
         if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
         {
-            _logger.LogWarning("Истёкший refresh token для пользователя {UserId}", userId);
+            LogExpiredRefreshToken(userId);
             return Result<TokenResponseDto>.Unauthorized("Refresh token истёк");
         }
 
@@ -148,7 +147,7 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         storedToken.ReplacedByTokenId = newRefreshToken.Id;
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Refresh token ротирован для пользователя {UserId}", userId);
+        LogTokenRotated(userId);
 
         return Result<TokenResponseDto>.Success(new TokenResponseDto
         {
@@ -161,12 +160,10 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
 
     public async Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
     {
-        var now = _appDateTime.UtcNow;
-
         var revokedCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
+            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
 
-        _logger.LogInformation("Отозвано {Count} refresh tokens для пользователя {UserId}", revokedCount, userId);
+        LogTokensRevoked(revokedCount, userId);
 
         return Result.Success();
     }
@@ -206,7 +203,8 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
             .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
             .GroupBy(rt => rt.FamilyId)
             .Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) })
-            .OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
+            .OrderByDescending(f => f.LatestCreatedAt)
+            .ToListAsync(ct);
 
         if (activeFamilies.Count >= MaxActiveSessions)
         {
@@ -214,34 +212,33 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
 
             if (familiesToRevoke.Count > 0)
             {
-                var revokedCount = await _context.RefreshTokens.Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
+                var revokedCount = await _context.RefreshTokens
+                    .Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
                     .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
 
-                _logger.LogInformation("Превышен лимит сессий для пользователя {UserId}: отозвано {RevokedCount} токенов из {FamilyCount} старых сессий"
-                    + " (лимит: {MaxSessions})", userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
+                LogSessionLimitExceeded(userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
             }
         }
     }
 
     private async Task RevokeTokenFamilyAsync(string familyId, CancellationToken ct)
     {
-        var now = _appDateTime.UtcNow;
+        var revokedCount = await _context.RefreshTokens
+            .Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
 
-        var revokedCount = await _context.RefreshTokens.Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
-
-        _logger.LogWarning("Отозвано {Count} токенов семьи {FamilyId}", revokedCount, familyId);
+        LogFamilyRevoked(revokedCount, familyId);
     }
 
     private async Task CleanupExpiredTokensAsync(int userId, CancellationToken ct)
     {
-        var cutoff = _appDateTime.UtcNow.AddDays(-60);
-
-        var expiredCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiresAt < cutoff).ExecuteDeleteAsync(ct);
+        var expiredCount = await _context.RefreshTokens
+            .Where(rt => rt.UserId == userId && rt.ExpiresAt < _appDateTime.UtcNow.AddDays(-60))
+            .ExecuteDeleteAsync(ct);
 
         if (expiredCount > 0)
         {
-            _logger.LogDebug("Очищено {Count} истёкших refresh tokens для пользователя {UserId}", expiredCount, userId);
+            LogExpiredTokensCleanup(expiredCount, userId);
         }
     }
 
@@ -260,6 +257,43 @@ public sealed class AuthService : BaseService<AuthService>, IAuthService
         try { return BCrypt.Net.BCrypt.Verify(password, hash); }
         catch { return false; }
     }
+
+    #endregion
+
+    #region Log Messages
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Неудачная попытка входа: {Username}")]
+    private partial void LogFailedLogin(string username);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Попытка входа заблокированного пользователя: {Username}")]
+    private partial void LogBannedLogin(string username);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Успешный вход: {Username} (роль: {Role})")]
+    private partial void LogSuccessfulLogin(string username, UserRole role);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "Refresh token не найден для пользователя {UserId}")]
+    private partial void LogRefreshTokenNotFound(int userId);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "Обнаружено повторное использование refresh token! UserId={UserId}, FamilyId={FamilyId}. Отзываем всю семью.")]
+    private partial void LogTokenReuse(int userId, string familyId);
+
+    [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "Истёкший refresh token для пользователя {UserId}")]
+    private partial void LogExpiredRefreshToken(int userId);
+
+    [LoggerMessage(EventId = 7, Level = LogLevel.Information, Message = "Refresh token ротирован для пользователя {UserId}")]
+    private partial void LogTokenRotated(int userId);
+
+    [LoggerMessage(EventId = 8, Level = LogLevel.Information, Message = "Отозвано {Count} refresh tokens для пользователя {UserId}")]
+    private partial void LogTokensRevoked(int count, int userId);
+
+    [LoggerMessage(EventId = 9, Level = LogLevel.Information, Message = "Превышен лимит сессий для пользователя {UserId}: отозвано {RevokedCount} токенов из {FamilyCount} старых сессий (лимит: {MaxSessions})")]
+    private partial void LogSessionLimitExceeded(int userId, int revokedCount, int familyCount, int maxSessions);
+
+    [LoggerMessage(EventId = 10, Level = LogLevel.Warning, Message = "Отозвано {Count} токенов семьи {FamilyId}")]
+    private partial void LogFamilyRevoked(int count, string familyId);
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Debug, Message = "Очищено {Count} истёкших refresh tokens для пользователя {UserId}")]
+    private partial void LogExpiredTokensCleanup(int count, int userId);
 
     #endregion
 }

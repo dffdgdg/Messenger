@@ -12,7 +12,7 @@
     <StackPanel>
         <parts:DateSeparatorPart/>
 
-        <parts:SystemMessagePart/>
+        <parts:SystemMessagePart OpenProfileCommand="{Binding #BubbleRoot.OpenProfileCommand}"/>
 
         <Border Classes="MessageHighlight MessageWrapper"
                 Classes.Highlighted="{Binding IsHighlighted}"

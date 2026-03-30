@@ -11,7 +11,7 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     private readonly Action<List<int>>? _applySelection;
     private readonly TaskCompletionSource<UserDto?>? _singleSelectTcs;
 
-    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> Items { get; set; }
     [ObservableProperty] public partial ObservableCollection<UserListItemViewModel> FilteredItems { get; set; } = [];
     [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
     [ObservableProperty] public partial bool AllowEdit { get; set; }

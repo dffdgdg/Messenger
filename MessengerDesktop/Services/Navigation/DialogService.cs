@@ -37,7 +37,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
     private CancellationTokenSource? _animationCts;
     private bool _disposed;
 
-    private record CloseRequest(bool CloseAll, TaskCompletionSource Completion);
+    private sealed record CloseRequest(bool CloseAll, TaskCompletionSource Completion);
 
     [ObservableProperty] public partial DialogBaseViewModel? CurrentDialog { get; set; }
 
@@ -58,8 +58,7 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
     {
         try
         {
-            await foreach (var request in
-                _closeRequests.Reader.ReadAllAsync(ct))
+            await foreach (var request in _closeRequests.Reader.ReadAllAsync(ct))
             {
                 try
                 {
@@ -121,9 +120,8 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
     {
         ThrowIfDisposed();
 
-        var tcs = new TaskCompletionSource();
-        await _closeRequests.Writer.WriteAsync(new CloseRequest(true, tcs));
-        await tcs.Task;
+        await _closeRequests.Writer.WriteAsync(new CloseRequest(true, new TaskCompletionSource()));
+        await new TaskCompletionSource().Task;
     }
 
     private async Task CloseInternalAsync()

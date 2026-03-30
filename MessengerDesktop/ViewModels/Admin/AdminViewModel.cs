@@ -82,12 +82,9 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     [RelayCommand]
     private async Task OpenEditDepartment(DepartmentDto department)
     {
-        var hierarchicalItem = FindDepartmentItem(
-            DepartmentsTab.HierarchicalDepartments, department.Id);
-
-        if (hierarchicalItem != null)
+        if (FindDepartmentItem(DepartmentsTab.HierarchicalDepartments, department.Id) != null)
         {
-            await DepartmentsTab.EditCommand.ExecuteAsync(hierarchicalItem);
+            await DepartmentsTab.EditCommand.ExecuteAsync(FindDepartmentItem(DepartmentsTab.HierarchicalDepartments, department.Id));
         }
     }
 
@@ -121,8 +118,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
         {
             if (item.Id == departmentId) return item;
 
-            var found = FindDepartmentItem(item.Children, departmentId);
-            if (found != null) return found;
+            if (FindDepartmentItem(item.Children, departmentId) != null)
+                return FindDepartmentItem(item.Children, departmentId);
         }
         return null;
     }

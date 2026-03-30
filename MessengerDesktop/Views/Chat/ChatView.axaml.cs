@@ -460,7 +460,7 @@ public partial class ChatView : UserControl
 
     private bool IsItemVisible(ListBoxItem item, double viewportHeight)
     {
-        var transform = item.TransformToVisual(_scrollViewer);
+        var transform = item.TransformToVisual(_scrollViewer!);
         if (transform is null) return false;
 
         var top = transform.Value.Transform(new Point(0, 0)).Y;
@@ -473,7 +473,7 @@ public partial class ChatView : UserControl
 
     #region Helpers
 
-    private void ScheduleAction(Func<Task> action, int delayMs = 50)
+    private static void ScheduleAction(Func<Task> action, int delayMs = 50)
     {
         Dispatcher.UIThread.Post(async () =>
         {
@@ -482,7 +482,7 @@ public partial class ChatView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    private void ScheduleAction(Action action, int delayMs = 50)
+    private static void ScheduleAction(Action action, int delayMs = 50)
     {
         Dispatcher.UIThread.Post(async () =>
         {

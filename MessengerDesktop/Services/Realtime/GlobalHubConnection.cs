@@ -40,9 +40,18 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     Task SendTypingAsync(int chatId);
 }
 
-public sealed class GlobalHubConnection(IAuthManager authManager,INotificationService notificationService,
-    INavigationService navigationService, ISettingsService settingsService, ILocalCacheService cacheService) : IGlobalHubConnection
+public sealed class GlobalHubConnection(
+    IAuthManager authManager,
+    INotificationService notificationService,
+    INavigationService navigationService,
+    ISettingsService settingsService,
+    ILocalCacheService cacheService) : IGlobalHubConnection
 {
+    private const int NoChatId = -1;
+    private const int ContentPreviewMaxLength = 100;
+    private const string PreviewEllipsis = "...";
+    private const string NotificationTypePoll = "poll";
+
     private readonly IAuthManager _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
     private readonly INotificationService _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
     private readonly INavigationService _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
@@ -51,16 +60,21 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     private HubConnection? _hubConnection;
     private readonly List<IDisposable> _hubSubscriptions = [];
-    private bool _disposed;
-    private int? _currentChatId;
 
-    private readonly Dictionary<int, int> _unreadCounts = [];
-    private int _totalUnread;
-    private readonly Lock _lock = new();
+    private int _disposed;
+    private int _connectState;
+
+    private volatile int _openChatId = NoChatId;
 
     private int _lastSentReadMessageId;
     private DateTime _lastSentReadTime = DateTime.MinValue;
     private DateTime _lastSentTypingTime = DateTime.MinValue;
+
+    private readonly Dictionary<int, int> _unreadCounts = [];
+    private int _totalUnread;
+    private readonly Lock _unreadLock = new();
+
+    #region Events
 
     public event Action<NotificationDto>? NotificationReceived;
     public event Action<int, bool>? UserStatusChanged;
@@ -76,32 +90,33 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     public event Action<int, int>? MemberLeft;
     public event Action? Reconnected;
 
+    #endregion
+
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
     public int GetUnreadCount(int chatId)
     {
-        lock (_lock)
-        {
+        lock (_unreadLock)
             return _unreadCounts.GetValueOrDefault(chatId, 0);
-        }
     }
 
     public int GetTotalUnread()
     {
-        lock (_lock)
-        {
+        lock (_unreadLock)
             return _totalUnread;
-        }
     }
+
+    #region Connection
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        if (_hubConnection != null) return;
+        if (Interlocked.CompareExchange(ref _connectState, 1, 0) != 0)
+            return;
 
         try
         {
-            _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options => options.AccessTokenProvider = () => Task.FromResult(_authManager.Session.Token))
-                .WithAutomaticReconnect().Build();
+            _hubConnection = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", options => options.AccessTokenProvider =
+            () => Task.FromResult(_authManager.Session.Token)).WithAutomaticReconnect().Build();
 
             SubscribeHubEvents();
 
@@ -113,16 +128,39 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
             await LoadUnreadCountsAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            Debug.WriteLine($"[GlobalHub] Connection error: {ex.Message}");
+            Volatile.Write(ref _connectState, 0);
             throw;
         }
     }
 
-    /// <summary>
-    /// Подписка на все Hub-события. Сохраняет IDisposable для корректной отписки.
-    /// </summary>
+    public async Task DisconnectAsync()
+    {
+        if (_hubConnection is null) return;
+
+        try
+        {
+            await _hubConnection.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GlobalHub] Disconnect error: {ex.Message}");
+        }
+    }
+
+    public void SetCurrentChat(int? chatId)
+    {
+        _openChatId = chatId ?? NoChatId;
+        _lastSentReadMessageId = 0;
+        _lastSentReadTime = DateTime.MinValue;
+        _lastSentTypingTime = DateTime.MinValue;
+    }
+
+    #endregion
+
+    #region Hub subscriptions
+
     private void SubscribeHubEvents()
     {
         if (_hubConnection is null) return;
@@ -141,9 +179,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         _hubSubscriptions.Add(_hubConnection.On<int, int>("MemberLeft", OnMemberLeftReceived));
     }
 
-    /// <summary>
-    /// Отписка от всех Hub-событий через сохранённые IDisposable.
-    /// </summary>
     private void UnsubscribeHubEvents()
     {
         foreach (var sub in _hubSubscriptions)
@@ -151,8 +186,13 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
             try { sub.Dispose(); }
             catch { /* best-effort */ }
         }
+
         _hubSubscriptions.Clear();
     }
+
+    #endregion
+
+    #region Reconnection
 
     private async Task OnHubReconnecting(Exception? error)
     {
@@ -174,7 +214,9 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         Reconnected?.Invoke();
     }
 
-    #region Chat-level methods
+    #endregion
+
+    #region Chat-level RPC
 
     public async Task<ChatReadInfoDto?> GetReadInfoAsync(int chatId)
     {
@@ -235,50 +277,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         }
     }
 
-    #endregion
-
-    private async Task LoadUnreadCountsAsync()
-    {
-        try
-        {
-            var counts = await GetUnreadCountsAsync();
-            if (counts == null) return;
-
-            lock (_lock)
-            {
-                _unreadCounts.Clear();
-                _totalUnread = counts.TotalUnread;
-
-                foreach (var chat in counts.Chats)
-                {
-                    _unreadCounts[chat.ChatId] = chat.UnreadCount;
-                }
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                Dictionary<int, int> snapshot = [];
-                int total = 0;
-
-                lock (_lock)
-                {
-                    snapshot = new Dictionary<int, int>(_unreadCounts);
-                    total = _totalUnread;
-                }
-
-                foreach (var kvp in snapshot)
-                {
-                    UnreadCountChanged?.Invoke(kvp.Key, kvp.Value);
-                }
-                TotalUnreadChanged?.Invoke(total);
-            });
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[GlobalHub] LoadUnreadCounts error: {ex.Message}");
-        }
-    }
-
     public async Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
     {
         if (_hubConnection?.State != HubConnectionState.Connected)
@@ -320,61 +318,33 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         }
     }
 
-    private void SetUnreadCountLocally(int chatId, int newCount)
-    {
-        lock (_lock)
-        {
-            var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
-            var diff = oldCount - newCount;
-            _unreadCounts[chatId] = newCount;
-            _totalUnread = Math.Max(0, _totalUnread - diff);
-        }
+    #endregion
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            int count = 0;
-            int total = 0;
-
-            lock (_lock)
-            {
-                count = _unreadCounts.GetValueOrDefault(chatId, 0);
-                total = _totalUnread;
-            }
-            UnreadCountChanged?.Invoke(chatId, count);
-            TotalUnreadChanged?.Invoke(total);
-        });
-    }
-
-    #region Event Handlers
+    #region Event handlers
 
     private void OnNotificationReceived(NotificationDto notification)
     {
-        if (!_settingsService.NotificationsEnabled)
+        if (Volatile.Read(ref _disposed) == 1) return;
+        if (!_settingsService.NotificationsEnabled) return;
+
+        if (_openChatId == notification.ChatId)
             return;
 
-        if (!_currentChatId.HasValue ||
-            _currentChatId.Value != notification.ChatId)
-        {
-            IncrementUnreadCount(notification.ChatId);
-        }
-
-        if (_currentChatId == notification.ChatId)
-            return;
+        IncrementUnreadCount(notification.ChatId);
 
         Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                var title = notification.ChatName ?? "Новое сообщение";
-                var message = FormatNotificationMessage(notification);
-                _notificationService.ShowWindow(title, message, DesktopNotificationType.Information, 5000,
+                _notificationService.Show(notification.ChatName ?? "Новое сообщение",
+                    FormatNotificationMessage(notification), DesktopNotificationType.Information, 5000,
                     () => OpenNotificationAsync(notification));
 
                 NotificationReceived?.Invoke(notification);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[GlobalHub] Ошибка отображения уведомления: {ex.Message}");
+                Debug.WriteLine($"[GlobalHub] Notification display error: {ex.Message}");
             }
         });
     }
@@ -383,10 +353,9 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
     {
         _ = CacheIncomingMessageAsync(message);
 
-        Dispatcher.UIThread.Post(
-            () => MessageReceivedGlobally?.Invoke(message));
+        Dispatcher.UIThread.Post(() => MessageReceivedGlobally?.Invoke(message));
 
-        if (_currentChatId == message.ChatId)
+        if (_openChatId == message.ChatId)
             return;
 
         if (message.SenderId == _authManager.Session.UserId)
@@ -397,28 +366,14 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     private void OnMessageUpdated(MessageDto message)
     {
-        _ = Task.Run(async () =>
-        {
-            try { await _cacheService.UpsertMessageAsync(message); }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GlobalHub] Cache update error: {ex.Message}");
-            }
-        });
+        _ = SafeCacheAsync(() => _cacheService.UpsertMessageAsync(message), "update");
 
         Dispatcher.UIThread.Post(() => MessageUpdatedGlobally?.Invoke(message));
     }
 
     private void OnMessageDeleted(MessageDeletedEvent evt)
     {
-        _ = Task.Run(async () =>
-        {
-            try { await _cacheService.MarkMessageDeletedAsync(evt.MessageId); }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GlobalHub] Cache delete error: {ex.Message}");
-            }
-        });
+        _ = SafeCacheAsync(() => _cacheService.MarkMessageDeletedAsync(evt.MessageId), "delete");
 
         Dispatcher.UIThread.Post(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
     }
@@ -431,14 +386,12 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     private void OnUnreadCountUpdated(int chatId, int unreadCount)
     {
-        int total = 0;
-
-        lock (_lock)
+        int total;
+        lock (_unreadLock)
         {
             var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
-            var diff = oldCount - unreadCount;
             _unreadCounts[chatId] = unreadCount;
-            _totalUnread = Math.Max(0, _totalUnread - diff);
+            _totalUnread = Math.Max(0, _totalUnread - (oldCount - unreadCount));
             total = _totalUnread;
         }
 
@@ -463,56 +416,70 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     #endregion
 
-    #region Helpers
+    #region Unread count helpers
 
-    private async Task CacheIncomingMessageAsync(MessageDto message)
+    private async Task LoadUnreadCountsAsync()
     {
         try
         {
-            await _cacheService.UpsertMessageAsync(message);
+            var counts = await GetUnreadCountsAsync();
+            if (counts is null) return;
 
-            var preview = message.Content?.Length > 100
-                ? message.Content[..100] + "..." : message.Content;
-            await _cacheService.UpdateChatLastMessageAsync(
-                message.ChatId, preview, message.SenderName, message.CreatedAt);
+            Dictionary<int, int> snapshot;
+            int total;
+
+            lock (_unreadLock)
+            {
+                _unreadCounts.Clear();
+                _totalUnread = counts.TotalUnread;
+
+                foreach (var chat in counts.Chats)
+                    _unreadCounts[chat.ChatId] = chat.UnreadCount;
+
+                snapshot = new Dictionary<int, int>(_unreadCounts);
+                total = _totalUnread;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var kvp in snapshot)
+                    UnreadCountChanged?.Invoke(kvp.Key, kvp.Value);
+
+                TotalUnreadChanged?.Invoke(total);
+            });
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[GlobalHub] Cache incoming message error: {ex.Message}");
+            Debug.WriteLine($"[GlobalHub] LoadUnreadCounts error: {ex.Message}");
         }
     }
 
-    private async Task ReconcileAfterReconnectAsync()
+    private void SetUnreadCountLocally(int chatId, int newCount)
     {
-        try
+        int total;
+        lock (_unreadLock)
         {
-            if (_currentChatId.HasValue)
-            {
-                var syncState = await _cacheService.GetSyncStateAsync(
-                    _currentChatId.Value);
-                if (syncState?.NewestLoadedId != null)
-                {
-                    Debug.WriteLine($"[GlobalHub] Reconcile: checking gap for chat {_currentChatId.Value}, newestCached={syncState.NewestLoadedId}");
-                }
-            }
+            var oldCount = _unreadCounts.GetValueOrDefault(chatId, 0);
+            _unreadCounts[chatId] = newCount;
+            _totalUnread = Math.Max(0, _totalUnread - (oldCount - newCount));
+            total = _totalUnread;
+        }
 
-            Debug.WriteLine("[GlobalHub] Reconciliation check completed");
-        }
-        catch (Exception ex)
+        Dispatcher.UIThread.Post(() =>
         {
-            Debug.WriteLine($"[GlobalHub] Reconciliation error: {ex.Message}");
-        }
+            UnreadCountChanged?.Invoke(chatId, newCount);
+            TotalUnreadChanged?.Invoke(total);
+        });
     }
 
     private void IncrementUnreadCount(int chatId)
     {
-        int newCount = 0;
-        int total = 0;
+        int newCount;
+        int total;
 
-        lock (_lock)
+        lock (_unreadLock)
         {
-            var current = _unreadCounts.GetValueOrDefault(chatId, 0);
-            newCount = current + 1;
+            newCount = _unreadCounts.GetValueOrDefault(chatId, 0) + 1;
             _unreadCounts[chatId] = newCount;
             _totalUnread++;
             total = _totalUnread;
@@ -525,64 +492,114 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
         });
     }
 
-    private static string FormatNotificationMessage(NotificationDto notification)
-        => notification.Type == "poll" ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
-
-    private Task OpenNotificationAsync(NotificationDto notification)
-    {
-        if (_navigationService.CurrentViewModel is not MainMenuViewModel mainMenuViewModel)
-            return Task.CompletedTask;
-
-        return mainMenuViewModel.OpenNotificationAsync(notification);
-    }
     #endregion
 
-    public void SetCurrentChat(int? chatId)
-    {
-        _currentChatId = chatId;
+    #region Cache helpers
 
-        _lastSentReadMessageId = 0;
-        _lastSentReadTime = DateTime.MinValue;
-        _lastSentTypingTime = DateTime.MinValue;
-    }
-
-    public async Task DisconnectAsync()
+    private async Task CacheIncomingMessageAsync(MessageDto message)
     {
-        if (_hubConnection == null) return;
         try
         {
-            await _hubConnection.StopAsync();
+            await _cacheService.UpsertMessageAsync(message);
+
+            var preview = message.Content?.Length > ContentPreviewMaxLength ? message.Content[..ContentPreviewMaxLength] + PreviewEllipsis
+                : message.Content;
+
+            await _cacheService.UpdateChatLastMessageAsync(message.ChatId, preview, message.SenderName, message.CreatedAt);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[GlobalHub] Ошибка отключения: {ex.Message}");
+            Debug.WriteLine($"[GlobalHub] Cache incoming message error: {ex.Message}");
         }
     }
 
+    private static async Task SafeCacheAsync(Func<Task> action, string operationName)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GlobalHub] Cache {operationName} error: {ex.Message}");
+        }
+    }
+
+    private async Task ReconcileAfterReconnectAsync()
+    {
+        try
+        {
+            var chatId = _openChatId;
+            if (chatId != NoChatId)
+            {
+                var syncState = await _cacheService.GetSyncStateAsync(chatId);
+                if (syncState?.NewestLoadedId is not null)
+                {
+                    Debug.WriteLine($"[GlobalHub] Reconcile: gap check for chat {chatId}, newestCached={syncState.NewestLoadedId}");
+                }
+            }
+
+            Debug.WriteLine("[GlobalHub] Reconciliation check completed");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GlobalHub] Reconciliation error: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Notification helpers
+
+    private static string FormatNotificationMessage(NotificationDto notification) =>
+        notification.Type == NotificationTypePoll ? notification.Preview ?? "Новый опрос" : $"{notification.SenderName}: {notification.Preview}";
+
+    private Task OpenNotificationAsync(NotificationDto notification)
+    {
+        if (_navigationService.CurrentViewModel is not MainMenuViewModel mainMenuVm)
+            return Task.CompletedTask;
+
+        return mainMenuVm.OpenNotificationAsync(notification);
+    }
+
+    #endregion
+
     #region IDisposable & IAsyncDisposable
 
-    public void Dispose()
+    private void DetachFromHub()
     {
-        if (_disposed) return;
-        _disposed = true;
-
         UnsubscribeHubEvents();
 
-        if (_hubConnection != null)
+        if (_hubConnection is not null)
         {
             _hubConnection.Reconnecting -= OnHubReconnecting;
             _hubConnection.Reconnected -= OnHubReconnectedInternal;
+        }
+    }
 
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
+
+        DetachFromHub();
+
+        var hub = _hubConnection;
+        _hubConnection = null;
+
+        if (hub is not null)
+        {
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _hubConnection.StopAsync();
-                    await _hubConnection.DisposeAsync();
+                    await hub.StopAsync();
+                    await hub.DisposeAsync();
                 }
-                catch { /* не блокируем Dispose на случай ошибок при остановке/уничтожении соединения */ }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[GlobalHub] Hub disposal error: {ex.Message}");
+                }
             });
-            _hubConnection = null;
         }
 
         Debug.WriteLine("[GlobalHub] Disposed (sync)");
@@ -590,26 +607,24 @@ public sealed class GlobalHubConnection(IAuthManager authManager,INotificationSe
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
 
-        UnsubscribeHubEvents();
+        DetachFromHub();
 
-        if (_hubConnection != null)
+        var hub = _hubConnection;
+        _hubConnection = null;
+
+        if (hub is not null)
         {
-            _hubConnection.Reconnecting -= OnHubReconnecting;
-            _hubConnection.Reconnected -= OnHubReconnectedInternal;
-
             try
             {
-                await _hubConnection.StopAsync();
-                await _hubConnection.DisposeAsync();
+                await hub.StopAsync();
+                await hub.DisposeAsync();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[GlobalHub] DisposeAsync error: {ex.Message}");
             }
-            _hubConnection = null;
         }
 
         Debug.WriteLine("[GlobalHub] Disposed (async)");

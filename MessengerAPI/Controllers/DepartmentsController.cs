@@ -34,23 +34,14 @@ public sealed class DepartmentsController(IDepartmentService departmentService, 
         => await ExecuteAsync(() => departmentService.GetDepartmentMembersAsync(id, ct),"Список сотрудников получен");
 
     [HttpPost("{id}/members")]
-    public async Task<IActionResult> AddUserToDepartment(int id, [FromBody] UpdateDepartmentMemberDto dto, CancellationToken ct)
-    {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => departmentService.AddUserToDepartmentAsync(id, dto.UserId, currentUserId, ct), "Пользователь добавлен в отдел");
-    }
+    public async Task<IActionResult> AddUserToDepartment(int id, [FromBody] UpdateDepartmentMemberDto dto, CancellationToken ct) => await ExecuteAsync(()
+        => departmentService.AddUserToDepartmentAsync(id, dto.UserId, GetCurrentUserId(), ct), "Пользователь добавлен в отдел");
 
     [HttpDelete("{id}/members/{userId}")]
-    public async Task<IActionResult> RemoveUserFromDepartment(int id, int userId, CancellationToken ct)
-    {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => departmentService.RemoveUserFromDepartmentAsync(id, userId, currentUserId, ct), "Пользователь удалён из отдела");
-    }
+    public async Task<IActionResult> RemoveUserFromDepartment(int id, int userId, CancellationToken ct) => await ExecuteAsync(()
+        => departmentService.RemoveUserFromDepartmentAsync(id, userId, GetCurrentUserId(), ct), "Пользователь удалён из отдела");
 
     [HttpGet("{id}/can-manage")]
-    public async Task<ActionResult<ApiResponse<bool>>> CanManageDepartment(int id, CancellationToken ct)
-    {
-        var currentUserId = GetCurrentUserId();
-        return await ExecuteAsync(() => departmentService.CanManageDepartmentAsync(currentUserId, id, ct));
-    }
+    public async Task<ActionResult<ApiResponse<bool>>> CanManageDepartment(int id, CancellationToken ct) => await ExecuteAsync(()
+        => departmentService.CanManageDepartmentAsync(GetCurrentUserId(), id, ct));
 }

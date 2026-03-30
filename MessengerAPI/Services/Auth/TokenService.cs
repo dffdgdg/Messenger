@@ -17,16 +17,9 @@ public interface ITokenService
 {
     TokenPair GenerateTokenPair(int userId, UserRole? role = null);
     bool ValidateToken(string token, out int userId);
-
-    /// <summary>
-    /// Извлекает claims из истёкшего access token без проверки срока действия.
-    /// Возвращает Result.Failure при невалидном токене вместо исключения.
-    /// </summary>
     Result<ClaimsPrincipal> GetPrincipalFromExpiredToken(string token);
-
     static string HashToken(string token)
         => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-
     TokenValidationParameters GetValidationParameters();
 }
 
@@ -57,12 +50,10 @@ public sealed class TokenService : ITokenService
 
     public TokenPair GenerateTokenPair(int userId, UserRole? role = null)
     {
-        var jti = Guid.NewGuid().ToString();
-
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(JwtRegisteredClaimNames.Jti, jti),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
@@ -71,15 +62,13 @@ public sealed class TokenService : ITokenService
             claims.Add(new Claim(ClaimTypes.Role, role.Value.ToString()));
         }
 
-        var credentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
-
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(_settings.AccessTokenLifetimeMinutes),
             Issuer = _settings.Issuer,
             Audience = _settings.Audience,
-            SigningCredentials = credentials,
+            SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256),
             NotBefore = DateTime.UtcNow
         };
 
@@ -93,7 +82,7 @@ public sealed class TokenService : ITokenService
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            JwtId = jti
+            JwtId = Guid.NewGuid().ToString()
         };
     }
 
@@ -202,10 +191,7 @@ public sealed class TokenService : ITokenService
     }
 
     private static string GenerateRefreshToken()
-    {
-        var randomBytes = RandomNumberGenerator.GetBytes(64);
-        return Convert.ToBase64String(randomBytes);
-    }
+        => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
     private static SymmetricSecurityKey CreateSigningKey(string keyMaterial)
         => new(Encoding.UTF8.GetBytes(keyMaterial));

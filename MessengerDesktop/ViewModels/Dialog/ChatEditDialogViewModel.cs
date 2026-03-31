@@ -129,7 +129,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         }
     }
 
-    partial void OnAvailableUsersChanged(ObservableCollection<UserListItemViewModel>? oldValue, ObservableCollection<UserListItemViewModel> newValue)
+    partial void OnAvailableUsersChanged(ObservableCollection<UserListItemViewModel> oldValue, ObservableCollection<UserListItemViewModel> newValue)
     {
         if (oldValue != null)
             UnsubscribeFromUsers(oldValue);
@@ -185,14 +185,9 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         if (ShowDialogAction == null)
             return;
 
-        var adminsSource = AvailableUsers.Where(x => x.IsSelected)
-            .Select(x => x.Clone(SelectedAdminIds.Contains(x.Id)))
-            .ToList();
+        var adminsSource = AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList();
 
-        var dialog = new UserListDialogViewModel("Администраторы",
-            adminsSource,
-            CanManageAdmins,
-            items => items.Where(x => x.IsSelected),
+        var dialog = new UserListDialogViewModel("Администраторы", adminsSource, CanManageAdmins, items => items.Where(x => x.IsSelected),
             selectedIds =>
             {
                 SelectedAdminIds = new ObservableCollection<int>(selectedIds);
@@ -302,13 +297,12 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private void ClearAvatar()
     {
-        var hadAvatar = AvatarPreview != null;
         _avatarStream?.Dispose();
         _avatarStream = null;
         _avatarFileName = null;
         AvatarPreview?.Dispose();
         AvatarPreview = null;
-        _isAvatarRemoved = hadAvatar;
+        _isAvatarRemoved = AvatarPreview != null;
     }
 
     #endregion

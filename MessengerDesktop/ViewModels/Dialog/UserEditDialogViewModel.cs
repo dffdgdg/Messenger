@@ -96,12 +96,6 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         OnPropertyChanged(nameof(DisplayNamePreview));
     }
 
-    partial void OnNameChanged(string value)
-    {
-        ClearErrorIfValid();
-        OnPropertyChanged(nameof(DisplayNamePreview));
-    }
-
     partial void OnMidnameChanged(string value) => OnPropertyChanged(nameof(DisplayNamePreview));
 
     partial void OnPasswordChanged(string value) => ClearErrorIfValid();

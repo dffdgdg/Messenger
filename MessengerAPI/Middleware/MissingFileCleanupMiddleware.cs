@@ -1,6 +1,6 @@
 ﻿namespace MessengerAPI.Middleware;
 
-public sealed class MissingFileCleanupMiddleware(RequestDelegate next)
+public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {
     private static readonly PathString[] WatchedPrefixes = [new("/uploads"), new("/avatars")];
 
@@ -53,12 +53,14 @@ public sealed class MissingFileCleanupMiddleware(RequestDelegate next)
 
         await dbContext.SaveChangesAsync(context.RequestAborted);
 
-        logger.LogInformation("Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}",
-            relativePath,messageFiles.Count,usersWithAvatar.Count,chatsWithAvatar.Count);
+        LogMissingFileCleaned(logger, relativePath, messageFiles.Count, usersWithAvatar.Count, chatsWithAvatar.Count);
     }
 
     private static bool IsWatchedRequest(PathString path)
         => WatchedPrefixes.Any(prefix => path.StartsWithSegments(prefix));
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}")]
+    private static partial void LogMissingFileCleaned(ILogger logger, string path, int files, int users, int chats);
 }
 
 public static class MissingFileCleanupMiddlewareExtensions

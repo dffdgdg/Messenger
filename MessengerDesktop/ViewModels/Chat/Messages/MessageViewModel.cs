@@ -60,7 +60,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private readonly INotificationService? _notificationService;
     private readonly IApiClientService? _apiClient;
     private readonly IAudioPlayerService? _audioPlayer;
-    private MemoryStream? _cachedAudioStream;
+    private byte[]? _cachedAudioBytes;
     private bool _disposed;
     private bool _subscribedToPlayer;
 
@@ -167,17 +167,13 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         set => SenderAvatar = value;
     }
 
-    public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null)
+    public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null,
+    IAudioPlayerService? audioPlayer = null,
+    IApiClientService? apiClient = null)
     {
         _downloadService = downloadService;
         _notificationService = notificationService;
-
-        try
-        {
-            _apiClient = App.Current.Services.GetService<IApiClientService>();
-            _audioPlayer = App.Current.Services.GetService<IAudioPlayerService>();
-        }
-        catch { /* Если сервисы не зарегистрированы, просто продолжим без них. */ }
 
         Message = message;
         Id = message.Id;
@@ -347,7 +343,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (_cachedAudioStream == null)
+        if (_cachedAudioBytes == null)
         {
             IsVoiceLoading = true;
 
@@ -371,7 +367,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                _cachedAudioStream = memoryStream;
+                _cachedAudioBytes = memoryStream.ToArray();
+                await memoryStream.DisposeAsync();
             }
             catch (Exception ex)
             {
@@ -383,7 +380,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             IsVoiceLoading = false;
         }
 
-        var playStream = new MemoryStream(_cachedAudioStream.ToArray());
+        var playStream = new MemoryStream(_cachedAudioBytes, writable: false);
         _audioPlayer.Play(Id, playStream);
     }
 
@@ -484,8 +481,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         VoiceDurationSeconds = null;
         ResetPlayerState();
 
-        _cachedAudioStream?.Dispose();
-        _cachedAudioStream = null;
+        _cachedAudioBytes = null;
 
         OnPropertyChanged(nameof(DisplayContent));
         OnPropertyChanged(nameof(HasTextContent));
@@ -674,8 +670,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         UnsubscribeFromAudioPlayer();
 
-        _cachedAudioStream?.Dispose();
-        _cachedAudioStream = null;
+        _cachedAudioBytes = null;
     }
 
     #endregion

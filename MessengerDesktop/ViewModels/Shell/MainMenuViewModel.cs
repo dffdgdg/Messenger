@@ -118,6 +118,23 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             _forwardHistory.Clear();
         }
 
+        var leavingChatTab = SelectedMenuIndex is 1 or 2 or 5;
+        var enteringChatTab = index is 1 or 2 or 5;
+
+        if (leavingChatTab && !enteringChatTab)
+        {
+            if (_chatsViewModel?.CurrentChatViewModel != null)
+            {
+                _chatsViewModel.SelectedChat = null;
+                _chatsViewModel.CurrentChatViewModel = null;
+            }
+            if (_contactsViewModel?.CurrentChatViewModel != null)
+            {
+                _contactsViewModel.SelectedChat = null;
+                _contactsViewModel.CurrentChatViewModel = null;
+            }
+        }
+
         SelectedMenuIndex = index;
         ClearSearch();
 
@@ -550,6 +567,27 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             _searchCts?.Cancel();
             _searchCts?.Dispose();
             _searchCts = null;
+
+            _chatsViewModel?.Dispose();
+            _chatsViewModel = null;
+
+            _contactsViewModel?.Dispose();
+            _contactsViewModel = null;
+
+            _departmentViewModel?.Dispose();
+            _departmentViewModel = null;
+
+            _profileViewModel?.Dispose();
+            _profileViewModel = null;
+
+            _adminViewModel?.Dispose();
+            _adminViewModel = null;
+
+            _settingsViewModel?.Dispose();
+            _settingsViewModel = null;
+
+            _styleGuideViewModel?.Dispose();
+            _styleGuideViewModel = null;
 
             if (_globalHub is IAsyncDisposable asyncDisposable)
                 _ = DisposeGlobalHubAsync(asyncDisposable);

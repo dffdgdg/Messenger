@@ -38,7 +38,7 @@ public partial class PollDialogViewModel : DialogBaseViewModel
         NotifyStateChanged();
     }
 
-    partial void OnOptionsChanged(ObservableCollection<OptionItem>? oldValue, ObservableCollection<OptionItem> newValue)
+    partial void OnOptionsChanged(ObservableCollection<OptionItem> oldValue, ObservableCollection<OptionItem> newValue)
     {
         if (oldValue != null)
             UnsubscribeFromOptions(oldValue);

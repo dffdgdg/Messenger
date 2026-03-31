@@ -101,9 +101,13 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
         if (accessResult.IsFailure)
             return Result<PollDto>.FromFailure(accessResult);
 
-        var optionIds = voteDto.OptionIds?.Count > 0
-            ? voteDto.OptionIds : voteDto.OptionId.HasValue
-            ? [voteDto.OptionId.Value] : [];
+        List<int> optionIds;
+        if (voteDto.OptionIds?.Count > 0)
+            optionIds = voteDto.OptionIds;
+        else if (voteDto.OptionId.HasValue)
+            optionIds = [voteDto.OptionId.Value];
+        else
+            optionIds = [];
 
         var validOptionIds = poll.PollOptions.Select(o => o.Id).ToHashSet();
         var invalidIds = optionIds.Where(id => !validOptionIds.Contains(id)).ToList();

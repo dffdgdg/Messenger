@@ -32,7 +32,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
 
     public async Task LoadAsync() => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Admin.Users);
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Admin.AllUsers);
 
         if (result is { Success: true, Data: not null })
         {
@@ -56,7 +56,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         {
             await SafeExecuteAsync(async () =>
             {
-                var apiResult = await _apiClient.PostAsync<UserDto>(ApiEndpoints.Admin.Users, createDto);
+                var apiResult = await _apiClient.PostAsync<UserDto>(ApiEndpoints.Admin.AllUsers, createDto);
 
                 if (apiResult.Success)
                 {

@@ -203,7 +203,7 @@
                              SelectionMode="Single,Toggle">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel/>
+                                <VirtualizingStackPanel/>
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>

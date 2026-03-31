@@ -233,7 +233,7 @@ public static class ApiEndpoints
         private const string Base = $"{Api}/admin";
 
         /// <summary>GET api/admin/users</summary>
-        public const string Users = $"{Base}/users";
+        public const string AllUsers = $"{Base}/users";
 
         /// <summary>PUT api/admin/users/{userId}</summary>
         public static string UserById(int userId) => $"{Base}/users/{userId}";

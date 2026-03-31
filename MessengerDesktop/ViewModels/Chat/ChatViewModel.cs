@@ -150,19 +150,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #region Конструктор и инициализация
 
     public ChatViewModel(
-        int chatId,
-        ChatsViewModel parent,
-        IChatNavigator navigator,
-        IApiClientService apiClient,
-        IAuthManager authManager,
-        IChatInfoPanelStateStore chatInfoPanelStateStore,
-        INotificationService notificationService,
-        IChatNotificationApiService notificationApiService,
-        IDialogService dialogService,
-        IGlobalHubConnection globalHub,
-        IFileDownloadService fileDownloadService,
-        IStorageProvider? storageProvider = null,
-        ILocalCacheService? cacheService = null)
+    int chatId,
+    ChatsViewModel parent,
+    IChatNavigator navigator,
+    IApiClientService apiClient,
+    IAuthManager authManager,
+    IChatInfoPanelStateStore chatInfoPanelStateStore,
+    INotificationService notificationService,
+    IChatNotificationApiService notificationApiService,
+    IDialogService dialogService,
+    IGlobalHubConnection globalHub,
+    IFileDownloadService fileDownloadService,
+    IStorageProvider? storageProvider = null,
+    ILocalCacheService? cacheService = null,
+    IAudioPlayerService? audioPlayer = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
@@ -186,7 +187,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient,
+        () => Context.Members, fileDownloadService, notificationService,
+        cacheService, audioPlayer);
 
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
@@ -523,7 +526,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         if (Context.IsDisposed) return;
 
-        // защита от спама на сервер при быстром скролле
         var now = DateTime.UtcNow;
         if ((now - _lastMarkAsReadTime).TotalSeconds < AppConstants.MarkAsReadCooldownSeconds)
             return;
@@ -600,6 +602,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Notification.Dispose();
         Attachments.Dispose();
 
+        try
+        {
+            MessageManager.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] MessageManager dispose error: {ex.Message}");
+        }
+
         Context.Dispose();
     }
 
@@ -611,11 +622,28 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         base.Dispose(disposing);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        Dispose();
-        return ValueTask.CompletedTask;
-    }
+        if (Context.IsDisposed) return;
 
+        _hubSubscriber.Dispose();
+        Context.Hub.SetCurrentChat(null);
+
+        EditDelete.Dispose();
+        Reply.Dispose();
+        Forward.Dispose();
+        Typing.Dispose();
+        Voice.Dispose();
+        InfoPanel.Dispose();
+        Search.Dispose();
+        Notification.Dispose();
+        Attachments.Dispose();
+
+        await MessageManager.DisposeAsync();
+
+        Context.Dispose();
+
+        base.Dispose(true);
+    }
     #endregion
 }

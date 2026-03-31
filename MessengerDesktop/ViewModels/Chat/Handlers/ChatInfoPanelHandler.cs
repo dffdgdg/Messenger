@@ -161,7 +161,16 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     }
 
     private void OnUserProfileUpdated(UserDto updated)
-        => Dispatcher.UIThread.Post(() => { if (!IsAlive) return; UpdateContactProfile(updated); ReplaceMemberInList(updated); });
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsAlive)
+                return;
+
+            UpdateContactProfile(updated);
+            ReplaceMemberInList(updated);
+        });
+    }
 
     private void UpdateContactProfile(UserDto updated)
     {

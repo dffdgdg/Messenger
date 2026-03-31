@@ -274,23 +274,41 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 _ = _globalHub.MarkChatAsReadAsync(value.Id);
             }
 
-            if (CurrentChatViewModel == null || CurrentChatViewModel.Chat?.Id != value.Id)
-                CurrentChatViewModel = _chatViewModelFactory.Create(value.Id, this);
+            if (CurrentChatViewModel?.Chat?.Id == value.Id)
+                return;
+
+            CurrentChatViewModel = _chatViewModelFactory.Create(value.Id, this);
         }
     }
 
-    partial void OnCurrentChatViewModelChanged(ChatViewModel? value)
+    partial void OnCurrentChatViewModelChanged(ChatViewModel? oldValue, ChatViewModel? newValue)
     {
         if (_subscribedChatVm != null)
             _subscribedChatVm.PropertyChanged -= SubscribedChatVm_PropertyChanged;
 
-        _subscribedChatVm = value;
+        _subscribedChatVm = newValue;
 
         if (_subscribedChatVm != null)
             _subscribedChatVm.PropertyChanged += SubscribedChatVm_PropertyChanged;
 
         SyncSearchScopeWithChatViewMode();
         OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
+
+        if (oldValue != null && !ReferenceEquals(oldValue, newValue))
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                Debug.WriteLine($"[ChatsVM] Disposing ChatViewModel for chat {oldValue.Chat?.Id}");
+                try
+                {
+                    oldValue.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ChatsVM] Dispose error: {ex.Message}");
+                }
+            }, DispatcherPriority.Background);
+        }
     }
 
     private void SyncSearchScopeWithChatViewMode()
@@ -552,8 +570,20 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.TotalUnreadChanged -= OnTotalUnreadChanged;
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
+
             SearchManager?.PropertyChanged -= OnSearchManagerPropertyChanged;
+
             _subscribedChatVm?.PropertyChanged -= SubscribedChatVm_PropertyChanged;
+
+            try
+            {
+                CurrentChatViewModel?.Dispose();
+                CurrentChatViewModel = null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatsVM] ChatVM dispose error: {ex.Message}");
+            }
         }
 
         _disposed = true;

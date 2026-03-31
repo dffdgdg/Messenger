@@ -1,5 +1,7 @@
 ﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Infrastructure;
+using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.UI;
 using System;
 using System.Collections.Generic;
@@ -11,17 +13,22 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(int chatId, int userId, IApiClientService apiClient,
-    Func<ObservableCollection<UserDto>> getMembersFunc, IFileDownloadService? downloadService = null,
-    INotificationService? notificationService = null, ILocalCacheService? cacheService = null) : IAsyncDisposable
+public sealed class ChatMessageManager(
+    int chatId, int userId, IApiClientService apiClient,
+    Func<ObservableCollection<UserDto>> getMembersFunc,
+    IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null,
+    ILocalCacheService? cacheService = null,
+    IAudioPlayerService? audioPlayer = null) : IAsyncDisposable
 {
+    private readonly IAudioPlayerService? _audioPlayer = audioPlayer;
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
 
     private int? _oldestLoadedMessageId;
     private int? _newestLoadedMessageId;
-    private bool _hasMoreOlder = true;
-    private bool _hasMoreNewer;
+    private volatile bool _hasMoreOlder = true;
+    private volatile bool _hasMoreNewer;
     private readonly HashSet<int> _loadedMessageIds = [];
 
     private int _isLoading;
@@ -30,6 +37,8 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
     private readonly List<Task> _backgroundTasks = [];
 
     private const int MaxGapFillBatches = 5;
+    private const int MaxMessagesInMemory = 200;
+    private const int TrimBatchSize = 80;
 
     public ObservableCollection<MessageViewModel> Messages { get; } = [];
     public bool IsLoading => Volatile.Read(ref _isLoading) != 0;
@@ -49,11 +58,10 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         if (info == null) return;
         LastReadMessageId = info.LastReadMessageId;
         FirstUnreadMessageId = info.FirstUnreadMessageId;
-
         Debug.WriteLine($"[MessageManager] ReadInfo: lastRead={LastReadMessageId}, firstUnread={FirstUnreadMessageId}");
     }
 
-    #region Загрузка сообщений
+    #region Message Loading
 
     public async Task<int?> LoadInitialMessagesAsync(CancellationToken ct = default)
     {
@@ -62,92 +70,80 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         try
         {
             if (FirstUnreadMessageId.HasValue)
-                return await LoadMessagesAroundInternalAsync(FirstUnreadMessageId.Value, ct);
+                return await LoadAroundCoreAsync(FirstUnreadMessageId.Value, ct);
 
-            if (cacheService != null)
-            {
-                var cached = await cacheService.GetMessagesAsync(chatId, AppConstants.DefaultPageSize);
-
-                if (cached is { Messages.Count: > 0 })
-                {
-                    RenderMessages(cached.Messages);
-                    _hasMoreOlder = cached.HasMoreOlder;
-                    _hasMoreNewer = false;
-
-                    Debug.WriteLine($"[MessageManager] Загружено {cached.Messages.Count} из кеша для чата {chatId}");
-
-                    RunInBackground(() => RevalidateNewestAsync(_disposeCts.Token));
-                    return Messages.Count > 0 ? Messages.Count - 1 : null;
-                }
-            }
+            if (await TryLoadInitialFromCacheAsync() is { } cachedIndex)
+                return cachedIndex;
 
             return await LoadInitialFromServerAsync(ct);
         }
-        finally
-        {
-            EndLoading();
-        }
+        finally { EndLoading(); }
+    }
+
+    private async Task<int?> TryLoadInitialFromCacheAsync()
+    {
+        if (cacheService == null) return null;
+
+        var cached = await cacheService.GetMessagesAsync(chatId, AppConstants.DefaultPageSize);
+        if (cached is not { Messages.Count: > 0 }) return null;
+
+        RenderMessages(cached.Messages);
+        _hasMoreOlder = cached.HasMoreOlder;
+        _hasMoreNewer = false;
+
+        Debug.WriteLine($"[MessageManager] Загружено {cached.Messages.Count} из кеша для чата {chatId}");
+
+        RunInBackground(() => RevalidateNewestAsync(_disposeCts.Token));
+        return LastIndexOrNull();
     }
 
     private async Task<int?> LoadInitialFromServerAsync(CancellationToken ct)
     {
         var url = ApiEndpoints.Messages.ForChat(chatId, userId, 1, AppConstants.DefaultPageSize);
-        var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+        var data = await FetchAsync(url, ct);
+        if (data == null) return null;
 
-        if (result is not { Success: true, Data: not null })
-            return null;
-
-        RenderMessages(result.Data.Messages);
-        _hasMoreOlder = result.Data.HasMoreMessages;
+        RenderMessages(data.Messages);
+        _hasMoreOlder = data.HasMoreMessages;
         _hasMoreNewer = false;
 
-        await SaveToCacheAsync(result.Data.Messages, result.Data.HasMoreMessages, false);
-
-        return Messages.Count > 0 ? Messages.Count - 1 : null;
+        await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, false);
+        return LastIndexOrNull();
     }
 
     public async Task<int?> LoadMessagesAroundAsync(int messageId, CancellationToken ct = default)
     {
         if (!TryBeginLoading()) return null;
 
-        try
-        {
-            return await LoadMessagesAroundInternalAsync(messageId, ct);
-        }
-        finally
-        {
-            EndLoading();
-        }
+        try { return await LoadAroundCoreAsync(messageId, ct); }
+        finally { EndLoading(); }
     }
 
-    private async Task<int?> LoadMessagesAroundInternalAsync(int messageId, CancellationToken ct = default)
+    private async Task<int?> LoadAroundCoreAsync(int messageId, CancellationToken ct)
     {
         if (cacheService != null)
         {
-            var cached = await cacheService.GetMessagesAroundAsync(chatId, messageId, AppConstants.DefaultPageSize);
+            var cached = await cacheService.GetMessagesAroundAsync(
+                chatId, messageId, AppConstants.DefaultPageSize);
 
             if (cached is { IsComplete: true, Messages.Count: > 0 })
             {
                 RenderMessages(cached.Messages);
                 _hasMoreOlder = cached.HasMoreOlder;
                 _hasMoreNewer = cached.HasMoreNewer;
-                return FindIndexById(Messages, messageId);
+                return FindIndexById(messageId);
             }
         }
 
-        var url = ApiEndpoints.Messages.Around(chatId, messageId, userId, AppConstants.DefaultPageSize);
-        var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+        var data = await FetchAsync(ApiEndpoints.Messages.Around(chatId, messageId, userId, AppConstants.DefaultPageSize), ct);
+        if (data == null) return null;
 
-        if (result is not { Success: true, Data: not null })
-            return null;
+        RenderMessages(data.Messages);
+        _hasMoreOlder = data.HasMoreMessages;
+        _hasMoreNewer = data.HasNewerMessages;
 
-        RenderMessages(result.Data.Messages);
-        _hasMoreOlder = result.Data.HasMoreMessages;
-        _hasMoreNewer = result.Data.HasNewerMessages;
-
-        await SaveToCacheAsync(result.Data.Messages, result.Data.HasMoreMessages, result.Data.HasNewerMessages);
-
-        return FindIndexById(Messages, messageId);
+        await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, data.HasNewerMessages);
+        return FindIndexById(messageId);
     }
 
     private enum LoadDirection { Older, Newer }
@@ -160,16 +156,15 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
     private async Task LoadPageAsync(LoadDirection direction, CancellationToken ct)
     {
-        var anchor = direction == LoadDirection.Older ? _oldestLoadedMessageId : _newestLoadedMessageId;
-        var hasMore = direction == LoadDirection.Older ? _hasMoreOlder : _hasMoreNewer;
-
         if (!TryBeginLoading()) return;
 
         try
         {
-            if (!hasMore || anchor is not { } anchorId) return;
+            if (!GetHasMore(direction) || GetAnchor(direction) is not { } anchorId)
+                return;
 
-            var page = await LoadDirectionalAsync(direction, anchorId, AppConstants.LoadMorePageSize, ct);
+            var page = await LoadDirectionalAsync(
+                direction, anchorId, AppConstants.LoadMorePageSize, ct);
             if (page is not { Messages.Count: > 0 }) return;
 
             if (direction == LoadDirection.Older)
@@ -183,63 +178,63 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
                 _hasMoreNewer = page.HasMore;
             }
 
-            await UpdateSyncStateAsync();
+            await SafeUpdateSyncStateAsync();
         }
-        finally
-        {
-            EndLoading();
-        }
+        finally { EndLoading(); }
     }
 
     private async Task<DirectionalPage?> LoadDirectionalAsync(LoadDirection direction, int anchorId, int count, CancellationToken ct)
     {
         if (cacheService != null)
         {
-            var cached = direction == LoadDirection.Older
-                ? await cacheService.GetMessagesBeforeAsync(chatId, anchorId, count)
-                : await cacheService.GetMessagesAfterAsync(chatId, anchorId, count);
-
-            if (cached is { IsComplete: true, Messages.Count: > 0 })
-            {
-                var cachedHasMore = direction == LoadDirection.Older
-                    ? cached.HasMoreOlder : cached.HasMoreNewer;
-                return new(cached.Messages, cachedHasMore);
-            }
-
-            if (direction == LoadDirection.Older && cached?.Messages is { Count: > 0 } partial)
-            {
-                var serverAnchor = partial.Min(m => m.Id);
-                var serverCount = count - partial.Count;
-
-                var url = ApiEndpoints.Messages.Before(chatId, serverAnchor, userId, serverCount);
-                var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
-
-                if (result is not { Success: true, Data: not null })
-                    return null;
-
-                await CacheMessagesOnlyAsync(result.Data.Messages);
-                return new(MergeAndDeduplicate(partial, result.Data.Messages), result.Data.HasMoreMessages);
-            }
+            var fromCache = await TryLoadDirectionalFromCacheAsync(
+                direction, anchorId, count, ct);
+            if (fromCache != null)
+                return fromCache;
         }
-        {
-            var url = direction == LoadDirection.Older
-                ? ApiEndpoints.Messages.Before(chatId, anchorId, userId, count)
-                : ApiEndpoints.Messages.After(chatId, anchorId, userId, count);
 
-            var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
-            if (result is not { Success: true, Data: not null })
-                return null;
-
-            await CacheMessagesOnlyAsync(result.Data.Messages);
-
-            var serverHasMore = direction == LoadDirection.Older
-                ? result.Data.HasMoreMessages : result.Data.HasNewerMessages;
-
-            return new(result.Data.Messages, serverHasMore);
-        }
+        return await LoadDirectionalFromServerAsync(direction, anchorId, count, ct);
     }
 
-    private record DirectionalPage(List<MessageDto> Messages, bool HasMore);
+    private async Task<DirectionalPage?> TryLoadDirectionalFromCacheAsync(LoadDirection direction, int anchorId, int count, CancellationToken ct)
+    {
+        var cached = direction == LoadDirection.Older ? await cacheService!.GetMessagesBeforeAsync(chatId, anchorId, count)
+            : await cacheService!.GetMessagesAfterAsync(chatId, anchorId, count);
+
+        if (cached is { IsComplete: true, Messages.Count: > 0 })
+            return new DirectionalPage(cached.Messages, GetCachedHasMore(cached, direction));
+
+        if (direction == LoadDirection.Older && cached?.Messages is { Count: > 0 } partial)
+            return await BackfillOlderFromServerAsync(partial, count, ct);
+
+        return null;
+    }
+
+    private async Task<DirectionalPage?> BackfillOlderFromServerAsync(List<MessageDto> partial, int totalCount, CancellationToken ct)
+    {
+        var serverAnchor = partial.Min(m => m.Id);
+        var remaining = totalCount - partial.Count;
+
+        var url = ApiEndpoints.Messages.Before(chatId, serverAnchor, userId, remaining);
+        var data = await FetchAsync(url, ct);
+        if (data == null) return null;
+
+        await SafeCacheMessagesAsync(data.Messages);
+        return new DirectionalPage(MergeAndDeduplicate(partial, data.Messages), data.HasMoreMessages);
+    }
+
+    private async Task<DirectionalPage?> LoadDirectionalFromServerAsync(
+        LoadDirection direction, int anchorId, int count, CancellationToken ct)
+    {
+        var url = BuildDirectionalUrl(direction, anchorId, count);
+        var data = await FetchAsync(url, ct);
+        if (data == null) return null;
+
+        await SafeCacheMessagesAsync(data.Messages);
+        return new DirectionalPage(data.Messages, GetServerHasMore(data, direction));
+    }
+
+    private sealed record DirectionalPage(List<MessageDto> Messages, bool HasMore);
 
     public async Task GapFillAfterReconnectAsync(CancellationToken ct = default)
     {
@@ -254,35 +249,37 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
             {
                 ct.ThrowIfCancellationRequested();
 
-                var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId!.Value, userId, AppConstants.DefaultPageSize);
-                var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
-
-                if (result is not { Success: true, Data.Messages.Count: > 0 })
-                    break;
+                var url = ApiEndpoints.Messages.After(
+                    chatId, _newestLoadedMessageId!.Value, userId, AppConstants.DefaultPageSize);
+                var data = await FetchAsync(url, ct);
+                if (data is not { Messages.Count: > 0 }) break;
 
                 batchesLoaded++;
-                await CacheMessagesOnlyAsync(result.Data.Messages);
+                await SafeCacheMessagesAsync(data.Messages);
 
+                var batch = data;
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    totalAdded += AppendNewMessages(result.Data.Messages);
-                    _hasMoreNewer = result.Data.HasNewerMessages;
+                    totalAdded += AppendNewMessagesAndCount(batch.Messages);
+                    _hasMoreNewer = batch.HasNewerMessages;
                 });
 
-                await UpdateSyncStateAsync();
+                await SafeUpdateSyncStateAsync();
 
-                if (!result.Data.HasNewerMessages || result.Data.Messages.Count < AppConstants.DefaultPageSize)
+                if (!data.HasNewerMessages || data.Messages.Count < AppConstants.DefaultPageSize)
                     break;
             }
 
             if (batchesLoaded >= MaxGapFillBatches)
             {
-                Debug.WriteLine($"[MessageManager] Лимит GapFill ({MaxGapFillBatches} батчей, {totalAdded} сообщений). Сброс.");
+                Debug.WriteLine(
+                    $"[MessageManager] Лимит GapFill ({MaxGapFillBatches} батчей, {totalAdded} сообщений). Сброс.");
                 await ResetToLatestAsync(ct);
             }
             else
             {
-                Debug.WriteLine($"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batchesLoaded} батчей");
+                Debug.WriteLine(
+                    $"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batchesLoaded} батчей");
             }
         }
         catch (OperationCanceledException) { /* expected */ }
@@ -290,10 +287,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         {
             Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}");
         }
-        finally
-        {
-            EndLoading();
-        }
+        finally { EndLoading(); }
     }
 
     private async Task ResetToLatestAsync(CancellationToken ct)
@@ -303,36 +297,39 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
             if (cacheService != null)
                 await cacheService.ClearChatMessagesAsync(chatId);
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                DisposeAllMessages();
-                Messages.Clear();
-                _loadedMessageIds.Clear();
-                _oldestLoadedMessageId = null;
-                _newestLoadedMessageId = null;
-                _hasMoreOlder = true;
-                _hasMoreNewer = false;
-            });
+            await Dispatcher.UIThread.InvokeAsync(ClearAllState);
 
             var url = ApiEndpoints.Messages.ForChat(chatId, userId, 1, AppConstants.DefaultPageSize);
-            var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+            var data = await FetchAsync(url, ct);
+            if (data == null) return;
 
-            if (result is { Success: true, Data: not null })
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    RenderMessages(result.Data.Messages);
-                    _hasMoreOlder = result.Data.HasMoreMessages;
-                    _hasMoreNewer = false;
-                });
+            var d = data;
+            await Dispatcher.UIThread.InvokeAsync(() => ApplyResetData(d));
 
-                await SaveToCacheAsync(result.Data.Messages, result.Data.HasMoreMessages, false);
-            }
+            await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, false);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[MessageManager] Ошибка сброса: {ex.Message}");
         }
+    }
+
+    private void ClearAllState()
+    {
+        DisposeAllMessages();
+        Messages.Clear();
+        _loadedMessageIds.Clear();
+        _oldestLoadedMessageId = null;
+        _newestLoadedMessageId = null;
+        _hasMoreOlder = true;
+        _hasMoreNewer = false;
+    }
+
+    private void ApplyResetData(PagedMessagesDto data)
+    {
+        RenderMessages(data.Messages);
+        _hasMoreOlder = data.HasMoreMessages;
+        _hasMoreNewer = false;
     }
 
     private async Task RevalidateNewestAsync(CancellationToken ct)
@@ -341,23 +338,23 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
         try
         {
-            var url = ApiEndpoints.Messages.After(chatId, _newestLoadedMessageId.Value, userId, AppConstants.DefaultPageSize);
-            var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+            var url = ApiEndpoints.Messages.After(
+                chatId, _newestLoadedMessageId.Value, userId, AppConstants.DefaultPageSize);
+            var data = await FetchAsync(url, ct);
+            if (data is not { Messages.Count: > 0 }) return;
 
-            if (result is not { Success: true, Data.Messages.Count: > 0 })
-                return;
+            await SafeCacheMessagesAsync(data.Messages);
 
-            await CacheMessagesOnlyAsync(result.Data.Messages);
-
+            var d = data;
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                AppendNewMessages(result.Data.Messages);
-                _hasMoreNewer = result.Data.HasNewerMessages;
+                AppendNewMessages(d.Messages);
+                _hasMoreNewer = d.HasNewerMessages;
             });
 
-            await UpdateSyncStateAsync();
+            await SafeUpdateSyncStateAsync();
         }
-        catch (OperationCanceledException) { /* Закрытие чата */ }
+        catch (OperationCanceledException) { /* закрытие чата */ }
         catch (Exception ex)
         {
             Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}");
@@ -366,15 +363,13 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
     #endregion
 
-    #region Обработка событий реального времени
+    #region Real-time Event Handling
 
     public void AddReceivedMessage(MessageDto message)
     {
-        if (!_loadedMessageIds.Add(message.Id))
-            return;
+        if (!_loadedMessageIds.Add(message.Id)) return;
 
         var vm = CreateMessageViewModel(message);
-
         if (message.SenderId != userId)
             vm.IsUnread = true;
 
@@ -382,14 +377,15 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         TrackBounds(message.Id);
         UpdateDateSeparatorForNewMessage(vm);
         MessageViewModel.UpdateGroupingAround(Messages, Messages.Count - 1);
+        TrimOldMessagesFromStart();
 
         _hasMoreNewer = false;
 
         RunInBackground(async () =>
         {
             if (cacheService == null) return;
-            await cacheService.UpsertMessageAsync(message);
-            await UpdateSyncStateAsync();
+            await SafeCacheAsync(() => cacheService.UpsertMessageAsync(message));
+            await SafeUpdateSyncStateAsync();
         });
     }
 
@@ -402,10 +398,10 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         msg.MarkAsDeleted();
         MessageViewModel.UpdateGroupingAround(Messages, index);
 
-        RunInBackground(async () =>
+        RunInBackground(() =>
         {
-            if (cacheService != null)
-                await cacheService.MarkMessageDeletedAsync(messageId);
+            if (cacheService == null) return Task.CompletedTask;
+            return SafeCacheAsync(() => cacheService.MarkMessageDeletedAsync(messageId));
         });
     }
 
@@ -416,16 +412,16 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
         msg.ApplyUpdate(updatedDto);
 
-        RunInBackground(async () =>
+        RunInBackground(() =>
         {
-            if (cacheService != null)
-                await cacheService.UpsertMessageAsync(updatedDto);
+            if (cacheService == null) return Task.CompletedTask;
+            return SafeCacheAsync(() => cacheService.UpsertMessageAsync(updatedDto));
         });
     }
 
     #endregion
 
-    #region Статус прочтения
+    #region Read Status
 
     public void MarkAsReadLocally(int messageId)
     {
@@ -444,52 +440,57 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
     #endregion
 
-    #region Работа с UI-коллекцией (вызывать на UI-потоке)
+    #region UI Collection
 
-    private int AppendNewMessages(List<MessageDto> dtos)
+    private void AppendNewMessages(List<MessageDto> dtos)
     {
         var lookup = BuildMembersLookup();
         var startIndex = Messages.Count;
-        var added = 0;
+        var added = false;
 
         foreach (var msg in dtos)
         {
             if (!_loadedMessageIds.Add(msg.Id)) continue;
             Messages.Add(CreateMessageViewModel(msg, lookup));
             TrackBounds(msg.Id);
-            added++;
+            added = true;
         }
 
-        if (added > 0)
+        if (added)
         {
+            TrimOldMessagesFromStart();
             UpdateDateSeparators();
             UpdateGroupingFrom(Math.Max(0, startIndex - 1));
         }
-
-        return added;
     }
 
-    private int PrependNewMessages(List<MessageDto> dtos)
+    private int AppendNewMessagesAndCount(List<MessageDto> dtos)
+    {
+        var before = Messages.Count;
+        AppendNewMessages(dtos);
+        return Messages.Count - before;
+    }
+
+    private void PrependNewMessages(List<MessageDto> dtos)
     {
         var lookup = BuildMembersLookup();
-        var added = 0;
+        var added = false;
 
-        for (int i = dtos.Count - 1; i >= 0; i--)
+        for (var i = dtos.Count - 1; i >= 0; i--)
         {
             var msg = dtos[i];
             if (!_loadedMessageIds.Add(msg.Id)) continue;
             Messages.Insert(0, CreateMessageViewModel(msg, lookup));
             TrackBounds(msg.Id);
-            added++;
+            added = true;
         }
 
-        if (added > 0)
+        if (added)
         {
+            RecalculateGrouping();
             UpdateDateSeparators();
             RecalculateGrouping();
         }
-
-        return added;
     }
 
     private void RenderMessages(List<MessageDto> messages)
@@ -501,6 +502,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         _newestLoadedMessageId = null;
 
         var lookup = BuildMembersLookup();
+
         foreach (var msg in messages)
         {
             if (!_loadedMessageIds.Add(msg.Id)) continue;
@@ -516,12 +518,41 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
     {
         foreach (var msg in Messages)
         {
-            foreach (var file in msg.FileViewModels)
-            {
-                if (file is IDisposable disposable)
-                    disposable.Dispose();
-            }
+            if (msg is IDisposable disposableMsg)
+                disposableMsg.Dispose();
+
+            DisposeMessage(msg);
         }
+    }
+    private void TrimOldMessagesFromStart()
+    {
+        if (Messages.Count <= MaxMessagesInMemory)
+            return;
+
+        var removeCount = Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory);
+        if (removeCount <= 0)
+            return;
+
+        for (int i = 0; i < removeCount; i++)
+        {
+            var message = Messages[0];
+            _loadedMessageIds.Remove(message.Id);
+            DisposeMessage(message);
+            Messages.RemoveAt(0);
+        }
+        _hasMoreOlder = true;
+        RecalculateBounds();
+    }
+
+    private static void DisposeMessage(MessageViewModel message)
+    {
+        foreach (var file in message.FileViewModels)
+        {
+            if (file is IDisposable disposable)
+                disposable.Dispose();
+        }
+
+        message.Dispose();
     }
 
     private MessageViewModel CreateMessageViewModel(MessageDto msg, Dictionary<int, UserDto>? lookup = null)
@@ -529,7 +560,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         lookup ??= BuildMembersLookup();
         lookup.TryGetValue(msg.SenderId, out var sender);
 
-        var vm = new MessageViewModel(msg, downloadService, notificationService)
+        var vm = new MessageViewModel(msg, downloadService, notificationService, _audioPlayer, _apiClient)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl
@@ -546,111 +577,82 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
     #endregion
 
-    #region Кеширование
+    #region API & Cache
 
-    private async Task SaveToCacheAsync(List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
+    private async Task<PagedMessagesDto?> FetchAsync(string url, CancellationToken ct)
     {
-        if (cacheService == null || messages.Count == 0) return;
-
-        try
-        {
-            await cacheService.UpsertMessagesAsync(messages);
-            await cacheService.UpdateSyncStateAsync(BuildSyncState(hasMoreOlder, hasMoreNewer));
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[MessageManager] Ошибка сохранения в кеш: {ex.Message}");
-        }
+        var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+        return result is { Success: true, Data: not null } ? result.Data : null;
     }
 
-    private async Task CacheMessagesOnlyAsync(List<MessageDto> messages)
-    {
-        if (cacheService == null || messages.Count == 0) return;
-
-        try
-        {
-            await cacheService.UpsertMessagesAsync(messages);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[MessageManager] Ошибка записи в кеш: {ex.Message}");
-        }
-    }
-
-    private async Task UpdateSyncStateAsync()
+    private async Task SafeCacheAsync(Func<Task> action)
     {
         if (cacheService == null) return;
 
-        try
-        {
-            await cacheService.UpdateSyncStateAsync(BuildSyncState(_hasMoreOlder, _hasMoreNewer));
-        }
+        try { await action(); }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[MessageManager] Ошибка обновления SyncState: {ex.Message}");
+            Debug.WriteLine($"[MessageManager] Ошибка кеша: {ex.Message}");
         }
     }
 
-    private ChatSyncState BuildSyncState(bool hasMoreOlder, bool hasMoreNewer) => new()
+    private Task SafeCacheMessagesAsync(List<MessageDto> messages)
+        => messages.Count > 0 ? SafeCacheAsync(() => cacheService!.UpsertMessagesAsync(messages)) : Task.CompletedTask;
+
+    private Task SafeUpdateSyncStateAsync()
+        => SafeCacheAsync(() => cacheService!.UpdateSyncStateAsync(BuildSyncState()));
+
+    private async Task SafeSaveToCacheAsync(List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
+    {
+        if (cacheService == null || messages.Count == 0) return;
+        await SafeCacheAsync(() => SaveToCacheCoreAsync(messages, hasMoreOlder, hasMoreNewer));
+    }
+
+    private async Task SaveToCacheCoreAsync(List<MessageDto> messages, bool hasMoreOlder, bool hasMoreNewer)
+    {
+        await cacheService!.UpsertMessagesAsync(messages);
+        await cacheService.UpdateSyncStateAsync(BuildSyncState(hasMoreOlder, hasMoreNewer));
+    }
+
+    private ChatSyncState BuildSyncState(bool? hasMoreOlder = null, bool? hasMoreNewer = null) => new()
     {
         ChatId = chatId,
         OldestLoadedId = _oldestLoadedMessageId,
         NewestLoadedId = _newestLoadedMessageId,
-        HasMoreOlder = hasMoreOlder,
-        HasMoreNewer = hasMoreNewer
+        HasMoreOlder = hasMoreOlder ?? _hasMoreOlder,
+        HasMoreNewer = hasMoreNewer ?? _hasMoreNewer
     };
 
-    private void RunInBackground(Func<Task> action, [CallerMemberName] string? caller = null)
-    {
-        var token = _disposeCts.Token;
-        var task = Task.Run(async () =>
-        {
-            try
-            {
-                token.ThrowIfCancellationRequested();
-                await action();
-            }
-            catch (OperationCanceledException) { /* dispose */ }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MessageManager] Ошибка фоновой задачи в {caller}: {ex.Message}");
-            }
-        }, token);
+    #endregion
 
-        lock (_bgLock)
-        {
-            _backgroundTasks.RemoveAll(t => t.IsCompleted);
-            _backgroundTasks.Add(task);
-        }
-    }
+    #region Direction Helpers
+
+    private int? GetAnchor(LoadDirection direction)
+        => direction == LoadDirection.Older ? _oldestLoadedMessageId : _newestLoadedMessageId;
+
+    private bool GetHasMore(LoadDirection direction)
+        => direction == LoadDirection.Older ? _hasMoreOlder : _hasMoreNewer;
+
+    private string BuildDirectionalUrl(LoadDirection direction, int anchorId, int count)
+        => direction == LoadDirection.Older ? ApiEndpoints.Messages.Before(chatId, anchorId, userId, count)
+            : ApiEndpoints.Messages.After(chatId, anchorId, userId, count);
+
+    private static bool GetCachedHasMore(CachedMessagesResult cached, LoadDirection direction)
+        => direction == LoadDirection.Older ? cached.HasMoreOlder : cached.HasMoreNewer;
+
+    private static bool GetServerHasMore(PagedMessagesDto data, LoadDirection direction)
+        => direction == LoadDirection.Older ? data.HasMoreMessages : data.HasNewerMessages;
 
     #endregion
 
-    #region Вспомогательные методы
-
-    private static List<MessageDto> MergeAndDeduplicate(List<MessageDto>? first, List<MessageDto> second)
-        => [.. (first ?? []).Concat(second).GroupBy(m => m.Id).Select(g => g.First()).OrderBy(m => m.Id)];
-
-    private static int? FindIndexById(ObservableCollection<MessageViewModel> messages, int id)
-    {
-        for (int i = 0; i < messages.Count; i++)
-        {
-            if (messages[i].Id == id)
-                return i;
-        }
-        return null;
-    }
-
-    #endregion
-
-    #region Группировка
+    #region Grouping
 
     private void RecalculateGrouping()
         => MessageViewModel.RecalculateGrouping(Messages);
 
     private void UpdateGroupingFrom(int startIndex)
     {
-        for (int i = startIndex; i < Messages.Count; i++)
+        for (var i = startIndex; i < Messages.Count; i++)
         {
             var current = Messages[i];
             var prev = i > 0 ? Messages[i - 1] : null;
@@ -663,12 +665,24 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
     #endregion
 
-    #region Границы и разделители дат
+    #region Bounds & Date Separators
 
     private void TrackBounds(int id)
     {
         _oldestLoadedMessageId = _oldestLoadedMessageId.HasValue ? Math.Min(_oldestLoadedMessageId.Value, id) : id;
         _newestLoadedMessageId = _newestLoadedMessageId.HasValue ? Math.Max(_newestLoadedMessageId.Value, id) : id;
+    }
+    private void RecalculateBounds()
+    {
+        if (Messages.Count == 0)
+        {
+            _oldestLoadedMessageId = null;
+            _newestLoadedMessageId = null;
+            return;
+        }
+
+        _oldestLoadedMessageId = Messages.Min(m => m.Id);
+        _newestLoadedMessageId = Messages.Max(m => m.Id);
     }
 
     private void UpdateDateSeparators()
@@ -678,17 +692,10 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         foreach (var message in Messages)
         {
             var messageDate = message.CreatedAt.Date;
+            var isNewDate = previousDate == null || messageDate != previousDate.Value;
 
-            if (previousDate == null || messageDate != previousDate.Value)
-            {
-                message.ShowDateSeparator = true;
-                message.DateSeparatorText = FormatDateSeparator(messageDate);
-            }
-            else
-            {
-                message.ShowDateSeparator = false;
-                message.DateSeparatorText = null;
-            }
+            message.ShowDateSeparator = isNewDate;
+            message.DateSeparatorText = isNewDate ? FormatDateSeparator(messageDate) : null;
 
             previousDate = messageDate;
         }
@@ -719,17 +726,58 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         if (date == today.AddDays(-1)) return "Вчера";
 
         var culture = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
-
         return date.Year == today.Year ? date.ToString("d MMMM", culture) : date.ToString("d MMMM yyyy", culture);
     }
 
     #endregion
 
-    #region Dispose
+    #region Helpers
+
+    private int? LastIndexOrNull()
+        => Messages.Count > 0 ? Messages.Count - 1 : null;
+
+    private int? FindIndexById(int id)
+    {
+        for (var i = 0; i < Messages.Count; i++)
+            if (Messages[i].Id == id) return i;
+        return null;
+    }
+
+    private static List<MessageDto> MergeAndDeduplicate(List<MessageDto>? first, List<MessageDto> second)
+        => [.. (first ?? []).Concat(second).GroupBy(m => m.Id).Select(g => g.First()).OrderBy(m => m.Id)];
+
+    private void RunInBackground(Func<Task> action, [CallerMemberName] string? caller = null)
+    {
+        var token = _disposeCts.Token;
+
+        var task = Task.Run(async () =>
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                await action();
+            }
+            catch (OperationCanceledException) { /* dispose */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MessageManager] Ошибка фоновой задачи в {caller}: {ex.Message}");
+            }
+        }, token);
+
+        lock (_bgLock)
+        {
+            _backgroundTasks.RemoveAll(t => t.IsCompleted);
+            _backgroundTasks.Add(task);
+        }
+    }
+
+    #endregion
+
+    #region Disposal
 
     public async ValueTask DisposeAsync()
     {
-        _disposeCts.Cancel();
+        await _disposeCts.CancelAsync();
 
         Task[] pending;
         lock (_bgLock) pending = [.. _backgroundTasks];
@@ -740,5 +788,6 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         DisposeAllMessages();
         _disposeCts.Dispose();
     }
+
     #endregion
 }

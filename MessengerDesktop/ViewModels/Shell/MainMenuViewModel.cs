@@ -17,22 +17,19 @@ namespace MessengerDesktop.ViewModels;
 
 public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 {
-    private readonly MainWindowViewModel _mainWindowViewModel;
-    private readonly IApiClientService _apiClient;
-    private readonly IAuthManager _authManager;
-    private readonly IChatsViewModelFactory _chatsViewModelFactory;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly MainWindowViewModel _mainWindowVm;
+    private readonly IApiClientService _api;
+    private readonly IAuthManager _auth;
+    private readonly IChatsViewModelFactory _chatsFactory;
+    private readonly IServiceProvider _sp;
     private readonly IGlobalHubConnection _globalHub;
-    private readonly Stack<int> _backHistory = [];
-    private readonly Stack<int> _forwardHistory = [];
+    private readonly Stack<int> _backHistory = [], _forwardHistory = [];
 
-    private ChatsViewModel? _chatsViewModel;
-    private ChatsViewModel? _contactsViewModel;
-    private DepartmentManagementViewModel? _departmentViewModel;
-    private ProfileViewModel? _profileViewModel;
-    private AdminViewModel? _adminViewModel;
-    private SettingsViewModel? _settingsViewModel;
-    private StyleGuideViewModel? _styleGuideViewModel;
+    private ChatsViewModel? _chatsVm, _contactsVm;
+    private DepartmentManagementViewModel? _deptVm;
+    private ProfileViewModel? _profileVm;
+    private AdminViewModel? _adminVm;
+    private SettingsViewModel? _settingsVm;
     private CancellationTokenSource? _searchCts;
 
     [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
@@ -48,69 +45,54 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public bool CanGoBack => _backHistory.Count > 0;
     public bool CanGoForward => _forwardHistory.Count > 0;
 
-    public MainMenuViewModel(MainWindowViewModel mainWindowViewModel, IApiClientService apiClient, IAuthManager authManager,
-        IChatsViewModelFactory chatsViewModelFactory, IServiceProvider serviceProvider, IGlobalHubConnection globalHub)
+    public MainMenuViewModel(MainWindowViewModel mainWindowVm, IApiClientService api, IAuthManager auth, IChatsViewModelFactory chatsFactory, IServiceProvider sp, IGlobalHubConnection globalHub)
     {
+        _mainWindowVm = mainWindowVm ?? throw new ArgumentNullException(nameof(mainWindowVm));
+        _api = api ?? throw new ArgumentNullException(nameof(api));
+        _auth = auth ?? throw new ArgumentNullException(nameof(auth));
+        _chatsFactory = chatsFactory ?? throw new ArgumentNullException(nameof(chatsFactory));
+        _sp = sp ?? throw new ArgumentNullException(nameof(sp));
         _globalHub = globalHub;
-        _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
-        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-        _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
-        _chatsViewModelFactory = chatsViewModelFactory ?? throw new ArgumentNullException(nameof(chatsViewModelFactory));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-        UserId = _authManager.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
-
-        _chatsViewModel = _chatsViewModelFactory.Create(this, isGroupMode: true);
-        CurrentMenuViewModel = _chatsViewModel;
+        UserId = _auth.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
+        CurrentMenuViewModel = _chatsVm = _chatsFactory.Create(this, isGroupMode: true);
 
         _ = LoadContactsAndChatsAsync();
-        _ = InitializeGlobalHubAsync();
+        _ = InitGlobalHubAsync();
     }
 
-    private async Task InitializeGlobalHubAsync()
+    private async Task InitGlobalHubAsync()
     {
-        try
-        {
-            await _globalHub.ConnectAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Failed to connect global hub: {ex.Message}");
-        }
+        try { await _globalHub.ConnectAsync(); }
+        catch (Exception ex) { Debug.WriteLine($"Failed to connect global hub: {ex.Message}"); }
     }
+
+    #region Navigation
 
     [RelayCommand]
-    private void SetItem(int index) => NavigateToMenu(index, addToHistory: true);
+    private void SetItem(int index) => NavigateTo(index, addToHistory: true);
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void GoBack()
     {
         if (!CanGoBack) return;
-
-        var previousIndex = _backHistory.Pop();
-
-        if (SelectedMenuIndex != previousIndex)
-            _forwardHistory.Push(SelectedMenuIndex);
-
-        NavigateToMenu(previousIndex, addToHistory: false);
+        var prev = _backHistory.Pop();
+        if (SelectedMenuIndex != prev) _forwardHistory.Push(SelectedMenuIndex);
+        NavigateTo(prev, false);
     }
 
     [RelayCommand(CanExecute = nameof(CanGoForward))]
     private void GoForward()
     {
         if (!CanGoForward) return;
-
-        var nextIndex = _forwardHistory.Pop();
-
-        if (SelectedMenuIndex != nextIndex)
-            _backHistory.Push(SelectedMenuIndex);
-
-        NavigateToMenu(nextIndex, addToHistory: false);
+        var next = _forwardHistory.Pop();
+        if (SelectedMenuIndex != next) _backHistory.Push(SelectedMenuIndex);
+        NavigateTo(next, false);
     }
 
-    public void SetActiveMenu(int index) => NavigateToMenu(index, addToHistory: true);
+    public void SetActiveMenu(int index) => NavigateTo(index, true);
 
-    private void NavigateToMenu(int index, bool addToHistory)
+    private void NavigateTo(int index, bool addToHistory)
     {
         if (addToHistory && SelectedMenuIndex != index)
         {
@@ -118,21 +100,11 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             _forwardHistory.Clear();
         }
 
-        var leavingChatTab = SelectedMenuIndex is 1 or 2 or 5;
-        var enteringChatTab = index is 1 or 2 or 5;
-
-        if (leavingChatTab && !enteringChatTab)
+        static bool IsChatTab(int i) => i is 1 or 2 or 5;
+        if (IsChatTab(SelectedMenuIndex) && !IsChatTab(index))
         {
-            if (_chatsViewModel?.CurrentChatViewModel != null)
-            {
-                _chatsViewModel.SelectedChat = null;
-                _chatsViewModel.CurrentChatViewModel = null;
-            }
-            if (_contactsViewModel?.CurrentChatViewModel != null)
-            {
-                _contactsViewModel.SelectedChat = null;
-                _contactsViewModel.CurrentChatViewModel = null;
-            }
+            ResetChat(_chatsVm);
+            ResetChat(_contactsVm);
         }
 
         SelectedMenuIndex = index;
@@ -140,61 +112,66 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         CurrentMenuViewModel = index switch
         {
-            0 => _settingsViewModel ??= _serviceProvider.GetRequiredService<SettingsViewModel>(),
-            1 or 2 => _chatsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: true),
-            3 => _profileViewModel ??= _serviceProvider.GetRequiredService<ProfileViewModel>(),
-            4 => _adminViewModel ??= _serviceProvider.GetRequiredService<AdminViewModel>(),
-            5 => _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false),
-            6 => _styleGuideViewModel ??= _serviceProvider.GetRequiredService<StyleGuideViewModel>(),
-            7 => GetOrCreateDepartmentViewModel(),
+            0 => _settingsVm ??= _sp.GetRequiredService<SettingsViewModel>(),
+            1 or 2 => _chatsVm ??= _chatsFactory.Create(this, true),
+            3 => _profileVm ??= _sp.GetRequiredService<ProfileViewModel>(),
+            4 => _adminVm ??= _sp.GetRequiredService<AdminViewModel>(),
+            5 => _contactsVm ??= _chatsFactory.Create(this, false),
+            7 => GetOrCreateDeptVm(),
             _ => CurrentMenuViewModel
         };
 
+        NotifyNavState();
+    }
+
+    private static void ResetChat(ChatsViewModel? vm)
+    {
+        if (vm?.CurrentChatViewModel == null) return;
+        vm.SelectedChat = null;
+        vm.CurrentChatViewModel = null;
+    }
+
+    private void NotifyNavState()
+    {
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(CanGoForward));
         GoBackCommand.NotifyCanExecuteChanged();
         GoForwardCommand.NotifyCanExecuteChanged();
     }
 
-    private DepartmentManagementViewModel GetOrCreateDepartmentViewModel()
+    private DepartmentManagementViewModel GetOrCreateDeptVm()
     {
-        if (_departmentViewModel != null)
-            return _departmentViewModel;
+        if (_deptVm != null) return _deptVm;
 
-        _departmentViewModel = _serviceProvider.GetRequiredService<DepartmentManagementViewModel>();
-
-        _departmentViewModel.OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user);
-
-        _departmentViewModel.NavigateToChatAction = async chatId =>
+        _deptVm = _sp.GetRequiredService<DepartmentManagementViewModel>();
+        _deptVm.OpenChatWithUserAction = async u => await OpenOrCreateChatAsync(u);
+        _deptVm.NavigateToChatAction = async id =>
         {
-            var chat = UserChats.FirstOrDefault(c => c.Id == chatId);
-            if (chat != null)
-                await OpenChatAsync(chat);
+            var chat = UserChats.FirstOrDefault(c => c.Id == id);
+            if (chat != null) await OpenChatAsync(chat);
         };
-
-        _departmentViewModel.ShowRemoveConfirmAction = async member =>
+        _deptVm.ShowRemoveConfirmAction = async member =>
         {
-            var dialog = new ConfirmDialogViewModel("Удаление из отдела",
-                $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?",
-                "Удалить", "Отмена");
-            await _mainWindowViewModel.ShowDialogAsync(dialog);
-            return await dialog.Result;
+            var dlg = new ConfirmDialogViewModel("Удаление из отдела", $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?", "Удалить", "Отмена");
+            await _mainWindowVm.ShowDialogAsync(dlg);
+            return await dlg.Result;
         };
-
-        _departmentViewModel.ShowSelectUserAction = async users =>
+        _deptVm.ShowSelectUserAction = async users =>
         {
-            var pickerDialog = new UserPickerDialogViewModel("Добавить сотрудника", users);
-            await _mainWindowViewModel.ShowDialogAsync(pickerDialog);
-            return await pickerDialog.SingleSelectResult;
+            var picker = new UserPickerDialogViewModel("Добавить сотрудника", users);
+            await _mainWindowVm.ShowDialogAsync(picker);
+            return await picker.SingleSelectResult;
         };
-
-        return _departmentViewModel;
+        return _deptVm;
     }
+
+    #endregion
+
+    #region Search
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        _searchCts?.Dispose();
+        _searchCts?.Cancel(); _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
         OnPropertyChanged(nameof(HasSearchText));
     }
@@ -204,82 +181,27 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     [RelayCommand]
     private void ClearSearch() => SearchText = string.Empty;
 
+    #endregion
+
+    #region Chat open
+
     public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
-        if (chat.Type is ChatType.Chat or ChatType.Department)
-        {
-            await OpenChatAsync(chat);
-            return;
-        }
-
-        SetActiveMenu(5);
-        await Task.Delay(50);
-
-        _contactsViewModel ??= _chatsViewModelFactory.Create(this, isGroupMode: false);
-
-        if (!_contactsViewModel.Chats.Any(c => c.Id == chat.Id))
-            _contactsViewModel.Chats.Insert(0, new ChatListItemViewModel(chat));
-
-        _contactsViewModel.SelectedChat = _contactsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
-        CurrentMenuViewModel = _contactsViewModel;
+        if (chat.Type is ChatType.Chat or ChatType.Department) { await OpenChatAsync(chat); return; }
+        _contactsVm ??= _chatsFactory.Create(this, false);
+        await EnsureAndSelectChatAsync(_contactsVm, chat, 5);
     }
 
-    public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto message)
+    public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto msg)
     {
-        bool isGroupChat = message.ChatType is ChatType.Chat or ChatType.Department;
-        SetActiveMenu(isGroupChat ? 1 : 5);
+        bool isGroup = msg.ChatType is ChatType.Chat or ChatType.Department;
+        SetActiveMenu(isGroup ? 1 : 5);
         await Task.Delay(50);
 
-        var targetViewModel = isGroupChat ? _chatsViewModel : _contactsViewModel;
+        var vm = isGroup ? (_chatsVm ??= _chatsFactory.Create(this, true)) : (_contactsVm ??= _chatsFactory.Create(this, false));
 
-        if (targetViewModel == null)
-        {
-            if (isGroupChat)
-            {
-                _chatsViewModel = _chatsViewModelFactory.Create(this, isGroupMode: true);
-                targetViewModel = _chatsViewModel;
-            }
-            else
-            {
-                _contactsViewModel = _chatsViewModelFactory.Create(this, isGroupMode: false);
-                targetViewModel = _contactsViewModel;
-            }
-            CurrentMenuViewModel = targetViewModel;
-        }
-
-        await targetViewModel.OpenChatByIdAsync(message.ChatId, message.Id);
-    }
-
-    public async Task OpenNotificationAsync(NotificationDto notification)
-    {
-        ArgumentNullException.ThrowIfNull(notification);
-
-        var chat = UserChats.FirstOrDefault(c => c.Id == notification.ChatId);
-
-        if (chat == null)
-        {
-            var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(notification.ChatId));
-            if (!result.Success || result.Data == null)
-                throw new InvalidOperationException(result.Error ?? "Не удалось загрузить чат из уведомления.");
-
-            chat = result.Data;
-
-            if (UserChats.All(c => c.Id != chat.Id))
-                UserChats.Insert(0, chat);
-        }
-
-        if (notification.MessageId.HasValue)
-        {
-            await SwitchToTabAndOpenMessageAsync(new GlobalSearchMessageDto
-            {
-                Id = notification.MessageId.Value,
-                ChatId = notification.ChatId,
-                ChatType = chat.Type
-            });
-            return;
-        }
-
-        await SwitchToTabAndOpenChatAsync(chat);
+        CurrentMenuViewModel = vm;
+        await vm.OpenChatByIdAsync(msg.ChatId, msg.Id);
     }
 
     [RelayCommand]
@@ -287,271 +209,219 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         SetActiveMenu(5);
         await Task.Delay(50);
-
-        if (_contactsViewModel != null)
-            await _contactsViewModel.OpenOrCreateDialogWithUserAsync(user);
+        if (_contactsVm != null) await _contactsVm.OpenOrCreateDialogWithUserAsync(user);
     }
 
     private async Task OpenChatAsync(ChatDto chat)
     {
-        SetActiveMenu(1);
-        await Task.Delay(50);
-
-        _chatsViewModel ??= _chatsViewModelFactory.Create(this, true);
-
-        if (!_chatsViewModel.Chats.Any(c => c.Id == chat.Id))
-            _chatsViewModel.Chats.Add(new ChatListItemViewModel(chat));
-
-        _chatsViewModel.SelectedChat = _chatsViewModel.Chats.FirstOrDefault(c => c.Id == chat.Id);
-        CurrentMenuViewModel = _chatsViewModel;
+        _chatsVm ??= _chatsFactory.Create(this, true);
+        await EnsureAndSelectChatAsync(_chatsVm, chat, 1);
     }
+
+    private async Task EnsureAndSelectChatAsync(ChatsViewModel vm, ChatDto chat, int menuIndex)
+    {
+        SetActiveMenu(menuIndex);
+        await Task.Delay(50);
+        if (!vm.Chats.Any(c => c.Id == chat.Id))
+            vm.Chats.Insert(0, new ChatListItemViewModel(chat));
+        vm.SelectedChat = vm.Chats.FirstOrDefault(c => c.Id == chat.Id);
+        CurrentMenuViewModel = vm;
+    }
+
+    #endregion
+
+    #region Notifications
+
+    public async Task OpenNotificationAsync(NotificationDto notification)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        var chat = UserChats.FirstOrDefault(c => c.Id == notification.ChatId);
+        if (chat == null)
+        {
+            var r = await _api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(notification.ChatId));
+            chat = r is { Success: true, Data: not null } ? r.Data : throw new InvalidOperationException(r.Error ?? "Не удалось загрузить чат из уведомления.");
+            if (UserChats.All(c => c.Id != chat.Id)) UserChats.Insert(0, chat);
+        }
+
+        if (notification.MessageId is { } msgId)
+        {
+            await SwitchToTabAndOpenMessageAsync(new GlobalSearchMessageDto
+            { Id = msgId, ChatId = notification.ChatId, ChatType = chat.Type });
+            return;
+        }
+        await SwitchToTabAndOpenChatAsync(chat);
+    }
+
+    #endregion
+
+    #region Dialogs
 
     public async Task ShowUserProfileAsync(int userId) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(userId));
-        if (!result.Success || result.Data == null)
-        {
-            ErrorMessage = $"Не удалось загрузить профиль: {result.Error}";
-            return;
-        }
+        var r = await _api.GetAsync<UserDto>(ApiEndpoints.Users.ById(userId));
+        if (!r.Success || r.Data == null) { ErrorMessage = $"Не удалось загрузить профиль: {r.Error}"; return; }
 
-        var dialog = new UserProfileDialogViewModel(result.Data, _apiClient)
+        var dlg = new UserProfileDialogViewModel(r.Data, _api)
         {
-            CanSendMessage = result.Data.Id != _authManager.Session.UserId,
-            OpenChatWithUserAction = async user => await OpenOrCreateChatAsync(user)
+            CanSendMessage = r.Data.Id != _auth.Session.UserId,
+            OpenChatWithUserAction = async u => await OpenOrCreateChatAsync(u)
         };
-
-        await _mainWindowViewModel.ShowDialogAsync(dialog);
+        await _mainWindowVm.ShowDialogAsync(dlg);
     });
 
     public async Task ShowPollDialogAsync(int chatId, Func<Task>? onCreated = null)
     {
         try
         {
-            var pollDialog = new PollDialogViewModel(chatId)
+            var dlg = new PollDialogViewModel(chatId)
             {
-                CreateAction = async createPollDto =>
-                {
-                    await CreatePollAsync(createPollDto);
-                    if (onCreated != null)
-                        await onCreated();
-                }
+                CreateAction = async dto => { await CreatePollAsync(dto); if (onCreated != null) await onCreated(); }
             };
-
-            await _mainWindowViewModel.ShowDialogAsync(pollDialog);
+            await _mainWindowVm.ShowDialogAsync(dlg);
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
 
     public async Task ShowEditGroupDialogAsync(ChatDto chat, Action<ChatDto>? onUpdated = null)
     {
         try
         {
-            var membersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
-                ApiEndpoints.Chats.MembersDetailed(chat.Id));
-            var members = membersResult.Success ? membersResult.Data : null;
-
-            var dialog = new ChatEditDialogViewModel(_apiClient, UserId, chat, members)
+            var members = (await _api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chat.Id))).Data;
+            var dlg = new ChatEditDialogViewModel(_api, UserId, chat, members)
             {
-                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved)
-                    => await UpdateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, isAvatarRemoved, onUpdated),
-                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
+                SaveAction = async (dto, mIds, aIds, s, n, rem) => await UpdateGroupChatAsync(dto, mIds, aIds, s, n, rem, onUpdated),
+                ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
             };
-
-            await _mainWindowViewModel.ShowDialogAsync(dialog);
+            await _mainWindowVm.ShowDialogAsync(dlg);
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
 
-    public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onGroupCreated = null)
+    public async Task ShowCreateGroupDialogAsync(Action<ChatDto>? onCreated = null)
     {
         try
         {
-            var dialog = new ChatEditDialogViewModel(_apiClient, UserId)
+            var dlg = new ChatEditDialogViewModel(_api, UserId)
             {
-                SaveAction = async (chatDto, memberIds, adminIds, avatarStream, avatarFileName, _)
-                    => await CreateGroupChatAsync(chatDto, memberIds, adminIds, avatarStream, avatarFileName, onGroupCreated),
-                ShowDialogAction = dialogVm => _mainWindowViewModel.ShowDialogAsync(dialogVm)
+                SaveAction = async (dto, mIds, aIds, s, n, _)
+                    => await CreateGroupChatAsync(dto, mIds, aIds, s, n, onCreated),
+                ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
             };
-
-            await _mainWindowViewModel.ShowDialogAsync(dialog);
+            await _mainWindowVm.ShowDialogAsync(dlg);
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия диалога: {ex.Message}";
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
+
+    #endregion
+
+    #region API operations
 
     private async Task CreatePollAsync(CreatePollDto dto) => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Polls.Create, dto);
-
-        if (result.Success)
-            SuccessMessage = "Опрос создан";
-        else
-            ErrorMessage = $"Ошибка создания опроса: {result.Error}";
+        var r = await _api.PostAsync<CreatePollDto, MessageDto>(ApiEndpoints.Polls.Create, dto);
+        if (r.Success) SuccessMessage = "Опрос создан";
+        else ErrorMessage = $"Ошибка создания опроса: {r.Error}";
     });
 
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
-        var usersTask = _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
-        var chatsTask = _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(UserId));
+        var usersTask = _api.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
+        var chatsTask = _api.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(UserId));
         await Task.WhenAll(usersTask, chatsTask);
 
-        var usersResult = await usersTask;
-        var chatsResult = await chatsTask;
-
-        if (usersResult.Success && usersResult.Data != null)
-            AllContacts = new ObservableCollection<UserDto>(usersResult.Data.Where(u => u.Id != UserId));
-
-        if (chatsResult.Success && chatsResult.Data != null)
-            UserChats = new ObservableCollection<ChatDto>(chatsResult.Data);
+        if (await usersTask is { Success: true, Data: { } users })
+            AllContacts = new ObservableCollection<UserDto>(users.Where(u => u.Id != UserId));
+        if (await chatsTask is { Success: true, Data: { } chats })
+            UserChats = new ObservableCollection<ChatDto>(chats);
     });
 
-    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
-        Stream? avatarStream, string? avatarFileName, Action<ChatDto>? onSuccess)
+    private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream, string? avatarName, Action<ChatDto>? onSuccess)
     {
         try
         {
-            var createResult = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create, chatDto);
+            var cr = await _api.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create, chatDto);
+            if (!cr.Success || cr.Data == null) { ErrorMessage = $"Ошибка создания группы: {cr.Error}"; return false; }
 
-            if (!createResult.Success || createResult.Data == null)
-            {
-                ErrorMessage = $"Ошибка создания группы: {createResult.Error}";
-                return false;
-            }
+            var chat = cr.Data;
+            foreach (var uid in memberIds)
+                await _api.PostAsync(ApiEndpoints.Chats.Members(chat.Id), new UpdateChatMemberDto { UserId = uid });
+            foreach (var aid in adminIds)
+                await _api.PutAsync(ApiEndpoints.Chats.MemberRole(chat.Id, aid, ChatRole.Admin), null!);
 
-            var createdChat = createResult.Data;
-
-            foreach (var userId in memberIds)
-                await _apiClient.PostAsync(ApiEndpoints.Chats.Members(createdChat.Id), new UpdateChatMemberDto { UserId = userId });
-
-            foreach (var adminId in adminIds)
-                await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(createdChat.Id, adminId, ChatRole.Admin), null!);
-
-            if (avatarStream != null && !string.IsNullOrEmpty(avatarFileName))
+            if (avatarStream != null && !string.IsNullOrEmpty(avatarName))
             {
                 avatarStream.Position = 0;
-                var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-                    ApiEndpoints.Chats.Avatar(createdChat.Id), avatarStream, avatarFileName, GetMimeType(avatarFileName));
-
-                if (avatarResult.Success && avatarResult.Data != null)
-                    createdChat.Avatar = avatarResult.Data.AvatarUrl;
+                var av = await _api.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chats.Avatar(chat.Id), avatarStream, avatarName, MimeType(avatarName));
+                if (av is { Success: true, Data: not null }) chat.Avatar = av.Data.AvatarUrl;
             }
 
-            UserChats.Add(createdChat);
-            await OpenChatAsync(createdChat);
-
-            onSuccess?.Invoke(createdChat);
+            UserChats.Add(chat);
+            await OpenChatAsync(chat);
+            onSuccess?.Invoke(chat);
             SuccessMessage = "Группа успешно создана";
             return true;
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка: {ex.Message}";
-            return false;
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка: {ex.Message}"; return false; }
     }
 
     private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
-        Stream? avatarStream, string? avatarFileName, bool isAvatarRemoved, Action<ChatDto>? onSuccess)
+        Stream? avatarStream, string? avatarName, bool avatarRemoved, Action<ChatDto>? onSuccess)
     {
         try
         {
-            var updateDto = new UpdateChatDto { Id = chatDto.Id, Name = chatDto.Name, ChatType = ChatType.Chat };
+            var ur = await _api.PutAsync<UpdateChatDto, ChatDto>(ApiEndpoints.Chats.ById(chatDto.Id),
+                new UpdateChatDto { Id = chatDto.Id, Name = chatDto.Name, ChatType = ChatType.Chat });
+            if (!ur.Success || ur.Data == null) { ErrorMessage = $"Ошибка обновления группы: {ur.Error}"; return false; }
 
-            var updateResult = await _apiClient.PutAsync<UpdateChatDto, ChatDto>(
-                ApiEndpoints.Chats.ById(chatDto.Id), updateDto);
+            var chat = ur.Data;
+            await SyncMembersAsync(chatDto.Id, memberIds, adminIds, chatDto.CreatedById);
 
-            if (!updateResult.Success || updateResult.Data == null)
-            {
-                ErrorMessage = $"Ошибка обновления группы: {updateResult.Error}";
-                return false;
-            }
+            var (ok, url, err) = await UpdateAvatarAsync(chatDto.Id, avatarStream, avatarName, avatarRemoved);
+            if (!ok) { ErrorMessage = err; return false; }
+            if (url != null) chat.Avatar = url;
 
-            var updatedChat = updateResult.Data;
+            var existing = UserChats.FirstOrDefault(c => c.Id == chatDto.Id);
+            if (existing != null) UserChats[UserChats.IndexOf(existing)] = chat;
 
-            await SyncChatMembersAsync(chatDto.Id, memberIds, adminIds, chatDto.CreatedById);
-
-            var (avatarOk, newAvatarUrl, avatarError) = await UpdateChatAvatarAsync(
-                chatDto.Id, avatarStream, avatarFileName, isAvatarRemoved);
-
-            if (!avatarOk)
-            {
-                ErrorMessage = avatarError;
-                return false;
-            }
-
-            if (newAvatarUrl != null)
-                updatedChat.Avatar = newAvatarUrl;
-
-            var existingChat = UserChats.FirstOrDefault(c => c.Id == chatDto.Id);
-            if (existingChat != null)
-                UserChats[UserChats.IndexOf(existingChat)] = updatedChat;
-
-            onSuccess?.Invoke(updatedChat);
+            onSuccess?.Invoke(chat);
             SuccessMessage = "Группа успешно обновлена";
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) { ErrorMessage = $"Ошибка: {ex.Message}"; return false; }
+    }
+
+    private async Task SyncMembersAsync(int chatId, List<int> memberIds, List<int> adminIds, int createdById)
+    {
+        var current = (await _api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chatId))).Data ?? [];
+        var curIds = current.Select(m => m.UserId).ToHashSet();
+        var curAdmins = current.Where(x => x.Role is ChatRole.Admin or ChatRole.Owner).Select(x => x.UserId).ToHashSet();
+
+        foreach (var id in memberIds.Where(id => !curIds.Contains(id)))
+            await _api.PostAsync(ApiEndpoints.Chats.Members(chatId), new UpdateChatMemberDto { UserId = id });
+        foreach (var id in curIds.Where(id => !memberIds.Contains(id) && id != UserId))
+            await _api.DeleteAsync(ApiEndpoints.Chats.RemoveMember(chatId, id));
+        foreach (var id in adminIds.Where(id => curIds.Contains(id) && !curAdmins.Contains(id)))
+            await _api.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, id, ChatRole.Admin), null!);
+        foreach (var id in curAdmins.Where(id => id != createdById && !adminIds.Contains(id) && curIds.Contains(id)))
+            await _api.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, id, ChatRole.Member), null!);
+    }
+
+    private async Task<(bool Ok, string? Url, string? Error)> UpdateAvatarAsync(int chatId, Stream? stream, string? fileName, bool removed)
+    {
+        if (stream != null && !string.IsNullOrEmpty(fileName))
         {
-            ErrorMessage = $"Ошибка: {ex.Message}";
-            return false;
+            stream.Position = 0;
+            var r = await _api.UploadFileAsync<AvatarResponseDto>(ApiEndpoints.Chats.Avatar(chatId), stream, fileName, MimeType(fileName));
+            if (r is { Success: true, Data: not null }) return (true, r.Data.AvatarUrl, null);
         }
+        if (!removed) return (true, null, null);
+
+        var del = await _api.DeleteAsync(ApiEndpoints.Chats.Avatar(chatId));
+        return del.Success ? (true, string.Empty, null) : (false, null, $"Ошибка удаления аватара: {del.Error}");
     }
 
-    private async Task SyncChatMembersAsync(int chatId, List<int> memberIds, List<int> adminIds, int createdById)
-    {
-        var currentMembersResult = await _apiClient.GetAsync<List<ChatMemberDto>>(
-            ApiEndpoints.Chats.MembersDetailed(chatId));
-        var currentMembers = currentMembersResult.Data ?? [];
-        var currentMemberIds = currentMembers.Select(m => m.UserId).ToHashSet();
-        var currentAdminIds = currentMembers
-            .Where(x => x.Role is ChatRole.Admin or ChatRole.Owner)
-            .Select(x => x.UserId).ToHashSet();
-
-        foreach (var userId in memberIds.Where(id => !currentMemberIds.Contains(id)))
-            await _apiClient.PostAsync(ApiEndpoints.Chats.Members(chatId), new UpdateChatMemberDto { UserId = userId });
-
-        foreach (var userId in currentMemberIds.Where(id => !memberIds.Contains(id) && id != UserId))
-            await _apiClient.DeleteAsync(ApiEndpoints.Chats.RemoveMember(chatId, userId));
-
-        foreach (var adminId in adminIds.Where(id => currentMemberIds.Contains(id) && !currentAdminIds.Contains(id)))
-            await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, adminId, ChatRole.Admin), null!);
-
-        foreach (var memberId in currentAdminIds.Where(id => id != createdById && !adminIds.Contains(id) && currentMemberIds.Contains(id)))
-            await _apiClient.PutAsync(ApiEndpoints.Chats.MemberRole(chatId, memberId, ChatRole.Member), null!);
-    }
-
-    private async Task<(bool Success, string? AvatarUrl, string? Error)> UpdateChatAvatarAsync(
-        int chatId, Stream? avatarStream, string? avatarFileName, bool isAvatarRemoved)
-    {
-        if (avatarStream == null || string.IsNullOrEmpty(avatarFileName))
-            return (true, null, null);
-
-        avatarStream.Position = 0;
-        var avatarResult = await _apiClient.UploadFileAsync<AvatarResponseDto>(
-            ApiEndpoints.Chats.Avatar(chatId), avatarStream, avatarFileName, GetMimeType(avatarFileName));
-
-        if (avatarResult.Success && avatarResult.Data != null)
-            return (true, avatarResult.Data.AvatarUrl, null);
-
-        if (!isAvatarRemoved)
-            return (true, null, null);
-
-        var deleteResult = await _apiClient.DeleteAsync(ApiEndpoints.Chats.Avatar(chatId));
-        return deleteResult.Success
-            ? (true, string.Empty, null)
-            : (false, null, $"Ошибка удаления аватара: {deleteResult.Error}");
-    }
-
-    private static string GetMimeType(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+    private static string MimeType(string name) => Path.GetExtension(name).ToLowerInvariant() switch
     {
         ".jpg" or ".jpeg" => "image/jpeg",
         ".png" => "image/png",
@@ -560,51 +430,30 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _ => "application/octet-stream"
     };
 
+    #endregion
+
+    #region Dispose
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _searchCts?.Cancel();
-            _searchCts?.Dispose();
-            _searchCts = null;
-
-            _chatsViewModel?.Dispose();
-            _chatsViewModel = null;
-
-            _contactsViewModel?.Dispose();
-            _contactsViewModel = null;
-
-            _departmentViewModel?.Dispose();
-            _departmentViewModel = null;
-
-            _profileViewModel?.Dispose();
-            _profileViewModel = null;
-
-            _adminViewModel?.Dispose();
-            _adminViewModel = null;
-
-            _settingsViewModel?.Dispose();
-            _settingsViewModel = null;
-
-            _styleGuideViewModel?.Dispose();
-            _styleGuideViewModel = null;
-
-            if (_globalHub is IAsyncDisposable asyncDisposable)
-                _ = DisposeGlobalHubAsync(asyncDisposable);
+            _searchCts?.Cancel(); _searchCts?.Dispose();
+            DisposeVm(ref _chatsVm); DisposeVm(ref _contactsVm);
+            DisposeVm(ref _deptVm); DisposeVm(ref _profileVm);
+            DisposeVm(ref _adminVm); DisposeVm(ref _settingsVm);
+            if (_globalHub is IAsyncDisposable ad) _ = SafeDisposeAsync(ad);
         }
-
         base.Dispose(disposing);
     }
 
-    private static async Task DisposeGlobalHubAsync(IAsyncDisposable disposable)
+    private static void DisposeVm<T>(ref T? vm) where T : BaseViewModel { vm?.Dispose(); vm = null; }
+
+    private static async Task SafeDisposeAsync(IAsyncDisposable d)
     {
-        try
-        {
-            await disposable.DisposeAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[MainMenuViewModel] Global hub dispose error: {ex.Message}");
-        }
+        try { await d.DisposeAsync(); }
+        catch (Exception ex) { Debug.WriteLine($"[MainMenuViewModel] Hub dispose error: {ex.Message}"); }
     }
+
+    #endregion
 }

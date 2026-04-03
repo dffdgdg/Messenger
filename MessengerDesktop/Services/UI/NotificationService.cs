@@ -112,8 +112,7 @@ public class NotificationService : INotificationService
     private async Task ShowInternalAsync(string title, string message,
         DesktopNotificationType type, int durationMs, Func<Task>? onClick)
     {
-        var notification = new DesktopNotificationViewModel(
-            title, message, type, durationMs, CloseNotificationAsync, onClick);
+        var notification = new DesktopNotificationViewModel(title, message, type, durationMs, CloseNotificationAsync, onClick);
         var cts = new CancellationTokenSource();
 
         List<DesktopNotificationViewModel>? stale = null;

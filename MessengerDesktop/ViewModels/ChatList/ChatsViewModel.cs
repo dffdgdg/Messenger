@@ -1,4 +1,5 @@
 ﻿using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Helpers;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Chats;
@@ -27,33 +28,21 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     IAsyncRelayCommand IRefreshable.RefreshCommand => LoadChatsCommand;
 
+    public MainMenuViewModel Parent { get; }
+
     public UserProfileDialogViewModel? UserProfileDialog
     {
         get => CurrentChatViewModel?.UserProfileDialog;
-        set => CurrentChatViewModel?.UserProfileDialog = value;
+        set { CurrentChatViewModel?.UserProfileDialog = value; }
     }
 
-    [ObservableProperty]
-    public partial bool IsGroupMode { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsInitialLoading { get; set; } = true;
-    public MainMenuViewModel Parent { get; }
-
-    [ObservableProperty]
-    public partial ObservableCollection<ChatListItemViewModel> Chats { get; set; } = [];
-
-    [ObservableProperty]
-    public partial ChatListItemViewModel? SelectedChat { get; set; }
-
-    [ObservableProperty]
-    public partial ChatViewModel? CurrentChatViewModel { get; set; }
-
-    [ObservableProperty]
-    public partial GlobalSearchManager? SearchManager { get; set; }
-
-    [ObservableProperty]
-    public partial int TotalUnreadCount { get; set; }
+    [ObservableProperty] public partial bool IsGroupMode { get; set; }
+    [ObservableProperty] public partial bool IsInitialLoading { get; set; } = true;
+    [ObservableProperty] public partial ObservableCollection<ChatListItemViewModel> Chats { get; set; } = [];
+    [ObservableProperty] public partial ChatListItemViewModel? SelectedChat { get; set; }
+    [ObservableProperty] public partial ChatViewModel? CurrentChatViewModel { get; set; }
+    [ObservableProperty] public partial GlobalSearchManager? SearchManager { get; set; }
+    [ObservableProperty] public partial int TotalUnreadCount { get; set; }
 
     public bool IsSearchMode => SearchManager?.IsSearchMode is true;
     public bool IsChatLocalSearchMode => SearchManager?.IsChatLocalMode is true;
@@ -75,80 +64,91 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
 
         InitializeSearchManager();
-
-        _ = LoadChats().ContinueWith(t =>
-        {
-            if (t.Exception != null)
-                Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}");
-        }, TaskContinuationOptions.OnlyOnFaulted);
+        _ = LoadChats().ContinueWith(
+            t => Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}"),
+            TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private void InitializeSearchManager()
     {
-        if (_authManager.Session.UserId.HasValue)
-        {
-            SearchManager = new GlobalSearchManager(_authManager.Session.UserId.Value, _apiClient);
-            SearchManager.PropertyChanged += OnSearchManagerPropertyChanged;
-        }
+        if (!_authManager.Session.UserId.HasValue) return;
+
+        SearchManager = new GlobalSearchManager(_authManager.Session.UserId.Value, IsGroupMode, _apiClient);
+        SearchManager.PropertyChanged += OnSearchManagerPropertyChanged;
     }
 
     private void OnSearchManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(GlobalSearchManager.IsSearchMode))
-            OnPropertyChanged(nameof(IsSearchMode));
+        switch (e.PropertyName)
+        {
+            case nameof(GlobalSearchManager.IsSearchMode):
+                OnPropertyChanged(nameof(IsSearchMode));
+                break;
+            case nameof(GlobalSearchManager.IsChatLocalMode):
+                OnPropertyChanged(nameof(IsChatLocalSearchMode));
+                break;
+        }
+    }
 
-        if (e.PropertyName == nameof(GlobalSearchManager.IsChatLocalMode))
-            OnPropertyChanged(nameof(IsChatLocalSearchMode));
+    private void SyncSearchScopeWithChatViewMode()
+    {
+        if (SearchManager == null) return;
+
+        var useChatLocal = CurrentChatViewModel?.IsSearchMode == true
+            && SelectedChat != null
+            && CurrentChatViewModel.Chat?.Id == SelectedChat.Id;
+
+        var chat = useChatLocal ? SelectedChat : null;
+        SetSearchChatContext(chat);
+    }
+
+    private void SetSearchChatContext(ChatListItemViewModel? chat)
+    {
+        if (SearchManager == null) return;
+        SearchManager.ChatLocalSearchChatId = chat?.Id;
+        SearchManager.ChatLocalSearchChatType = chat?.Type;
+        SearchManager.ChatLocalSearchChatName = chat?.Name;
+        SearchManager.ChatLocalSearchChatAvatar = chat?.Avatar;
+    }
+
+    [RelayCommand]
+    private void CloseSearch()
+    {
+        SearchManager?.ExitSearch();
+        if (CurrentChatViewModel?.IsSearchMode == true)
+            CurrentChatViewModel.IsSearchMode = false;
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreSearchResults()
+    {
+        if (SearchManager != null)
+            await SearchManager.LoadMoreMessagesAsync();
     }
 
     private void OnTotalUnreadChanged(int total) => TotalUnreadCount = total;
 
-    private void OnUnreadCountChanged(int chatId, int unreadCount)
-    {
-        var chat = Chats.FirstOrDefault(c => c.Id == chatId);
-        chat?.UnreadCount = unreadCount;
-    }
+    private void OnUnreadCountChanged(int chatId, int unreadCount) => FindChat(chatId)?.Apply(c => c.UnreadCount = unreadCount);
 
     private void OnMessageReceivedGlobally(MessageDto message)
     {
-        var chat = Chats.FirstOrDefault(c => c.Id == message.ChatId);
+        var chat = FindChat(message.ChatId);
         if (chat == null) return;
 
         var currentUserId = _authManager.Session.UserId;
-        chat.LastMessageSenderName = (currentUserId.HasValue && message.SenderId == currentUserId.Value)
-            ? "Вы" : message.SenderName;
-        chat.LastMessagePreview = BuildLastMessagePreview(message);
+        chat.LastMessageSenderName = ChatPreviewFormatter.FormatSenderName(message.SenderName, message.SenderId, currentUserId);
+        chat.LastMessagePreview = ChatPreviewFormatter.BuildPreview(message);
         chat.LastMessageDate = message.CreatedAt;
 
         MoveChatToTop(chat);
     }
 
-    private void MoveChatToTop(ChatListItemViewModel chat)
+    [RelayCommand]
+    private void OpenChat(ChatListItemViewModel? chat)
     {
-        var currentIndex = Chats.IndexOf(chat);
-        if (currentIndex <= 0) return;
-
-        Chats.Move(currentIndex, 0);
-
-        if (SelectedChat?.Id == chat.Id)
-            SelectedChat = chat;
-    }
-
-    private static string BuildLastMessagePreview(MessageDto message)
-    {
-        if (message.Poll != null) return "Опрос";
-        if (message.IsVoiceMessage) return "Голосовое сообщение";
-        if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
-            return "Вложение";
-        if (string.IsNullOrWhiteSpace(message.Content)) return "Сообщение";
-        return message.Content.Length > 100 ? message.Content[..100] + "..." : message.Content;
-    }
-
-    private bool IsChatMatchingCurrentTab(ChatType chatType)
-    {
-        if (IsGroupMode)
-            return chatType is ChatType.Chat or ChatType.Department;
-        return chatType == ChatType.Contact;
+        if (chat == null) return;
+        try { SelectedChat = chat; }
+        catch (Exception ex) { ErrorMessage = $"Ошибка открытия чата: {ex.Message}"; }
     }
 
     [RelayCommand]
@@ -163,17 +163,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             return;
         }
 
-        var existingChat = Chats.FirstOrDefault(c => c.Id == chat.Id);
-        if (existingChat != null)
-        {
-            SelectedChat = existingChat;
-        }
-        else
-        {
-            Chats.Insert(0, chat);
-            SelectedChat = chat;
-        }
-
+        SelectedChat = Chats.FirstOrDefault(c => c.Id == chat.Id) ?? InsertAndReturn(chat);
         SearchManager?.ExitSearch();
     }
 
@@ -194,10 +184,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             await OpenChatByIdAsync(searchResult.ChatId, searchResult.Id);
             SearchManager?.ExitSearch();
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия: {ex.Message}";
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка открытия: {ex.Message}"; }
     }
 
     public async Task OpenChatByIdAsync(int chatId, int? scrollToMessageId = null)
@@ -205,170 +192,15 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (Chats.Count == 0)
             await LoadChats();
 
-        var chat = Chats.FirstOrDefault(c => c.Id == chatId);
-
-        if (chat == null)
-        {
-            var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(chatId));
-            if (result.Success && result.Data != null)
-            {
-                result.Data.UnreadCount = _globalHub.GetUnreadCount(chatId);
-                chat = new ChatListItemViewModel(result.Data);
-                Chats.Insert(0, chat);
-            }
-        }
-
-        if (chat != null)
-        {
-            SelectedChat = chat;
-
-            if (scrollToMessageId.HasValue && CurrentChatViewModel != null)
-            {
-                await CurrentChatViewModel.WaitForInitializationAsync();
-                await CurrentChatViewModel.ScrollToMessageAsync(scrollToMessageId.Value);
-            }
-        }
-    }
-
-    [RelayCommand]
-    private void CloseSearch()
-    {
-        SearchManager?.ExitSearch();
-
-        if (CurrentChatViewModel?.IsSearchMode == true)
-            CurrentChatViewModel.IsSearchMode = false;
-    }
-
-    [RelayCommand]
-    private void OpenChat(ChatListItemViewModel? chat)
-    {
+        var chat = FindChat(chatId) ?? await FetchAndInsertChatAsync(chatId);
         if (chat == null) return;
 
-        try
+        SelectedChat = chat;
+
+        if (scrollToMessageId.HasValue && CurrentChatViewModel != null)
         {
-            SelectedChat = chat;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка открытия чата: {ex.Message}";
-        }
-    }
-
-    partial void OnSelectedChatChanged(ChatListItemViewModel? value)
-    {
-        SyncSearchScopeWithChatViewMode();
-
-        if (SearchManager != null)
-        {
-            SearchManager.ChatLocalSearchChatId = value?.Id;
-            SearchManager.ChatLocalSearchChatType = value?.Type;
-            SearchManager.ChatLocalSearchChatName = value?.Name;
-            SearchManager.ChatLocalSearchChatAvatar = value?.Avatar;
-        }
-
-        if (value != null)
-        {
-            if (value.UnreadCount > 0)
-            {
-                value.UnreadCount = 0;
-                _ = _globalHub.MarkChatAsReadAsync(value.Id);
-            }
-
-            if (CurrentChatViewModel?.Chat?.Id == value.Id)
-                return;
-
-            CurrentChatViewModel = _chatViewModelFactory.Create(value.Id, this);
-        }
-    }
-
-    partial void OnCurrentChatViewModelChanged(ChatViewModel? oldValue, ChatViewModel? newValue)
-    {
-        if (_subscribedChatVm != null)
-            _subscribedChatVm.PropertyChanged -= SubscribedChatVm_PropertyChanged;
-
-        _subscribedChatVm = newValue;
-
-        if (_subscribedChatVm != null)
-            _subscribedChatVm.PropertyChanged += SubscribedChatVm_PropertyChanged;
-
-        SyncSearchScopeWithChatViewMode();
-        OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
-
-        if (oldValue != null && !ReferenceEquals(oldValue, newValue))
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                Debug.WriteLine($"[ChatsVM] Disposing ChatViewModel for chat {oldValue.Chat?.Id}");
-                try
-                {
-                    oldValue.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[ChatsVM] Dispose error: {ex.Message}");
-                }
-            }, DispatcherPriority.Background);
-        }
-    }
-
-    private void SyncSearchScopeWithChatViewMode()
-    {
-        if (SearchManager == null) return;
-
-        var shouldUseChatLocal = CurrentChatViewModel?.IsSearchMode == true
-            && SelectedChat != null && CurrentChatViewModel.Chat?.Id == SelectedChat.Id;
-
-        if (shouldUseChatLocal)
-        {
-            SearchManager.ChatLocalSearchChatId = SelectedChat!.Id;
-            SearchManager.ChatLocalSearchChatType = SelectedChat.Type;
-            SearchManager.ChatLocalSearchChatName = SelectedChat.Name;
-            SearchManager.ChatLocalSearchChatAvatar = SelectedChat.Avatar;
-            return;
-        }
-
-        SearchManager.ChatLocalSearchChatId = null;
-        SearchManager.ChatLocalSearchChatType = null;
-        SearchManager.ChatLocalSearchChatName = null;
-        SearchManager.ChatLocalSearchChatAvatar = null;
-    }
-
-    [RelayCommand]
-    private async Task CreateGroup()
-    {
-        try
-        {
-            await Parent.ShowCreateGroupDialogAsync(createdChat =>
-            {
-                var item = new ChatListItemViewModel(createdChat);
-
-                if (Chats.All(c => c.Id != createdChat.Id))
-                    Chats.Insert(0, item);
-
-                SelectedChat = Chats.FirstOrDefault(c => c.Id == createdChat.Id) ?? item;
-            });
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка создания группы: {ex.Message}";
-        }
-    }
-
-    private void SubscribedChatVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ChatViewModel.IsInfoPanelOpen))
-            OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
-
-        if (e.PropertyName == nameof(ChatViewModel.IsSearchMode))
-        {
-            SyncSearchScopeWithChatViewMode();
-
-            if (SearchManager == null) return;
-
-            if (CurrentChatViewModel?.IsSearchMode == true)
-                SearchManager.EnterSearchMode();
-            else
-                SearchManager.ExitSearch();
+            await CurrentChatViewModel.WaitForInitializationAsync();
+            await CurrentChatViewModel.ScrollToMessageAsync(scrollToMessageId.Value);
         }
     }
 
@@ -379,56 +211,108 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             await LoadChats();
 
             var existingChat = await FindDialogWithUser(user.Id);
-
             if (existingChat != null)
             {
-                var existingItem = Chats.FirstOrDefault(c => c.Id == existingChat.Id)
-                    ?? new ChatListItemViewModel(existingChat);
-
-                if (Chats.All(c => c.Id != existingItem.Id))
-                    Chats.Insert(0, existingItem);
-
-                OpenChatCommand.Execute(existingItem);
+                var item = FindChat(existingChat.Id) ?? InsertAndReturn(new ChatListItemViewModel(existingChat));
+                OpenChatCommand.Execute(item);
                 return;
             }
 
             var userId = _authManager.Session.UserId ?? 0;
+            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create,
+                new ChatDto { Name = user.Id.ToString(), Type = ChatType.Contact, CreatedById = userId });
 
-            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create, new ChatDto
-            {
-                Name = user.Id.ToString(),
-                Type = ChatType.Contact,
-                CreatedById = userId
-            });
-
-            if (result.Success && result.Data != null)
-            {
-                result.Data.Name = user.DisplayName ?? user.Username;
-                result.Data.Avatar = user.Avatar;
-
-                var createdChat = new ChatListItemViewModel(result.Data);
-                Chats.Add(createdChat);
-                OpenChatCommand.Execute(createdChat);
-            }
-            else
+            if (!result.Success || result.Data == null)
             {
                 ErrorMessage = $"Ошибка создания диалога: {result.Error}";
+                return;
             }
+
+            result.Data.Name = user.DisplayName ?? user.Username;
+            result.Data.Avatar = user.Avatar;
+
+            var created = new ChatListItemViewModel(result.Data);
+            Chats.Add(created);
+            OpenChatCommand.Execute(created);
         });
     }
 
-    private async Task<ChatDto?> FindDialogWithUser(int contactUserId)
+    [RelayCommand]
+    private async Task CreateGroup()
     {
-        var currentUserId = _authManager.Session.UserId ?? 0;
-        var result = await _apiClient.GetAsync<ChatDto?>(ApiEndpoints.Chats.UserContact(currentUserId, contactUserId));
-        return result.Success ? result.Data : null;
+        try
+        {
+            await Parent.ShowCreateGroupDialogAsync(createdChat =>
+            {
+                var item = new ChatListItemViewModel(createdChat);
+                if (Chats.All(c => c.Id != createdChat.Id))
+                    Chats.Insert(0, item);
+
+                SelectedChat = FindChat(createdChat.Id) ?? item;
+            });
+        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка создания группы: {ex.Message}"; }
     }
 
-    [RelayCommand]
-    private async Task LoadMoreSearchResults()
+    partial void OnSelectedChatChanged(ChatListItemViewModel? value)
     {
-        if (SearchManager != null)
-            await SearchManager.LoadMoreMessagesAsync();
+        SyncSearchScopeWithChatViewMode();
+        SetSearchChatContext(value);
+
+        if (value == null) return;
+
+        if (value.UnreadCount > 0)
+        {
+            value.UnreadCount = 0;
+            _ = _globalHub.MarkChatAsReadAsync(value.Id);
+        }
+
+        if (CurrentChatViewModel?.Chat?.Id != value.Id)
+            CurrentChatViewModel = _chatViewModelFactory.Create(value.Id, this);
+    }
+
+    partial void OnCurrentChatViewModelChanged(ChatViewModel? oldValue, ChatViewModel? newValue)
+    {
+        if (_subscribedChatVm != null)
+            _subscribedChatVm.PropertyChanged -= OnChatVmPropertyChanged;
+
+        _subscribedChatVm = newValue;
+
+        if (_subscribedChatVm != null)
+            _subscribedChatVm.PropertyChanged += OnChatVmPropertyChanged;
+
+        SyncSearchScopeWithChatViewMode();
+        OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
+
+        if (oldValue != null && !ReferenceEquals(oldValue, newValue))
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                Debug.WriteLine($"[ChatsVM] Disposing ChatViewModel for chat {oldValue.Chat?.Id}");
+                try { oldValue.Dispose(); }
+                catch (Exception ex) { Debug.WriteLine($"[ChatsVM] Dispose error: {ex.Message}"); }
+            }, DispatcherPriority.Background);
+        }
+    }
+
+    private void OnChatVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(ChatViewModel.IsInfoPanelOpen):
+                OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
+                break;
+
+            case nameof(ChatViewModel.IsSearchMode):
+                SyncSearchScopeWithChatViewMode();
+                if (SearchManager == null) return;
+
+                if (CurrentChatViewModel?.IsSearchMode == true)
+                    SearchManager.EnterSearchMode();
+                else
+                    SearchManager.ExitSearch();
+                break;
+        }
     }
 
     [RelayCommand]
@@ -444,12 +328,10 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                     return;
                 }
 
-                var userId = _authManager.Session.UserId.Value;
-
                 if (_isFirstLoad)
                     await ShowCachedChatsAsync();
 
-                await LoadFreshChatsFromServerAsync(userId);
+                await LoadFreshChatsAsync(_authManager.Session.UserId.Value);
             });
         }
         finally
@@ -467,30 +349,60 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         try
         {
             var sw = Stopwatch.StartNew();
-            var cachedChats = await _cacheService.GetChatsAsync(IsGroupMode);
+            var cached = await _cacheService.GetChatsAsync(IsGroupMode);
 
-            if (cachedChats.Count > 0)
+            if (cached.Count == 0)
             {
-                foreach (var chat in cachedChats)
-                    chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
-
-                Chats = new ObservableCollection<ChatListItemViewModel>(cachedChats.Select(c => new ChatListItemViewModel(c)));
-                TotalUnreadCount = _globalHub.GetTotalUnread();
-
-                sw.Stop();
-                Debug.WriteLine($"[ChatsVM] Showed {cachedChats.Count} cached {(IsGroupMode ? "groups" : "dialogs")} in {sw.ElapsedMilliseconds}ms");
-
-                IsInitialLoading = false;
+                Debug.WriteLine($"[ChatsVM] No cached {ChatTypeLabel}, waiting for server");
+                return;
             }
-            else
-            {
-                Debug.WriteLine($"[ChatsVM] No cached {(IsGroupMode ? "groups" : "dialogs")}, waiting for server");
-            }
+
+            foreach (var c in cached)
+                c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
+
+            Chats = new ObservableCollection<ChatListItemViewModel>(cached.Select(c => new ChatListItemViewModel(c)));
+            TotalUnreadCount = _globalHub.GetTotalUnread();
+            IsInitialLoading = false;
+
+            Debug.WriteLine($"[ChatsVM] Showed {cached.Count} cached {ChatTypeLabel} in {sw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatsVM] Cache read failed (non-critical): {ex.Message}");
         }
+    }
+
+    private async Task LoadFreshChatsAsync(int userId)
+    {
+        var endpoint = IsGroupMode ? ApiEndpoints.Chats.UserGroups(userId) : ApiEndpoints.Chats.UserDialogs(userId);
+
+        var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
+
+        if (!result.Success || result.Data == null)
+        {
+            if (Chats.Count == 0)
+                ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
+            else
+                Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
+            return;
+        }
+
+        var ordered = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
+        foreach (var c in ordered)
+            c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
+
+        var selectedId = SelectedChat?.Id;
+        Chats = new ObservableCollection<ChatListItemViewModel>(ordered.Select(c => new ChatListItemViewModel(c)));
+        TotalUnreadCount = _globalHub.GetTotalUnread();
+
+        if (selectedId.HasValue)
+        {
+            var restored = FindChat(selectedId.Value);
+            if (restored != null && SelectedChat?.Id != restored.Id)
+                SelectedChat = restored;
+        }
+
+        await SaveCacheSilentAsync(ordered);
     }
 
     public void UpdateChatInList(ChatDto updatedChat)
@@ -503,63 +415,59 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
 
         if (SelectedChat?.Id == updatedChat.Id)
-            SelectedChat = Chats.FirstOrDefault(c => c.Id == updatedChat.Id) ?? new ChatListItemViewModel(updatedChat);
+            SelectedChat = FindChat(updatedChat.Id) ?? new ChatListItemViewModel(updatedChat);
     }
 
-    private async Task LoadFreshChatsFromServerAsync(int userId)
+    private ChatListItemViewModel? FindChat(int chatId) => Chats.FirstOrDefault(c => c.Id == chatId);
+
+    private ChatListItemViewModel InsertAndReturn(ChatListItemViewModel chat)
     {
-        var endpoint = IsGroupMode
-            ? ApiEndpoints.Chats.UserGroups(userId)
-            : ApiEndpoints.Chats.UserDialogs(userId);
-
-        var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
-
-        if (!result.Success || result.Data == null)
-        {
-            HandleLoadError(result.Error);
-            return;
-        }
-
-        var orderedChats = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
-
-        foreach (var chat in orderedChats)
-            chat.UnreadCount = _globalHub.GetUnreadCount(chat.Id);
-
-        var selectedId = SelectedChat?.Id;
-
-        Chats = new ObservableCollection<ChatListItemViewModel>(orderedChats.Select(c => new ChatListItemViewModel(c)));
-        TotalUnreadCount = _globalHub.GetTotalUnread();
-
-        if (selectedId.HasValue)
-        {
-            var restoredChat = Chats.FirstOrDefault(c => c.Id == selectedId.Value);
-            if (restoredChat != null && SelectedChat?.Id != restoredChat.Id)
-                SelectedChat = restoredChat;
-        }
-
-        await SaveChatsCacheAsync(orderedChats);
+        Chats.Insert(0, chat);
+        return chat;
     }
 
-    private void HandleLoadError(string? error)
+    private async Task<ChatListItemViewModel?> FetchAndInsertChatAsync(int chatId)
     {
-        if (Chats.Count == 0)
-            ErrorMessage = $"Ошибка загрузки чатов: {error}";
-        else
-            Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {error}");
+        var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(chatId));
+        if (!result.Success || result.Data == null) return null;
+
+        result.Data.UnreadCount = _globalHub.GetUnreadCount(chatId);
+        return InsertAndReturn(new ChatListItemViewModel(result.Data));
     }
 
-    private async Task SaveChatsCacheAsync(List<ChatDto> chats)
+    private void MoveChatToTop(ChatListItemViewModel chat)
+    {
+        var idx = Chats.IndexOf(chat);
+        if (idx <= 0) return;
+
+        Chats.Move(idx, 0);
+        if (SelectedChat?.Id == chat.Id)
+            SelectedChat = chat;
+    }
+
+    private bool IsChatMatchingCurrentTab(ChatType type) => IsGroupMode ? type is ChatType.Chat or ChatType.Department : type == ChatType.Contact;
+
+    private async Task<ChatDto?> FindDialogWithUser(int contactUserId)
+    {
+        var currentUserId = _authManager.Session.UserId ?? 0;
+        var result = await _apiClient.GetAsync<ChatDto?>(ApiEndpoints.Chats.UserContact(currentUserId, contactUserId));
+        return result.Success ? result.Data : null;
+    }
+
+    private async Task SaveCacheSilentAsync(List<ChatDto> chats)
     {
         try
         {
             await _cacheService.UpsertChatsAsync(chats);
-            Debug.WriteLine($"[ChatsVM] Cached {chats.Count} {(IsGroupMode ? "groups" : "dialogs")}");
+            Debug.WriteLine($"[ChatsVM] Cached {chats.Count} {ChatTypeLabel}");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatsVM] Cache write failed (non-critical): {ex.Message}");
         }
     }
+
+    private string ChatTypeLabel => IsGroupMode ? "groups" : "dialogs";
 
     protected override void Dispose(bool disposing)
     {
@@ -570,23 +478,20 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.TotalUnreadChanged -= OnTotalUnreadChanged;
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
-
             SearchManager?.PropertyChanged -= OnSearchManagerPropertyChanged;
+            _subscribedChatVm?.PropertyChanged -= OnChatVmPropertyChanged;
 
-            _subscribedChatVm?.PropertyChanged -= SubscribedChatVm_PropertyChanged;
-
-            try
-            {
-                CurrentChatViewModel?.Dispose();
-                CurrentChatViewModel = null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatsVM] ChatVM dispose error: {ex.Message}");
-            }
+            try { CurrentChatViewModel?.Dispose(); }
+            catch (Exception ex) { Debug.WriteLine($"[ChatsVM] ChatVM dispose error: {ex.Message}"); }
+            CurrentChatViewModel = null;
         }
 
         _disposed = true;
         base.Dispose(disposing);
     }
+}
+
+file static class ObjectExtensions
+{
+    public static void Apply<T>(this T obj, Action<T> action) => action(obj);
 }

@@ -14,6 +14,7 @@ namespace MessengerDesktop.ViewModels.Dialog;
 public partial class ChatEditDialogViewModel : DialogBaseViewModel
 {
     private const int MaxAvatarSizeMb = 5;
+    private const long MaxAvatarSizeBytes = MaxAvatarSizeMb * 1024 * 1024;
 
     private readonly IApiClientService _apiClient;
     private readonly int _currentUserId;
@@ -34,19 +35,16 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public bool IsNewChat => _originalChat == null;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
-    public int ParticipantsCount => AvailableUsers.Count(u => u.IsSelected);
+    public int ParticipantsCount => SelectedUsersCount;
     public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
     public bool CanManageParticipants => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
     public bool CanManageAdmins => IsNewChat || CurrentUserRole == ChatRole.Owner;
     public bool CanSave => !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
 
     public Func<ChatDto, List<int>, List<int>, Stream?, string?, bool, Task<bool>>? SaveAction { get; set; }
-
     public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId) : this(apiClient, currentUserId, null) { }
-
-    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId, ChatDto? chat, List<ChatMemberDto>? existingMembers = null)
+    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId, ChatDto? chat = null, List<ChatMemberDto>? existingMembers = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _currentUserId = currentUserId;
@@ -63,78 +61,75 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         IsBusy = true;
         await LoadUsersAsync();
-
-        if (_originalChat?.Avatar != null)
-            await LoadExistingAvatarAsync(_originalChat.Avatar);
+        if (_originalChat?.Avatar is { } url)
+            await LoadAvatarFromUrlAsync(url);
         IsBusy = false;
     });
 
-    #region Users Loading
 
     private async Task LoadUsersAsync()
     {
         var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
-
         if (!result.Success || result.Data == null)
         {
             ErrorMessage = $"Ошибка загрузки пользователей: {result.Error}";
             return;
         }
 
-        var existingMemberIds = _existingMembers?.Select(m => m.UserId).ToHashSet() ?? [];
+        var memberIds = _existingMembers?.Select(m => m.UserId).ToHashSet() ?? [];
         var adminIds = _existingMembers?.Where(m => m.Role is ChatRole.Admin or ChatRole.Owner).Select(m => m.UserId).ToHashSet() ?? [];
-        SelectedAdminIds = new ObservableCollection<int>(adminIds);
 
-        var currentMember = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId);
-        CurrentUserRole = currentMember?.Role ?? ChatRole.Owner;
+        SelectedAdminIds = new ObservableCollection<int>(adminIds);
+        CurrentUserRole = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId)?.Role ?? ChatRole.Owner;
 
         var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username)
-            .Select(u => new UserListItemViewModel(u, existingMemberIds.Contains(u.Id))).ToList();
+            .Select(u => new UserListItemViewModel(u, memberIds.Contains(u.Id))).ToList();
 
-        SetAvailableUsers(users);
+        ReplaceAvailableUsers(users);
     }
 
-    private void SetAvailableUsers(List<UserListItemViewModel> users)
+    private void ReplaceAvailableUsers(List<UserListItemViewModel> users)
     {
-        UnsubscribeFromUsers(AvailableUsers);
+        ForEachUser(AvailableUsers, subscribe: false);
         AvailableUsers = new ObservableCollection<UserListItemViewModel>(users);
-        SubscribeToUsers(AvailableUsers);
+        ForEachUser(AvailableUsers, subscribe: true);
         ApplyUserFilter();
+        NotifySelectionChanged();
+    }
+
+    private void ForEachUser(IEnumerable<UserListItemViewModel> users, bool subscribe)
+    {
+        foreach (var u in users)
+        {
+            if (subscribe) u.PropertyChanged += OnUserPropertyChanged;
+            else u.PropertyChanged -= OnUserPropertyChanged;
+        }
+    }
+
+    private void OnUserPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(UserListItemViewModel.IsSelected))
+            NotifySelectionChanged();
+    }
+
+    private void NotifySelectionChanged()
+    {
         OnPropertyChanged(nameof(SelectedUsersCount));
         OnPropertyChanged(nameof(ParticipantsCount));
         OnPropertyChanged(nameof(AdminsCount));
         NotifyCanSaveChanged();
     }
 
-    private void SubscribeToUsers(IEnumerable<UserListItemViewModel> users)
+    private void NotifyCanSaveChanged()
     {
-        foreach (var user in users)
-            user.PropertyChanged += OnUserSelectionChanged;
-    }
-
-    private void UnsubscribeFromUsers(IEnumerable<UserListItemViewModel> users)
-    {
-        foreach (var user in users)
-            user.PropertyChanged -= OnUserSelectionChanged;
-    }
-
-    private void OnUserSelectionChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(UserListItemViewModel.IsSelected))
-        {
-            OnPropertyChanged(nameof(SelectedUsersCount));
-            OnPropertyChanged(nameof(ParticipantsCount));
-            OnPropertyChanged(nameof(AdminsCount));
-            NotifyCanSaveChanged();
-        }
+        OnPropertyChanged(nameof(CanSave));
+        SaveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnAvailableUsersChanged(ObservableCollection<UserListItemViewModel> oldValue, ObservableCollection<UserListItemViewModel> newValue)
     {
-        if (oldValue != null)
-            UnsubscribeFromUsers(oldValue);
-
-        SubscribeToUsers(newValue);
+        if (oldValue != null) ForEachUser(oldValue, subscribe: false);
+        ForEachUser(newValue, subscribe: true);
         ApplyUserFilter();
         NotifyCanSaveChanged();
     }
@@ -143,68 +138,51 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private void ApplyUserFilter()
     {
-        if (string.IsNullOrWhiteSpace(SearchUserQuery))
-        {
-            FilteredUsers = new ObservableCollection<UserListItemViewModel>(AvailableUsers);
-            return;
-        }
+        var source = string.IsNullOrWhiteSpace(SearchUserQuery) ? AvailableUsers
+            : AvailableUsers.Where(u => (u.DisplayName?.Contains(SearchUserQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (u.Username?.Contains(SearchUserQuery, StringComparison.OrdinalIgnoreCase) ?? false));
 
-        var query = SearchUserQuery;
-        var filtered = AvailableUsers.Where(u =>
-            u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
-            u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true);
-
-        FilteredUsers = new ObservableCollection<UserListItemViewModel>(filtered);
-    }
-
-    [RelayCommand]
-    private async Task ManageParticipants()
-    {
-        if (ShowDialogAction == null)
-            return;
-
-        var dialog = new UserListDialogViewModel("Участники",AvailableUsers, CanManageParticipants,items => items.Where(x => x.IsSelected),
-            selectedIds =>
-            {
-                foreach (var user in AvailableUsers)
-                    user.IsSelected = selectedIds.Contains(user.Id);
-
-                var selectedSet = selectedIds.ToHashSet();
-                SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(selectedSet.Contains));
-                OnPropertyChanged(nameof(ParticipantsCount));
-                OnPropertyChanged(nameof(AdminsCount));
-            }, "Изменить состав", "Участники не выбраны");
-
-
-        await ShowDialogAction(dialog);
-    }
-
-    [RelayCommand]
-    private async Task ManageAdmins()
-    {
-        if (ShowDialogAction == null)
-            return;
-
-        var adminsSource = AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList();
-
-        var dialog = new UserListDialogViewModel("Администраторы", adminsSource, CanManageAdmins, items => items.Where(x => x.IsSelected),
-            selectedIds =>
-            {
-                SelectedAdminIds = new ObservableCollection<int>(selectedIds);
-                OnPropertyChanged(nameof(AdminsCount));
-            }, "Изменить роли", "Администраторы не назначены");
-
-
-        await ShowDialogAction(dialog);
+        FilteredUsers = new ObservableCollection<UserListItemViewModel>(source);
     }
 
     public List<int> GetSelectedUserIds() => [.. AvailableUsers.Where(u => u.IsSelected).Select(u => u.Id)];
 
-    #endregion
+    [RelayCommand]
+    private Task ManageParticipants() => ShowUserListDialog("Участники", AvailableUsers, CanManageParticipants,
+        items => items.Where(x => x.IsSelected),
+        selectedIds =>
+        {
+            foreach (var u in AvailableUsers)
+                u.IsSelected = selectedIds.Contains(u.Id);
 
-    #region Avatar
+            var set = selectedIds.ToHashSet();
+            SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(set.Contains));
+            NotifySelectionChanged();
+        },
+        "Изменить состав", "Участники не выбраны");
 
-    private async Task LoadExistingAvatarAsync(string avatarUrl)
+    [RelayCommand]
+    private Task ManageAdmins() => ShowUserListDialog("Администраторы",
+        AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList(), CanManageAdmins,
+        items => items.Where(x => x.IsSelected),
+        ids =>
+        {
+            SelectedAdminIds = new ObservableCollection<int>(ids);
+            OnPropertyChanged(nameof(AdminsCount));
+        }, "Изменить роли", "Администраторы не назначены");
+
+    private Task ShowUserListDialog<T>(string title, T source, bool canManage, Func<IEnumerable<UserListItemViewModel>,
+        IEnumerable<UserListItemViewModel>> filter, Action<List<int>> onConfirm, string confirmText, string emptyText)
+        where T : IEnumerable<UserListItemViewModel>
+    {
+        if (ShowDialogAction == null) return Task.CompletedTask;
+
+        var dialog = new UserListDialogViewModel(title, source, canManage, filter, onConfirm, confirmText, emptyText);
+
+        return ShowDialogAction(dialog);
+    }
+
+    private async Task LoadAvatarFromUrlAsync(string avatarUrl)
     {
         try
         {
@@ -214,18 +192,13 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             await using var stream = await _apiClient.GetStreamAsync(fullUrl);
             if (stream == null) return;
 
-            var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
+            var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
 
-            AvatarPreview?.Dispose();
-            AvatarPreview = new Bitmap(memoryStream);
+            SetAvatarPreview(new Bitmap(ms));
         }
-        catch
-        {
-            AvatarPreview?.Dispose();
-            AvatarPreview = null;
-        }
+        catch { SetAvatarPreview(null); }
     }
 
     [RelayCommand]
@@ -233,8 +206,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         try
         {
-            var platformService = App.Current?.Services?.GetService<IPlatformService>();
-            var storageProvider = platformService?.MainWindow?.StorageProvider;
+            var storageProvider = App.Current?.Services?.GetService<IPlatformService>()?.MainWindow?.StorageProvider;
 
             if (storageProvider == null)
             {
@@ -242,7 +214,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 return;
             }
 
-            var options = new FilePickerOpenOptions
+            var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Выберите аватар группы",
                 AllowMultiple = false,
@@ -254,44 +226,33 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                         MimeTypes = ["image/jpeg", "image/png", "image/webp"]
                     }
                 ]
-            };
+            });
 
-            var files = await storageProvider.OpenFilePickerAsync(options);
             if (files.Count == 0) return;
-            var file = files[0];
-
-            var path = file.TryGetLocalPath();
+            var path = files[0].TryGetLocalPath();
             if (path == null) return;
 
-            var fileInfo = new FileInfo(path);
-            if (fileInfo.Length > MaxAvatarSizeMb * 1024 * 1024)
+            if (new FileInfo(path).Length > MaxAvatarSizeBytes)
             {
                 ErrorMessage = $"Размер файла не должен превышать {MaxAvatarSizeMb} МБ";
                 return;
             }
 
-            if (_avatarStream is not null)
-                await _avatarStream.DisposeAsync();
-
+            if (_avatarStream != null) await _avatarStream.DisposeAsync();
             _avatarStream = new MemoryStream();
 
-            await using var fileStream = File.OpenRead(path);
-            await fileStream.CopyToAsync(_avatarStream);
+            await using var fs = File.OpenRead(path);
+            await fs.CopyToAsync(_avatarStream);
             _avatarStream.Position = 0;
-            _isAvatarRemoved = false;
 
             _avatarFileName = Path.GetFileName(path);
+            _isAvatarRemoved = false;
 
-            AvatarPreview?.Dispose();
-            AvatarPreview = new Bitmap(_avatarStream);
+            SetAvatarPreview(new Bitmap(_avatarStream));
             _avatarStream.Position = 0;
-
             ErrorMessage = null;
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Ошибка выбора файла: {ex.Message}";
-        }
+        catch (Exception ex) { ErrorMessage = $"Ошибка выбора файла: {ex.Message}"; }
     }
 
     [RelayCommand]
@@ -300,14 +261,15 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         _avatarStream?.Dispose();
         _avatarStream = null;
         _avatarFileName = null;
-        AvatarPreview?.Dispose();
-        AvatarPreview = null;
         _isAvatarRemoved = AvatarPreview != null;
+        SetAvatarPreview(null);
     }
 
-    #endregion
-
-    #region Save
+    private void SetAvatarPreview(Bitmap? bitmap)
+    {
+        AvatarPreview?.Dispose();
+        AvatarPreview = bitmap;
+    }
 
     partial void OnNameChanged(string value)
     {
@@ -315,26 +277,13 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         NotifyCanSaveChanged();
     }
 
-    private void NotifyCanSaveChanged()
-    {
-        OnPropertyChanged(nameof(CanSave));
-        SaveCommand.NotifyCanExecuteChanged();
-    }
+    partial void OnSelectedAdminIdsChanged(ObservableCollection<int> value) => OnPropertyChanged(nameof(AdminsCount));
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        if (string.IsNullOrWhiteSpace(Name))
-        {
-            ErrorMessage = "Введите название группы";
-            return;
-        }
-
-        if (SelectedUsersCount < 1)
-        {
-            ErrorMessage = "Выберите минимум одного участника";
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(Name)) { ErrorMessage = "Введите название группы"; return; }
+        if (SelectedUsersCount < 1) { ErrorMessage = "Выберите минимум одного участника"; return; }
 
         await SafeExecuteAsync(async () =>
         {
@@ -346,37 +295,25 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 CreatedById = _currentUserId
             };
 
-            if (SaveAction != null)
-            {
-                _avatarStream?.Seek(0, SeekOrigin.Begin);
+            if (SaveAction == null) { await RequestCloseAsync(); return; }
 
-                var success = await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds], _avatarStream, _avatarFileName, _isAvatarRemoved);
-
-                if (success)
-                {
-                    SuccessMessage = IsNewChat ? "Группа создана" : "Группа обновлена";
-                    await RequestCloseAsync();
-                }
-            }
-            else
+            _avatarStream?.Seek(0, SeekOrigin.Begin);
+            if (await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds],
+                    _avatarStream, _avatarFileName, _isAvatarRemoved))
             {
+                SuccessMessage = IsNewChat ? "Группа создана" : "Группа обновлена";
                 await RequestCloseAsync();
             }
         });
     }
-
-    #endregion
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            UnsubscribeFromUsers(AvailableUsers);
+            ForEachUser(AvailableUsers, subscribe: false);
             _avatarStream?.Dispose();
             AvatarPreview?.Dispose();
         }
         base.Dispose(disposing);
     }
-
-    partial void OnSelectedAdminIdsChanged(ObservableCollection<int> value) => OnPropertyChanged(nameof(AdminsCount));
 }

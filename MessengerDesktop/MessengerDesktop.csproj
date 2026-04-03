@@ -91,9 +91,6 @@
 	  <Compile Update="Views\Shared\ConfirmDialog.axaml.cs">
 	    <DependentUpon>ConfirmDialog.axaml</DependentUpon>
 	  </Compile>
-	  <Compile Update="Views\StyleGuideViewModel.axaml.cs">
-	    <DependentUpon>StyleGuideViewModel.axaml</DependentUpon>
-	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,5 +1,6 @@
 using Avalonia.Input;
 using Avalonia.Reactive;
+using MessengerDesktop.Views.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -216,8 +217,8 @@ public partial class ChatsView : UserControl
 
         Dispatcher.UIThread.Post(() =>
         {
-            var searchBox = this.FindControl<TextBox>("SearchTextBox");
-            searchBox?.Focus();
+            var searchBox = this.FindControl<SearchBox>("SearchTextBox");
+            searchBox?.FocusInput();
         }, DispatcherPriority.Background);
     }
 

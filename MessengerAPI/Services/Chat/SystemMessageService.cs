@@ -36,8 +36,7 @@ public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier
 
             var loaded = await _context.Messages.Include(m => m.Sender).Include(m => m.TargetUser).AsNoTracking().FirstAsync(m => m.Id == message.Id);
 
-            var dto = loaded.ToDto(urlBuilder: urlBuilder);
-            await hubNotifier.SendToChatAsync(chatId, "ReceiveMessageDto", dto);
+            await hubNotifier.SendToChatAsync(chatId, "ReceiveMessageDto", loaded.ToDto(urlBuilder: urlBuilder));
         }
         catch (Exception ex)
         {

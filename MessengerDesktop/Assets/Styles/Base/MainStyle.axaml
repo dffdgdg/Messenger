@@ -964,11 +964,6 @@
 		<Setter Property="Cursor" Value="Hand"/>
 		<Setter Property="CornerRadius" Value="8"/>
 		<Setter Property="FocusAdorner" Value="{x:Null}"/>
-		<Setter Property="Transitions">
-			<Transitions>
-				<BrushTransition Property="Background" Duration="0:0:0.15"/>
-			</Transitions>
-		</Setter>
 	</Style>
 
 	<Style Selector="Button.MemberItem /template/ ContentPresenter#PART_ContentPresenter">
@@ -980,7 +975,7 @@
 	</Style>
 
 	<Style Selector="Button.MemberItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
 	</Style>
 
 	<Style Selector="Button.MemberItem:focus /template/ ContentPresenter#PART_ContentPresenter">

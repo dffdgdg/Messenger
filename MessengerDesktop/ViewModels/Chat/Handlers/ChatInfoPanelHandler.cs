@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.ViewModels.Chat.Managers;
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -12,7 +13,13 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 {
     [ObservableProperty] public partial UserDto? ContactUser { get; set; }
     [ObservableProperty] public partial bool IsContactOnline { get; set; }
-    [ObservableProperty]public partial string? ContactLastSeen { get; set; }
+    [ObservableProperty] public partial string? ContactLastSeen { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FilteredMembers))]
+    public partial string MemberSearchQuery { get; set; } = string.Empty;
+
+    public ObservableCollection<UserDto> FilteredMembers { get; } = [];
 
     public bool IsInfoPanelOpen
     {
@@ -36,7 +43,16 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     private string GetInfoPanelSubtitle()
     {
         if (!IsContactChat)
-            return $"{Ctx.Members.Count} участников";
+        {
+            var count = Ctx.Members.Count;
+            return count switch
+            {
+                0 => "нет участников",
+                1 => "1 участник",
+                >= 2 and <= 4 => $"{count} участника",
+                _ => $"{count} участников"
+            };
+        }
 
         if (IsContactOnline)
             return "в сети";
@@ -48,6 +64,37 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     public string? ContactDisplayName => ContactUser?.DisplayName;
     public string? ContactUsername => ContactUser?.Username;
     public string? ContactDepartment => ContactUser?.Department;
+
+    partial void OnMemberSearchQueryChanged(string value)
+    {
+        UpdateFilteredMembers();
+    }
+
+    private void UpdateFilteredMembers()
+    {
+        FilteredMembers.Clear();
+
+        var query = MemberSearchQuery?.Trim() ?? string.Empty;
+        var source = Ctx.Members;
+
+        if (string.IsNullOrEmpty(query))
+        {
+            foreach (var m in source)
+                FilteredMembers.Add(m);
+            return;
+        }
+
+        var lower = query.ToLowerInvariant();
+        foreach (var m in source)
+        {
+            var matchName = m.DisplayName?.Contains(lower, StringComparison.OrdinalIgnoreCase) == true;
+            var matchUsername = m.Username?.Contains(lower, StringComparison.OrdinalIgnoreCase) == true;
+            var matchDept = m.Department?.Contains(lower, StringComparison.OrdinalIgnoreCase) == true;
+
+            if (matchName || matchUsername || matchDept)
+                FilteredMembers.Add(m);
+        }
+    }
 
     public void Subscribe()
     {
@@ -76,7 +123,6 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         InvalidateAll();
 
-
         if (!string.IsNullOrWhiteSpace(contact.Department))
             return;
 
@@ -94,7 +140,9 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 IsContactOnline = profileResult.Data.IsOnline;
                 ContactLastSeen = FormatLastSeen(profileResult.Data);
 
-                var memberIndex = Ctx.Members.Select((member, index) => new { member, index }).FirstOrDefault(x => x.member.Id == profileResult.Data.Id)?.index;
+                var memberIndex = Ctx.Members
+                    .Select((member, index) => new { member, index })
+                    .FirstOrDefault(x => x.member.Id == profileResult.Data.Id)?.index;
 
                 if (memberIndex.HasValue)
                     Ctx.Members[memberIndex.Value] = profileResult.Data;
@@ -102,9 +150,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { /* Expected when user navigates away before load completes */ }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}"); }
-
     }
 
     public async Task ReloadMembersAfterEditAsync()
@@ -116,13 +163,20 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
             Dispatcher.UIThread.Post(() =>
             {
                 Ctx.Members = freshMembers;
+                UpdateFilteredMembers();
                 if (IsContactChat)
                     _ = LoadContactUserAsync();
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { /* Expected when user navigates away before load completes */ }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}"); }
+    }
+
+    [RelayCommand]
+    private async Task CopyUsername()
+    {
+        if (string.IsNullOrEmpty(ContactUsername)) return;
     }
 
     private void OnUserStatusChanged(int userId, bool isOnline)
@@ -169,6 +223,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
             UpdateContactProfile(updated);
             ReplaceMemberInList(updated);
+            UpdateFilteredMembers();
         });
     }
 
@@ -213,7 +268,10 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         {
             if (!IsAlive) return;
             if (Ctx.Members.All(m => m.Id != user.Id))
+            {
                 Ctx.Members.Add(user);
+                UpdateFilteredMembers();
+            }
         });
     }
 
@@ -224,12 +282,19 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         Dispatcher.UIThread.Post(() =>
         {
             var member = Ctx.Members.FirstOrDefault(m => m.Id == userId);
-            if (member != null) Ctx.Members.Remove(member);
+            if (member != null)
+            {
+                Ctx.Members.Remove(member);
+                UpdateFilteredMembers();
+            }
         });
     }
 
     private void OnMembersCollectionChanged(object? s, NotifyCollectionChangedEventArgs e)
-        => OnPropertyChanged(nameof(InfoPanelSubtitle));
+    {
+        OnPropertyChanged(nameof(InfoPanelSubtitle));
+        UpdateFilteredMembers();
+    }
 
     internal static string? FormatLastSeen(UserDto contact)
     {

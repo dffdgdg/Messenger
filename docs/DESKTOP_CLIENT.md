@@ -144,7 +144,7 @@ PRAGMA mmap_size=33554432;        -- 32MB Memory-mapped I/O
 
 Схема:
 - `INotificationService` хранит активные уведомления в observable-коллекции.
-- `MainWindow` рендерит их через `ItemsControl` в правом верхнем углу поверх основного контента.
+- `MainWindow` хостит `NotificationOverlay`, а сам overlay рендерит уведомления через `ItemsControl` в правом верхнем углу поверх основного контента.
 - Каждое уведомление имеет `ActivateCommand` и `CloseCommand`.
 - `onClick` callback используется `GlobalHubConnection` для перехода в `MainMenuViewModel.OpenNotificationAsync()`, где определяется нужная вкладка, при необходимости догружается чат и выполняется переход к сообщению по `MessageId`.
 

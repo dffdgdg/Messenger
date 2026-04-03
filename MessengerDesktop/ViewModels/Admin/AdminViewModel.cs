@@ -18,8 +18,7 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
     public IEnumerable<DepartmentGroup> FilteredGroupedUsers => UsersTab.FilteredGroups;
 
-    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments
-        => DepartmentsTab.FilteredDepartments;
+    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments => DepartmentsTab.FilteredDepartments;
 
     public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab)
     {
@@ -30,8 +29,7 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
         {
             PropagateMessages(e.PropertyName, UsersTab);
 
-            if (e.PropertyName == nameof(UsersTab.FilteredGroups) ||
-                e.PropertyName == nameof(UsersTab.GroupedUsers))
+            if (e.PropertyName == nameof(UsersTab.FilteredGroups) || e.PropertyName == nameof(UsersTab.GroupedUsers))
             {
                 OnPropertyChanged(nameof(FilteredGroupedUsers));
             }

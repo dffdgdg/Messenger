@@ -30,7 +30,8 @@
                       Foreground="{DynamicResource TextMuted}"
                       Margin="10,0,8,0"/>
 
-            <TextBox Grid.Column="1"
+            <TextBox x:Name="SearchInput"
+                     Grid.Column="1"
                      Classes="Borderless"
                      Text="{Binding #Root.SearchText, Mode=TwoWay}"
                      Watermark="{Binding #Root.Watermark}"

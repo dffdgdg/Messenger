@@ -1,11 +1,12 @@
 ﻿using MessengerDesktop.ViewModels.Chats;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class GlobalSearchManager(int userId, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
+public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
     : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _searchCts;
@@ -120,15 +121,15 @@ public sealed partial class GlobalSearchManager(int userId, IApiClientService ap
                 ChatResults.Clear();
                 MessageResults.Clear();
 
-                foreach (var chat in result.Data.Chats)
+                foreach (var chat in result.Data.Chats.Where(chat => IsChatAllowedForScope(chat.Type)))
                     ChatResults.Add(new ChatListItemViewModel(chat));
             }
 
-            foreach (var msg in result.Data.Messages)
+            foreach (var msg in result.Data.Messages.Where(m => IsChatAllowedForScope(m.ChatType)))
                 MessageResults.Add(msg);
 
-            TotalMessagesCount = result.Data.TotalMessagesCount;
-            HasMoreMessages = result.Data.HasMoreMessages;
+            TotalMessagesCount = MessageResults.Count;
+            HasMoreMessages = result.Data.HasMoreMessages && MessageResults.Count >= page * AppConstants.SearchPageSize;
             NotifyResultsChanged();
         }
         else
@@ -258,4 +259,13 @@ public sealed partial class GlobalSearchManager(int userId, IApiClientService ap
         OnPropertyChanged(nameof(HasMessageResults));
         OnPropertyChanged(nameof(IsChatLocalMode));
     }
+
+    private bool IsChatAllowedForScope(ChatType type)
+    {
+        if (isGroupMode)
+            return type is ChatType.Chat or ChatType.Department;
+
+        return type == ChatType.Contact;
+    }
+
 }

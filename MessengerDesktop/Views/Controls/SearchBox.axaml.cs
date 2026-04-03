@@ -29,4 +29,6 @@ public partial class SearchBox : UserControl
         ClearCommand = new RelayCommand(() => SearchText = string.Empty);
         InitializeComponent();
     }
+
+    public void FocusInput() => this.FindControl<TextBox>("SearchInput")?.Focus();
 }

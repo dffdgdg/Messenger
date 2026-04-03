@@ -11,17 +11,12 @@ namespace MessengerDesktop.ViewModels;
 
 public partial class ProfileViewModel : BaseViewModel, IRefreshable
 {
-    private readonly IApiClientService _apiClient;
+    private readonly IApiClientService _api;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FullName))]
-    [NotifyPropertyChangedFor(nameof(Username))]
-    [NotifyPropertyChangedFor(nameof(SurnameDisplay))]
-    [NotifyPropertyChangedFor(nameof(NameDisplay))]
-    [NotifyPropertyChangedFor(nameof(MidnameDisplay))]
-    [NotifyPropertyChangedFor(nameof(HasDepartment))]
-    [NotifyPropertyChangedFor(nameof(DepartmentDisplay))]
-    [NotifyPropertyChangedFor(nameof(HasAvatar))]
+    [NotifyPropertyChangedFor(nameof(FullName), nameof(Username),
+        nameof(SurnameDisplay), nameof(NameDisplay), nameof(MidnameDisplay),
+        nameof(HasDepartment), nameof(DepartmentDisplay), nameof(HasAvatar))]
     public partial UserDto? User { get; set; }
 
     [ObservableProperty] public partial int UserId { get; set; }
@@ -42,96 +37,71 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public partial string TempMidname { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSaveUsername))]
-    [NotifyPropertyChangedFor(nameof(UsernameValidationMessage))]
-    [NotifyPropertyChangedFor(nameof(IsUsernameValid))]
+    [NotifyPropertyChangedFor(nameof(CanSaveUsername), nameof(UsernameValidationMessage), nameof(IsUsernameValid))]
     public partial string TempUsername { get; set; } = string.Empty;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSavePassword))]
     public partial string CurrentPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSavePassword))]
-    [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
-    [NotifyPropertyChangedFor(nameof(IsNewPasswordValid))]
-    [NotifyPropertyChangedFor(nameof(NewPasswordValidationMessage))]
+    [NotifyPropertyChangedFor(nameof(CanSavePassword), nameof(PasswordsMatch),
+        nameof(IsNewPasswordValid), nameof(NewPasswordValidationMessage))]
     public partial string NewPassword { get; set; } = string.Empty;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSavePassword))]
-    [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
-    [NotifyPropertyChangedFor(nameof(ShowPasswordMatchIndicator))]
-    public partial string ConfirmPassword { get; set; } = string.Empty;
-    [ObservableProperty] public partial Bitmap? AvatarBitmap { get; set; }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSavePassword), nameof(PasswordsMatch), nameof(ShowPasswordMatchIndicator))]
+    public partial string ConfirmPassword { get; set; } = string.Empty;
+
+    [ObservableProperty] public partial Bitmap? AvatarBitmap { get; set; }
     [ObservableProperty] public partial string? AvatarUrl { get; set; }
 
     public string FullName => FormatFullName(User?.Surname, User?.Name, User?.Midname) ?? User?.Username ?? "Пользователь";
-
     public string TempFullName => FormatFullName(TempSurname, TempName, TempMidname) ?? "—";
     public string Username => User?.Username ?? string.Empty;
-
-    public string SurnameDisplay => string.IsNullOrWhiteSpace(User?.Surname) ? "Не указана" : User?.Surname ?? "Не указана";
-
-    public string NameDisplay => string.IsNullOrWhiteSpace(User?.Name) ? "Не указано" : User?.Name ?? "Не указано";
-
-    public string MidnameDisplay => string.IsNullOrWhiteSpace(User?.Midname) ? "Не указано" : User?.Midname ?? "Не указано";
-
+    public string SurnameDisplay => string.IsNullOrWhiteSpace(User?.Surname) ? "Не указана" : User.Surname;
+    public string NameDisplay => string.IsNullOrWhiteSpace(User?.Name) ? "Не указано" : User.Name;
+    public string MidnameDisplay => string.IsNullOrWhiteSpace(User?.Midname) ? "Не указано" : User.Midname;
     public bool HasDepartment => !string.IsNullOrWhiteSpace(User?.Department);
-
     public string DepartmentDisplay => User?.Department ?? string.Empty;
-
-    /// <summary>
-    /// Есть ли у пользователя аватар (для показа кнопки удаления)
-    /// </summary>
     public bool HasAvatar => !string.IsNullOrWhiteSpace(User?.Avatar);
     public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) || UsernameRegex().IsMatch(TempUsername.Trim());
     public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
-
-    public string? UsernameValidationMessage
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(TempUsername)) return null;
-            if (TempUsername.Trim().Length < 3) return "Минимум 3 символа";
-            if (!IsUsernameValid) return "Только латинские буквы, цифры и _";
-            return null;
-        }
-    }
-
     public bool IsNewPasswordValid => string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
-
-    public string? NewPasswordValidationMessage
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(NewPassword)) return null;
-            if (NewPassword.Length < 6) return $"Ещё {6 - NewPassword.Length} символов";
-            return null;
-        }
-    }
-
     public bool PasswordsMatch => NewPassword == ConfirmPassword;
     public bool ShowPasswordMatchIndicator => !string.IsNullOrEmpty(ConfirmPassword);
 
     public bool CanSavePassword => !string.IsNullOrWhiteSpace(CurrentPassword)
-                                   && !string.IsNullOrWhiteSpace(NewPassword)
-                                   && NewPassword.Length >= 6
-                                   && PasswordsMatch;
+        && !string.IsNullOrWhiteSpace(NewPassword) && NewPassword.Length >= 6 && PasswordsMatch;
+
+    public string? UsernameValidationMessage => TempUsername switch
+    {
+        "" => null,
+        _ when TempUsername.Trim().Length < 3 => "Минимум 3 символа",
+        _ when !IsUsernameValid => "Только латинские буквы, цифры и _",
+        _ => null
+    };
+
+    public string? NewPasswordValidationMessage => NewPassword switch
+    {
+        "" => null,
+        _ when NewPassword.Length < 6 => $"Ещё {6 - NewPassword.Length} символов",
+        _ => null
+    };
 
     IAsyncRelayCommand IRefreshable.RefreshCommand => RefreshCommand;
 
     public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager)
     {
-        _apiClient = apiClient;
+        _api = apiClient;
         UserId = authManager.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
         _ = LoadUser();
     }
 
     private static string? FormatFullName(string? surname, string? name, string? midname)
     {
-        var parts = new[] { surname, name, midname };
-        var filtered = parts.Where(s => !string.IsNullOrWhiteSpace(s));
-        return filtered.Any() ? string.Join(" ", filtered) : null;
+        var parts = new[] { surname, name, midname }.Where(s => !string.IsNullOrWhiteSpace(s));
+        return parts.Any() ? string.Join(" ", parts) : null;
     }
 
     [RelayCommand]
@@ -139,56 +109,36 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     private async Task LoadUser() => await SafeExecuteAsync(async () =>
     {
-        var result = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(UserId));
-        if (result.Success)
-        {
-            User = result.Data;
-            RefreshAvatarUrl();
-            await LoadAvatarAsync();
-        }
+        var r = await _api.GetAsync<UserDto>(ApiEndpoints.Users.ById(UserId));
+        if (!r.Success) return;
+        User = r.Data;
+        RefreshAvatarUrl();
+        await LoadAvatarAsync();
     });
 
     private async Task LoadAvatarAsync()
     {
-        if (string.IsNullOrEmpty(AvatarUrl))
-        {
-            AvatarBitmap?.Dispose();
-            AvatarBitmap = null;
-            return;
-        }
+        AvatarBitmap?.Dispose();
+        AvatarBitmap = null;
+
+        if (string.IsNullOrEmpty(AvatarUrl)) return;
+
         try
         {
-            await using var stream = await _apiClient.GetStreamAsync(AvatarUrl);
-            if (stream == null)
-            {
-                AvatarBitmap?.Dispose();
-                AvatarBitmap = null;
-                return;
-            }
-
-            AvatarBitmap?.Dispose();
-            AvatarBitmap = new Bitmap(stream);
+            await using var stream = await _api.GetStreamAsync(AvatarUrl);
+            if (stream != null) AvatarBitmap = new Bitmap(stream);
         }
-        catch
-        {
-            AvatarBitmap?.Dispose();
-            AvatarBitmap = null;
-        }
+        catch { /* avatar load failed silently */ }
     }
 
+    partial void OnUserChanged(UserDto? value) => RefreshAvatarUrl();
 
-    partial void OnUserChanged(UserDto? value)
-        => RefreshAvatarUrl();
-
-    private void RefreshAvatarUrl(bool forceCacheBuster = false)
-    {
-        var rawAvatarUrl = User?.Avatar;
+    private void RefreshAvatarUrl(bool forceCacheBuster = false) =>
         AvatarUrl = forceCacheBuster
-            ? AvatarHelper.GetUrlWithCacheBuster(rawAvatarUrl)
-            : GetAbsoluteUrl(rawAvatarUrl);
-    }
+            ? AvatarHelper.GetUrlWithCacheBuster(User?.Avatar)
+            : GetAbsoluteUrl(User?.Avatar);
 
-    #region Редактирование профиля (ФИО)
+    #region Profile editing (FIO)
 
     [RelayCommand]
     private void StartEditProfile()
@@ -207,12 +157,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     private async Task SaveProfile()
     {
         if (User == null) return;
-
         if (string.IsNullOrWhiteSpace(TempSurname) && string.IsNullOrWhiteSpace(TempName))
-        {
-            ErrorMessage = "Укажите хотя бы имя или фамилию";
-            return;
-        }
+        { ErrorMessage = "Укажите хотя бы имя или фамилию"; return; }
 
         await SafeExecuteAsync(async () =>
         {
@@ -226,10 +172,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 Avatar = User.Avatar,
                 Department = User.Department
             };
-
-            var result = await _apiClient.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), update);
-
-            if (result.Success)
+            var r = await _api.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), update);
+            if (r.Success)
             {
                 User.Surname = TempSurname.Trim();
                 User.Name = TempName.Trim();
@@ -238,16 +182,13 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 IsEditingProfile = false;
                 SuccessMessage = "Профиль обновлён";
             }
-            else
-            {
-                ErrorMessage = result.Error;
-            }
+            else { ErrorMessage = r.Error; }
         });
     }
 
     #endregion
 
-    #region Редактирование Username
+    #region Username editing
 
     [RelayCommand]
     private void StartEditUsername()
@@ -258,56 +199,38 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private void CancelEditUsername()
-    {
-        IsEditingUsername = false;
-        TempUsername = "";
-    }
+    private void CancelEditUsername() { IsEditingUsername = false; TempUsername = ""; }
 
     [RelayCommand]
     private async Task SaveUsername()
     {
         if (User == null || !CanSaveUsername) return;
-
         var newUsername = TempUsername.Trim().ToLower();
-
-        if (newUsername == User.Username?.ToLower())
-        {
-            IsEditingUsername = false;
-            return;
-        }
+        if (newUsername == User.Username?.ToLower()) { IsEditingUsername = false; return; }
 
         await SafeExecuteAsync(async () =>
         {
-            var dto = new ChangeUsernameDto { NewUsername = newUsername };
-            var result = await _apiClient.PutAsync<object>(
-                ApiEndpoints.Users.Username(User.Id), dto);
-
-            if (result.Success)
+            var r = await _api.PutAsync<object>(ApiEndpoints.Users.Username(User.Id), new ChangeUsernameDto { NewUsername = newUsername });
+            if (r.Success)
             {
                 User.Username = newUsername;
                 OnPropertyChanged(nameof(User));
                 IsEditingUsername = false;
                 SuccessMessage = "Username успешно изменён";
             }
-            else
-            {
-                ErrorMessage = result.Error;
-            }
+            else { ErrorMessage = r.Error; }
         });
     }
 
     #endregion
 
-    #region Смена пароля
+    #region Password change
 
     [RelayCommand]
     private void StartEditPassword()
     {
         CancelAllEditing();
-        CurrentPassword = "";
-        NewPassword = "";
-        ConfirmPassword = "";
+        CurrentPassword = NewPassword = ConfirmPassword = "";
         IsEditingPassword = true;
     }
 
@@ -315,9 +238,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     private void CancelEditPassword()
     {
         IsEditingPassword = false;
-        CurrentPassword = "";
-        NewPassword = "";
-        ConfirmPassword = "";
+        CurrentPassword = NewPassword = ConfirmPassword = "";
     }
 
     [RelayCommand]
@@ -327,63 +248,45 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var dto = new ChangePasswordDto
-            {
-                CurrentPassword = CurrentPassword,
-                NewPassword = NewPassword
-            };
-
-            var result = await _apiClient.PutAsync<object>(
-                ApiEndpoints.Users.Password(User.Id), dto);
-
-            if (result.Success)
+            var r = await _api.PutAsync<object>(ApiEndpoints.Users.Password(User.Id),
+                new ChangePasswordDto { CurrentPassword = CurrentPassword, NewPassword = NewPassword });
+            if (r.Success)
             {
                 IsEditingPassword = false;
-                CurrentPassword = "";
-                NewPassword = "";
-                ConfirmPassword = "";
+                CurrentPassword = NewPassword = ConfirmPassword = "";
                 SuccessMessage = "Пароль успешно изменён";
             }
-            else
-            {
-                ErrorMessage = result.Error;
-            }
+            else { ErrorMessage = r.Error; }
         });
     }
 
     #endregion
 
-    #region Аватар
+    #region Avatar
 
     [RelayCommand]
     private async Task UploadAvatar()
     {
-        var storage = (App.Current?.ApplicationLifetime
-            as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.StorageProvider;
-
+        var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow?.StorageProvider;
         if (storage == null) return;
 
-        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            FileTypeFilter = [FilePickerFileTypes.ImageAll]
-        });
-
+        var files = await storage.OpenFilePickerAsync(
+            new FilePickerOpenOptions { FileTypeFilter = [FilePickerFileTypes.ImageAll] });
         if (files.Count == 0) return;
 
         await SafeExecuteAsync(async () =>
         {
             await using var stream = await files[0].OpenReadAsync();
-            var result = await _apiClient.UploadFileAsync<UserDto>(
+            var r = await _api.UploadFileAsync<UserDto>(
                 ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
+            if (!r.Success) return;
 
-            if (result.Success)
-            {
-                User.Avatar = result.Data!.Avatar;
-                RefreshAvatarUrl(forceCacheBuster: true);
-                OnPropertyChanged(nameof(HasAvatar));
-                await LoadAvatarAsync();
-                SuccessMessage = "Аватар обновлён";
-            }
+            User.Avatar = r.Data!.Avatar;
+            RefreshAvatarUrl(forceCacheBuster: true);
+            OnPropertyChanged(nameof(HasAvatar));
+            await LoadAvatarAsync();
+            SuccessMessage = "Аватар обновлён";
         });
     }
 
@@ -394,10 +297,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.DeleteAsync(
-                ApiEndpoints.Users.Avatar(User.Id));
-
-            if (result.Success)
+            var r = await _api.DeleteAsync(ApiEndpoints.Users.Avatar(User.Id));
+            if (r.Success)
             {
                 User.Avatar = null;
                 AvatarBitmap?.Dispose();
@@ -406,53 +307,41 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 OnPropertyChanged(nameof(HasAvatar));
                 SuccessMessage = "Аватар удалён";
             }
-            else
-            {
-                ErrorMessage = result.Error ?? "Не удалось удалить аватар";
-            }
+            else { ErrorMessage = r.Error ?? "Не удалось удалить аватар"; }
         });
     }
 
     #endregion
 
-    #region Вспомогательные методы
+    #region Helpers
 
     private void CancelAllEditing()
     {
-        IsEditingProfile = false;
-        IsEditingUsername = false;
-        IsEditingPassword = false;
+        IsEditingProfile = IsEditingUsername = IsEditingPassword = false;
         ErrorMessage = null;
     }
 
     [RelayCommand]
     private static async Task Logout()
     {
-        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
-            && desktop.MainWindow?.DataContext is MainWindowViewModel main)
-        {
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow.DataContext: MainWindowViewModel main })
             await main.Logout();
-        }
     }
 
-    [RelayCommand]
-    protected void ClearError() => ErrorMessage = null;
-
-    [RelayCommand]
-    protected void ClearSuccess() => SuccessMessage = null;
+    [RelayCommand] protected void ClearError() => ErrorMessage = null;
+    [RelayCommand] protected void ClearSuccess() => SuccessMessage = null;
 
     #endregion
 
+    #region Dispose
+
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
-        {
-            AvatarBitmap?.Dispose();
-            AvatarBitmap = null;
-        }
-
+        if (disposing) { AvatarBitmap?.Dispose(); AvatarBitmap = null; }
         base.Dispose(disposing);
     }
+
+    #endregion
 
     [GeneratedRegex("^[a-zA-Z0-9_]{3,30}$", RegexOptions.None)]
     private static partial Regex UsernameRegex();

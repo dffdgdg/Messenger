@@ -222,6 +222,7 @@
 					<Panel>
 						<controls:SearchBox x:Name="SearchTextBox"
 											SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
+											Watermark="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Поиск в чатах...|Поиск в контактах...'}"
 											IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
 						<Button Classes="IconButton CompactSearchButton"

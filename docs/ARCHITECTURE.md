@@ -14,169 +14,202 @@
 
 ## Backend Architecture (MessengerAPI)
 
-### Слои взаимодействия
+### Слои
 ```
-[Controllers] 
-     ↓ [BaseController.ExecuteAsync → Result Pattern]
-[Services] (Business Logic, Transaction boundaries)
-     ↓ [Infrastructure Layer (Cache, AccessControl, Hub)]
-[Model / DbContext] (EF Core)
+[Controllers]  →  BaseController.ExecuteAsync  →  Result<T> → HTTP + ApiResponse<T>
+[Services]     →  Business Logic, Transaction boundaries
+[Infrastructure] → Cache, AccessControl, HubNotifier, UrlBuilder
+[Model / DbContext] → EF Core, PostgreSQL
 ```
 
-#### Контроллеры
-- Все наследуют `BaseController<T>`.
-- Автоматическая маппинг ошибок из `Result<T>` в HTTP статус + `ApiResponse<T>`.
-- Извлечение текущего пользователя через `GetCurrentUserId()` (Claim NameIdentifier).
-- Rate Limiting настроен на уровне контроллера (Policy Injection) или встроенной инфраструктурой.
+### DI-регистрация (Lifetime)
 
-#### Сервисы
-- **Бизнес-сервисы**:
-  - `ChatService`: Управление чатами (CRUD), аватарами, инвайдитами участников, инвалидацией кэша после записей.
-  - `MessageService`: CRUD сообщений (создание через `CreateMessageRequest`, отдельный от `MessageDto` входной контракт), пагинация (окно вокруг сообщения, до/после), поиск (GlobalSearch, FTS-style ILike), обновления непрочитанных, уведомления. Создание сообщения атомарно — один `SaveChanges` для Message, VoiceMessage, файлов и обновления чата.  
-  - `PollService`: Создание опросов, голосование.
-  - `UserService` / `AdminService`: Пользователи, роли.
-  - `DepartmentService`: Департаментская иерархия.
-- **Инфраструктурные**:
-  - `HubNotifier`: Отправка событий в SignalR (Fire-and-forget).
-  - `CacheService`: IMemoryCache с TTL (Chats: 5 мин, Membership: 10 мин). Инвалидация по ключам.
-  - `AccessControlService`: Проверка прав доступа (Member/Admin/Owner). Кэширует текущую роль на время запроса (`_requestCache`), но использует БД с кэшем для первичного чтения.
-- **База данных**: `MessengerDbContext` (EF Core) с транзакциями при создании чатов.
+**Singleton**: `OnlineUserService`, `AppDateTime`, `TimeProvider`.
+**Scoped** (per-request): все бизнес-сервисы (`ChatService`, `MessageService`, `ChatMemberService`, `NotificationService`, `ReadReceiptService`, `PollService`, `UserService`, `AdminService`, `DepartmentService`, `AuthService`, `TokenService`, `SystemMessageService`), все инфраструктурные (`CacheService`, `AccessControlService`, `FileService`, `HubNotifier`, `HttpUrlBuilder`).
 
-#### База данных
-- **СУБД**: PostgreSQL.
-- **ORM**: EF Core 9 с миграциями.
-- **Энум-ы**: Postgres enum-ы регистрируются в API; `MessengerShared` не содержит `PgName`, а специальные label-ы задаются через API-side name translator-ы.
-- **Конфигурация**: `UseNpgsql(..., npgsql => npgsql.MapEnum(..., nameTranslator: ...))` + `HasPostgresEnum(..., nameTranslator: ...)` в `MessengerDbContext`.
+### Сервисы — карта
 
-#### Безопасность и потоки токенов
-- **Password Hashing**: BCrypt.Net-Next.
-- **Tokens**:
-  - **Access Token**: JWT, короткое время жизни.
-  - **Refresh Token**: SHA-256 хеш в БД, семья ротации (`FamilyId`). При ротации обновляется `ReplacedByTokenId`.
-- **Rate Limiting**: Sliding Window (Global + Policies `login`, `messaging`, `search`).
+| Сервис | Файл | Ответственность |
+|--------|------|-----------------|
+| `ChatService` | `Services/Chat/ChatService.cs` | CRUD чатов, аватары, инвалидация кэша |
+| `ChatMemberService` | `Services/Chat/ChatMemberService.cs` | Участники: добавление, удаление, смена ролей, выход. Проверяет права, создаёт системные сообщения |
+| `SystemMessageService` | `Services/Chat/SystemMessageService.cs` | Системные сообщения (MemberAdded/Removed/Left/RoleChanged). Не создаёт для Contact. Отправляет в SignalR |
+| `NotificationService` | `Services/Chat/NotificationService.cs` | Push-уведомления через SignalR. Mute/unmute per-chat |
+| `MessageService` | `Services/Messaging/MessageService.cs` | CRUD сообщений, атомарное создание (Message+Voice+Files в одном SaveChanges). Пагинация (around/before/after), поиск (ILike). Уведомляет участников, обновляет непрочитанные |
+| `FileService` | `Services/Messaging/FileService.cs` | Загрузка файлов/изображений. Конвертация в WebP (ImageSharp) |
+| `PollService` | `Services/Messaging/PollService.cs` | Опросы, голосование |
+| `ReadReceiptService` | `Services/ReadReceipt/ReadReceiptService.cs` | Прочитанные (`LastReadMessageId` в `ChatMember`), счётчики, `FirstUnreadMessageId` |
+| `AuthService` | `Services/Auth/AuthService.cs` | Логин, рефреш, отзыв токенов |
+| `TokenService` | `Services/Auth/TokenService.cs` | Генерация JWT, управление Refresh Token (SHA-256, FamilyId) |
+| `UserService` | `Services/User/UserService.cs` | Профиль, аватар, смена пароля/логина |
+| `AdminService` | `Services/User/AdminService.cs` | CRUD пользователей, блокировка |
+| `DepartmentService` | `Services/Department/DepartmentService.cs` | Департаментская иерархия |
+| `CacheService` | `Services/Infrastructure/CacheService.cs` | `IMemoryCache`, TTL 5/10 мин, явная инвалидация |
+| `AccessControlService` | `Services/Infrastructure/AccessControlService.cs` | Проверка прав (Member/Admin/Owner), кэш на запрос + IMemoryCache. `GetUserChatIdsAsync` |
+| `OnlineUserService` | `Services/Infrastructure/OnlineUserService.cs` | Потокобезопасный трекинг онлайна (ConcurrentDictionary), несколько соединений на юзера |
+| `HubNotifier` | `Services/Infrastructure/HubNotifier.cs` | Fire-and-forget отправка в SignalR |
+| `HttpUrlBuilder` | `Services/Infrastructure/HttpUrlBuilder.cs` | Абсолютные URL из относительных через HttpContext |
+
+### SignalR Hub (`Hubs/ChatHub.cs`)
+
+Авторизованный хаб, `IServiceScopeFactory` для scoped-сервисов.
+
+- `OnConnectedAsync`: регистрация в `OnlineUserService`, join всех групп чатов, broadcast `UserOnline`.
+- `OnDisconnectedAsync`: если нет других соединений — обновление `LastOnline`, broadcast `UserOffline`.
+- RPC: `JoinChat`, `LeaveChat`, `MarkAsRead`, `MarkMessageAsRead`, `GetReadInfo`, `GetUnreadCounts`, `SendTyping`, `GetOnlineUsersInChat`.
+
+### Middleware
+
+| Middleware | Файл | Назначение |
+|-----------|------|-----------|
+| `ExceptionHandlingMiddleware` | `Middleware/ExceptionHandlingMiddleware.cs` | Глобальный обработчик → ApiResponse с 500 |
+| `MissingFileCleanupMiddleware` | `Middleware/MissingFileCleanupMiddleware.cs` | При 404 на статический файл удаляет битые ссылки из БД |
+
+### База данных
+- PostgreSQL, EF Core 9 с миграциями.
+- Postgres enum-ы с `EnumNameTranslator`.
+- Модели: `Model/` — `Chat`, `ChatMember`, `Message`, `MessageFile`, `VoiceMessage`, `Poll`, `PollOption`, `PollVote`, `User`, `UserSetting`, `RefreshToken`, `Department`, `SystemSetting`.
+
+### Безопасность
+- BCrypt.Net-Next (пароли), JWT (access), SHA-256 + FamilyId (refresh).
+- Rate Limiting: Sliding Window (Global + `login`, `messaging`, `search`).
 
 ---
 
 ## Desktop Client Architecture (MessengerDesktop)
 
-### Паттерн: MVVM
-```
-Avalonia View (.axaml)
-       ↓ Data Binding
-ViewModel (CommunityToolkit.Mvvm)
-       ↓ Dependency Injection
-Services / Repositories (Local DB, Network)
-```
+### DI-регистрация (все Singleton, кроме помеченных)
 
-### Жизненный цикл приложения
-1. **Startup (`App.axaml`)**
-   - Создание `ServiceProvider` (DI).
-   - Регистрация всех сервисов (Core Services + ViewModels).
-   - Запуск фоновой инициализации базы данных (`InitializeLocalDatabaseAndMaintenanceAsync`).
-   - Создание `MainWindow` и привязка `DataContext = MainWindowViewModel`.
-   - Подключение SignalR (`GlobalHubConnection.ConnectAsync()`) происходит из `MainMenuViewModel`.
-2. **Начало работы**
-   - Проверка авторизации через `AuthManager`.
-   - Если нет токена или истёк — `LoginViewModel`.
-   - Иначе — `MainWindowViewModel`.
-3. **Работа**
-   - Кэширование данных в SQLite (Offline-first) при каждой загрузке.
-   - Обработка 401 (Unauthorized) в `ApiClientService` автоматически вызывает `AuthManager.TryRefreshTokenAsync()`.
-4. **Закрытие**
-   - `Dispose()` на контейнере и сервисы, отписка от событий.
+**Core Services** (`Infrastructure/ServiceCollectionExtensions.cs`):
+`LocalDatabase`, `ILocalCacheService`, `ICacheMaintenanceService`, `IPlatformService`, `ISettingsService`, `IGlobalHubConnection`, `IChatNotificationApiService`, `IChatInfoPanelStateStore`, `IAudioPlayerService`, `HttpClient`, `IAuthService`, `ISessionStore`, `ISecureStorageService`, `IAuthManager`, `IApiClientService`, `INavigationService`, `IDialogService`, `INotificationService`, `IFileDownloadService`, `IAudioRecorderService`.
 
-### Интеграция с Backend
-- **ApiClientService**: Обёртка над HttpClient. Реализует логику повторного входа при 401 (с учетом исключений `NoRefreshUrls`).
-  - Поток загрузки файлов (>10MB) отправляется во временный файл (Temp File), чтобы не перегружать память.
-- **Hub Connection**: Единожды при запуске. Фильтрация событий происходит внутри `ChatHubSubscriber`.
-- **Notification Navigation**: Клик по overlay-уведомлению обрабатывается в `GlobalHubConnection`, а переход выполняется через уже активный `MainMenuViewModel` без отдельного navigation-layer для уведомлений.
-- **Authentication**: `SessionStore` хранит ID юзера и токены. Токен инжектится в каждый запрос (`Authorization: Bearer ...`).
+**Factories** (Singleton): `IChatViewModelFactory`, `IChatsViewModelFactory`.
+
+**ViewModels**: `MainWindowViewModel` (Singleton), остальные — **Transient** (`LoginViewModel`, `MainMenuViewModel`, `AdminViewModel`, `ProfileViewModel`, `SettingsViewModel`, `DepartmentManagementViewModel`).
+
+### Архитектура ChatViewModel — Handler Composition
+
+`ChatViewModel` (`ViewModels/Chat/ChatViewModel.cs`) — композитный ViewModel:
+
+- **`ChatContext`** (`ChatViewModel/ChatContext.cs`) — разделяемое состояние (ChatId, CurrentUserId, Chat, Members), зависимости (Api, Hub, Dialogs, Notifications), события координации (`CompositionModeReset`, `ScrollToMessageRequested`), `LifetimeToken`.
+- **`ChatFeatureHandler`** (`ChatViewModel/ChatFeatureHandler.cs`) — базовый класс: `Ctx`, `IsAlive`, `Dispose`. Наследует `ObservableObject`.
+
+**Managers** (данные):
+
+| Manager | Файл | Ответственность |
+|---------|------|-----------------|
+| `ChatMessageManager` | `Managers/ChatMessageManager.cs` | Загрузка, пагинация (before/after/around), cache-first, gap-fill после reconnect, группировка, разделители дат, trim старых |
+| `ChatAttachmentManager` | `Managers/ChatAttachmentManager.cs` | Выбор файлов (IStorageProvider), thumbnail, upload |
+| `ChatMemberLoader` | `Managers/ChatMemberLoader.cs` | Загрузка участников через API |
+
+**Handlers**:
+
+| Handler | Файл | Ответственность |
+|---------|------|-----------------|
+| `ChatEditDeleteHandler` | `Handlers/ChatEditDeleteHandler.cs` | Редактирование, удаление, копирование |
+| `ChatReplyHandler` | `Handlers/ChatReplyHandler.cs` | Ответ на сообщение, прокрутка к оригиналу |
+| `ChatForwardHandler` | `Handlers/ChatForwardHandler.cs` | Пересылка через ChatPickerDialog |
+| `ChatTypingHandler` | `Handlers/ChatTypingHandler.cs` | Индикатор набора (отправка/отображение) |
+| `ChatVoiceHandler` | `Handlers/ChatVoiceHandler.cs` | Запись/отправка голосовых (auto-stop, min duration) |
+| `ChatInfoPanelHandler` | `Handlers/ChatInfoPanelHandler.cs` | Инфопанель, статусы, участники, контактный профиль |
+| `ChatSearchHandler` | `Handlers/ChatSearchHandler.cs` | Навигация к сообщению, подсветка |
+| `ChatNotificationHandler` | `Handlers/ChatNotificationHandler.cs` | Mute/unmute уведомлений |
+
+**`ChatHubSubscriber`** (`ChatViewModel/ChatHubSubscriber.cs`) — подписывается на `GlobalHubConnection`, фильтрует по ChatId, делегирует в `ChatMessageManager`.
+
+**Property Forwarding**: `ChatViewModel` проксирует свойства handler'ов через `ForwardProperties()`. View биндится только к `ChatViewModel`.
+
+**Фабрики**: `ChatViewModelFactory` (`Factories/ChatViewModelFactory.cs`), `ChatsViewModelFactory` (`Factories/ChatsViewModelFactory.cs`).
+
+### Сервисы — карта
+
+| Сервис | Файл | Ответственность |
+|--------|------|-----------------|
+| `ApiClientService` | `Services/Api/ApiClientService.cs` | HTTP-клиент, retry при 401 (refresh), temp file для >10MB |
+| `GlobalHubConnection` | `Services/Realtime/GlobalHubConnection.cs` | Единственный SignalR-клиент. Подписка на события, in-memory непрочитанные, дебаунс read/typing, кэширование входящих, reconnect с refresh, desktop-уведомления, `SetCurrentChat` |
+| `AuthManager` | `Services/Auth/AuthManager.cs` | SecureStorage → refresh если истёк → logout. Refresh Lock |
+| `AuthService` | `Services/Auth/AuthService.cs` | REST-вызовы login/refresh/revoke |
+| `SessionStore` | `Services/Auth/SessionStore.cs` | In-memory хранение UserId + Token |
+| `SecureStorageService` | `Services/Auth/SecureStorage.cs` | Персистентное хранение токенов (файл) |
+| `LocalCacheService` | `Data/Repositories/LocalCacheService.cs` | Фасад над SQLite. Работает с DTO. Upsert/Get/Search сообщений/чатов/пользователей |
+| `LocalDatabase` | `Data/LocalDatabase.cs` | SQLite (WAL, FTS5). Версионирование схемы (v3), индексы, триггеры |
+| `FileDownloadService` | `Services/IFileDownloadService.cs` | Скачивание в Downloads, прогресс, кросс-платформа |
+| `AudioPlayerService` | `Services/Audio/AudioPlayerService.cs` | NAudio воспроизведение, Play/Pause/Seek, потокобезопасен |
+| `NAudioRecorderService` | `Services/Audio/NAudioRecorderService.cs` | NAudio запись → WAV MemoryStream |
+| `NotificationService` | `Services/UI/NotificationService.cs` | Desktop overlay-уведомления |
+| `DialogService` | `Services/Navigation/DialogService.cs` | Показ диалоговых окон |
+| `NavigationService` | `Services/Navigation/NavigationService.cs` | Навигация между ViewModel |
+| `SettingsService` | `Services/Storage/SettingsService.cs` | Key-value настройки |
+| `PlatformService` | `Services/Platform/PlatformService.cs` | Доступ к MainWindow, StorageProvider |
+| `ChatNotificationApiService` | `Services/ChatNotificationApiService.cs` | REST-обёртка для mute/unmute |
+| `ChatInfoPanelStateStore` | `Services/ChatInfoPanelStateStore.cs` | Персистентное состояние инфопанели |
+| `CacheMaintenanceService` | `Services/Cache/CacheMaintenanceService.cs` | Фоновый VACUUM, проверка размера |
+| `ThemeService` | `Services/ThemeService.cs` | Управление темами |
+
+### Локальный кэш (SQLite)
+
+**Таблицы**: `CachedMessage`, `CachedChat`, `CachedUser`, `CachedReadPointer`, `ChatSyncState`.
+**FTS5**: `messages_fts` с триггерами INSERT/UPDATE/DELETE.
+**`ChatSyncState`**: `OldestLoadedId`, `NewestLoadedId`, `HasMoreOlder/Newer` — для инкрементальной синхронизации.
+**`ILocalCacheService`**: фасад, маппинг DTO↔Entity через `CacheMapper`.
+
+### Ключевые потоки
+
+**Login / Auth**: Запуск → AuthManager.InitializeAsync → SecureStorage.GetTokens 
+→ токены есть + access истёк → POST /auth/refresh → сохранить 
+→ refresh невалиден → очистить всё → LoginView 
+→ токенов нет → LoginView. 
+При 401 в runtime → ApiClientService вызывает TryRefreshTokenAsync → повтор. 
+Refresh Lock (_refreshLock + _activeRefreshTask) предотвращает параллельные рефреши.
+
+**Send Message**: ChatViewModel.SendAsync → валидация → ApiClient.POST /messages 
+→ 401 → TryRefresh → повтор → успех → ChatMessageManager.AddLocal 
+→ SignalR broadcast → другие клиенты получают
+
+**Cache-first загрузка сообщений**: `ChatMessageManager.LoadInitialCoreAsync` → SQLite → если есть, рендерим, фоново ревалидируем с сервера. Если нет — сервер → рендер → сохранение в SQLite.
+
+**Gap-fill после reconnect**: `ChatMessageManager.GapFillAfterReconnectAsync` → батчами загружает новые сообщения after newest. При превышении лимита — полный сброс к последним.
+
+**Read Receipts**: `GlobalHubConnection` хранит `_unreadCounts` (Lock), дебаунсит `MarkMessageAsRead`. `ChatViewModel.OnMessageVisibleAsync` маркирует при скролле. `FirstUnreadMessageId` определяет начальную позицию.
+
+**Уведомления**: `GlobalHubConnection.OnNotificationReceived` → если не текущий чат и включены → `NotificationService.Show()` с callback → `MainMenuViewModel.OpenNotificationAsync`.
 
 ---
 
-## Детали реализации ключевых модулей
+## API Routes (Desktop → Backend)
 
-### 1. Кэширование (Caching Strategy)
+Определены в `Infrastructure/Configuration/ApiEndPoints.cs`:
 
-| Уровн | Технология | Политика |
-|-------|------------|-----------|
-| **Backend (Сервер)** | `IMemoryCache` | Чтение пользователей/чатов кэшируется (5 мин для списков, 10 мин для состава). После записи (создание чата, удаление участника) ключи инвалидируются явно (`InvalidateUserChats`, `InvalidateMembership`). Локальный кэш запросов (`AccessControlService._requestCache`) сбрасывается между HTTP-запросами. |
-| **Frontend (Клиент)** | SQLite (`sqlite-net-pcl`) | Полная синхронизация списка чатов и сообщений. Используется `Fts5` для текстового поиска. Есть таблица `chat_sync_state` для трекинга последнего загруженного сообщения. Кэш сохраняется после каждого успешного API-запроса. |
-
-### 2. Управление правами доступа (AccessControl)
-
-Все методы в сервисах используют `IAccessControlService` перед выполнением логики.
-- **IsMemberAsync**: Проверяет наличие записи в `ChatMembers`.
-- **IsAdminAsync**: Проверяет роль `Admin` или `Owner`.
-- **CheckIsOwnerAsync**: Строго проверяет `Owner`.
-- **Поток**:
-  1. Проверка прав происходит через `AccessControlService.CheckIsMemberAsync(userId, chatId)`.
-  2. Внутри вызывается `GetMembershipAsync`, который сначала смотрит в `IMemoryCache` (backend) или `_requestCache` (на один запрос), затем в БД.
-  3. Результат возвращается как `Result<bool>` или `Result<Forbidden>`.
-
-### 3. Авторизация и токены (AuthManager)
-
-- **Инициализация**:
-  - При старте приложения `AuthManager` пытается прочитать сохранённые токены из `SecureStorage`.
-  - Если Access Token валиден (локальная проверка длительности) — сессия восстанавливается.
-  - Если истёк — запускается фоновый `RefreshTokenAsync`. Если успешно — сохраняются новые токен + RefreshToken в SecureStorage и SessionStore.
-  - Если ошибка сервера (401/403) — очищается всё и пользователь перенаправляется на вход.
-- **Refresh Lock**:
-  - Защита от параллельных рефрешей (`_refreshLock` + `_activeRefreshTask`). Если рефреш уже идёт, другие запросы ждут завершения текущего.
-- **Logout**:
-  - Вызывает `/api/auth/revoke` (для отзыва всех refresh-токенов пользователя), очищает SecureStorage, SessionStore, LocalDB.
-
-### 4. Клиентское API (ApiClientService)
-
-- **Retry Logic**:
-  - При получении 401 `SendWithRefreshAsync` вызывает `TryRefreshTokenAsync`.
-  - Если рефреш успешен — исходный запрос повторяется.
-  - Если нет — выбрасывается явная ошибка "Сессия истекла".
-- **Обработка больших файлов**:
-  - Если размер файла > 10 MB (`LargeFileThreshold`) — используется буферное чтение и запись во временный файл, чтобы не держать весь поток в оперативной памяти.
-- **JSON**:
-  - Сериализация через `System.Text.Json` с настройкой `CamelCase` и игнорированием `null`.
-  - Автоматическая оборачивание ответа в `ApiResponse<T>`.
-
-### 5. Оффлайн-режим и Поиск
-
-- **Кэш**: `LocalDatabase` имеет версию схемы (v3). При старте мигрируется если нужно.
-- **Поиск**:
-  - **Глобальный**: Выполняется на сервере (`GlobalSearchAsync`), возвращает список чатов и сообщений.
-  - **Локальный**: При наличии подключения можно искать по `messages_fts` (FTS5), но основная логика пока реализована через серверный вызов.
-- **Синхронизация**:
-  - `GlobalHubConnection` при реконнекте запрашивает актуальные счётчики `GetUnreadCounts`.
-  - `ChatViewModel` при открытии чата делает паузу `WaitForInitializationAsync` до загрузки истории из кэша/сервера.
+| Группа | Prefix | Ключевые маршруты |
+|--------|--------|-------------------|
+| `Auth` | `api/auth` | `login`, `refresh`, `revoke` |
+| `Users` | `api/users` | `{id}`, `{id}/avatar`, `{id}/username`, `{id}/password`, `online`, `status/batch` |
+| `Chats` | `api/chats` | `{id}`, `{chatId}/members`, `{chatId}/members/{userId}/role`, `{chatId}/leave`, `{chatId}/avatar`, `user/{userId}`, `user/{userId}/dialogs`, `user/{userId}/groups`, `user/{userId}/contact/{contactId}` |
+| `Messages` | `api/messages` | `{id}`, `chat/{chatId}`, `chat/{chatId}/around/{msgId}`, `chat/{chatId}/before/{id}`, `chat/{chatId}/after/{id}`, `chat/{chatId}/search`, `user/{userId}/search` |
+| `Files` | `api/files` | `upload?chatId={chatId}` |
+| `Polls` | `api/polls` | create, `vote`, `{pollId}` |
+| `Departments` | `api/departments` | `{id}`, `{id}/members`, `{id}/can-manage` |
+| `Notifications` | `api/notifications` | `settings`, `chat/mute`, `chat/{chatId}/settings` |
+| `ReadReceipts` | `api/readreceipts` | `mark-read`, `unread-counts`, `chat/{chatId}/unread-count` |
+| `Admin` | `api/admin` | `users`, `users/{id}`, `users/{id}/toggle-ban` |
 
 ---
 
-## Схема взаимодействия (Sequence Example: Login Flow)
+## Shared DTO (MessengerShared)
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant App as Desktop Client
-    participant Auth as AuthManager
-    participant Storage as SecureStorage
-    participant Api as Backend API
-    
-    User->>App: Запуск
-    App->>Auth: InitializeAsync()
-    Auth->>Storage: Get Tokens
-    alt Tokens Found
-        Storage-->>Auth: Access, Refresh
-        Auth->>Api: POST /auth/refresh (if expired)
-        alt Valid
-            Api-->>Auth: New Tokens
-            Auth->>Storage: Save Tokens
-        else Invalid
-            Auth->>Storage: Clear
-            Note over Auth: Force Logout
-        end
-    else No Tokens
-        Auth->>User: Show LoginView
-    end
-```
+| Группа | Ключевые DTO | Назначение |
+|--------|-------------|-----------|
+| `Auth/` | `LoginRequest`, `RefreshTokenRequest`, `AuthResponseDto`, `TokenResponseDto` | Контракты авторизации |
+| `Chat/` | `ChatDto`, `ChatMemberDto`, `UpdateChatDto`, `UpdateChatMemberDto`, `ChatNotificationSettingsDto` | Чаты и участники |
+| `Message/` | `MessageDto`, `CreateMessageRequest`, `UpdateMessageDto`, `MessageFileDto`, `MessageForwardInfoDto`, `MessageReplyPreviewDto`, `PagedMessagesDto` | Сообщения. `CreateMessageRequest` — входной контракт (отдельный от `MessageDto`) |
+| `Poll/` | `CreatePollDto`, `PollDto`, `PollOptionDto`, `PollVoteDto` | Опросы |
+| `ReadReceipt/` | `MarkAsReadDto`, `ReadReceiptResponseDto`, `AllUnreadCountsDto`, `UnreadCountDto`, `ChatReadInfoDto` | Прочитанные |
+| `Search/` | `GlobalSearchDTO`, `GlobalSearchResponseDTO`, `SearchMessagesDTO` | Поиск |
+| `User/` | `UserDto`, `CreateUserDto`, `ChangePasswordDto`, `ChangeUsernameDto`, `AvatarResponseDto` | Пользователи |
+| `Notification/` | `NotificationDto` | Push-уведомления |
+| `Online/` | `OnlineStatusDto` | Статус онлайн |
+| `Enum/` | `ChatRole`, `ChatType`, `SystemEventTypes`, `Theme`, `UserRoles` | Перечисления |
+| `Response/` | `ApiResponse<T>`, `ApiResponseHelper` | Обёртка ответов |
 
 ---
 
@@ -184,8 +217,10 @@ sequenceDiagram
 
 | Область | Текущее состояние | Риск / TODO |
 |---------|-------------------|-------------|
-| **Оффлайн режим** | Чтение возможно без сети, но новые сообщения не отправятся (требуется репост при восстановлении связи). | Нет очереди оффлайн-запросов. При потере сети сообщение пропадает. |
-| **Поиск** | Используется FTS5 для текста. Поиск по файлам только метаданными. | Полный поиск по содержимому файлов пока не поддерживается. |
-| **Медиа** | Клиент не обрабатывает превью изображений сам — это делает сервер (ImageSharp.Web). | Нет локального кеширования картинок (кроме пути в URL). |
-| **Кэширование** | Нет очистки старых сообщений при переполнении лимита (TODO: LRU policy). | Возможна потеря места при длительном использовании. |
-| **Конкурентность** | Редактирование одного чата с двух устройств работает строго последовательно (по серверу). | Нет Optimistic Locking для чатов (только обновление состояния через SignalR). |
+| **Оффлайн** | Чтение из кэша возможно, отправка — нет | Нет очереди оффлайн-запросов |
+| **Поиск** | FTS5 локально + ILike на сервере. По файлам — только метаданные | Полный поиск по содержимому файлов не поддерживается |
+| **Медиа** | Сервер конвертирует в WebP | Нет локального кеширования изображений |
+| **Кэш** | SQLite без автоочистки старых данных | LRU policy не реализован |
+| **Конкурентность** | Обновление через SignalR, нет Optimistic Locking | Последний записавший побеждает |
+| **Gap Fill** | Лимит батчей, затем полный сброс | При длительном оффлайне часть истории теряется из view |
+| **Аудио** | NAudio — Windows + Linux | macOS не тестировался |

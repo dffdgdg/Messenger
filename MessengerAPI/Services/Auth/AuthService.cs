@@ -97,8 +97,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
-        var storedToken = await _context.RefreshTokens
-            .Include(rt => rt.User)
+        var storedToken = await _context.RefreshTokens.Include(rt => rt.User)
             .FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
 
         if (storedToken is null)

@@ -1,230 +1,895 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:skeleton="using:MessengerDesktop.Views.Controls.Skeleton"
-			 xmlns:controls="using:MessengerDesktop.Views.Controls"
-			 xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
-			 xmlns:conv="using:MessengerDesktop.Converters"
-			 xmlns:userShared="using:MessengerShared.Dto"
-			 xmlns:user="using:MessengerShared.Dto.User"
-			 xmlns:views="using:MessengerDesktop.Views"
-			 xmlns:shared="using:MessengerShared.Dto"
-			 x:Class="MessengerDesktop.Views.ChatInfoPanel"
-			 x:DataType="vm:ChatViewModel"
-			 Width="320"
-			 Design.Height="720">
+             xmlns:controls="using:MessengerDesktop.Views.Controls"
+             xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
+             xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:userShared="using:MessengerShared.Dto"
+             xmlns:user="using:MessengerShared.Dto.User"
+             xmlns:views="using:MessengerDesktop.Views"
+             xmlns:shared="using:MessengerShared.Dto"
+             x:Class="MessengerDesktop.Views.ChatInfoPanel"
+             x:DataType="vm:ChatViewModel"
+             Width="320"
+             Design.Height="720">
 
-	<Border Background="{DynamicResource PrimaryBG}"
-			CornerRadius="0,16,16,0">
-		<Grid RowDefinitions="58,*">
-			<Border Grid.Row="0"
-					BorderBrush="{DynamicResource BorderDefault}"
-					BorderThickness="0,0,0,1"
-					Padding="16,0">
-				<Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-					<TextBlock Text="{Binding InfoPanelTitle}"
-							   VerticalAlignment="Center"
-							   FontWeight="SemiBold"
-							   FontSize="16"/>
-					<Button Grid.Column="1"
-							Command="{Binding ToggleInfoPanelCommand}"
-							Classes="IconButton Small">
-						<PathIcon Data="{StaticResource CloseIcon}"
-								  Width="12" Height="12"/>
-					</Button>
-				</Grid>
-			</Border>
+    <UserControl.Styles>
+        <Style Selector="StackPanel.AnimatedSection">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="RenderTransform">
+                <TranslateTransform Y="8"/>
+            </Setter>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="StackPanel.AnimatedSection.Visible">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform">
+                <TranslateTransform Y="0"/>
+            </Setter>
+        </Style>
 
-			<Grid Grid.Row="1">
-				<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
-				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
-							  IsVisible="{Binding !IsInitialLoading}">
-					<StackPanel Spacing="20" Margin="16,16,16,32">
-						<StackPanel IsVisible="{Binding IsContactChat}" Spacing="20">
-							<StackPanel HorizontalAlignment="Center" Spacing="12">
-								<controls:AvatarControl Classes="XXLarge"
-														Source="{Binding ContactAvatar}"
-														DisplayName="{Binding ContactDisplayName}"
-														IsOnline="{Binding IsContactOnline}"
-														HorizontalAlignment="Center"/>
-								<TextBlock Text="{Binding ContactDisplayName}"
-										   FontSize="20"
-										   FontWeight="SemiBold"
-										   HorizontalAlignment="Center"
-										   TextWrapping="Wrap"
-										   TextAlignment="Center"
-										   IsVisible="{Binding ContactDisplayName,
-										   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-								<TextBlock Text="{Binding ContactUsername}"
-										   FontSize="20"
-										   FontWeight="SemiBold"
-										   HorizontalAlignment="Center"
-										   IsVisible="{Binding ContactDisplayName,
-										   Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-								<TextBlock Text="{Binding ContactLastSeen}"
-										   FontSize="14"
-										   Foreground="{DynamicResource TextSecondary}"
-										   HorizontalAlignment="Center"/>
-							</StackPanel>
+        <Style Selector="TextBlock.SectionHeader">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+        <Style Selector="Button.InfoRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.InfoRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+        </Style>
+        <Style Selector="Button.InfoRow:pressed">
+            <Setter Property="Background" Value="{DynamicResource PressedBrush}"/>
+        </Style>
 
-							<StackPanel Spacing="16">
-								<StackPanel Spacing="2"
-											IsVisible="{Binding ContactUsername,
-											Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-									<TextBlock Text="Имя пользователя"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextMuted}"/>
-									<TextBlock Text="{Binding ContactUsername, StringFormat='@{0}'}"
-											   FontSize="14"
-											   Foreground="{DynamicResource AccentBrush}"/>
-								</StackPanel>
+        <Style Selector="Button.CopyableField">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip.Tip" Value="Нажмите, чтобы скопировать"/>
+        </Style>
+        <Style Selector="Button.CopyableField:pointerover TextBlock.CopyValue">
+            <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
 
-								<StackPanel Spacing="2"
-											IsVisible="{Binding ContactDepartment,
-											Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-									<TextBlock Text="Отдел"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextMuted}"/>
-									<TextBlock Text="{Binding ContactDepartment}"
-											   FontSize="14"/>
-								</StackPanel>
-							</StackPanel>
+        <Style Selector="Border.CountBadge">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="MinWidth" Value="24"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+        <Style Selector="Border.Divider">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
 
-							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource NotificationsIcon}"
-										  Width="18" Height="18"
-										  Foreground="{DynamicResource TextSecondary}"
-										  Margin="0,0,12,0"/>
-								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
-								<ToggleSwitch Grid.Column="2"
-											  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
-											  IsEnabled="{Binding !IsLoadingMuteState}"
-											  OnContent=""
-											  OffContent=""/>
-							</Grid>
-						</StackPanel>
+        <Style Selector="StackPanel.EmptyState">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,24"/>
+            <Setter Property="Opacity" Value="0.6"/>
+        </Style>
 
-						<StackPanel IsVisible="{Binding IsGroupChat}" Spacing="20">
+        <Style Selector="Button.MemberRow">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="FocusAdorner" Value="{x:Null}"/>
+</Style>
 
-							<StackPanel Orientation="Horizontal" Spacing="12">
-								<controls:AvatarControl Classes="Large"
-														Source="{Binding Chat.Avatar}"
-														DisplayName="{Binding Chat.Name}"
-														FallbackIcon="{StaticResource GroupIcon}"
-														ShowOnlineIndicator="False"/>
+<Style Selector="Button.MemberRow /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
 
-								<StackPanel VerticalAlignment="Center" Spacing="2">
-									<TextBlock Text="{Binding Chat.Name}"
-											   FontSize="16"
-											   FontWeight="SemiBold"/>
-									<TextBlock Text="{Binding Members.Count, StringFormat='{}{0} участников'}"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextMuted}"/>
-								</StackPanel>
-							</StackPanel>
+<Style Selector="Button.MemberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+</Style>
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+<Style Selector="Button.MemberRow:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+</Style>
 
-							<Grid ColumnDefinitions="Auto,*,Auto">
-								<PathIcon Data="{StaticResource NotificationsIcon}"
-										  Width="18" Height="18"
-										  Foreground="{DynamicResource TextSecondary}"
-										  Margin="0,0,12,0"/>
-								<TextBlock Grid.Column="1" Text="Уведомления" VerticalAlignment="Center"/>
-								<ToggleSwitch Grid.Column="2"
-											  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
-											  IsEnabled="{Binding !IsLoadingMuteState}"
-											  OnContent=""
-											  OffContent=""/>
-							</Grid>
+<Style Selector="Button.MemberRow:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+<Style Selector="Button.MemberRow:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
 
-							<StackPanel Spacing="4">
-								<TextBlock Text="Медиа и файлы" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8"/>
+        <Style Selector="TextBox.SearchField">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
 
-								<Button Classes="InfoPanelItem">
-									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource ImageIcon}" Width="18" Height="18"
-												  Foreground="{DynamicResource TextSecondary}"/>
-										<TextBlock Text="Фото" VerticalAlignment="Center"/>
-									</StackPanel>
-								</Button>
+        <Style Selector="Button.MediaThumb">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.MediaThumb:pointerover">
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
 
-								<Button Classes="InfoPanelItem">
-									<StackPanel Orientation="Horizontal" Spacing="12">
-										<PathIcon Data="{StaticResource DocumentIcon}" Width="18" Height="18"
-												  Foreground="{DynamicResource TextSecondary}"/>
-										<TextBlock Text="Файлы" VerticalAlignment="Center"/>
-									</StackPanel>
-								</Button>
+        <Style Selector="Button.DangerAction">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.DangerAction:pointerover">
+            <Setter Property="Background" Value="{DynamicResource DangerBgHover}"/>
+        </Style>
+    </UserControl.Styles>
 
-								<Button Classes="InfoPanelItem" IsVisible="{Binding PollsCount}">
-									<Grid ColumnDefinitions="Auto,*,Auto">
-										<PathIcon Data="{StaticResource PollIcon}" Width="18" Height="18"
-												  Foreground="{DynamicResource TextSecondary}"/>
-										<TextBlock Grid.Column="1" Text="Опросы" VerticalAlignment="Center" Margin="12,0,0,0"/>
-										<TextBlock Grid.Column="2" Text="{Binding PollsCount}"
-												   Foreground="{DynamicResource TextMuted}"/>
-									</Grid>
-								</Button>
-							</StackPanel>
+    <Border Background="{DynamicResource PrimaryBG}"
+            CornerRadius="0,16,16,0"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="1,0,0,0">
+        <Grid RowDefinitions="58,*">
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+            <Border Grid.Row="0"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,0">
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                    <Button IsVisible="{Binding IsInfoSectionOpen}"
+                            Command="{Binding CloseInfoSectionCommand}"
+                            Classes="IconButton Small"
+                            Margin="0,0,8,0">
+                        <PathIcon Data="{StaticResource ChevronLeftIcon}"
+                                  Width="14" Height="14"/>
+                    </Button>
 
-							<StackPanel Spacing="8">
-								<StackPanel Orientation="Horizontal">
-									<TextBlock Text="Участники" FontWeight="SemiBold" FontSize="14"/>
-									<TextBlock Text="{Binding Members.Count}" Foreground="{DynamicResource TextMuted}" Padding="10,0"/>
-								</StackPanel>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               FontSize="16">
+                        <TextBlock.Text>
+                            <MultiBinding StringFormat="{}{0}">
+                                <Binding Path="InfoSectionTitle" FallbackValue=""/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
 
-								<ItemsControl ItemsSource="{Binding Members}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate x:DataType="user:UserDto">
-											<Button Classes="MemberItem"
-													Command="{Binding $parent[views:ChatInfoPanel].OpenProfileCommand}"
-													CommandParameter="{Binding Id}">
-												<Grid ColumnDefinitions="Auto,*">
-													<controls:AvatarControl Classes="Medium"
-																			Source="{Binding Avatar}"
-																			DisplayName="{Binding DisplayName}"
-																			IsOnline="{Binding IsOnline}"/>
+                    <Panel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding InfoSectionTitle}"
+                                   IsVisible="{Binding IsInfoSectionOpen}"
+                                   FontWeight="SemiBold"
+                                   FontSize="16"/>
+                        <TextBlock Text="{Binding InfoPanelTitle}"
+                                   IsVisible="{Binding !IsInfoSectionOpen}"
+                                   FontWeight="SemiBold"
+                                   FontSize="16"/>
+                    </Panel>
 
-													<StackPanel Grid.Column="1"
-																VerticalAlignment="Center"
-																Margin="12,0,0,0"
-																Spacing="2">
-														<TextBlock Text="{Binding DisplayName}"
-																   FontSize="14"/>
-														<TextBlock Text="{Binding Department}"
-																   FontSize="12"
-																   Foreground="{DynamicResource TextMuted}"
-																   IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-													</StackPanel>
-												</Grid>
-											</Button>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</StackPanel>
+                    <Button Grid.Column="2"
+                            Command="{Binding ToggleInfoPanelCommand}"
+                            Classes="IconButton Small">
+                        <PathIcon Data="{StaticResource CloseIcon}"
+                                  Width="12" Height="12"/>
+                    </Button>
+                </Grid>
+            </Border>
 
-							<Border Height="1" Background="{DynamicResource BorderDefault}"/>
+            <Grid Grid.Row="1">
+                <skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
-							<Button Command="{Binding LeaveChatCommand}"
-									Classes="InfoPanelItem">
-								<StackPanel Orientation="Horizontal" Spacing="12">
-									<PathIcon Data="{StaticResource SignOutIcon}" Width="18" Height="18"
-											  Foreground="{DynamicResource DangerBrush}"/>
-									<TextBlock Text="Покинуть группу" Foreground="{DynamicResource DangerBrush}"/>
-								</StackPanel>
-							</Button>
-						</StackPanel>
-					</StackPanel>
-				</ScrollViewer>
-			</Grid>
-		</Grid>
-	</Border>
+                <ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
+                              IsVisible="{Binding !IsInitialLoading}">
+                    <StackPanel Margin="0,0,0,32">
+
+                        <StackPanel IsVisible="{Binding IsContactChat}" Spacing="0">
+
+                            <StackPanel HorizontalAlignment="Center"
+                                        Spacing="8"
+                                        Margin="16,24,16,20">
+                                <controls:AvatarControl Classes="XXLarge"
+                                                        Source="{Binding ContactAvatar}"
+                                                        DisplayName="{Binding ContactDisplayName}"
+                                                        IsOnline="{Binding IsContactOnline}"
+                                                        HorizontalAlignment="Center"/>
+
+                                <TextBlock FontSize="20"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           MaxWidth="260">
+                                    <TextBlock.Text>
+                                        <MultiBinding FallbackValue="Пользователь">
+                                            <Binding Path="ContactDisplayName"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Center"
+                                            Spacing="6">
+                                    <Ellipse Width="8" Height="8"
+                                             Fill="{DynamicResource OnlineBrush}"
+                                             VerticalAlignment="Center"
+                                             IsVisible="{Binding IsContactOnline}"/>
+                                    <TextBlock FontSize="13"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               HorizontalAlignment="Center">
+                                        <TextBlock.Text>
+                                            <MultiBinding FallbackValue="не в сети">
+                                                <Binding Path="ContactLastSeen"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,0"/>
+
+                            <StackPanel Spacing="4" Margin="16,16,16,0">
+                                <TextBlock Classes="SectionHeader" Text="ИНФОРМАЦИЯ"/>
+
+                                <Button Classes="CopyableField"
+                                        Command="{Binding CopyUsernameCommand}"
+                                        IsVisible="{Binding ContactUsername,
+                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <StackPanel Spacing="2" Margin="0,4">
+                                        <TextBlock Text="Имя пользователя"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Classes="CopyValue"
+                                                       Text="{Binding ContactUsername, StringFormat='@{0}'}"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource AccentBrush}"/>
+                                            <PathIcon Grid.Column="1"
+                                                      Data="{StaticResource CopyIcon}"
+                                                      Width="14" Height="14"
+                                                      Foreground="{DynamicResource TextMuted}"
+                                                      Opacity="0.5"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Button>
+
+                                <StackPanel Spacing="2"
+                                            Margin="0,4"
+                                            IsVisible="{Binding ContactDepartment,
+                                            Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Отдел"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}"/>
+                                    <TextBlock Text="{Binding ContactDepartment}"
+                                               FontSize="14"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,12"/>
+
+                            <StackPanel Margin="16,4,16,0" Spacing="0">
+                                <TextBlock Classes="SectionHeader" Text="НАСТРОЙКИ"/>
+
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      Margin="0,4"
+                                      Height="40">
+                                    <PathIcon Data="{StaticResource NotificationsIcon}"
+                                              Width="18" Height="18"
+                                              Foreground="{DynamicResource TextSecondary}"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="Уведомления"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0"/>
+                                    <ToggleSwitch Grid.Column="2"
+                                                  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+                                                  IsEnabled="{Binding !IsLoadingMuteState}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,8"/>
+
+                            <StackPanel Margin="16,4,16,0" Spacing="4"
+                                        IsVisible="{Binding !IsInfoSectionOpen}">
+                                <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
+
+                                <Button Classes="InfoRow"
+                                        Command="{Binding OpenPhotosSectionCommand}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Data="{StaticResource ImageIcon}"
+                                                  Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Фото"
+                                                   VerticalAlignment="Center"
+                                                   Margin="12,0,0,0"/>
+                                        <Border Classes="CountBadge" Grid.Column="2">
+                                            <TextBlock Text="{Binding PhotosMessages.Count}"
+                                                       FontSize="12"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource TextMuted}"/>
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="InfoRow"
+                                        Command="{Binding OpenFilesSectionCommand}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Data="{StaticResource DocumentIcon}"
+                                                  Width="18" Height="18"
+                                                  Foreground="{DynamicResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Файлы"
+                                                   VerticalAlignment="Center"
+                                                   Margin="12,0,0,0"/>
+                                        <Border Classes="CountBadge" Grid.Column="2">
+                                            <TextBlock Text="{Binding FilesMessages.Count}"
+                                                       FontSize="12"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource TextMuted}"/>
+                                        </Border>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Spacing="8"
+                                        Margin="16,4,16,0"
+                                        IsVisible="{Binding IsInfoSectionOpen}">
+
+                                <StackPanel IsVisible="{Binding ShowPhotosSection}">
+                                    <ItemsControl ItemsSource="{Binding PhotosMessages}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                                <Button Classes="MediaThumb"
+                                                        Width="88" Height="88"
+                                                        Margin="2"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Panel>
+                                                        <Border Background="{DynamicResource SurfaceBrush}"
+                                                                CornerRadius="8"/>
+                                                        <PathIcon Data="{StaticResource ImageIcon}"
+                                                                  Width="24" Height="24"
+                                                                  Foreground="{DynamicResource TextMuted}"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Opacity="0.4"/>
+                                                    </Panel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !PhotosMessages.Count}">
+                                        <PathIcon Data="{StaticResource ImageIcon}"
+                                                  Width="32" Height="32"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Нет фотографий"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding ShowFilesSection}">
+                                    <ItemsControl ItemsSource="{Binding FilesMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                                <Button Classes="InfoRow"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <Border Width="36" Height="36"
+                                                                CornerRadius="8"
+                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                VerticalAlignment="Center">
+                                                            <PathIcon Data="{StaticResource DocumentIcon}"
+                                                                      Width="18" Height="18"
+                                                                      Foreground="{DynamicResource TextSecondary}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="10,0,0,0"
+                                                                    Spacing="2">
+                                                            <TextBlock Text="{Binding Files.Count, StringFormat='Вложений: {0}'}"
+                                                                       FontSize="13"/>
+                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !FilesMessages.Count}">
+                                        <PathIcon Data="{StaticResource DocumentIcon}"
+                                                  Width="32" Height="32"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Нет файлов"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding IsGroupChat}" Spacing="0">
+
+                            <StackPanel Margin="16,20,16,16" Spacing="12">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <controls:AvatarControl Classes="Large"
+                                                            Source="{Binding Chat.Avatar}"
+                                                            DisplayName="{Binding Chat.Name}"
+                                                            FallbackIcon="{StaticResource GroupIcon}"
+                                                            ShowOnlineIndicator="False"/>
+
+                                    <StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Margin="12,0,0,0"
+                                                Spacing="2">
+                                        <TextBlock Text="{Binding Chat.Name}"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="180"/>
+                                        <TextBlock Text="{Binding InfoPanelSubtitle}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2"
+                                            Command="{Binding OpenEditChatCommand}"
+                                            Classes="IconButton Small"
+                                            ToolTip.Tip="Редактировать"
+                                            VerticalAlignment="Top">
+                                        <PathIcon Data="{StaticResource EditIcon}"
+                                                  Width="14" Height="14"/>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,0"/>
+
+                            <StackPanel Margin="16,12,16,0" Spacing="0">
+                                <TextBlock Classes="SectionHeader" Text="НАСТРОЙКИ"/>
+
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      Margin="0,4"
+                                      Height="40">
+                                    <PathIcon Data="{StaticResource NotificationsIcon}"
+                                              Width="18" Height="18"
+                                              Foreground="{DynamicResource TextSecondary}"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="Уведомления"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0"/>
+                                    <ToggleSwitch Grid.Column="2"
+                                                  IsChecked="{Binding IsChatNotificationsEnabled, Mode=TwoWay}"
+                                                  IsEnabled="{Binding !IsLoadingMuteState}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,8"/>
+
+                            <StackPanel IsVisible="{Binding !IsInfoSectionOpen}" Spacing="0">
+
+                                <StackPanel Margin="16,4,16,0" Spacing="4">
+                                    <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
+
+                                    <Button Classes="InfoRow"
+                                            Command="{Binding OpenPhotosSectionCommand}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <PathIcon Data="{StaticResource ImageIcon}"
+                                                      Width="18" Height="18"
+                                                      Foreground="{DynamicResource TextSecondary}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Фото"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0,0,0"/>
+                                            <Border Classes="CountBadge" Grid.Column="2">
+                                                <TextBlock Text="{Binding PhotosMessages.Count}"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource TextMuted}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+
+                                    <Button Classes="InfoRow"
+                                            Command="{Binding OpenFilesSectionCommand}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <PathIcon Data="{StaticResource DocumentIcon}"
+                                                      Width="18" Height="18"
+                                                      Foreground="{DynamicResource TextSecondary}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Файлы"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0,0,0"/>
+                                            <Border Classes="CountBadge" Grid.Column="2">
+                                                <TextBlock Text="{Binding FilesMessages.Count}"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource TextMuted}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+
+                                    <Button Classes="InfoRow"
+                                            Command="{Binding OpenPollsSectionCommand}"
+                                            IsVisible="{Binding PollsCount}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <PathIcon Data="{StaticResource PollIcon}"
+                                                      Width="18" Height="18"
+                                                      Foreground="{DynamicResource TextSecondary}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Опросы"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0,0,0"/>
+                                            <Border Classes="CountBadge" Grid.Column="2">
+                                                <TextBlock Text="{Binding PollsCount}"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource TextMuted}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+
+                                <Border Classes="Divider" Margin="16,12"/>
+
+                                <StackPanel Margin="16,4,16,0" Spacing="4">
+                                    <Button Classes="InfoRow"
+                                            Command="{Binding OpenMembersSectionCommand}"
+                                            Margin="0,0,0,4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="УЧАСТНИКИ"
+                                                       Classes="SectionHeader"
+                                                       Margin="0"
+                                                       VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1"
+                                                        Orientation="Horizontal"
+                                                        Spacing="4"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Members.Count}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                <PathIcon Data="{StaticResource ChevronRightIcon}"
+                                                          Width="12" Height="12"
+                                                          Foreground="{DynamicResource TextMuted}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+
+                                    <ItemsControl ItemsSource="{Binding MembersPreview}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="user:UserDto">
+                                                <Button Classes="MemberRow"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenProfileCommand}"
+                                                        CommandParameter="{Binding Id}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <controls:AvatarControl Classes="Medium"
+                                                                                Source="{Binding Avatar}"
+                                                                                DisplayName="{Binding DisplayName}"
+                                                                                IsOnline="{Binding IsOnline}"/>
+
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="10,0,0,0"
+                                                                    Spacing="1">
+                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                       FontSize="14"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding Department}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMuted}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel IsVisible="{Binding IsInfoSectionOpen}"
+                                        Margin="16,4,16,0"
+                                        Spacing="4">
+
+                                <StackPanel IsVisible="{Binding ShowPhotosSection}">
+                                    <ItemsControl ItemsSource="{Binding PhotosMessages}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                                <Button Classes="MediaThumb"
+                                                        Width="88" Height="88"
+                                                        Margin="2"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Panel>
+                                                        <Border Background="{DynamicResource SurfaceBrush}"
+                                                                CornerRadius="8"/>
+                                                        <StackPanel VerticalAlignment="Center"
+                                                                    HorizontalAlignment="Center"
+                                                                    Spacing="4">
+                                                            <PathIcon Data="{StaticResource ImageIcon}"
+                                                                      Width="20" Height="20"
+                                                                      Foreground="{DynamicResource TextMuted}"
+                                                                      HorizontalAlignment="Center"
+                                                                      Opacity="0.5"/>
+                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM}'}"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource TextMuted}"
+                                                                       HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Panel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !PhotosMessages.Count}">
+                                        <PathIcon Data="{StaticResource ImageIcon}"
+                                                  Width="32" Height="32"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Нет фотографий"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding ShowFilesSection}">
+                                    <ItemsControl ItemsSource="{Binding FilesMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                                <Button Classes="InfoRow"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <Border Width="36" Height="36"
+                                                                CornerRadius="8"
+                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                VerticalAlignment="Center">
+                                                            <PathIcon Data="{StaticResource DocumentIcon}"
+                                                                      Width="18" Height="18"
+                                                                      Foreground="{DynamicResource TextSecondary}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="10,0,0,0"
+                                                                    Spacing="2">
+                                                            <TextBlock Text="{Binding SenderName}"
+                                                                       FontSize="13"
+                                                                       FontWeight="Medium"/>
+                                                            <TextBlock Text="{Binding Files.Count, StringFormat='Файлов: {0}'}"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !FilesMessages.Count}">
+                                        <PathIcon Data="{StaticResource DocumentIcon}"
+                                                  Width="32" Height="32"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Нет файлов"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding ShowPollsSection}">
+                                    <ItemsControl ItemsSource="{Binding PollMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                                <Button Classes="InfoRow"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <Border Width="36" Height="36"
+                                                                CornerRadius="8"
+                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                VerticalAlignment="Center">
+                                                            <PathIcon Data="{StaticResource PollIcon}"
+                                                                      Width="18" Height="18"
+                                                                      Foreground="{DynamicResource TextSecondary}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="10,0,0,0"
+                                                                    Spacing="2">
+                                                            <TextBlock Text="{Binding SenderName}"
+                                                                       FontSize="13"
+                                                                       FontWeight="Medium"/>
+                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !PollMessages.Count}">
+                                        <PathIcon Data="{StaticResource PollIcon}"
+                                                  Width="32" Height="32"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Нет опросов"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding ShowMembersSection}" Spacing="8">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <PathIcon Data="{StaticResource SearchIcon}"
+                                                  Width="14" Height="14"
+                                                  Foreground="{DynamicResource TextMuted}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,0,0,0"/>
+                                        <TextBox Grid.Column="1"
+                                                 Classes="SearchField"
+                                                 Watermark="Поиск участников..."
+                                                 Text="{Binding MemberSearchQuery, Mode=TwoWay}"
+                                                 Margin="-20,0,0,0"
+                                                 Padding="28,6,8,6"/>
+                                    </Grid>
+
+                                    <ItemsControl ItemsSource="{Binding FilteredMembers}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="user:UserDto">
+                                                <Button Classes="MemberRow"
+                                                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenProfileCommand}"
+                                                        CommandParameter="{Binding Id}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <controls:AvatarControl Classes="Medium"
+                                                                                Source="{Binding Avatar}"
+                                                                                DisplayName="{Binding DisplayName}"
+                                                                                IsOnline="{Binding IsOnline}"/>
+
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="10,0,0,0"
+                                                                    Spacing="1">
+                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                       FontSize="14"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextMuted}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       IsVisible="{Binding Username, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Classes="EmptyState"
+                                                IsVisible="{Binding !FilteredMembers.Count}">
+                                        <TextBlock Text="Никого не найдено"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Classes="Divider" Margin="16,12"
+                                    IsVisible="{Binding !IsInfoSectionOpen}"/>
+
+                            <StackPanel Margin="16,0,16,0"
+                                        IsVisible="{Binding !IsInfoSectionOpen}">
+                                <Button Command="{Binding LeaveChatCommand}"
+                                        Classes="DangerAction">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <PathIcon Data="{StaticResource SignOutIcon}"
+                                                  Width="18" Height="18"
+                                                  Foreground="{DynamicResource DangerBrush}"/>
+                                        <TextBlock Text="Покинуть группу"
+                                                   Foreground="{DynamicResource DangerBrush}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Border>
 </UserControl>

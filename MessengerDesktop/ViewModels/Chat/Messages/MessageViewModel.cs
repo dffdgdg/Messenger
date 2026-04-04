@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
@@ -57,9 +58,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial double VoicePositionPercent { get; set; }
     [ObservableProperty] public partial string VoicePositionText { get; set; } = "0:00";
     [ObservableProperty] public partial string? VoiceError { get; set; }
+    public ICommand? MentionClickCommand { get; set; }
 
     public string? SenderAvatarUrl { get => SenderAvatar; set => SenderAvatar = value; }
-
     public bool HasFiles => Files.Count > 0;
     public bool HasPoll => Poll != null;
     public bool HasImages => Files.Any(f => f.PreviewType == "image");

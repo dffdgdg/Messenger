@@ -177,7 +177,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService, audioPlayer);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService);
 
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
@@ -687,6 +687,23 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     [RelayCommand]
     public async Task OpenProfile(int userId) => await _navigator.ShowUserProfileAsync(userId);
+
+    [RelayCommand]
+    private async Task OpenMentionProfile(string? mention)
+    {
+        if (string.IsNullOrWhiteSpace(mention))
+            return;
+
+        var normalizedUsername = mention.Trim().TrimStart('@');
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
+            return;
+
+        var user = Members.FirstOrDefault(m =>
+            string.Equals(m.Username, normalizedUsername, StringComparison.OrdinalIgnoreCase));
+
+        if (user?.Id > 0)
+            await _navigator.ShowUserProfileAsync(user.Id);
+    }
 
     [RelayCommand]
     private async Task LeaveChat()

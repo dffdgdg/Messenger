@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Windows.Input;
 
 namespace MessengerDesktop.Views.Controls.Shared;
 
@@ -19,6 +20,15 @@ public class RichMessageTextBlock : SelectableTextBlock
         set => SetValue(RawTextProperty, value);
     }
 
+    public static readonly StyledProperty<ICommand?> MentionClickCommandProperty =
+        AvaloniaProperty.Register<RichMessageTextBlock, ICommand?>(nameof(MentionClickCommand));
+
+    public ICommand? MentionClickCommand
+    {
+        get => GetValue(MentionClickCommandProperty);
+        set => SetValue(MentionClickCommandProperty, value);
+    }
+
     private static readonly Regex UrlRegex = new(@"(https?://[^\s<>""')\]]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     private static readonly SolidColorBrush LinkBrush = new(Color.Parse("#4A9EEA"));
@@ -26,13 +36,19 @@ public class RichMessageTextBlock : SelectableTextBlock
     private static readonly Regex MentionRegex = new(@"(?<![A-Za-z0-9_])@[A-Za-z0-9_]{3,30}", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     private readonly List<(int start, int end, string url)> _linkRanges = [];
-
+    private readonly List<(int start, int end, string mention)> _mentionRanges = [];
     static RichMessageTextBlock() => RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>((ctrl, _) => ctrl.RebuildInlines());
-
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == MentionClickCommandProperty)
+            Debug.WriteLine($"[RichText] MentionClickCommand changed: {change.NewValue}");
+    }
     private void RebuildInlines()
     {
         Inlines?.Clear();
         _linkRanges.Clear();
+        _mentionRanges.Clear();
 
         var text = RawText;
         if (string.IsNullOrEmpty(text))
@@ -59,7 +75,6 @@ public class RichMessageTextBlock : SelectableTextBlock
         Text = null;
         Inlines ??= [];
 
-        // Создаём underline декорацию
         var underline = new TextDecorationCollection
         {
             new TextDecoration { Location = TextDecorationLocation.Underline }
@@ -99,6 +114,8 @@ public class RichMessageTextBlock : SelectableTextBlock
             charPos += token.Length;
             if (Kind == "url")
                 _linkRanges.Add((linkStart, charPos, token));
+            else
+                _mentionRanges.Add((linkStart, charPos, token));
 
             lastIndex = End;
         }
@@ -109,12 +126,24 @@ public class RichMessageTextBlock : SelectableTextBlock
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        if (_linkRanges.Count > 0 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             var url = GetUrlUnderPointer(e);
             if (url != null)
             {
                 OpenUrl(url);
+                e.Handled = true;
+                return;
+            }
+
+            var mention = GetMentionUnderPointer(e);
+            Debug.WriteLine($"[RichText] Mention under pointer: '{mention}', Command: {MentionClickCommand}");
+
+            if (mention != null)
+                Debug.WriteLine($"CanExecute: {MentionClickCommand?.CanExecute(mention)}");
+            if (mention != null && MentionClickCommand?.CanExecute(mention) == true)
+            {
+                MentionClickCommand.Execute(mention);
                 e.Handled = true;
                 return;
             }
@@ -127,13 +156,13 @@ public class RichMessageTextBlock : SelectableTextBlock
     {
         base.OnPointerMoved(e);
 
-        if (_linkRanges.Count == 0)
+        if (_linkRanges.Count == 0 && _mentionRanges.Count == 0)
         {
             Cursor = Cursor.Default;
             return;
         }
 
-        Cursor = GetUrlUnderPointer(e) != null
+        Cursor = GetUrlUnderPointer(e) != null || GetMentionUnderPointer(e) != null
             ? new Cursor(StandardCursorType.Hand)
             : Cursor.Default;
     }
@@ -146,22 +175,7 @@ public class RichMessageTextBlock : SelectableTextBlock
 
     private string? GetUrlUnderPointer(PointerEventArgs e)
     {
-        var pos = e.GetPosition(this);
-
-        var textLayout = TextLayout;
-        if (textLayout is null)
-            return null;
-
-        int charIndex;
-        try
-        {
-            charIndex = GetCharacterIndex(pos, textLayout);
-        }
-        catch
-        {
-            return null;
-        }
-
+        var charIndex = GetCharacterIndexSafe(e);
         if (charIndex < 0)
             return null;
 
@@ -173,43 +187,70 @@ public class RichMessageTextBlock : SelectableTextBlock
 
         return null;
     }
+    private int GetCharacterIndexSafe(PointerEventArgs e)
+    {
+        var pos = e.GetPosition(this);
+        var textLayout = TextLayout;
+        if (textLayout is null) return -1;
+
+        try
+        {
+            var hitResult = textLayout.HitTestPoint(pos);
+            return hitResult.TextPosition;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    private string? GetMentionUnderPointer(PointerEventArgs e)
+    {
+        var charIndex = GetCharacterIndexSafe(e);
+
+        if (charIndex < 0)
+            return null;
+
+        foreach (var (start, end, mention) in _mentionRanges)
+        {
+            if (charIndex >= start && charIndex < end)
+                return mention;
+        }
+
+        return null;
+    }
 
     private static int GetCharacterIndex(Point pos, TextLayout layout)
     {
-        var textPosition = layout.HitTestPoint(pos);
-
-        var type = textPosition.GetType();
-
-        var prop = type.GetProperty("TextPosition")
-                   ?? type.GetProperty("CharacterHit")
-                   ?? type.GetProperty("Position");
-
-        if (prop != null)
+        try
         {
-            var val = prop.GetValue(textPosition);
-            if (val is int i) return i;
-            if (val is CharacterHit ch) return ch.FirstCharacterIndex;
+            var result = layout.HitTestPoint(pos);
+            return result.TextPosition;
         }
-
-        return GetCharIndexByPosition(layout, pos);
+        catch
+        {
+            return GetCharIndexByPosition(layout, pos);
+        }
     }
 
     private static int GetCharIndexByPosition(TextLayout layout, Point pos)
     {
         var lines = layout.TextLines;
         var y = 0.0;
-        var globalIndex = 0;
+        var globalCharOffset = 0;
 
         foreach (var line in lines)
         {
-            if (pos.Y >= y && pos.Y < y + line.Height)
+            var lineHeight = line.Height;
+
+            if (pos.Y >= y && pos.Y < y + lineHeight)
             {
-                var lineHit = line.GetCharacterHitFromDistance(pos.X);
-                return globalIndex + lineHit.FirstCharacterIndex;
+                var hit = line.GetCharacterHitFromDistance(pos.X);
+                return hit.FirstCharacterIndex;
             }
 
-            y += line.Height;
-            globalIndex += line.Length;
+            y += lineHeight;
+            globalCharOffset += line.Length;
         }
 
         return -1;

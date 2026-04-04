@@ -5,6 +5,15 @@
     <Color x:Key="TopBg">#FFFFFF</Color>
     <Color x:Key="BaseBg">#F4F6FB</Color>
 
+    <!-- ── Chat surfaces ── -->
+    <SolidColorBrush x:Key="ChatHeaderBg" Color="#F8FAFD"/>
+    <Color x:Key="ChatMessagesBgTop">#F7F9FD</Color>
+    <Color x:Key="ChatMessagesBgBottom">#EEF3FA</Color>
+    <SolidColorBrush x:Key="ChatGlowPrimary" Color="#122B74D9"/>
+    <SolidColorBrush x:Key="ChatGlowSecondary" Color="#102B74D9"/>
+    <SolidColorBrush x:Key="ChatComposerBg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ChatComposerBorder" Color="#D8DEE9"/>
+
     <!-- ── Фоны ── -->
     <SolidColorBrush x:Key="PrimaryBG" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="SecondaryBG" Color="#F4F6FB"/>

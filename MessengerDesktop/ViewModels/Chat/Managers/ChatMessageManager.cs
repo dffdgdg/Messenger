@@ -9,15 +9,24 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(int chatId, int userId, IApiClientService apiClient, Func<ObservableCollection<UserDto>> getMembersFunc,
-    IFileDownloadService? downloadService = null, INotificationService? notificationService = null, ILocalCacheService? cacheService = null,
-    IAudioPlayerService? audioPlayer = null) : IAsyncDisposable
+public sealed class ChatMessageManager(
+    int chatId,
+    int userId,
+    IApiClientService apiClient,
+    Func<ObservableCollection<UserDto>> getMembersFunc,
+    IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null,
+    ILocalCacheService? cacheService = null,
+    IAudioPlayerService? audioPlayer = null,
+    ICommand? mentionClickCommand = null) : IAsyncDisposable
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
+    private readonly ICommand? _mentionClickCommand = mentionClickCommand;
 
     private int? _oldestLoadedMessageId;
     private int? _newestLoadedMessageId;
@@ -443,7 +452,8 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         var vm = new MessageViewModel(msg, downloadService, notificationService, audioPlayer, _apiClient)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
-            SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl
+            SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,
+            MentionClickCommand = _mentionClickCommand
         };
 
         if (LastReadMessageId.HasValue && msg.Id > LastReadMessageId.Value && msg.SenderId != userId)

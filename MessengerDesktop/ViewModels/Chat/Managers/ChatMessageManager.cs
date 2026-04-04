@@ -148,8 +148,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         await SafeUpdateSyncStateAsync();
     }
 
-    private async Task<DirectionalPage?> LoadDirectionalAsync(
-        LoadDirection dir, int anchorId, int count, CancellationToken ct)
+    private async Task<DirectionalPage?> LoadDirectionalAsync(LoadDirection dir, int anchorId, int count, CancellationToken ct)
     {
         if (cacheService != null)
         {
@@ -159,8 +158,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         return await LoadDirectionalFromServerAsync(dir, anchorId, count, ct);
     }
 
-    private async Task<DirectionalPage?> TryLoadDirectionalFromCacheAsync(
-        LoadDirection dir, int anchorId, int count, CancellationToken ct)
+    private async Task<DirectionalPage?> TryLoadDirectionalFromCacheAsync(LoadDirection dir, int anchorId, int count, CancellationToken ct)
     {
         var cached = dir == LoadDirection.Older
             ? await cacheService!.GetMessagesBeforeAsync(chatId, anchorId, count)
@@ -183,8 +181,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         return null;
     }
 
-    private async Task<DirectionalPage?> LoadDirectionalFromServerAsync(
-        LoadDirection dir, int anchorId, int count, CancellationToken ct)
+    private async Task<DirectionalPage?> LoadDirectionalFromServerAsync(LoadDirection dir, int anchorId, int count, CancellationToken ct)
     {
         var data = await FetchAsync(BuildDirectionalUrl(dir, anchorId, count), ct);
         if (data == null) return null;
@@ -211,7 +208,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
                 Debug.WriteLine($"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batches} батчей");
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Отменено */ }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}"); }
         finally { EndLoading(); }
     }
@@ -292,7 +289,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
             await SafeUpdateSyncStateAsync();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Отменено */ }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}"); }
     }
 
@@ -617,7 +614,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         var task = Task.Run(async () =>
         {
             try { token.ThrowIfCancellationRequested(); await action(); }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { /* Отменено */ }
             catch (Exception ex) { Debug.WriteLine($"[MessageManager] Фоновая ошибка в {caller}: {ex.Message}"); }
         }, token);
 
@@ -635,7 +632,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         Task[] pending;
         lock (_bgLock) pending = [.. _backgroundTasks];
 
-        try { await Task.WhenAll(pending); } catch { }
+        try { await Task.WhenAll(pending); } catch { /* Ignored */ }
 
         DisposeAllMessages();
         _disposeCts.Dispose();

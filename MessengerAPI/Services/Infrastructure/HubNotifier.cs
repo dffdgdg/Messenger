@@ -4,17 +4,17 @@ namespace MessengerAPI.Services.Infrastructure;
 
 public interface IHubNotifier
 {
-    Task SendToChatAsync<T>(int chatId, string method, T data);
-    Task SendToUserAsync<T>(int userId, string method, T data);
+    Task SendToChatAsync(int chatId, string method, params object?[] args);
+    Task SendToUserAsync(int userId, string method, params object?[] args);
 }
 
 public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> logger) : IHubNotifier
 {
-    public async Task SendToChatAsync<T>(int chatId, string method, T data)
+    public async Task SendToChatAsync(int chatId, string method, params object?[] args)
     {
         try
         {
-            await hubContext.Clients.Group($"chat_{chatId}").SendAsync(method, data);
+            await hubContext.Clients.Group($"chat_{chatId}").SendAsync(method, args);
         }
         catch (Exception ex)
         {
@@ -22,11 +22,11 @@ public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> l
         }
     }
 
-    public async Task SendToUserAsync<T>(int userId, string method, T data)
+    public async Task SendToUserAsync(int userId, string method, params object?[] args)
     {
         try
         {
-            await hubContext.Clients.Group($"user_{userId}").SendAsync(method, data);
+            await hubContext.Clients.Group($"user_{userId}").SendAsync(method, args);
         }
         catch (Exception ex)
         {

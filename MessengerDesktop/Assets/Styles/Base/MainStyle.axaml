@@ -1053,6 +1053,29 @@
 		<Setter Property="Background" Value="Transparent"/>
 	</Style>
 
+	<!-- ── Элемент списка упоминаний ── -->
+	<Style Selector="Button.MentionItem">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="8,6"/>
+		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="FocusAdorner" Value="{x:Null}"/>
+	</Style>
+
+	<Style Selector="Button.MentionItem /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
+
+	<Style Selector="Button.MentionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+	</Style>
+
+	<Style Selector="Button.MentionItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+	</Style>
 	<!-- ═══════════════════════════════════════════════════════════════
 	14. ПОЛЕ ВВОДА ЧАТА
 	ChatInput, режим редактирования, превью вложений

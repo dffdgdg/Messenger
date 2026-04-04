@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using MessengerDesktop.ViewModels.Chat;
@@ -467,6 +468,31 @@ public partial class ChatView : UserControl
         var bottom = top + item.Bounds.Height;
 
         return bottom > 0 && top < viewportHeight;
+    }
+
+    private void ComposerTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null)
+            return;
+
+        if (_viewModel.HandleMentionNavigationKey(e.Key))
+            e.Handled = true;
+    }
+
+    private void ComposerTextBox_OnKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null || sender is not TextBox textBox)
+            return;
+
+        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
+    }
+
+    private void ComposerTextBox_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_viewModel is null || sender is not TextBox textBox)
+            return;
+
+        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
     }
 
     #endregion

@@ -431,9 +431,11 @@
   "senderId": 2,
   "senderName": "Петров Иван",
   "preview": "Привет!",
-  "type": "message|poll"
-}
+  "type": "message|poll|mention"
+  }
 ```
+
+> `type = "mention"` используется для сообщений, где текущий пользователь упомянут через `@username`.
 
 ## Enums (строковые значения)
 

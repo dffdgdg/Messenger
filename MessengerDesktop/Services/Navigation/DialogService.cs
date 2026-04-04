@@ -120,8 +120,9 @@ public sealed partial class DialogService : ObservableObject, IDialogService, ID
     {
         ThrowIfDisposed();
 
-        await _closeRequests.Writer.WriteAsync(new CloseRequest(true, new TaskCompletionSource()));
-        await new TaskCompletionSource().Task;
+        var tcs = new TaskCompletionSource();
+        await _closeRequests.Writer.WriteAsync(new CloseRequest(true, tcs));
+        await tcs.Task;
     }
 
     private async Task CloseInternalAsync()

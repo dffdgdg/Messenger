@@ -202,7 +202,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
     private void UnsubscribeHubEvents()
     {
-        foreach (var s in _subs) try { s.Dispose(); } catch { }
+        foreach (var s in _subs) try { s.Dispose(); } catch { /* Ignored */ }
         _subs.Clear();
     }
 

@@ -34,8 +34,8 @@
 | `ChatService` | `Services/Chat/ChatService.cs` | CRUD чатов, аватары, инвалидация кэша |
 | `ChatMemberService` | `Services/Chat/ChatMemberService.cs` | Участники: добавление, удаление, смена ролей, выход. Проверяет права, создаёт системные сообщения |
 | `SystemMessageService` | `Services/Chat/SystemMessageService.cs` | Системные сообщения (MemberAdded/Removed/Left/RoleChanged). Не создаёт для Contact. Отправляет в SignalR |
-| `NotificationService` | `Services/Chat/NotificationService.cs` | Push-уведомления через SignalR. Mute/unmute per-chat |
-| `MessageService` | `Services/Messaging/MessageService.cs` | CRUD сообщений, атомарное создание (Message+Voice+Files в одном SaveChanges). Пагинация (around/before/after), поиск (ILike). Уведомляет участников, обновляет непрочитанные |
+| `NotificationService` | `Services/Chat/NotificationService.cs` | Push-уведомления через SignalR. Mute/unmute per-chat, отдельный тип `mention` для `@username` |
+| `MessageService` | `Services/Messaging/MessageService.cs` | CRUD сообщений, атомарное создание (Message+Voice+Files в одном SaveChanges). Пагинация (around/before/after), поиск (ILike). Уведомляет участников, обновляет непрочитанные, извлекает `@username` и запускает mention-уведомления |
 | `FileService` | `Services/Messaging/FileService.cs` | Загрузка файлов/изображений. Конвертация в WebP (ImageSharp) |
 | `PollService` | `Services/Messaging/PollService.cs` | Опросы, голосование |
 | `ReadReceiptService` | `Services/ReadReceipt/ReadReceiptService.cs` | Прочитанные (`LastReadMessageId` в `ChatMember`), счётчики, `FirstUnreadMessageId` |

@@ -1,4 +1,5 @@
-﻿using Avalonia.Platform.Storage;
+﻿using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
@@ -42,6 +43,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private readonly ChatHubSubscriber _hubSubscriber;
     private readonly TaskCompletionSource _initTcs = new();
     private DateTime _lastMarkAsReadTime = DateTime.MinValue;
+    private int _composerCaretIndex;
 
     #endregion
 
@@ -60,6 +62,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public ObservableCollection<MessageViewModel> PhotosMessages { get; } = [];
     public ObservableCollection<MessageViewModel> FilesMessages { get; } = [];
     public ObservableCollection<MessageViewModel> PollMessages { get; } = [];
+    public ObservableCollection<UserDto> MentionSuggestions { get; } = [];
 
     public string InfoPanelTitle => InfoPanel.InfoPanelTitle;
     public string InfoPanelSubtitle => InfoPanel.InfoPanelSubtitle;
@@ -114,40 +117,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Observable свойства (State)
 
-    [ObservableProperty]
-    public partial string NewMessage { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial bool IsInitialLoading { get; set; } = true;
-
-    [ObservableProperty]
-    public partial bool IsLoadingOlderMessages { get; set; }
-
-    [ObservableProperty]
-    public partial bool HasNewMessages { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsScrolledToBottom { get; set; } = true;
-
-    [ObservableProperty]
-    public partial int UnreadCount { get; set; }
-
-    [ObservableProperty]
-    public partial int PollsCount { get; set; }
-
-    [ObservableProperty]
-    public partial int UserId { get; set; }
-
-    [ObservableProperty]
-    public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
-    [ObservableProperty]
-    public partial bool IsInfoSectionOpen { get; set; }
-
-    [ObservableProperty]
-    public partial string InfoSectionTitle { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial InfoSectionType CurrentInfoSection { get; set; }
+    [ObservableProperty] public partial string NewMessage { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsMentionSuggestionsOpen { get; set; }
+    [ObservableProperty] public partial int MentionSelectedIndex { get; set; } = -1;
+    [ObservableProperty] public partial bool IsInitialLoading { get; set; } = true;
+    [ObservableProperty] public partial bool IsLoadingOlderMessages { get; set; }
+    [ObservableProperty] public partial bool HasNewMessages { get; set; }
+    [ObservableProperty] public partial bool IsScrolledToBottom { get; set; } = true;
+    [ObservableProperty] public partial int UnreadCount { get; set; }
+    [ObservableProperty] public partial int PollsCount { get; set; }
+    [ObservableProperty] public partial int UserId { get; set; }
+    [ObservableProperty] public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
+    [ObservableProperty] public partial bool IsInfoSectionOpen { get; set; }
+    [ObservableProperty] public partial string InfoSectionTitle { get; set; } = string.Empty;
+    [ObservableProperty] public partial InfoSectionType CurrentInfoSection { get; set; }
 
     public bool ShowPhotosSection => CurrentInfoSection == InfoSectionType.Photos;
     public bool ShowFilesSection => CurrentInfoSection == InfoSectionType.Files;
@@ -349,7 +332,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Перехватчики изменений (Partial hooks)
 
-    partial void OnNewMessageChanged(string value) => Typing.NotifyTextChanged(value);
+    partial void OnNewMessageChanged(string value)
+    {
+        Typing.NotifyTextChanged(value);
+        _composerCaretIndex = Math.Clamp(_composerCaretIndex, 0, value?.Length ?? 0);
+        UpdateMentionSuggestions(value, _composerCaretIndex);
+    }
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
@@ -560,10 +548,121 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private void InsertEmoji(string emoji) => NewMessage += emoji;
 
     [RelayCommand]
+    private void SelectMention(UserDto? user)
+    {
+        if (user is null || string.IsNullOrWhiteSpace(user.Username))
+            return;
+
+        var text = NewMessage ?? string.Empty;
+        var caret = Math.Clamp(_composerCaretIndex, 0, text.Length);
+        if (!TryFindMentionToken(text, caret, out var start, out var _))
+            return;
+
+        var prefix = text[..start];
+        var suffix = caret < text.Length ? text[caret..] : string.Empty;
+        NewMessage = $"{prefix}@{user.Username} {suffix}";
+        _composerCaretIndex = (prefix + "@" + user.Username + " ").Length;
+        IsMentionSuggestionsOpen = false;
+        MentionSelectedIndex = -1;
+    }
+
+    public bool HandleMentionNavigationKey(Key key)
+    {
+        if (!IsMentionSuggestionsOpen || MentionSuggestions.Count == 0)
+            return false;
+
+        if (key == Key.Down)
+        {
+            MentionSelectedIndex = MentionSelectedIndex < MentionSuggestions.Count - 1 ? MentionSelectedIndex + 1 : 0;
+            return true;
+        }
+
+        if (key == Key.Up)
+        {
+            MentionSelectedIndex = MentionSelectedIndex > 0 ? MentionSelectedIndex - 1 : MentionSuggestions.Count - 1;
+            return true;
+        }
+
+        if (key == Key.Enter && MentionSelectedIndex >= 0 && MentionSelectedIndex < MentionSuggestions.Count)
+        {
+            SelectMention(MentionSuggestions[MentionSelectedIndex]);
+            return true;
+        }
+
+        if (key == Key.Escape)
+        {
+            IsMentionSuggestionsOpen = false;
+            MentionSelectedIndex = -1;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void OnComposerSelectionChanged(int caretIndex)
+    {
+        _composerCaretIndex = caretIndex;
+        UpdateMentionSuggestions(NewMessage, caretIndex);
+    }
+
+    [RelayCommand]
     private async Task AttachFile()
     {
         if (!await Attachments.PickAndAddFilesAsync())
             ErrorMessage = "Не удалось выбрать файлы";
+    }
+
+    #endregion
+    #region Mentions
+
+    private void UpdateMentionSuggestions(string? text, int caretIndex)
+    {
+        var source = Context.Members.Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username)).ToList();
+
+        if (!TryFindMentionToken(text ?? string.Empty, caretIndex, out _, out var token))
+        {
+            MentionSuggestions.Clear();
+            IsMentionSuggestionsOpen = false;
+            MentionSelectedIndex = -1;
+            return;
+        }
+
+        var filtered = source
+            .Where(m => m.Username!.Contains(token, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(m => m.Username!.StartsWith(token, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(m => m.Username)
+            .Take(7)
+            .ToList();
+
+        MentionSuggestions.Clear();
+        foreach (var member in filtered)
+            MentionSuggestions.Add(member);
+
+        IsMentionSuggestionsOpen = MentionSuggestions.Count > 0;
+        MentionSelectedIndex = IsMentionSuggestionsOpen ? 0 : -1;
+    }
+
+    private static bool TryFindMentionToken(string text, int caretIndex, out int tokenStart, out string token)
+    {
+        tokenStart = -1;
+        token = string.Empty;
+
+        if (string.IsNullOrEmpty(text) || caretIndex < 0 || caretIndex > text.Length)
+            return false;
+
+        var i = caretIndex - 1;
+        while (i >= 0 && !char.IsWhiteSpace(text[i]))
+            i--;
+
+        tokenStart = i + 1;
+        if (tokenStart >= text.Length || text[tokenStart] != '@')
+            return false;
+
+        if (caretIndex <= tokenStart)
+            return false;
+
+        token = text.Substring(tokenStart + 1, caretIndex - tokenStart - 1);
+        return token.All(c => char.IsLetterOrDigit(c) || c == '_');
     }
 
     #endregion

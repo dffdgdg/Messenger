@@ -65,10 +65,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     public string? ContactUsername => ContactUser?.Username;
     public string? ContactDepartment => ContactUser?.Department;
 
-    partial void OnMemberSearchQueryChanged(string value)
-    {
+    partial void OnMemberSearchQueryChanged(string value) =>
         UpdateFilteredMembers();
-    }
 
     private void UpdateFilteredMembers()
     {
@@ -150,7 +148,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Отменено */ }
         catch (Exception ex) { Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}"); }
     }
 
@@ -169,14 +167,15 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
                 InvalidateAll();
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Отменено */ }
         catch (Exception ex) { Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}"); }
     }
 
     [RelayCommand]
     private async Task CopyUsername()
     {
-        if (string.IsNullOrEmpty(ContactUsername)) return;
+        if (string.IsNullOrEmpty(ContactUsername))
+            return;
     }
 
     private void OnUserStatusChanged(int userId, bool isOnline)

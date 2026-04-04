@@ -2,6 +2,7 @@
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.ReadReceipt;
 using MessengerShared.DTO.Message;
+using System.Text.RegularExpressions;
 
 namespace MessengerAPI.Services.Messaging;
 
@@ -26,6 +27,9 @@ public partial class MessageService(
     : BaseService<MessageService>(context, logger), IMessageService
 {
     private readonly MessengerSettings _settings = settings.Value;
+    [GeneratedRegex(@"(?<![a-z0-9_])@([a-z0-9_]{3,30})", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex MentionRegex();
+
 
     #region Base Query & Helpers
 
@@ -476,10 +480,12 @@ public partial class MessageService(
     {
         try
         {
+            var mentionedUsernames = ExtractMentionedUsernames(message.Content);
             var members = await _context.ChatMembers.Where(cm => cm.ChatId == message.ChatId && cm.UserId != message.SenderId)
                 .Select(cm => new
                 {
                     cm.UserId,
+                    cm.User.Username,
                     cm.NotificationsEnabled,
                     GlobalEnabled = cm.User.UserSetting == null || cm.User.UserSetting.NotificationsEnabled
                 }).ToListAsync();
@@ -487,14 +493,44 @@ public partial class MessageService(
             foreach (var m in members)
             {
                 var unread = await readReceiptService.GetUnreadCountAsync(m.UserId, message.ChatId);
-                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated",
-                    new { message.ChatId, UnreadCount = unread.IsSuccess ? unread.Value : 0 });
+                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated", message.ChatId, unread.IsSuccess ? unread.Value : 0);
 
-                if (m.NotificationsEnabled && m.GlobalEnabled)
+                if (!m.GlobalEnabled)
+                    continue;
+
+                var isMentioned = !string.IsNullOrWhiteSpace(m.Username)
+                    && mentionedUsernames.Contains(m.Username!);
+
+                if (isMentioned)
+                {
+                    await notificationService.SendMentionNotificationAsync(m.UserId, message);
+                    continue;
+                }
+
+                if (m.NotificationsEnabled)
                     await notificationService.SendNotificationAsync(m.UserId, message);
             }
         }
         catch (Exception ex) { LogNotificationError(message.ChatId, ex); }
+    }
+
+    private static HashSet<string> ExtractMentionedUsernames(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return [];
+
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in MentionRegex().Matches(content))
+        {
+            if (match.Groups.Count < 2)
+                continue;
+
+            var username = match.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(username))
+                result.Add(username);
+        }
+
+        return result;
     }
 
     #endregion

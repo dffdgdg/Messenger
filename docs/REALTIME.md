@@ -80,7 +80,7 @@ await hubNotifier.SendToUserAsync(userId, "UserProfileUpdated", userDto);
 
 | Метод | Данные | Описание |
 |-------|--------|----------|
-| `ReceiveNotification` | `NotificationDto` | Push-уведомление о новом сообщении |
+| `ReceiveNotification` | `NotificationDto` | Push-уведомление о новом сообщении/опросе/упоминании |
 | `UnreadCountUpdated` | `int chatId, int unreadCount` | Обновлённый счётчик непрочитанных |
 
 ### Статусы пользователей
@@ -124,9 +124,12 @@ await hubNotifier.SendToUserAsync(userId, "UserProfileUpdated", userDto);
 **Логика уведомлений:**
 1. Проверить `SettingsService.NotificationsEnabled`
 2. Если текущий открытый чат = чат уведомления → не показывать popup, но инкрементировать счётчик
-3. Формат: `"{SenderName}: {Preview}"` или `"Новый опрос"` для poll-типа
+3. Формат: `"{SenderName}: {Preview}"` для `message`/`mention` или `"Новый опрос"` для `poll`
 4. `ShowWindow(..., onClick: ...)` передает callback, который использует текущий `MainMenuViewModel` и вызывает `OpenNotificationAsync(notification)`
 5. `MainMenuViewModel.OpenNotificationAsync` при необходимости догружает `ChatDto`, выбирает нужную вкладку (группы/контакты) и, если в `NotificationDto` есть `MessageId`, открывает чат с прокруткой к конкретному сообщению
+
+**Примечание по mention:**
+- Для `NotificationDto.Type = "mention"` клиент использует тот же маршрут открытия чата, но отображает текст превью из сервера (например, `"Вас упомянули: ..."`).
 
 **Логика непрочитанных:**
 - `Dictionary<int, int> _unreadCounts` — локальный кеш счётчиков

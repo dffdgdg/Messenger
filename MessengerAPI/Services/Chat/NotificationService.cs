@@ -3,6 +3,7 @@
 public interface INotificationService
 {
     Task SendNotificationAsync(int userId, MessageDto message);
+    Task SendMentionNotificationAsync(int userId, MessageDto message);
     Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(int userId, int chatId);
     Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request);
     Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
@@ -15,12 +16,25 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
     {
         try
         {
-            var notification = await BuildNotificationAsync(message);
+            var notification = await BuildNotificationAsync(message, "message");
             await hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
         }
         catch (Exception ex)
         {
             LogNotificationFailed(userId,ex);
+        }
+    }
+
+    public async Task SendMentionNotificationAsync(int userId, MessageDto message)
+    {
+        try
+        {
+            var notification = await BuildNotificationAsync(message, "mention");
+            await hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
+        }
+        catch (Exception ex)
+        {
+            LogNotificationFailed(userId, ex);
         }
     }
 
@@ -70,13 +84,13 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
 
     #region Private Methods
 
-    private async Task<NotificationDto> BuildNotificationAsync(MessageDto message)
+    private async Task<NotificationDto> BuildNotificationAsync(MessageDto message, string type)
     {
         var chat = await context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
 
         return new NotificationDto
         {
-            Type = message.Poll != null ? "poll" : "message",
+            Type = type == "mention" ? "mention" : message.Poll != null ? "poll" : "message",
             ChatId = message.ChatId,
             ChatName = chat?.Type == ChatType.Contact ? message.SenderName : chat?.Name,
             ChatAvatar = chat?.Type == ChatType.Contact ? message.SenderAvatarUrl : urlBuilder.BuildUrl(chat?.Avatar),
@@ -84,7 +98,7 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
             SenderId = message.SenderId,
             SenderName = message.SenderName,
             SenderAvatar = message.SenderAvatarUrl,
-            Preview = message.Poll != null ? $"{message.Content}" : TruncateText(message.Content, 100),
+            Preview = type == "mention" ? $"Вас упомянули: {TruncateText(message.Content, 100)}" : message.Poll != null ? $"{message.Content}" : TruncateText(message.Content, 100),
             CreatedAt = message.CreatedAt
         };
     }

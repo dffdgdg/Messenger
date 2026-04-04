@@ -19,20 +19,15 @@ public class RichMessageTextBlock : SelectableTextBlock
         set => SetValue(RawTextProperty, value);
     }
 
-    private static readonly Regex UrlRegex = new(
-    @"(https?://[^\s<>""')\]]+)",
-    RegexOptions.Compiled | RegexOptions.IgnoreCase,
-    TimeSpan.FromSeconds(1));
+    private static readonly Regex UrlRegex = new(@"(https?://[^\s<>""')\]]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     private static readonly SolidColorBrush LinkBrush = new(Color.Parse("#4A9EEA"));
+    private static readonly SolidColorBrush MentionBrush = new(Color.Parse("#8F7DFF"));
+    private static readonly Regex MentionRegex = new(@"(?<![A-Za-z0-9_])@[A-Za-z0-9_]{3,30}", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     private readonly List<(int start, int end, string url)> _linkRanges = [];
 
-    static RichMessageTextBlock()
-    {
-        RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>(
-            (ctrl, _) => ctrl.RebuildInlines());
-    }
+    static RichMessageTextBlock() => RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>((ctrl, _) => ctrl.RebuildInlines());
 
     private void RebuildInlines()
     {
@@ -46,13 +41,20 @@ public class RichMessageTextBlock : SelectableTextBlock
             return;
         }
 
-        var matches = UrlRegex.Matches(text);
+        var matches = new List<(int Start, int End, string Kind, string Value)>();
+        foreach (Match match in UrlRegex.Matches(text))
+            matches.Add((match.Index, match.Index + match.Length, "url", match.Value));
+        foreach (Match match in MentionRegex.Matches(text))
+            matches.Add((match.Index, match.Index + match.Length, "mention", match.Value));
+
 
         if (matches.Count == 0)
         {
             Text = text;
             return;
         }
+
+        matches.Sort((a, b) => a.Start.CompareTo(b.Start));
 
         Text = null;
         Inlines ??= [];
@@ -66,27 +68,39 @@ public class RichMessageTextBlock : SelectableTextBlock
         var lastIndex = 0;
         var charPos = 0;
 
-        foreach (Match match in matches)
+        foreach (var (Start, End, Kind, Value) in matches)
         {
-            if (match.Index > lastIndex)
+            if (Start < lastIndex)
+                continue;
+
+            if (Start > lastIndex)
             {
-                var plain = text[lastIndex..match.Index];
+                var plain = text[lastIndex..Start];
                 Inlines.Add(new Run(plain));
                 charPos += plain.Length;
             }
 
-            var url = match.Value;
+            var token = Value;
             var linkStart = charPos;
 
-            var run = new Run(url);
-            run.SetValue(Inline.ForegroundProperty, LinkBrush);
-            run.SetValue(Inline.TextDecorationsProperty, underline);
+            var run = new Run(token);
+            if (Kind == "url")
+            {
+                run.SetValue(Inline.ForegroundProperty, LinkBrush);
+                run.SetValue(Inline.TextDecorationsProperty, underline);
+            }
+            else
+            {
+                run.SetValue(Inline.ForegroundProperty, MentionBrush);
+                run.SetValue(Inline.FontWeightProperty, FontWeight.SemiBold);
+            }
             Inlines.Add(run);
 
-            charPos += url.Length;
-            _linkRanges.Add((linkStart, charPos, url));
+            charPos += token.Length;
+            if (Kind == "url")
+                _linkRanges.Add((linkStart, charPos, token));
 
-            lastIndex = match.Index + match.Length;
+            lastIndex = End;
         }
 
         if (lastIndex < text.Length)

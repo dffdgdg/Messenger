@@ -13,13 +13,14 @@ public sealed class MessagesController(IMessageService messageService,
         => messageService.CreateMessageAsync(GetCurrentUserId(), request), "Сообщение успешно отправлено");
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> UpdateMessage(int id, [FromBody] UpdateMessageDto updateDto)
-        => await ExecuteAsync(async () =>
+    public async Task<ActionResult<ApiResponse<MessageDto>>> UpdateMessage(int id, [FromBody] UpdateMessageDto updateDto) => await ExecuteAsync(async () =>
+    {
+        if (id != updateDto.Id)
         {
-            if (id != updateDto.Id)
-                return Result<MessageDto>.Failure("Несоответствие ID сообщения");
-            return await messageService.UpdateMessageAsync(id, GetCurrentUserId(), updateDto);
-        }, "Сообщение успешно отредактировано");
+            return Result<MessageDto>.Failure("Несоответствие ID сообщения");
+        }
+        return await messageService.UpdateMessageAsync(id, GetCurrentUserId(), updateDto);
+    }, "Сообщение успешно отредактировано");
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMessage(int id)

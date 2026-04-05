@@ -61,25 +61,20 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddBusinessServices(this IServiceCollection services)
     {
-        // Auth
         services.AddScoped<IAuthService, AuthService>();
 
-        // Users
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAdminService, AdminService>();
 
-        // Chats
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatMemberService, ChatMemberService>();
         services.AddScoped<ISystemMessageService, SystemMessageService>();
         services.AddScoped<INotificationService, NotificationService>();
 
-        // Messaging
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IReadReceiptService, ReadReceiptService>();
 
-        // Departments
         services.AddScoped<IDepartmentService, DepartmentService>();
 
         return services;

@@ -4,8 +4,7 @@ using System.Security.Claims;
 namespace MessengerAPI.Hubs;
 
 [Authorize]
-public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService,
-    AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
+public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService, AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
 
@@ -210,8 +209,7 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         if (memberCheck.IsFailure)
             throw new HubException(memberCheck.Error);
 
-        var memberIds = await accessControl.GetUserChatIdsAsync(chatId);
-        return [.. onlineUserService.FilterOnline(memberIds)];
+        return [.. onlineUserService.FilterOnline(await accessControl.GetUserChatIdsAsync(chatId))];
     }
 
     #endregion

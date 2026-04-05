@@ -9,18 +9,13 @@ public static class MessageMappings
         var voice = message.VoiceMessage;
         var senderName = message.Sender?.FormatDisplayName();
         var targetUserName = isSystem ? message.TargetUser?.FormatDisplayName() : null;
-        var resolvedContent = isDeleted
-            ? "[Сообщение удалено]"
-            : (isSystem
-                ? BuildSystemMessageContent(message.SystemEventType, senderName, targetUserName, message.Content)
-                : message.Content);
 
         return new MessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
             SenderId = message.SenderId,
-            Content = resolvedContent,
+            Content = isDeleted ? "[Сообщение удалено]" : (isSystem ? BuildSystemMessageContent(message.SystemEventType, senderName, targetUserName, message.Content) : message.Content),
             CreatedAt = message.CreatedAt,
             EditedAt = message.EditedAt,
             IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,
@@ -50,20 +45,16 @@ public static class MessageMappings
         };
     }
 
-    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
+    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message) => new()
     {
-        var isDeleted = message.IsDeleted ?? false;
-        return new()
-        {
-            Id = message.Id,
-            ChatId = message.ChatId,
-            SenderId = message.SenderId,
-            SenderName = message.Sender?.FormatDisplayName(),
-            Content = isDeleted ? "[Сообщение удалено]" : message.Content,
-            CreatedAt = message.CreatedAt,
-            IsDeleted = isDeleted
-        };
-    }
+        Id = message.Id,
+        ChatId = message.ChatId,
+        SenderId = message.SenderId,
+        SenderName = message.Sender?.FormatDisplayName(),
+        Content = message.IsDeleted ?? false ? "[Сообщение удалено]" : message.Content,
+        CreatedAt = message.CreatedAt,
+        IsDeleted = message.IsDeleted ?? false
+    };
 
     public static MessageForwardInfoDto ToForwardInfoDto(this Message message) => new()
     {
@@ -73,6 +64,7 @@ public static class MessageMappings
         OriginalSenderName = message.Sender?.FormatDisplayName(),
         OriginalCreatedAt = message.CreatedAt
     };
+
     private static string BuildSystemMessageContent(SystemEventType? eventType, string? senderName, string? targetUserName, string? fallbackContent)
     {
         var actor = string.IsNullOrWhiteSpace(senderName) ? "Пользователь" : senderName;

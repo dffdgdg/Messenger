@@ -3,6 +3,7 @@
 			 xmlns:controls="using:MessengerDesktop.Controls"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:chat="using:MessengerDesktop.Views.Chat"
+			 xmlns:controlss="using:MessengerDesktop.Views.Controls"
 			 xmlns:managers="using:MessengerDesktop.ViewModels.Chat.Managers"
 			 xmlns:skeleton="using:MessengerDesktop.Views.Controls.Skeleton"
 			 xmlns:vmChat="clr-namespace:MessengerDesktop.ViewModels.Chat"
@@ -486,36 +487,8 @@
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="14"
 								IsVisible="{Binding !Voice.IsVoiceRecording}">
-							<Grid RowDefinitions="Auto,Auto">
-								<Border Grid.Row="0"
-										Margin="48,0,96,8"
-										Padding="6"
-										Background="{DynamicResource SecondaryBG}"
-										CornerRadius="10"
-										IsVisible="{Binding IsMentionSuggestionsOpen}">
-									<ItemsControl ItemsSource="{Binding MentionSuggestions}">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate>
-												<Button Classes="MentionItem"
-														Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).SelectMentionCommand}"
-														CommandParameter="{Binding}">
-													<Grid ColumnDefinitions="Auto,*">
-														<TextBlock Grid.Column="0"
-																   Text="@"
-																   Foreground="{DynamicResource Accent}"
-																   FontWeight="SemiBold"
-																   VerticalAlignment="Center"/>
-														<TextBlock Grid.Column="1"
-																   Text="{Binding Username}"
-																   Margin="4,0,0,0"
-																   VerticalAlignment="Center"/>
-													</Grid>
-												</Button>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-								</Border>
-								<Grid Grid.Row="1" Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+							<Grid>
+								<Grid Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
 									<Button Grid.Column="0"
 											Classes="IconButton"
 											ToolTip.Tip="Прикрепить файл"
@@ -623,6 +596,55 @@
 										</Panel>
 									</Button>
 								</Grid>
+								<Popup IsOpen="{Binding IsMentionSuggestionsOpen}"
+									   IsLightDismissEnabled="False"
+									   PlacementTarget="{Binding #ComposerTextBox}"
+									   Placement="TopEdgeAlignedLeft"
+									   HorizontalOffset="-44"
+									   VerticalOffset="-8">
+									<Border Width="560"
+											Padding="6,8"
+											Background="{DynamicResource SecondaryBG}"
+											CornerRadius="10"
+											BorderBrush="{DynamicResource BorderDefault}"
+											BorderThickness="1">
+										<ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+											<ItemsControl ItemsSource="{Binding MentionSuggestions}">
+												<ItemsControl.ItemTemplate>
+													<DataTemplate>
+														<Button Classes="MentionItem"
+																Command="{Binding $parent[UserControl].((vmChat:ChatViewModel)DataContext).SelectMentionCommand}"
+																CommandParameter="{Binding}">
+															<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+																<controlss:AvatarControl Grid.Column="0"
+																						 Classes="Small"
+																						 Source="{Binding Avatar}"
+																						 DisplayName="{Binding DisplayName}"
+																						 ShowOnlineIndicator="False"
+																						 VerticalAlignment="Center"/>
+																<StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+																	<TextBlock Text="{Binding DisplayName}"
+																			   FontWeight="SemiBold"
+																			   TextTrimming="CharacterEllipsis"
+																			   IsVisible="{Binding DisplayName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																	<TextBlock Text="{Binding Username}"
+																			   FontWeight="SemiBold"
+																			   TextTrimming="CharacterEllipsis"
+																			   IsVisible="{Binding DisplayName, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+																	<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+																			   Foreground="{DynamicResource TextSecondary}"
+																			   FontSize="12"
+																			   TextTrimming="CharacterEllipsis"
+																			   IsVisible="{Binding Username, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																</StackPanel>
+															</Grid>
+														</Button>
+													</DataTemplate>
+												</ItemsControl.ItemTemplate>
+											</ItemsControl>
+										</ScrollViewer>
+									</Border>
+								</Popup>
 							</Grid>
 						</Border>
 
@@ -651,7 +673,6 @@
 								</Button>
 							</Grid>
 						</Border>
-
 					</Grid>
 				</Border>
 			</Grid>

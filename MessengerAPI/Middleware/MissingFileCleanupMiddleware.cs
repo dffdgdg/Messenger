@@ -28,17 +28,11 @@ public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
         var logger = context.RequestServices.GetRequiredService<ILogger<MissingFileCleanupMiddleware>>();
 
         var alternativePath = $"/{relativePath}";
-        var messageFiles = await dbContext.MessageFiles
-            .Where(f => f.Path == relativePath || f.Path == alternativePath)
-            .ToListAsync(context.RequestAborted);
+        var messageFiles = await dbContext.MessageFiles.Where(f => f.Path == relativePath || f.Path == alternativePath).ToListAsync(context.RequestAborted);
 
-        var usersWithAvatar = await dbContext.Users
-            .Where(u => u.Avatar == relativePath || u.Avatar == alternativePath)
-            .ToListAsync(context.RequestAborted);
+        var usersWithAvatar = await dbContext.Users.Where(u => u.Avatar == relativePath || u.Avatar == alternativePath).ToListAsync(context.RequestAborted);
 
-        var chatsWithAvatar = await dbContext.Chats
-            .Where(c => c.Avatar == relativePath || c.Avatar == alternativePath)
-            .ToListAsync(context.RequestAborted);
+        var chatsWithAvatar = await dbContext.Chats.Where(c => c.Avatar == relativePath || c.Avatar == alternativePath).ToListAsync(context.RequestAborted);
 
         if (messageFiles.Count == 0 && usersWithAvatar.Count == 0 && chatsWithAvatar.Count == 0)
             return;

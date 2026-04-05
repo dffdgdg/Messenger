@@ -12,25 +12,12 @@ public interface IChatViewModelFactory
     ChatViewModel Create(int chatId, ChatsViewModel parent);
 }
 
-public class ChatViewModelFactory(
-    IApiClientService apiClient, IAuthManager authManager,
-    IChatInfoPanelStateStore chatInfoPanelStateStore,
-    INotificationService notificationService,
-    IChatNotificationApiService notificationApiService,
-    IDialogService dialogService,
-    IGlobalHubConnection globalHub,
-    IFileDownloadService fileDownloadService,
-    IPlatformService platformService,
-    ILocalCacheService cacheService,
+public class ChatViewModelFactory(IApiClientService apiClient, IAuthManager authManager, IChatInfoPanelStateStore chatInfoPanelStateStore,
+    INotificationService notificationService, IChatNotificationApiService notificationApiService, IDialogService dialogService,
+    IGlobalHubConnection globalHub, IFileDownloadService fileDownloadService, IPlatformService platformService, ILocalCacheService cacheService,
     IAudioPlayerService audioPlayer) : IChatViewModelFactory
 {
-    public ChatViewModel Create(int chatId, ChatsViewModel parent)
-    {
-        var storageProvider = platformService.MainWindow?.StorageProvider;
-
-        return new ChatViewModel(chatId, parent, parent.Parent, apiClient, authManager,
-            chatInfoPanelStateStore, notificationService, notificationApiService,
-            dialogService, globalHub, fileDownloadService, storageProvider, cacheService,
-            audioPlayer);
-    }
+    public ChatViewModel Create(int chatId, ChatsViewModel parent) =>
+        new ChatViewModel(chatId, parent, parent.Parent, apiClient, authManager, chatInfoPanelStateStore, notificationService, notificationApiService,
+            dialogService, globalHub, fileDownloadService, platformService.MainWindow?.StorageProvider, cacheService, audioPlayer);
 }

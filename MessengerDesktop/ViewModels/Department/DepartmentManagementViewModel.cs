@@ -87,7 +87,6 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             IsLoading = true;
             ClearMessages();
 
-            // Получаем информацию о текущем пользователе
             var userResult = await _apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(CurrentUserId), ct);
 
             if (!userResult.Success || userResult.Data == null)
@@ -109,7 +108,6 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             _departmentId = currentUser.DepartmentId.Value;
             HasNoDepartment = false;
 
-            // Проверяем права на управление
             var canManageResult = await _apiClient.GetAsync<bool>(ApiEndpoints.Departments.CanManage((int)_departmentId), ct);
             CanManage = canManageResult is { Success: true, Data: true };
 
@@ -119,23 +117,16 @@ public partial class DepartmentManagementViewModel : BaseViewModel
                 return;
             }
 
-            // Загружаем информацию об отделе
             var departmentResult = await _apiClient.GetAsync<DepartmentDto>(ApiEndpoints.Departments.ById((int)_departmentId), ct);
             if (departmentResult is { Success: true, Data: not null })
             {
                 Department = departmentResult.Data;
             }
 
-            // Загружаем сотрудников
             await LoadMembersAsync(ct);
-
-            // Загружаем доступных пользователей
             await LoadAvailableUsersAsync(ct);
         }
-        catch (OperationCanceledException)
-        {
-            // Загрузка отменена
-        }
+        catch (OperationCanceledException) { /* Загрузка отменена */ }
         catch (Exception ex)
         {
             ErrorMessage = $"Ошибка загрузки: {ex.Message}";
@@ -154,7 +145,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         if (membersResult is { Success: true, Data: not null })
         {
-            var memberVms = membersResult.Data.Where(u => u.Id != CurrentUserId) // Исключаем себя
+            var memberVms = membersResult.Data.Where(u => u.Id != CurrentUserId)
                 .Select(u => new DepartmentMemberViewModel(u)).OrderByDescending(m => m.IsOnline).ThenBy(m => m.DisplayName);
 
             Members = new ObservableCollection<DepartmentMemberViewModel>(memberVms);
@@ -171,11 +162,11 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
     private async Task LoadAvailableUsersAsync(CancellationToken ct)
     {
-        var usersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll, ct);
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll, ct);
 
-        if (usersResult is { Success: true, Data: not null })
+        if (result is { Success: true, Data: not null })
         {
-            var available = usersResult.Data.Where(u => u.DepartmentId == null && !u.IsBanned && u.Id != CurrentUserId).ToList();
+            var available = result.Data.Where(u => u.DepartmentId == null && !u.IsBanned && u.Id != CurrentUserId).ToList();
 
             AvailableUsers = new ObservableCollection<UserDto>(available);
         }
@@ -206,7 +197,6 @@ public partial class DepartmentManagementViewModel : BaseViewModel
             return;
         }
 
-        // Показываем диалог выбора пользователя
         var selectedUser = ShowSelectUserAction != null ? await ShowSelectUserAction(AvailableUsers) : null;
 
         if (selectedUser == null) return;
@@ -233,7 +223,6 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     {
         if (member == null || _departmentId == null || !CanManage) return;
 
-        // Показываем подтверждение
         var confirmed = ShowRemoveConfirmAction != null && await ShowRemoveConfirmAction(member);
         if (!confirmed) return;
 
@@ -281,8 +270,8 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     #region Helpers
 
     private static bool MatchesSearch(DepartmentMemberViewModel member, string query) =>
-        member.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
-        member.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
+        member.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true
+        || member.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
 
     partial void OnSearchQueryChanged(string value) => OnPropertyChanged(nameof(FilteredMembers));
 

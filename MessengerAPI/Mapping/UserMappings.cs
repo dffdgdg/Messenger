@@ -3,22 +3,22 @@
 public static class UserMappings
 {
     public static UserDto ToDto(this User user, IUrlBuilder? urlBuilder = null, bool? isOnline = null) => new()
-        {
-            Id = user.Id,
-            Username = user.Username,
-            DisplayName = user.FormatDisplayName(),
-            Name = user.Name,
-            Surname = user.Surname,
-            Midname = user.Midname,
-            Department = user.Department?.Name,
-            DepartmentId = user.Department?.Id,
-            Avatar = user.Avatar.BuildFullUrl(urlBuilder),
-            Theme = user.UserSetting?.Theme,
-            NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
-            IsOnline = isOnline ?? false,
-            LastOnline = user.LastOnline,
-            IsBanned = user.IsBanned
-        };
+    {
+        Id = user.Id,
+        Username = user.Username,
+        DisplayName = user.FormatDisplayName(),
+        Name = user.Name,
+        Surname = user.Surname,
+        Midname = user.Midname,
+        Department = user.Department?.Name,
+        DepartmentId = user.Department?.Id,
+        Avatar = user.Avatar.BuildFullUrl(urlBuilder),
+        Theme = user.UserSetting?.Theme,
+        NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
+        IsOnline = isOnline ?? false,
+        LastOnline = user.LastOnline,
+        IsBanned = user.IsBanned
+    };
 
     public static string FormatDisplayName(this User user)
     {

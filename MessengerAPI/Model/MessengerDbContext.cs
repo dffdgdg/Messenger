@@ -39,8 +39,7 @@ public partial class MessengerDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder
-            .HasPostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
+        modelBuilder.HasostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
             .HasPostgresEnum<ChatType>(name: "chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator)
             .HasPostgresEnum<Theme>("theme")
             .HasPostgresEnum<SystemEventType>("system_event_type");
@@ -51,30 +50,14 @@ public partial class MessengerDbContext : DbContext
 
             entity.ToTable("chats");
 
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"Chats_Id_seq\"'::regclass)")
-                .HasColumnName("id");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Chats_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.Avatar).HasColumnName("avatar");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("created_at");
             entity.Property(e => e.CreatedById).HasColumnName("created_by_id");
-            entity.Property(e => e.LastMessageTime)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("last_message_time");
-            entity.Property(e => e.Name)
-                .HasMaxLength(100)
-                .HasColumnName("name");
-
-            entity.Property(e => e.Type)
-                .HasColumnName("type")
-                .HasColumnType("chat_type");
-
-            entity.HasOne(d => d.CreatedBy).WithMany(p => p.Chats)
-                .HasForeignKey(d => d.CreatedById)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("Chats_CreatedById_fkey");
+            entity.Property(e => e.LastMessageTime).HasColumnType("timestamp without time zone").HasColumnName("last_message_time");
+            entity.Property(e => e.Name).HasMaxLength(100).HasColumnName("name");
+            entity.Property(e => e.Type).HasColumnName("type").HasColumnType("chat_type");
+            entity.HasOne(d => d.CreatedBy).WithMany(p => p.Chats).HasForeignKey(d => d.CreatedById).OnDelete(DeleteBehavior.Cascade).HasConstraintName("Chats_CreatedById_fkey");
         });
 
         modelBuilder.Entity<ChatMember>(entity =>
@@ -91,70 +74,30 @@ public partial class MessengerDbContext : DbContext
 
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
-            entity.Property(e => e.JoinedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("joined_at");
-            entity.Property(e => e.LastReadAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("last_read_at");
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("joined_at");
+            entity.Property(e => e.LastReadAt).HasColumnType("timestamp without time zone").HasColumnName("last_read_at");
             entity.Property(e => e.LastReadMessageId).HasColumnName("last_read_message_id");
-            entity.Property(e => e.NotificationsEnabled)
-                .HasDefaultValue(true)
-                .HasColumnName("notifications_enabled");
-
-            entity.Property(e => e.Role)
-                .HasColumnName("role")
-                .HasColumnType("chat_role");
-
-            entity.HasOne(d => d.Chat).WithMany(p => p.ChatMembers)
-                .HasForeignKey(d => d.ChatId)
-                .HasConstraintName("ChatMembers_ChatId_fkey");
-
-            entity.HasOne(d => d.LastReadMessage).WithMany(p => p.ChatMembers)
-                .HasForeignKey(d => d.LastReadMessageId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("ChatMembers_LastReadMessageId_fkey");
-
-            entity.HasOne(d => d.User).WithMany(p => p.ChatMembers)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("ChatMembers_UserId_fkey");
+            entity.Property(e => e.NotificationsEnabled).HasDefaultValue(true).HasColumnName("notifications_enabled");
+            entity.Property(e => e.Role).HasColumnName("role").HasColumnType("chat_role");
+            entity.HasOne(d => d.Chat).WithMany(p => p.ChatMembers).HasForeignKey(d => d.ChatId).HasConstraintName("ChatMembers_ChatId_fkey");
+            entity.HasOne(d => d.LastReadMessage).WithMany(p => p.ChatMembers).HasForeignKey(d => d.LastReadMessageId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("ChatMembers_LastReadMessageId_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.ChatMembers).HasForeignKey(d => d.UserId).HasConstraintName("ChatMembers_UserId_fkey");
         });
 
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("departments_pkey");
-
             entity.ToTable("departments");
-
             entity.HasIndex(e => e.ChatId, "Departments_ChatId_key").IsUnique();
-
             entity.HasIndex(e => e.HeadId, "idx_departments_head_id");
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"Departments_Id_seq\"'::regclass)")
-                .HasColumnName("id");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Departments_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
             entity.Property(e => e.HeadId).HasColumnName("head_id");
-            entity.Property(e => e.Name)
-                .HasMaxLength(100)
-                .HasColumnName("name");
+            entity.Property(e => e.Name).HasMaxLength(100).HasColumnName("name");
             entity.Property(e => e.ParentDepartmentId).HasColumnName("parent_department_id");
-
-            entity.HasOne(d => d.Chat).WithOne(p => p.Department)
-                .HasForeignKey<Department>(d => d.ChatId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Departments_ChatId_fkey");
-
-            entity.HasOne(d => d.Head).WithMany(p => p.Departments)
-                .HasForeignKey(d => d.HeadId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Departments_Head_fkey");
-
-            entity.HasOne(d => d.ParentDepartment).WithMany(p => p.InverseParentDepartment)
-                .HasForeignKey(d => d.ParentDepartmentId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Departments_Parent_fkey");
+            entity.HasOne(d => d.Chat).WithOne(p => p.Department).HasForeignKey<Department>(d => d.ChatId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Departments_ChatId_fkey");
+            entity.HasOne(d => d.Head).WithMany(p => p.Departments).HasForeignKey(d => d.HeadId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Departments_Head_fkey");
+            entity.HasOne(d => d.ParentDepartment).WithMany(p => p.InverseParentDepartment).HasForeignKey(d => d.ParentDepartmentId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Departments_Parent_fkey");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -479,13 +422,11 @@ public partial class MessengerDbContext : DbContext
                 .HasMaxLength(64)
                 .HasColumnName("family_id");
 
-            // Indexes
             entity.HasIndex(e => e.TokenHash, "idx_refresh_tokens_token_hash");
             entity.HasIndex(e => e.UserId, "idx_refresh_tokens_user_id");
             entity.HasIndex(e => e.FamilyId, "idx_refresh_tokens_family_id");
             entity.HasIndex(e => e.ExpiresAt, "idx_refresh_tokens_expires_at");
 
-            // Relationships
             entity.HasOne(d => d.User)
                 .WithMany(p => p.RefreshTokens)
                 .HasForeignKey(d => d.UserId)

@@ -17,9 +17,6 @@ public sealed class AuthController(IAuthService authService, ILogger<AuthControl
     public async Task<ActionResult<ApiResponse<TokenResponseDto>>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
         => await ExecuteAsync(() => authService.RefreshTokenAsync(request.AccessToken, request.RefreshToken, ct), "Токен обновлён");
 
-    /// <summary>
-    /// Отзывает все refresh-токены текущего пользователя (logout).
-    /// </summary>
     [HttpPost("revoke")]
     public async Task<IActionResult> Revoke(CancellationToken ct)
         => await ExecuteAsync(() => authService.RevokeRefreshTokenAsync(GetCurrentUserId(), ct), "Все токены отозваны");

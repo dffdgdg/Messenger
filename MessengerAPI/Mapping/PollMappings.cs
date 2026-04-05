@@ -4,8 +4,7 @@ public static class PollMappings
 {
     public static PollDto ToDto(this Poll poll, int? currentUserId = null)
     {
-        var selectedOptionIds = currentUserId.HasValue? poll.PollOptions?.SelectMany(o => o.PollVotes ?? [])
-            .Where(v => v.UserId == currentUserId).Select(v => v.OptionId).ToList() ?? [] : [];
+        var selectedOptionIds = currentUserId.HasValue? poll.PollOptions?.SelectMany(o => o.PollVotes ?? []).Where(v => v.UserId == currentUserId).Select(v => v.OptionId).ToList() ?? [] : [];
 
         return new PollDto
         {
@@ -21,19 +20,17 @@ public static class PollMappings
     }
 
     public static PollOptionDto ToDto(this PollOption option, bool isAnonymous = false) => new()
+    {
+        Id = option.Id,
+        PollId = option.PollId,
+        Text = option.OptionText,
+        Position = option.Position,
+        VotesCount = option.PollVotes?.Count ?? 0,
+        Votes = isAnonymous ? [] : option.PollVotes?.Select(v => new PollVoteDto
         {
-            Id = option.Id,
-            PollId = option.PollId,
-            Text = option.OptionText,
-            Position = option.Position,
-            VotesCount = option.PollVotes?.Count ?? 0,
-            Votes = isAnonymous
-            ? []
-            : option.PollVotes?.Select(v => new PollVoteDto
-            {
-                PollId = v.PollId,
-                UserId = v.UserId,
-                OptionId = v.OptionId
-            }).ToList() ?? []
-        };
+            PollId = v.PollId,
+            UserId = v.UserId,
+            OptionId = v.OptionId
+        }).ToList() ?? []
+    };
 }

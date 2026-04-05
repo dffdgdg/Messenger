@@ -27,11 +27,9 @@ public static class SwaggerConfiguration
 
             c.AddSecurityRequirement(_ =>
             {
-                var schemeRef = new OpenApiSecuritySchemeReference("Bearer");
-
                 return new OpenApiSecurityRequirement
                 {
-                    [schemeRef] = []
+                    [new OpenApiSecuritySchemeReference("Bearer")] = []
                 };
             });
         });

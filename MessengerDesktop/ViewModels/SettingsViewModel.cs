@@ -39,8 +39,7 @@ public partial class SettingsViewModel : BaseViewModel
 
     private static AppTheme GetCurrentAppTheme()
     {
-        var app = Application.Current;
-        var themeVariant = app?.RequestedThemeVariant;
+        var themeVariant = Application.Current?.RequestedThemeVariant;
 
         if (themeVariant == null || themeVariant == ThemeVariant.Default)
             return AppTheme.system;
@@ -63,8 +62,7 @@ public partial class SettingsViewModel : BaseViewModel
             _isSaving = true;
             try
             {
-                var data = result.Data;
-                var serverTheme = (AppTheme)data.Theme!;
+                var serverTheme = (AppTheme)result.Data.Theme!;
 
                 if (SelectedTheme != serverTheme)
                 {
@@ -72,7 +70,7 @@ public partial class SettingsViewModel : BaseViewModel
                     ApplyTheme(serverTheme);
                 }
 
-                NotificationsEnabled = data.NotificationsEnabled ?? true;
+                NotificationsEnabled = result.Data.NotificationsEnabled ?? true;
                 _settingsService.NotificationsEnabled = NotificationsEnabled;
             }
             finally

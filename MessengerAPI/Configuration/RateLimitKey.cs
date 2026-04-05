@@ -8,6 +8,5 @@ public static class RateLimitKey
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     internal static string GetUserOrIpPartitionKey(HttpContext context) =>
-        context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-        ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }

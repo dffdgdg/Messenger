@@ -4,6 +4,7 @@
              xmlns:controls="using:MessengerDesktop.Views.Controls"
              xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
              xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:userShared="using:MessengerShared.Dto"
              xmlns:user="using:MessengerShared.Dto.User"
              xmlns:views="using:MessengerDesktop.Views"
@@ -93,41 +94,41 @@
         </Style>
 
         <Style Selector="Button.MemberRow">
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="Padding" Value="8,6"/>
-    <Setter Property="CornerRadius" Value="8"/>
-    <Setter Property="HorizontalAlignment" Value="Stretch"/>
-    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-    <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="FocusAdorner" Value="{x:Null}"/>
-</Style>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
 
-<Style Selector="Button.MemberRow /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="CornerRadius" Value="8"/>
-    <Setter Property="Transitions">
-        <Transitions>
-            <BrushTransition Property="Background" Duration="0:0:0.15"/>
-        </Transitions>
-    </Setter>
-</Style>
+        <Style Selector="Button.MemberRow /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
 
-<Style Selector="Button.MemberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-</Style>
+        <Style Selector="Button.MemberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+        </Style>
 
-<Style Selector="Button.MemberRow:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-</Style>
+        <Style Selector="Button.MemberRow:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+        </Style>
 
-<Style Selector="Button.MemberRow:focus /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent"/>
-</Style>
+        <Style Selector="Button.MemberRow:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
 
-<Style Selector="Button.MemberRow:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent"/>
-</Style>
+        <Style Selector="Button.MemberRow:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
 
         <Style Selector="TextBox.SearchField">
             <Setter Property="CornerRadius" Value="8"/>
@@ -167,9 +168,7 @@
     </UserControl.Styles>
 
     <Border Background="{DynamicResource PrimaryBG}"
-            CornerRadius="0,16,16,0"
-            BorderBrush="{DynamicResource BorderDefault}"
-            BorderThickness="1,0,0,0">
+            CornerRadius="0,16,16,0">
         <Grid RowDefinitions="58,*">
 
             <Border Grid.Row="0"
@@ -223,6 +222,7 @@
                               IsVisible="{Binding !IsInitialLoading}">
                     <StackPanel Margin="0,0,0,32">
 
+                        <!-- Contact Chat Section -->
                         <StackPanel IsVisible="{Binding IsContactChat}" Spacing="0">
 
                             <StackPanel HorizontalAlignment="Center"
@@ -334,6 +334,7 @@
 
                             <Border Classes="Divider" Margin="16,8"/>
 
+                            <!-- Media & Files Section (Closed) -->
                             <StackPanel Margin="16,4,16,0" Spacing="4"
                                         IsVisible="{Binding !IsInfoSectionOpen}">
                                 <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
@@ -349,7 +350,7 @@
                                                    VerticalAlignment="Center"
                                                    Margin="12,0,0,0"/>
                                         <Border Classes="CountBadge" Grid.Column="2">
-                                            <TextBlock Text="{Binding PhotosMessages.Count}"
+                                            <TextBlock Text="{Binding PhotosCount}"
                                                        FontSize="12"
                                                        HorizontalAlignment="Center"
                                                        Foreground="{DynamicResource TextMuted}"/>
@@ -368,7 +369,7 @@
                                                    VerticalAlignment="Center"
                                                    Margin="12,0,0,0"/>
                                         <Border Classes="CountBadge" Grid.Column="2">
-                                            <TextBlock Text="{Binding FilesMessages.Count}"
+                                            <TextBlock Text="{Binding FilesCount}"
                                                        FontSize="12"
                                                        HorizontalAlignment="Center"
                                                        Foreground="{DynamicResource TextMuted}"/>
@@ -382,28 +383,23 @@
                                         IsVisible="{Binding IsInfoSectionOpen}">
 
                                 <StackPanel IsVisible="{Binding ShowPhotosSection}">
-                                    <ItemsControl ItemsSource="{Binding PhotosMessages}">
+                                    <ItemsControl ItemsSource="{Binding PhotosItems}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <WrapPanel Orientation="Horizontal"/>
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                            <DataTemplate x:DataType="vm:ChatInfoPanelMediaItem">
                                                 <Button Classes="MediaThumb"
                                                         Width="88" Height="88"
                                                         Margin="2"
                                                         Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding Message}">
                                                     <Panel>
-                                                        <Border Background="{DynamicResource SurfaceBrush}"
-                                                                CornerRadius="8"/>
-                                                        <PathIcon Data="{StaticResource ImageIcon}"
-                                                                  Width="24" Height="24"
-                                                                  Foreground="{DynamicResource TextMuted}"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"
-                                                                  Opacity="0.4"/>
+                                                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8"/>
+                                                        <Image Stretch="UniformToFill"
+                                                               asyncImageLoader:ImageLoader.Source="{Binding PreviewUrl}"/>
                                                     </Panel>
                                                 </Button>
                                             </DataTemplate>
@@ -411,7 +407,7 @@
                                     </ItemsControl>
 
                                     <StackPanel Classes="EmptyState"
-                                                IsVisible="{Binding !PhotosMessages.Count}">
+                                                IsVisible="{Binding !PhotosCount}">
                                         <PathIcon Data="{StaticResource ImageIcon}"
                                                   Width="32" Height="32"
                                                   Foreground="{DynamicResource TextMuted}"
@@ -425,32 +421,43 @@
                                 </StackPanel>
 
                                 <StackPanel IsVisible="{Binding ShowFilesSection}">
-                                    <ItemsControl ItemsSource="{Binding FilesMessages}">
+                                    <ItemsControl ItemsSource="{Binding FilesItems}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                            <DataTemplate x:DataType="vm:ChatInfoPanelFileItem">
                                                 <Button Classes="InfoRow"
                                                         Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding Message}">
                                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                                         <Border Width="36" Height="36"
                                                                 CornerRadius="8"
                                                                 Background="{DynamicResource SurfaceBrush}"
                                                                 VerticalAlignment="Center">
-                                                            <PathIcon Data="{StaticResource DocumentIcon}"
-                                                                      Width="18" Height="18"
-                                                                      Foreground="{DynamicResource TextSecondary}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding FileExtension}"
+                                                                       FontSize="10"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource TextSecondary}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
                                                         </Border>
                                                         <StackPanel Grid.Column="1"
                                                                     VerticalAlignment="Center"
                                                                     Margin="10,0,0,0"
                                                                     Spacing="2">
-                                                            <TextBlock Text="{Binding Files.Count, StringFormat='Вложений: {0}'}"
-                                                                       FontSize="13"/>
-                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
-                                                                       FontSize="11"
-                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                            <TextBlock Text="{Binding FileName}"
+                                                                       FontSize="13"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       MaxWidth="180"/>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="{Binding FileSizeFormatted}"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                                <TextBlock Text="•"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Button>
@@ -459,7 +466,7 @@
                                     </ItemsControl>
 
                                     <StackPanel Classes="EmptyState"
-                                                IsVisible="{Binding !FilesMessages.Count}">
+                                                IsVisible="{Binding !FilesCount}">
                                         <PathIcon Data="{StaticResource DocumentIcon}"
                                                   Width="32" Height="32"
                                                   Foreground="{DynamicResource TextMuted}"
@@ -474,6 +481,7 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- Group Chat Section -->
                         <StackPanel IsVisible="{Binding IsGroupChat}" Spacing="0">
 
                             <StackPanel Margin="16,20,16,16" Spacing="12">
@@ -537,6 +545,7 @@
 
                             <Border Classes="Divider" Margin="16,8"/>
 
+                            <!-- Group Chat - Media Section (Closed) -->
                             <StackPanel IsVisible="{Binding !IsInfoSectionOpen}" Spacing="0">
 
                                 <StackPanel Margin="16,4,16,0" Spacing="4">
@@ -553,7 +562,7 @@
                                                        VerticalAlignment="Center"
                                                        Margin="12,0,0,0"/>
                                             <Border Classes="CountBadge" Grid.Column="2">
-                                                <TextBlock Text="{Binding PhotosMessages.Count}"
+                                                <TextBlock Text="{Binding PhotosCount}"
                                                            FontSize="12"
                                                            HorizontalAlignment="Center"
                                                            Foreground="{DynamicResource TextMuted}"/>
@@ -572,7 +581,7 @@
                                                        VerticalAlignment="Center"
                                                        Margin="12,0,0,0"/>
                                             <Border Classes="CountBadge" Grid.Column="2">
-                                                <TextBlock Text="{Binding FilesMessages.Count}"
+                                                <TextBlock Text="{Binding FilesCount}"
                                                            FontSize="12"
                                                            HorizontalAlignment="Center"
                                                            Foreground="{DynamicResource TextMuted}"/>
@@ -603,6 +612,7 @@
 
                                 <Border Classes="Divider" Margin="16,12"/>
 
+                                <!-- Members Preview -->
                                 <StackPanel Margin="16,4,16,0" Spacing="4">
                                     <Button Classes="InfoRow"
                                             Command="{Binding OpenMembersSectionCommand}"
@@ -659,40 +669,29 @@
                                 </StackPanel>
                             </StackPanel>
 
+                            <!-- Group Chat - Expanded Media Sections -->
                             <StackPanel IsVisible="{Binding IsInfoSectionOpen}"
                                         Margin="16,4,16,0"
                                         Spacing="4">
 
                                 <StackPanel IsVisible="{Binding ShowPhotosSection}">
-                                    <ItemsControl ItemsSource="{Binding PhotosMessages}">
+                                    <ItemsControl ItemsSource="{Binding PhotosItems}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <WrapPanel Orientation="Horizontal"/>
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                            <DataTemplate x:DataType="vm:ChatInfoPanelMediaItem">
                                                 <Button Classes="MediaThumb"
                                                         Width="88" Height="88"
                                                         Margin="2"
                                                         Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding Message}">
                                                     <Panel>
-                                                        <Border Background="{DynamicResource SurfaceBrush}"
-                                                                CornerRadius="8"/>
-                                                        <StackPanel VerticalAlignment="Center"
-                                                                    HorizontalAlignment="Center"
-                                                                    Spacing="4">
-                                                            <PathIcon Data="{StaticResource ImageIcon}"
-                                                                      Width="20" Height="20"
-                                                                      Foreground="{DynamicResource TextMuted}"
-                                                                      HorizontalAlignment="Center"
-                                                                      Opacity="0.5"/>
-                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM}'}"
-                                                                       FontSize="10"
-                                                                       Foreground="{DynamicResource TextMuted}"
-                                                                       HorizontalAlignment="Center"/>
-                                                        </StackPanel>
+                                                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8"/>
+                                                        <Image Stretch="UniformToFill"
+                                                               asyncImageLoader:ImageLoader.Source="{Binding PreviewUrl}"/>
                                                     </Panel>
                                                 </Button>
                                             </DataTemplate>
@@ -700,7 +699,7 @@
                                     </ItemsControl>
 
                                     <StackPanel Classes="EmptyState"
-                                                IsVisible="{Binding !PhotosMessages.Count}">
+                                                IsVisible="{Binding !PhotosCount}">
                                         <PathIcon Data="{StaticResource ImageIcon}"
                                                   Width="32" Height="32"
                                                   Foreground="{DynamicResource TextMuted}"
@@ -714,36 +713,43 @@
                                 </StackPanel>
 
                                 <StackPanel IsVisible="{Binding ShowFilesSection}">
-                                    <ItemsControl ItemsSource="{Binding FilesMessages}">
+                                    <ItemsControl ItemsSource="{Binding FilesItems}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:MessageViewModel">
+                                            <DataTemplate x:DataType="vm:ChatInfoPanelFileItem">
                                                 <Button Classes="InfoRow"
                                                         Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding Message}">
                                                     <Grid ColumnDefinitions="Auto,*">
                                                         <Border Width="36" Height="36"
                                                                 CornerRadius="8"
                                                                 Background="{DynamicResource SurfaceBrush}"
                                                                 VerticalAlignment="Center">
-                                                            <PathIcon Data="{StaticResource DocumentIcon}"
-                                                                      Width="18" Height="18"
-                                                                      Foreground="{DynamicResource TextSecondary}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding FileExtension}"
+                                                                       FontSize="10"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource TextSecondary}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
                                                         </Border>
                                                         <StackPanel Grid.Column="1"
                                                                     VerticalAlignment="Center"
                                                                     Margin="10,0,0,0"
                                                                     Spacing="2">
-                                                            <TextBlock Text="{Binding SenderName}"
+                                                            <TextBlock Text="{Binding FileName}"
                                                                        FontSize="13"
-                                                                       FontWeight="Medium"/>
-                                                            <TextBlock Text="{Binding Files.Count, StringFormat='Файлов: {0}'}"
-                                                                       FontSize="12"
-                                                                       Foreground="{DynamicResource TextMuted}"/>
-                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
-                                                                       FontSize="11"
-                                                                       Foreground="{DynamicResource TextMuted}"/>
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       MaxWidth="180"/>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="{Binding FileSizeFormatted}"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                                <TextBlock Text="•"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextMuted}"/>
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Button>
@@ -752,7 +758,7 @@
                                     </ItemsControl>
 
                                     <StackPanel Classes="EmptyState"
-                                                IsVisible="{Binding !FilesMessages.Count}">
+                                                IsVisible="{Binding !FilesCount}">
                                         <PathIcon Data="{StaticResource DocumentIcon}"
                                                   Width="32" Height="32"
                                                   Foreground="{DynamicResource TextMuted}"

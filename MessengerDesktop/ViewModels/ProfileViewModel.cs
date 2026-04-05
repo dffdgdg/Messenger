@@ -14,8 +14,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     private readonly IApiClientService _api;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FullName), nameof(Username),
-        nameof(SurnameDisplay), nameof(NameDisplay), nameof(MidnameDisplay),
+    [NotifyPropertyChangedFor(nameof(FullName), nameof(Username), nameof(SurnameDisplay), nameof(NameDisplay), nameof(MidnameDisplay),
         nameof(HasDepartment), nameof(DepartmentDisplay), nameof(HasAvatar))]
     public partial UserDto? User { get; set; }
 
@@ -45,8 +44,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public partial string CurrentPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSavePassword), nameof(PasswordsMatch),
-        nameof(IsNewPasswordValid), nameof(NewPasswordValidationMessage))]
+    [NotifyPropertyChangedFor(nameof(CanSavePassword), nameof(PasswordsMatch), nameof(IsNewPasswordValid), nameof(NewPasswordValidationMessage))]
     public partial string NewPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -134,11 +132,9 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     partial void OnUserChanged(UserDto? value) => RefreshAvatarUrl();
 
     private void RefreshAvatarUrl(bool forceCacheBuster = false) =>
-        AvatarUrl = forceCacheBuster
-            ? AvatarHelper.GetUrlWithCacheBuster(User?.Avatar)
-            : GetAbsoluteUrl(User?.Avatar);
+        AvatarUrl = forceCacheBuster ? AvatarHelper.GetUrlWithCacheBuster(User?.Avatar) : GetAbsoluteUrl(User?.Avatar);
 
-    #region Profile editing (FIO)
+    #region Profile editing
 
     [RelayCommand]
     private void StartEditProfile()
@@ -162,7 +158,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var update = new UserDto
+            var r = await _api.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), new UserDto
             {
                 Id = User.Id,
                 Username = User.Username,
@@ -171,8 +167,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 Midname = TempMidname.Trim(),
                 Avatar = User.Avatar,
                 Department = User.Department
-            };
-            var r = await _api.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), update);
+            });
             if (r.Success)
             {
                 User.Surname = TempSurname.Trim();
@@ -248,15 +243,14 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var r = await _api.PutAsync<object>(ApiEndpoints.Users.Password(User.Id),
-                new ChangePasswordDto { CurrentPassword = CurrentPassword, NewPassword = NewPassword });
-            if (r.Success)
+            var result = await _api.PutAsync<object>(ApiEndpoints.Users.Password(User.Id), new ChangePasswordDto { CurrentPassword = CurrentPassword, NewPassword = NewPassword });
+            if (result.Success)
             {
                 IsEditingPassword = false;
                 CurrentPassword = NewPassword = ConfirmPassword = "";
                 SuccessMessage = "Пароль успешно изменён";
             }
-            else { ErrorMessage = r.Error; }
+            else { ErrorMessage = result.Error; }
         });
     }
 
@@ -267,22 +261,19 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [RelayCommand]
     private async Task UploadAvatar()
     {
-        var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-            ?.MainWindow?.StorageProvider;
+        var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime) ?.MainWindow?.StorageProvider;
         if (storage == null) return;
 
-        var files = await storage.OpenFilePickerAsync(
-            new FilePickerOpenOptions { FileTypeFilter = [FilePickerFileTypes.ImageAll] });
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions { FileTypeFilter = [FilePickerFileTypes.ImageAll] });
         if (files.Count == 0) return;
 
         await SafeExecuteAsync(async () =>
         {
             await using var stream = await files[0].OpenReadAsync();
-            var r = await _api.UploadFileAsync<UserDto>(
-                ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
-            if (!r.Success) return;
+            var result = await _api.UploadFileAsync<UserDto>(ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
+            if (!result.Success) return;
 
-            User.Avatar = r.Data!.Avatar;
+            User.Avatar = result.Data!.Avatar;
             RefreshAvatarUrl(forceCacheBuster: true);
             OnPropertyChanged(nameof(HasAvatar));
             await LoadAvatarAsync();
@@ -297,8 +288,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var r = await _api.DeleteAsync(ApiEndpoints.Users.Avatar(User.Id));
-            if (r.Success)
+            var result = await _api.DeleteAsync(ApiEndpoints.Users.Avatar(User.Id));
+            if (result.Success)
             {
                 User.Avatar = null;
                 AvatarBitmap?.Dispose();

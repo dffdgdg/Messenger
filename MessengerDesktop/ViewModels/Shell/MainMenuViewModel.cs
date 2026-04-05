@@ -246,8 +246,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         if (notification.MessageId is { } msgId)
         {
-            await SwitchToTabAndOpenMessageAsync(new GlobalSearchMessageDto
-            { Id = msgId, ChatId = notification.ChatId, ChatType = chat.Type });
+            await SwitchToTabAndOpenMessageAsync(new GlobalSearchMessageDto { Id = msgId, ChatId = notification.ChatId, ChatType = chat.Type });
             return;
         }
         await SwitchToTabAndOpenChatAsync(chat);
@@ -274,11 +273,10 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         try
         {
-            var dlg = new PollDialogViewModel(chatId)
+            await _mainWindowVm.ShowDialogAsync(new PollDialogViewModel(chatId)
             {
                 CreateAction = async dto => { await CreatePollAsync(dto); if (onCreated != null) await onCreated(); }
-            };
-            await _mainWindowVm.ShowDialogAsync(dlg);
+            });
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
@@ -288,12 +286,11 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         try
         {
             var members = (await _api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chat.Id))).Data;
-            var dlg = new ChatEditDialogViewModel(_api, UserId, chat, members)
+            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId, chat, members)
             {
                 SaveAction = async (dto, mIds, aIds, s, n, rem) => await UpdateGroupChatAsync(dto, mIds, aIds, s, n, rem, onUpdated),
                 ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
-            };
-            await _mainWindowVm.ShowDialogAsync(dlg);
+            });
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
@@ -302,13 +299,11 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         try
         {
-            var dlg = new ChatEditDialogViewModel(_api, UserId)
+            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId)
             {
-                SaveAction = async (dto, mIds, aIds, s, n, _)
-                    => await CreateGroupChatAsync(dto, mIds, aIds, s, n, onCreated),
+                SaveAction = async (dto, mIds, aIds, s, n, _) => await CreateGroupChatAsync(dto, mIds, aIds, s, n, onCreated),
                 ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
-            };
-            await _mainWindowVm.ShowDialogAsync(dlg);
+            });
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }

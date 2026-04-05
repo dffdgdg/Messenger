@@ -82,8 +82,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         SelectedAdminIds = new ObservableCollection<int>(adminIds);
         CurrentUserRole = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId)?.Role ?? ChatRole.Owner;
 
-        var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username)
-            .Select(u => new UserListItemViewModel(u, memberIds.Contains(u.Id))).ToList();
+        var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username).Select(u => new UserListItemViewModel(u, memberIds.Contains(u.Id))).ToList();
 
         ReplaceAvailableUsers(users);
     }

@@ -366,7 +366,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void RefreshInfoPanelLists()
     {
-        ReplaceCollection(MembersPreview, Context.Members.Take(5).ToList());
+        ReplaceCollection(MembersPreview, [.. Context.Members.Take(5)]);
 
         var photos = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).SelectMany(m => m.Files.Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url))
                 .Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(item => item.CreatedAt).ToList();
@@ -805,18 +805,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         if (Context.IsDisposed) return;
 
-        _hubSubscriber.Dispose();
-        Context.Hub.SetCurrentChat(null);
-
-        EditDelete.Dispose();
-        Reply.Dispose();
-        Forward.Dispose();
-        Typing.Dispose();
-        Voice.Dispose();
-        InfoPanel.Dispose();
-        Search.Dispose();
-        Notification.Dispose();
-        Attachments.Dispose();
+        DisposeCommonResources();
 
         try
         {
@@ -842,6 +831,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         if (Context.IsDisposed) return;
 
+        DisposeCommonResources();
+
+        await MessageManager.DisposeAsync();
+
+        Context.Dispose();
+
+        base.Dispose(true);
+    }
+
+    private void DisposeCommonResources()
+    {
         _hubSubscriber.Dispose();
         Context.Hub.SetCurrentChat(null);
 
@@ -854,12 +854,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search.Dispose();
         Notification.Dispose();
         Attachments.Dispose();
-
-        await MessageManager.DisposeAsync();
-
-        Context.Dispose();
-
-        base.Dispose(true);
     }
     #endregion
 }

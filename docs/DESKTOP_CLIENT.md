@@ -1,211 +1,172 @@
-## DESKTOP_CLIENT.md
-
-```markdown
 # Desktop Client Architecture
 
-## Обзор структуры
-Приложение построено по паттерну **MVVM** на базе **Avalonia UI**. Основной стек технологий: `CommunityToolkit.Mvvm` (для ObservableObject/RelayCommand) и `Microsoft.Extensions.DependencyInjection` для DI.
-
-## Жизненный цикл приложения
-
-### 1. Инициализация (`App.axaml.cs`)
-```csharp
+## 1. Инициализация (`App.axaml.cs`)
+```
 Initialize():
   1. Build ServiceProvider (DI)
-  2. Настроить AuthenticatedImageLoader
+  2. Настроить AuthenticatedImageLoader (добавляет Authorization header)
   3. Запустить InitDB (фоновая задача)
-  4. Применить тему настроек
+  4. Применить тему из настроек
   5. Show MainWindow
 ```
 
-### 2. Шелл (`MainWindow.axaml`)
-Это контейнер для всего UI. Содержит:
-- Меню (слева): Навигационный бар (Чаты, Контакты, Админ...).
-- Основная область: Текущая View (динамически меняется).
-- Верхняя панель: Поиск, Профиль, Переключение темы.
+## 2. Shell (`MainWindow` / `MainWindowViewModel`)
+Содержит:
+- Левый бар: навигация (Чаты, Контакты, Профиль, Админ, Настройки)
+- Основная область: текущая View (динамически)
+- Верхняя панель: поиск, профиль, тема
 
-### 3. Виджет навигации (`MainMenuViewModel`)
-Единая точка управления контентом. Содержит 4 состояния (вкладки):
-- **Index 1/2**: Групповые чаты (`ChatsViewModel`).
-- **Index 3**: Личные диалоги (`ChatsViewModel` с фильтром контактов).
-- **Index 4**: Профиль пользователя.
-- **Index 5**: Управление сотрудниками (Admin view).
-- **Index 0**: Настройки.
+### MainMenuViewModel — вкладки
+| Index | Содержимое |
+|-------|-----------|
+| 0 | Настройки |
+| 1/2 | Групповые чаты (`ChatsViewModel`, `IsGroupMode=true`) |
+| 3 | Личные диалоги (`ChatsViewModel`, `IsGroupMode=false`) |
+| 4 | Профиль пользователя |
+| 5 | Управление сотрудниками (Admin) |
 
-**Управление историей**: Внутри `MainMenuViewModel` есть стеки `BackHistory` и `ForwardHistory` для кнопки "Назад" между вкладками.
+`BackHistory` / `ForwardHistory` — стеки для навигации "Назад/Вперёд" между вкладками.
 
-### 4. Список чатов (`ChatsViewModel`)
-- **Типы режима**: `IsGroupMode=true` (Группы) / `false` (Личные).
-- **Нагрузка**:
-  - Сначала показывает данные из SQLite (`ShowCachedChatsAsync`).
-  - Затем параллельно грузит свежие данные с API.
-  - Если сеть упала — оставляет кэш с ошибкой.
-- **Unread Counts**: Подписан на события `GlobalHubConnection.TotalUnreadChanged` и обновляет бейджи в UI.
-- **Сортировка**: По дате последнего сообщения.
+## 3. Список чатов (`ChatsViewModel`)
+- `IsGroupMode=true` — группы, `false` — личные диалоги
+- **Загрузка**: сначала SQLite (`ShowCachedChatsAsync`), затем фоновый запрос к API
+- При недоступной сети — оставляет кэш, показывает ошибку
+- Подписан на `GlobalHubConnection.TotalUnreadChanged` → обновляет бейджи
+- Сортировка: по дате последнего сообщения
 
 ---
 
-## Открытие чата (`ChatViewModel`)
+## 4. ChatViewModel — открытие чата
 
-### Жизненный цикл открытия
-1. Пользователь кликает на элемент из списка (`ChatsViewModel.SelectedChatChanged`).
-2. `ChatViewModelFactory.Create(chatId)` создает новый экземпляр.
-3. `ChatViewModel` запускает `InitializeAsync()`.
-4. Загружает инфу о чате (Metadata).
-5. Загружает список участников (`MemberLoader`).
-6. Загружает историю сообщений (`MessageManager.LoadInitialMessagesAsync`).
-7. Подписывается на реальное время через `ChatHubSubscriber.Subscribe()`.
+### Жизненный цикл
+1. Клик → `ChatsViewModel.SelectedChatChanged`
+2. `ChatViewModelFactory.Create(chatId)` → новый экземпляр
+3. `InitializeAsync()`:
+   - Загрузить metadata чата
+   - Загрузить участников (`ChatMemberLoader`)
+   - Загрузить историю (`ChatMessageManager.LoadInitialMessagesAsync`)
+   - Подписаться на SignalR (`ChatHubSubscriber.Subscribe()`)
 
-### Архитектура внутри чата (Composite Pattern)
-`ChatViewModel` не содержит всей логики. Он делегирует ответственность **Handlers** и **Managers**:
+### Composite Pattern — компоненты
 
 | Компонент | Ответственность |
 |-----------|----------------|
 | `ChatMessageManager` | CRUD сообщений, пагинация, буферизация истории |
 | `ChatAttachmentManager` | Выбор файлов, предпросмотр, загрузка на сервер |
-| `ChatVoiceHandler` | Запись микрофона, декодирование, траскрипция |
-| `ChatInfoPanelHandler` | Управление правами участников, уведомления |
-| `ChatSearchHandler` | Локальный поиск по истории |
-| `ChatEditDeleteHandler` | Редактирование текста, удаление |
+| `ChatVoiceHandler` | Запись микрофона, отправка голосовых |
+| `ChatInfoPanelHandler` | Управление участниками, права, инфопанель |
+| `ChatSearchHandler` | Поиск по истории, навигация к сообщению |
+| `ChatEditDeleteHandler` | Редактирование, удаление, копирование |
 | `ChatReplyHandler` | Цитирование (Reply) |
 | `ChatTypingHandler` | Отправка события "печатает..." |
-| `ChatNotificationHandler` | Мут/Размут уведомлений для чата |
+| `ChatNotificationHandler` | Mute/unmute уведомлений чата |
 
-**Mention-composer (`@username`) в `ChatViewModel`:**
-- во время ввода определяется mention-токен возле каретки (`@...`);
-- формируется список подсказок из `Members` (кроме текущего пользователя);
-- поддерживается выбор мышью и клавиатурой (`Up/Down/Enter/Esc`);
-- при выборе вставляется `@username` в позицию текущего mention-токена.
+### ChatContext (разделяемое состояние)
+Передаётся во все компоненты:
+- `ChatDto`, список `Members`
+- `IApiClient`, `IGlobalHubConnection`
+- `LifetimeToken` (отмена при закрытии чата)
+- События координации: `ScrollToMessageRequested`, `CompositionModeReset`
 
-**Общий контекст**: `ChatContext` хранит состояние, разделяемое всеми компонентами:
-- `ChatDto` объект.
-- Список `Members`.
-- `IApiClient`, `IGlobalHubConnection`.
-- Event-ы на скролл (чтобы View знала когда подниматься).
+### Mention-composer (`@username`)
+- При вводе определяется mention-токен у каретки (`@...`)
+- Список подсказок из `Members` (кроме текущего пользователя)
+- Навигация: `Up`/`Down`/`Enter`/`Esc` + мышь
+- При выборе — вставка `@username` на позицию токена
 
 ---
 
-## Система диалогов (`DialogService`)
+## 5. DialogService
 
-### Принцип работы
-Все модальные окна работают через стек (`DialogStack`).
-- **Показать**: Добавляется в конец стека. Становится текущим.
-- **Закрыть**: Удаляется верхний элемент. Активируется следующий (если есть) или скрывается окно.
+Все модальные окна через стек (`DialogStack`):
+- **Показать**: добавляется в конец, становится текущим
+- **Закрыть**: удаляется верхний, активируется следующий
 
-### Анимация
-Используется блокировка через `SemaphoreSlim` и `Channel<CloseRequest>`. Это позволяет гарантировать порядок закрытия окон, даже если пользователь многократно нажимал "Закрыть".
+**Порядок показа** (через `SemaphoreSlim` + `Channel<CloseRequest>`):
+1. `ShowAsync(dialog)` → лок semaphore
+2. Отписать старый диалог
+3. Добавить новый
+4. Fade-in анимация
+5. `NotifyAnimationComplete()` из ViewModel
 
-**Пример потока:**
-1. `ShowAsync(PollDialog)`
-2. Лок semaphore
-3. Отписать старый диалог от событий
-4. Добавить новый
-5. Включить анимацию (fade-in)
-6. Вызвать `NotifyAnimationComplete()` из ViewModel при готовности
+**Переиспользуемые диалоги:**
+- `UserPickerDialog` — single/multi-select пользователя
+- `UserListDialog` — список с режимами просмотра и редактирования
+- `UserListItemViewModel` — общий item для всех пользовательских списков (переиспользовать, не создавать новые)
 
-**Правила безопасности**: Нельзя показать модальное окно поверх другого модального без явного разрешения (stack behavior).
-
-### Повторно используемые пользовательские диалоги
-- `UserPickerDialogViewModel` / `UserPickerDialog` — быстрый single-select или multi-select сценарий выбора пользователя.
-- `UserListDialogViewModel` / `UserListDialog` — универсальный диалог списка пользователей с режимами просмотра и редактирования.
-- `UserListItemViewModel` — общий item-viewmodel для отображения пользователя в списках/пикерах; новые пользовательские диалоги должны переиспользовать его, а не вводить отдельные chat-specific item-типы.
 ---
 
-## Локальное кеширование (SQLite)
+## 6. Локальный кэш (SQLite)
 
-### Схема
-В `LocalDatabase.cs` определена схема версии 3. Основные таблицы:
-- `messages` — история переписки.
-- `chats` — список чатов.
-- `users` — контакты.
-- `chat_sync_state` — мета-данные синхронизации (какой последний message_id загружен).
-- `messages_fts` — виртуальная таблица **FTS5** для текстового поиска.
+### Таблицы (схема v3)
+| Таблица | Назначение |
+|---------|-----------|
+| `messages` | История переписки |
+| `chats` | Список чатов |
+| `users` | Контакты |
+| `chat_sync_state` | Метаданные синхронизации (последний загруженный `message_id`) |
+| `messages_fts` | FTS5 — полнотекстовый поиск |
 
-### PRAGMAs оптимизации
-Для скорости записи включены настройки:
+### PRAGMA настройки
 ```sql
-PRAGMA journal_mode=WAL;          -- Write-Ahead Logging
-PRAGMA synchronous=NORMAL;        -- Компромисс надежности и скорости
-PRAGMA cache_size=-4000;          -- ~4MB RAM
-PRAGMA mmap_size=33554432;        -- 32MB Memory-mapped I/O
+PRAGMA journal_mode=WAL;       -- Write-Ahead Logging
+PRAGMA synchronous=NORMAL;     -- баланс надёжности и скорости
+PRAGMA cache_size=-4000;       -- ~4MB RAM
+PRAGMA mmap_size=33554432;     -- 32MB Memory-mapped I/O
 ```
 
 ### Стратегия загрузки
-1. **Чтения**: Если `ChatSyncState` говорит, что есть сообщения > `lastReadAt`, показываем сразу.
-2. **Фоновое обновление**: При открытии чата `MessageManager` проверяет наличие новых сообщений на сервере и догружает "на лету".
-3. **Очистка**: Нет авто-очистки старых сообщений. Есть ручной VACUUM через консольные команды (Future TODO).
+1. `ChatSyncState` есть → показать сразу из SQLite
+2. Фоновая ревалидация с сервером при открытии чата
+3. Авто-очистки нет (TODO: LRU policy)
 
 ---
 
-## Real-Time интеграция (`GlobalHubConnection`)
+## 7. In-app уведомления
 
-### Подключение
-Создается один раз на уровне `App` (как Singleton в DI).
-- Поддерживает `WithAutomaticReconnect()`.
-- При потере соединения пытается обновить токен (если 401 Unauthorized).
-- При успешном reconnect — запрашивает актуальные счетчики непрочитанных (`GetUnreadCountsAsync`).
+Используется **собственный overlay** внутри `MainWindow` (не нативные toast), это обеспечивает одинаковое поведение на Windows и Linux.
 
-### In-app desktop notifications
-Для desktop-уведомлений используется **собственный overlay-host внутри MainWindow**, а не нативные системные toast API. Это дает одинаковое поведение на **Windows** и **Linux** и позволяет обрабатывать клик прямо внутри клиентского shell.
+**Схема:**
+- `INotificationService` → observable-коллекция активных уведомлений
+- `MainWindow` хостит `NotificationOverlay` (`ItemsControl`, правый верхний угол)
+- Каждое уведомление: `ActivateCommand` + `CloseCommand`
+- Клик → `GlobalHubConnection` → `MainMenuViewModel.OpenNotificationAsync()` → нужная вкладка + прокрутка к `MessageId`
 
-Схема:
-- `INotificationService` хранит активные уведомления в observable-коллекции.
-- `MainWindow` хостит `NotificationOverlay`, а сам overlay рендерит уведомления через `ItemsControl` в правом верхнем углу поверх основного контента.
-- Каждое уведомление имеет `ActivateCommand` и `CloseCommand`.
-- `onClick` callback используется `GlobalHubConnection` для перехода в `MainMenuViewModel.OpenNotificationAsync()`, где определяется нужная вкладка, при необходимости догружается чат и выполняется переход к сообщению по `MessageId`.
-
-Ограничения/правила:
-- одновременно показывается не больше 3 уведомлений;
-- уведомления автоматически скрываются по таймеру;
-- если чат уже открыт, popup не показывается, сохраняется только обычная realtime-логика unread-счетчиков;
-- клик по popup не создаёт отдельную навигационную подсистему: используется уже активный `MainMenuViewModel`, который является основным shell после входа пользователя.
-
-### Обработка входящих событий
-В `GlobalHubConnection` подписан на все события через `_hubSubscriptions.Add(...)`.
-Каждое событие проходит через обработчик, который может:
-1. Обновить кэш SQLite (`CacheIncomingMessageAsync`).
-2. Триггерить UI событие (через `Dispatcher.UIThread.Post`).
-3. Обновить локальные переменные (unreads).
-
-### Перехватчик чата (`ChatHubSubscriber`)
-Фильтрует глобальные события по конкретному открытому чату:
-- Только события `messageReceivedGlobally` с `msg.ChatId == ctx.ChatId` попадают в UI этого чата.
-- Остальные события (например, уведомление о новом сообщении в другом чате) поднимают общий счётчик, но не показываются визуально внутри окна чата.
+**Правила:**
+- Максимум 3 одновременно
+- Автоскрытие по таймеру
+- Если чат уже открыт — popup не показывается, только unread-счётчик
 
 ---
 
-## Утилиты и помощники
+## 8. Утилиты
 
 ### AvatarHelper
-Стандартизирует пути к аватаркам:
-- Проверяет, начинается ли путь с `http`.
-- Если нет — добавляет базовый URL API.
-- Добавляет timestamp для сброса кеша браузера клиента (`cachebuster`).
+- Если путь не начинается с `http` → добавить базовый URL API
+- Добавляет `?t={timestamp}` для сброса кэша (cachebuster)
 
-### AsyncImageLoader
-Асинхронная загрузка картинок (библиотека `AsyncImageLoader.Avalonia`):
-- Предотвращает зависимость UI при загрузке больших картинок.
-- Автоматически кеширует изображения в память (LruCache).
-- Использует настроенный `AuthenticatedImageLoader` (добавляет Authorization header при запросе аватарок).
+### AsyncImageLoader (`AsyncImageLoader.Avalonia`)
+- Асинхронная загрузка без блокировки UI
+- LruCache в памяти
+- `AuthenticatedImageLoader` добавляет `Authorization` header
 
 ---
 
-## Режим разработки (Debug)
-В режиме разработки (`#if DEBUG`):
-- Base API URL: `https://localhost:7190/`
-- Enable Debug UI (Avalonia.Diagnostics)
-- Sensitive Data Logging в Entity Framework
+## 9. Debug / Release конфигурация
 
-В Release:
-- Base API URL: `https://localhost:5274/` (production proxy placeholder)
-- Disable Debug UI
-- Strict SSL validation включена (кроме localhost)
+| | Debug | Release |
+|-|-------|---------|
+| API URL | `https://localhost:7190/` | `https://localhost:5274/` |
+| Avalonia Diagnostics | ✅ | ❌ |
+| SSL validation | Relaxed | Strict |
 
 ---
 
-## Потенциальные проблемы (Known Issues in Implementation)
-- **Leakage Context**: `ChatContext` хранит ссылки на API и Hub. При быстром закрытии чата (`DisposeAsync`) нужно гарантировать, что старые задачи завершения (`InitializationTask`) не начнут писать в disposed контекст. Сейчас реализовано через `CancellationTokenSource _lifetimeCts`.
-- **Race Condition Edit**: При одновременном редактировании одного чата с двух устройств. Здесь нет оптимистических обновлений (оптимистичных UI), обновления происходят строго по серверным ответам или событиям.
-- **Memory Leak**: `GlobalHubConnection` подписан на события в статике или синглтонах. Важно отписаться через `Dispose()`. Реализовано явно.
-- **Thread Safety**: `ChatHubSubscriber` использует `Dispatcher.UIThread.Post` для всех изменений UI. Логики вне UI безопасны благодаря использованию `lock (_lock)` в `GlobalHubConnection`.
-```
+## 10. Known Issues
+
+| Проблема | Детали | Решение |
+|---------|--------|---------|
+| **Context Leak** | `ChatContext` держит ссылки на API/Hub; при быстром закрытии старые задачи могут писать в disposed контекст | `CancellationTokenSource _lifetimeCts` |
+| **Race Condition** | Одновременное редактирование с двух устройств — нет optimistic locking | Last-write-wins по серверным событиям |
+| **Memory Leak** | `GlobalHubConnection` подписан на события синглтонов | Явный `Dispose()` с отпиской |
+| **Thread Safety** | UI-изменения только через `Dispatcher.UIThread.Post` | `lock (_lock)` для non-UI логики |

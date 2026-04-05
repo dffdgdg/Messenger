@@ -1,196 +1,115 @@
-# Real-time Communication (SignalR)
+# Оценка работы Codex над REALTIME.md# Real-time / SignalR
 
-## Общая информация
-- **Технология**: SignalR (ASP.NET Core)
-- **Hub**: `ChatHub` — единственный хаб
-- **URL подключения**: `{ApiUrl}/chatHub`
-- **Аутентификация**: JWT через `AccessTokenProvider` (query string автоматически)
-- **Реконнект**: `WithAutomaticReconnect()` (встроенная стратегия SignalR)
-
-## Архитектура
-
-### Серверная сторона
-- **`ChatHub`** — SignalR Hub, обрабатывает входящие вызовы от клиентов
-- **`HubNotifier`** — сервис для отправки событий из бизнес-логики (Scoped, инжектится в сервисы)
-
-### Клиентская сторона
-- **`GlobalHubConnection`** — Singleton, управляет единым SignalR-подключением
-- **`ChatHubSubscriber`** — подписка на события для конкретного открытого чата (создаётся/уничтожается при открытии/закрытии чата)
+## Инфраструктура
+- Hub: `ChatHub` (`[Authorize]`), endpoint `/chatHub`
+- Auth: JWT через `AccessTokenProvider` (query string)
+- Реконнект: `WithAutomaticReconnect()`
+- Серверная отправка из сервисов: `HubNotifier` (fire-and-forget, ошибки логируются)
+- Клиент: singleton `GlobalHubConnection`
+- Группы: `chat_{chatId}` (все участники), `user_{userId}` (персональная)
 
 ---
 
-## SignalR группы
-
-Используются два типа групп:
-
-| Группа | Формат | Описание |
-|--------|--------|----------|
-| Чат | `chat_{chatId}` | Все участники чата |
-| Пользователь | `user_{userId}` | Персональная группа пользователя |
-
-### HubNotifier — отправка из сервисов
-
-```csharp
-// Отправка всем участникам чата
-await hubNotifier.SendToChatAsync(chatId, "ReceiveMessageDto", messageDto);
-
-// Отправка конкретному пользователю
-await hubNotifier.SendToUserAsync(userId, "UserProfileUpdated", userDto);
-```
-
-Ошибки отправки **логируются, но не пробрасываются** — fire-and-forget подход.
-
----
-
-## Серверные методы (Client → Server)
-
-Методы, которые клиент вызывает на Hub через `InvokeAsync`:
+## Client → Server (Hub методы)
 
 | Метод | Параметры | Описание |
 |-------|-----------|----------|
-| `MarkAsRead` | `int chatId, int? messageId` | Отметить чат/сообщение прочитанным |
-| `MarkMessageAsRead` | `int chatId, int messageId` | Отметить конкретное сообщение прочитанным |
-| `SendTyping` | `int chatId` | Отправить индикатор "печатает..." |
-| `GetUnreadCounts` | — | Получить все счётчики непрочитанных (returns `AllUnreadCountsDto`) |
-| `GetReadInfo` | `int chatId` | Получить информацию о прочтении чата (returns `ChatReadInfoDto?`) |
+| `JoinChat` | `int chatId` | Присоединиться к chat-группе |
+| `LeaveChat` | `int chatId` | Покинуть chat-группу |
+| `MarkAsRead` | `int chatId, int? messageId` | Отметить чат прочитанным |
+| `MarkMessageAsRead` | `int chatId, int messageId` | Отметить конкретное сообщение |
+| `SendTyping` | `int chatId` | Индикатор "печатает..." |
+| `GetUnreadCounts` | — | → `AllUnreadCountsDto` |
+| `GetReadInfo` | `int chatId` | → `ChatReadInfoDto?` |
+| `GetOnlineUsersInChat` | `int chatId` | → список userId |
 
-### Дебаунсинг на клиенте
-
-| Операция | Дебаунс | Константа |
-|----------|---------|-----------|
-| MarkMessageAsRead | Не чаще чем раз в N мс | `AppConstants.MarkAsReadDebounceMs` |
-| SendTyping | Не чаще чем раз в N мс | `AppConstants.TypingSendDebounceMs` |
-| MarkMessageAsRead | Пропуск если `messageId <= _lastSentReadMessageId` | — |
+**Дебаунс на клиенте:**
+- `MarkMessageAsRead`: не чаще `AppConstants.MarkAsReadDebounceMs`, пропуск если `messageId <= _lastSentReadMessageId`
+- `SendTyping`: не чаще `AppConstants.TypingSendDebounceMs`
 
 ---
 
-## Клиентские методы (Server → Client)
-
-Методы, которые сервер вызывает на клиенте:
+## Server → Client (события)
 
 ### Сообщения
+| Событие | Payload | Описание |
+|---------|---------|----------|
+| `ReceiveMessageDto` | `MessageDto` | Новое сообщение |
+| `MessageUpdated` | `MessageDto` | Отредактировано |
+| `MessageDeleted` | `{ MessageId, ChatId }` | Удалено (soft) |
 
-| Метод | Данные | Описание |
-|-------|--------|----------|
-| `ReceiveMessageDto` | `MessageDto` | Новое сообщение в чате |
-| `MessageUpdated` | `MessageDto` | Сообщение отредактировано |
-| `MessageDeleted` | `MessageDeletedEvent { MessageId, ChatId }` | Сообщение удалено |
+### Уведомления
+| Событие | Payload | Описание |
+|---------|---------|----------|
+| `ReceiveNotification` | `NotificationDto` | Push (message/mention/poll) |
+| `UnreadCountUpdated` | `int chatId, int count` | Счётчик непрочитанных |
 
-### Уведомления и счётчики
+### Пользователи
+| Событие | Payload |
+|---------|---------|
+| `UserOnline` | `int userId` |
+| `UserOffline` | `int userId` |
+| `UserProfileUpdated` | `UserDto` |
 
-| Метод | Данные | Описание |
-|-------|--------|----------|
-| `ReceiveNotification` | `NotificationDto` | Push-уведомление о новом сообщении/опросе/упоминании |
-| `UnreadCountUpdated` | `int chatId, int unreadCount` | Обновлённый счётчик непрочитанных |
-
-### Статусы пользователей
-
-| Метод | Данные | Описание |
-|-------|--------|----------|
-| `UserOnline` | `int userId` | Пользователь вошёл в сеть |
-| `UserOffline` | `int userId` | Пользователь вышел из сети |
-| `UserProfileUpdated` | `UserDto` | Профиль пользователя обновлён |
-
-### Чат и участники
-
-| Метод | Данные | Описание |
-|-------|--------|----------|
-| `UserTyping` | `int chatId, int userId` | Пользователь печатает |
-| `MessageRead` | `int chatId, int userId, int? lastReadMessageId, DateTime? readAt` | Сообщение прочитано |
-| `MemberJoined` | `int chatId, UserDto user` | Участник присоединился к чату |
-| `MemberLeft` | `int chatId, int userId` | Участник покинул чат |
-
-### Голосовые сообщения
-
-| Метод | Данные | Описание |
-|-------|--------|----------|
-| `TranscriptionStatusChanged` | `VoiceTranscriptionDto` | Статус транскрипции изменился |
-| `TranscriptionCompleted` | `VoiceTranscriptionDto` | Транскрипция завершена |
-
+### Чат
+| Событие | Payload |
+|---------|---------|
+| `UserTyping` | `int chatId, int userId` |
+| `MessageRead` | `int chatId, int userId, int? lastReadMessageId, DateTime? readAt` |
+| `MemberJoined` | `int chatId, UserDto user` |
+| `MemberLeft` | `int chatId, int userId` |
 ---
 
-## Клиентская обработка событий
+## Клиентская обработка
 
-### GlobalHubConnection (глобальные)
+### GlobalHubConnection — новое сообщение
+1. `CacheIncomingMessageAsync` → SQLite
+2. Поднять `MessageReceivedGlobally`
+3. Чат не открыт + не свой → инкремент unread
+4. Чат не открыт → desktop-уведомление
 
-Все входящие события диспатчатся в UI-поток через `Dispatcher.UIThread.Post()`.
-
-**Логика обработки новых сообщений:**
-1. Кешировать в SQLite (`CacheIncomingMessageAsync`)
-2. Поднять событие `MessageReceivedGlobally`
-3. Если чат **не открыт** и отправитель **не текущий пользователь** → инкрементировать unread count
-4. Если чат **не открыт** → показать desktop-уведомление
-
-**Логика уведомлений:**
+### GlobalHubConnection — уведомление
 1. Проверить `SettingsService.NotificationsEnabled`
-2. Если текущий открытый чат = чат уведомления → не показывать popup, но инкрементировать счётчик
-3. Формат: `"{SenderName}: {Preview}"` для `message`/`mention` или `"Новый опрос"` для `poll`
-4. `ShowWindow(..., onClick: ...)` передает callback, который использует текущий `MainMenuViewModel` и вызывает `OpenNotificationAsync(notification)`
-5. `MainMenuViewModel.OpenNotificationAsync` при необходимости догружает `ChatDto`, выбирает нужную вкладку (группы/контакты) и, если в `NotificationDto` есть `MessageId`, открывает чат с прокруткой к конкретному сообщению
+2. Текущий чат = чат уведомления → не показывать popup, но считать
+3. Формат: `"{SenderName}: {Preview}"` (message/mention) или `"Новый опрос"` (poll)
+4. `mention` — тот же маршрут, превью с сервера
+5. Клик → `MainMenuViewModel.OpenNotificationAsync` → загрузка `ChatDto` + открытие с прокруткой к `MessageId`
 
-**Примечание по mention:**
-- Для `NotificationDto.Type = "mention"` клиент использует тот же маршрут открытия чата, но отображает текст превью из сервера (например, `"Вас упомянули: ..."`).
+### GlobalHubConnection — непрочитанные
+- `Dictionary<int,int> _unreadCounts` + `_totalUnread`, thread-safe через `lock`
+- При реконнекте: `LoadUnreadCountsAsync()` с сервера
 
-**Логика непрочитанных:**
-- `Dictionary<int, int> _unreadCounts` — локальный кеш счётчиков
-- `_totalUnread` — суммарный счётчик
-- Thread-safe через `lock (_lock)`
-- При реконнекте загружаются заново с сервера (`LoadUnreadCountsAsync`)
-
-### ChatHubSubscriber (для открытого чата)
-
-Фильтрует события по `chatId` текущего чата:
-
+### ChatHubSubscriber (текущий чат)
 | Событие | Обработка |
 |---------|-----------|
-| `MessageReceivedGlobally` | → `messageManager.AddReceivedMessage(msg)` + запуск polling транскрипции |
-| `MessageUpdatedGlobally` | → `messageManager.HandleMessageUpdated(msg)` |
-| `MessageDeletedGlobally` | → `messageManager.HandleMessageDeleted(messageId)` |
-| `MessageRead` | → обновить `IsRead` у своих сообщений с `Id <= lastReadId` |
-| `UnreadCountChanged` | → callback `onUnreadCountChanged(count)` |
-| `TranscriptionStatusChanged` | → `message.UpdateTranscription(status, text)` + polling |
-| `TranscriptionCompleted` | → `message.UpdateTranscription(status, text)` |
-| `Reconnected` | → callback `onReconnected()` |
+| `MessageReceivedGlobally` | `messageManager.AddReceivedMessage`  |
+| `MessageUpdatedGlobally` | `messageManager.HandleMessageUpdated` |
+| `MessageDeletedGlobally` | `messageManager.HandleMessageDeleted` |
+| `MessageRead` | обновить `IsRead` у сообщений с `Id <= lastReadId` |
+| `UnreadCountChanged` | `onUnreadCountChanged(count)` |
+| `Reconnected` | `onReconnected()` |
 
-**Подписки не дублируют:** typing и infoPanel подписываются отдельно в своих handler-ах.
+> typing и infoPanel подписываются в своих handler-ах отдельно
 
 ---
 
-## Управление подключением
-
-### Жизненный цикл
+## Жизненный цикл (клиент)
 ```
-Login → ConnectAsync() → SubscribeHubEvents() → LoadUnreadCountsAsync()
-                                    ↓
-                    [работа, автореконнект]
-                                    ↓
-Logout → DisconnectAsync() → Dispose() → UnsubscribeHubEvents()
+Login → ConnectAsync → SubscribeHubEvents → LoadUnreadCountsAsync
+         ↓                [автореконнект]
+Logout → DisconnectAsync → Dispose → UnsubscribeHubEvents
 ```
 
-### Реконнект
-1. `WithAutomaticReconnect()` — стандартная стратегия SignalR
-2. `Reconnecting` → если 401 → попытка refresh token
-3. `Reconnected` → перезагрузка unread counts + reconciliation кеша
-4. Поднятие события `Reconnected` → ChatHubSubscriber перезагружает сообщения
+**Реконнект:**
+1. `Reconnecting` + 401 → refresh token
+2. `Reconnected` → reload unread + reconciliation кеша
+3. Событие `Reconnected` → ChatHubSubscriber перезагружает сообщения
 
-### Текущий чат
-`SetCurrentChat(int? chatId)` — устанавливает текущий открытый чат:
-- Влияет на подавление уведомлений
-- Сбрасывает дебаунс-счётчики (read, typing)
+**`SetCurrentChat(int? chatId)`** — текущий открытый чат:
+- Подавляет уведомления для этого чата
+- Сбрасывает дебаунс read/typing
 
-### Кеширование при real-time
-При получении сообщений через SignalR:
-- Новые сообщения → `cacheService.UpsertMessageAsync()`
-- Обновлённые → `cacheService.UpsertMessageAsync()`
-- Удалённые → `cacheService.MarkMessageDeletedAsync()`
-- Обновление preview чата → `cacheService.UpdateChatLastMessageAsync()`
-
----
-
-## IDisposable / IAsyncDisposable
-
-`GlobalHubConnection` реализует оба интерфейса:
-- Отписка от всех hub-событий через сохранённые `IDisposable` подписки
-- Отписка от lifecycle-событий (`Reconnecting`, `Reconnected`)
-- Остановка и dispose HubConnection
-- Best-effort — ошибки при dispose игнорируются
+**Кеш при real-time:**
+- Новые/обновлённые → `UpsertMessageAsync`
+- Удалённые → `MarkMessageDeletedAsync`
+- Preview чата → `UpdateChatLastMessageAsync`

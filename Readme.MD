@@ -2,8 +2,8 @@
 
 <div align="center">
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Avalonia](https://img.shields.io/badge/Avalonia-11.3-8B44AC?logo=avalonia)](https://avaloniaui.net/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Avalonia](https://img.shields.io/badge/Avalonia-11.3.12-8B44AC?logo=avalonia)](https://avaloniaui.net/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![SignalR](https://img.shields.io/badge/SignalR--Real--time-blue?logo=dotnet)](https://learn.microsoft.com/aspnet/core/signalr/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
@@ -20,45 +20,45 @@
 ## О проекте
 
 Система построена по архитектуре **клиент-сервер**:
-*   **Backend (MessengerAPI):** ASP.NET Core 8 REST API + SignalR Hub. База данных — PostgreSQL 16. Серверная часть контейнеризирована (Docker).
-*   **Frontend (MessengerDesktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальной базой SQLite и FTS5.
-*   **Shared (MessengerShared):** Общие DTO и контракты данных.
+- **Backend (MessengerAPI):** ASP.NET Core 10 REST API + SignalR Hub. База данных — PostgreSQL 16. Серверная часть контейнеризирована (Docker).
+- **Frontend (MessengerDesktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальной базой SQLite и FTS5.
+- **Shared (MessengerShared):** Общие DTO и контракты данных.
 
 ### Ключевые особенности
-*   **Безопасность:** JWT ротация токенов (FamilyId), BCrypt паролей, Rate Limiting, безопасность уровней доступа.
-*   **Real-time:** Мгновенные уведомления, статусы набора текста, чтения, онлайн/офлайн через SignalR.
-*   **Кэширование:** Быстрый оффлайн доступ к истории чатов через SQLite + FTS5 поиск.
-*   **Файлы:** Отправка файлов до 100 МБ, автоконвертация аватаров (WebP).
-*   **Голосовые:** Запись микрофона.
+- **Безопасность:** JWT ротация токенов (FamilyId), BCrypt паролей, Rate Limiting, разграничение уровней доступа.
+- **Real-time:** Мгновенные уведомления, статусы набора текста, прочтения, онлайн/офлайн через SignalR.
+- **Кэширование:** Быстрый офлайн-доступ к истории чатов через SQLite + FTS5 поиск.
+- **Файлы:** Отправка файлов до 100 МБ, автоконвертация аватаров в WebP.
+- **Голосовые:** Запись и воспроизведение голосовых сообщений.
 
 ---
 
 ## Возможности
 
 ### Коммуникация
-- Личные диалоги и групповые чаты (до N участников)
-- Поддержка опросов (Polls) с анонимным и множественным голосованием
+- Личные диалоги и групповые чаты
+- Опросы с анонимным и множественным голосованием
 - Ответы на сообщения (Quote) и пересылка (Forward)
 - Редактирование и удаление сообщений (soft-delete)
-- Голосовые сообщения с транскрибацией в текст (AI)
-- Индикаторы прочтения (Read Receipts) и статуса "печатает..."
-- Настройка уведомлений (мут чата, звук)
+- Голосовые сообщения
+- Индикаторы прочтения (Read Receipts) и статус "печатает..."
+- Настройка уведомлений (мут чата)
 
 ### Организация
-- Иерархические отделы (структура дерева без циклов)
+- Иерархические отделы (дерево без циклов)
 - Ролевая модель: Пользователь / Руководитель отдела / Администратор
 - Управление составом отделов и назначением руководителей
 - Глобальный поиск по всем чатам и сообщениям с подсветкой совпадений
 
 ### Клиент
-- Работает на Windows, macOS и Linux
-- Темы оформления (светлая/тёмная/системная)
-- Безопасное хранение учётных данных через OS-native хранилища
-- Асинхронная загрузка изображений (Avatars, Attachments)
+- Работает на Windows и Linux
+- Темы оформления (светлая / тёмная / системная)
+- Безопасное хранение учётных данных (Secure Storage)
+- Асинхронная загрузка изображений (аватары, вложения)
 
 ### Администрирование
-- Панель управления пользователями (бан/разбан, смены пароля)
-- Создание и управление структурой организаций
+- Панель управления пользователями (бан/разбан, смена пароля)
+- Создание и управление структурой организации
 - Контейнеризация сервера (Healthchecks, Restart Policies)
 
 ---
@@ -67,14 +67,14 @@
 
 | Компонент | Технологии | Версия |
 |-----------|------------|--------|
-| **Runtime** | .NET | 8.0 |
-| **Сервер** | ASP.NET Core Web API + SignalR | 8.0 |
-| **Клиент** | Avalonia UI (MVVM) + CommunityToolkit.Mvvm | 11.3.10 |
-| **ORM (Server)** | Entity Framework Core | 9.0.8 |
+| **Runtime** | .NET | 10.0 |
+| **Сервер** | ASP.NET Core Web API + SignalR | 10.0 |
+| **Клиент** | Avalonia UI (MVVM) + CommunityToolkit.Mvvm | 11.3.12 |
+| **ORM (Server)** | Entity Framework Core | 10.0 |
 | **ORM (Client)** | sqlite-net-pcl | 1.9.172 |
-| **База данных** | PostgreSQL + Npgsql | 16 / 9.0+ |
-| **Audio** | NAudio | 2.2.1 |
-| **Security** | JwtBearer, BCrypt.Net-Next | 8.0.22 / 4.0.3 |
+| **База данных** | PostgreSQL + Npgsql | 16 / 10.0 |
+| **Audio** | NAudio | 2.3.0 |
+| **Security** | JwtBearer, BCrypt.Net-Next | 10.0.5 / 4.1.0 |
 | **Images** | SixLabors.ImageSharp.Web | 3.2.0 |
 
 ---
@@ -85,50 +85,56 @@
 📦 Messenger
 │
 ├── 📂 MessengerShared/         # Общие компоненты (Class Library)
-│   ├── 📂 Dto/                 # Объекты передачи данных
+│   ├── 📂 DTO/                 # Объекты передачи данных
 │   │   ├── Auth/               # LoginRequest, TokenResponseDto
 │   │   ├── Chat/               # ChatDto, ChatMemberDto
-│   │   ├── Message/            # MessageDto
+│   │   ├── Message/            # MessageDto, CreateMessageRequest
 │   │   ├── User/               # UserDto, CreateUserDto
-│   │   └── ...                 # Polls, Notifications, Departments
-│   ├── 📂 Enum/                # Типы данных (ChatType, Role, Theme)
-│   └── 📄 Response/            # ApiResponse<T> wrapper
+│   │   └── ...                 # Poll, Notification, Department, Search, ReadReceipt
+│   ├── 📂 Enum/                # ChatType, ChatRole, Theme, UserRoles, SystemEventTypes
+│   └── 📂 Response/            # ApiResponse<T>
 │
 ├── 📂 MessengerAPI/            # Серверная часть (ASP.NET Core)
 │   ├── 📂 Controllers/         # REST API endpoints
-│   │   ├── BaseController      # ExecuteAsync (Result -> HTTP)
+│   │   ├── BaseController      # ExecuteAsync (Result → HTTP)
 │   │   ├── AuthController      # Login, Refresh, Revoke
-│   │   ├── ChatsController     # CRUD чатов, члены
-│   │   ├── MessagesController  # Сообщения, поиск, файлы
+│   │   ├── ChatsController     # CRUD чатов, участники
+│   │   ├── MessagesController  # Сообщения, поиск, пагинация
 │   │   ├── PollsController     # Опросы
-│   │   └── ...                 # Users, Departments, Admin
-│   ├── 📂 Hubs/                # SignalR Hub (/chatHub)
-│   ├── 📂 Models/              # EF Core Entities + DbContext
+│   │   └── ...                 # Users, Departments, Admin, Files, Notifications
+│   ├── 📂 Hubs/                # ChatHub (/chatHub)
+│   ├── 📂 Model/               # EF Core сущности + MessengerDbContext
 │   ├── 📂 Services/            # Бизнес-логика
-│   │   ├── Infrastructure/     # CacheService, AccessControlService, HubNotifier
-│   │   ├── Messaging/          # MessageService, FileService
-│   │   └── ...                 # AuthService, ChatService
-│   ├── 📂 Middleware/          # ExceptionHandling, RateLimiting
-│   ├── 📂 Configuration/       # DI, Swagger, AppSettings
-│   └── 📄 Dockerfile           # Multi-stage build (non-root user)
+│   │   ├── Infrastructure/     # CacheService, AccessControlService, HubNotifier, OnlineUserService
+│   │   ├── Messaging/          # MessageService, FileService, PollService
+│   │   ├── Chat/               # ChatService, ChatMemberService, NotificationService
+│   │   └── ...                 # AuthService, UserService, DepartmentService
+│   ├── 📂 Mapping/             # Ручной маппинг моделей → DTO
+│   ├── 📂 Middleware/          # ExceptionHandling, MissingFileCleanup
+│   ├── 📂 Configuration/       # DI, Swagger, JWT, RateLimit
+│   └── 📄 Dockerfile
 │
 ├── 📂 MessengerDesktop/        # Клиент (Avalonia UI)
 │   ├── 📂 ViewModels/          # MVVM логика
 │   │   ├── Shell/              # MainWindowViewModel, MainMenuViewModel
-│   │   ├── Chat/               # ChatViewModel (Handler-based), ChatContext
-│   │   ├── Factories/          # Dependency Injection factories
-│   │   └── Dialog/             # Modal dialogs
+│   │   ├── Chat/               # ChatViewModel (Handler Composition)
+│   │   │   ├── Handlers/       # Edit, Reply, Forward, Typing, Voice, Search, Notifications
+│   │   │   └── Managers/       # ChatMessageManager, ChatAttachmentManager
+│   │   ├── ChatList/           # ChatsViewModel, GlobalSearchManager
+│   │   ├── Dialog/             # Модальные диалоги
+│   │   └── Factories/          # ChatViewModelFactory
 │   ├── 📂 Services/            # Сервисы клиента
-│   │   ├── Api/                # ApiClientService (auto-refresh)
-│   │   ├── Auth/               # AuthManager, SecureStorage
-│   │   ├── Realtime/           # GlobalHubConnection
-│   │   └── Audio/              # NAudioRecording, Playback
-│   ├── 📂 Data/                # Локальный кеш
-│   │   ├── LocalDatabase       # SQLite Setup + FTS5
-│   │   └── Repositories/       # CacheRepositories
-│   └── 📂 Views/               # XAML разметка (AXAML)
+│   │   ├── Api/                # ApiClientService (auto-refresh при 401)
+│   │   ├── Auth/               # AuthManager, SecureStorage, SessionStore
+│   │   ├── Realtime/           # GlobalHubConnection (единый SignalR-клиент)
+│   │   └── Audio/              # AudioPlayerService, NAudioRecorderService
+│   ├── 📂 Data/                # Локальный кэш
+│   │   ├── LocalDatabase       # SQLite + FTS5, схема v3
+│   │   └── Repositories/       # LocalCacheService, Chat/MessageCacheRepository
+│   ├── 📂 Converters/          # Value converters для Avalonia bindings
+│   └── 📂 Views/               # AXAML разметка
 │
-├── 📄 docker-compose.server.yml # Сервер + Postgres + ZAP Scanner
+├── 📄 docker-compose.server.yml
 ├── 📄 README.md
 └── 📄 LICENSE
 ```
@@ -138,13 +144,11 @@
 ## Установка
 
 ### Системные требования
-- OS: Windows 10+ / macOS 12+ / Linux (Ubuntu 20.04+)
-- RAM: 4 GB Minimum / 8 GB Recommended
+- OS: Windows 10+ / Linux (Ubuntu 20.04+)
+- RAM: 4 GB минимум / 8 GB рекомендуется
 - Disk: 500 MB
 
 ### Развёртывание сервера (Docker)
-
-Рекомендуемый способ запуска сервера с базой данных одной командой:
 
 ```bash
 # 1. Клонировать репозиторий
@@ -154,47 +158,46 @@ cd messenger
 # 2. Запустить сервер и БД
 docker compose -f docker-compose.server.yml up -d
 
-# 3. Проверить логи (если база не стартует сразу)
+# 3. Проверить логи
 docker compose logs -f postgres
 docker compose logs -f messenger-api
 ```
 
 По умолчанию сервер доступен на порту **8080**.
-Для разработки (dev): порт меняется динамически или задается переменной окружения.
 
-> **Примечание:** Первый запуск может занять время на миграцию базы данных и создание таблиц.
+> **Примечание:** Первый запуск может занять время на миграцию базы данных.
 
 ### Развёртывание клиента (Release)
-1. Скачайте архив из Releases (Windows/Linux/macOS).
+1. Скачайте архив из Releases (Windows / Linux).
 2. Распакуйте в удобную папку.
-3. Установите **[.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)**.
-4. Запустите `MessengerDesktop.exe` (или бинарник).
+3. Установите **[.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**.
+4. Запустите `MessengerDesktop.exe` (Windows) или бинарник (Linux).
 
-> Входящие данные шифруются средствами ОС при сохранении (Secure Storage).
+> Учётные данные шифруются средствами ОС при сохранении (Secure Storage).
 
 ---
 
 ## Архитектурные особенности
 
-### Backend Architecture
-*   **Result Pattern:** Сервисы возвращают объекты `Result<T>` (успех/ошибка) вместо исключений. Контроллеры автоматически маппят их на HTTP статусы.
-*   **Access Control:** Единый слой `AccessControlService` проверяет права перед выполнением бизнес-логики (Owner/Admin/Member).
-*   **Caching:** `IMemoryCache` для списка чатов (TTL 5 мин) и состава участников (TTL 10 мин) с явной инвалидацией при изменениях.
-*   **Rate Limiting:** Sliding Window Policy настроен индивидуально для разных действий (Login, Upload, Search, Messaging).
-*   **SignalR:** Single Hub (`ChatHub`) с обработкой событий через `HubNotifier`. Клиенты подписываются на группы чатов и отдельных юзеров.
+### Backend
+- **Result Pattern:** Сервисы возвращают `Result<T>` вместо исключений. `BaseController.ExecuteAsync` автоматически маппит результат на HTTP-статус и `ApiResponse<T>`.
+- **Access Control:** `AccessControlService` проверяет права (Owner/Admin/Member) перед выполнением бизнес-логики.
+- **Caching:** `IMemoryCache` для списков чатов (TTL 5 мин) и состава участников (TTL 10 мин) с явной инвалидацией.
+- **Rate Limiting:** Sliding Window Policy для Login, Upload, Search, Messaging.
+- **SignalR:** Единый `ChatHub` с рассылкой через `HubNotifier`. Группы: `chat_{id}` и `user_{id}`.
 
-### Frontend Architecture (MVVM)
-*   **Handler-Based Decomposition:** `ChatViewModel` разделён на отдельные классы-хаудеры (Edit, Reply, Forward, Typing...) для снижения связанности.
-*   **Stale-While-Revalidate:** При загрузке списка чатов клиент мгновенно показывает закэшированные данные (`LocalDatabase`), параллельно подтягивая свежие с сервера.
-*   **Offline-First:** Все важные данные хранятся в SQLite. Поиск работает локально через FTS5.
-*   **Global Hub Connection:** Один глобальный WebSocket-соединение на всё приложение. События фильтруются внутри `ChatHubSubscriber` для каждого открытого чата.
+### Frontend (MVVM)
+- **Handler Composition:** `ChatViewModel` разделён на независимые Handler-классы (Edit, Reply, Forward, Typing...) для снижения связанности.
+- **Stale-While-Revalidate:** При открытии чата мгновенно показываются данные из SQLite, параллельно загружаются свежие с сервера.
+- **Offline-First:** Все важные данные хранятся в SQLite. Локальный поиск через FTS5.
+- **Global Hub Connection:** Одно WebSocket-соединение на всё приложение. Фильтрация событий по чату через `ChatHubSubscriber`.
 
 ---
 
 ## Скриншоты
 
 <details>
-<summary><b>Темы оформления и Навигация</b></summary>
+<summary><b>Темы оформления</b></summary>
 
 | Светлая тема | Тёмная тема |
 |:-------------:|:-----------:|
@@ -202,7 +205,7 @@ docker compose logs -f messenger-api
 </details>
 
 <details>
-<summary><b>Рабочее пространство (Чаты)</b></summary>
+<summary><b>Рабочее пространство</b></summary>
 
 | Список диалогов | Переписка с опросом |
 |:---------------:|:-------------------:|
@@ -231,40 +234,38 @@ docker compose logs -f messenger-api
 |----------|-------|----------|
 | `/api/auth/login` | POST | Вход, получение токенов |
 | `/api/auth/refresh` | POST | Обновление access-токена |
-| `/api/auth/revoke` | POST | Выход (реvoke всех refresh-токенов) |
+| `/api/auth/revoke` | POST | Выход (отзыв всех refresh-токенов) |
 
-#### Чаты и Сообщения
+#### Чаты и сообщения
 | Endpoint | Метод | Описание |
 |----------|-------|----------|
-| `/api/chats/{id}/members` | GET | Состав участников |
+| `/api/chats/user/{userId}` | GET | Список чатов пользователя |
+| `/api/chats/{id}/members` | GET | Участники чата |
 | `/api/messages/chat/{id}` | GET | История сообщений (paginated) |
-| `/api/messages/{id}` | PUT | Редактирование текста |
-| `/api/messages/{id}` | DELETE | Удаление (soft-delete) |
+| `/api/messages` | POST | Отправить сообщение |
+| `/api/messages/{id}` | PUT | Редактировать сообщение |
+| `/api/messages/{id}` | DELETE | Удалить сообщение (soft-delete) |
 
 #### Пользователи
 | Endpoint | Метод | Описание |
 |----------|-------|----------|
 | `/api/users/{id}` | GET | Профиль пользователя |
-| `/api/users/{id}/avatar` | POST | Загрузка фото профиля |
-| `/api/admin/users` | GET | Список пользователей (Admin) |
+| `/api/users/{id}/avatar` | POST | Загрузка аватара |
+| `/api/admin/users` | GET | Список всех пользователей (Admin) |
 
-#### SignalR Hub
-Подключение к URL: `{ApiUrl}/chatHub` (через JS SDK или SignalR Client)
-Методы: `ReceiveMessage`, `SendTyping`, `GetUnreadCounts` и др.
+#### SignalR
+Подключение: `{ApiUrl}/chatHub`
+Ключевые события: `ReceiveMessageDto`, `UserOnline`, `UserOffline`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`
 
 ---
 
-## Терминология
+## Глоссарий
 
 | Термин | Значение |
 |--------|----------|
-| **Result Pattern** | Паттерн обработки ошибок без исключений (`Result<T>.Success()` / `.Failure()`) |
-| **Soft Delete** | Удаление помечается флагом `IsDeleted=true`, но запись остаётся в БД |
-| **FTS5** | Полнотекстовый поисковый индекс в SQLite для быстрого поиска |
-| **Family Id** | Группа связанных Refresh-токенов для обнаружения атак повторного использования (Replay Attack) |
-
----
-
-## Контакты
-
-Разработано [@a35472](https://t.me/a35472)
+| **Result Pattern** | Паттерн обработки ошибок без исключений (`Result<T>.Success()` / `Result.NotFound()`) |
+| **Soft Delete** | Удаление помечается флагом `is_deleted=true`, запись остаётся в БД |
+| **FTS5** | Полнотекстовый поисковый индекс SQLite для быстрого локального поиска |
+| **FamilyId** | Группа связанных Refresh-токенов для обнаружения replay-атак |
+| **Handler Composition** | Паттерн декомпозиции `ChatViewModel` на независимые Handler-классы |
+| **Gap-fill** | Догрузка пропущенных сообщений после переподключения SignalR |

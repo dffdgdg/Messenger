@@ -202,8 +202,6 @@
 
   "isVoiceMessage": false,
   "voiceDurationSeconds": null,
-  "transcriptionStatus": null,
-  "transcriptionText": null,
   "voiceFileUrl": null,
   "voiceFileName": null,
   "voiceContentType": null,
@@ -263,16 +261,6 @@
   "hasMoreMessages": true,
   "hasNewerMessages": false,
   "currentPage": 1
-}
-```
-
-### VoiceTranscriptionDto
-```json
-{
-  "messageId": 100,
-  "chatId": 1,
-  "status": "Pending|Processing|Done|Failed",
-  "transcription": "Распознанный текст..."
 }
 ```
 
@@ -446,7 +434,6 @@
 | `UserRole` | `User`, `Head`, `Admin` |
 | `Theme` | `light`, `dark`, `system` |
 | `SystemEventType` | `chat_created`, `member_added`, `member_removed`, `member_left`, `role_changed` |
-| `TranscriptionStatus` | `Pending`, `Processing`, `Done`, `Failed` |
 ```
 
 ---

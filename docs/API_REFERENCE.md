@@ -1,208 +1,188 @@
-# API Reference
+# API Reference (Agent-optimized)
 
-## Общая информация
-- **Base URL**: `{host}/api/{controller}`
-- **Аутентификация**: JWT Bearer Token (заголовок `Authorization: Bearer {token}`)
-- **Формат ответов**: `ApiResponse<T>` (см. DTO_CONTRACTS.md)
-- **Rate Limiting**: Sliding Window (см. TECH_STACK.md)
+## Базовые правила
+- Base URL: `{host}/api/{controller}`
+- Auth: заголовок `Authorization: Bearer {token}` (везде где Auth: ✅)
+- Все тела запросов/ответов: `application/json`
+- Все ответы обёрнуты: `ApiResponse<T>`
+- Файловые эндпоинты: `multipart/form-data`
 
-## Маршрутизация
-Все контроллеры наследуют `BaseController<T>` с атрибутом:
+## Rate Limits (при 429 — отступить и повторить)
+- Глобально: 100 req/10s (по UserId или IP)
+- `/api/auth/login` → 5/мин
+- `/api/files/upload` → 10/мин  
+- Поиск (`/search`) → 15/мин
+- `POST /api/messages` → 30/мин
+
+## Коды ответов
+200 OK | 201 Created | 400 Bad Request | 401 Unauthorized
+403 Forbidden | 404 Not Found | 429 Rate Limited | 500 Server Error
+
+---
+
+## AUTH `/api/auth`
+
+### POST `/login` — получить токены
+Запрос: `{ Username, Password }`
+Ответ: `{ User: UserDto, AccessToken, RefreshToken }`
+
+### POST `/refresh` — обновить токены
+Запрос: `{ RefreshToken }`
+Ответ: `{ AccessToken, RefreshToken }`
+
+### POST `/revoke` [Auth] — logout (отзыв всей сессии)
+Тело: нет. Ответ: нет.
+
+---
+
+## USERS `/api/users`
+
+> Эндпоинты сометкой [SELF] доступны только для своего UserId
+
+| Метод | Путь | Auth | Описание |
+|-------|------|------|----------|
+| GET | `/` | ✅ | Все пользователи → `List<UserDto>` |
+| GET | `/{id}` | ✅ | Пользователь по ID → `UserDto` |
+| PUT | `/{id}` | ✅ SELF | Обновить профиль, тело: `UserDto` |
+| POST | `/{id}/avatar` | ✅ SELF | Загрузить аватар (`multipart`) → `AvatarResponseDto` |
+| PUT | `/{id}/username` | ✅ SELF | Тело: `{ NewUsername }` |
+| PUT | `/{id}/password` | ✅ SELF | Тело: `{ OldPassword, NewPassword }` |
+| GET | `/online` | ✅ | Онлайн-пользователи → `OnlineUsersResponseDto` |
+| GET | `/{id}/status` | ✅ | Статус → `{ UserId, IsOnline, LastSeen }` |
+| POST | `/status/batch` | ✅ | Тело: `[userId1, userId2]` → `List<OnlineStatusDto>` |
+
+**UserDto**: `{ Id, Username, DisplayName, AvatarUrl, Role, DepartmentId }`
+
+---
+
+## CHATS `/api/chats`
+
+> [SELF] = только для чатов текущего пользователя
+
+**ChatType**: `Contact` (личный) | `Group` | `Department`
+**ChatRole**: `Member` | `Admin` | `Owner`
+
+### Получение
+| GET | `/user/{userId}` | [SELF] | Все чаты |
+| GET | `/user/{userId}/dialogs` | [SELF] | Только личные (Contact) |
+| GET | `/user/{userId}/groups` | [SELF] | Только группы |
+| GET | `/user/{userId}/contact/{contactUserId}` | [SELF] | Диалог с конкретным юзером |
+| GET | `/{chatId}` | ✅ | Чат по ID |
+
+### Управление чатом
+| POST | `/` | тело: `ChatDto` → `ChatDto` | Создать |
+| PUT | `/{id}` | тело: `UpdateChatDto` → `ChatDto` | Переименовать |
+| DELETE | `/{id}` | — | Удалить |
+| POST | `/{id}/avatar` | `multipart` → `string (url)` | Загрузить аватар |
+| DELETE | `/{id}/avatar` | — | Удалить аватар |
+
+### Участники
+| GET | `/{chatId}/members` | → `List<UserDto>` | Базовый список |
+| GET | `/{chatId}/members/detailed` | → `List<ChatMemberDto>` | С ролями и датой |
+| POST | `/{chatId}/members` | тело: `UpdateChatMemberDto` → `ChatMemberDto` | Добавить |
+| DELETE | `/{chatId}/members/{userId}` | — | Удалить |
+| PUT | `/{chatId}/members/{userId}/role` | query: `?role=Admin` → `ChatMemberDto` | Изменить роль |
+
+**ChatDto**: `{ Id, Name, ChatType, AvatarUrl, LastMessage, CreatedAt }`
+**ChatMemberDto**: `{ UserId, User, Role, JoinedAt }`
+
+---
+
+## MESSAGES `/api/messages`
+
+### Отправка и редактирование
+| POST | `/` | Rate: messaging | `CreateMessageRequest` → `MessageDto` |
+| PUT | `/{id}` | | `UpdateMessageDto` → `MessageDto` (только своё) |
+| DELETE | `/{id}` | | Soft delete (только своё) |
+
+**CreateMessageRequest**:
+```json
+{
+  "ChatId": 1,
+  "Content": "текст",
+  "ReplyToMessageId": null,
+  "ForwardFromMessageId": null,
+  "FileIds": []
+}
 ```
-[ApiController]
-[Route("api/[controller]")]
-```
+
+### Загрузка (пагинация)
+| GET | `/chat/{chatId}` | `?page=1&pageSize=15` | Страница (новые→старые) |
+| GET | `/chat/{chatId}/around/{messageId}` | `?count=50` | Вокруг сообщения |
+| GET | `/chat/{chatId}/before/{messageId}` | `?count=30` | Старше (scroll вверх) |
+| GET | `/chat/{chatId}/after/{messageId}` | `?count=30` | Новее (догрузка) |
+
+Все → `PagedMessagesDto`: `{ Messages, TotalCount, HasMore }`
+
+### Поиск (Rate: search)
+| GET | `/chat/{chatId}/search?query=текст&page=1&pageSize=20` | → `SearchMessagesResponseDto` |
+| GET | `/user/{userId}/search?query=текст&page=1&pageSize=20` | [SELF] → `GlobalSearchResponseDto` |
+
+**MessageDto**: `{ Id, ChatId, SenderId, Content, MessageType, ReplyToId, Files, Poll, IsEdited, CreatedAt }`
 
 ---
 
-## AuthController (`/api/auth`)
+## FILES `/api/files`
 
-| Метод | Endpoint | Auth | Rate Limit | Запрос | Ответ | Описание |
-|-------|----------|------|------------|--------|-------|----------|
-| POST | `/api/auth/login` | ❌ | `login` (5/мин) | `LoginRequest` | `AuthResponseDto` | Авторизация |
-| POST | `/api/auth/refresh` | ❌ | — | `RefreshTokenRequest` | `TokenResponseDto` | Обновление токенов |
-| POST | `/api/auth/revoke` | ✅ | — | — | — | Отзыв всех refresh-токенов (logout) |
+### POST `/upload` [Auth, Rate: upload]
+- Content-Type: `multipart/form-data`
+- Query: `?chatId={id}`
+- Макс. размер: **100 MB**
+- Ответ: `MessageFileDto`: `{ Id, FileName, FileUrl, FileSize, MimeType }`
 
----
-
-## UsersController (`/api/users`)
-
-| Метод | Endpoint | Auth | Rate Limit | Запрос | Ответ | Описание |
-|-------|----------|------|------------|--------|-------|----------|
-| GET | `/api/users` | ✅ | — | — | `List<UserDto>` | Все пользователи |
-| GET | `/api/users/{id}` | ✅ | — | — | `UserDto` | Пользователь по ID |
-| PUT | `/api/users/{id}` | ✅¹ | — | `UserDto` | — | Обновить профиль |
-| POST | `/api/users/{id}/avatar` | ✅¹ | — | `IFormFile` | `AvatarResponseDto` | Загрузить аватар |
-| PUT | `/api/users/{id}/username` | ✅¹ | — | `ChangeUsernameDto` | — | Изменить username |
-| PUT | `/api/users/{id}/password` | ✅¹ | — | `ChangePasswordDto` | — | Изменить пароль |
-| GET | `/api/users/online` | ✅ | — | — | `OnlineUsersResponseDto` | Список онлайн-пользователей |
-| GET | `/api/users/{id}/status` | ✅ | — | — | `OnlineStatusDto` | Статус одного пользователя |
-| POST | `/api/users/status/batch` | ✅ | — | `List<int>` | `List<OnlineStatusDto>` | Статусы нескольких пользователей |
-
-> ¹ Только для своего профиля (`IsCurrentUser`)
+> ⚠️ Типичный flow: сначала загрузить файл → получить `Id` → передать в `FileIds[]` при создании сообщения
 
 ---
 
-## ChatsController (`/api/chats`)
+## POLLS `/api/polls`
 
-### Получение чатов
+| POST | `/` | Создать опрос (возвращает `MessageDto`) |
+| GET | `/{pollId}` | Опрос с результатами → `PollDto` |
+| POST | `/vote` | Проголосовать |
 
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/chats/user/{userId}` | ✅¹ | — | `List<ChatDto>` | Все чаты пользователя |
-| GET | `/api/chats/user/{userId}/dialogs` | ✅¹ | — | `List<ChatDto>` | Только диалоги (Contact) |
-| GET | `/api/chats/user/{userId}/groups` | ✅¹ | — | `List<ChatDto>` | Только групповые |
-| GET | `/api/chats/user/{userId}/contact/{contactUserId}` | ✅¹ | — | `ChatDto` | Чат с конкретным пользователем |
-| GET | `/api/chats/{chatId}` | ✅ | — | `ChatDto` | Чат по ID |
-
-### Управление чатами
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| POST | `/api/chats` | ✅ | `ChatDto` | `ChatDto` | Создать чат |
-| PUT | `/api/chats/{id}` | ✅ | `UpdateChatDto` | `ChatDto` | Обновить чат |
-| DELETE | `/api/chats/{id}` | ✅ | — | — | Удалить чат |
-| POST | `/api/chats/{id}/avatar` | ✅ | `IFormFile` | `string` (url) | Загрузить аватар чата |
-| DELETE | `/api/chats/{id}/avatar` | ✅ | — | — | Удалить аватар чата |
-
-### Участники чата
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/chats/{chatId}/members` | ✅ | — | `List<UserDto>` | Участники (краткий) |
-| GET | `/api/chats/{chatId}/members/detailed` | ✅ | — | `List<ChatMemberDto>` | Участники (детальный, с ролями) |
-| POST | `/api/chats/{chatId}/members` | ✅ | `UpdateChatMemberDto` | `ChatMemberDto` | Добавить участника |
-| DELETE | `/api/chats/{chatId}/members/{userId}` | ✅ | — | — | Удалить участника |
-| PUT | `/api/chats/{chatId}/members/{userId}/role` | ✅ | `?role={ChatRole}` | `ChatMemberDto` | Изменить роль участника |
-
-> ¹ Только для своих чатов (`IsCurrentUser`)
+**CreatePollDto**: `{ ChatId, Question, Options: string[], IsAnonymous, IsMultipleChoice }`
+**PollVoteDto**: `{ PollId, OptionIds: int[] }`
+**PollDto**: `{ Id, Question, Options, TotalVotes, UserVotes }`
 
 ---
 
-## MessagesController (`/api/messages`)
+## READ RECEIPTS `/api/readreceipts`
 
-### CRUD
-
-| Метод | Endpoint | Auth | Rate Limit | Запрос | Ответ | Описание |
-|-------|----------|------|------------|--------|-------|----------|
-| POST | `/api/messages` | ✅ | `messaging` (30/мин) | `CreateMessageRequest` | `MessageDto` | Отправить сообщение |
-| PUT | `/api/messages/{id}` | ✅ | — | `UpdateMessageDto` | `MessageDto` | Редактировать |
-| DELETE | `/api/messages/{id}` | ✅ | — | — | — | Удалить (soft delete) |
-
-### Получение сообщений
-
-| Метод | Endpoint | Auth | Параметры | Ответ | Описание |
-|-------|----------|------|-----------|-------|----------|
-| GET | `/api/messages/chat/{chatId}` | ✅ | `?page=1&pageSize=15` | `PagedMessagesDto` | Постраничная загрузка |
-| GET | `/api/messages/chat/{chatId}/around/{messageId}` | ✅ | `?count=50` | `PagedMessagesDto` | Сообщения вокруг конкретного |
-| GET | `/api/messages/chat/{chatId}/before/{messageId}` | ✅ | `?count=30` | `PagedMessagesDto` | Сообщения старше |
-| GET | `/api/messages/chat/{chatId}/after/{messageId}` | ✅ | `?count=30` | `PagedMessagesDto` | Сообщения новее |
-
-### Поиск
-
-| Метод | Endpoint | Auth | Rate Limit | Параметры | Ответ | Описание |
-|-------|----------|------|------------|-----------|-------|----------|
-| GET | `/api/messages/chat/{chatId}/search` | ✅ | `search` (15/мин) | `?query=&page=1&pageSize=20` | `SearchMessagesResponseDto` | Поиск в чате |
-| GET | `/api/messages/user/{userId}/search` | ✅¹ | `search` (15/мин) | `?query=&page=1&pageSize=20` | `GlobalSearchResponseDto` | Глобальный поиск |
-
-### Транскрипция голосовых
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/messages/{id}/transcription` | ✅ | — | `VoiceTranscriptionDto` | Получить транскрипцию |
-| POST | `/api/messages/{id}/transcription/retry` | ✅ | — | — | Перезапустить транскрипцию |
-
-> ¹ Только свой userId
+| POST | `/mark-read` | `{ ChatId, LastReadMessageId }` → `ReadReceiptResponseDto` |
+| GET | `/chat/{chatId}/unread-count` | → `int` |
+| GET | `/unread-counts` | → `{ Counts: { [chatId]: number } }` |
 
 ---
 
-## FilesController (`/api/files`)
+## NOTIFICATIONS `/api/notifications`
 
-| Метод | Endpoint | Auth | Rate Limit | Запрос | Ответ | Описание |
-|-------|----------|------|------------|--------|-------|----------|
-| POST | `/api/files/upload` | ✅ | — | `?chatId={id}` + `IFormFile` | `MessageFileDto` | Загрузить файл |
-
-**Ограничения**: макс. размер файла — **100 MB** (`RequestSizeLimit`)
+| GET | `/chat/{chatId}/settings` | → `ChatNotificationSettingsDto` |
+| POST | `/chat/mute` | `{ ChatId, IsMuted, MutedUntil? }` → обновлённые настройки |
+| GET | `/settings` | → все настройки текущего юзера |
 
 ---
 
-## PollsController (`/api/polls`)
+## DEPARTMENTS `/api/departments`
 
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/polls/{pollId}` | ✅ | — | `PollDto` | Получить опрос |
-| POST | `/api/polls` | ✅ | `CreatePollDto` | `MessageDto` | Создать опрос (создаёт сообщение) |
-| POST | `/api/polls/vote` | ✅ | `PollVoteDto` | `PollDto` | Проголосовать |
+| GET | `/` | Все отделы → `List<DepartmentDto>` |
+| GET | `/{id}` | Отдел → `DepartmentDto` |
+| GET | `/{id}/members` | Сотрудники → `List<UserDto>` |
+| GET | `/{id}/can-manage` | Есть ли права → `bool` |
+| POST | `/` | [Admin] Создать отдел |
+| PUT | `/{id}` | [Admin] Обновить |
+| DELETE | `/{id}` | [Admin] Удалить |
+| POST | `/{id}/members` | Добавить: `{ UserId, Role }` |
+| DELETE | `/{id}/members/{userId}` | Удалить участника |
 
----
-
-## ReadReceiptsController (`/api/readreceipts`)
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| POST | `/api/readreceipts/mark-read` | ✅ | `MarkAsReadDto` | `ReadReceiptResponseDto` | Отметить прочитанным |
-| GET | `/api/readreceipts/chat/{chatId}/unread-count` | ✅ | — | `int` | Непрочитанных в чате |
-| GET | `/api/readreceipts/unread-counts` | ✅ | — | `AllUnreadCountsDto` | Все счётчики непрочитанных |
+**DepartmentDto**: `{ Id, Name, Description, HeadUserId, ParentDepartmentId }`
 
 ---
 
-## NotificationsController (`/api/notifications`)
+## ADMIN `/api/admin`
 
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/notifications/chat/{chatId}/settings` | ✅ | — | `ChatNotificationSettingsDto` | Настройки уведомлений чата |
-| POST | `/api/notifications/chat/mute` | ✅ | `ChatNotificationSettingsDto` | `ChatNotificationSettingsDto` | Вкл/выкл уведомления чата |
-| GET | `/api/notifications/settings` | ✅ | — | `List<ChatNotificationSettingsDto>` | Все настройки уведомлений |
+> ⚠️ Все эндпоинты только для роли `Admin`
 
----
-
-## DepartmentsController (`/api/departments`)
-
-### Чтение
-
-| Метод | Endpoint | Auth | Ответ | Описание |
-|-------|----------|------|-------|----------|
-| GET | `/api/departments` | ✅ | `List<DepartmentDto>` | Все отделы |
-| GET | `/api/departments/{id}` | ✅ | `DepartmentDto` | Отдел по ID |
-| GET | `/api/departments/{id}/members` | ✅ | `List<UserDto>` | Сотрудники отдела |
-| GET | `/api/departments/{id}/can-manage` | ✅ | `bool` | Может ли текущий пользователь управлять |
-
-### Управление (Admin only)
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| POST | `/api/departments` | ✅ Admin | `DepartmentDto` | `DepartmentDto` | Создать отдел |
-| PUT | `/api/departments/{id}` | ✅ Admin | `DepartmentDto` | — | Обновить отдел |
-| DELETE | `/api/departments/{id}` | ✅ Admin | — | — | Удалить отдел |
-
-### Управление составом
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| POST | `/api/departments/{id}/members` | ✅ | `UpdateDepartmentMemberDto` | — | Добавить в отдел |
-| DELETE | `/api/departments/{id}/members/{userId}` | ✅ | — | — | Удалить из отдела |
-
----
-
-## AdminController (`/api/admin`)
-
-> Все эндпоинты требуют роли `Admin`
-
-| Метод | Endpoint | Auth | Запрос | Ответ | Описание |
-|-------|----------|------|--------|-------|----------|
-| GET | `/api/admin/users` | ✅ Admin | — | `List<UserDto>` | Все пользователи |
-| POST | `/api/admin/users` | ✅ Admin | `CreateUserDto` | `UserDto` | Создать пользователя |
-| PUT | `/api/admin/users/{id}` | ✅ Admin | `UserDto` | `UserDto` | Обновить пользователя |
-| POST | `/api/admin/users/{id}/toggle-ban` | ✅ Admin | — | — | Заблокировать/разблокировать |
-
----
-
-## Статические эндпоинты (без контроллера)
-
-| Метод | Endpoint | Auth | Описание |
-|-------|----------|------|----------|
-| GET | `/` | ❌ | Health check: "Messenger API is running" |
-| GET | `/robots.txt` | ❌ | Robots exclusion |
-| GET | `/sitemap.xml` | ❌ | Пустой sitemap |
-
-Все с `Cache-Control: public, max-age=300`.
+| GET | `/users` | Все пользователи (включая забаненных) |
+| POST | `/users` | Создать: `{ Username, Password, DisplayName, Role, DepartmentId }` → `UserDto` |
+| PUT | `/users/{id}` | Обновить любого → `UserDto` |
+| POST | `/users/{id}/toggle-ban` | Бан/разбан |

@@ -334,7 +334,6 @@
 
                             <Border Classes="Divider" Margin="16,8"/>
 
-                            <!-- Media & Files Section (Closed) -->
                             <StackPanel Margin="16,4,16,0" Spacing="4"
                                         IsVisible="{Binding !IsInfoSectionOpen}">
                                 <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
@@ -378,6 +377,7 @@
                                 </Button>
                             </StackPanel>
 
+                            <!-- Expanded Media Sections -->
                             <StackPanel Spacing="8"
                                         Margin="16,4,16,0"
                                         IsVisible="{Binding IsInfoSectionOpen}">
@@ -820,6 +820,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
+                                <!-- Members Section with Search -->
                                 <StackPanel IsVisible="{Binding ShowMembersSection}" Spacing="8">
                                     <Grid ColumnDefinitions="Auto,*">
                                         <PathIcon Data="{StaticResource SearchIcon}"
@@ -879,6 +880,7 @@
                             <Border Classes="Divider" Margin="16,12"
                                     IsVisible="{Binding !IsInfoSectionOpen}"/>
 
+                            <!-- Leave Group Button -->
                             <StackPanel Margin="16,0,16,0"
                                         IsVisible="{Binding !IsInfoSectionOpen}">
                                 <Button Command="{Binding LeaveChatCommand}"

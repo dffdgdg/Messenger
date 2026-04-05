@@ -298,7 +298,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 OnPropertyChanged(nameof(HasAvatar));
                 SuccessMessage = "Аватар удалён";
             }
-            else { ErrorMessage = r.Error ?? "Не удалось удалить аватар"; }
+            else { ErrorMessage = result.Error ?? "Не удалось удалить аватар"; }
         });
     }
 

@@ -39,7 +39,7 @@ public partial class MessengerDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.HasostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
+        modelBuilder.HasPostgresEnum<ChatRole>(name: "chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator)
             .HasPostgresEnum<ChatType>(name: "chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator)
             .HasPostgresEnum<Theme>("theme")
             .HasPostgresEnum<SystemEventType>("system_event_type");

@@ -77,6 +77,7 @@ public partial class ChatView : UserControl
 
         Interlocked.Exchange(ref _loadingOlderMessages, 0);
         Interlocked.Exchange(ref _loadingNewerMessages, 0);
+        EnsureMessagesHidden();
     }
 
     private void AttachToViewModel()
@@ -165,6 +166,9 @@ public partial class ChatView : UserControl
         _messagesList ??= this.FindControl<ListBox>("MessagesList");
         if (_messagesList is null) return;
 
+        if (!_isInitialScrollDone)
+            EnsureMessagesHidden();
+
         _scrollViewer = _messagesList.FindDescendantOfType<ScrollViewer>();
 
         if (_scrollViewer is null)
@@ -205,6 +209,7 @@ public partial class ChatView : UserControl
 
             ScrollToItem(_viewModel.Messages[index]);
             _isInitialScrollDone = true;
+            EnsureMessagesVisible();
         });
     }
 
@@ -216,6 +221,7 @@ public partial class ChatView : UserControl
         {
             ScrollToItem(message);
             _isInitialScrollDone = true;
+            EnsureMessagesVisible();
         });
     }
 
@@ -276,6 +282,7 @@ public partial class ChatView : UserControl
     {
         _isInitialScrollDone = true;
         _suppressScrollEvents = false;
+        EnsureMessagesVisible();
 
         if (_viewModel is not null)
         {
@@ -286,6 +293,18 @@ public partial class ChatView : UserControl
 
         if (_scrollViewer is not null)
             _lastExtentHeight = _scrollViewer.Extent.Height;
+    }
+
+    private void EnsureMessagesVisible()
+    {
+        _messagesList ??= this.FindControl<ListBox>("MessagesList");
+        _messagesList?.Opacity = 1;
+    }
+
+    private void EnsureMessagesHidden()
+    {
+        _messagesList ??= this.FindControl<ListBox>("MessagesList");
+        _messagesList?.Opacity = 0;
     }
 
     #endregion

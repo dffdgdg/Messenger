@@ -186,7 +186,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService, mentionClickCommand: OpenMentionProfileCommand);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService, audioPlayer, OpenMentionProfileCommand);
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
 
@@ -245,6 +245,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(Context.LifetimeToken);
 
+            if (scrollToIndex < Messages.Count - 1)
+            {
+                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} request=ScrollToIndex index={scrollToIndex.Value}");
+                Context.RequestScrollToIndex(scrollToIndex.Value);
+            }
+            else
+            {
+                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} request=ScrollToBottom");
+                Context.RequestScrollToBottom();
+            }
+
             await Notification.LoadSettingsAsync(Context.LifetimeToken);
 
             PollsCount = MessageManager.GetPollsCount();
@@ -256,13 +267,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             InfoPanel.Subscribe();
 
             _initTcs.TrySetResult();
-
-            await Task.Delay(150, Context.LifetimeToken);
-
-            if (scrollToIndex < Messages.Count - 1)
-                Context.RequestScrollToIndex(scrollToIndex.Value);
-            else
-                Context.RequestScrollToBottom();
         }
         catch (OperationCanceledException)
         {

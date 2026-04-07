@@ -1,4 +1,5 @@
-﻿namespace MessengerAPI.Middleware;
+﻿
+namespace MessengerAPI.Middleware;
 
 public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {

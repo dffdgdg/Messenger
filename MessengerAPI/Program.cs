@@ -101,6 +101,12 @@ var app = builder.Build();
 
 app.UseExceptionHandling();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -17,6 +17,29 @@
 | `system_event_type` | `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged |
 
 ---
+## EF Migrations (workflow)
+1. Установить/обновить инструмент:
+   - `dotnet tool update --global dotnet-ef`
+2. Создать миграцию из корня репозитория:
+   - `dotnet ef migrations add InitialSchema --project MessengerAPI --startup-project MessengerAPI`
+3. Применить миграцию локально:
+   - `dotnet ef database update --project MessengerAPI --startup-project MessengerAPI`
+4. В Docker миграции применятся автоматически при старте API (`Database.MigrateAsync()`).
+
+> Порядок важен: сначала `migrations add`, потом `database update`.
+> Если сначала выполнить `database update`, EF покажет `No migrations were applied`, что нормально для текущего состояния БД.
+
+> Для PowerShell не используйте запись вида `<MigrationName>` — символы `<` и `>` там интерпретируются как операторы.
+> Рекомендуемое имя миграции: `InitialSchema`, `AddUserSettings`, `AddPollIndexes` и т.д.
+
+### Скрипты (быстрый запуск)
+- PowerShell:
+  - `./scripts/db-migration-add.ps1 -Name InitialSchema`
+  - `./scripts/db-migration-add.ps1 -Name AddPollIndexes -Apply` (создать и сразу применить)
+  - `./scripts/db-update.ps1`
+
+---
+
 
 ## Сущности
 

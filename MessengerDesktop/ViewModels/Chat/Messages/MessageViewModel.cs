@@ -26,7 +26,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public List<MessageFileDto> Files { get; set; } = [];
     public PollDto? PollDto { get; set; }
     public MessageDto Message { get; }
-
     [ObservableProperty] public partial int? ReplyToMessageId { get; set; }
     [ObservableProperty] public partial string? ReplyToSenderName { get; set; }
     [ObservableProperty] public partial string? ReplyToContent { get; set; }

@@ -6,7 +6,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
+public enum SearchScopeMode
+{
+    Chats = 0,
+    Contacts = 1,
+    CurrentChatMessages = 2
+}
+
+public sealed partial class GlobalSearchManager(int userId, bool startWithChatsScope, IApiClientService apiClient, int debounceMs = AppConstants.DefaultDebounceMs)
     : ObservableObject, IDisposable
 {
     private CancellationTokenSource? _searchCts;
@@ -17,6 +24,7 @@ public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IA
     [ObservableProperty] public partial bool IsSearchMode { get; set; }
     [ObservableProperty] public partial int TotalMessagesCount { get; set; }
     [ObservableProperty] public partial bool HasMoreMessages { get; set; }
+    [ObservableProperty] public partial SearchScopeMode SelectedScope { get; set; } = startWithChatsScope ? SearchScopeMode.Chats : SearchScopeMode.Contacts;
     [ObservableProperty] public partial int? ChatLocalSearchChatId { get; set; }
     [ObservableProperty] public partial ChatType? ChatLocalSearchChatType { get; set; }
     [ObservableProperty] public partial string? ChatLocalSearchChatName { get; set; }
@@ -28,11 +36,42 @@ public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IA
     public bool HasResults => ChatResults.Count > 0 || MessageResults.Count > 0;
     public bool HasChatResults => ChatResults.Count > 0;
     public bool HasMessageResults => MessageResults.Count > 0;
-    public bool IsChatLocalMode => ChatLocalSearchChatId.HasValue;
+    public bool CanSearchInCurrentChat => ChatLocalSearchChatId.HasValue;
+    public bool IsChatLocalMode => SelectedScope == SearchScopeMode.CurrentChatMessages && CanSearchInCurrentChat;
+    public bool IsChatsScope => SelectedScope == SearchScopeMode.Chats;
+    public bool IsContactsScope => SelectedScope == SearchScopeMode.Contacts;
+
+    partial void OnSelectedScopeChanged(SearchScopeMode value)
+    {
+        if (value == SearchScopeMode.CurrentChatMessages && !CanSearchInCurrentChat)
+        {
+            SelectedScope = SearchScopeMode.Chats;
+            return;
+        }
+
+        OnPropertyChanged(nameof(IsChatLocalMode));
+        OnPropertyChanged(nameof(IsChatsScope));
+        OnPropertyChanged(nameof(IsContactsScope));
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = new CancellationTokenSource();
+            _ = SearchWithDelayAsync(SearchQuery, _searchCts.Token);
+        }
+    }
 
     partial void OnChatLocalSearchChatIdChanged(int? value)
     {
+        OnPropertyChanged(nameof(CanSearchInCurrentChat));
         OnPropertyChanged(nameof(IsChatLocalMode));
+
+        if (!CanSearchInCurrentChat && SelectedScope == SearchScopeMode.CurrentChatMessages)
+        {
+            SelectedScope = SearchScopeMode.Chats;
+            return;
+        }
 
         if (!string.IsNullOrWhiteSpace(SearchQuery))
         {
@@ -225,6 +264,15 @@ public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IA
         NotifyResultsChanged();
     }
 
+    public void UseScope(SearchScopeMode scope)
+    {
+        if (scope == SearchScopeMode.CurrentChatMessages && !CanSearchInCurrentChat)
+            return;
+
+        SelectedScope = scope;
+        EnterSearchMode();
+    }
+
     public void Clear()
     {
         ChatResults.Clear();
@@ -258,14 +306,17 @@ public sealed partial class GlobalSearchManager(int userId, bool isGroupMode, IA
         OnPropertyChanged(nameof(HasChatResults));
         OnPropertyChanged(nameof(HasMessageResults));
         OnPropertyChanged(nameof(IsChatLocalMode));
+        OnPropertyChanged(nameof(CanSearchInCurrentChat));
+        OnPropertyChanged(nameof(IsChatsScope));
+        OnPropertyChanged(nameof(IsContactsScope));
     }
 
     private bool IsChatAllowedForScope(ChatType type)
     {
-        if (isGroupMode)
+        if (SelectedScope == SearchScopeMode.Chats)
             return type is ChatType.Chat or ChatType.Department;
 
-        return type == ChatType.Contact;
+        return SelectedScope == SearchScopeMode.Contacts && type == ChatType.Contact;
     }
 
 }

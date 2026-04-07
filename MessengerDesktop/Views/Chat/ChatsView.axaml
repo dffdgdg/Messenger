@@ -149,11 +149,11 @@
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 		<Border Grid.Column="0"
-		  Background="{DynamicResource BorderDefault}"
-		  Width="1"
-		  HorizontalAlignment="Left"
-		  VerticalAlignment="Stretch"
-		  ZIndex="1" />
+				Background="{DynamicResource BorderDefault}"
+				Width="1"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Stretch"
+				ZIndex="1" />
 		<Grid x:Name="ChatListPanel" Grid.Column="0">
 			<DockPanel>
 				<Border DockPanel.Dock="Top"
@@ -172,8 +172,7 @@
 								<TextBlock Classes="PanelTitle"
 										   VerticalAlignment="Center"
 										   IsVisible="{Binding IsSearchMode}"
-										   Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Поиск по чату|Поиск'}"/>
-							</Panel>
+										   Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToTitle}}"/>							</Panel>
 
 							<Button Grid.Column="1"
 									Classes="IconButton"
@@ -222,8 +221,7 @@
 					<Panel>
 						<controls:SearchBox x:Name="SearchTextBox"
 											SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
-											Watermark="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Поиск в чатах...|Поиск в контактах...'}"
-											IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+											Watermark="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToWatermark}}"											IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
 						<Button Classes="IconButton CompactSearchButton"
 								IsVisible="{Binding IsCompactMode, ElementName=Root}"
@@ -238,6 +236,33 @@
 						</Button>
 					</Panel>
 				</Border>
+				<StackPanel DockPanel.Dock="Top"
+							Orientation="Horizontal"
+							Spacing="6"
+							Margin="8,0,8,4">
+					<StackPanel.IsVisible>
+						<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+							<Binding Path="IsSearchMode"/>
+							<Binding Path="!IsCompactMode" ElementName="Root"/>
+						</MultiBinding>
+					</StackPanel.IsVisible>
+					<ToggleButton Content="Чаты"
+								  Classes="SwitchSmall"
+								  IsChecked="{Binding SearchManager.IsChatsScope}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.Chats}"/>
+					<ToggleButton Content="Контакты"
+								  Classes="SwitchSmall"
+								  IsChecked="{Binding SearchManager.IsContactsScope}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.Contacts}"/>
+					<ToggleButton Content="Сообщения чата"
+								  Classes="SwitchSmall"
+								  IsEnabled="{Binding SearchManager.CanSearchInCurrentChat}"
+								  IsChecked="{Binding SearchManager.IsChatLocalMode}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.CurrentChatMessages}"/>
+				</StackPanel>
 
 				<ListBox DockPanel.Dock="Top"
 						 ItemsSource="{Binding Chats}"
@@ -378,7 +403,7 @@
 							</StackPanel.IsVisible>
 
 							<StackPanel Orientation="Horizontal">
-								<TextBlock Classes="SectionHeader" Text="Сообщения"/>
+								<TextBlock Classes="SectionHeader" Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToMessagesHeader}}"/>
 								<TextBlock FontSize="{StaticResource FontSizeSmall}"
 										   Foreground="{DynamicResource TextMuted}"
 										   Margin="4,8,0,6"
@@ -474,12 +499,11 @@
 										   Foreground="{DynamicResource TextSecondary}"
 										   HorizontalAlignment="Center"
 										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-								<TextBlock Text="{Binding IsChatLocalSearchMode, Converter={conv:Converter Name=BoolToString},
-								ConverterParameter='Поиск по сообщениям в чате|Поиск по названиям чатов и сообщениями'}"
-								FontSize="{StaticResource FontSizeSmall}"
-								Foreground="{DynamicResource TextMuted}"
-								HorizontalAlignment="Center"
-								IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+								<TextBlock Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToHint}}"
+										   FontSize="{StaticResource FontSizeSmall}"
+										   Foreground="{DynamicResource TextMuted}"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 							</StackPanel>
 
 							<StackPanel Spacing="8"
@@ -567,8 +591,8 @@
 		</Border>
 
 		<views:ChatInfoPanel x:Name="InfoPanel"
-					 Grid.Column="3"
-					 DataContext="{Binding CurrentChatViewModel}"
-					 OpenProfileCommand="{Binding OpenProfileCommand}"/>
-		</Grid>
+							 Grid.Column="3"
+							 DataContext="{Binding CurrentChatViewModel}"
+							 OpenProfileCommand="{Binding OpenProfileCommand}"/>
+	</Grid>
 </UserControl>

@@ -87,6 +87,10 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             case nameof(GlobalSearchManager.IsChatLocalMode):
                 OnPropertyChanged(nameof(IsChatLocalSearchMode));
                 break;
+            case nameof(GlobalSearchManager.IsChatsScope):
+            case nameof(GlobalSearchManager.IsContactsScope):
+            case nameof(GlobalSearchManager.CanSearchInCurrentChat):
+                break;
         }
     }
 
@@ -94,12 +98,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (SearchManager == null) return;
 
-        var useChatLocal = CurrentChatViewModel?.IsSearchMode == true
+        if (CurrentChatViewModel?.IsSearchMode == true
             && SelectedChat != null
-            && CurrentChatViewModel.Chat?.Id == SelectedChat.Id;
-
-        var chat = useChatLocal ? SelectedChat : null;
-        SetSearchChatContext(chat);
+            && CurrentChatViewModel.Chat?.Id == SelectedChat.Id)
+        {
+            SearchManager.UseScope(SearchScopeMode.CurrentChatMessages);
+        }
     }
 
     private void SetSearchChatContext(ChatListItemViewModel? chat)
@@ -124,6 +128,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (SearchManager != null)
             await SearchManager.LoadMoreMessagesAsync();
+    }
+
+    [RelayCommand]
+    private void SetSearchScope(SearchScopeMode scope)
+    {
+        SearchManager?.UseScope(scope);
     }
 
     private void OnTotalUnreadChanged(int total) => TotalUnreadCount = total;

@@ -49,6 +49,10 @@ public sealed class ConverterLocator
         // Domain converters
         Add<ThemeToDisplayConverter>("ThemeToDisplay");
         Add<InitialsConverter>("Initials", "InitialsConverter");
+        Add<SearchScopeToTitleConverter>("SearchScopeToTitle");
+        Add<SearchScopeToWatermarkConverter>("SearchScopeToWatermark");
+        Add<SearchScopeToHintConverter>("SearchScopeToHint");
+        Add<SearchScopeToMessagesHeaderConverter>("SearchScopeToMessagesHeader");
 
         // Enum converters
         Add<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");

@@ -16,6 +16,8 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
 
         ctx.Hub.MessageReceivedGlobally += OnMessageReceived;
         ctx.Hub.MessageUpdatedGlobally += OnMessageUpdated;
+        ctx.Hub.PollUpdatedGlobally += OnPollUpdated;
+        ctx.Hub.MessageUpdatedGlobally += OnMessageUpdated;
         ctx.Hub.MessageDeletedGlobally += OnMessageDeleted;
         ctx.Hub.MessageRead += OnMessageRead;
         ctx.Hub.UnreadCountChanged += OnUnreadCountChanged;
@@ -44,6 +46,11 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
     {
         if (ctx.IsDisposed || chatId != ctx.ChatId) return;
         Dispatcher.UIThread.Post(() => messageManager.HandleMessageDeleted(messageId));
+    }
+    private void OnPollUpdated(PollDto poll)
+    {
+        if (ctx.IsDisposed) return;
+        Dispatcher.UIThread.Post(() => messageManager.HandlePollUpdated(poll));
     }
 
     private void OnMessageRead(int chatId, int userId, int? lastReadId, DateTime? readAt)
@@ -79,6 +86,7 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
 
         ctx.Hub.MessageReceivedGlobally -= OnMessageReceived;
         ctx.Hub.MessageUpdatedGlobally -= OnMessageUpdated;
+        ctx.Hub.PollUpdatedGlobally -= OnPollUpdated;
         ctx.Hub.MessageDeletedGlobally -= OnMessageDeleted;
         ctx.Hub.MessageRead -= OnMessageRead;
         ctx.Hub.UnreadCountChanged -= OnUnreadCountChanged;

@@ -111,6 +111,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private readonly IAudioPlayerService? _audioPlayer;
     private byte[]? _cachedAudioBytes;
     private bool _disposed, _subscribedToPlayer;
+    private PollViewModel? _boundPollVm;
 
     private static readonly string[] ContentProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta)];
     private static readonly string[] EditedProps = [nameof(EditedLabel), nameof(EditedLabelFull)];
@@ -149,7 +150,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (message.ForwardedFrom != null)
             ForwardedFromSenderName = message.ForwardedFrom.OriginalSenderName;
 
-        if (message.Poll != null) Poll = CreatePollViewModel(message.Poll);
+        if (message.Poll != null)
+        {
+            Poll = CreatePollViewModel(message.Poll);
+            BindPollViewModel(Poll);
+        }
         if (Files.Count > 0)
             FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, downloadService, notificationService)));
 
@@ -269,9 +274,37 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         PollDto = pollDto;
         Message.Poll = pollDto;
-        if (Poll != null) Poll.ApplyDto(pollDto); else Poll = CreatePollViewModel(pollDto);
+        if (Poll != null)
+        {
+            Poll.ApplyDto(pollDto);
+        }
+        else
+        {
+            Poll = CreatePollViewModel(pollDto);
+            BindPollViewModel(Poll);
+        }
         _ = PersistPollStateToCacheAsync();
         Notify(nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta));
+    }
+    private void OnPollServerStateApplied(PollDto pollDto)
+    {
+        PollDto = pollDto;
+        Message.Poll = pollDto;
+        _ = PersistPollStateToCacheAsync();
+    }
+
+    private void BindPollViewModel(PollViewModel? pollViewModel)
+    {
+        if (ReferenceEquals(_boundPollVm, pollViewModel))
+            return;
+
+        if (_boundPollVm != null)
+            _boundPollVm.ServerStateApplied -= OnPollServerStateApplied;
+
+        _boundPollVm = pollViewModel;
+
+        if (_boundPollVm != null)
+            _boundPollVm.ServerStateApplied += OnPollServerStateApplied;
     }
 
     public void ApplyUpdate(MessageDto updated)
@@ -315,7 +348,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     }
 
     partial void OnContentChanged(string? value) => Notify(ContentProps);
-    partial void OnPollChanged(PollViewModel? value) => Notify(nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit));
+    partial void OnPollChanged(PollViewModel? value)
+    {
+        BindPollViewModel(value);
+        Notify(nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit));
+    }
     partial void OnIsEditedChanged(bool value) => Notify(EditedProps);
     partial void OnEditedAtChanged(DateTime? value) => Notify(EditedProps);
     partial void OnIsDeletedChanged(bool value) => Notify(nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowDeliveryStatus), nameof(CanEdit), nameof(CanDelete));
@@ -366,6 +403,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         _disposed = true;
         if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Stop();
         UnsubscribeFromAudioPlayer();
+        BindPollViewModel(null);
         _cachedAudioBytes = null;
     }
 }

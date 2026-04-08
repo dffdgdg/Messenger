@@ -77,6 +77,12 @@ Initialize():
 
 - Переключатели режима показываются только в состоянии активного поиска (когда `IsSearchMode=true`)
 
+### Обновление опросов в real-time
+- `GlobalHubConnection` принимает событие `ReceivePollUpdate` (`PollDto`) и пробрасывает его как `PollUpdatedGlobally`.
+- `ChatHubSubscriber` делегирует событие в `ChatMessageManager.HandlePollUpdated`.
+- `ChatMessageManager` обновляет `MessageViewModel.UpdatePoll(...)` и сохраняет актуальный `poll_json` в SQLite, чтобы после перезапуска не показывались устаревшие результаты.
+- После успешного `POST /api/polls/vote` `PollViewModel` дополнительно уведомляет `MessageViewModel`, и состояние опроса сразу сохраняется в локальный кэш даже до прихода SignalR-события.
+
 ---
 
 ## 5. DialogService

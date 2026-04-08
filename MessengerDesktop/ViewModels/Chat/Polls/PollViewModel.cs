@@ -10,6 +10,7 @@ namespace MessengerDesktop.ViewModels.Chat;
 public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
+    public event Action<PollDto>? ServerStateApplied;
 
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
@@ -149,6 +150,7 @@ public partial class PollViewModel : BaseViewModel
             if (result is { Success: true, Data: not null })
             {
                 ApplyDto(result.Data);
+                ServerStateApplied?.Invoke(result.Data);
             }
             else
             {
@@ -176,6 +178,7 @@ public partial class PollViewModel : BaseViewModel
             if (result is { Success: true, Data: not null })
             {
                 ApplyDto(result.Data);
+                ServerStateApplied?.Invoke(result.Data);
             }
             else
             {

@@ -37,6 +37,7 @@
 | `ReceiveMessageDto` | `MessageDto` | Новое сообщение |
 | `MessageUpdated` | `MessageDto` | Отредактировано |
 | `MessageDeleted` | `{ MessageId, ChatId }` | Удалено (soft) |
+| `ReceivePollUpdate` | `PollDto` | Обновление результатов опроса после голосования/отмены |
 
 ### Уведомления
 | Событие | Payload | Описание |
@@ -85,6 +86,7 @@
 | `MessageReceivedGlobally` | `messageManager.AddReceivedMessage`  |
 | `MessageUpdatedGlobally` | `messageManager.HandleMessageUpdated` |
 | `MessageDeletedGlobally` | `messageManager.HandleMessageDeleted` |
+| `PollUpdatedGlobally` | `messageManager.HandlePollUpdated` (обновляет poll state + SQLite cache) |
 | `MessageRead` | обновить `IsRead` у сообщений с `Id <= lastReadId` |
 | `UnreadCountChanged` | `onUnreadCountChanged(count)` |
 | `Reconnected` | `onReconnected()` |

@@ -2,7 +2,9 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using MessengerDesktop.Services.Storage;
 using MessengerDesktop.ViewModels.Chat;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -20,14 +22,20 @@ public partial class ChatView : UserControl
     private const int VisibilityCheckDelayMs = 300;
     private const double NearBottomThreshold = 50;
     private const double NearTopThreshold = 100;
+    private const int ScrollStateSaveDebounceMs = 350;
+    private const string ScrollStateKeyPrefix = "chat_scroll_state:";
 
     private ScrollViewer? _scrollViewer;
     private ListBox? _messagesList;
     private ChatViewModel? _viewModel;
+    private ISettingsService? _settingsService;
 
     private bool _isInitialScrollDone;
     private bool _suppressScrollEvents;
     private bool _isScrollViewerInitialized;
+    private bool _isRestoringScrollState;
+    private bool _scrollStateRestored;
+    private ChatScrollState? _pendingScrollState;
 
     private double _lastExtentHeight;
     private int _scrollToEndRetries;
@@ -37,11 +45,13 @@ public partial class ChatView : UserControl
 
     private readonly HashSet<int> _seenMessageIds = [];
     private readonly DispatcherTimer _visibilityTimer;
+    private readonly DispatcherTimer _saveScrollStateTimer;
 
     public ChatView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        _settingsService = App.Current.Services.GetService<ISettingsService>();
 
         _visibilityTimer = new DispatcherTimer
         {
@@ -51,6 +61,16 @@ public partial class ChatView : UserControl
         {
             _visibilityTimer.Stop();
             CheckVisibleMessages();
+        };
+
+        _saveScrollStateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(ScrollStateSaveDebounceMs)
+        };
+        _saveScrollStateTimer.Tick += (_, _) =>
+        {
+            _saveScrollStateTimer.Stop();
+            SaveScrollState();
         };
     }
 
@@ -74,9 +94,14 @@ public partial class ChatView : UserControl
         _suppressScrollEvents = false;
         _lastExtentHeight = 0;
         _isScrollViewerInitialized = false;
+        _isRestoringScrollState = false;
+        _scrollStateRestored = false;
 
         Interlocked.Exchange(ref _loadingOlderMessages, 0);
         Interlocked.Exchange(ref _loadingNewerMessages, 0);
+
+        _pendingScrollState = LoadScrollState();
+
         EnsureMessagesHidden();
     }
 
@@ -123,6 +148,7 @@ public partial class ChatView : UserControl
         if (e.PropertyName == nameof(ChatViewModel.IsInitialLoading) && !_viewModel.IsInitialLoading)
         {
             ScheduleAction(FindScrollViewer, 50);
+            ScheduleAction(TryRestoreSavedScrollState, 120);
         }
     }
 
@@ -323,6 +349,9 @@ public partial class ChatView : UserControl
 
         HandleExtentChange();
         HandleScrollPosition();
+
+        _saveScrollStateTimer.Stop();
+        _saveScrollStateTimer.Start();
     }
 
     private void HandleExtentChange()
@@ -364,6 +393,81 @@ public partial class ChatView : UserControl
     private bool IsInitialLoading() => _viewModel?.IsInitialLoading == true;
     private bool ShouldLoadNewerMessages(bool isNearBottom)
         => isNearBottom && _viewModel?.HasMoreNewer == true && !IsInitialLoading();
+
+    #endregion
+
+    #region Scroll State Persistence
+
+    private ChatScrollState? LoadScrollState()
+    {
+        if (_settingsService is null || _viewModel is null)
+            return null;
+
+        var key = GetScrollStateKey(_viewModel.Context.ChatId);
+        return _settingsService.Get<ChatScrollState>(key);
+    }
+
+    private void TryRestoreSavedScrollState()
+    {
+        if (_scrollStateRestored || _isRestoringScrollState || _pendingScrollState is null)
+            return;
+
+        if (_viewModel is null || _viewModel.IsInitialLoading)
+            return;
+
+        EnsureScrollViewer();
+        if (_scrollViewer is null)
+        {
+            ScheduleAction(TryRestoreSavedScrollState, 120);
+            return;
+        }
+
+        _isRestoringScrollState = true;
+        _suppressScrollEvents = true;
+
+        try
+        {
+            var state = _pendingScrollState;
+            if (state.IsAtBottom)
+            {
+                _scrollToEndRetries = 0;
+                ScrollToBottom();
+            }
+            else
+            {
+                var maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
+                var targetOffset = Math.Clamp(state.OffsetY, 0, maxOffset);
+                _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetOffset);
+            }
+
+            _scrollStateRestored = true;
+            _isInitialScrollDone = true;
+            EnsureMessagesVisible();
+        }
+        finally
+        {
+            _isRestoringScrollState = false;
+            _suppressScrollEvents = false;
+        }
+    }
+
+    private void SaveScrollState()
+    {
+        if (_settingsService is null || _scrollViewer is null || _viewModel is null || !_isInitialScrollDone)
+            return;
+
+        double extent = _scrollViewer.Extent.Height;
+        double viewport = _scrollViewer.Viewport.Height;
+        double offset = _scrollViewer.Offset.Y;
+        bool isAtBottom = extent - viewport - offset < NearBottomThreshold;
+
+        var state = new ChatScrollState(offset, isAtBottom, DateTime.UtcNow);
+        _settingsService.Set(GetScrollStateKey(_viewModel.Context.ChatId), state);
+    }
+
+    private static string GetScrollStateKey(int chatId) => $"{ScrollStateKeyPrefix}{chatId}";
+
+    private sealed record ChatScrollState(double OffsetY, bool IsAtBottom, DateTime SavedAtUtc);
 
     #endregion
 
@@ -573,6 +677,8 @@ public partial class ChatView : UserControl
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
+        _saveScrollStateTimer.Stop();
+        SaveScrollState();
         _visibilityTimer.Stop();
         _scrollViewer?.ScrollChanged -= OnScrollChanged;
 

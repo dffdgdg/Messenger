@@ -19,6 +19,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int>? TotalUnreadChanged;
     event Action<MessageDto>? MessageReceivedGlobally;
     event Action<MessageDto>? MessageUpdatedGlobally;
+    event Action<PollDto>? PollUpdatedGlobally;
     event Action<int, int>? MessageDeletedGlobally;
     event Action<UserDto>? UserProfileUpdated;
     event Action<int, int>? UserTyping;
@@ -69,6 +70,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action<int>? TotalUnreadChanged;
     public event Action<MessageDto>? MessageReceivedGlobally;
     public event Action<MessageDto>? MessageUpdatedGlobally;
+    public event Action<PollDto>? PollUpdatedGlobally;
     public event Action<int, int>? MessageDeletedGlobally;
     public event Action<UserDto>? UserProfileUpdated;
     public event Action<int, int>? UserTyping;
@@ -193,6 +195,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, int>("UnreadCountUpdated", (cid, cnt) => UpdateUnread(cid, cnt)));
         _subs.Add(_hub.On<MessageDto>("ReceiveMessageDto", OnNewMessageReceived));
         _subs.Add(_hub.On<MessageDto>("MessageUpdated", OnMessageUpdated));
+        _subs.Add(_hub.On<PollDto>("ReceivePollUpdate", OnPollUpdated));
         _subs.Add(_hub.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeleted));
         _subs.Add(_hub.On<int, int>("UserTyping", (c, u) => PostUI(() => UserTyping?.Invoke(c, u))));
         _subs.Add(_hub.On<int, int, int?, DateTime?>("MessageRead", (c, u, m, t) => PostUI(() => MessageRead?.Invoke(c, u, m, t))));
@@ -267,6 +270,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _ = SafeCacheAsync(() => _cache.MarkMessageDeletedAsync(evt.MessageId), "delete");
         PostUI(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
     }
+    private void OnPollUpdated(PollDto poll) => PostUI(() => PollUpdatedGlobally?.Invoke(poll));
 
     #endregion
 

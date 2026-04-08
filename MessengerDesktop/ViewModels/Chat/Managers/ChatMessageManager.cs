@@ -341,6 +341,18 @@ public sealed class ChatMessageManager(
         RunInBackground(() => SafeCacheIfAvailable(() => cacheService!.UpsertMessageAsync(updatedDto)));
     }
 
+    public void HandlePollUpdated(PollDto pollDto)
+    {
+        var affectedMessages = Messages.Where(m => m.PollDto?.Id == pollDto.Id || m.Poll?.PollId == pollDto.Id).ToList();
+        if (affectedMessages.Count == 0) return;
+
+        foreach (var message in affectedMessages)
+        {
+            message.UpdatePoll(pollDto);
+            RunInBackground(() => SafeCacheIfAvailable(() => cacheService!.UpsertMessageAsync(message.Message)));
+        }
+    }
+
     public void MarkAsReadLocally(int messageId)
     {
         foreach (var msg in Messages.Where(m => m.Id <= messageId && m.IsUnread))

@@ -57,6 +57,8 @@
 			<PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
 		</PackageReference>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
 		<PackageReference Include="NAudio" Version="2.3.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<PackageReference Include="Scrutor" Version="7.0.0" />
@@ -100,4 +102,20 @@
 	  <Folder Include="Assets\Images\Avatars\" />
 	  <Folder Include="Assets\Images\Illustrations\" />
 	</ItemGroup>
+	
+	<ItemGroup>
+		<None Update="appsettings.Wsl.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="appsettings.Local.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+		<BaseOutputPath>/tmp/MessengerDesktop/bin/</BaseOutputPath>
+		<BaseIntermediateOutputPath>/tmp/MessengerDesktop/obj/</BaseIntermediateOutputPath>
+	</PropertyGroup>
 </Project>

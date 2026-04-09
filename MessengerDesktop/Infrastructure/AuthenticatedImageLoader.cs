@@ -201,8 +201,7 @@ public sealed class AuthenticatedImageLoader : BaseWebImageLoader
     {
         lock (_lruLock)
         {
-            Debug.WriteLine($"[AuthImageLoader] Clearing RAM cache: " +
-                $"{_lruMap.Count} items, {_ramCacheBytes / 1024 / 1024} MB");
+            Debug.WriteLine($"[AuthImageLoader] Clearing RAM cache: {_lruMap.Count} items, {_ramCacheBytes / 1024 / 1024} MB");
             _lruList.Clear();
             _lruMap.Clear();
             _ramCacheBytes = 0;

@@ -8,6 +8,7 @@ using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
@@ -24,21 +25,28 @@ public sealed class App : Application, IDisposable
 
     public IServiceProvider Services { get; private set; } = null!;
 
-    public const string ApiUrl =
-#if DEBUG
-        "https://localhost:7190/";
-#else
-        "https://localhost:5274/";
-#endif
+    public static string ApiUrl { get; private set; } = null!;
 
     public override void Initialize()
     {
-        Debug.WriteLine("[App] Initialize starting...");
+        var config = BuildConfiguration();
+        ApiUrl = config["ApiUrl"] ?? "http://localhost:5274/";
+        Debug.WriteLine($"[App] ApiUrl = {ApiUrl}");
         AvaloniaXamlLoader.Load(this);
         Services = ConfigureServices();
-        Debug.WriteLine("[App] Initialize completed");
     }
 
+    private static IConfiguration BuildConfiguration()
+    {
+        var env = Environment.GetEnvironmentVariable("MESSENGER_ENV") ?? "Local";
+
+        return new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{env}.json", optional: true) // перекрывает базовый
+            .AddEnvironmentVariables("MESSENGER_")
+            .Build();
+    }
     private static ServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();

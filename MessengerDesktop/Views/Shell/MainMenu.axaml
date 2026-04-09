@@ -148,8 +148,8 @@
     <Grid ColumnDefinitions="82,*">
         <DockPanel Grid.Column="0" LastChildFill="False" Margin="5,0,5,0">
 
-            <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10"
-                        HorizontalAlignment="Center">
+            <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,50,0,10"
+                        HorizontalAlignment="Center" >
             
 
                 <RadioButton Classes="NavButton" GroupName="MainNav"

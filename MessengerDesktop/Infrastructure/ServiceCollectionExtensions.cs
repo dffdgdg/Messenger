@@ -44,7 +44,10 @@ public static class ServiceCollectionExtensions
             var handler = new HttpClientHandler
             {
                 CheckCertificateRevocationList = false,
-                UseProxy = false
+                UseProxy = false,
+#if DEBUG
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+#endif
             };
 
             return new HttpClient(handler)

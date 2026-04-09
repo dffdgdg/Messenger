@@ -40,7 +40,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     public bool IsChatLocalMode => SelectedScope == SearchScopeMode.CurrentChatMessages && CanSearchInCurrentChat;
     public bool IsChatsScope => SelectedScope == SearchScopeMode.Chats;
     public bool IsContactsScope => SelectedScope == SearchScopeMode.Contacts;
-
+    public bool IsEmpty => !IsSearching && !string.IsNullOrWhiteSpace(SearchQuery) && !HasResults;
     partial void OnSelectedScopeChanged(SearchScopeMode value)
     {
         if (value == SearchScopeMode.CurrentChatMessages && !CanSearchInCurrentChat)
@@ -61,6 +61,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
             _ = SearchWithDelayAsync(SearchQuery, _searchCts.Token);
         }
     }
+    partial void OnIsSearchingChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
 
     partial void OnChatLocalSearchChatIdChanged(int? value)
     {
@@ -305,6 +306,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         OnPropertyChanged(nameof(HasResults));
         OnPropertyChanged(nameof(HasChatResults));
         OnPropertyChanged(nameof(HasMessageResults));
+        OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(IsChatLocalMode));
         OnPropertyChanged(nameof(CanSearchInCurrentChat));
         OnPropertyChanged(nameof(IsChatsScope));

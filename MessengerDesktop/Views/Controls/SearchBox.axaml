@@ -34,7 +34,7 @@
                      Grid.Column="1"
                      Classes="Borderless"
                      Text="{Binding #Root.SearchText, Mode=TwoWay}"
-                     Watermark="{Binding #Root.Watermark}"
+                     PlaceholderText="{Binding #Root.Watermark}"
                      FontSize="13"
                      VerticalContentAlignment="Center"/>
 

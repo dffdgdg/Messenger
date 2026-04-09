@@ -298,13 +298,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (ReferenceEquals(_boundPollVm, pollViewModel))
             return;
 
-        if (_boundPollVm != null)
-            _boundPollVm.ServerStateApplied -= OnPollServerStateApplied;
+        _boundPollVm?.ServerStateApplied -= OnPollServerStateApplied;
 
         _boundPollVm = pollViewModel;
 
-        if (_boundPollVm != null)
-            _boundPollVm.ServerStateApplied += OnPollServerStateApplied;
+        _boundPollVm?.ServerStateApplied += OnPollServerStateApplied;
     }
 
     public void ApplyUpdate(MessageDto updated)
@@ -365,7 +363,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     partial void OnIsVoicePausedChanged(bool value) => Notify(VoiceButtonProps);
     partial void OnIsVoiceLoadingChanged(bool value) => OnPropertyChanged(nameof(ShowPlayButton));
     partial void OnForwardedFromMessageIdChanged(int? value) => Notify(nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit));
-    partial void OnForwardedFromSenderNameChanged(string? v) => OnPropertyChanged(nameof(ForwardedFromHeader));
+    partial void OnForwardedFromSenderNameChanged(string? value) => OnPropertyChanged(nameof(ForwardedFromHeader));
 
     private void UpdateGroupPosition() => GroupPosition = (IsContinuation, HasNextFromSame) switch
     {

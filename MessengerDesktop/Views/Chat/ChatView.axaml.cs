@@ -220,6 +220,9 @@ public partial class ChatView : UserControl
 
     private void OnScrollToBottomRequested()
     {
+        if (ShouldIgnoreInitialScrollRequest())
+            return;
+
         _scrollToEndRetries = 0;
         _suppressScrollEvents = true;
         EnsureScrollViewer();
@@ -228,10 +231,14 @@ public partial class ChatView : UserControl
 
     private void OnScrollToIndexRequested(int index, bool highlight)
     {
+        if (ShouldIgnoreInitialScrollRequest())
+            return;
+
         ScheduleScrollAction(() =>
         {
             if (_viewModel is null || index < 0 || index >= _viewModel.Messages.Count)
                 return;
+
 
             ScrollToItem(_viewModel.Messages[index]);
             _isInitialScrollDone = true;
@@ -412,7 +419,7 @@ public partial class ChatView : UserControl
         if (_scrollStateRestored || _isRestoringScrollState || _pendingScrollState is null)
             return;
 
-        if (_viewModel is null || _viewModel.IsInitialLoading)
+        if (_viewModel?.IsInitialLoading != false)
             return;
 
         EnsureScrollViewer();
@@ -621,6 +628,15 @@ public partial class ChatView : UserControl
     #endregion
 
     #region Helpers
+
+    private bool ShouldIgnoreInitialScrollRequest()
+    {
+        if (_scrollStateRestored || _pendingScrollState is null)
+            return false;
+
+        Debug.WriteLine("[ChatView] Пропуск стартового скролл-запроса: ожидается восстановление сохранённой позиции.");
+        return true;
+    }
 
     private static void ScheduleAction(Func<Task> action, int delayMs = 50)
     {

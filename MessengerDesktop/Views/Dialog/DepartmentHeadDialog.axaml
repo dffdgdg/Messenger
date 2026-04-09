@@ -37,7 +37,7 @@
                 <TextBlock Text="Название отдела" Classes="FieldLabel Secondary"/>
                 <TextBox Text="{Binding Name}"
                          Classes="Input"
-                         Watermark="Введите название отдела...">
+                         PlaceholderText="Введите название отдела...">
                     <TextBox.InnerLeftContent>
                         <PathIcon Data="{StaticResource FolderIcon}"
                                   Classes="InputIcon"

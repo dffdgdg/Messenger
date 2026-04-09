@@ -14,12 +14,12 @@
 		x:DataType="vm:MainWindowViewModel"
 		x:Name="MainWindowRoot"
 		Icon="/Assets/avalonia-logo.ico"
-		Title="Messenger"
+		Title="ВнутрьСеть"
 		ExtendClientAreaToDecorationsHint="True"
-		ExtendClientAreaChromeHints="Default"
 		ExtendClientAreaTitleBarHeightHint="-1"
 		Background="{DynamicResource PrimaryBG}"
 		TransparencyLevelHint="AcrylicBlur"
+		CanResize="True"
 		MinWidth="700"
 		MinHeight="500">
 	<Window.Styles>
@@ -60,20 +60,7 @@
 			<Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
 		</Style>
 
-		<Style Selector="Button.TitleBarHelp">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="CornerRadius" Value="0"/>
-			<Setter Property="Foreground" Value="{DynamicResource PrimaryFG}"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
-		<Style Selector="Button.TitleBarHelp:pointerover /template/ ContentPresenter">
-			<Setter Property="Background" Value="#22FFFFFF"/>
-		</Style>
-		<Style Selector="Button.TitleBarHelp:pressed /template/ ContentPresenter">
-			<Setter Property="Background" Value="#33FFFFFF"/>
-		</Style>
+		
 	</Window.Styles>
 
 	<Grid>
@@ -96,21 +83,6 @@
 			  VerticalAlignment="Top"
 			  Background="Transparent"
 			  ZIndex="999"/>
-
-		<Button Classes="TitleBarHelp"
-				Grid.Column="2"
-				HorizontalAlignment="Right"
-				VerticalAlignment="Top"
-				Height="48"
-				Width="46"
-				Margin="0,0,138,0"
-				ZIndex="1000"
-				ToolTip.Tip="Помощь">
-			<PathIcon Width="16"
-					  Height="16"
-					  Foreground="{DynamicResource PrimaryFG}"
-					  Data="{StaticResource HelpIcon}"/>
-		</Button>
 
 		<ContentControl Content="{Binding CurrentViewModel}" Grid.ColumnSpan="3">
 			<ContentControl.DataTemplates>

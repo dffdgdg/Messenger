@@ -16,7 +16,7 @@
 
             <TextBox Grid.Row="1"
                      Text="{Binding SearchQuery, Mode=TwoWay}"
-                     Watermark="Поиск по названию чата..."
+                     PlaceholderText="Поиск по названию чата..."
                      Classes="Input Search">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource SearchIcon}"

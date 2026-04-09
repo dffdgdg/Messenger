@@ -505,7 +505,7 @@
 											 x:Name="ComposerTextBox"
 											 Classes="ChatInput"
 											 Text="{Binding NewMessage, Mode=TwoWay}"
-											 Watermark="Сообщение..."
+											 PlaceholderText="Сообщение..."
 											 KeyUp="ComposerTextBox_OnKeyUp"
 											 KeyDown="ComposerTextBox_OnKeyDown"
 											 PointerReleased="ComposerTextBox_OnPointerReleased"
@@ -517,7 +517,7 @@
 									<TextBox Grid.Column="1"
 											 Classes="ChatInput"
 											 Text="{Binding EditDelete.EditMessageContent, Mode=TwoWay}"
-											 Watermark="Редактирование..."
+											 PlaceholderText="Редактирование..."
 											 IsVisible="{Binding EditDelete.IsEditMode}">
 										<TextBox.KeyBindings>
 											<KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}"/>

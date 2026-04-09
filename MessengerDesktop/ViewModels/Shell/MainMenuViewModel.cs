@@ -31,6 +31,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private AdminViewModel? _adminVm;
     private SettingsViewModel? _settingsVm;
     private CancellationTokenSource? _searchCts;
+    private readonly GlobalSearchManager _searchManager;
 
     [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
     [ObservableProperty] public partial int UserId { get; set; }
@@ -44,6 +45,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public bool ShowNoResults => HasSearchText && !IsSearching;
     public bool CanGoBack => _backHistory.Count > 0;
     public bool CanGoForward => _forwardHistory.Count > 0;
+    public bool IsSearchAvailable => true;
+    public GlobalSearchManager SearchManager => _searchManager;
+    public bool IsSearchMode => _searchManager.IsSearchMode;
 
     public MainMenuViewModel(MainWindowViewModel mainWindowVm, IApiClientService api, IAuthManager auth, IChatsViewModelFactory chatsFactory, IServiceProvider sp, IGlobalHubConnection globalHub)
     {
@@ -55,6 +59,12 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _globalHub = globalHub;
 
         UserId = _auth.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
+        _searchManager = new GlobalSearchManager(UserId, startWithChatsScope: true, _api);
+        _searchManager.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(GlobalSearchManager.IsSearchMode))
+                OnPropertyChanged(nameof(IsSearchMode));
+        };
         CurrentMenuViewModel = _chatsVm = _chatsFactory.Create(this, isGroupMode: true);
 
         _ = LoadContactsAndChatsAsync();
@@ -174,12 +184,51 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _searchCts?.Cancel(); _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
         OnPropertyChanged(nameof(HasSearchText));
+        SearchManager.SearchQuery = value;
     }
 
     partial void OnIsSearchingChanged(bool value) => OnPropertyChanged(nameof(ShowNoResults));
 
     [RelayCommand]
-    private void ClearSearch() => SearchText = string.Empty;
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        SearchManager.Clear();
+    }
+
+    [RelayCommand]
+    private void CloseSearch()
+    {
+        SearchManager.ExitSearch();
+        SearchText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SetSearchScope(SearchScopeMode scope)
+    {
+        SearchManager.UseScope(scope);
+        OnPropertyChanged(nameof(IsSearchMode));
+    }
+
+    [RelayCommand]
+    private async Task OpenSearchedChat(ChatListItemViewModel? chat)
+    {
+        if (chat == null) return;
+        await SwitchToTabAndOpenChatAsync(chat.ToDto());
+        CloseSearch();
+    }
+
+    [RelayCommand]
+    private async Task OpenSearchResult(GlobalSearchMessageDto? message)
+    {
+        if (message == null) return;
+        await SwitchToTabAndOpenMessageAsync(message);
+        CloseSearch();
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreSearchResults() => await SearchManager.LoadMoreMessagesAsync();
+
 
     #endregion
 

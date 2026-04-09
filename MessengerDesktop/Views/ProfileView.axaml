@@ -147,17 +147,17 @@
 								<Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
 									<StackPanel Spacing="6">
 										<TextBlock Text="Фамилия" Classes="FieldLabel" FontSize="12"/>
-										<TextBox Text="{Binding TempSurname}" Classes="Input" Watermark="Иванов"/>
+										<TextBox Text="{Binding TempSurname}" Classes="Input" PlaceholderText="Иванов"/>
 									</StackPanel>
 
 									<StackPanel Grid.Column="1" Spacing="6">
 										<TextBlock Text="Имя" Classes="FieldLabel" FontSize="12"/>
-										<TextBox Text="{Binding TempName}" Classes="Input" Watermark="Иван"/>
+										<TextBox Text="{Binding TempName}" Classes="Input" PlaceholderText="Иван"/>
 									</StackPanel>
 
 									<StackPanel Grid.Column="2" Spacing="6">
 										<TextBlock Text="Отчество" Classes="FieldLabel" FontSize="12"/>
-										<TextBox Text="{Binding TempMidname}" Classes="Input" Watermark="Иванович"/>
+										<TextBox Text="{Binding TempMidname}" Classes="Input" PlaceholderText="Иванович"/>
 									</StackPanel>
 								</Grid>
 
@@ -221,7 +221,7 @@
 												 Text="{Binding TempUsername}"
 												 Classes="Input"
 												 CornerRadius="0,8,8,0"
-												 Watermark="username"
+												 PlaceholderText="username"
 												 MaxLength="30"/>
 									</Grid>
 
@@ -289,7 +289,7 @@
 									<TextBox Text="{Binding CurrentPassword}"
 											 Classes="Input"
 											 PasswordChar="•"
-											 Watermark="Введите текущий пароль"
+											 PlaceholderText="Введите текущий пароль"
 											 MaxWidth="320"
 											 HorizontalAlignment="Left"/>
 								</StackPanel>
@@ -302,7 +302,7 @@
 										<TextBox Text="{Binding NewPassword}"
 												 Classes="Input"
 												 PasswordChar="•"
-												 Watermark="Минимум 6 символов"/>
+												 PlaceholderText="Минимум 6 символов"/>
 										<TextBlock Text="{Binding NewPasswordValidationMessage}"
 												   Classes="ValidationHint"
 												   IsVisible="{Binding NewPasswordValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -313,7 +313,7 @@
 										<TextBox Text="{Binding ConfirmPassword}"
 												 Classes="Input"
 												 PasswordChar="•"
-												 Watermark="Повторите пароль"/>
+												 PlaceholderText="Повторите пароль"/>
 
 										<StackPanel Orientation="Horizontal"
 													Spacing="5"

@@ -444,12 +444,18 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             var result = await Context.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
 
-            if (result.Success)
+            if (result.Success && result.Data != null)
             {
                 NewMessage = string.Empty;
                 Attachments.Clear();
                 Reply.CancelReply();
                 Forward.CancelForward();
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    MessageManager.AddReceivedMessage(result.Data);
+                    Context.RequestScrollToBottom();
+                });
             }
             else
             {

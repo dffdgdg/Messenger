@@ -31,7 +31,7 @@
                 <StackPanel Spacing="6">
                     <TextBlock Text="Логин" Classes="FieldLabel"/>
                     <TextBox Text="{Binding Username}" Classes="Input"
-                             Watermark="username" IsEnabled="{Binding IsNewUser}">
+                             PlaceholderText="username" IsEnabled="{Binding IsNewUser}">
                         <TextBox.InnerLeftContent>
                             <TextBlock Text="@" Margin="12,0,4,0"
                                        Foreground="{DynamicResource TextSecondary}"
@@ -47,11 +47,11 @@
                     <TextBlock Text="ФИО" Classes="FieldLabel"/>
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                         <TextBox Grid.Column="0" Text="{Binding Surname}"
-                                 Classes="Input" Watermark="Фамилия"/>
+                                 Classes="Input" PlaceholderText="Фамилия"/>
                         <TextBox Grid.Column="1" Text="{Binding Name}"
-                                 Classes="Input" Watermark="Имя"/>
+                                 Classes="Input" PlaceholderText="Имя"/>
                         <TextBox Grid.Column="2" Text="{Binding Midname}"
-                                 Classes="Input" Watermark="Отчество"/>
+                                 Classes="Input" PlaceholderText="Отчество"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Spacing="4"
                                 IsVisible="{Binding DisplayNamePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -87,7 +87,7 @@
                                  Text="{Binding Password}"
                                  PasswordChar="•"
                                  Classes="Input"
-                                 Watermark="Пароль">
+                                 PlaceholderText="Пароль">
                             <TextBox.InnerLeftContent>
                                 <PathIcon Data="{StaticResource LockClosedIcon}"
                                           Classes="InputIcon"
@@ -99,7 +99,7 @@
                                  Text="{Binding ConfirmPassword}"
                                  PasswordChar="•"
                                  Classes="Input"
-                                 Watermark="Подтверждение">
+                                 PlaceholderText="Подтверждение">
                             <TextBox.InnerLeftContent>
                                 <PathIcon Data="{StaticResource LockClosedIcon}"
                                           Classes="InputIcon"

@@ -9,7 +9,7 @@
         <StackPanel Spacing="16">
             <TextBlock Text="Создать опрос" Classes="DialogTitle"/>
 
-            <TextBox Watermark="Вопрос" Text="{Binding Question}" Classes="Input"/>
+            <TextBox PlaceholderText="Вопрос" Text="{Binding Question}" Classes="Input"/>
 
             <TextBlock Text="Варианты ответа" Classes="FieldLabel" FontWeight="DemiBold"/>
 

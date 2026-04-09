@@ -9,7 +9,7 @@
         <StackPanel Spacing="16">
             <TextBlock Text="{Binding Title}" Classes="DialogTitle"/>
 
-            <TextBox Text="{Binding Name}" Classes="Input" Watermark="Название отдела">
+            <TextBox Text="{Binding Name}" Classes="Input" PlaceholderText="Название отдела">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource FolderIcon}"
                               Classes="InputIcon"

@@ -25,7 +25,7 @@
             <!-- Поиск -->
             <TextBox Grid.Row="1"
                      Text="{Binding SearchQuery}"
-                     Watermark="Поиск по имени или логину..."
+                     PlaceholderText="Поиск по имени или логину..."
                      Classes="Input Search">
                 <TextBox.InnerLeftContent>
                     <PathIcon Data="{StaticResource SearchIcon}"

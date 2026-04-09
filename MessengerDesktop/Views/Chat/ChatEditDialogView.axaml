@@ -58,7 +58,7 @@
 					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
 						<TextBlock Text="Название группы" FontWeight="DemiBold" FontSize="12"
 								   Foreground="{DynamicResource TextSecondary}"/>
-						<TextBox Text="{Binding Name}" Watermark="Введите название..."
+						<TextBox Text="{Binding Name}" PlaceholderText="Введите название..."
 								 Classes="Input" MaxLength="100"/>
 					</StackPanel>
 				</Grid>

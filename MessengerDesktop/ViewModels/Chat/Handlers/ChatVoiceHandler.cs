@@ -5,11 +5,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-/// <summary> <param name="cancelReply">
+/// <summary>
+/// <param name="cancelReply">
 /// ReplyHandler нужен для CancelReply после отправки голосового.
 /// Передаётся как Func для избежания циклических зависимостей.
-/// </param> </summary>
-public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelReply) : ChatFeatureHandler(context)
+/// </param>
+/// </summary>
+public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelReply)
+    : ChatFeatureHandler(context)
 {
     private IAudioRecorderService _audioRecorder = null!;
     private CancellationTokenSource? _voiceSendCts;
@@ -59,7 +62,9 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
 
         _voiceRecording?.Dispose();
         VoiceRecording = new VoiceRecordingViewModel(_audioRecorder)
-        { State = AudioRecordingState.Recording };
+        {
+            State = AudioRecordingState.Recording
+        };
         VoiceRecording.StartTimer();
         IsVoiceRecording = true;
 
@@ -79,7 +84,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
             if (IsVoiceRecording && IsAlive)
                 await StopAndSend();
         }
-        catch (OperationCanceledException) { /* Отмена нормальная, не считаем ошибкой */ }
+        catch (OperationCanceledException) { /* Отмена нормальная */ }
     }
 
     [RelayCommand]
@@ -150,8 +155,10 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
 
             var uploadResult = await Ctx.Api.UploadFileAsync<MessageFileDto>(
                 ApiEndpoints.Files.Upload(Ctx.ChatId),
-                recording.AudioStream, recording.FileName,
-                recording.ContentType, ct);
+                recording.AudioStream,
+                recording.FileName,
+                recording.ContentType,
+                ct);
 
             if (ct.IsCancellationRequested) return;
 
@@ -174,7 +181,8 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
                 VoiceFileSize = uploadResult.Data.FileSize
             };
 
-            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
+            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(
+                ApiEndpoints.Messages.Create, msg, ct);
 
             if (sendResult.Success) cancelReply();
             else VoiceError = $"Ошибка отправки: {sendResult.Error}";
@@ -196,13 +204,12 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
         VoiceRecording = null;
     }
 
-    public override void Dispose()
+    protected override void DisposeManaged()
     {
         _autoStopCts?.Cancel();
         _autoStopCts?.Dispose();
         _voiceSendCts?.Cancel();
         _voiceSendCts?.Dispose();
         _voiceRecording?.Dispose();
-        base.Dispose();
     }
 }

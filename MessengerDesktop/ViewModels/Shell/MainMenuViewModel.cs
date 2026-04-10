@@ -45,7 +45,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public bool ShowNoResults => HasSearchText && !IsSearching;
     public bool CanGoBack => _backHistory.Count > 0;
     public bool CanGoForward => _forwardHistory.Count > 0;
-    public bool IsSearchAvailable => true;
+    public static bool IsSearchAvailable => true;
     public GlobalSearchManager SearchManager => _searchManager;
     public bool IsSearchMode => _searchManager.IsSearchMode;
 

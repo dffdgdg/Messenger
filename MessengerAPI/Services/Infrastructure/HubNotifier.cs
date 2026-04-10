@@ -26,11 +26,11 @@ public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> l
     {
         try
         {
-            await hubContext.Clients.Group($"user_{userId}").SendAsync(method, args);
+            await hubContext.Clients.Group($"user_{userId}").SendCoreAsync(method, args!);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex,"Не удалось отправить {Method} пользователю {UserId}", method, userId);
+            logger.LogWarning(ex, "Не удалось отправить {Method} пользователю {UserId}", method, userId);
         }
     }
 }

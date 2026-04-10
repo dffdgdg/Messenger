@@ -1,6 +1,5 @@
 ﻿using Avalonia.Controls.Documents;
 using Avalonia.Input;
-using Avalonia.Media.TextFormatting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,7 +32,7 @@ public class RichMessageTextBlock : SelectableTextBlock
 
     private static readonly SolidColorBrush LinkBrush = new(Color.Parse("#4A9EEA"));
     private static readonly SolidColorBrush MentionBrush = new(Color.Parse("#8F7DFF"));
-    private static readonly Regex MentionRegex = new(@"(?<![A-Za-z0-9_])@[A-Za-z0-9_]{3,30}", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private static readonly Regex MentionRegex = new("(?<![A-Za-z0-9_])@[A-Za-z0-9_]{3,30}", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     private readonly List<(int start, int end, string url)> _linkRanges = [];
     private readonly List<(int start, int end, string mention)> _mentionRanges = [];
@@ -162,9 +161,7 @@ public class RichMessageTextBlock : SelectableTextBlock
             return;
         }
 
-        Cursor = GetUrlUnderPointer(e) != null || GetMentionUnderPointer(e) != null
-            ? new Cursor(StandardCursorType.Hand)
-            : Cursor.Default;
+        Cursor = GetUrlUnderPointer(e) != null || GetMentionUnderPointer(e) != null ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
@@ -218,42 +215,6 @@ public class RichMessageTextBlock : SelectableTextBlock
         }
 
         return null;
-    }
-
-    private static int GetCharacterIndex(Point pos, TextLayout layout)
-    {
-        try
-        {
-            var result = layout.HitTestPoint(pos);
-            return result.TextPosition;
-        }
-        catch
-        {
-            return GetCharIndexByPosition(layout, pos);
-        }
-    }
-
-    private static int GetCharIndexByPosition(TextLayout layout, Point pos)
-    {
-        var lines = layout.TextLines;
-        var y = 0.0;
-        var globalCharOffset = 0;
-
-        foreach (var line in lines)
-        {
-            var lineHeight = line.Height;
-
-            if (pos.Y >= y && pos.Y < y + lineHeight)
-            {
-                var hit = line.GetCharacterHitFromDistance(pos.X);
-                return hit.FirstCharacterIndex;
-            }
-
-            y += lineHeight;
-            globalCharOffset += line.Length;
-        }
-
-        return -1;
     }
 
     private static void OpenUrl(string url)

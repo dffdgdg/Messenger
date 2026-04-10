@@ -82,8 +82,7 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
     {
         if (message?.CanDelete != true) return;
 
-        var result = await Ctx.Api.DeleteAsync(
-            ApiEndpoints.Messages.ById(message.Id));
+        var result = await Ctx.Api.DeleteAsync(ApiEndpoints.Messages.ById(message.Id));
 
         if (result.Success)
         {
@@ -126,9 +125,5 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
         if (IsEditMode) CancelEdit();
     }
 
-    public override void Dispose()
-    {
-        Ctx.CompositionModeReset -= OnCompositionReset;
-        base.Dispose();
-    }
+    protected override void DisposeManaged() => Ctx.CompositionModeReset -= OnCompositionReset;
 }

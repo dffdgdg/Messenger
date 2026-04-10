@@ -10,16 +10,19 @@ namespace MessengerDesktop.ViewModels.Chat;
 public abstract class ChatFeatureHandler(ChatContext context) : ObservableObject, IDisposable
 {
     protected ChatContext Ctx { get; } = context ?? throw new ArgumentNullException(nameof(context));
-    protected bool Disposed { get; private set; }
 
-    protected bool IsAlive => !Disposed && !Ctx.IsDisposed;
+    private bool _disposed;
+    protected bool Disposed => _disposed;
+    protected bool IsAlive => !_disposed && !Ctx.IsDisposed;
 
-    public virtual void Dispose()
+    public void Dispose()
     {
-        if (Disposed)
-            return;
+        if (_disposed) return;
+        _disposed = true;
 
-        Disposed = true;
+        DisposeManaged();
         GC.SuppressFinalize(this);
     }
+
+    protected virtual void DisposeManaged() { }
 }

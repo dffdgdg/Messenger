@@ -238,16 +238,17 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     private void OnNotificationReceived(NotificationDto n)
     {
         if (Volatile.Read(ref _disposed) == 1 || !_settings.NotificationsEnabled || _openChatId == n.ChatId) return;
-        IncrementUnread(n.ChatId);
+
         PostUI(() =>
         {
             try
             {
                 _notify.Show(n.ChatName ?? "Новое сообщение", n.Type == NotificationTypePoll ? n.Preview ?? "Новый опрос" : $"{n.SenderName}: {n.Preview}",
-                    DesktopNotificationType.Information, 5000, () => _nav.CurrentViewModel is MainMenuViewModel vm ? vm.OpenNotificationAsync(n) : Task.CompletedTask);
+                    DesktopNotificationType.Information, 5000, () => _nav.CurrentViewModel is MainMenuViewModel vm
+                        ? vm.OpenNotificationAsync(n) : Task.CompletedTask);
                 NotificationReceived?.Invoke(n);
             }
-            catch (Exception ex) { Log($"Notification display error: {ex.Message}"); }
+            catch (Exception ex) { Log($"Ошибка отображения уведомления: {ex.Message}"); }
         });
     }
 

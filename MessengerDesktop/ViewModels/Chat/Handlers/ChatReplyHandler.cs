@@ -30,8 +30,7 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
     }
 
     [RelayCommand]
-    public void CancelReply()
-        => ReplyingToMessage = null;
+    public void CancelReply() => ReplyingToMessage = null;
 
     [RelayCommand]
     private async Task ScrollToReplyOriginal(MessageViewModel? message)
@@ -50,9 +49,7 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
 
         var targetIndex = await _messageManager.LoadMessagesAroundAsync(targetId);
         if (targetIndex < messages.Count)
-        {
             HighlightAndScroll(messages[targetIndex.Value]);
-        }
     }
 
     private void HighlightAndScroll(MessageViewModel target)
@@ -68,9 +65,5 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
         if (IsReplyMode) CancelReply();
     }
 
-    public override void Dispose()
-    {
-        Ctx.CompositionModeReset -= OnCompositionReset;
-        base.Dispose();
-    }
+    protected override void DisposeManaged() => Ctx.CompositionModeReset -= OnCompositionReset;
 }

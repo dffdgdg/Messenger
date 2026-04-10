@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore,
-    ChatMemberLoader memberLoader) : ChatFeatureHandler(context)
+public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader) : ChatFeatureHandler(context)
 {
     [ObservableProperty] public partial UserDto? ContactUser { get; set; }
     [ObservableProperty] public partial bool IsContactOnline { get; set; }
@@ -33,11 +32,9 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     }
 
     public bool IsContactChat => Ctx.Chat?.Type == ChatType.Contact;
-    public bool IsGroupChat
-        => Ctx.Chat?.Type is ChatType.Chat or ChatType.Department;
+    public bool IsGroupChat => Ctx.Chat?.Type is ChatType.Chat or ChatType.Department;
 
     public string InfoPanelTitle => IsContactChat ? "Информация о пользователе" : "Информация о группе";
-
     public string InfoPanelSubtitle => GetInfoPanelSubtitle();
 
     private string GetInfoPanelSubtitle()
@@ -54,9 +51,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
             };
         }
 
-        if (IsContactOnline)
-            return "в сети";
-
+        if (IsContactOnline) return "в сети";
         return ContactLastSeen ?? "не в сети";
     }
 
@@ -65,8 +60,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     public string? ContactUsername => ContactUser?.Username;
     public string? ContactDepartment => ContactUser?.Department;
 
-    partial void OnMemberSearchQueryChanged(string value) =>
-        UpdateFilteredMembers();
+    partial void OnMemberSearchQueryChanged(string value) => UpdateFilteredMembers();
 
     private void UpdateFilteredMembers()
     {
@@ -121,14 +115,14 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         InvalidateAll();
 
-        if (!string.IsNullOrWhiteSpace(contact.Department))
-            return;
+        if (!string.IsNullOrWhiteSpace(contact.Department)) return;
 
         try
         {
-            var profileResult = await Ctx.Api.GetAsync<UserDto>(ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
-            if (profileResult is not { Success: true, Data: not null })
-                return;
+            var profileResult = await Ctx.Api.GetAsync<UserDto>(
+                ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
+
+            if (profileResult is not { Success: true, Data: not null }) return;
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -149,7 +143,10 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
             });
         }
         catch (OperationCanceledException) { /* Отменено */ }
-        catch (Exception ex) { Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InfoPanel] LoadContactUserAsync profile error: {ex.Message}");
+        }
     }
 
     public async Task ReloadMembersAfterEditAsync()
@@ -162,20 +159,21 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
             {
                 Ctx.Members = freshMembers;
                 UpdateFilteredMembers();
-                if (IsContactChat)
-                    _ = LoadContactUserAsync();
+                if (IsContactChat) _ = LoadContactUserAsync();
                 InvalidateAll();
             });
         }
         catch (OperationCanceledException) { /* Отменено */ }
-        catch (Exception ex) { Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InfoPanel] ReloadMembers error: {ex.Message}");
+        }
     }
 
     [RelayCommand]
     private async Task CopyUsername()
     {
-        if (string.IsNullOrEmpty(ContactUsername))
-            return;
+        if (string.IsNullOrEmpty(ContactUsername)) return;
     }
 
     private void OnUserStatusChanged(int userId, bool isOnline)
@@ -183,7 +181,6 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         Dispatcher.UIThread.Post(() =>
         {
             if (!IsAlive) return;
-
             UpdateContactStatus(userId, isOnline);
             UpdateMemberStatus(userId, isOnline);
         });
@@ -191,8 +188,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
     private void UpdateContactStatus(int userId, bool isOnline)
     {
-        if (!IsContactChat || ContactUser?.Id != userId)
-            return;
+        if (!IsContactChat || ContactUser?.Id != userId) return;
 
         IsContactOnline = isOnline;
         ContactUser.IsOnline = isOnline;
@@ -217,9 +213,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (!IsAlive)
-                return;
-
+            if (!IsAlive) return;
             UpdateContactProfile(updated);
             ReplaceMemberInList(updated);
             UpdateFilteredMembers();
@@ -228,13 +222,11 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
     private void UpdateContactProfile(UserDto updated)
     {
-        if (!IsContactChat || ContactUser?.Id != updated.Id)
-            return;
+        if (!IsContactChat || ContactUser?.Id != updated.Id) return;
 
         ContactUser = updated;
         IsContactOnline = updated.IsOnline;
         ContactLastSeen = FormatLastSeen(updated);
-
         UpdateChatHeaderFromContact(updated);
         InvalidateAll();
     }
@@ -244,7 +236,6 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         if (Ctx.Chat == null) return;
 
         Ctx.Chat.Name = contact.DisplayName ?? contact.Username ?? Ctx.Chat.Name;
-
         if (!string.IsNullOrEmpty(contact.Avatar))
             Ctx.Chat.Avatar = contact.Avatar;
     }
@@ -297,8 +288,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
     internal static string? FormatLastSeen(UserDto contact)
     {
-        if (contact.IsOnline || !contact.LastOnline.HasValue)
-            return null;
+        if (contact.IsOnline || !contact.LastOnline.HasValue) return null;
 
         var elapsed = DateTimeOffset.UtcNow - contact.LastOnline.Value;
 
@@ -330,13 +320,12 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     [RelayCommand]
     public void Toggle() => IsInfoPanelOpen = !IsInfoPanelOpen;
 
-    public override void Dispose()
+    protected override void DisposeManaged()
     {
         Ctx.Hub.UserStatusChanged -= OnUserStatusChanged;
         Ctx.Hub.UserProfileUpdated -= OnUserProfileUpdated;
         Ctx.Hub.MemberJoined -= OnMemberJoined;
         Ctx.Hub.MemberLeft -= OnMemberLeft;
         Ctx.Members.CollectionChanged -= OnMembersCollectionChanged;
-        base.Dispose();
     }
 }

@@ -15,8 +15,18 @@ public interface IMessageService
     Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count);
     Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count);
     Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count);
-    Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize);
-    Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize);
+    Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(
+        int chatId, int userId, string query, int page, int pageSize,
+        int? senderId = null,
+        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
+        DateTime? dateFrom = null, DateTime? dateTo = null,
+        bool oldestFirst = false);
+    Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(
+        int userId, string query, int page, int pageSize,
+        int? senderId = null, int? filterChatId = null,
+        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
+        DateTime? dateFrom = null, DateTime? dateTo = null,
+        bool oldestFirst = false);
 }
 
 public partial class MessageService(
@@ -27,9 +37,9 @@ public partial class MessageService(
     : BaseService<MessageService>(context, logger), IMessageService
 {
     private readonly MessengerSettings _settings = settings.Value;
+
     [GeneratedRegex(@"(?<![a-z0-9_])@([a-z0-9_]{3,30})", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex MentionRegex();
-
 
     #region Base Query & Helpers
 
@@ -175,7 +185,10 @@ public partial class MessageService(
 
         var (np, nps) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
-        var query = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true).OrderByDescending(m => m.CreatedAt).AsNoTracking();
+        var query = MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+            .OrderByDescending(m => m.CreatedAt)
+            .AsNoTracking();
 
         var total = await query.CountAsync();
         var skip = (np - 1) * nps;
@@ -183,8 +196,11 @@ public partial class MessageService(
 
         return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
-            Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse()], CurrentPage = np,
-            TotalCount = total, HasMoreMessages = total > skip + nps, HasNewerMessages = false
+            Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse()],
+            CurrentPage = np,
+            TotalCount = total,
+            HasMoreMessages = total > skip + nps,
+            HasNewerMessages = false
         });
     }
 
@@ -193,10 +209,12 @@ public partial class MessageService(
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
         var half = count / 2;
 
-        var before = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
+        var before = await MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
             .OrderByDescending(m => m.Id).Take(half + 1).AsNoTracking().ToListAsync();
 
-        var after = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
+        var after = await MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
             .OrderBy(m => m.Id).Take(half).AsNoTracking().ToListAsync();
 
         var msgs = before.OrderBy(m => m.Id).Concat(after).Select(m => m.ToDto(userId, urlBuilder)).ToList();
@@ -213,12 +231,14 @@ public partial class MessageService(
     {
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
 
-        var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true)
+        var messages = await MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true)
             .OrderByDescending(m => m.Id).Take(count).AsNoTracking().ToListAsync();
 
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(
+            [.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
             hasOlder: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true),
             hasNewer: true));
     }
@@ -227,12 +247,14 @@ public partial class MessageService(
     {
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
 
-        var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
+        var messages = await MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
             .OrderBy(m => m.Id).Take(count).AsNoTracking().ToListAsync();
 
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.Select(m => m.ToDto(userId, urlBuilder))],
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(
+            [.. messages.Select(m => m.ToDto(userId, urlBuilder))],
             hasOlder: true,
             hasNewer: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true)));
     }
@@ -281,7 +303,10 @@ public partial class MessageService(
 
     public async Task<Result> DeleteMessageAsync(int messageId, int userId)
     {
-        var message = await _context.Messages.Include(m => m.VoiceMessage).Include(m => m.MessageFiles).FirstOrDefaultAsync(m => m.Id == messageId);
+        var message = await _context.Messages
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
 
         if (message is null) return Result.NotFound($"Сообщение с ID {messageId} не найдено");
         if (await CheckAccessAsync(userId, message.ChatId) is { } denied) return denied;
@@ -321,46 +346,103 @@ public partial class MessageService(
     #region Search
 
     public async Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(
-        int chatId, int userId, string query, int page, int pageSize)
+        int chatId, int userId, string query, int page, int pageSize,
+        int? senderId = null,
+        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
+        DateTime? dateFrom = null, DateTime? dateTo = null,
+        bool oldestFirst = false)
     {
         if (await CheckAccessAsync<SearchMessagesResponseDto>(userId, chatId) is { } denied) return denied;
 
-        if (string.IsNullOrWhiteSpace(query))
-            return Result<SearchMessagesResponseDto>.Success(new() { Messages = [], TotalCount = 0, CurrentPage = page });
-
         var (np, nps) = NormalizePagination(page, 20, _settings.MaxPageSize);
-        var escaped = EscapeLikePattern(query);
 
-        var baseQuery = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true  && !m.IsSystemMessage && m.Content
-                        != null && EF.Functions.ILike(m.Content, $"%{escaped}%")).OrderByDescending(m => m.CreatedAt).AsNoTracking();
+        var hasQuery = !string.IsNullOrWhiteSpace(query);
+        var escaped = hasQuery ? EscapeLikePattern(query) : string.Empty;
 
-        var total = await baseQuery.CountAsync();
-        var messages = await Paginate(baseQuery, np, nps).ToListAsync();
+        var q = MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId
+                     && m.IsDeleted != true
+                     && !m.IsSystemMessage
+                     && m.Content != null
+                     && (!hasQuery || EF.Functions.ILike(m.Content, $"%{escaped}%")))
+            .AsNoTracking();
+
+        // Серверные фильтры
+        if (senderId.HasValue)
+            q = q.Where(m => m.SenderId == senderId.Value);
+
+        if (dateFrom.HasValue)
+            q = q.Where(m => m.CreatedAt >= dateFrom.Value);
+
+        if (dateTo.HasValue)
+            q = q.Where(m => m.CreatedAt < dateTo.Value.AddDays(1));
+
+        if (hasFiles == true)
+            q = q.Where(m => m.MessageFiles.Any());
+
+        if (hasVoice == true)
+            q = q.Where(m => m.VoiceMessage != null);
+
+        if (hasPoll == true)
+            q = q.Where(m => m.Polls.Any());
+
+        if (onlyText == true)
+            q = q.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
+
+        q = oldestFirst
+            ? q.OrderBy(m => m.CreatedAt)
+            : q.OrderByDescending(m => m.CreatedAt);
+
+        var total = await q.CountAsync();
+        var messages = await Paginate(q, np, nps).ToListAsync();
+
+        // При OrderByDescending разворачиваем для отображения (старые внизу)
+        var ordered = oldestFirst
+            ? messages.AsEnumerable()
+            : messages.AsEnumerable().Reverse();
 
         return Result<SearchMessagesResponseDto>.Success(new()
         {
-            Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse()],
+            Messages = [.. ordered.Select(m => m.ToDto(userId, urlBuilder))],
             TotalCount = total,
             CurrentPage = np,
             HasMoreMessages = total > ((np - 1) * nps) + nps
         });
     }
 
-    public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize)
+    public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(
+        int userId, string query, int page, int pageSize,
+        int? senderId = null, int? filterChatId = null,
+        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
+        DateTime? dateFrom = null, DateTime? dateTo = null,
+        bool oldestFirst = false)
     {
-        if (string.IsNullOrWhiteSpace(query))
-            return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = page });
-
         var (np, nps) = NormalizePagination(page, 20, 50);
-        var escaped = EscapeLikePattern(query);
 
-        var chatIds = await _context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync();
+        var hasQuery = !string.IsNullOrWhiteSpace(query);
+        var escaped = hasQuery ? EscapeLikePattern(query) : string.Empty;
+
+        var chatIds = await _context.ChatMembers
+            .Where(cm => cm.UserId == userId)
+            .Select(cm => cm.ChatId)
+            .ToListAsync();
 
         if (chatIds.Count == 0)
             return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = page });
 
-        var chats = await SearchChatsAsync(chatIds, escaped, userId);
-        var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(chatIds, escaped, userId, np, nps);
+        // Фильтр по конкретному чату если передан
+        if (filterChatId.HasValue)
+            chatIds = chatIds.Where(id => id == filterChatId.Value).ToList();
+
+        // Чаты ищем только при текстовом запросе и без фильтрации по чату
+        var chats = (hasQuery && filterChatId == null)
+            ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery)
+            : [];
+
+        var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(
+            chatIds, escaped, userId, np, nps, hasQuery,
+            senderId, hasFiles, hasVoice, hasPoll, onlyText,
+            dateFrom, dateTo, oldestFirst);
 
         return Result<GlobalSearchResponseDto>.Success(new()
         {
@@ -373,13 +455,16 @@ public partial class MessageService(
         });
     }
 
-    private async Task<List<ChatDto>> SearchChatsAsync(List<int> chatIds, string query, int userId)
+    private async Task<List<ChatDto>> SearchChatsAsync(List<int> chatIds, string query, int userId, bool hasQuery)
     {
         const int max = 5;
         var result = new List<ChatDto>();
 
-        var dialogs = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact)
-            .Include(c => c.ChatMembers).ThenInclude(cm => cm.User).AsNoTracking().ToListAsync();
+        var dialogs = await _context.Chats
+            .Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact)
+            .Include(c => c.ChatMembers).ThenInclude(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync();
 
         foreach (var chat in dialogs)
         {
@@ -387,7 +472,9 @@ public partial class MessageService(
             if (partner is null) continue;
 
             var name = partner.FormatDisplayName();
-            if (name.Contains(query, StringComparison.OrdinalIgnoreCase) || (partner.Username ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
+            if (!hasQuery
+                || name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (partner.Username ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
             {
                 result.Add(new ChatDto
                 {
@@ -401,24 +488,69 @@ public partial class MessageService(
         }
 
         var groups = await _context.Chats
-            .Where(c => chatIds.Contains(c.Id) && c.Type != ChatType.Contact && EF.Functions.ILike(c.Name ?? "", $"%{query}%"))
-            .Take(max).AsNoTracking().ToListAsync();
+            .Where(c => chatIds.Contains(c.Id)
+                     && c.Type != ChatType.Contact
+                     && (!hasQuery || EF.Functions.ILike(c.Name ?? "", $"%{query}%")))
+            .Take(max)
+            .AsNoTracking()
+            .ToListAsync();
 
         result.AddRange(groups.Select(c => c.ToDto(urlBuilder)));
         return [.. result.Take(max)];
     }
 
-    private async Task<(List<GlobalSearchMessageDto>, int Total, bool HasMore)> SearchMessagesGlobalAsync(List<int> chatIds, string query,
-        int userId, int page, int pageSize)
+    private async Task<(List<GlobalSearchMessageDto>, int Total, bool HasMore)> SearchMessagesGlobalAsync(
+        List<int> chatIds, string query, int userId, int page, int pageSize, bool hasQuery,
+        int? senderId = null,
+        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
+        DateTime? dateFrom = null, DateTime? dateTo = null,
+        bool oldestFirst = false)
     {
-        var q = _context.Messages.Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && !m.IsSystemMessage
-        && m.Content != null && EF.Functions.ILike(m.Content, $"%{query}%")).Include(m => m.Sender).Include(m => m.Chat).Include(m => m.MessageFiles)
-            .OrderByDescending(m => m.CreatedAt).AsNoTracking();
+        var q = _context.Messages
+            .Where(m => chatIds.Contains(m.ChatId)
+                     && m.IsDeleted != true
+                     && !m.IsSystemMessage
+                     && m.Content != null
+                     && (!hasQuery || EF.Functions.ILike(m.Content, $"%{query}%")))
+            .Include(m => m.Sender)
+            .Include(m => m.Chat)
+            .Include(m => m.MessageFiles)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.Polls)
+            .AsNoTracking();
+
+        // Серверные фильтры
+        if (senderId.HasValue)
+            q = q.Where(m => m.SenderId == senderId.Value);
+
+        if (dateFrom.HasValue)
+            q = q.Where(m => m.CreatedAt >= dateFrom.Value);
+
+        if (dateTo.HasValue)
+            q = q.Where(m => m.CreatedAt < dateTo.Value.AddDays(1));
+
+        if (hasFiles == true)
+            q = q.Where(m => m.MessageFiles.Any());
+
+        if (hasVoice == true)
+            q = q.Where(m => m.VoiceMessage != null);
+
+        if (hasPoll == true)
+            q = q.Where(m => m.Polls.Any());
+
+        if (onlyText == true)
+            q = q.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
+
+        q = oldestFirst
+            ? q.OrderBy(m => m.CreatedAt)
+            : q.OrderByDescending(m => m.CreatedAt);
 
         var total = await q.CountAsync();
         var messages = await Paginate(q, page, pageSize).ToListAsync();
 
-        var dialogIds = messages.Where(m => m.Chat.Type == ChatType.Contact).Select(m => m.ChatId).Distinct().ToList();
+        var dialogIds = messages
+            .Where(m => m.Chat.Type == ChatType.Contact)
+            .Select(m => m.ChatId).Distinct().ToList();
         var partners = await GetDialogPartnersAsync(dialogIds, userId);
 
         return (messages.ConvertAll(m => BuildSearchDto(m, query, partners)), total,
@@ -429,12 +561,17 @@ public partial class MessageService(
     {
         if (chatIds.Count == 0) return [];
 
-        return (await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
-            .Include(cm => cm.User).AsNoTracking().ToListAsync()).Where(p => p.User != null)
+        return (await _context.ChatMembers
+            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
+            .Include(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync())
+            .Where(p => p.User != null)
             .ToDictionary(p => p.ChatId, p => (p.User!.FormatDisplayName(), urlBuilder.BuildUrl(p.User.Avatar)));
     }
 
-    private GlobalSearchMessageDto BuildSearchDto(Message m, string term, Dictionary<int, (string Name, string? Avatar)> partners)
+    private GlobalSearchMessageDto BuildSearchDto(
+        Message m, string term, Dictionary<int, (string Name, string? Avatar)> partners)
     {
         var dto = new GlobalSearchMessageDto
         {
@@ -446,7 +583,9 @@ public partial class MessageService(
             Content = m.Content,
             CreatedAt = m.CreatedAt,
             HighlightedContent = Highlight(m.Content, term),
-            HasFiles = m.MessageFiles?.Count > 0
+            HasFiles = m.MessageFiles?.Count > 0,
+            HasVoice = m.VoiceMessage != null,
+            HasPoll = m.Polls?.Count > 0
         };
 
         if (m.Chat.Type == ChatType.Contact && partners.TryGetValue(m.ChatId, out var p))
@@ -481,7 +620,8 @@ public partial class MessageService(
         try
         {
             var mentionedUsernames = ExtractMentionedUsernames(message.Content);
-            var members = await _context.ChatMembers.Where(cm => cm.ChatId == message.ChatId && cm.UserId != message.SenderId)
+            var members = await _context.ChatMembers
+                .Where(cm => cm.ChatId == message.ChatId && cm.UserId != message.SenderId)
                 .Select(cm => new
                 {
                     cm.UserId,
@@ -493,10 +633,10 @@ public partial class MessageService(
             foreach (var m in members)
             {
                 var unread = await readReceiptService.GetUnreadCountAsync(m.UserId, message.ChatId);
-                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated", message.ChatId, unread.IsSuccess ? unread.Value : 0);
+                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated", message.ChatId,
+                    unread.IsSuccess ? unread.Value : 0);
 
-                if (!m.GlobalEnabled)
-                    continue;
+                if (!m.GlobalEnabled) continue;
 
                 var isMentioned = !string.IsNullOrWhiteSpace(m.Username)
                     && mentionedUsernames.Contains(m.Username!);
@@ -516,20 +656,16 @@ public partial class MessageService(
 
     private static HashSet<string> ExtractMentionedUsernames(string? content)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            return [];
+        if (string.IsNullOrWhiteSpace(content)) return [];
 
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (Match match in MentionRegex().Matches(content))
         {
-            if (match.Groups.Count < 2)
-                continue;
-
+            if (match.Groups.Count < 2) continue;
             var username = match.Groups[1].Value.Trim();
             if (!string.IsNullOrWhiteSpace(username))
                 result.Add(username);
         }
-
         return result;
     }
 

@@ -15,4 +15,6 @@ public class GlobalSearchMessageDto
     public DateTime CreatedAt { get; set; }
     public string? HighlightedContent { get; set; }
     public bool HasFiles { get; set; }
+    public bool HasVoice { get; set; }
+    public bool HasPoll { get; set; }
 }

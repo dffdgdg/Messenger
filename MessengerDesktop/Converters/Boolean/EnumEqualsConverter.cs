@@ -20,3 +20,16 @@ public sealed class EnumEqualsConverter : ConverterBase
         return string.Equals(value.ToString(), parameter.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }
+
+public sealed class EnumNotEqualsConverter : ConverterBase
+{
+    protected override object? DefaultValue => true;
+
+    protected override object? ConvertCore(object? value, object? parameter, CultureInfo culture)
+    {
+        if (value == null || parameter == null)
+            return true;
+
+        return !string.Equals(value.ToString(), parameter.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+}

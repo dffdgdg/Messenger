@@ -31,8 +31,8 @@ public sealed class ConverterLocator
         Add(new BoolToHAlignmentConverter { TrueValue = HorizontalAlignment.Right, FalseValue = HorizontalAlignment.Left }, "BoolToHAlignment");
         Add<BoolToBrushConverter>("BoolToBrush");
         Add<EnumEqualsConverter>("EnumEquals");
+        Add<EnumNotEqualsConverter>("EnumNotEquals");
         Add<BoolToThicknessConverter>("BoolToThickness");
-
         // Comparison converters
         Add(new ComparisonConverter { Mode = ComparisonMode.Equal }, "Equality", "Equals");
         Add(new ComparisonConverter { Mode = ComparisonMode.NotEqual }, "NotEquals", "NotEquality");
@@ -53,6 +53,7 @@ public sealed class ConverterLocator
         Add<SearchScopeToWatermarkConverter>("SearchScopeToWatermark");
         Add<SearchScopeToHintConverter>("SearchScopeToHint");
         Add<SearchScopeToMessagesHeaderConverter>("SearchScopeToMessagesHeader");
+        Add<ContentFilterToLabelConverter>("ContentFilterToLabel");
 
         // Enum converters
         Add<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");

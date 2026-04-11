@@ -1,5 +1,6 @@
 ﻿using Avalonia.Input;
-using MessengerDesktop.Infrastructure;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.UI;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,9 +26,13 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _animationCts;
     private readonly Lock _animationLock = new();
 
+    private bool _searchBoxSubscribed;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        SubscribeSearchBox();
 
         _platformService = App.Current.Services.GetRequiredService<IPlatformService>();
         _dialogService = App.Current.Services.GetRequiredService<IDialogService>();
@@ -41,10 +46,61 @@ public partial class MainWindow : Window
         UpdateWindowPadding();
     }
 
+    private void SubscribeSearchBox()
+    {
+        if (_searchBoxSubscribed) return;
+
+        if (GlobalSearchBox == null) return;
+
+        GlobalSearchBox.SearchFocused += OnGlobalSearchFocused;
+        _searchBoxSubscribed = true;
+    }
+
+    private void UnsubscribeSearchBox()
+    {
+        if (!_searchBoxSubscribed) return;
+        if (GlobalSearchBox != null)
+            GlobalSearchBox.SearchFocused -= OnGlobalSearchFocused;
+        _searchBoxSubscribed = false;
+    }
+
+    private void OnGlobalSearchFocused(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel { CurrentViewModel: MainMenuViewModel menu })
+            menu.SearchManager.EnterSearchMode();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        RemoveHandler(PointerPressedEvent, OnWindowPointerPressed);
+    }
+
+    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { CurrentViewModel: MainMenuViewModel menu })
+            return;
+        if (!menu.SearchManager.IsSearchMode)
+            return;
+
+        var inSearch = GlobalSearchBox?.IsPointerOver ?? false;
+
+        var menuView = this.FindDescendantOfType<MainMenuView>();
+        var popup = menuView?.FindControl<Border>("SearchPopup");
+        var inPopup = popup?.IsPointerOver ?? false;
+
+        if (!inSearch && !inPopup)
+            menu.CloseSearchCommand.Execute(null);
+    }
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-
         if (change.Property == WindowStateProperty)
             UpdateWindowPadding();
     }
@@ -57,7 +113,6 @@ public partial class MainWindow : Window
         _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
             var completed = false;
-
             try
             {
                 completed = await RunAnimationAsync(isOpening);
@@ -103,7 +158,6 @@ public partial class MainWindow : Window
             {
                 await PlayCloseAnimationAsync(newCts.Token);
             }
-
             return true;
         }
         catch (OperationCanceledException)
@@ -124,10 +178,8 @@ public partial class MainWindow : Window
     private async Task PlayOpenAnimationAsync(CancellationToken ct)
     {
         await Task.Delay(FrameDelayMs, ct);
-
         DialogOverlay.Classes.Add(OpenClass);
         DialogAnimWrapper.Classes.Add(OpenClass);
-
         await Task.Delay(AnimationDurationMs, ct);
     }
 
@@ -136,11 +188,8 @@ public partial class MainWindow : Window
         DialogOverlay.Classes.Remove(OpenClass);
         DialogAnimWrapper.Classes.Remove(OpenClass);
         DialogAnimWrapper.Classes.Add(ClosingClass);
-
         await Task.Delay(AnimationDurationMs, ct);
-
         ct.ThrowIfCancellationRequested();
-
         DialogAnimWrapper.Classes.Remove(ClosingClass);
     }
 
@@ -165,6 +214,8 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _dialogService.OnDialogAnimationRequested -= OnDialogAnimationRequested;
+
+        UnsubscribeSearchBox();
 
         lock (_animationLock)
         {

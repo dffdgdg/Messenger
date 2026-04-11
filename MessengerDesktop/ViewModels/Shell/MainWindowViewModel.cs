@@ -97,4 +97,14 @@ public partial class MainWindowViewModel : BaseViewModel
 
         base.Dispose(disposing);
     }
+
+    public MainMenuViewModel? MainMenu => CurrentViewModel as MainMenuViewModel;
+
+    public bool IsMainMenuActive => CurrentViewModel is MainMenuViewModel;
+
+    partial void OnCurrentViewModelChanged(BaseViewModel? value)
+    {
+        OnPropertyChanged(nameof(MainMenu));
+        OnPropertyChanged(nameof(IsMainMenuActive));
+    }
 }

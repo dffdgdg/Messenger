@@ -73,8 +73,31 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (!_authManager.Session.UserId.HasValue) return;
 
-        SearchManager = new GlobalSearchManager(_authManager.Session.UserId.Value, IsGroupMode, _apiClient);
+        SearchManager = new GlobalSearchManager(
+            _authManager.Session.UserId.Value,
+            IsGroupMode,
+            _apiClient,
+            getUsersFunc: LoadUsersForFilterAsync,
+            getChatsFunc: LoadChatsForFilterAsync);
+
         SearchManager.PropertyChanged += OnSearchManagerPropertyChanged;
+    }
+
+    private async Task<List<SearchFilterItem>> LoadUsersForFilterAsync()
+    {
+        var result = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
+        if (!result.Success || result.Data == null) return [];
+
+        return result.Data.ConvertAll(u => new SearchFilterItem(u.Id, u.DisplayName ?? u.Username ?? string.Empty, u.Avatar));
+    }
+
+    private async Task<List<SearchFilterItem>> LoadChatsForFilterAsync()
+    {
+        var userId = _authManager.Session.UserId ?? 0;
+        var result = await _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(userId));
+        if (!result.Success || result.Data == null) return [];
+
+        return result.Data.ConvertAll(c => new SearchFilterItem(c.Id, c.Name ?? string.Empty, c.Avatar));
     }
 
     private void OnSearchManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -98,9 +121,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (SearchManager == null) return;
 
-        if (CurrentChatViewModel?.IsSearchMode == true
-            && SelectedChat != null
-            && CurrentChatViewModel.Chat?.Id == SelectedChat.Id)
+        if (CurrentChatViewModel?.IsSearchMode == true && SelectedChat != null && CurrentChatViewModel.Chat?.Id == SelectedChat.Id)
         {
             SearchManager.UseScope(SearchScopeMode.CurrentChatMessages);
         }
@@ -135,6 +156,46 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         SearchManager?.UseScope(scope);
     }
+    [RelayCommand]
+    private async Task OpenSearchFilters()
+    {
+        if (SearchManager == null) return;
+        SearchManager.EnterSearchMode();
+
+        var dialog = new SearchFiltersDialogViewModel(SearchManager, applyAction: () => SearchManager.ApplyFiltersAsync(), clearAction: () => SearchManager.ApplyFiltersAsync());
+
+        await Parent.ShowDialogAsync(dialog);
+    }
+
+    [RelayCommand]
+    private void SetSearchContentFilter(SearchContentFilter filter)
+    {
+        if (SearchManager == null) return;
+        SearchManager.ContentFilter = filter;
+    }
+
+    [RelayCommand]
+    private void SetSearchAuthorFilter(SearchAuthorFilter filter)
+    {
+        if (SearchManager == null) return;
+        SearchManager.AuthorFilter = filter;
+    }
+
+    [RelayCommand]
+    private async Task ApplySearchFilters()
+    {
+        if (SearchManager == null) return;
+        await SearchManager.ApplyFiltersAsync();
+    }
+
+    [RelayCommand]
+    private async Task ClearSearchFilters()
+    {
+        if (SearchManager == null) return;
+        SearchManager.ResetFilters();
+        await SearchManager.ApplyFiltersAsync();
+    }
+
 
     private void OnTotalUnreadChanged(int total) => TotalUnreadCount = total;
 
@@ -263,7 +324,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка создания группы: {ex.Message}"; }
     }
-
+    [RelayCommand]
+    private void ToggleSortOrder() => SearchManager?.ToggleSortOrder();
     partial void OnSelectedChatChanged(ChatListItemViewModel? value)
     {
         SyncSearchScopeWithChatViewMode();

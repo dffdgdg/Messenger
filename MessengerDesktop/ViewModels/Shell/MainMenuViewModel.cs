@@ -59,7 +59,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _globalHub = globalHub;
 
         UserId = _auth.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
-        _searchManager = new GlobalSearchManager(UserId, startWithChatsScope: true, _api);
+        _searchManager = new GlobalSearchManager(UserId, startWithChatsScope: true, _api, getUsersFunc: () => Task.FromResult(AllContacts.Select(u => new SearchFilterItem(u.Id,u.DisplayName ?? u.Username ?? string.Empty,u.Avatar)).ToList()),
+            getChatsFunc: () => Task.FromResult(UserChats.Select(c => new SearchFilterItem(c.Id,c.Name ?? string.Empty,c.Avatar)).ToList()));
         _searchManager.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(GlobalSearchManager.IsSearchMode))
@@ -77,6 +78,51 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         catch (Exception ex) { Debug.WriteLine($"Failed to connect global hub: {ex.Message}"); }
     }
 
+    [RelayCommand]
+    private async Task OpenSearchFilters()
+    {
+        if (SearchManager == null) return;
+        SearchManager.EnterSearchMode();
+
+        var dialog = new SearchFiltersDialogViewModel(
+            SearchManager,
+            applyAction: () => SearchManager.ApplyFiltersAsync(),
+            clearAction: () => SearchManager.ApplyFiltersAsync());
+
+        await ShowDialogAsync(dialog);
+    }
+    [RelayCommand]
+    private void ClearSenderFilter()
+    {
+        SearchManager.SelectedSender = null;
+        SearchManager.SenderSearchText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ClearChatFilter()
+    {
+        SearchManager.SelectedChatFilter = null;
+        SearchManager.ChatSearchText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ClearContentFilter() =>
+        SearchManager.ContentFilter = SearchContentFilter.Any;
+
+    [RelayCommand]
+    private void ClearDateFrom() =>
+        SearchManager.DateFromFilter = null;
+
+    [RelayCommand]
+    private void ClearDateTo() =>
+        SearchManager.DateToFilter = null;
+
+    [RelayCommand]
+    private async Task ClearAllFilters()
+    {
+        SearchManager.ResetFilters();
+        await SearchManager.ApplyFiltersAsync();
+    }
     #region Navigation
 
     [RelayCommand]
@@ -127,7 +173,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             3 => _profileVm ??= _sp.GetRequiredService<ProfileViewModel>(),
             4 => _adminVm ??= _sp.GetRequiredService<AdminViewModel>(),
             5 => _contactsVm ??= _chatsFactory.Create(this, false),
-            7 => GetOrCreateDeptVm(),
+            6 => GetOrCreateDeptVm(),
             _ => CurrentMenuViewModel
         };
 
@@ -179,10 +225,13 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     #region Search
 
+
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel(); _searchCts?.Dispose();
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
+
         OnPropertyChanged(nameof(HasSearchText));
         SearchManager.SearchQuery = value;
     }
@@ -356,6 +405,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
+    public Task ShowDialogAsync(DialogBaseViewModel dialogViewModel)
+        => _mainWindowVm.ShowDialogAsync(dialogViewModel);
 
     #endregion
 

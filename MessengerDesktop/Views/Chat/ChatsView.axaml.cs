@@ -243,4 +243,10 @@ public partial class ChatsView : UserControl
 
         EvaluateResponsiveLayout();
     }
+
+    private void OnSearchBoxFocused(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is ChatsViewModel vm)
+            vm.SearchManager?.EnterSearchMode();
+    }
 }

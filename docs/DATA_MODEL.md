@@ -116,10 +116,13 @@
 | is_system_message | bool | default false | — |
 | system_event_type | system_event_type | nullable | — |
 | target_user_id | int | FK → users, SET NULL | Для системных |
+| is_pinned | bool | default false | Закреплено ли сообщение |
+| pinned_at | timestamp | nullable | Когда закрепили |
+| pinned_by_user_id | int | FK → users, SET NULL | Кто закрепил |
 
 **NotMapped**: `IsVoiceMessage` → `VoiceMessage != null`
 
-**Индексы**: `idx_messages_chatid_createdat` (пагинация), `idx_messages_reply_to_message_id`, `idx_messages_forwarded_from_message_id`, `idx_messages_target_user_id`
+**Индексы**: `idx_messages_chatid_createdat` (пагинация), `idx_messages_reply_to_message_id`, `idx_messages_forwarded_from_message_id`, `idx_messages_target_user_id`, `idx_messages_chatid_ispinned_pinnedat` (быстрая выборка закрепленных)
 
 **Связи**: `Chat` (N:1), `Sender` (N:1), `TargetUser` (N:1), `ReplyToMessage` (N:1, self-ref), `ForwardedFromMessage` (N:1, self-ref), `VoiceMessage` (1:0..1), `MessageFiles` (1:N), `Polls` (1:N)
 

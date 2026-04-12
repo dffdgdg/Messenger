@@ -37,7 +37,7 @@ Model/DbContext → EF Core + PostgreSQL
 | `ChatMemberService` | Участники: добавление/удаление/роли. Права + системные сообщения |
 | `SystemMessageService` | Системные сообщения (Added/Removed/Left/RoleChanged). Не для Contact-чатов |
 | `NotificationService` | Push через SignalR. Mute per-chat. Mention-уведомления (`@username`) |
-| `MessageService` | CRUD сообщений, атомарное создание (Message+Voice+Files). Пагинация, ILike-поиск, mentions |
+| `MessageService` | CRUD сообщений, атомарное создание (Message+Voice+Files), закрепление/открепление. Пагинация, ILike-поиск, mentions |
 | `FileService` | Загрузка + конвертация в WebP |
 | `PollService` | Опросы, голосование |
 | `ReadReceiptService` | `LastReadMessageId` в `ChatMember`, счётчики, `FirstUnreadMessageId` |

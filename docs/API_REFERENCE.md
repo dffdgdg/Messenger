@@ -93,7 +93,9 @@
 ### Отправка и редактирование
 | POST | `/` | Rate: messaging | `CreateMessageRequest` → `MessageDto` |
 | PUT | `/{id}` | | `UpdateMessageDto` → `MessageDto` (только своё) |
-| DELETE | `/{id}` | | Soft delete (только своё) |
+| POST | `/{id}/pin` | | Закрепить сообщение → `MessageDto` |
+| DELETE | `/{id}/pin` | | Открепить сообщение → `MessageDto` |
+| GET | `/chat/{chatId}/pinned` | | Список закрепленных сообщений → `List<MessageDto>` |
 
 **CreateMessageRequest**:
 ```json
@@ -118,7 +120,7 @@
 | GET | `/chat/{chatId}/search?query=текст&page=1&pageSize=20` | → `SearchMessagesResponseDto` |
 | GET | `/user/{userId}/search?query=текст&page=1&pageSize=20` | [SELF] → `GlobalSearchResponseDto` |
 
-**MessageDto**: `{ Id, ChatId, SenderId, Content, MessageType, ReplyToId, Files, Poll, IsEdited, CreatedAt }`
+**MessageDto**: `{ Id, ChatId, SenderId, Content, MessageType, ReplyToId, Files, Poll, IsEdited, IsPinned, PinnedAt, PinnedByUserId, CreatedAt }`
 
 ---
 

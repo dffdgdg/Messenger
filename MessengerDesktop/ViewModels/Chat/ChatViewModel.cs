@@ -20,15 +20,17 @@ namespace MessengerDesktop.ViewModels.Chat;
 
 public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 {
-    public enum InfoSectionType { None, Photos, Files, Polls, Members }
+    public enum InfoSectionType { None, Photos, Files, Polls, Members, Pinned }
 
     private static readonly Dictionary<InfoSectionType, string> InfoSectionTitles = new()
     {
         [InfoSectionType.Photos] = "Медиа",
         [InfoSectionType.Files] = "Документы",
         [InfoSectionType.Polls] = "Опросы",
-        [InfoSectionType.Members] = "Участники"
+        [InfoSectionType.Members] = "Участники",
+        [InfoSectionType.Pinned] = "Закреплённые сообщения"
     };
+
     #region Зависимости и хэндлеры
 
     public ChatContext Context { get; }
@@ -81,6 +83,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public bool IsContactOnline => InfoPanel.IsContactOnline;
     public bool IsGroupChat => InfoPanel.IsGroupChat;
     public bool IsContactChat => InfoPanel.IsContactChat;
+    public bool HasMultiplePinned => PinnedMessages.Count > 1;
     public string TypingText => Typing.TypingText;
     public bool IsEditMode => EditDelete.IsEditMode;
     public bool IsReplyMode => Reply.IsReplyMode;
@@ -123,6 +126,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     #region Observable properties
+    public ObservableCollection<MessageViewModel> PinnedMessages { get; } = [];
+    public int PinnedCount => PinnedMessages.Count;
+
+    public bool ShowPinnedSection => CurrentInfoSection == InfoSectionType.Pinned;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPinnedBannerVisible))]
+    public partial MessageViewModel? PinnedBannerMessage { get; set; }
+
+    public bool IsPinnedBannerVisible => PinnedBannerMessage != null;
 
     [ObservableProperty] public partial string NewMessage { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsMentionSuggestionsOpen { get; set; }
@@ -232,6 +244,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             {
                 throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
+            await LoadPinnedBannerAsync(Context.LifetimeToken);
 
             Context.Members = await MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
 
@@ -332,6 +345,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
 
         MessageManager.Messages.CollectionChanged += (_, _) => RefreshInfoPanelLists();
+        MessageManager.MessagePinStateChanged += OnMessagePinStateChanged;
+
         Context.Members.CollectionChanged += (_, _) => RefreshInfoPanelLists();
         InfoPanel.FilteredMembers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(FilteredMembers));
 
@@ -366,6 +381,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         OnPropertyChanged(nameof(ShowFilesSection));
         OnPropertyChanged(nameof(ShowPollsSection));
         OnPropertyChanged(nameof(ShowMembersSection));
+        OnPropertyChanged(nameof(ShowPinnedSection));
     }
 
     private void RefreshInfoPanelLists()
@@ -399,6 +415,85 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     #region Сообщения
+    private async Task LoadPinnedBannerAsync(CancellationToken ct)
+    {
+        try
+        {
+            var result = await Context.Api.GetAsync<List<MessageDto>>(
+                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Context.IsDisposed) return;
+
+                if (result is { Success: true, Data.Count: > 0 })
+                {
+                    var dto = result.Data[0];
+                    PinnedBannerMessage?.Dispose();
+                    PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
+                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
+
+                    RebuildPinnedMessages(result.Data);
+                }
+                else
+                {
+                    PinnedBannerMessage?.Dispose();
+                    PinnedBannerMessage = null;
+                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
+
+                    foreach (var old in PinnedMessages)
+                        old.Dispose();
+                    PinnedMessages.Clear();
+                    OnPropertyChanged(nameof(PinnedCount));
+                    OnPropertyChanged(nameof(HasMultiplePinned));
+                }
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
+        }
+    }
+    private async Task LoadPinnedMessagesAsync(CancellationToken ct)
+    {
+        try
+        {
+            var result = await Context.Api.GetAsync<List<MessageDto>>(
+                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Context.IsDisposed) return;
+                if (result is { Success: true, Data: not null })
+                    RebuildPinnedMessages(result.Data);
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
+        }
+    }
+
+    private void RebuildPinnedMessages(List<MessageDto> dtos)
+    {
+        foreach (var old in PinnedMessages)
+            old.Dispose();
+
+        PinnedMessages.Clear();
+
+        foreach (var dto in dtos)
+            PinnedMessages.Add(CreatePinnedMessageViewModel(dto));
+
+        OnPropertyChanged(nameof(PinnedCount));
+        OnPropertyChanged(nameof(HasMultiplePinned));
+    }
+
+    private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
+        => new(dto, App.Current.Services.GetRequiredService<IFileDownloadService>(), App.Current.Services.GetRequiredService<INotificationService>(),
+            App.Current.Services.GetRequiredService<IAudioPlayerService>(), Context.Api);
+
 
     [RelayCommand]
     private async Task CopyUsername() => await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
@@ -512,6 +607,22 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         CurrentInfoSection = section;
         InfoSectionTitle = InfoSectionTitles.GetValueOrDefault(section, string.Empty);
         IsInfoSectionOpen = true;
+    }
+    [RelayCommand]
+    private async Task OpenPinnedSection()
+    {
+        if (!IsInfoPanelOpen)
+            IsInfoPanelOpen = true;
+
+        OpenInfoSection(InfoSectionType.Pinned);
+        await LoadPinnedMessagesAsync(Context.LifetimeToken);
+    }
+
+    [RelayCommand]
+    private async Task ScrollToPinnedMessage()
+    {
+        if (PinnedBannerMessage == null) return;
+        await Search.ScrollToMessageAsync(PinnedBannerMessage.Id);
     }
 
     [RelayCommand]
@@ -732,6 +843,51 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
         });
     }
+    private void OnMessagePinStateChanged(MessageDto dto)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Context.IsDisposed) return;
+
+            if (!dto.IsPinned)
+            {
+                var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
+                if (toRemove != null)
+                {
+                    PinnedMessages.Remove(toRemove);
+                    toRemove.Dispose();
+                    OnPropertyChanged(nameof(PinnedCount));
+                    OnPropertyChanged(nameof(HasMultiplePinned));
+                }
+
+                if (PinnedBannerMessage?.Id == dto.Id)
+                {
+                    PinnedBannerMessage?.Dispose();
+                    PinnedBannerMessage = PinnedMessages.Count > 0
+                        ? CreatePinnedMessageViewModel(PinnedMessages[0].Message)
+                        : null;
+                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
+                }
+                return;
+            }
+
+            var existing = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
+            if (existing != null)
+            {
+                existing.ApplyUpdate(dto);
+            }
+            else
+            {
+                PinnedMessages.Insert(0, CreatePinnedMessageViewModel(dto));
+                OnPropertyChanged(nameof(PinnedCount));
+                OnPropertyChanged(nameof(HasMultiplePinned));
+            }
+
+            PinnedBannerMessage?.Dispose();
+            PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
+            OnPropertyChanged(nameof(IsPinnedBannerVisible));
+        });
+    }
 
     #endregion
 
@@ -864,6 +1020,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search.Dispose();
         Notification.Dispose();
         Attachments.Dispose();
+        MessageManager.MessagePinStateChanged -= OnMessagePinStateChanged;
+        foreach (var msg in PinnedMessages)
+            msg.Dispose();
+        PinnedMessages.Clear();
     }
     #endregion
 }

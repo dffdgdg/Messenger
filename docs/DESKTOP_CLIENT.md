@@ -57,7 +57,7 @@ Initialize():
 | `ChatVoiceHandler` | Запись микрофона, отправка голосовых |
 | `ChatInfoPanelHandler` | Управление участниками, права, инфопанель |
 | `ChatSearchHandler` | Поиск по истории, навигация к сообщению |
-| `ChatEditDeleteHandler` | Редактирование, удаление, копирование |
+| `ChatEditDeleteHandler` | Редактирование, удаление, копирование, закрепление/открепление |
 | `ChatReplyHandler` | Цитирование (Reply) |
 | `ChatTypingHandler` | Отправка события "печатает..." |
 | `ChatNotificationHandler` | Mute/unmute уведомлений чата |
@@ -76,6 +76,11 @@ Initialize():
 - При выборе — вставка `@username` на позицию токена
 
 - Переключатели режима показываются только в состоянии активного поиска (когда `IsSearchMode=true`)
+
+### Закрепленные сообщения
+- В контекстном меню сообщения доступны действия **«Закрепить»** / **«Открепить»**.
+- UI опирается на `MessageDto.IsPinned`; закрепленные сообщения помечаются иконкой pin в мета-блоке сообщения.
+- Изменение состояния приходит через стандартное SignalR-событие `MessageUpdated`.
 
 ### Обновление опросов в real-time
 - `GlobalHubConnection` принимает событие `ReceivePollUpdate` (`PollDto`) и пробрасывает его как `PollUpdatedGlobally`.

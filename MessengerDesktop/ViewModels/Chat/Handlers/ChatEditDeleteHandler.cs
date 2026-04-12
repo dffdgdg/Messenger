@@ -94,6 +94,25 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
             await Ctx.Notifications.ShowErrorAsync($"Ошибка удаления: {result.Error}");
         }
     }
+    [RelayCommand]
+    private async Task TogglePin(MessageViewModel? message)
+    {
+        if (message?.CanPin != true) return;
+        var wasPinned = message.IsPinned;
+
+        var endpoint = ApiEndpoints.Messages.Pin(message.Id);
+
+        var result = wasPinned ? await Ctx.Api.DeleteAsync<MessageDto>(endpoint) : await Ctx.Api.PostAsync<object, MessageDto>(endpoint, new { });
+
+        if (!result.Success || result.Data == null)
+        {
+            await Ctx.Notifications.ShowErrorAsync($"Ошибка изменения закрепления: {result.Error}");
+            return;
+        }
+
+        message.ApplyUpdate(result.Data);
+        await Ctx.Notifications.ShowSuccessAsync(wasPinned ? "Сообщение откреплено" : "Сообщение закреплено");
+    }
 
     [RelayCommand]
     private async Task CopyMessageText(MessageViewModel? message)

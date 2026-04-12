@@ -189,6 +189,9 @@
   "editedAt": null,
   "isEdited": false,
   "isDeleted": false,
+  "isPinned": false,
+  "pinnedAt": null,
+  "pinnedByUserId": null,
 
   "replyToMessageId": null,
   "replyToMessage": null,

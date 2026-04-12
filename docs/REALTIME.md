@@ -35,7 +35,7 @@
 | Событие | Payload | Описание |
 |---------|---------|----------|
 | `ReceiveMessageDto` | `MessageDto` | Новое сообщение |
-| `MessageUpdated` | `MessageDto` | Отредактировано |
+| `MessageUpdated` | `MessageDto` | Отредактировано или изменено состояние закрепления |
 | `MessageDeleted` | `{ MessageId, ChatId }` | Удалено (soft) |
 | `ReceivePollUpdate` | `PollDto` | Обновление результатов опроса после голосования/отмены |
 

@@ -23,6 +23,7 @@ public interface IApiClientService : IDisposable
     Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string url, TRequest data, CancellationToken ct = default);
     Task<ApiResponse<object>> PutAsync(string url, object data, CancellationToken ct = default);
     Task<ApiResponse<object>> DeleteAsync(string url, CancellationToken ct = default);
+    Task<ApiResponse<T>> DeleteAsync<T>(string url, CancellationToken ct = default);
     Task<ApiResponse<T>> UploadFileAsync<T>(string url, Stream fileStream, string fileName, string contentType, CancellationToken ct = default);
     Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default);
 }
@@ -211,6 +212,17 @@ public sealed class ApiClientService : IApiClientService
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { return CreateErrorResponse(ex); }
+    }
+    public async Task<ApiResponse<T>> DeleteAsync<T>(string url, CancellationToken ct = default)
+    {
+        ThrowIfDisposed();
+        try
+        {
+            var response = await SendWithRefreshAsync(() => _httpClient.SendAsync(CreateRequest(HttpMethod.Delete, url), ct), url);
+            return await ProcessResponseAsync<T>(response, ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { return CreateErrorResponse<T>(ex); }
     }
 
     public async Task<Stream?> GetStreamAsync(string url, CancellationToken ct = default)

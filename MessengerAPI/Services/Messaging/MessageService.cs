@@ -11,22 +11,17 @@ public interface IMessageService
     Task<Result<MessageDto>> CreateMessageAsync(int senderId, CreateMessageRequest request);
     Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto);
     Task<Result> DeleteMessageAsync(int messageId, int userId);
+    Task<Result<MessageDto>> PinMessageAsync(int messageId, int userId);
+    Task<Result<MessageDto>> UnpinMessageAsync(int messageId, int userId);
+    Task<Result<List<MessageDto>>> GetPinnedMessagesAsync(int chatId, int userId);
     Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize);
     Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count);
     Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count);
     Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count);
-    Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(
-        int chatId, int userId, string query, int page, int pageSize,
-        int? senderId = null,
-        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
-        DateTime? dateFrom = null, DateTime? dateTo = null,
-        bool oldestFirst = false);
-    Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(
-        int userId, string query, int page, int pageSize,
-        int? senderId = null, int? filterChatId = null,
-        bool? hasFiles = null, bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null,
-        DateTime? dateFrom = null, DateTime? dateTo = null,
-        bool oldestFirst = false);
+    Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, string query, int page, int pageSize, int? senderId = null, bool? hasFiles = null,
+        bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null, DateTime? dateFrom = null, DateTime? dateTo = null, bool oldestFirst = false);
+    Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, string query, int page, int pageSize, int? senderId = null, int? filterChatId = null, bool? hasFiles = null,
+        bool? hasVoice = null, bool? hasPoll = null, bool? onlyText = null, DateTime? dateFrom = null, DateTime? dateTo = null, bool oldestFirst = false);
 }
 
 public partial class MessageService(
@@ -52,14 +47,14 @@ public partial class MessageService(
 
     private async Task<Result<T>?> CheckAccessAsync<T>(int userId, int chatId)
     {
-        var r = await accessControl.CheckIsMemberAsync(userId, chatId);
-        return r.IsFailure ? Result<T>.FromFailure(r) : null;
+        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
+        return result.IsFailure ? Result<T>.FromFailure(result) : null;
     }
 
     private async Task<Result?> CheckAccessAsync(int userId, int chatId)
     {
-        var r = await accessControl.CheckIsMemberAsync(userId, chatId);
-        return r.IsFailure ? r : null;
+        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
+        return result.IsFailure ? result : null;
     }
 
     private string StripBaseUrl(string? url)
@@ -74,18 +69,17 @@ public partial class MessageService(
         return url.StartsWith('/') ? url : "/" + url;
     }
 
-    private static PagedMessagesDto BuildPagedResult(
-        List<MessageDto> messages, bool hasOlder, bool hasNewer) => new()
-        {
-            Messages = messages,
-            HasMoreMessages = hasOlder,
-            HasNewerMessages = hasNewer,
-            TotalCount = messages.Count,
-            CurrentPage = 1
-        };
+    private static PagedMessagesDto BuildPagedResult(List<MessageDto> messages, bool hasOlder, bool hasNewer) => new()
+    {
+        Messages = messages,
+        HasMoreMessages = hasOlder,
+        HasNewerMessages = hasNewer,
+        TotalCount = messages.Count,
+        CurrentPage = 1
+    };
 
-    private static string EscapeLikePattern(string pattern) => string.IsNullOrEmpty(pattern)
-        ? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+    private static string EscapeLikePattern(string pattern)
+        => string.IsNullOrEmpty(pattern) ? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
     #endregion
 
@@ -160,14 +154,12 @@ public partial class MessageService(
 
     private async Task<Result> ValidateReferencesAsync(CreateMessageRequest request)
     {
-        if (request.ReplyToMessageId.HasValue && !await _context.Messages.AnyAsync(m =>
-            m.Id == request.ReplyToMessageId.Value && m.ChatId == request.ChatId && m.IsDeleted != true))
+        if (request.ReplyToMessageId.HasValue && !await _context.Messages.AnyAsync(m => m.Id == request.ReplyToMessageId.Value && m.ChatId == request.ChatId && m.IsDeleted != true))
         {
             return Result.NotFound("Сообщение для ответа не найдено в этом чате");
         }
 
-        if (request.ForwardedFromMessageId.HasValue && !await _context.Messages.AnyAsync(m =>
-                m.Id == request.ForwardedFromMessageId.Value && m.IsDeleted != true))
+        if (request.ForwardedFromMessageId.HasValue && !await _context.Messages.AnyAsync(m => m.Id == request.ForwardedFromMessageId.Value && m.IsDeleted != true))
         {
             return Result.NotFound("Оригинальное сообщение для пересылки не найдено");
         }
@@ -185,10 +177,7 @@ public partial class MessageService(
 
         var (np, nps) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
-        var query = MessagesWithIncludes()
-            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
-            .OrderByDescending(m => m.CreatedAt)
-            .AsNoTracking();
+        var query = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true).OrderByDescending(m => m.CreatedAt).AsNoTracking();
 
         var total = await query.CountAsync();
         var skip = (np - 1) * nps;
@@ -286,6 +275,9 @@ public partial class MessageService(
 
         message.Content = dto.Content!.Trim();
         message.EditedAt = appDateTime.UtcNow;
+        message.IsPinned = false;
+        message.PinnedAt = null;
+        message.PinnedByUserId = null;
 
         var save = await SaveChangesAsync();
         if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
@@ -339,6 +331,62 @@ public partial class MessageService(
         LogMessageDeleted(messageId);
 
         return Result.Success();
+    }
+
+    #endregion
+    #region Pinned Messages
+
+    public async Task<Result<MessageDto>> PinMessageAsync(int messageId, int userId)
+    {
+        var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
+        if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
+        if (await CheckAccessAsync<MessageDto>(userId, message.ChatId) is { } denied) return denied;
+        if (message.IsDeleted == true) return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
+
+        message.IsPinned = true;
+        message.PinnedAt = appDateTime.UtcNow;
+        message.PinnedByUserId = userId;
+
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+
+        var dto = message.ToDto(userId, urlBuilder);
+        await hubNotifier.SendToChatAsync(message.ChatId, "MessageUpdated", dto);
+        return Result<MessageDto>.Success(dto);
+    }
+
+    public async Task<Result<MessageDto>> UnpinMessageAsync(int messageId, int userId)
+    {
+        var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
+        if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
+        if (await CheckAccessAsync<MessageDto>(userId, message.ChatId) is { } denied) return denied;
+
+        if (!message.IsPinned)
+            return Result<MessageDto>.Failure("Сообщение уже не закреплено");
+
+        message.IsPinned = false;
+        message.PinnedAt = null;
+        message.PinnedByUserId = null;
+
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+
+        var dto = message.ToDto(userId, urlBuilder);
+        await hubNotifier.SendToChatAsync(message.ChatId, "MessageUpdated", dto);
+        return Result<MessageDto>.Success(dto);
+    }
+
+    public async Task<Result<List<MessageDto>>> GetPinnedMessagesAsync(int chatId, int userId)
+    {
+        if (await CheckAccessAsync<List<MessageDto>>(userId, chatId) is { } denied) return denied;
+
+        var pinned = await MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.IsPinned && m.IsDeleted != true)
+            .OrderByDescending(m => m.PinnedAt ?? m.CreatedAt)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Result<List<MessageDto>>.Success([.. pinned.Select(m => m.ToDto(userId, urlBuilder))]);
     }
 
     #endregion

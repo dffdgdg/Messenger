@@ -86,6 +86,26 @@
                                   Width="14" Height="14" Stretch="Uniform"/>
                         </MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Закрепить"
+                              Command="{Binding #BubbleRoot.TogglePinCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding ShowPinAction}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource PinIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Открепить"
+                              Command="{Binding #BubbleRoot.TogglePinCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding ShowUnpinAction}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource PinIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="Скачать аудио"
                               Command="{Binding DownloadVoiceCommand}"
                               IsVisible="{Binding ShowVoiceMessage}">
@@ -95,9 +115,9 @@
                                   Width="14" Height="14" Stretch="Uniform"/>
                         </MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Отменить голос"
-                              Command="{Binding Poll.CancelVoteCommand}"
-                              IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
+                   <MenuItem Header="Отменить голос"
+                             Command="{Binding Poll.CancelVoteCommand, FallbackValue={x:Null}}"
+                             IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
                         <MenuItem.Icon>
                             <Path Data="{StaticResource CloseIcon}"
                                   Fill="{DynamicResource TextPrimary}"

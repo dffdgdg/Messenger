@@ -588,7 +588,25 @@
                                             </Border>
                                         </Grid>
                                     </Button>
-
+                                    <Button Classes="InfoRow"
+        Command="{Binding OpenPinnedSectionCommand}"
+        IsVisible="{Binding PinnedCount}">
+    <Grid ColumnDefinitions="Auto,*,Auto">
+        <PathIcon Data="{StaticResource PinIcon}"
+                  Width="18" Height="18"
+                  Foreground="{DynamicResource TextSecondary}"/>
+        <TextBlock Grid.Column="1"
+                   Text="Закреплённые"
+                   VerticalAlignment="Center"
+                   Margin="12,0,0,0"/>
+        <Border Classes="CountBadge" Grid.Column="2">
+            <TextBlock Text="{Binding PinnedCount}"
+                       FontSize="12"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextMuted}"/>
+        </Border>
+    </Grid>
+</Button>
                                     <Button Classes="InfoRow"
                                             Command="{Binding OpenPollsSectionCommand}"
                                             IsVisible="{Binding PollsCount}">
@@ -609,7 +627,68 @@
                                         </Grid>
                                     </Button>
                                 </StackPanel>
+                                    <!-- Закреплённые сообщения -->
+<StackPanel IsVisible="{Binding ShowPinnedSection}" Spacing="4">
+    <ItemsControl ItemsSource="{Binding PinnedMessages}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MessageViewModel">
+                <Button Classes="InfoRow"
+                        Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
+                        CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <!-- Иконка типа сообщения -->
+                        <Border Width="36" Height="36"
+                                CornerRadius="8"
+                                Background="{DynamicResource SurfaceBrush}"
+                                VerticalAlignment="Center">
+                            <PathIcon Data="{StaticResource PinIcon}"
+                                      Width="16" Height="16"
+                                      Foreground="{DynamicResource Accent}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Border>
 
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Margin="10,0,0,0"
+                                    Spacing="2">
+                            <TextBlock Text="{Binding SenderName}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock FontSize="12"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1">
+                                <TextBlock.Text>
+                                    <MultiBinding FallbackValue="">
+                                        <Binding Path="DisplayContent"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMuted}"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <StackPanel Classes="EmptyState"
+                IsVisible="{Binding !PinnedMessages.Count}">
+        <PathIcon Data="{StaticResource PinIcon}"
+                  Width="32" Height="32"
+                  Foreground="{DynamicResource TextMuted}"
+                  HorizontalAlignment="Center"/>
+        <TextBlock Text="Нет закреплённых сообщений"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextMuted}"
+                   HorizontalAlignment="Center"
+                   Margin="0,8,0,0"/>
+    </StackPanel>
+</StackPanel>
                                 <Border Classes="Divider" Margin="16,12"/>
 
                                 <!-- Members Preview -->

@@ -13,13 +13,8 @@ using System.Windows.Input;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(
-    int chatId,
-    int userId,
-    IApiClientService apiClient,
-    Func<ObservableCollection<UserDto>> getMembersFunc,
-    IFileDownloadService? downloadService = null,
-    INotificationService? notificationService = null,
+public sealed class ChatMessageManager(int chatId, int userId, IApiClientService apiClient, Func<ObservableCollection<UserDto>> getMembersFunc,
+    IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
     ILocalCacheService? cacheService = null,
     IAudioPlayerService? audioPlayer = null,
     ICommand? mentionClickCommand = null) : IAsyncDisposable
@@ -54,6 +49,7 @@ public sealed class ChatMessageManager(
 
     private bool TryBeginLoading() => Interlocked.CompareExchange(ref _isLoading, 1, 0) == 0;
     private void EndLoading() => Interlocked.Exchange(ref _isLoading, 0);
+    public event Action<MessageDto>? MessagePinStateChanged;
 
     public void SetReadInfo(ChatReadInfoDto? info)
     {
@@ -335,11 +331,17 @@ public sealed class ChatMessageManager(
         RunInBackground(() => SafeCacheIfAvailable(() => cacheService!.MarkMessageDeletedAsync(messageId)));
     }
 
-    public void HandleMessageUpdated(MessageDto updatedDto)
-    {
-        FindMessage(updatedDto.Id)?.ApplyUpdate(updatedDto);
-        RunInBackground(() => SafeCacheIfAvailable(() => cacheService!.UpsertMessageAsync(updatedDto)));
-    }
+    public void HandleMessageUpdated(MessageDto dto)
+{
+    var existing = Messages.FirstOrDefault(m => m.Id == dto.Id);
+    
+    var pinChanged = existing == null ? dto.IsPinned : existing.IsPinned != dto.IsPinned;
+    
+    existing?.ApplyUpdate(dto);
+    
+    if (pinChanged)
+        MessagePinStateChanged?.Invoke(dto);
+}
 
     public void HandlePollUpdated(PollDto pollDto)
     {

@@ -45,6 +45,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial bool IsRead { get; set; }
     [ObservableProperty] public partial bool IsEdited { get; set; }
     [ObservableProperty] public partial bool IsDeleted { get; set; }
+    [ObservableProperty] public partial bool IsPinned { get; set; }
     [ObservableProperty] public partial ObservableCollection<MessageFileViewModel> FileViewModels { get; set; } = [];
     [ObservableProperty] public partial bool ShowDateSeparator { get; set; }
     [ObservableProperty] public partial string? DateSeparatorText { get; set; }
@@ -68,6 +69,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool HasTextContent => !IsDeleted && !IsSystemMessage && !string.IsNullOrWhiteSpace(Content) && !HasPoll && !IsVoiceMessage;
     public bool ShowSenderName => !IsOwn && !IsContinuation && !IsSystemMessage;
     public bool ShowDeliveryStatus => IsOwn && !IsDeleted && !IsSystemMessage;
+    public bool CanPin => !IsDeleted && !IsSystemMessage;
+    public bool ShowPinAction => CanPin && !IsPinned;
+    public bool ShowUnpinAction => CanPin && IsPinned;
     public bool CanDelete => IsOwn && !IsDeleted && !IsSystemMessage;
     public bool ShowNonVoiceFiles => HasFiles && !IsDeleted && !IsSystemMessage;
     public bool CanEdit => IsOwn && !IsDeleted && !IsSystemMessage && Poll == null && !IsVoiceMessage && !HasForward;
@@ -135,6 +139,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         (Id, ChatId, SenderId, Content, CreatedAt, IsOwn) = (message.Id, message.ChatId, message.SenderId, message.Content, message.CreatedAt, message.IsOwn);
         (IsEdited, IsDeleted, EditedAt, PollDto, Files) = (message.IsEdited, message.IsDeleted, message.EditedAt, message.Poll, message.Files ?? []);
+        IsPinned = message.IsPinned;
         (SenderName, SenderAvatar) = (message.SenderName, message.SenderAvatarUrl);
         (IsVoiceMessage, VoiceDurationSeconds, VoiceFileUrl) = (message.IsVoiceMessage, message.VoiceDurationSeconds, message.VoiceFileUrl);
         (IsSystemMessage, SystemEventType, TargetUserId, TargetUserName) = (message.IsSystemMessage, message.SystemEventType, message.TargetUserId, message.TargetUserName);
@@ -310,7 +315,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         Content = updated.Content;
         IsEdited = updated.IsEdited;
         EditedAt = updated.EditedAt;
-        Notify([.. ContentProps, .. EditedProps, nameof(CanEdit)]);
+        IsPinned = updated.IsPinned;
+        Notify([.. ContentProps, .. EditedProps, nameof(CanEdit), nameof(CanPin), nameof(ShowPinAction), nameof(ShowUnpinAction)]);
     }
 
     public void MarkAsDeleted()
@@ -319,6 +325,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         IsDeleted = true;
         Content = null;
         IsVoiceMessage = false;
+        IsPinned = false;
         VoiceFileUrl = null;
         VoiceDurationSeconds = null;
         ResetPlayerState();
@@ -353,8 +360,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     }
     partial void OnIsEditedChanged(bool value) => Notify(EditedProps);
     partial void OnEditedAtChanged(DateTime? value) => Notify(EditedProps);
-    partial void OnIsDeletedChanged(bool value) => Notify(nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowDeliveryStatus), nameof(CanEdit), nameof(CanDelete));
-    partial void OnIsReadChanged(bool value) => OnPropertyChanged(nameof(ShowDeliveryStatus));
+    partial void OnIsDeletedChanged(bool value) => Notify(nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowDeliveryStatus), nameof(CanEdit), nameof(CanDelete), nameof(CanPin), nameof(ShowPinAction), nameof(ShowUnpinAction)); partial void OnIsReadChanged(bool value) => OnPropertyChanged(nameof(ShowDeliveryStatus));
     partial void OnIsContinuationChanged(bool value) { OnPropertyChanged(nameof(ShowSenderName)); UpdateGroupPosition(); }
     partial void OnHasNextFromSameChanged(bool value) => UpdateGroupPosition();
     partial void OnIsVoiceMessageChanged(bool value) => Notify(nameof(ShowVoiceMessage), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowNonVoiceFiles), nameof(CanEdit), nameof(ShowPlayButton));
@@ -364,6 +370,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     partial void OnIsVoiceLoadingChanged(bool value) => OnPropertyChanged(nameof(ShowPlayButton));
     partial void OnForwardedFromMessageIdChanged(int? value) => Notify(nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit));
     partial void OnForwardedFromSenderNameChanged(string? value) => OnPropertyChanged(nameof(ForwardedFromHeader));
+    partial void OnIsPinnedChanged(bool value) => Notify(nameof(ShowPinAction), nameof(ShowUnpinAction));
 
     private void UpdateGroupPosition() => GroupPosition = (IsContinuation, HasNextFromSame) switch
     {

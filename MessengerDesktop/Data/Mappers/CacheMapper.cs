@@ -50,7 +50,8 @@ public static class CacheMapper
         ForwardOriginalDateTicks = dto.ForwardedFrom?.OriginalCreatedAt.ToUniversalTime().Ticks,
         PollJson = dto.Poll != null ? JsonSerializer.Serialize(dto.Poll, JsonOpts) : null,
         FilesJson = dto.Files is { Count: > 0 } ? JsonSerializer.Serialize(dto.Files, JsonOpts) : null,
-        CachedAtTicks = DateTime.UtcNow.Ticks
+        CachedAtTicks = DateTime.UtcNow.Ticks,
+        IsPinned = dto.IsPinned
     };
 
     public static MessageDto ToDto(this CachedMessage entity)
@@ -80,6 +81,7 @@ public static class CacheMapper
             SystemEventType = (SystemEventType?)entity.SystemEventTypeInt,
             TargetUserId = entity.TargetUserId,
             TargetUserName = entity.TargetUserName,
+            IsPinned = entity.IsPinned,
         };
 
         if (entity.ReplyToMessageId.HasValue && entity.ReplySenderName != null)

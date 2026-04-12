@@ -14,6 +14,9 @@ public class Message
     public bool IsSystemMessage { get; set; } = false;
     public SystemEventType? SystemEventType { get; set; }
     public int? TargetUserId { get; set; }
+    public bool IsPinned { get; set; }
+    public DateTime? PinnedAt { get; set; }
+    public int? PinnedByUserId { get; set; }
     public virtual VoiceMessage? VoiceMessage { get; set; }
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
@@ -21,6 +24,7 @@ public class Message
     public virtual Chat Chat { get; set; } = null!;
     public virtual User Sender { get; set; } = null!;
     public virtual User? TargetUser { get; set; }
+    public virtual User? PinnedByUser { get; set; }
     public virtual Message? ReplyToMessage { get; set; }
     public virtual Message? ForwardedFromMessage { get; set; }
     public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];

@@ -47,9 +47,7 @@ public partial class MessengerDbContext : DbContext
         modelBuilder.Entity<Chat>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("chats_pkey");
-
             entity.ToTable("chats");
-
             entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Chats_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.Avatar).HasColumnName("avatar");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("created_at");
@@ -63,15 +61,9 @@ public partial class MessengerDbContext : DbContext
         modelBuilder.Entity<ChatMember>(entity =>
         {
             entity.HasKey(e => new { e.ChatId, e.UserId }).HasName("chat_members_pkey");
-
             entity.ToTable("chat_members");
-
-            entity.HasIndex(e => new { e.ChatId, e.UserId }, "UQ_Chat_User").IsUnique();
-
             entity.HasIndex(e => e.LastReadMessageId, "idx_chat_members_last_read_message_id");
-
             entity.HasIndex(e => e.UserId, "idx_chat_members_user_id");
-
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("joined_at");
@@ -89,7 +81,7 @@ public partial class MessengerDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("departments_pkey");
             entity.ToTable("departments");
             entity.HasIndex(e => e.ChatId, "Departments_ChatId_key").IsUnique();
-            entity.HasIndex(e => e.HeadId, "idx_departments_head_id");
+            entity.HasIndex(e => e.HeadId, "idx_departments_head_id").IsUnique();
             entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Departments_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
             entity.Property(e => e.HeadId).HasColumnName("head_id");
@@ -103,95 +95,47 @@ public partial class MessengerDbContext : DbContext
         modelBuilder.Entity<Message>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("messages_pkey");
-
             entity.ToTable("messages");
-
             entity.HasIndex(e => new { e.ChatId, e.CreatedAt }, "idx_messages_chatid_createdat");
             entity.HasIndex(e => e.ReplyToMessageId, "idx_messages_reply_to_message_id");
             entity.HasIndex(e => e.ForwardedFromMessageId, "idx_messages_forwarded_from_message_id");
             entity.HasIndex(e => e.TargetUserId, "idx_messages_target_user_id");
-
-            entity.Property(e => e.IsSystemMessage).HasColumnName("is_system_message")
-            .HasDefaultValue(false);
-
+            entity.HasIndex(e => new { e.ChatId, e.IsPinned, e.PinnedAt }, "idx_messages_chatid_ispinned_pinnedat");
+            entity.Property(e => e.IsSystemMessage).HasColumnName("is_system_message").HasDefaultValue(false);
             entity.Property(e => e.SystemEventType).HasColumnName("system_event_type").HasColumnType("system_event_type");
-
             entity.Property(e => e.TargetUserId).HasColumnName("target_user_id");
-
-            entity.HasOne(d => d.TargetUser).WithMany().HasForeignKey(d => d.TargetUserId)
-            .OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_TargetUserId_fkey");
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"Messages_Id_seq\"'::regclass)")
-                .HasColumnName("id");
+            entity.Property(e => e.IsPinned).HasDefaultValue(false).HasColumnName("is_pinned");
+            entity.Property(e => e.PinnedAt).HasColumnType("timestamp without time zone").HasColumnName("pinned_at");
+            entity.Property(e => e.PinnedByUserId).HasColumnName("pinned_by_user_id");
+            entity.HasOne(d => d.TargetUser).WithMany().HasForeignKey(d => d.TargetUserId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_TargetUserId_fkey");
+            entity.HasOne(d => d.PinnedByUser).WithMany().HasForeignKey(d => d.PinnedByUserId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_PinnedByUserId_fkey");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Messages_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
             entity.Property(e => e.Content).HasColumnName("content");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
-            entity.Property(e => e.EditedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("edited_at");
-            entity.Property(e => e.IsDeleted)
-                .HasDefaultValue(false)
-                .HasColumnName("is_deleted");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("created_at");
+            entity.Property(e => e.EditedAt).HasColumnType("timestamp without time zone").HasColumnName("edited_at");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
             entity.Property(e => e.ReplyToMessageId).HasColumnName("reply_to_message_id");
             entity.Property(e => e.ForwardedFromMessageId).HasColumnName("forwarded_from_message_id");
-
-            entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
-                .HasForeignKey(d => d.ChatId)
-                .HasConstraintName("Messages_ChatId_fkey");
-
-            entity.HasOne(d => d.Sender).WithMany(p => p.Messages)
-                .HasForeignKey(d => d.SenderId)
-                .HasConstraintName("Messages_SenderId_fkey");
-
-            entity.HasOne(d => d.ReplyToMessage).WithMany(p => p.InverseReplyToMessage)
-                .HasForeignKey(d => d.ReplyToMessageId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Messages_ReplyToMessageId_fkey");
-
-            entity.HasOne(d => d.ForwardedFromMessage).WithMany(p => p.InverseForwardedFromMessage)
-                .HasForeignKey(d => d.ForwardedFromMessageId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Messages_ForwardedFromMessageId_fkey");
+            entity.HasOne(d => d.Chat).WithMany(p => p.Messages).HasForeignKey(d => d.ChatId).HasConstraintName("Messages_ChatId_fkey");
+            entity.HasOne(d => d.Sender).WithMany(p => p.Messages).HasForeignKey(d => d.SenderId).HasConstraintName("Messages_SenderId_fkey");
+            entity.HasOne(d => d.ReplyToMessage).WithMany(p => p.InverseReplyToMessage).HasForeignKey(d => d.ReplyToMessageId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_ReplyToMessageId_fkey");
+            entity.HasOne(d => d.ForwardedFromMessage).WithMany(p => p.InverseForwardedFromMessage).HasForeignKey(d => d.ForwardedFromMessageId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Messages_ForwardedFromMessageId_fkey");
         });
 
         modelBuilder.Entity<VoiceMessage>(entity =>
         {
             entity.HasKey(e => e.MessageId).HasName("voice_messages_pkey");
-
             entity.ToTable("voice_messages");
+            entity.Property(e => e.MessageId).ValueGeneratedNever().HasColumnName("message_id");
+            entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
+            entity.Property(e => e.FilePath).HasColumnName("file_path");
+            entity.Property(e => e.FileName).HasMaxLength(255).HasColumnName("file_name");
+            entity.Property(e => e.ContentType).HasMaxLength(100).HasDefaultValue("audio/wav").HasColumnName("content_type");
+            entity.Property(e => e.FileSize).HasColumnName("file_size");
 
-            entity.Property(e => e.MessageId)
-                .ValueGeneratedNever()
-                .HasColumnName("message_id");
-
-            entity.Property(e => e.DurationSeconds)
-                .HasColumnName("duration_seconds");
-
-            entity.Property(e => e.FilePath)
-                .HasColumnName("file_path");
-
-            entity.Property(e => e.FileName)
-                .HasMaxLength(255)
-                .HasColumnName("file_name");
-
-            entity.Property(e => e.ContentType)
-                .HasMaxLength(100)
-                .HasDefaultValue("audio/wav")
-                .HasColumnName("content_type");
-
-            entity.Property(e => e.FileSize)
-                .HasColumnName("file_size");
-
-            entity.HasOne(d => d.Message)
-                .WithOne(p => p.VoiceMessage)
-                .HasForeignKey<VoiceMessage>(d => d.MessageId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("VoiceMessages_MessageId_fkey");
+            entity.HasOne(d => d.Message).WithOne(p => p.VoiceMessage).HasForeignKey<VoiceMessage>(d => d.MessageId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("VoiceMessages_MessageId_fkey");
         });
 
         modelBuilder.Entity<MessageFile>(entity =>
@@ -200,21 +144,13 @@ public partial class MessengerDbContext : DbContext
 
             entity.ToTable("message_files");
 
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"MessageFiles_id_seq\"'::regclass)")
-                .HasColumnName("id");
-            entity.Property(e => e.ContentType)
-                .HasMaxLength(100)
-                .HasColumnName("content_type");
-            entity.Property(e => e.FileName)
-                .HasMaxLength(255)
-                .HasColumnName("file_name");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"MessageFiles_id_seq\"'::regclass)").HasColumnName("id");
+            entity.Property(e => e.ContentType).HasMaxLength(100).HasColumnName("content_type");
+            entity.Property(e => e.FileName).HasMaxLength(255).HasColumnName("file_name");
             entity.Property(e => e.MessageId).HasColumnName("message_id");
             entity.Property(e => e.Path).HasColumnName("path");
 
-            entity.HasOne(d => d.Message).WithMany(p => p.MessageFiles)
-                .HasForeignKey(d => d.MessageId)
-                .HasConstraintName("MessageFiles_MessageId_fkey");
+            entity.HasOne(d => d.Message).WithMany(p => p.MessageFiles).HasForeignKey(d => d.MessageId).HasConstraintName("MessageFiles_MessageId_fkey");
         });
 
         modelBuilder.Entity<Poll>(entity =>
@@ -225,23 +161,12 @@ public partial class MessengerDbContext : DbContext
 
             entity.HasIndex(e => e.MessageId, "idx_polls_message_id");
 
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"Polls_Id_seq\"'::regclass)")
-                .HasColumnName("id");
-            entity.Property(e => e.AllowsMultipleAnswers)
-                .HasDefaultValue(false)
-                .HasColumnName("allows_multiple_answers");
-            entity.Property(e => e.ClosesAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("closes_at");
-            entity.Property(e => e.IsAnonymous)
-                .HasDefaultValue(true)
-                .HasColumnName("is_anonymous");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Polls_Id_seq\"'::regclass)").HasColumnName("id");
+            entity.Property(e => e.AllowsMultipleAnswers).HasDefaultValue(false).HasColumnName("allows_multiple_answers");
+            entity.Property(e => e.ClosesAt).HasColumnType("timestamp without time zone").HasColumnName("closes_at");
+            entity.Property(e => e.IsAnonymous).HasDefaultValue(true).HasColumnName("is_anonymous");
             entity.Property(e => e.MessageId).HasColumnName("message_id");
-
-            entity.HasOne(d => d.Message).WithMany(p => p.Polls)
-                .HasForeignKey(d => d.MessageId)
-                .HasConstraintName("Polls_MessageId_fkey");
+            entity.HasOne(d => d.Message).WithMany(p => p.Polls).HasForeignKey(d => d.MessageId).HasConstraintName("Polls_MessageId_fkey");
         });
 
         modelBuilder.Entity<PollOption>(entity =>
@@ -250,18 +175,12 @@ public partial class MessengerDbContext : DbContext
 
             entity.ToTable("poll_options");
 
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"PollOptions_Id_seq\"'::regclass)")
-                .HasColumnName("id");
-            entity.Property(e => e.OptionText)
-                .HasMaxLength(50)
-                .HasColumnName("option_text");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"PollOptions_Id_seq\"'::regclass)").HasColumnName("id");
+            entity.Property(e => e.OptionText).HasMaxLength(50).HasColumnName("option_text");
             entity.Property(e => e.PollId).HasColumnName("poll_id");
             entity.Property(e => e.Position).HasColumnName("position");
 
-            entity.HasOne(d => d.Poll).WithMany(p => p.PollOptions)
-                .HasForeignKey(d => d.PollId)
-                .HasConstraintName("PollOptions_PollId_fkey");
+            entity.HasOne(d => d.Poll).WithMany(p => p.PollOptions).HasForeignKey(d => d.PollId).HasConstraintName("PollOptions_PollId_fkey");
         });
 
         modelBuilder.Entity<PollVote>(entity =>

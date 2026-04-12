@@ -18,6 +18,9 @@ public class MessageDto
     public DateTime? EditedAt { get; set; }
     public bool IsEdited { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsPinned { get; set; }
+    public DateTime? PinnedAt { get; set; }
+    public int? PinnedByUserId { get; set; }
     public int? ReplyToMessageId { get; set; }
     public MessageReplyPreviewDto? ReplyToMessage { get; set; }
     public int? ForwardedFromMessageId { get; set; }

@@ -15,6 +15,9 @@ public partial class MessageControl : UserControl
     public static readonly StyledProperty<ICommand?> DeleteMessageCommandProperty =
         AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(DeleteMessageCommand));
 
+    public static readonly StyledProperty<ICommand?> TogglePinCommandProperty =
+       AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(TogglePinCommand));
+
     public static readonly StyledProperty<ICommand?> OpenProfileCommandProperty =
         AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(OpenProfileCommand));
 
@@ -43,6 +46,11 @@ public partial class MessageControl : UserControl
     {
         get => GetValue(DeleteMessageCommandProperty);
         set => SetValue(DeleteMessageCommandProperty, value);
+    }
+    public ICommand? TogglePinCommand
+    {
+        get => GetValue(TogglePinCommandProperty);
+        set => SetValue(TogglePinCommandProperty, value);
     }
 
     public ICommand? OpenProfileCommand

@@ -37,12 +37,7 @@ public class RichMessageTextBlock : SelectableTextBlock
     private readonly List<(int start, int end, string url)> _linkRanges = [];
     private readonly List<(int start, int end, string mention)> _mentionRanges = [];
     static RichMessageTextBlock() => RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>((ctrl, _) => ctrl.RebuildInlines());
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-        if (change.Property == MentionClickCommandProperty)
-            Debug.WriteLine($"[RichText] MentionClickCommand changed: {change.NewValue}");
-    }
+
     private void RebuildInlines()
     {
         Inlines?.Clear();
@@ -136,10 +131,6 @@ public class RichMessageTextBlock : SelectableTextBlock
             }
 
             var mention = GetMentionUnderPointer(e);
-            Debug.WriteLine($"[RichText] Mention under pointer: '{mention}', Command: {MentionClickCommand}");
-
-            if (mention != null)
-                Debug.WriteLine($"CanExecute: {MentionClickCommand?.CanExecute(mention)}");
             if (mention != null && MentionClickCommand?.CanExecute(mention) == true)
             {
                 MentionClickCommand.Execute(mention);

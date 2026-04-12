@@ -388,33 +388,31 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    public async Task LoadChats()
+public async Task LoadChats()
+{
+    try
     {
-        try
+        await SafeExecuteAsync(async () =>
         {
-            await SafeExecuteAsync(async () =>
+            if (!_authManager.Session.IsAuthenticated || !_authManager.Session.UserId.HasValue)
             {
-                if (!_authManager.Session.IsAuthenticated || !_authManager.Session.UserId.HasValue)
-                {
-                    ErrorMessage = "Ошибка авторизации";
-                    return;
-                }
-
-                if (_isFirstLoad)
-                    await ShowCachedChatsAsync();
-
-                await LoadFreshChatsAsync(_authManager.Session.UserId.Value);
-            });
-        }
-        finally
-        {
-            if (_isFirstLoad)
-            {
-                _isFirstLoad = false;
-                IsInitialLoading = false;
+                ErrorMessage = "Ошибка авторизации";
+                return;
             }
-        }
+
+            if (_isFirstLoad)
+                await ShowCachedChatsAsync();
+
+            IsInitialLoading = false;
+
+            await LoadFreshChatsAsync(_authManager.Session.UserId.Value);
+        });
     }
+    finally
+    {
+        _isFirstLoad = false;
+    }
+}
 
     private async Task ShowCachedChatsAsync()
     {
@@ -445,37 +443,71 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     private async Task LoadFreshChatsAsync(int userId)
+{
+    var endpoint = IsGroupMode
+        ? ApiEndpoints.Chats.UserGroups(userId)
+        : ApiEndpoints.Chats.UserDialogs(userId);
+
+    var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
+
+    if (!result.Success || result.Data == null)
     {
-        var endpoint = IsGroupMode ? ApiEndpoints.Chats.UserGroups(userId) : ApiEndpoints.Chats.UserDialogs(userId);
-
-        var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
-
-        if (!result.Success || result.Data == null)
-        {
-            if (Chats.Count == 0)
-                ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
-            else
-                Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
-            return;
-        }
-
-        var ordered = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
-        foreach (var c in ordered)
-            c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
-
-        var selectedId = SelectedChat?.Id;
-        Chats = new ObservableCollection<ChatListItemViewModel>(ordered.Select(c => new ChatListItemViewModel(c)));
-        TotalUnreadCount = _globalHub.GetTotalUnread();
-
-        if (selectedId.HasValue)
-        {
-            var restored = FindChat(selectedId.Value);
-            if (restored != null && SelectedChat?.Id != restored.Id)
-                SelectedChat = restored;
-        }
-
-        await SaveCacheSilentAsync(ordered);
+        if (Chats.Count == 0)
+            ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
+        else
+            Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
+        return;
     }
+
+    var ordered = result.Data
+        .OrderByDescending(c => c.LastMessageDate)
+        .ToList();
+
+    foreach (var c in ordered)
+        c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
+
+    MergeChats(ordered);
+
+    TotalUnreadCount = _globalHub.GetTotalUnread();
+
+    if (SelectedChat != null)
+    {
+        var restored = FindChat(SelectedChat.Id);
+        if (restored != null && !ReferenceEquals(restored, SelectedChat))
+            SelectedChat = restored;
+    }
+
+    await SaveCacheSilentAsync(ordered);
+}
+private void MergeChats(List<ChatDto> fresh)
+{
+    var freshIds = fresh.Select(c => c.Id).ToHashSet();
+
+    for (var i = Chats.Count - 1; i >= 0; i--)
+    {
+        if (!freshIds.Contains(Chats[i].Id))
+            Chats.RemoveAt(i);
+    }
+
+    for (var i = 0; i < fresh.Count; i++)
+    {
+        var dto = fresh[i];
+        var existing = Chats.FirstOrDefault(c => c.Id == dto.Id);
+
+        if (existing != null)
+        {
+            existing.Apply(dto);
+
+            var currentIdx = Chats.IndexOf(existing);
+            if (currentIdx != i)
+                Chats.Move(currentIdx, Math.Min(i, Chats.Count - 1));
+        }
+        else
+        {
+            Chats.Insert(Math.Min(i, Chats.Count), new ChatListItemViewModel(dto));
+        }
+    }
+}
 
     public void UpdateChatInList(ChatDto updatedChat)
     {

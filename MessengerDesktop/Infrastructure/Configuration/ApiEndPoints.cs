@@ -37,6 +37,8 @@ public static class ApiEndpoints
         public const string Create = Base;
 
         public static string ById(int id) => $"{Base}/{id}";
+        public static string Pin(int id) => $"{Base}/{id}/pin";
+        public static string PinnedForChat(int chatId) => $"{Base}/chat/{chatId}/pinned";
         public static string Members(int chatId) => $"{Base}/{chatId}/members";
         public static string RemoveMember(int chatId, int userId) => $"{Base}/{chatId}/members/{userId}";
         public static string MembersDetailed(int chatId) => $"{Base}/{chatId}/members/detailed";
@@ -56,6 +58,8 @@ public static class ApiEndpoints
         public const string Create = Base;
 
         public static string ById(int id) => $"{Base}/{id}";
+        public static string Pin(int id) => $"{Base}/{id}/pin";
+        public static string PinnedForChat(int chatId) => $"{Base}/chat/{chatId}/pinned";
 
         public static string ForChat(int chatId, int userId, int page, int pageSize)
             => $"{Base}/chat/{chatId}?userId={userId}&page={page}&pageSize={pageSize}";

@@ -31,20 +31,25 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         if (chatIds.Count == 0)
             return Result<List<ChatDto>>.Success([]);
 
-        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id)).GroupJoin(_context.Messages.Where(m => m.IsDeleted != true),
-                chat => chat.Id, msg => msg.ChatId, (chat, msgs) => new
-                {
-                    Chat = chat,
-                    LastMessage = msgs
-                        .OrderByDescending(m => m.CreatedAt)
-                        .Select(m => new
-                        {
-                            m.Content,
-                            m.CreatedAt,
-                            m.IsSystemMessage,
-                            SenderName = m.Sender!.FormatDisplayName()
-                        }).FirstOrDefault()
-                }).AsNoTracking().ToListAsync();
+        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id)).GroupJoin(_context.Messages.Where(m => m.IsDeleted != true), chat => chat.Id, msg => msg.ChatId, (chat, msgs) => new
+        {
+            Chat = chat,
+            LastMessage = msgs.OrderByDescending(m => m.CreatedAt).Select(m => new
+            {
+                m.Id,
+                m.Content,
+                m.CreatedAt,
+                m.IsSystemMessage,
+                m.SenderId,
+                m.IsVoiceMessage,
+                m.SystemEventType,
+                m.TargetUserId,
+                SenderName = m.Sender!.FormatDisplayName(),
+                TargetUserName = m.TargetUser != null ? m.TargetUser.FormatDisplayName() : null,
+                HasPoll = m.Polls.Count != 0,
+                HasFiles = m.MessageFiles.Count != 0
+            }).FirstOrDefault()
+        }).AsNoTracking().ToListAsync();
 
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
@@ -54,21 +59,65 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
         var result = chatsData.ConvertAll(item =>
         {
+            var msg = item.LastMessage;
+            string? preview = null;
+            string? senderName = null;
+            bool isSystem = false;
+            bool isPoll = false;
+
+            if (msg != null)
+            {
+                isSystem = msg.IsSystemMessage;
+                isPoll = msg.HasPoll;
+
+                if (msg.IsSystemMessage)
+                {
+                    preview = BuildSystemPreview(msg.SystemEventType, msg.SenderName, msg.TargetUserName);
+                    senderName = null;
+                }
+                else if (msg.HasPoll)
+                {
+                    preview = Truncate(msg.Content, 50);
+                    senderName = msg.SenderName;
+                }
+                else if (msg.IsVoiceMessage)
+                {
+                    preview = "Голосовое сообщение";
+                    senderName = msg.SenderName;
+                }
+                else if (msg.HasFiles && string.IsNullOrWhiteSpace(msg.Content))
+                {
+                    preview = "Вложение";
+                    senderName = msg.SenderName;
+                }
+                else if (msg.HasFiles && !string.IsNullOrWhiteSpace(msg.Content))
+                {
+                    preview = Truncate(msg.Content, 50);
+                    senderName = msg.SenderName;
+                }
+                else
+                {
+                    preview = Truncate(msg.Content, 50);
+                    senderName = msg.SenderName;
+                }
+            }
+
             var dto = new ChatDto
             {
                 Id = item.Chat.Id,
                 Type = item.Chat.Type,
                 CreatedById = item.Chat.CreatedById ?? 0,
-                LastMessageDate = item.LastMessage?.CreatedAt ?? item.Chat.LastMessageTime,
-                LastMessagePreview = item.LastMessage?.IsSystemMessage == true ? "Системное сообщение" : Truncate(item.LastMessage?.Content, 50),
-                LastMessageSenderName = item.LastMessage?.IsSystemMessage == true
-                    ? null
-                    : item.LastMessage?.SenderName,
+                LastMessageDate = msg?.CreatedAt ?? item.Chat.LastMessageTime,
+                LastMessagePreview = preview,
+                LastMessageSenderName = senderName,
+                LastMessageSenderId = msg?.SenderId,
+                LastMessageIsSystem = isSystem,
+                LastMessageIsPoll = isPoll,
+                LastMessageIsVoice = msg?.IsVoiceMessage ?? false,
                 UnreadCount = unreadCounts.GetValueOrDefault(item.Chat.Id, 0)
             };
 
-            if (item.Chat.Type == ChatType.Contact
-                && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
+            if (item.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
             {
                 dto.Name = partner.DisplayName;
                 dto.Avatar = partner.AvatarUrl;
@@ -85,6 +134,22 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         var sorted = result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate).ToList();
 
         return Result<List<ChatDto>>.Success(sorted);
+    }
+
+    private static string BuildSystemPreview(SystemEventType? eventType, string? senderName, string? targetName)
+    {
+        var actor = string.IsNullOrWhiteSpace(senderName) ? "Пользователь" : senderName;
+        var target = string.IsNullOrWhiteSpace(targetName) ? "пользователя" : targetName;
+
+        return eventType switch
+        {
+            SystemEventType.ChatCreated => $"{actor} создал(а) группу",
+            SystemEventType.MemberAdded => $"{actor} добавил(а) {target}",
+            SystemEventType.MemberRemoved => $"{actor} удалил(а) {target}",
+            SystemEventType.MemberLeft => $"{actor} покинул(а) группу",
+            SystemEventType.RoleChanged => $"{actor} изменил(а) роль {target}",
+            _ => "Системное сообщение"
+        };
     }
 
     public async Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId)
@@ -345,7 +410,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             cacheService.InvalidateMembership(memberId, chatId);
         }
 
-        LogChatDeleted(chatId,userId);
+        LogChatDeleted(chatId, userId);
 
         return Result.Success();
     }

@@ -332,16 +332,16 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
     }
 
     public void HandleMessageUpdated(MessageDto dto)
-{
-    var existing = Messages.FirstOrDefault(m => m.Id == dto.Id);
-    
-    var pinChanged = existing == null ? dto.IsPinned : existing.IsPinned != dto.IsPinned;
-    
-    existing?.ApplyUpdate(dto);
-    
-    if (pinChanged)
-        MessagePinStateChanged?.Invoke(dto);
-}
+    {
+        var existing = Messages.FirstOrDefault(m => m.Id == dto.Id);
+
+        var pinChanged = existing == null ? dto.IsPinned : existing.IsPinned != dto.IsPinned;
+
+        existing?.ApplyUpdate(dto);
+
+        if (pinChanged)
+            MessagePinStateChanged?.Invoke(dto);
+    }
 
     public void HandlePollUpdated(PollDto pollDto)
     {

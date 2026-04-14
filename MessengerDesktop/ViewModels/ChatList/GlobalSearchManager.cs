@@ -50,7 +50,7 @@ public sealed partial class GlobalSearchManager(
     [ObservableProperty] public partial string? ErrorMessage { get; set; }
 
     // Scope
-    [ObservableProperty] public partial SearchScopeMode SelectedScope { get; set; } = SearchScopeMode.All;
+    [ObservableProperty] public partial SearchScopeMode SelectedScope { get; set; } = startWithChatsScope ? SearchScopeMode.Chats : SearchScopeMode.All;
     [ObservableProperty] public partial int? ChatLocalSearchChatId { get; set; }
     [ObservableProperty] public partial ChatType? ChatLocalSearchChatType { get; set; }
     [ObservableProperty] public partial string? ChatLocalSearchChatName { get; set; }

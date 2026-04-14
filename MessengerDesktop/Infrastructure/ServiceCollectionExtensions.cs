@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
         services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
         services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
+        services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
 
         services.AddSingleton(_ =>
@@ -76,7 +77,7 @@ public static class ServiceCollectionExtensions
             var httpClient = sp.GetRequiredService<HttpClient>();
             return new FileDownloadService(httpClient);
         });
-        services.AddSingleton<IAudioRecorderService, NAudioRecorderService>();
+        services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
 
         return services;
     }

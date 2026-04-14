@@ -15,7 +15,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:Name="MainWindowRoot"
         Icon="/Assets/avalonia-logo.ico"
-        Title="ВнутрьСеть"
+        Title=""
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1"
         Background="{DynamicResource PrimaryBG}"

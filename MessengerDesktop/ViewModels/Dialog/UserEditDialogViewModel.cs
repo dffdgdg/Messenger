@@ -9,67 +9,104 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 {
     private readonly UserDto? _originalUser;
 
-    #region Properties
-
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Username { get; set; } = string.Empty;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Surname { get; set; } = string.Empty;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string Name { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial string Midname { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
+
+    [ObservableProperty]
+    public partial DepartmentDto? SelectedDepartment { get; set; }
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(PasswordStrength))]
+    [NotifyPropertyChangedFor(nameof(PasswordStrengthLabel))]
+    [NotifyPropertyChangedFor(nameof(PasswordSegment1))]
+    [NotifyPropertyChangedFor(nameof(PasswordSegment2))]
+    [NotifyPropertyChangedFor(nameof(PasswordSegment3))]
+    [NotifyPropertyChangedFor(nameof(PasswordSegment4))]
+    [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     public partial string Password { get; set; } = string.Empty;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     public partial string ConfirmPassword { get; set; } = string.Empty;
+    public int PasswordStrength => CalculateStrength(Password);
+    public string PasswordStrengthLabel => ToLabel(PasswordStrength);
+    public bool PasswordSegment1 => PasswordStrength >= 1;
+    public bool PasswordSegment2 => PasswordStrength >= 2;
+    public bool PasswordSegment3 => PasswordStrength >= 3;
+    public bool PasswordSegment4 => PasswordStrength >= 4;
+    public bool PasswordsMatch =>
+        !string.IsNullOrEmpty(Password) && Password == ConfirmPassword;
 
-    [ObservableProperty] public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordStrength))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordStrengthLabel))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordSegment1))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordSegment2))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordSegment3))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordSegment4))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordsMatch))]
+    [NotifyPropertyChangedFor(nameof(IsChangingPassword))]
+    public partial string NewPassword { get; set; } = string.Empty;
 
-    [ObservableProperty] public partial DepartmentDto? SelectedDepartment { get; set; }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordsMatch))]
+    [NotifyPropertyChangedFor(nameof(IsChangingPassword))]
+    public partial string NewConfirmPassword { get; set; } = string.Empty;
 
-    #endregion
+    public int NewPasswordStrength => CalculateStrength(NewPassword);
+    public string NewPasswordStrengthLabel => ToLabel(NewPasswordStrength);
+    public bool NewPasswordSegment1 => NewPasswordStrength >= 1;
+    public bool NewPasswordSegment2 => NewPasswordStrength >= 2;
+    public bool NewPasswordSegment3 => NewPasswordStrength >= 3;
+    public bool NewPasswordSegment4 => NewPasswordStrength >= 4;
+    public bool NewPasswordsMatch =>
+        !string.IsNullOrEmpty(NewPassword) && NewPassword == NewConfirmPassword;
 
-    #region Actions
+    public bool IsNewUser => _originalUser is null;
+
+    public bool IsChangingPassword =>
+        !string.IsNullOrWhiteSpace(NewPassword) || !string.IsNullOrWhiteSpace(NewConfirmPassword);
+
+    public bool CanSave =>
+        !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name)
+        && ValidatePasswordSection() is null;
+
+    public string DisplayNamePreview =>
+        string.Join(" ",new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     public Func<CreateUserDto, Task>? CreateAction { get; set; }
     public Func<UserDto, Task>? UpdateAction { get; set; }
-
-    #endregion
-
-    #region Computed Properties
-
-    public bool IsNewUser => _originalUser == null;
-
-    public bool CanSave =>
-        !string.IsNullOrWhiteSpace(Username) &&
-        !string.IsNullOrWhiteSpace(Surname) &&
-        !string.IsNullOrWhiteSpace(Name) &&
-        (!IsNewUser || (!string.IsNullOrWhiteSpace(Password) && Password == ConfirmPassword));
-
-    public string DisplayNamePreview =>
-        string.Join(" ", new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
-
-    #endregion
+    public Func<string, Task>? ChangePasswordAction { get; set; }
 
     public UserEditDialogViewModel(UserDto? user, ObservableCollection<DepartmentDto> departments)
     {
         _originalUser = user;
         Departments = departments ?? [];
-        Title = user == null ? "Создать сотрудника" : "Редактировать сотрудника";
+        Title = user is null ? "Создать сотрудника" : "Редактировать сотрудника";
         CanCloseOnBackgroundClick = true;
 
-        if (user == null) return;
-
-        InitializeFromUser(user);
+        if (user is not null)
+            InitializeFromUser(user);
     }
-
-    #region Initialization
 
     private void InitializeFromUser(UserDto user)
     {
@@ -79,16 +116,14 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         Midname = user.Midname ?? string.Empty;
 
         if (user.DepartmentId.HasValue)
-        {
             SelectedDepartment = Departments.FirstOrDefault(d => d.Id == user.DepartmentId.Value);
-        }
     }
 
-    #endregion
-
-    #region Property Changed Handlers
-
     partial void OnUsernameChanged(string value) => ClearErrorIfValid();
+    partial void OnPasswordChanged(string value) => ClearErrorIfValid();
+    partial void OnConfirmPasswordChanged(string value) => ClearErrorIfValid();
+    partial void OnNewPasswordChanged(string value) => ClearErrorIfValid();
+    partial void OnNewConfirmPasswordChanged(string value) => ClearErrorIfValid();
 
     partial void OnSurnameChanged(string value)
     {
@@ -96,29 +131,46 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         OnPropertyChanged(nameof(DisplayNamePreview));
     }
 
-    partial void OnMidnameChanged(string value) => OnPropertyChanged(nameof(DisplayNamePreview));
+    partial void OnNameChanged(string value)
+    {
+        ClearErrorIfValid();
+        OnPropertyChanged(nameof(DisplayNamePreview));
+    }
 
-    partial void OnPasswordChanged(string value) => ClearErrorIfValid();
+    partial void OnMidnameChanged(string value) =>
+        OnPropertyChanged(nameof(DisplayNamePreview));
 
-    partial void OnConfirmPasswordChanged(string value) => ClearErrorIfValid();
+    private void ClearErrorIfValid()
+    {
+        if (CanSave) ErrorMessage = null;
+    }
+    private string? ValidatePasswordSection()
+    {
+        if (IsNewUser)
+        {
+            if (string.IsNullOrWhiteSpace(Password)) return "required";
+            if (Password.Length < 6) return "too_short";
+            if (Password != ConfirmPassword) return "mismatch";
+        }
+        else if (IsChangingPassword)
+        {
+            if (NewPassword.Length > 0 && NewPassword.Length < 6)
+                return "too_short";
+            if (NewPassword != NewConfirmPassword)
+                return "mismatch";
+        }
 
-    private void ClearErrorIfValid() => ErrorMessage = CanSave ? null : ErrorMessage;
-
-    #endregion
-
-    #region Validation
+        return null;
+    }
 
     private string? Validate()
     {
         if (string.IsNullOrWhiteSpace(Username))
             return "Введите логин";
-
-        if (Username.Length < 3)
+        if (Username.Trim().Length < 3)
             return "Логин должен содержать минимум 3 символа";
-
         if (string.IsNullOrWhiteSpace(Surname))
             return "Введите фамилию";
-
         if (string.IsNullOrWhiteSpace(Name))
             return "Введите имя";
 
@@ -126,25 +178,46 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         {
             if (string.IsNullOrWhiteSpace(Password))
                 return "Введите пароль";
-
             if (Password.Length < 6)
                 return "Пароль должен содержать минимум 6 символов";
-
             if (Password != ConfirmPassword)
+                return "Пароли не совпадают";
+        }
+        else if (IsChangingPassword)
+        {
+            if (NewPassword.Length < 6)
+                return "Пароль должен содержать минимум 6 символов";
+            if (NewPassword != NewConfirmPassword)
                 return "Пароли не совпадают";
         }
 
         return null;
     }
 
-    #endregion
+    private static int CalculateStrength(string password)
+    {
+        if (string.IsNullOrEmpty(password)) return 0;
 
-    #region DTO Builders
+        int score = 0;
+        if (password.Length >= 6) score++;
+        if (password.Length >= 10) score++;
+        if (password.Any(char.IsUpper) && password.Any(char.IsLower)) score++;
+        if (password.Any(char.IsDigit) || password.Any(c => !char.IsLetterOrDigit(c))) score++;
 
-    private static string TrimLower(string value) => value.Trim().ToLower();
+        return score;
+    }
 
-    private static string? TrimOrNull(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string ToLabel(int strength) => strength switch
+    {
+        0 => string.Empty,
+        1 => "Очень слабый",
+        2 => "Слабый",
+        3 => "Хороший",
+        _ => "Надёжный",
+    };
+
+    private static string TrimLower(string value) => value.Trim().ToLowerInvariant();
+    private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private CreateUserDto BuildCreateDto() => new()
     {
@@ -153,7 +226,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         Surname = Surname.Trim(),
         Name = Name.Trim(),
         Midname = TrimOrNull(Midname),
-        DepartmentId = SelectedDepartment?.Id
+        DepartmentId = SelectedDepartment?.Id,
     };
 
     private UserDto BuildUpdateDto() => new()
@@ -163,32 +236,34 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         Surname = Surname.Trim(),
         Name = Name.Trim(),
         Midname = TrimOrNull(Midname),
-        DepartmentId = SelectedDepartment?.Id
+        DepartmentId = SelectedDepartment?.Id,
     };
-
-    #endregion
-
-    #region Commands
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        var validationError = Validate();
-        if (validationError != null)
+        var error = Validate();
+        if (error is not null)
         {
-            ErrorMessage = validationError;
+            ErrorMessage = error;
             return;
         }
 
         await SafeExecuteAsync(async () =>
         {
             if (IsNewUser)
-                await CreateAction?.Invoke(BuildCreateDto())!;
+            {
+                await (CreateAction?.Invoke(BuildCreateDto()) ?? Task.CompletedTask);
+            }
             else
-                await UpdateAction?.Invoke(BuildUpdateDto())!;
+            {
+                await (UpdateAction?.Invoke(BuildUpdateDto()) ?? Task.CompletedTask);
+
+                if (IsChangingPassword && !string.IsNullOrWhiteSpace(NewPassword))
+                    await (ChangePasswordAction?.Invoke(NewPassword) ?? Task.CompletedTask);
+            }
 
             await RequestCloseAsync();
         });
     }
-    #endregion
 }

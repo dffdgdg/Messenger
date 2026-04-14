@@ -176,5 +176,6 @@ public static class ApiEndpoints
         public const string AllUsers = $"{Base}/users";
         public static string UserById(int userId) => $"{Base}/users/{userId}";
         public static string ToggleBan(int userId) => $"{Base}/users/{userId}/toggle-ban";
+        public static string ResetPassword(int userId) => $"{Base}/users/{userId}/reset-password";
     }
 }

@@ -338,8 +338,11 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         {
             await _cache.UpsertMessageAsync(msg);
             var uid = _auth.Session.UserId;
-            await _cache.UpdateChatLastMessageAsync(msg.ChatId, ChatPreviewFormatter.BuildPreview(msg),
-                ChatPreviewFormatter.FormatSenderName(msg.SenderName, msg.SenderId, uid), msg.CreatedAt);
+
+            var (preview, _) = ChatPreviewFormatter.BuildPreviewWithMeta(msg, uid);
+            var senderName = ChatPreviewFormatter.FormatSenderName(msg.SenderName, msg.SenderId, uid);
+
+            await _cache.UpdateChatLastMessageAsync(msg.ChatId, preview, senderName, msg.CreatedAt);
         }
         catch (Exception ex) { Log($"Cache incoming error: {ex.Message}"); }
     }

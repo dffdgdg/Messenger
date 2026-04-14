@@ -140,6 +140,10 @@ public static class CacheMapper
         LastMessageDateTicks = dto.LastMessageDate?.ToUniversalTime().Ticks,
         LastMessagePreview = dto.LastMessagePreview,
         LastMessageSenderName = dto.LastMessageSenderName,
+        LastMessageSenderId = dto.LastMessageSenderId,
+        LastMessageIsSystem = dto.LastMessageIsSystem,
+        LastMessageIsPoll = dto.LastMessageIsPoll,
+        LastMessageIsVoice = dto.LastMessageIsVoice,
         CachedAtTicks = DateTime.UtcNow.Ticks
     };
 
@@ -152,7 +156,11 @@ public static class CacheMapper
         CreatedById = entity.CreatedById,
         LastMessageDate = entity.LastMessageDate,
         LastMessagePreview = entity.LastMessagePreview,
-        LastMessageSenderName = entity.LastMessageSenderName
+        LastMessageSenderName = entity.LastMessageSenderName,
+        LastMessageSenderId = entity.LastMessageSenderId,
+        LastMessageIsSystem = entity.LastMessageIsSystem,
+        LastMessageIsPoll = entity.LastMessageIsPoll,
+        LastMessageIsVoice = entity.LastMessageIsVoice,
     };
 
     #endregion

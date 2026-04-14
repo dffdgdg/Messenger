@@ -25,7 +25,6 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
     [ObservableProperty] public partial bool IsVoiceSending { get; set; }
     [ObservableProperty] public partial string VoiceElapsed { get; set; } = "0:00";
     [ObservableProperty] public partial string? VoiceError { get; set; }
-    [ObservableProperty] public partial bool IsVoiceSupported { get; set; }
 
     private VoiceRecordingViewModel? _voiceRecording;
     public VoiceRecordingViewModel? VoiceRecording
@@ -37,19 +36,12 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
     public void Initialize(IAudioRecorderService audioRecorder)
     {
         _audioRecorder = audioRecorder;
-        IsVoiceSupported = _audioRecorder.IsSupported;
     }
 
     [RelayCommand]
     private async Task StartRecording()
     {
         if (IsVoiceRecording || IsVoiceSending) return;
-
-        if (!_audioRecorder.IsSupported)
-        {
-            VoiceError = "Запись аудио не поддерживается на этой платформе";
-            return;
-        }
 
         VoiceError = null;
         var started = await _audioRecorder.StartAsync();

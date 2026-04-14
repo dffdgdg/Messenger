@@ -13,4 +13,13 @@ public class ChatDto
     public string? LastMessagePreview { get; set; }
     public string? LastMessageSenderName { get; set; }
     public int UnreadCount { get; set; }
+
+    public int? LastMessageSenderId { get; set; }
+    public bool LastMessageIsSystem { get; set; }
+    public bool LastMessageIsPoll { get; set; }
+    public bool LastMessageIsVoice { get; set; }
+    public bool LastMessageHasFilesOnly { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool HideSenderPrefix { get; set; }
 }

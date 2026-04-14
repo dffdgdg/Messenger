@@ -8,17 +8,18 @@ public interface IAdminService
     Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default);
     Task<Result<UserDto>> UpdateUserAsync(int userId, UserDto dto, CancellationToken ct = default);
     Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default);
+    Task<Result> ResetPasswordAsync(int userId, string newPassword, CancellationToken ct = default);
 }
 
-public partial class AdminService(MessengerDbContext context,AppDateTime appDateTime,ILogger<AdminService> logger)
+public partial class AdminService(MessengerDbContext context, AppDateTime appDateTime, ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync(ct);
+        var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking()
+            .OrderBy(u => u.Surname).ThenBy(u => u.Name).ToListAsync(ct);
 
-        var result = users.ConvertAll(u => u.ToDto());
-        return Result<List<UserDto>>.Success(result);
+        return Result<List<UserDto>>.Success(users.ConvertAll(u => u.ToDto()));
     }
 
     public async Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default)
@@ -45,8 +46,9 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
 
         if (dto.DepartmentId.HasValue)
         {
-            var departmentExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
-            if (!departmentExists)
+            var deptExists = await _context.Departments
+                .AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
+            if (!deptExists)
                 return Result<UserDto>.NotFound("Указанный отдел не существует");
         }
 
@@ -63,8 +65,8 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
             UserSetting = new UserSetting
             {
                 NotificationsEnabled = true,
-                Theme = 0
-            }
+                Theme = 0,
+            },
         };
 
         _context.Users.Add(user);
@@ -75,15 +77,15 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
 
         LogUserCreated(username, user.Id);
 
-        var createdUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
+        var created = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
 
-        return Result<UserDto>.Success(createdUser.ToDto());
+        return Result<UserDto>.Success(created.ToDto());
     }
 
     public async Task<Result<UserDto>> UpdateUserAsync(int userId, UserDto dto, CancellationToken ct = default)
     {
         if (userId != dto.Id)
-            return Result<UserDto>.Failure("Несоответствие ID");
+            return Result<UserDto>.Failure("Несоответствие идентификатора");
 
         var usernameValidation = ValidationHelper.ValidateUsername(dto.Username);
         if (usernameValidation.IsFailure)
@@ -102,19 +104,21 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {userId} не найден");
 
-        var exists = await _context.Users.AnyAsync(u => u.Username == username && u.Id != userId, ct);
-        if (exists)
+        var taken = await _context.Users.AnyAsync(u => u.Username == username && u.Id != userId, ct);
+        if (taken)
             return Result<UserDto>.Conflict("Пользователь с таким логином уже существует");
 
         if (dto.DepartmentId.HasValue)
         {
-            var departmentExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
-            if (!departmentExists)
+            var deptExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
+            if (!deptExists)
                 return Result<UserDto>.NotFound("Указанный отдел не существует");
         }
 
         user.Username = username;
-        user.UpdateProfile(dto);
+        user.Surname = dto.Surname.Trim();
+        user.Name = dto.Name.Trim();
+        user.Midname = dto.Midname?.Trim();
         user.DepartmentId = dto.DepartmentId;
 
         var saveResult = await SaveChangesAsync(ct);
@@ -123,9 +127,9 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
 
         LogUserUpdated(userId);
 
-        var updatedUser = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == userId, ct);
+        var updated = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == userId, ct);
 
-        return Result<UserDto>.Success(updatedUser.ToDto());
+        return Result<UserDto>.Success(updated.ToDto());
     }
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
@@ -137,6 +141,11 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
         var user = userResult.Value!;
         user.IsBanned = !user.IsBanned;
 
+        if (user.IsBanned)
+        {
+            await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+        }
+
         var saveResult = await SaveChangesAsync(ct);
         if (saveResult.IsFailure)
             return saveResult;
@@ -145,16 +154,43 @@ public partial class AdminService(MessengerDbContext context,AppDateTime appDate
         return Result.Success();
     }
 
-    #region Log messages
+    public async Task<Result> ResetPasswordAsync(int userId, string newPassword, CancellationToken ct = default)
+    {
+        var passwordValidation = ValidationHelper.ValidatePassword(newPassword);
+        if (passwordValidation.IsFailure)
+            return Result.Failure(passwordValidation.Error!);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Создан пользователь {Username} с ID {UserId}")]
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+        if (user is null)
+            return Result.NotFound($"Пользователь с ID {userId} не найден");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+        await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+
+        var saveResult = await SaveChangesAsync(ct);
+        if (saveResult.IsFailure)
+            return saveResult;
+
+        LogPasswordReset(userId);
+        return Result.Success();
+    }
+
+    #region Log
+    [LoggerMessage(Level = LogLevel.Information, Message = "Создан пользователь {Username} (ID={UserId})")]
     private partial void LogUserCreated(string username, int userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Администратор обновил пользователя {UserId}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Администратор обновил профиль пользователя ID={UserId}")]
     private partial void LogUserUpdated(int userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} {Action}", EventName = "UserBanStatusChanged")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Администратор сбросил пароль пользователя ID={UserId}")]
+    private partial void LogPasswordReset(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь ID={UserId} {Action}", EventName = "UserBanStatusChanged")]
     private partial void LogBanStatusChanged(int userId, string action);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Пользователь ID={UserId} удалён администратором")]
+    private partial void LogUserDeleted(int userId);
     #endregion
 }

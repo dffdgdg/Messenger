@@ -204,8 +204,8 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="admin:DepartmentGroup">
                                             <adminCon:DepartmentGroupView
-                                                EditUserCommand="{Binding $parent[views:AdminView].DataContext.OpenEditUserDialogCommand}"
-                                                BanUserCommand="{Binding $parent[views:AdminView].DataContext.ToggleBanCommand}"/>
+                                            EditUserCommand="{Binding $parent[views:AdminView].DataContext.OpenEditUserDialogCommand}"
+                                            BanUserCommand="{Binding $parent[views:AdminView].DataContext.ToggleBanCommand}"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

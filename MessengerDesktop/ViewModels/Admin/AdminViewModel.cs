@@ -10,17 +10,21 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentTab))]
     public partial int SelectedTabIndex { get; set; }
-    [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SearchQuery { get; set; } = string.Empty;
+
     public UsersTabViewModel UsersTab { get; }
     public DepartmentsTabViewModel DepartmentsTab { get; }
 
     public BaseViewModel CurrentTab => SelectedTabIndex == 0 ? UsersTab : DepartmentsTab;
-
     public IEnumerable<DepartmentGroup> FilteredGroupedUsers => UsersTab.FilteredGroups;
 
-    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments => DepartmentsTab.FilteredDepartments;
-
-    public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab)
+    public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments =>
+        DepartmentsTab.FilteredDepartments;
+    public AdminViewModel(
+        UsersTabViewModel usersTab,
+        DepartmentsTabViewModel departmentsTab)
     {
         UsersTab = usersTab;
         DepartmentsTab = departmentsTab;
@@ -29,21 +33,16 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
         {
             PropagateMessages(e.PropertyName, UsersTab);
 
-            if (e.PropertyName == nameof(UsersTab.FilteredGroups) || e.PropertyName == nameof(UsersTab.GroupedUsers))
-            {
+            if (e.PropertyName is nameof(UsersTab.FilteredGroups) or nameof(UsersTab.GroupedUsers))
                 OnPropertyChanged(nameof(FilteredGroupedUsers));
-            }
         };
 
         DepartmentsTab.PropertyChanged += (_, e) =>
         {
             PropagateMessages(e.PropertyName, DepartmentsTab);
 
-            if (e.PropertyName == nameof(DepartmentsTab.FilteredDepartments) ||
-                e.PropertyName == nameof(DepartmentsTab.HierarchicalDepartments))
-            {
+            if (e.PropertyName is nameof(DepartmentsTab.FilteredDepartments) or nameof(DepartmentsTab.HierarchicalDepartments))
                 OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
-            }
         };
 
         _ = InitializeAsync();
@@ -59,7 +58,6 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
         OnPropertyChanged(nameof(FilteredGroupedUsers));
         OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
     }
-
     partial void OnSearchQueryChanged(string value)
     {
         UsersTab.SearchQuery = value;
@@ -72,18 +70,21 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     partial void OnSelectedTabIndexChanged(int value) => ClearMessages();
 
     [RelayCommand]
-    private async Task OpenEditUserDialog(UserDto user) => await UsersTab.EditCommand.ExecuteAsync(user);
+    private async Task OpenEditUserDialog(UserDto user) =>
+        await UsersTab.EditCommand.ExecuteAsync(user);
 
     [RelayCommand]
-    private async Task ToggleBan(UserDto user) => await UsersTab.ToggleBanCommand.ExecuteAsync(user);
+    private async Task ToggleBan(UserDto user) =>
+        await UsersTab.ToggleBanCommand.ExecuteAsync(user);
 
     [RelayCommand]
     private async Task OpenEditDepartment(DepartmentDto department)
     {
-        if (FindDepartmentItem(DepartmentsTab.HierarchicalDepartments, department.Id) != null)
-        {
-            await DepartmentsTab.EditCommand.ExecuteAsync(FindDepartmentItem(DepartmentsTab.HierarchicalDepartments, department.Id));
-        }
+        var item = FindDepartmentItem(
+            DepartmentsTab.HierarchicalDepartments, department.Id);
+
+        if (item is not null)
+            await DepartmentsTab.EditCommand.ExecuteAsync(item);
     }
 
     [RelayCommand]
@@ -106,25 +107,32 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     [RelayCommand]
     private async Task Create()
     {
-        if (SelectedTabIndex == 0) await UsersTab.CreateCommand.ExecuteAsync(null);
-        else await DepartmentsTab.CreateCommand.ExecuteAsync(null);
+        if (SelectedTabIndex == 0)
+            await UsersTab.CreateCommand.ExecuteAsync(null);
+        else
+            await DepartmentsTab.CreateCommand.ExecuteAsync(null);
     }
 
     private static HierarchicalDepartmentViewModel? FindDepartmentItem(IEnumerable<HierarchicalDepartmentViewModel> items, int departmentId)
     {
         foreach (var item in items)
         {
-            if (item.Id == departmentId) return item;
+            if (item.Id == departmentId)
+                return item;
 
-            if (FindDepartmentItem(item.Children, departmentId) != null)
-                return FindDepartmentItem(item.Children, departmentId);
+            var found = FindDepartmentItem(item.Children, departmentId);
+            if (found is not null)
+                return found;
         }
         return null;
     }
 
     private void PropagateMessages(string? propertyName, BaseViewModel source)
     {
-        if (propertyName == nameof(ErrorMessage) && !string.IsNullOrEmpty(source.ErrorMessage)) ErrorMessage = source.ErrorMessage;
-        else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage)) SuccessMessage = source.SuccessMessage;
+        if (propertyName == nameof(ErrorMessage) && !string.IsNullOrEmpty(source.ErrorMessage))
+            ErrorMessage = source.ErrorMessage;
+
+        else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage))
+            SuccessMessage = source.SuccessMessage;
     }
 }

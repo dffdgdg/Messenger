@@ -44,7 +44,12 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public partial string CurrentPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSavePassword), nameof(PasswordsMatch), nameof(IsNewPasswordValid), nameof(NewPasswordValidationMessage))]
+    [NotifyPropertyChangedFor(nameof(CanSavePassword))]
+    [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
+    [NotifyPropertyChangedFor(nameof(IsNewPasswordValid))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordValidationMessage))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordStrength))]
+    [NotifyPropertyChangedFor(nameof(NewPasswordStrengthLabel))]
     public partial string NewPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -68,6 +73,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public bool IsNewPasswordValid => string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
     public bool PasswordsMatch => NewPassword == ConfirmPassword;
     public bool ShowPasswordMatchIndicator => !string.IsNullOrEmpty(ConfirmPassword);
+    public int NewPasswordStrength => CalculatePasswordStrength(NewPassword);
+    public string NewPasswordStrengthLabel => ToStrengthLabel(NewPasswordStrength);
 
     public bool CanSavePassword => !string.IsNullOrWhiteSpace(CurrentPassword)
         && !string.IsNullOrWhiteSpace(NewPassword) && NewPassword.Length >= 6 && PasswordsMatch;
@@ -305,6 +312,27 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     #endregion
 
     #region Helpers
+    private static int CalculatePasswordStrength(string password)
+    {
+        if (string.IsNullOrEmpty(password)) return 0;
+
+        int score = 0;
+        if (password.Length >= 6) score++;
+        if (password.Length >= 10) score++;
+        if (password.Any(char.IsUpper) && password.Any(char.IsLower)) score++;
+        if (password.Any(char.IsDigit) || password.Any(c => !char.IsLetterOrDigit(c))) score++;
+
+        return score;
+    }
+
+    private static string ToStrengthLabel(int strength) => strength switch
+    {
+        0 => string.Empty,
+        1 => "Очень слабый",
+        2 => "Слабый",
+        3 => "Хороший",
+        _ => "Надёжный",
+    };
 
     private void CancelAllEditing()
     {

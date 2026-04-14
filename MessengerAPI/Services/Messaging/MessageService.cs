@@ -478,14 +478,10 @@ public partial class MessageService(
         if (chatIds.Count == 0)
             return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = page });
 
-        // Фильтр по конкретному чату если передан
         if (filterChatId.HasValue)
-            chatIds = chatIds.Where(id => id == filterChatId.Value).ToList();
+            chatIds = [.. chatIds.Where(id => id == filterChatId.Value)];
 
-        // Чаты ищем только при текстовом запросе и без фильтрации по чату
-        var chats = (hasQuery && filterChatId == null)
-            ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery)
-            : [];
+        var chats = (hasQuery && filterChatId == null) ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery) : [];
 
         var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(
             chatIds, escaped, userId, np, nps, hasQuery,

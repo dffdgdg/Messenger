@@ -619,8 +619,7 @@
 											Width="44" Height="44"
 											CornerRadius="10"
 											VerticalAlignment="Bottom"
-											Command="{Binding Voice.StartRecordingCommand}"
-											IsVisible="{Binding Voice.IsVoiceSupported}">
+											Command="{Binding Voice.StartRecordingCommand}">
 										<Path Data="{StaticResource MicrophoneIcon}"
 											  Fill="{DynamicResource TextSecondary}"
 											  Width="20" Height="20"

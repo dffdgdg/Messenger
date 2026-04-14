@@ -38,11 +38,9 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <parts:MessageMetaBlock
-            HorizontalAlignment="Right"
-            Margin="0,4,0,0"
-            Opacity="0.7"
-            IsVisible="{Binding ShowFilesOnlyMeta}"/>
+        <parts:MessageMetaBlock HorizontalAlignment="Right"
+                                Margin="0,4,0,0" Opacity="0.7"
+                                IsVisible="{Binding ShowFilesOnlyMeta}"/>
 
     </StackPanel>
 </UserControl>

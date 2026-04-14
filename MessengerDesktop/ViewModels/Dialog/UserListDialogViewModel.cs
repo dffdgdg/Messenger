@@ -84,9 +84,7 @@ public partial class UserListDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var filtered = Items.Where(u =>
-            u.DisplayName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-            u.Username.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+        var filtered = Items.Where(u => u.DisplayName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || u.Username.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
         FilteredItems = new ObservableCollection<UserListItemViewModel>(filtered);
     }

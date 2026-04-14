@@ -110,10 +110,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             case nameof(GlobalSearchManager.IsChatLocalMode):
                 OnPropertyChanged(nameof(IsChatLocalSearchMode));
                 break;
-            case nameof(GlobalSearchManager.IsChatsScope):
-            case nameof(GlobalSearchManager.IsContactsScope):
-            case nameof(GlobalSearchManager.CanSearchInCurrentChat):
-                break;
         }
     }
 
@@ -207,9 +203,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (chat == null) return;
 
         var currentUserId = _authManager.Session.UserId;
+        var (preview, hidePrefix) = ChatPreviewFormatter.BuildPreviewWithMeta(message, currentUserId);
+
         chat.LastMessageSenderName = ChatPreviewFormatter.FormatSenderName(message.SenderName, message.SenderId, currentUserId);
-        chat.LastMessagePreview = ChatPreviewFormatter.BuildPreview(message);
+        chat.LastMessagePreview = preview;
         chat.LastMessageDate = message.CreatedAt;
+        chat.HideSenderPrefix = hidePrefix;
 
         MoveChatToTop(chat);
     }
@@ -388,31 +387,31 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-public async Task LoadChats()
-{
-    try
+    public async Task LoadChats()
     {
-        await SafeExecuteAsync(async () =>
+        try
         {
-            if (!_authManager.Session.IsAuthenticated || !_authManager.Session.UserId.HasValue)
+            await SafeExecuteAsync(async () =>
             {
-                ErrorMessage = "Ошибка авторизации";
-                return;
-            }
+                if (!_authManager.Session.IsAuthenticated || !_authManager.Session.UserId.HasValue)
+                {
+                    ErrorMessage = "Ошибка авторизации";
+                    return;
+                }
 
-            if (_isFirstLoad)
-                await ShowCachedChatsAsync();
+                if (_isFirstLoad)
+                    await ShowCachedChatsAsync();
 
-            IsInitialLoading = false;
+                IsInitialLoading = false;
 
-            await LoadFreshChatsAsync(_authManager.Session.UserId.Value);
-        });
+                await LoadFreshChatsAsync(_authManager.Session.UserId.Value);
+            });
+        }
+        finally
+        {
+            _isFirstLoad = false;
+        }
     }
-    finally
-    {
-        _isFirstLoad = false;
-    }
-}
 
     private async Task ShowCachedChatsAsync()
     {
@@ -443,71 +442,69 @@ public async Task LoadChats()
     }
 
     private async Task LoadFreshChatsAsync(int userId)
-{
-    var endpoint = IsGroupMode
-        ? ApiEndpoints.Chats.UserGroups(userId)
-        : ApiEndpoints.Chats.UserDialogs(userId);
-
-    var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
-
-    if (!result.Success || result.Data == null)
     {
-        if (Chats.Count == 0)
-            ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
-        else
-            Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
-        return;
-    }
+        var endpoint = IsGroupMode ? ApiEndpoints.Chats.UserGroups(userId) : ApiEndpoints.Chats.UserDialogs(userId);
 
-    var ordered = result.Data
-        .OrderByDescending(c => c.LastMessageDate)
-        .ToList();
+        var result = await _apiClient.GetAsync<List<ChatDto>>(endpoint);
 
-    foreach (var c in ordered)
-        c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
-
-    MergeChats(ordered);
-
-    TotalUnreadCount = _globalHub.GetTotalUnread();
-
-    if (SelectedChat != null)
-    {
-        var restored = FindChat(SelectedChat.Id);
-        if (restored != null && !ReferenceEquals(restored, SelectedChat))
-            SelectedChat = restored;
-    }
-
-    await SaveCacheSilentAsync(ordered);
-}
-private void MergeChats(List<ChatDto> fresh)
-{
-    var freshIds = fresh.Select(c => c.Id).ToHashSet();
-
-    for (var i = Chats.Count - 1; i >= 0; i--)
-    {
-        if (!freshIds.Contains(Chats[i].Id))
-            Chats.RemoveAt(i);
-    }
-
-    for (var i = 0; i < fresh.Count; i++)
-    {
-        var dto = fresh[i];
-        var existing = Chats.FirstOrDefault(c => c.Id == dto.Id);
-
-        if (existing != null)
+        if (!result.Success || result.Data == null)
         {
-            existing.Apply(dto);
-
-            var currentIdx = Chats.IndexOf(existing);
-            if (currentIdx != i)
-                Chats.Move(currentIdx, Math.Min(i, Chats.Count - 1));
+            if (Chats.Count == 0)
+                ErrorMessage = $"Ошибка загрузки чатов: {result.Error}";
+            else
+                Debug.WriteLine($"[ChatsVM] Server unavailable, showing cached data. Error: {result.Error}");
+            return;
         }
-        else
+
+        var ordered = result.Data.OrderByDescending(c => c.LastMessageDate).ToList();
+
+        ApplyClientSideTransforms(ordered, userId);
+
+        foreach (var c in ordered)
+            c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
+
+        MergeChats(ordered);
+
+        TotalUnreadCount = _globalHub.GetTotalUnread();
+
+        if (SelectedChat != null)
         {
-            Chats.Insert(Math.Min(i, Chats.Count), new ChatListItemViewModel(dto));
+            var restored = FindChat(SelectedChat.Id);
+            if (restored != null && !ReferenceEquals(restored, SelectedChat))
+                SelectedChat = restored;
+        }
+
+        await SaveCacheSilentAsync(ordered);
+    }
+    private void MergeChats(List<ChatDto> fresh)
+    {
+        var freshIds = fresh.Select(c => c.Id).ToHashSet();
+
+        for (var i = Chats.Count - 1; i >= 0; i--)
+        {
+            if (!freshIds.Contains(Chats[i].Id))
+                Chats.RemoveAt(i);
+        }
+
+        for (var i = 0; i < fresh.Count; i++)
+        {
+            var dto = fresh[i];
+            var existing = Chats.FirstOrDefault(c => c.Id == dto.Id);
+
+            if (existing != null)
+            {
+                existing.Apply(dto);
+
+                var currentIdx = Chats.IndexOf(existing);
+                if (currentIdx != i)
+                    Chats.Move(currentIdx, Math.Min(i, Chats.Count - 1));
+            }
+            else
+            {
+                Chats.Insert(Math.Min(i, Chats.Count), new ChatListItemViewModel(dto));
+            }
         }
     }
-}
 
     public void UpdateChatInList(ChatDto updatedChat)
     {
@@ -549,6 +546,18 @@ private void MergeChats(List<ChatDto> fresh)
             SelectedChat = chat;
     }
 
+    private static void ApplyClientSideTransforms(List<ChatDto> chats, int currentUserId)
+    {
+        foreach (var chat in chats)
+        {
+            if (chat.LastMessageSenderId == currentUserId && !chat.LastMessageIsSystem)
+            {
+                chat.LastMessageSenderName = "Вы";
+            }
+
+            chat.HideSenderPrefix = chat.LastMessageIsSystem || chat.LastMessageIsPoll;
+        }
+    }
     private bool IsChatMatchingCurrentTab(ChatType type) => IsGroupMode ? type is ChatType.Chat or ChatType.Department : type == ChatType.Contact;
 
     private async Task<ChatDto?> FindDialogWithUser(int contactUserId)

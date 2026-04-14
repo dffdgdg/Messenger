@@ -10,6 +10,9 @@ public partial class DepartmentGroupView : UserControl
     public static readonly StyledProperty<ICommand?> BanUserCommandProperty =
         AvaloniaProperty.Register<DepartmentGroupView, ICommand?>(nameof(BanUserCommand));
 
+    public static readonly StyledProperty<ICommand?> DeleteUserCommandProperty =
+        AvaloniaProperty.Register<DepartmentGroupView, ICommand?>(nameof(DeleteUserCommand));
+
     public ICommand? EditUserCommand
     {
         get => GetValue(EditUserCommandProperty);
@@ -20,6 +23,12 @@ public partial class DepartmentGroupView : UserControl
     {
         get => GetValue(BanUserCommandProperty);
         set => SetValue(BanUserCommandProperty, value);
+    }
+
+    public ICommand? DeleteUserCommand
+    {
+        get => GetValue(DeleteUserCommandProperty);
+        set => SetValue(DeleteUserCommandProperty, value);
     }
 
     public DepartmentGroupView() => InitializeComponent();

@@ -9,7 +9,7 @@ namespace MessengerDesktop.Data;
 
 public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 {
-    private const int SchemaVersion = 4;
+    private const int SchemaVersion = 5;
 
     private readonly SQLiteAsyncConnection _db;
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -83,41 +83,42 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
     }
 
     private async Task MigrateAsync()
-{
-    var currentVersion = await _db.ExecuteScalarAsync<int>("PRAGMA user_version");
-    Debug.WriteLine($"[LocalDB] Schema version: {currentVersion}, expected: {SchemaVersion}");
-
-    if (currentVersion == SchemaVersion)
-        return;
-
-    if (currentVersion > SchemaVersion)
     {
-        Debug.WriteLine("[LocalDB] Schema downgrade detected, clearing all data");
-        await DropAllTablesAsync();
-    }
+        var currentVersion = await _db.ExecuteScalarAsync<int>("PRAGMA user_version");
+        Debug.WriteLine($"[LocalDB] Schema version: {currentVersion}, expected: {SchemaVersion}");
 
-    if (currentVersion < 1)
-    {
-        Debug.WriteLine("[LocalDB] Migrating to schema v1 (initial)");
-    }
+        if (currentVersion == SchemaVersion)
+            return;
 
-    if (currentVersion is >= 1 and < 4)
-    {
-        Debug.WriteLine("[LocalDB] Migrating to schema v4: adding is_pinned to messages");
-        try
+        if (currentVersion > SchemaVersion)
         {
-            await _db.ExecuteAsync("ALTER TABLE messages ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0");
-            Debug.WriteLine("[LocalDB] Column is_pinned added");
+            Debug.WriteLine("[LocalDB] Schema downgrade detected, clearing all data");
+            await DropAllTablesAsync();
         }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[LocalDB] ALTER TABLE messages (non-critical): {ex.Message}");
-        }
-    }
 
-    await _db.ExecuteAsync($"PRAGMA user_version = {SchemaVersion}");
-    Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
-}
+        if (currentVersion < 1)
+        {
+            Debug.WriteLine("[LocalDB] Migrating to schema v1 (initial)");
+        }
+
+        if (currentVersion is >= 1 and < 4)
+        {
+            Debug.WriteLine("[LocalDB] Migrating to schema v4: adding is_pinned to messages");
+            try
+            {
+                await _db.ExecuteAsync(
+                    "ALTER TABLE messages ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0");
+                Debug.WriteLine("[LocalDB] Column is_pinned added");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDB] ALTER TABLE messages (non-critical): {ex.Message}");
+            }
+        }
+
+        await _db.ExecuteAsync($"PRAGMA user_version = {SchemaVersion}");
+        Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
+    }
 
     private async Task DropAllTablesAsync()
     {

@@ -27,14 +27,12 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     /// <summary>
     /// Результат для single-select режима. Await после ShowAsync.
     /// </summary>
-    public Task<UserDto?> SingleSelectResult =>
-        _singleSelectTcs?.Task ?? Task.FromResult<UserDto?>(null);
+    public Task<UserDto?> SingleSelectResult => _singleSelectTcs?.Task ?? Task.FromResult<UserDto?>(null);
 
     /// <summary>
     /// Конструктор для multi-select (используется в ChatEditDialog)
     /// </summary>
-    public UserPickerDialogViewModel(string title, IEnumerable<UserListItemViewModel> items,
-        bool allowEdit, Action<List<int>> applySelection)
+    public UserPickerDialogViewModel(string title, IEnumerable<UserListItemViewModel> items, bool allowEdit, Action<List<int>> applySelection)
     {
         Title = title;
         _sourceItems = [.. items.Select(x => x.Clone())];

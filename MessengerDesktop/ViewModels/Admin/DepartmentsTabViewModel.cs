@@ -71,8 +71,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Edit(HierarchicalDepartmentViewModel item)
     {
-        await _dialogService.ShowAsync(new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)],
-            Users, _dialogService, item.Department, item.HasChildren)
+        await _dialogService.ShowAsync(new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)], Users, _dialogService, item.Department, item.HasChildren)
         {
             SaveAction = async dialogVm =>
             {
@@ -81,34 +80,39 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
                     Id = item.Id,
                     Name = dialogVm.Name,
                     ParentDepartmentId = dialogVm.ParentDepartmentId,
-                    Head = dialogVm.HeadId
+                    Head = dialogVm.HeadId,
                 };
 
-                if ((await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id), dto)).Success)
+                var result = await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id), dto);
+
+                if (result.Success)
                 {
                     await LoadAsync();
                     SuccessMessage = "Отдел обновлён";
                 }
                 else
                 {
-                    throw new InvalidOperationException((await _apiClient.PutAsync<DepartmentDto>(ApiEndpoints.Departments.ById(item.Id), dto)).Error ?? "Ошибка обновления отдела");
+                    throw new InvalidOperationException(result.Error ?? "Ошибка обновления отдела");
                 }
             },
+
             DeleteAction = async dialogVm =>
             {
                 if (!dialogVm.EditId.HasValue)
-                    throw new InvalidOperationException("Идентификатор отдела не задан.");
+                    throw new InvalidOperationException("Идентификатор отдела не задан");
 
-                if ((await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value))).Success)
+                var result = await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value));
+
+                if (result.Success)
                 {
                     await LoadAsync();
                     SuccessMessage = "Отдел успешно удалён";
                 }
                 else
                 {
-                    throw new InvalidOperationException((await _apiClient.DeleteAsync(ApiEndpoints.Departments.ById(dialogVm.EditId.Value))).Error ?? "Ошибка удаления отдела");
+                    throw new InvalidOperationException(result.Error ?? "Ошибка удаления отдела");
                 }
-            }
+            },
         });
     }
 

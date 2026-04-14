@@ -14,6 +14,11 @@ public class CachedChat
     [Column("last_message_date")] public long? LastMessageDateTicks { get; set; }
     [Column("last_message_preview")] public string? LastMessagePreview { get; set; }
     [Column("last_message_sender_name")] public string? LastMessageSenderName { get; set; }
+    [Column("last_message_sender_id")] public int? LastMessageSenderId { get; set; }
+    [Column("last_message_is_system")] public bool LastMessageIsSystem { get; set; }
+    [Column("last_message_is_poll")] public bool LastMessageIsPoll { get; set; }
+    [Column("last_message_is_voice")] public bool LastMessageIsVoice { get; set; }
     [Column("cached_at")] public long CachedAtTicks { get; set; }
-    [Ignore] public DateTime? LastMessageDate => LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
+    [Ignore]
+    public DateTime? LastMessageDate => LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
 }

@@ -172,191 +172,88 @@ public partial class MessengerDbContext : DbContext
         modelBuilder.Entity<PollOption>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("poll_options_pkey");
-
             entity.ToTable("poll_options");
-
             entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"PollOptions_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.OptionText).HasMaxLength(50).HasColumnName("option_text");
             entity.Property(e => e.PollId).HasColumnName("poll_id");
             entity.Property(e => e.Position).HasColumnName("position");
-
             entity.HasOne(d => d.Poll).WithMany(p => p.PollOptions).HasForeignKey(d => d.PollId).HasConstraintName("PollOptions_PollId_fkey");
         });
 
         modelBuilder.Entity<PollVote>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("poll_votes_pkey");
-
             entity.ToTable("poll_votes");
-
             entity.HasIndex(e => new { e.PollId, e.UserId, e.OptionId }, "UQ_Poll_User_Option_Vote").IsUnique();
-
             entity.HasIndex(e => e.UserId, "idx_poll_votes_user_id");
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"PollVotes_Id_seq\"'::regclass)")
-                .HasColumnName("id");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"PollVotes_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.OptionId).HasColumnName("option_id");
             entity.Property(e => e.PollId).HasColumnName("poll_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
-            entity.Property(e => e.VotedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("voted_at");
-
-            entity.HasOne(d => d.Option).WithMany(p => p.PollVotes)
-                .HasForeignKey(d => d.OptionId)
-                .HasConstraintName("PollVotes_OptionId_fkey");
-
-            entity.HasOne(d => d.Poll).WithMany(p => p.PollVotes)
-                .HasForeignKey(d => d.PollId)
-                .HasConstraintName("PollVotes_PollId_fkey");
-
-            entity.HasOne(d => d.User).WithMany(p => p.PollVotes)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("PollVotes_UserId_fkey");
+            entity.Property(e => e.VotedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("voted_at");
+            entity.HasOne(d => d.Option).WithMany(p => p.PollVotes).HasForeignKey(d => d.OptionId).HasConstraintName("PollVotes_OptionId_fkey");
+            entity.HasOne(d => d.Poll).WithMany(p => p.PollVotes).HasForeignKey(d => d.PollId).HasConstraintName("PollVotes_PollId_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.PollVotes).HasForeignKey(d => d.UserId).HasConstraintName("PollVotes_UserId_fkey");
         });
 
         modelBuilder.Entity<SystemSetting>(entity =>
         {
             entity.HasKey(e => e.Key).HasName("system_settings_pkey");
-
             entity.ToTable("system_settings");
-
-            entity.Property(e => e.Key)
-                .HasMaxLength(50)
-                .HasColumnName("key");
+            entity.Property(e => e.Key).HasMaxLength(50).HasColumnName("key");
             entity.Property(e => e.Value).HasColumnName("value");
         });
 
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("users_pkey");
-
             entity.ToTable("users");
-
             entity.HasIndex(e => e.DepartmentId, "idx_users_department_id");
-
             entity.HasIndex(e => e.Username, "users_username_key").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"Users_Id_seq\"'::regclass)")
-                .HasColumnName("id");
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"Users_Id_seq\"'::regclass)").HasColumnName("id");
             entity.Property(e => e.Avatar).HasColumnName("avatar");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnType("timestamp without time zone").HasColumnName("created_at");
             entity.Property(e => e.DepartmentId).HasColumnName("department_id");
-            entity.Property(e => e.IsBanned)
-                .HasDefaultValue(false)
-                .HasColumnName("is_banned");
-            entity.Property(e => e.LastOnline)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("last_online");
-            entity.Property(e => e.Midname)
-                .HasMaxLength(50)
-                .HasColumnName("midname");
-            entity.Property(e => e.Name)
-                .HasMaxLength(50)
-                .HasColumnName("name");
+            entity.Property(e => e.IsBanned).HasDefaultValue(false).HasColumnName("is_banned");
+            entity.Property(e => e.LastOnline).HasColumnType("timestamp without time zone").HasColumnName("last_online");
+            entity.Property(e => e.Midname).HasMaxLength(50).HasColumnName("midname");
+            entity.Property(e => e.Name).HasMaxLength(50).HasColumnName("name");
             entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
-            entity.Property(e => e.Surname)
-                .HasMaxLength(50)
-                .HasColumnName("surname");
-            entity.Property(e => e.Username)
-                .HasMaxLength(32)
-                .HasColumnName("username");
-
-            entity.HasOne(d => d.Department).WithMany(p => p.Users)
-                .HasForeignKey(d => d.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("Users_DepartmentId_fkey");
+            entity.Property(e => e.Surname).HasMaxLength(50).HasColumnName("surname");
+            entity.Property(e => e.Username).HasMaxLength(32).HasColumnName("username");
+            entity.HasOne(d => d.Department).WithMany(p => p.Users).HasForeignKey(d => d.DepartmentId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Users_DepartmentId_fkey");
         });
 
         modelBuilder.Entity<UserSetting>(entity =>
         {
             entity.HasKey(e => e.UserId).HasName("user_settings_pkey");
-
             entity.ToTable("user_settings");
-
-            entity.Property(e => e.UserId)
-                .ValueGeneratedNever()
-                .HasColumnName("user_id");
-
-            entity.Property(e => e.Theme)
-                .HasColumnName("theme")
-                .HasColumnType("theme");
-
-            entity.Property(e => e.NotificationsEnabled)
-                .HasDefaultValue(true)
-                .HasColumnName("notifications_enabled");
-
-            entity.HasOne(d => d.User).WithOne(p => p.UserSetting)
-                .HasForeignKey<UserSetting>(d => d.UserId)
-                .HasConstraintName("UserSettings_UserId_fkey");
+            entity.Property(e => e.UserId).ValueGeneratedNever().HasColumnName("user_id");
+            entity.Property(e => e.Theme).HasColumnName("theme").HasColumnType("theme");
+            entity.Property(e => e.NotificationsEnabled).HasDefaultValue(true).HasColumnName("notifications_enabled");
+            entity.HasOne(d => d.User).WithOne(p => p.UserSetting).HasForeignKey<UserSetting>(d => d.UserId).HasConstraintName("UserSettings_UserId_fkey");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("refresh_tokens_pkey");
-
             entity.ToTable("refresh_tokens");
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("nextval('\"RefreshTokens_Id_seq\"'::regclass)")
-                .HasColumnName("id");
-
-            entity.Property(e => e.UserId)
-                .HasColumnName("user_id");
-
-            entity.Property(e => e.TokenHash)
-                .HasMaxLength(128)
-                .HasColumnName("token_hash");
-
-            entity.Property(e => e.JwtId)
-                .HasMaxLength(64)
-                .HasColumnName("jwt_id");
-
-            entity.Property(e => e.CreatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
-
-            entity.Property(e => e.ExpiresAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("expires_at");
-
-            entity.Property(e => e.UsedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("used_at");
-
-            entity.Property(e => e.RevokedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("revoked_at");
-
-            entity.Property(e => e.ReplacedByTokenId)
-                .HasColumnName("replaced_by_token_id");
-
-            entity.Property(e => e.FamilyId)
-                .HasMaxLength(64)
-                .HasColumnName("family_id");
-
+            entity.Property(e => e.Id).HasDefaultValueSql("nextval('\"RefreshTokens_Id_seq\"'::regclass)").HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.TokenHash).HasMaxLength(128).HasColumnName("token_hash");
+            entity.Property(e => e.JwtId).HasMaxLength(64).HasColumnName("jwt_id");
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamp without time zone").HasColumnName("created_at");
+            entity.Property(e => e.ExpiresAt).HasColumnType("timestamp without time zone").HasColumnName("expires_at");
+            entity.Property(e => e.UsedAt).HasColumnType("timestamp without time zone").HasColumnName("used_at");
+            entity.Property(e => e.RevokedAt).HasColumnType("timestamp without time zone").HasColumnName("revoked_at");
+            entity.Property(e => e.ReplacedByTokenId).HasColumnName("replaced_by_token_id");
+            entity.Property(e => e.FamilyId).HasMaxLength(64).HasColumnName("family_id");
             entity.HasIndex(e => e.TokenHash, "idx_refresh_tokens_token_hash");
             entity.HasIndex(e => e.UserId, "idx_refresh_tokens_user_id");
             entity.HasIndex(e => e.FamilyId, "idx_refresh_tokens_family_id");
             entity.HasIndex(e => e.ExpiresAt, "idx_refresh_tokens_expires_at");
-
-            entity.HasOne(d => d.User)
-                .WithMany(p => p.RefreshTokens)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("RefreshTokens_UserId_fkey");
-
-            entity.HasOne(d => d.ReplacedByToken)
-                .WithMany()
-                .HasForeignKey(d => d.ReplacedByTokenId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("RefreshTokens_ReplacedBy_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens).HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("RefreshTokens_UserId_fkey");
+            entity.HasOne(d => d.ReplacedByToken).WithMany().HasForeignKey(d => d.ReplacedByTokenId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("RefreshTokens_ReplacedBy_fkey");
         });
     }
 }

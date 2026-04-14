@@ -159,12 +159,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public int FilesCount => FilesItems.Count;
 
     public List<string> PopularEmojis { get; } =
-    [
-        "😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅",
-        "😭", "😤", "❤", "👍", "👎", "🎉", "🔥", "✨",
-        "💯", "🙏", "👏", "🤝", "💪", "🎁", "📱", "💻",
-        "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"
-    ];
+    ["😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅", "😭", "😤", "❤", "👍", "👎", "🎉", "🔥", "✨", "💯", "🙏", "👏", "🤝", "💪", "🎁", "📱", "💻", "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"];
 
     #endregion
 
@@ -244,7 +239,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             {
                 throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
-            await LoadPinnedBannerAsync(Context.LifetimeToken);
+            await LoadPinnedAsync(Context.LifetimeToken, updateBanner: true);
 
             Context.Members = await MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
 
@@ -388,15 +383,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         ReplaceCollection(MembersPreview, [.. Context.Members.Take(5)]);
 
-        var photos = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).SelectMany(m => m.Files.Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url))
-                .Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(item => item.CreatedAt).ToList();
+        var visible = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).ToList();
 
+        var photos = visible.SelectMany(m => m.Files.Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url)).Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
 
-        var files = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).SelectMany(m => m.Files.Where(f => f.PreviewType != "image")
-                .Select(f => new ChatInfoPanelFileItem(m, f))).OrderByDescending(item => item.CreatedAt).ToList();
+        var files = visible.SelectMany(m => m.Files.Where(f => f.PreviewType != "image").Select(f => new ChatInfoPanelFileItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
 
-
-        var polls = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage && m.Poll != null).OrderByDescending(m => m.CreatedAt).ToList();
+        var polls = visible.Where(m => m.Poll != null).OrderByDescending(m => m.CreatedAt).ToList();
 
         ReplaceCollection(PhotosItems, photos);
         ReplaceCollection(FilesItems, files);
@@ -414,13 +407,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Сообщения
-    private async Task LoadPinnedBannerAsync(CancellationToken ct)
+    #region Messages
+    private async Task LoadPinnedAsync(CancellationToken ct, bool updateBanner = false)
     {
         try
         {
-            var result = await Context.Api.GetAsync<List<MessageDto>>(
-                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
+            var result = await Context.Api.GetAsync<List<MessageDto>>(ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -428,52 +420,28 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
                 if (result is { Success: true, Data.Count: > 0 })
                 {
-                    var dto = result.Data[0];
-                    PinnedBannerMessage?.Dispose();
-                    PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
-                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
-
                     RebuildPinnedMessages(result.Data);
+                    if (updateBanner)
+                    {
+                        PinnedBannerMessage?.Dispose();
+                        PinnedBannerMessage = CreatePinnedMessageViewModel(result.Data[0]);
+                        OnPropertyChanged(nameof(IsPinnedBannerVisible));
+                    }
                 }
-                else
+                else if (updateBanner)
                 {
                     PinnedBannerMessage?.Dispose();
                     PinnedBannerMessage = null;
                     OnPropertyChanged(nameof(IsPinnedBannerVisible));
-
-                    foreach (var old in PinnedMessages)
-                        old.Dispose();
+                    foreach (var old in PinnedMessages) old.Dispose();
                     PinnedMessages.Clear();
                     OnPropertyChanged(nameof(PinnedCount));
                     OnPropertyChanged(nameof(HasMultiplePinned));
                 }
             });
         }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
-        }
-    }
-    private async Task LoadPinnedMessagesAsync(CancellationToken ct)
-    {
-        try
-        {
-            var result = await Context.Api.GetAsync<List<MessageDto>>(
-                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Context.IsDisposed) return;
-                if (result is { Success: true, Data: not null })
-                    RebuildPinnedMessages(result.Data);
-            });
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
-        }
+        catch (OperationCanceledException) { /* Отмена действия */ }
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}"); }
     }
 
     private void RebuildPinnedMessages(List<MessageDto> dtos)
@@ -615,7 +583,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             IsInfoPanelOpen = true;
 
         OpenInfoSection(InfoSectionType.Pinned);
-        await LoadPinnedMessagesAsync(Context.LifetimeToken);
+        await LoadPinnedAsync(Context.LifetimeToken);
     }
 
     [RelayCommand]

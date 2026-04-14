@@ -10,22 +10,41 @@ public static class ChatPreviewFormatter
         if (senderId.HasValue && currentUserId.HasValue && senderId.Value == currentUserId.Value)
             return "Вы";
 
-        if (string.IsNullOrWhiteSpace(senderName))
-            return null;
+        return string.IsNullOrWhiteSpace(senderName) ? null : senderName;
+    }
 
-        return senderName;
+    /// <summary>
+    /// Возвращает превью и флаг — нужен ли префикс с именем отправителя.
+    /// </summary>
+    public static (string Preview, bool HidePrefix) BuildPreviewWithMeta(
+    MessageDto message, int? currentUserId = null)
+    {
+        if (message.IsDeleted)
+            return ("Сообщение удалено", HidePrefix: true);
+
+        if (message.IsSystemMessage)
+            return (BuildSystemPreview(message, currentUserId), HidePrefix: true);
+
+        if (message.Poll != null)
+        {
+            var question = BuildContentPreview(message.Content);
+            return ($"📊 {question}", HidePrefix: true);
+        }
+
+        if (message.IsVoiceMessage)
+            return ("Голосовое сообщение", HidePrefix: false);
+
+        if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
+            return ("📎 Вложение", HidePrefix: false);
+
+        if (message.Files.Count > 0)
+            return ($"📎 {BuildContentPreview(message.Content)}", HidePrefix: false);
+
+        return (BuildContentPreview(message.Content), HidePrefix: false);
     }
 
     public static string BuildPreview(MessageDto message, int? currentUserId = null)
-    {
-        if (message.Poll != null) return "Опрос";
-        if (message.IsVoiceMessage) return "Голосовое сообщение";
-        if (message.IsSystemMessage) return BuildSystemPreview(message, currentUserId);
-        if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
-            return "Вложение";
-
-        return BuildContentPreview(message.Content);
-    }
+        => BuildPreviewWithMeta(message, currentUserId).Preview;
 
     private static string BuildSystemPreview(MessageDto message, int? currentUserId)
     {
@@ -35,25 +54,23 @@ public static class ChatPreviewFormatter
         return message.SystemEventType switch
         {
             SystemEventType.ChatCreated => $"{actorName} создал(а) группу",
-            SystemEventType.MemberAdded => $"{actorName} добавил(а) {targetName} в группу",
-            SystemEventType.MemberRemoved => $"{actorName} удалил(а) {targetName} из группы",
+            SystemEventType.MemberAdded => $"{actorName} добавил(а) {targetName}",
+            SystemEventType.MemberRemoved => $"{actorName} удалил(а) {targetName}",
             SystemEventType.MemberLeft => $"{actorName} покинул(а) группу",
-            SystemEventType.RoleChanged => $"{actorName} изменил(а) роль участника {targetName}",
+            SystemEventType.RoleChanged => $"{actorName} изменил(а) роль {targetName}",
             _ => BuildContentPreview(message.Content)
         };
     }
 
-    private static string FormatParticipantName(string? name, int? participantId, int? currentUserId, string fallback)
+    private static string FormatParticipantName(string? name, int? id, int? currentUserId, string fallback)
     {
-        var formatted = FormatSenderName(name, participantId, currentUserId);
+        var formatted = FormatSenderName(name, id, currentUserId);
         return string.IsNullOrWhiteSpace(formatted) ? fallback : formatted;
     }
 
     public static string BuildContentPreview(string? content)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            return "Сообщение";
-
+        if (string.IsNullOrWhiteSpace(content)) return "Сообщение";
         return content.Length > ContentPreviewMaxLength ? content[..ContentPreviewMaxLength] + PreviewEllipsis : content;
     }
 }

@@ -51,10 +51,7 @@
 
     <Panel>
 
-        <!-- ══ ОСНОВНОЙ LAYOUT ══ -->
         <Grid ColumnDefinitions="82,*">
-
-            <!-- ── БОКОВАЯ НАВИГАЦИЯ ── -->
             <DockPanel Grid.Column="0"
                        LastChildFill="False"
                        Margin="5,0,5,0">
@@ -132,7 +129,6 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- ── КОНТЕНТ ── -->
             <Border Grid.Column="1"
                     Background="{DynamicResource SecondaryBG}"
                     Margin="0,8,9,9"
@@ -141,7 +137,6 @@
             </Border>
         </Grid>
 
-        <!-- ══ ПОИСКОВЫЙ ПОПАП ══ -->
         <Border x:Name="SearchPopup"
                 ZIndex="500"
                 IsVisible="{Binding SearchManager.IsSearchMode}"
@@ -157,8 +152,6 @@
                 Padding="6">
 
             <StackPanel>
-
-                <!-- Scope + кнопка фильтров -->
                 <Grid ColumnDefinitions="*,Auto" Margin="4,4,4,2">
                     <StackPanel Grid.Column="0"
                                 Orientation="Horizontal"
@@ -210,20 +203,17 @@
                     </Button>
                 </Grid>
 
-                <!-- Индикатор поиска -->
                 <TextBlock Text="Поиск..."
                            Classes="SearchGroupLabel"
                            IsVisible="{Binding SearchManager.IsSearching}"
                            HorizontalAlignment="Center"
                            Margin="0,8"/>
 
-                <!-- Результаты -->
                 <ScrollViewer MaxHeight="340"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="4">
 
-                        <!-- ── Чаты ── -->
                         <StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
                             <TextBlock Text="ЧАТЫ" Classes="SearchGroupLabel"/>
                             <ItemsControl ItemsSource="{Binding SearchManager.ChatResults}">
@@ -232,11 +222,7 @@
                                         <Button Classes="SearchResultItem"
                                                 Command="{Binding $parent[UserControl].((vm:MainMenuViewModel)DataContext).OpenSearchedChatCommand}"
                                                 CommandParameter="{Binding}">
-                                            <!--
-                                                Содержимое встроено напрямую —
-                                                StaticResource GroupIcon недоступен
-                                                через ContentTemplate из другого scope.
-                                            -->
+
                                             <Grid ColumnDefinitions="Auto,*" Margin="4,2">
                                                 <controls:AvatarControl
                                                     Grid.Column="0"
@@ -268,7 +254,6 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- ── Сообщения ── -->
                         <StackPanel IsVisible="{Binding SearchManager.HasMessageResults}">
                             <TextBlock Text="СООБЩЕНИЯ" Classes="SearchGroupLabel"/>
                             <ItemsControl ItemsSource="{Binding SearchManager.MessageResults}">
@@ -299,7 +284,6 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- ── Ничего не найдено ── -->
                         <StackPanel HorizontalAlignment="Center"
                                     Margin="0,16"
                                     Spacing="8">
@@ -320,7 +304,6 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
 
-                        <!-- ── Загрузить ещё ── -->
                         <Button Content="Показать ещё результаты"
                                 Classes="DialogOutline"
                                 HorizontalAlignment="Center"

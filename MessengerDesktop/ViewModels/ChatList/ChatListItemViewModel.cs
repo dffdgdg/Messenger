@@ -41,6 +41,9 @@ public partial class ChatListItemViewModel : ObservableObject
     [ObservableProperty]
     public partial int UnreadCount { get; set; }
 
+    [ObservableProperty]
+    public partial bool HideSenderPrefix { get; set; }
+
     public ChatDto ToDto() => new()
     {
         Id = Id,
@@ -51,7 +54,8 @@ public partial class ChatListItemViewModel : ObservableObject
         Avatar = Avatar,
         LastMessagePreview = LastMessagePreview,
         LastMessageSenderName = LastMessageSenderName,
-        UnreadCount = UnreadCount
+        UnreadCount = UnreadCount,
+        HideSenderPrefix = HideSenderPrefix
     };
 
     public void Apply(ChatDto dto)
@@ -62,5 +66,6 @@ public partial class ChatListItemViewModel : ObservableObject
         LastMessagePreview = dto.LastMessagePreview;
         LastMessageSenderName = dto.LastMessageSenderName;
         UnreadCount = dto.UnreadCount;
+        HideSenderPrefix = dto.HideSenderPrefix;
     }
 }

@@ -1,25 +1,30 @@
-﻿using NAudio.Wave;
+﻿using PortAudioSharp;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using IOStream = System.IO.Stream;
+using IOMemoryStream = System.IO.MemoryStream;
+using IOBinaryWriter = System.IO.BinaryWriter;
 
 namespace MessengerDesktop.Services.Audio;
 
-public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
+public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
 {
-    private static readonly WaveFormat RecordingFormat = new(16000, 16, 1);
+    private const int SampleRate = 16000;
+    private const int Channels = 1;
+    private const int BitsPerSample = 16;
+    private const int FramesPerBuffer = 512;
 
-    private WaveInEvent? _waveIn;
-    private MemoryStream? _buffer;
-    private WaveFileWriter? _writer;
+    private PortAudioSharp.Stream? _paStream;
+    private IOMemoryStream? _buffer;
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lock = new();
     private bool _disposed;
+    private bool _portAudioInitialized;
 
     public bool IsSupported => CheckSupported();
-    public bool IsRecording => _waveIn != null && _stopwatch.IsRunning;
+    public bool IsRecording => _paStream != null && _stopwatch.IsRunning;
     public TimeSpan Elapsed => _stopwatch.Elapsed;
 
     public Task<bool> StartAsync(CancellationToken ct = default)
@@ -31,27 +36,46 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
 
             try
             {
+                EnsurePortAudioInitialized();
                 CleanupInternal();
 
-                _buffer = new MemoryStream();
-                _waveIn = new WaveInEvent
+                _buffer = new IOMemoryStream();
+                WriteWavHeader(_buffer, 0);
+
+                if (PortAudio.DefaultInputDevice == PortAudio.NoDevice)
                 {
-                    WaveFormat = RecordingFormat,
-                    BufferMilliseconds = 100
+                    Debug.WriteLine("[AudioRecorder] No input device found");
+                    return Task.FromResult(false);
+                }
+
+                var inputParams = new StreamParameters
+                {
+                    device = PortAudio.DefaultInputDevice,
+                    channelCount = Channels,
+                    sampleFormat = SampleFormat.Int16,
+                    suggestedLatency = PortAudio
+                        .GetDeviceInfo(PortAudio.DefaultInputDevice)
+                        .defaultLowInputLatency,
+                    hostApiSpecificStreamInfo = IntPtr.Zero
                 };
-                _writer = new WaveFileWriter(new IgnoreDisposeStream(_buffer), RecordingFormat);
 
-                _waveIn.DataAvailable += OnDataAvailable;
-                _waveIn.RecordingStopped += OnRecordingStopped;
+                var capturedBuffer = _buffer;
 
-                _waveIn.StartRecording();
+                _paStream = new Stream(inParams: inputParams, outParams: null, sampleRate: SampleRate, framesPerBuffer: FramesPerBuffer, streamFlags: StreamFlags.ClipOff, callback: (input, _, frameCount, ref _, _, _) =>
+                {
+                    OnAudioData(input, (long)frameCount, capturedBuffer);
+                    return StreamCallbackResult.Continue;
+                },
+                userData: IntPtr.Zero);
+
+                _paStream.Start();
                 _stopwatch.Restart();
 
                 return Task.FromResult(true);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[NAudioRecorder] Start failed: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] Start failed: {ex.Message}");
                 CleanupInternal();
                 return Task.FromResult(false);
             }
@@ -62,30 +86,29 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     {
         lock (_lock)
         {
-            if (!IsRecording || _waveIn == null || _writer == null || _buffer == null)
+            if (!IsRecording || _paStream == null || _buffer == null)
                 return Task.FromResult<AudioRecordingResult?>(null);
 
             try
             {
                 _stopwatch.Stop();
-                _waveIn.StopRecording();
-
-                _writer.Flush();
-                _writer.Dispose();
-                _writer = null;
-
                 var duration = _stopwatch.Elapsed;
 
-                _buffer.Position = 0;
-                var resultStream = new MemoryStream(
-                    _buffer.ToArray())
-                { Position = 0 };
+                try { _paStream.Stop(); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[AudioRecorder] Stream stop warning: {ex.Message}");
+                }
+
+                var audioData = _buffer.ToArray();
+                FinalizeWavHeader(audioData);
+
+                var resultStream = new IOMemoryStream(audioData) { Position = 0 };
 
                 var result = new AudioRecordingResult
                 {
                     AudioStream = resultStream,
-                    FileName =
-                        $"voice_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav",
+                    FileName = $"voice_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav",
                     ContentType = "audio/wav",
                     Duration = duration
                 };
@@ -95,8 +118,7 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(
-                    $"[NAudioRecorder] Stop failed: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] Stop failed: {ex.Message}");
                 CleanupInternal();
                 return Task.FromResult<AudioRecordingResult?>(null);
             }
@@ -107,69 +129,118 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     {
         lock (_lock)
         {
-            if (IsRecording)
+            if (_paStream != null)
             {
                 _stopwatch.Stop();
-                _waveIn?.StopRecording();
+                try { _paStream.Stop(); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[AudioRecorder] Cancel warning: {ex.Message}");
+                }
             }
+
             CleanupInternal();
         }
+
         return Task.CompletedTask;
     }
 
-    private void OnDataAvailable(object? sender, WaveInEventArgs e)
+    private static unsafe void OnAudioData(
+        IntPtr input,
+        long frameCount,
+        IOMemoryStream buffer)
     {
-        lock (_lock)
+        if (input == IntPtr.Zero) return;
+
+        var byteCount = (int)(frameCount * Channels * (BitsPerSample / 8));
+
+        try
         {
-            try
+            var span = new ReadOnlySpan<byte>(input.ToPointer(), byteCount);
+            lock (buffer)
             {
-                _writer?.Write(e.Buffer, 0, e.BytesRecorded);
+                buffer.Write(span);
             }
-            catch (ObjectDisposedException)
-            {
-                // Writer disposed between check and write — OK
-            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[AudioRecorder] OnAudioData error: {ex.Message}");
         }
     }
 
-    private static void OnRecordingStopped(object? sender, StoppedEventArgs e)
+    private static void WriteWavHeader(IOStream stream, int dataLength)
     {
-        if (e.Exception != null)
-        {
-            Debug.WriteLine($"[NAudioRecorder] Recording error: {e.Exception.Message}");
-        }
+        const int byteRate = SampleRate * Channels * (BitsPerSample / 8);
+        const short blockAlign = (short)(Channels * (BitsPerSample / 8));
+
+        using var writer = new IOBinaryWriter(
+            stream,
+            System.Text.Encoding.ASCII,
+            leaveOpen: true);
+
+        writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+        writer.Write(36 + dataLength);
+        writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+
+        writer.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
+        writer.Write(16);
+        writer.Write((short)1);
+        writer.Write((short)Channels);
+        writer.Write(SampleRate);
+        writer.Write(byteRate);
+        writer.Write(blockAlign);
+        writer.Write((short)BitsPerSample);
+
+        writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+        writer.Write(dataLength);
+    }
+
+    private static void FinalizeWavHeader(byte[] data)
+    {
+        var dataLength = data.Length - 44;
+        if (dataLength < 0) return;
+
+        var chunkSize = BitConverter.GetBytes(36 + dataLength);
+        Buffer.BlockCopy(chunkSize, 0, data, 4, 4);
+
+        var subchunkSize = BitConverter.GetBytes(dataLength);
+        Buffer.BlockCopy(subchunkSize, 0, data, 40, 4);
+    }
+
+    private void EnsurePortAudioInitialized()
+    {
+        if (_portAudioInitialized) return;
+        PortAudio.Initialize();
+        _portAudioInitialized = true;
     }
 
     private void CleanupInternal()
     {
-        if (_waveIn != null)
+        if (_paStream != null)
         {
-            _waveIn.DataAvailable -= OnDataAvailable;
-            _waveIn.RecordingStopped -= OnRecordingStopped;
-            _waveIn.Dispose();
-            _waveIn = null;
+            try { _paStream.Dispose(); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AudioRecorder] Dispose warning: {ex.Message}");
+            }
+            _paStream = null;
         }
-
-        _writer?.Dispose();
-        _writer = null;
 
         _buffer?.Dispose();
         _buffer = null;
-
         _stopwatch.Reset();
     }
 
-    private static bool CheckSupported()
+    private bool CheckSupported()
     {
         try
         {
-            if (OperatingSystem.IsWindows())
-                return WaveInEvent.DeviceCount > 0;
-
-            return OperatingSystem.IsLinux();
+            EnsurePortAudioInitialized();
+            return PortAudio.DefaultInputDevice != PortAudio.NoDevice;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[AudioRecorder] CheckSupported failed: {ex.Message}");
             return false;
         }
     }
@@ -178,36 +249,16 @@ public sealed class NAudioRecorderService : IAudioRecorderService, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        lock (_lock) { CleanupInternal(); }
-    }
 
-    /// <summary>
-    /// Обёртка, которая не закрывает underlying stream при Dispose.
-    /// Нужна, чтобы WaveFileWriter.Dispose() не закрыл MemoryStream.
-    /// </summary>
-    private sealed class IgnoreDisposeStream(Stream inner) : Stream
-    {
-        public override bool CanRead => inner.CanRead;
-        public override bool CanSeek => inner.CanSeek;
-        public override bool CanWrite => inner.CanWrite;
-        public override long Length => inner.Length;
-        public override long Position
+        lock (_lock) { CleanupInternal(); }
+
+        if (_portAudioInitialized)
         {
-            get => inner.Position;
-            set => inner.Position = value;
-        }
-        public override void Flush() => inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count)
-            => inner.Read(buffer, offset, count);
-        public override long Seek(long offset, SeekOrigin origin)
-            => inner.Seek(offset, origin);
-        public override void SetLength(long value)
-            => inner.SetLength(value);
-        public override void Write(byte[] buffer, int offset, int count)
-            => inner.Write(buffer, offset, count);
-        protected override void Dispose(bool disposing)
-        {
-            // Intentionally empty — не закрываем inner
+            try { PortAudio.Terminate(); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AudioRecorder] Terminate warning: {ex.Message}");
+            }
         }
     }
 }

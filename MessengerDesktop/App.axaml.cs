@@ -43,7 +43,7 @@ public sealed class App : Application, IDisposable
         return new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true)
-            .AddJsonFile($"appsettings.{env}.json", optional: true) // перекрывает базовый
+            .AddJsonFile($"appsettings.{env}.json", optional: true)
             .AddEnvironmentVariables("MESSENGER_")
             .Build();
     }

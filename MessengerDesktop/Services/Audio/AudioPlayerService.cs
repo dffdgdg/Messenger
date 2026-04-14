@@ -1,48 +1,38 @@
-﻿using NAudio.Wave;
+﻿using PortAudioSharp;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
+using IOStream = System.IO.Stream;
 
 namespace MessengerDesktop.Services.Audio;
 
-public interface IAudioPlayerService : IDisposable
-{
-    bool IsPlaying { get; }
-    bool IsPaused { get; }
-    TimeSpan Position { get; }
-    TimeSpan Duration { get; }
-    int? CurrentMessageId { get; }
-    event Action<int>? PlaybackStarted;
-    event Action<int>? PlaybackPaused;
-    event Action<int>? PlaybackResumed;
-    event Action<int>? PlaybackStopped;
-    event Action<int, TimeSpan>? PositionChanged;
-
-    void Play(int messageId, Stream audioStream);
-    void Pause();
-    void Resume();
-    void Stop();
-    void Seek(double positionPercent);
-}
-
 public sealed class AudioPlayerService : IAudioPlayerService
 {
-    private WaveOutEvent? _waveOut;
-    private WaveStream? _waveStream;
+    private PortAudioSharp.Stream? _paStream;
+    private WavData? _wavData;
     private Timer? _positionTimer;
     private readonly Lock _lock = new();
     private bool _disposed;
+    private bool _portAudioInitialized;
 
-    public bool IsPlaying => _waveOut?.PlaybackState == PlaybackState.Playing;
-    public bool IsPaused => _waveOut?.PlaybackState == PlaybackState.Paused;
+    private long _positionSamples;
+    private bool _isPlaying;
+    private bool _isPaused;
+
+    public bool IsPlaying => _isPlaying;
+    public bool IsPaused => _isPaused;
     public int? CurrentMessageId { get; private set; }
 
     public TimeSpan Position
     {
         get
         {
-            lock (_lock) { return _waveStream?.CurrentTime ?? TimeSpan.Zero; }
+            lock (_lock)
+            {
+                if (_wavData == null) return TimeSpan.Zero;
+                return TimeSpan.FromSeconds(
+                    (double)_positionSamples / _wavData.SampleRate);
+            }
         }
     }
 
@@ -50,7 +40,10 @@ public sealed class AudioPlayerService : IAudioPlayerService
     {
         get
         {
-            lock (_lock) { return _waveStream?.TotalTime ?? TimeSpan.Zero; }
+            lock (_lock)
+            {
+                return _wavData?.Duration ?? TimeSpan.Zero;
+            }
         }
     }
 
@@ -60,41 +53,52 @@ public sealed class AudioPlayerService : IAudioPlayerService
     public event Action<int>? PlaybackStopped;
     public event Action<int, TimeSpan>? PositionChanged;
 
-    public void Play(int messageId, Stream audioStream)
+    public void Play(int messageId, IOStream audioStream)
     {
         lock (_lock)
         {
             if (_disposed) return;
 
-            StopInternal();
+            StopInternal(notifyStop: false);
 
             try
             {
+                EnsurePortAudioInitialized();
+
                 if (audioStream.CanSeek)
                     audioStream.Position = 0;
 
-                _waveStream = new WaveFileReader(audioStream);
-
-                _waveOut = new WaveOutEvent
-                {
-                    DesiredLatency = 200
-                };
-
-                _waveOut.PlaybackStopped += OnPlaybackStopped;
-                _waveOut.Init(_waveStream);
-
+                _wavData = WavData.Load(audioStream);
+                _positionSamples = 0;
                 CurrentMessageId = messageId;
 
-                _waveOut.Play();
+                var outputParams = new StreamParameters
+                {
+                    device = PortAudio.DefaultOutputDevice,
+                    channelCount = _wavData.Channels,
+                    sampleFormat = SampleFormat.Int16,
+                    suggestedLatency = PortAudio
+                        .GetDeviceInfo(PortAudio.DefaultOutputDevice)
+                        .defaultLowOutputLatency,
+                    hostApiSpecificStreamInfo = IntPtr.Zero
+                };
 
-                _positionTimer = new Timer(OnPositionTimerTick, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+                _paStream = new Stream(inParams: null, outParams: outputParams, sampleRate: _wavData.SampleRate, framesPerBuffer: 512, streamFlags: StreamFlags.ClipOff,
+                    callback: (_, output, frameCount, ref _, _, _) => AudioCallback(output, (long)frameCount),
+                    userData: IntPtr.Zero);
+
+                _paStream.Start();
+                _isPlaying = true;
+                _isPaused = false;
+
+                _positionTimer = new Timer(OnPositionTick, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
 
                 PlaybackStarted?.Invoke(messageId);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AudioPlayer] Play failed: {ex.Message}");
-                StopInternal();
+                StopInternal(notifyStop: false);
             }
         }
     }
@@ -103,13 +107,22 @@ public sealed class AudioPlayerService : IAudioPlayerService
     {
         lock (_lock)
         {
-            if (_waveOut?.PlaybackState != PlaybackState.Playing) return;
+            if (!_isPlaying || _isPaused || _paStream == null) return;
 
-            _waveOut.Pause();
-            _positionTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            try
+            {
+                _paStream.Stop();
+                _isPaused = true;
+                _isPlaying = false;
+                _positionTimer?.Change(Timeout.Infinite, Timeout.Infinite);
 
-            if (CurrentMessageId.HasValue)
-                PlaybackPaused?.Invoke(CurrentMessageId.Value);
+                if (CurrentMessageId.HasValue)
+                    PlaybackPaused?.Invoke(CurrentMessageId.Value);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AudioPlayer] Pause failed: {ex.Message}");
+            }
         }
     }
 
@@ -117,107 +130,144 @@ public sealed class AudioPlayerService : IAudioPlayerService
     {
         lock (_lock)
         {
-            if (_waveOut?.PlaybackState != PlaybackState.Paused) return;
+            if (!_isPaused || _paStream == null) return;
 
-            _waveOut.Play();
-            _positionTimer?.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+            try
+            {
+                _paStream.Start();
+                _isPlaying = true;
+                _isPaused = false;
+                _positionTimer?.Change(
+                    TimeSpan.Zero,
+                    TimeSpan.FromMilliseconds(50));
 
-            if (CurrentMessageId.HasValue)
-                PlaybackResumed?.Invoke(CurrentMessageId.Value);
+                if (CurrentMessageId.HasValue)
+                    PlaybackResumed?.Invoke(CurrentMessageId.Value);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AudioPlayer] Resume failed: {ex.Message}");
+            }
         }
     }
 
     public void Stop()
     {
-        lock (_lock) { StopInternal(); }
+        lock (_lock) { StopInternal(notifyStop: true); }
     }
 
     public void Seek(double positionPercent)
     {
         lock (_lock)
         {
-            if (_waveStream == null) return;
+            if (_wavData == null) return;
 
-            var clampedPercent = Math.Clamp(positionPercent, 0.0, 1.0);
-            var targetTime = TimeSpan.FromTicks(
-                (long)(_waveStream.TotalTime.Ticks * clampedPercent));
-
-            _waveStream.CurrentTime = targetTime;
+            var clamped = Math.Clamp(positionPercent, 0.0, 1.0);
+            _positionSamples = (long)(_wavData.TotalSamples * clamped);
 
             if (CurrentMessageId.HasValue)
-                PositionChanged?.Invoke(CurrentMessageId.Value, targetTime);
+                PositionChanged?.Invoke(CurrentMessageId.Value, Position);
         }
     }
 
-    private void OnPositionTimerTick(object? state)
+    // Коллбек PortAudio — сигнатура должна точно совпадать с делегатом
+    private StreamCallbackResult AudioCallback(IntPtr output,long frameCount)
     {
-        lock (_lock)
+        if (_wavData == null || output == IntPtr.Zero)
+            return StreamCallbackResult.Complete;
+
+        var samplesPerFrame = _wavData.Channels;
+        var totalSamplesNeeded = (int)(frameCount * samplesPerFrame);
+        var pos = Interlocked.Read(ref _positionSamples);
+        var remaining = _wavData.Samples.Length - (int)pos;
+        var available = Math.Min(totalSamplesNeeded, remaining);
+
+        unsafe
         {
-            if (_disposed || _waveStream == null || CurrentMessageId == null) return;
+            var outSpan = new Span<short>(output.ToPointer(), totalSamplesNeeded);
 
-            try
+            if (available > 0)
             {
-                PositionChanged?.Invoke(CurrentMessageId.Value, _waveStream.CurrentTime);
+                _wavData.Samples.AsSpan((int)pos, available).CopyTo(outSpan);
+                if (available < totalSamplesNeeded)
+                    outSpan[available..].Clear();
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"[AudioPlayer] Position tick error: {ex.Message}");
+                outSpan.Clear();
             }
         }
+
+        Interlocked.Exchange(ref _positionSamples, pos + available);
+
+        return available < totalSamplesNeeded
+            ? StreamCallbackResult.Complete
+            : StreamCallbackResult.Continue;
     }
 
-    private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
+    private void OnPositionTick(object? state)
     {
-        if (e.Exception != null)
-            Debug.WriteLine($"[AudioPlayer] Playback error: {e.Exception.Message}");
-
         int? msgId;
+        TimeSpan pos;
+
         lock (_lock)
         {
+            if (_disposed || _wavData == null || CurrentMessageId == null)
+                return;
+
             msgId = CurrentMessageId;
+            pos = Position;
+
+            if (_positionSamples >= _wavData.TotalSamples && _isPlaying)
+            {
+                StopInternal(notifyStop: true);
+                return;
+            }
         }
 
         if (msgId.HasValue)
-            PlaybackStopped?.Invoke(msgId.Value);
-
-        lock (_lock)
-        {
-            StopInternal();
-        }
+            PositionChanged?.Invoke(msgId.Value, pos);
     }
 
-    private void StopInternal()
+    private void StopInternal(bool notifyStop)
     {
         var previousId = CurrentMessageId;
 
         _positionTimer?.Dispose();
         _positionTimer = null;
 
-        if (_waveOut != null)
+        if (_paStream != null)
         {
-            _waveOut.PlaybackStopped -= OnPlaybackStopped;
-
             try
             {
-                if (_waveOut.PlaybackState != PlaybackState.Stopped)
-                    _waveOut.Stop();
+                if (_isPlaying) _paStream.Stop();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AudioPlayer] Stop error: {ex.Message}");
+                Debug.WriteLine($"[AudioPlayer] Stop warning: {ex.Message}");
             }
 
-            _waveOut.Dispose();
-            _waveOut = null;
+            try { _paStream.Dispose(); }
+            catch { /* игнорируем */ }
+
+            _paStream = null;
         }
 
-        _waveStream?.Dispose();
-        _waveStream = null;
-
+        _wavData = null;
+        _positionSamples = 0;
         CurrentMessageId = null;
+        _isPlaying = false;
+        _isPaused = false;
 
-        if (previousId.HasValue)
+        if (notifyStop && previousId.HasValue)
             PlaybackStopped?.Invoke(previousId.Value);
+    }
+
+    private void EnsurePortAudioInitialized()
+    {
+        if (_portAudioInitialized) return;
+        PortAudio.Initialize();
+        _portAudioInitialized = true;
     }
 
     public void Dispose()
@@ -225,9 +275,12 @@ public sealed class AudioPlayerService : IAudioPlayerService
         if (_disposed) return;
         _disposed = true;
 
-        lock (_lock)
+        lock (_lock) { StopInternal(notifyStop: false); }
+
+        if (_portAudioInitialized)
         {
-            StopInternal();
+            try { PortAudio.Terminate(); }
+            catch { /* игнорируем */ }
         }
     }
 }

@@ -2,18 +2,13 @@ namespace MessengerDesktop.Views.Controls.Shared;
 
 public partial class PasswordStrengthControl : UserControl
 {
-    public static readonly StyledProperty<int> StrengthProperty =
-        AvaloniaProperty.Register<PasswordStrengthControl, int>(nameof(Strength));
+    public static readonly StyledProperty<int> StrengthProperty = AvaloniaProperty.Register<PasswordStrengthControl, int>(nameof(Strength));
 
-    public static readonly StyledProperty<string> StrengthLabelProperty =
-        AvaloniaProperty.Register<PasswordStrengthControl, string>(
-            nameof(StrengthLabel), string.Empty);
+    public static readonly StyledProperty<string> StrengthLabelProperty = AvaloniaProperty.Register<PasswordStrengthControl, string>(nameof(StrengthLabel), string.Empty);
 
-    public static readonly StyledProperty<bool> PasswordsMatchProperty =
-        AvaloniaProperty.Register<PasswordStrengthControl, bool>(nameof(PasswordsMatch));
+    public static readonly StyledProperty<bool> PasswordsMatchProperty = AvaloniaProperty.Register<PasswordStrengthControl, bool>(nameof(PasswordsMatch));
 
-    public static readonly StyledProperty<bool> ShowMatchProperty =
-        AvaloniaProperty.Register<PasswordStrengthControl, bool>(nameof(ShowMatch));
+    public static readonly StyledProperty<bool> ShowMatchProperty = AvaloniaProperty.Register<PasswordStrengthControl, bool>(nameof(ShowMatch));
 
     public int Strength
     {
@@ -39,25 +34,22 @@ public partial class PasswordStrengthControl : UserControl
         set => SetValue(ShowMatchProperty, value);
     }
 
+    static PasswordStrengthControl() => StrengthProperty.Changed.AddClassHandler<PasswordStrengthControl>((c, _) => c.UpdateSegmentClasses());
+
     public PasswordStrengthControl()
     {
         InitializeComponent();
-
-        StrengthProperty.Changed.AddClassHandler<PasswordStrengthControl>(
-            (c, _) => c.UpdateSegmentClasses());
-
         Loaded += (_, _) => UpdateSegmentClasses();
     }
 
     private void UpdateSegmentClasses()
     {
-        if (Seg1 is null) return;
+        if (Seg1 is null || Seg2 is null || Seg3 is null || Seg4 is null) return;
 
-        var strength = Strength;
-        SetSegment(Seg1, strength, 1);
-        SetSegment(Seg2, strength, 2);
-        SetSegment(Seg3, strength, 3);
-        SetSegment(Seg4, strength, 4);
+        SetSegment(Seg1, Strength, 1);
+        SetSegment(Seg2, Strength, 2);
+        SetSegment(Seg3, Strength, 3);
+        SetSegment(Seg4, Strength, 4);
     }
 
     private static void SetSegment(Border border, int strength, int segIndex)
@@ -68,13 +60,7 @@ public partial class PasswordStrengthControl : UserControl
         border.Classes.Remove("seg-good");
         border.Classes.Remove("seg-strong");
 
-        if (strength < segIndex)
-        {
-            border.Classes.Add("seg-inactive");
-            return;
-        }
-
-        border.Classes.Add(strength switch
+        border.Classes.Add(strength < segIndex ? "seg-inactive" : strength switch
         {
             1 => "seg-weak",
             2 => "seg-medium",

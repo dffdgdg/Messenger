@@ -65,7 +65,7 @@ public sealed partial class GlobalSearchManager(
     [ObservableProperty] public partial DateTimeOffset? DateToFilter { get; set; }
 
     public ObservableCollection<ChatListItemViewModel> ChatResults { get; } = [];
-    public ObservableCollection<GlobalSearchMessageDto> MessageResults { get; } = [];
+    public ObservableCollection<SearchMessageResultViewModel> MessageResults { get; } = [];
 
     public bool HasResults => ChatResults.Count > 0 || MessageResults.Count > 0;
     public bool HasChatResults => ChatResults.Count > 0;
@@ -314,14 +314,11 @@ public sealed partial class GlobalSearchManager(
                     ChatResults.Add(new ChatListItemViewModel(chat));
             }
 
-            // Сервер уже отфильтровал по всем параметрам кроме AuthorFilter.Others и MentionFilter
-            foreach (var msg in result.Data.Messages
-                .Where(m => IsChatAllowedForScope(m.ChatType) && IsClientOnlyFilter(m)))
+            foreach (var msg in result.Data.Messages.Where(m => IsChatAllowedForScope(m.ChatType) && IsClientOnlyFilter(m)))
             {
-                MessageResults.Add(msg);
+                MessageResults.Add(new SearchMessageResultViewModel(msg, userId));
             }
 
-            // Total и HasMore берём с сервера — они учитывают все серверные фильтры
             TotalMessagesCount = result.Data.TotalMessagesCount;
             HasMoreMessages = result.Data.HasMoreMessages;
 
@@ -366,29 +363,26 @@ public sealed partial class GlobalSearchManager(
                 MessageResults.Clear();
             }
 
-            var mapped = result.Data.Messages
-                .Select(msg => new GlobalSearchMessageDto
-                {
-                    Id = msg.Id,
-                    ChatId = chatId,
-                    ChatName = ChatLocalSearchChatName,
-                    ChatAvatar = ChatLocalSearchChatAvatar,
-                    ChatType = ChatLocalSearchChatType ?? ChatType.Contact,
-                    SenderId = msg.SenderId,
-                    SenderName = msg.SenderName,
-                    Content = msg.Content,
-                    CreatedAt = msg.CreatedAt,
-                    HighlightedContent = msg.Content,
-                    HasFiles = msg.Files.Count > 0,
-                    HasVoice = msg.IsVoiceMessage,
-                    HasPoll = msg.Poll != null
-                })
-                .Where(IsClientOnlyFilter);
+            var mapped = result.Data.Messages.Select(msg => new GlobalSearchMessageDto
+            {
+                Id = msg.Id,
+                ChatId = chatId,
+                ChatName = ChatLocalSearchChatName,
+                ChatAvatar = ChatLocalSearchChatAvatar,
+                ChatType = ChatLocalSearchChatType ?? ChatType.Contact,
+                SenderId = msg.SenderId,
+                SenderName = msg.SenderName,
+                Content = msg.Content,
+                CreatedAt = msg.CreatedAt,
+                HighlightedContent = msg.Content,
+                HasFiles = msg.Files.Count > 0,
+                HasVoice = msg.IsVoiceMessage,
+                HasPoll = msg.Poll != null
+            }).Where(IsClientOnlyFilter);
 
             foreach (var msg in mapped)
-                MessageResults.Add(msg);
+                MessageResults.Add(new SearchMessageResultViewModel(msg, userId));
 
-            // Total и HasMore с сервера
             TotalMessagesCount = result.Data.TotalCount;
             HasMoreMessages = result.Data.HasMoreMessages;
 
@@ -503,11 +497,7 @@ public sealed partial class GlobalSearchManager(
     }
 
     public void ToggleSortOrder()
-    {
-        SortOrder = SortOrder == SearchSortOrder.Newest
-            ? SearchSortOrder.Oldest
-            : SearchSortOrder.Newest;
-    }
+        => SortOrder = SortOrder == SearchSortOrder.Newest ? SearchSortOrder.Oldest : SearchSortOrder.Newest;
 
     public void ResetFilters()
     {

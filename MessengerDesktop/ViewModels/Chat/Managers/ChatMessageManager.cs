@@ -463,6 +463,8 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
         lookup ??= BuildMembersLookup();
         lookup.TryGetValue(msg.SenderId, out var sender);
 
+        msg.IsOwn = msg.SenderId == userId;
+
         var vm = new MessageViewModel(msg, downloadService, notificationService, audioPlayer, _apiClient)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",

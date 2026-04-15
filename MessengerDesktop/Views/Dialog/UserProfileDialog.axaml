@@ -5,10 +5,10 @@
              x:Class="MessengerDesktop.Views.UserProfileDialog"
              x:DataType="vmDialog:UserProfileDialogViewModel">
 
-    <Border Classes="DialogContainer" Padding="0" Width="400">
-
+    <Border Classes="DialogContainer" Width="400">
         <Grid RowDefinitions="Auto,*,Auto">
 
+            <!-- Шапка -->
             <Border Grid.Row="0"
                     Background="{DynamicResource PrimaryBG}"
                     CornerRadius="16,16,0,0"
@@ -17,7 +17,6 @@
                     <TextBlock Text="Профиль пользователя"
                                FontSize="17"
                                FontWeight="SemiBold"/>
-
                     <Button Grid.Column="1"
                             Classes="IconButton Small"
                             Command="{Binding CloseOnBackgroundClickCommand}"
@@ -29,18 +28,19 @@
                 </Grid>
             </Border>
 
+            <!-- Тело -->
             <ScrollViewer Grid.Row="1"
+                          Classes="ThinScrollbar"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="24,20,24,24" Spacing="20">
 
-                    <Grid ColumnDefinitions="Auto,*" HorizontalAlignment="Stretch">
+                    <Grid ColumnDefinitions="Auto,*">
                         <controls:AvatarControl Classes="XLarge"
                                                 Source="{Binding User.Avatar}"
                                                 DisplayName="{Binding User.DisplayName}"
                                                 IsOnline="{Binding User.IsOnline}"
                                                 Margin="0,0,16,0"/>
-
                         <StackPanel Grid.Column="1"
                                     VerticalAlignment="Center"
                                     Spacing="4">
@@ -68,7 +68,8 @@
                         </Grid>
 
                         <Grid ColumnDefinitions="*,*"
-                              IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
+                              IsVisible="{Binding Department,
+                                  Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Text="Отдел"
                                        FontSize="14"
                                        Foreground="{DynamicResource TextSecondary}"/>
@@ -79,9 +80,11 @@
                                        TextTrimming="CharacterEllipsis"/>
                         </Grid>
                     </StackPanel>
+
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- Футер -->
             <Border Grid.Row="2"
                     Background="{DynamicResource PrimaryBG}"
                     CornerRadius="0,0,16,16"

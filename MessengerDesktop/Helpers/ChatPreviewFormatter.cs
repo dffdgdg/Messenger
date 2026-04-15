@@ -13,11 +13,7 @@ public static class ChatPreviewFormatter
         return string.IsNullOrWhiteSpace(senderName) ? null : senderName;
     }
 
-    /// <summary>
-    /// Возвращает превью и флаг — нужен ли префикс с именем отправителя.
-    /// </summary>
-    public static (string Preview, bool HidePrefix) BuildPreviewWithMeta(
-    MessageDto message, int? currentUserId = null)
+    public static (string Preview, bool HidePrefix) BuildPreviewWithMeta(MessageDto message, int? currentUserId = null)
     {
         if (message.IsDeleted)
             return ("Сообщение удалено", HidePrefix: true);
@@ -27,12 +23,12 @@ public static class ChatPreviewFormatter
 
         if (message.Poll != null)
         {
-            var question = BuildContentPreview(message.Content);
+            var question = BuildContentPreview(message.Content, "Опрос");
             return ($"📊 {question}", HidePrefix: true);
         }
 
         if (message.IsVoiceMessage)
-            return ("Голосовое сообщение", HidePrefix: false);
+            return ("🎤 Голосовое сообщение", HidePrefix: false);
 
         if (message.Files.Count > 0 && string.IsNullOrWhiteSpace(message.Content))
             return ("📎 Вложение", HidePrefix: false);
@@ -68,9 +64,9 @@ public static class ChatPreviewFormatter
         return string.IsNullOrWhiteSpace(formatted) ? fallback : formatted;
     }
 
-    public static string BuildContentPreview(string? content)
+    public static string BuildContentPreview(string? content, string fallback = "Сообщение")
     {
-        if (string.IsNullOrWhiteSpace(content)) return "Сообщение";
+        if (string.IsNullOrWhiteSpace(content)) return fallback;
         return content.Length > ContentPreviewMaxLength ? content[..ContentPreviewMaxLength] + PreviewEllipsis : content;
     }
 }

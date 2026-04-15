@@ -170,31 +170,49 @@ public sealed class AudioPlayerService : IAudioPlayerService
         }
     }
 
-    // Коллбек PortAudio — сигнатура должна точно совпадать с делегатом
-    private StreamCallbackResult AudioCallback(IntPtr output,long frameCount)
+    private StreamCallbackResult AudioCallback(IntPtr output, long frameCount)
     {
         if (_wavData == null || output == IntPtr.Zero)
             return StreamCallbackResult.Complete;
 
-        var samplesPerFrame = _wavData.Channels;
-        var totalSamplesNeeded = (int)(frameCount * samplesPerFrame);
+        var totalSamplesNeeded = (int)(frameCount * _wavData.Channels);
         var pos = Interlocked.Read(ref _positionSamples);
         var remaining = _wavData.Samples.Length - (int)pos;
         var available = Math.Min(totalSamplesNeeded, remaining);
 
-        unsafe
+        if (available > 0)
         {
-            var outSpan = new Span<short>(output.ToPointer(), totalSamplesNeeded);
+            System.Runtime.InteropServices.Marshal.Copy(_wavData.Samples,(int)pos,output,available);
 
-            if (available > 0)
+            if (available < totalSamplesNeeded)
             {
-                _wavData.Samples.AsSpan((int)pos, available).CopyTo(outSpan);
-                if (available < totalSamplesNeeded)
-                    outSpan[available..].Clear();
+                var silenceSamples = totalSamplesNeeded - available;
+                var silencePtr = IntPtr.Add(output, available * sizeof(short));
+                var silence = System.Buffers.ArrayPool<short>.Shared.Rent(silenceSamples);
+                try
+                {
+                    Array.Clear(silence, 0, silenceSamples);
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        silence, 0, silencePtr, silenceSamples);
+                }
+                finally
+                {
+                    System.Buffers.ArrayPool<short>.Shared.Return(silence);
+                }
             }
-            else
+        }
+        else
+        {
+            var silence = System.Buffers.ArrayPool<short>.Shared.Rent(totalSamplesNeeded);
+            try
             {
-                outSpan.Clear();
+                Array.Clear(silence, 0, totalSamplesNeeded);
+                System.Runtime.InteropServices.Marshal.Copy(
+                    silence, 0, output, totalSamplesNeeded);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<short>.Shared.Return(silence);
             }
         }
 

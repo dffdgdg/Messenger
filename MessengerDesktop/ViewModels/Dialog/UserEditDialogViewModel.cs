@@ -1,3 +1,4 @@
+using MessengerDesktop.Infrastructure;
 using MessengerShared.Dto.Department;
 using System;
 using System.Linq;
@@ -34,10 +35,6 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyPropertyChangedFor(nameof(PasswordStrength))]
     [NotifyPropertyChangedFor(nameof(PasswordStrengthLabel))]
-    [NotifyPropertyChangedFor(nameof(PasswordSegment1))]
-    [NotifyPropertyChangedFor(nameof(PasswordSegment2))]
-    [NotifyPropertyChangedFor(nameof(PasswordSegment3))]
-    [NotifyPropertyChangedFor(nameof(PasswordSegment4))]
     [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     public partial string Password { get; set; } = string.Empty;
 
@@ -45,12 +42,10 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyPropertyChangedFor(nameof(PasswordsMatch))]
     public partial string ConfirmPassword { get; set; } = string.Empty;
-    public int PasswordStrength => CalculateStrength(Password);
-    public string PasswordStrengthLabel => ToLabel(PasswordStrength);
-    public bool PasswordSegment1 => PasswordStrength >= 1;
-    public bool PasswordSegment2 => PasswordStrength >= 2;
-    public bool PasswordSegment3 => PasswordStrength >= 3;
-    public bool PasswordSegment4 => PasswordStrength >= 4;
+
+    public int PasswordStrength => PasswordHelper.CalculateStrength(Password);
+    public string PasswordStrengthLabel => PasswordHelper.ToStrengthLabel(PasswordStrength);
+
     public bool PasswordsMatch =>
         !string.IsNullOrEmpty(Password) && Password == ConfirmPassword;
 
@@ -72,12 +67,14 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     [NotifyPropertyChangedFor(nameof(IsChangingPassword))]
     public partial string NewConfirmPassword { get; set; } = string.Empty;
 
-    public int NewPasswordStrength => CalculateStrength(NewPassword);
-    public string NewPasswordStrengthLabel => ToLabel(NewPasswordStrength);
+    public int NewPasswordStrength => PasswordHelper.CalculateStrength(NewPassword);
+    public string NewPasswordStrengthLabel => PasswordHelper.ToStrengthLabel(NewPasswordStrength);
+
     public bool NewPasswordSegment1 => NewPasswordStrength >= 1;
     public bool NewPasswordSegment2 => NewPasswordStrength >= 2;
     public bool NewPasswordSegment3 => NewPasswordStrength >= 3;
     public bool NewPasswordSegment4 => NewPasswordStrength >= 4;
+
     public bool NewPasswordsMatch =>
         !string.IsNullOrEmpty(NewPassword) && NewPassword == NewConfirmPassword;
 
@@ -86,12 +83,8 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     public bool IsChangingPassword =>
         !string.IsNullOrWhiteSpace(NewPassword) || !string.IsNullOrWhiteSpace(NewConfirmPassword);
 
-    public bool CanSave =>
-        !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name)
-        && ValidatePasswordSection() is null;
-
     public string DisplayNamePreview =>
-        string.Join(" ",new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
+        string.Join(" ", new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     public Func<CreateUserDto, Task>? CreateAction { get; set; }
     public Func<UserDto, Task>? UpdateAction { get; set; }
@@ -142,8 +135,9 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     private void ClearErrorIfValid()
     {
-        if (CanSave) ErrorMessage = null;
+        if (CanSaveExecute()) ErrorMessage = null;
     }
+
     private string? ValidatePasswordSection()
     {
         if (IsNewUser)
@@ -154,10 +148,8 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         }
         else if (IsChangingPassword)
         {
-            if (NewPassword.Length > 0 && NewPassword.Length < 6)
-                return "too_short";
-            if (NewPassword != NewConfirmPassword)
-                return "mismatch";
+            if (NewPassword.Length > 0 && NewPassword.Length < 6) return "too_short";
+            if (NewPassword != NewConfirmPassword) return "mismatch";
         }
 
         return null;
@@ -193,31 +185,12 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
         return null;
     }
-
-    private static int CalculateStrength(string password)
-    {
-        if (string.IsNullOrEmpty(password)) return 0;
-
-        int score = 0;
-        if (password.Length >= 6) score++;
-        if (password.Length >= 10) score++;
-        if (password.Any(char.IsUpper) && password.Any(char.IsLower)) score++;
-        if (password.Any(char.IsDigit) || password.Any(c => !char.IsLetterOrDigit(c))) score++;
-
-        return score;
-    }
-
-    private static string ToLabel(int strength) => strength switch
-    {
-        0 => string.Empty,
-        1 => "Очень слабый",
-        2 => "Слабый",
-        3 => "Хороший",
-        _ => "Надёжный",
-    };
+    private bool CanSaveExecute() => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name)
+        && ValidatePasswordSection() is null;
 
     private static string TrimLower(string value) => value.Trim().ToLowerInvariant();
-    private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? TrimOrNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private CreateUserDto BuildCreateDto() => new()
     {
@@ -239,7 +212,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         DepartmentId = SelectedDepartment?.Id,
     };
 
-    [RelayCommand(CanExecute = nameof(CanSave))]
+    [RelayCommand(CanExecute = nameof(CanSaveExecute))]
     private async Task Save()
     {
         var error = Validate();

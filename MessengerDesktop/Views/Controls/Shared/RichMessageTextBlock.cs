@@ -95,13 +95,13 @@ public class RichMessageTextBlock : SelectableTextBlock
             var run = new Run(token);
             if (Kind == "url")
             {
-                run.SetValue(Inline.ForegroundProperty, LinkBrush);
-                run.SetValue(Inline.TextDecorationsProperty, underline);
+                run.SetValue(ForegroundProperty, LinkBrush);
+                run.SetValue(TextDecorationsProperty, underline);
             }
             else
             {
-                run.SetValue(Inline.ForegroundProperty, MentionBrush);
-                run.SetValue(Inline.FontWeightProperty, FontWeight.SemiBold);
+                run.SetValue(ForegroundProperty, MentionBrush);
+                run.SetValue(FontWeightProperty, FontWeight.SemiBold);
             }
             Inlines.Add(run);
 

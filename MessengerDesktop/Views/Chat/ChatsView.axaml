@@ -1,676 +1,700 @@
 <UserControl x:Name="Root"
-             xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:messengerdesktop="using:MessengerDesktop"
-             x:Class="MessengerDesktop.Views.ChatsView"
-             Background="{DynamicResource PrimaryBG}"
-             x:DataType="vm:ChatsViewModel"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             xmlns:chat="using:MessengerDesktop.ViewModels.Chat"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:views="using:MessengerDesktop.Views"
-             xmlns:dto="using:MessengerShared.Dto"
-             xmlns:search="using:MessengerShared.Dto.Search"
-             xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             xmlns:conChat="using:MessengerDesktop.Views.Controls.Chat"
-             xmlns:chatDTO="using:MessengerShared.Dto.Chat"
-             xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats"
-             xmlns:controls="using:MessengerDesktop.Views.Controls">
+			 xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:messengerdesktop="using:MessengerDesktop"
+			 x:Class="MessengerDesktop.Views.ChatsView"
+			 Background="{DynamicResource PrimaryBG}"
+			 x:DataType="vm:ChatsViewModel"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 xmlns:chat="using:MessengerDesktop.ViewModels.Chat"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:views="using:MessengerDesktop.Views"
+			 xmlns:dto="using:MessengerShared.Dto"
+			 xmlns:search="using:MessengerShared.Dto.Search"
+			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
+			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+			 xmlns:conChat="using:MessengerDesktop.Views.Controls.Chat"
+			 xmlns:chatDTO="using:MessengerShared.Dto.Chat"
+			 xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats"
+			 xmlns:controls="using:MessengerDesktop.Views.Controls">
 
-    <UserControl.Resources>
-        <x:Double x:Key="ChatItemHeight">52</x:Double>
-        <x:Double x:Key="FontSizeSmall">11</x:Double>
-        <x:Double x:Key="FontSizeBody">13</x:Double>
-        <x:Double x:Key="FontSizeTitle">14</x:Double>
-        <Thickness x:Key="ChatInfoMargin">12,0,8,0</Thickness>
-        <Thickness x:Key="PreviewTopMargin">0,2,0,0</Thickness>
-        <Thickness x:Key="TimeMargin">0,4,0,0</Thickness>
-        <Thickness x:Key="BadgeMargin">0,4,0,0</Thickness>
+	<UserControl.Resources>
+		<x:Double x:Key="ChatItemHeight">52</x:Double>
+		<x:Double x:Key="FontSizeSmall">11</x:Double>
+		<x:Double x:Key="FontSizeBody">13</x:Double>
+		<x:Double x:Key="FontSizeTitle">14</x:Double>
+		<Thickness x:Key="ChatInfoMargin">12,0,8,0</Thickness>
+		<Thickness x:Key="PreviewTopMargin">0,2,0,0</Thickness>
+		<Thickness x:Key="TimeMargin">0,4,0,0</Thickness>
+		<Thickness x:Key="BadgeMargin">0,4,0,0</Thickness>
 
-        <DataTemplate x:Key="ChatFullTemplate" x:DataType="chatItem:ChatListItemViewModel">
-            <Grid Height="{StaticResource ChatItemHeight}"
-                  ColumnDefinitions="*,Auto"
-                  HorizontalAlignment="Stretch">
+		<DataTemplate x:Key="ChatFullTemplate" x:DataType="chatItem:ChatListItemViewModel">
+			<Grid Height="{StaticResource ChatItemHeight}"
+				  ColumnDefinitions="*,Auto"
+				  HorizontalAlignment="Stretch">
 
-                <conChat:ChatItemView Grid.Column="0"
-                                      HorizontalAlignment="Stretch"/>
+				<conChat:ChatItemView Grid.Column="0"
+									  HorizontalAlignment="Stretch"/>
 
-                <StackPanel Grid.Column="1"
-                            VerticalAlignment="Top"
-                            HorizontalAlignment="Right"
-                            Margin="{StaticResource TimeMargin}"
-                            MinWidth="40">
+				<StackPanel Grid.Column="1"
+							VerticalAlignment="Top"
+							HorizontalAlignment="Right"
+							Margin="{StaticResource TimeMargin}"
+							MinWidth="40">
 
-                    <TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
-                               Foreground="{DynamicResource TextMuted}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               HorizontalAlignment="Right"/>
+					<TextBlock Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}"
+							   Foreground="{DynamicResource TextMuted}"
+							   FontSize="{StaticResource FontSizeSmall}"
+							   HorizontalAlignment="Right"/>
 
-                    <Border Classes="UnreadBadge"
-                            Margin="{StaticResource BadgeMargin}"
-                            HorizontalAlignment="Right"
-                            IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
-                        <TextBlock Text="{Binding UnreadCount}"
-                                   FontSize="{StaticResource FontSizeSmall}"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
-                    </Border>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
+					<Border Classes="UnreadBadge"
+							Margin="{StaticResource BadgeMargin}"
+							HorizontalAlignment="Right"
+							IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+						<TextBlock Text="{Binding UnreadCount}"
+								   FontSize="{StaticResource FontSizeSmall}"
+								   FontWeight="SemiBold"
+								   Foreground="White"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center"/>
+					</Border>
+				</StackPanel>
+			</Grid>
+		</DataTemplate>
 
-        <DataTemplate x:Key="ChatCompactTemplate" x:DataType="chatItem:ChatListItemViewModel">
-            <Grid Height="{StaticResource ChatItemHeight}"
-                  HorizontalAlignment="Center"
-                  ToolTip.Tip="{Binding Name}">
-                <Panel>
-                    <controls:AvatarControl Classes="Medium"
-                                            Source="{Binding Avatar}"
-                                            DisplayName="{Binding Name}"
-                                            FallbackIcon="{StaticResource GroupIcon}"
-                                            ShowOnlineIndicator="False"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"/>
+		<DataTemplate x:Key="ChatCompactTemplate" x:DataType="chatItem:ChatListItemViewModel">
+			<Grid Height="{StaticResource ChatItemHeight}"
+				  HorizontalAlignment="Center"
+				  ToolTip.Tip="{Binding Name}">
+				<Panel>
+					<controls:AvatarControl Classes="Medium"
+											Source="{Binding Avatar}"
+											DisplayName="{Binding Name}"
+											FallbackIcon="{StaticResource GroupIcon}"
+											ShowOnlineIndicator="False"
+											VerticalAlignment="Center"
+											HorizontalAlignment="Center"/>
 
-                    <Border Classes="UnreadBadge CompactBadge"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="0,-2,-6,0"
-                            MinWidth="18"
-                            Height="18"
-                            IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
-                        <TextBlock Text="{Binding UnreadCount}"
-                                   FontSize="10"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
-                    </Border>
-                </Panel>
-            </Grid>
-        </DataTemplate>
+					<Border Classes="UnreadBadge CompactBadge"
+							HorizontalAlignment="Right"
+							VerticalAlignment="Top"
+							Margin="0,-2,-6,0"
+							MinWidth="18"
+							Height="18"
+							IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+						<TextBlock Text="{Binding UnreadCount}"
+								   FontSize="10"
+								   FontWeight="SemiBold"
+								   Foreground="White"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center"/>
+					</Border>
+				</Panel>
+			</Grid>
+		</DataTemplate>
 
-        <DataTemplate x:Key="MessageSearchResultTemplate" x:DataType="search:GlobalSearchMessageDto">
-            <Grid Height="{StaticResource ChatItemHeight}" ColumnDefinitions="Auto,*,50">
-                <controls:AvatarControl Grid.Column="0"
-                                        Classes="Medium"
-                                        Source="{Binding ChatAvatar}"
-                                        DisplayName="{Binding ChatName}"
-                                        FallbackIcon="{StaticResource GroupIcon}"
-                                        ShowOnlineIndicator="False"
-                                        VerticalAlignment="Center"/>
+		<DataTemplate x:Key="MessageSearchResultTemplate"
+					  x:DataType="chat:SearchMessageResultViewModel">
+			<Grid Height="{StaticResource ChatItemHeight}"
+				  ColumnDefinitions="Auto,*,50">
 
-                <StackPanel Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Margin="{StaticResource ChatInfoMargin}">
-                    <TextBlock Text="{Binding ChatName}"
-                               FontWeight="SemiBold"
-                               FontSize="{StaticResource FontSizeTitle}"
-                               TextTrimming="CharacterEllipsis"
-                               MaxLines="1"/>
+				<controls:AvatarControl Grid.Column="0"
+										Classes="Medium"
+										Source="{Binding ChatAvatar}"
+										DisplayName="{Binding ChatName}"
+										FallbackIcon="{StaticResource GroupIcon}"
+										ShowOnlineIndicator="False"
+										VerticalAlignment="Center"/>
 
-                    <TextBlock Foreground="{DynamicResource TextSecondary}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               TextTrimming="CharacterEllipsis"
-                               MaxLines="1"
-                               Margin="{StaticResource PreviewTopMargin}"
-                               IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <Run Text="{Binding SenderName}" Foreground="{DynamicResource Accent}"/>
-                        <Run Text=": "/>
-                        <Run Text="{Binding HighlightedContent}"/>
-                    </TextBlock>
+				<StackPanel Grid.Column="1"
+							VerticalAlignment="Center"
+							Margin="{StaticResource ChatInfoMargin}">
 
-                    <TextBlock Text="Нет сообщений"
-                               Foreground="{DynamicResource TextMuted}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               Margin="{StaticResource PreviewTopMargin}"
-                               IsVisible="{Binding HighlightedContent, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-                </StackPanel>
+					<TextBlock Text="{Binding ChatName}"
+							   FontWeight="SemiBold"
+							   FontSize="{StaticResource FontSizeTitle}"
+							   TextTrimming="CharacterEllipsis"
+							   MaxLines="1"/>
 
-                <TextBlock Grid.Column="2"
-                           Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}"
-                           Foreground="{DynamicResource TextMuted}"
-                           FontSize="{StaticResource FontSizeSmall}"
-                           VerticalAlignment="Top"
-                           HorizontalAlignment="Right"
-                           Margin="{StaticResource TimeMargin}"/>
-            </Grid>
-        </DataTemplate>
-    </UserControl.Resources>
+					<!-- С префиксом отправителя -->
+					<TextBlock Classes="ChatPreview"
+							   Margin="{StaticResource PreviewTopMargin}">
+						<TextBlock.IsVisible>
+							<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+								<Binding Path="Preview"
+										 Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
+								<Binding Path="!HideSenderPrefix"/>
+							</MultiBinding>
+						</TextBlock.IsVisible>
+						<Run Text="{Binding SenderName}"
+							 Foreground="{DynamicResource Accent}"/>
+						<Run Text=": "/>
+						<Run Text="{Binding Preview}"/>
+					</TextBlock>
 
-    <Grid x:Name="MainGrid">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="72" MaxWidth="400"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition MinWidth="400"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+					<!-- Без префикса (системные, опросы) -->
+					<TextBlock Classes="ChatPreview"
+							   Text="{Binding Preview}"
+							   Margin="{StaticResource PreviewTopMargin}">
+						<TextBlock.IsVisible>
+							<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+								<Binding Path="Preview"
+										 Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
+								<Binding Path="HideSenderPrefix"/>
+							</MultiBinding>
+						</TextBlock.IsVisible>
+					</TextBlock>
 
-        <Border Grid.Column="0"
-                Background="{DynamicResource BorderDefault}"
-                Width="1"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Stretch"
-                ZIndex="1"/>
+					<TextBlock Text="Нет сообщений"
+							   Foreground="{DynamicResource TextMuted}"
+							   FontSize="{StaticResource FontSizeBody}"
+							   Margin="{StaticResource PreviewTopMargin}"
+							   IsVisible="{Binding Preview,
+							   Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+				</StackPanel>
 
-        <Grid x:Name="ChatListPanel" Grid.Column="0">
-            <DockPanel>
+				<TextBlock Grid.Column="2"
+						   Text="{Binding CreatedAt,
+						   Converter={conv:Converter Name=MessageTime}}"
+						   Foreground="{DynamicResource TextMuted}"
+						   FontSize="{StaticResource FontSizeSmall}"
+						   VerticalAlignment="Top"
+						   HorizontalAlignment="Right"
+						   Margin="{StaticResource TimeMargin}"/>
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
 
-                <!-- Заголовок панели -->
-                <Border DockPanel.Dock="Top"
-                        Classes="PanelHeader"
-                        BorderThickness="0,0,0,1"
-                        BorderBrush="{DynamicResource BorderDefault}">
-                    <Panel>
-                        <Grid ColumnDefinitions="*,Auto" Height="33" Margin="0"
-                              IsVisible="{Binding !IsCompactMode, ElementName=Root}">
-                            <Panel Grid.Column="0">
-                                <TextBlock Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString},
-                                           ConverterParameter='Чаты|Контакты'}"
-                                           Classes="PanelTitle"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding !IsSearchMode}"/>
-                                <TextBlock Classes="PanelTitle"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsSearchMode}"
-                                           Text="{Binding SearchManager.SelectedScope, 
-                                                  Converter={conv:Converter Name=SearchScopeToTitle}}"/>
-                            </Panel>
+	<Grid x:Name="MainGrid">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="280" MinWidth="72" MaxWidth="400"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition MinWidth="400"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
 
-                            <Button Grid.Column="1"
-                                    Classes="IconButton"
-                                    Command="{Binding CreateGroupCommand}"
-                                    ToolTip.Tip="Новый чат"
-                                    AutomationProperties.Name="Создать новый чат">
-                                <Button.IsVisible>
-                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                        <Binding Path="IsGroupMode"/>
-                                        <Binding Path="!IsSearchMode"/>
-                                    </MultiBinding>
-                                </Button.IsVisible>
-                                <PathIcon Data="{StaticResource AddIcon}"
-                                          Width="18" Height="18"
-                                          Foreground="{DynamicResource Icon}"/>
-                            </Button>
+		<Border Grid.Column="0"
+				Background="{DynamicResource BorderDefault}"
+				Width="1"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Stretch"
+				ZIndex="1"/>
 
-                            <Button Grid.Column="1"
-                                    Classes="IconButton"
-                                    Command="{Binding CloseSearchCommand}"
-                                    ToolTip.Tip="Закрыть поиск"
-                                    AutomationProperties.Name="Закрыть поиск"
-                                    IsVisible="{Binding IsSearchMode}">
-                                <PathIcon Data="{StaticResource CloseIcon}"
-                                          Width="16" Height="16"
-                                          Foreground="{DynamicResource Icon}"/>
-                            </Button>
-                        </Grid>
+		<Grid x:Name="ChatListPanel" Grid.Column="0">
+			<DockPanel>
 
-                        <Button Classes="IconButton"
-                                IsVisible="{Binding IsCompactMode, ElementName=Root}"
-                                Click="OnExpandButtonClick"
-                                ToolTip.Tip="Развернуть панель"
-                                AutomationProperties.Name="Развернуть панель чатов"
-                                HorizontalAlignment="Center">
-                            <PathIcon Data="{StaticResource MenuIcon}"
-                                      Width="20" Height="20"
-                                      Foreground="{DynamicResource Icon}"/>
-                        </Button>
-                    </Panel>
-                </Border>
+				<!-- Заголовок панели -->
+				<Border DockPanel.Dock="Top"
+						Classes="PanelHeader"
+						BorderThickness="0,0,0,1"
+						BorderBrush="{DynamicResource BorderDefault}">
+					<Panel>
+						<Grid ColumnDefinitions="*,Auto" Height="33" Margin="0"
+							  IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+							<Panel Grid.Column="0">
+								<TextBlock Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString},
+								ConverterParameter='Чаты|Контакты'}"
+								Classes="PanelTitle"
+								VerticalAlignment="Center"
+								IsVisible="{Binding !IsSearchMode}"/>
+								<TextBlock Classes="PanelTitle"
+										   VerticalAlignment="Center"
+										   IsVisible="{Binding IsSearchMode}"
+										   Text="{Binding SearchManager.SelectedScope,
+										   Converter={conv:Converter Name=SearchScopeToTitle}}"/>
+							</Panel>
 
-                <!-- Поле поиска -->
-                <Border DockPanel.Dock="Top"
-                        Margin="8,8,8,4"
-                        Height="40">
-                    <Panel>
-                        <controls:SearchBox x:Name="SearchTextBox"
-                                            SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
-                                            Watermark="{Binding SearchManager.SelectedScope, 
-                                                        Converter={conv:Converter Name=SearchScopeToWatermark}}"
-                                            IsVisible="{Binding !IsCompactMode, ElementName=Root}"
-                                            SearchFocused="OnSearchBoxFocused"/>
+							<Button Grid.Column="1"
+									Classes="IconButton"
+									Command="{Binding CreateGroupCommand}"
+									ToolTip.Tip="Новый чат"
+									AutomationProperties.Name="Создать новый чат">
+								<Button.IsVisible>
+									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+										<Binding Path="IsGroupMode"/>
+										<Binding Path="!IsSearchMode"/>
+									</MultiBinding>
+								</Button.IsVisible>
+								<PathIcon Data="{StaticResource AddIcon}"
+										  Width="18" Height="18"
+										  Foreground="{DynamicResource Icon}"/>
+							</Button>
 
-                        <Button Classes="IconButton CompactSearchButton"
-                                IsVisible="{Binding IsCompactMode, ElementName=Root}"
-                                Click="OnSearchButtonClick"
-                                ToolTip.Tip="Поиск"
-                                AutomationProperties.Name="Открыть поиск"
-                                HorizontalAlignment="Center"
-                                Width="40" Height="40">
-                            <PathIcon Data="{StaticResource SearchIcon}"
-                                      Width="20" Height="20"
-                                      Foreground="{DynamicResource Icon}"/>
-                        </Button>
-                    </Panel>
-                </Border>
+							<Button Grid.Column="1"
+									Classes="IconButton"
+									Command="{Binding CloseSearchCommand}"
+									ToolTip.Tip="Закрыть поиск"
+									AutomationProperties.Name="Закрыть поиск"
+									IsVisible="{Binding IsSearchMode}">
+								<PathIcon Data="{StaticResource CloseIcon}"
+										  Width="16" Height="16"
+										  Foreground="{DynamicResource Icon}"/>
+							</Button>
+						</Grid>
 
-                <!-- Переключатели scope -->
-                <StackPanel DockPanel.Dock="Top"
-            Orientation="Horizontal"
-            Spacing="6"
-            Margin="8,0,8,4"
-            IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+						<Button Classes="IconButton"
+								IsVisible="{Binding IsCompactMode, ElementName=Root}"
+								Click="OnExpandButtonClick"
+								ToolTip.Tip="Развернуть панель"
+								AutomationProperties.Name="Развернуть панель чатов"
+								HorizontalAlignment="Center">
+							<PathIcon Data="{StaticResource MenuIcon}"
+									  Width="20" Height="20"
+									  Foreground="{DynamicResource Icon}"/>
+						</Button>
+					</Panel>
+				</Border>
 
-    <ToggleButton Content="Все"
-                  Classes="SwitchSmall"
-                  IsChecked="{Binding SearchManager.IsAllScope}"
-                  Command="{Binding SetSearchScopeCommand}"
-                  CommandParameter="{x:Static chat:SearchScopeMode.All}"/>
+				<!-- Поле поиска -->
+				<Border DockPanel.Dock="Top"
+						Margin="8,8,8,4"
+						Height="40">
+					<Panel>
+						<controls:SearchBox x:Name="SearchTextBox"
+											SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
+											Watermark="{Binding SearchManager.SelectedScope,
+											Converter={conv:Converter Name=SearchScopeToWatermark}}"
+											IsVisible="{Binding !IsCompactMode, ElementName=Root}"
+											SearchFocused="OnSearchBoxFocused"/>
 
-    <ToggleButton Content="Чаты"
-                  Classes="SwitchSmall"
-                  IsChecked="{Binding SearchManager.IsChatsScope}"
-                  Command="{Binding SetSearchScopeCommand}"
-                  CommandParameter="{x:Static chat:SearchScopeMode.Chats}"/>
+						<Button Classes="IconButton CompactSearchButton"
+								IsVisible="{Binding IsCompactMode, ElementName=Root}"
+								Click="OnSearchButtonClick"
+								ToolTip.Tip="Поиск"
+								AutomationProperties.Name="Открыть поиск"
+								HorizontalAlignment="Center"
+								Width="40" Height="40">
+							<PathIcon Data="{StaticResource SearchIcon}"
+									  Width="20" Height="20"
+									  Foreground="{DynamicResource Icon}"/>
+						</Button>
+					</Panel>
+				</Border>
 
-    <ToggleButton Content="Контакты"
-                  Classes="SwitchSmall"
-                  IsChecked="{Binding SearchManager.IsContactsScope}"
-                  Command="{Binding SetSearchScopeCommand}"
-                  CommandParameter="{x:Static chat:SearchScopeMode.Contacts}"/>
+				<!-- Переключатели scope -->
+				<StackPanel DockPanel.Dock="Top"
+							Orientation="Horizontal"
+							Spacing="6"
+							Margin="8,0,8,4"
+							IsVisible="{Binding !IsCompactMode, ElementName=Root}">
 
-    <ToggleButton Content="Этот чат"
-                  Classes="SwitchSmall"
-                  IsVisible="{Binding SearchManager.CanSearchInCurrentChat}"
-                  IsChecked="{Binding SearchManager.IsChatLocalMode}"
-                  Command="{Binding SetSearchScopeCommand}"
-                  CommandParameter="{x:Static chat:SearchScopeMode.CurrentChatMessages}"/>
+					<ToggleButton Content="Все"
+								  Classes="SwitchSmall"
+								  IsChecked="{Binding SearchManager.IsAllScope}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.All}"/>
 
-</StackPanel>
+					<ToggleButton Content="Чаты"
+								  Classes="SwitchSmall"
+								  IsChecked="{Binding SearchManager.IsChatsScope}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.Chats}"/>
 
-                <!-- Строка: счётчик + фильтры + сортировка -->
-                <Grid DockPanel.Dock="Top"
-                      ColumnDefinitions="*,Auto,Auto"
-                      Margin="12,0,8,6"
-                      Height="24">
-                    <Grid.IsVisible>
-                        <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                            <Binding Path="IsSearchMode"/>
-                            <Binding Path="!IsCompactMode" ElementName="Root"/>
-                        </MultiBinding>
-                    </Grid.IsVisible>
+					<ToggleButton Content="Контакты"
+								  Classes="SwitchSmall"
+								  IsChecked="{Binding SearchManager.IsContactsScope}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.Contacts}"/>
 
-                    <TextBlock Grid.Column="0"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextMuted}"
-                               Text="{Binding SearchManager.TotalMessagesText}"/>
+					<ToggleButton Content="Этот чат"
+								  Classes="SwitchSmall"
+								  IsVisible="{Binding SearchManager.CanSearchInCurrentChat}"
+								  IsChecked="{Binding SearchManager.IsChatLocalMode}"
+								  Command="{Binding SetSearchScopeCommand}"
+								  CommandParameter="{x:Static chat:SearchScopeMode.CurrentChatMessages}"/>
 
-                    <!-- Кнопка фильтров -->
-                    <Button Grid.Column="1"
-                            Classes="IconButton Small"
-                            Command="{Binding OpenSearchFiltersCommand}"
-                            ToolTip.Tip="Фильтры"
-                            Margin="0,0,2,0">
-                        <Panel>
-                            <PathIcon Data="{StaticResource FilterIcon}"
-                                      Width="14" Height="14"
-                                      Foreground="{DynamicResource Icon}"/>
-                            <Ellipse Width="7" Height="7"
-                                     Fill="{DynamicResource Accent}"
-                                     HorizontalAlignment="Right"
-                                     VerticalAlignment="Top"
-                                     Margin="0,-2,-2,0"
-                                     IsVisible="{Binding SearchManager.HasActiveFilters}"/>
-                        </Panel>
-                    </Button>
+				</StackPanel>
 
-                    <!-- Кнопка сортировки -->
-                    <Button Grid.Column="2"
-                            Classes="IconButton Small"
-                            Command="{Binding ToggleSortOrderCommand}"
-                            ToolTip.Tip="{Binding SearchManager.IsSortNewest,
-                                          Converter={conv:Converter Name=BoolToString},
-                                          ConverterParameter='Сначала новые|Сначала старые'}">
-                        <Panel>
-                            <PathIcon Data="{StaticResource SortIcon}"
-                                      Width="14" Height="14"
-                                      Foreground="{DynamicResource Icon}"/>
-                            <PathIcon Data="{StaticResource SortIcon}"
-                                      Width="14" Height="14"
-                                      Foreground="{DynamicResource Accent}"
-                                      IsVisible="{Binding !SearchManager.IsSortNewest}"/>
-                        </Panel>
-                    </Button>
-                </Grid>
+				<!-- Строка: счётчик + фильтры + сортировка -->
+				<Grid DockPanel.Dock="Top"
+					  ColumnDefinitions="*,Auto,Auto"
+					  Margin="12,0,8,6"
+					  Height="24">
+					<Grid.IsVisible>
+						<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+							<Binding Path="IsSearchMode"/>
+							<Binding Path="!IsCompactMode" ElementName="Root"/>
+						</MultiBinding>
+					</Grid.IsVisible>
 
-                <!-- Список чатов (обычный режим) -->
-                <ListBox DockPanel.Dock="Top"
-                         ItemsSource="{Binding Chats}"
-                         SelectedItem="{Binding SelectedChat}"
-                         AutomationProperties.Name="Список чатов"
-                         Background="Transparent"
-                         Margin="4,4,0,8"
-                         BorderThickness="0"
-                         HorizontalAlignment="Stretch"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         IsVisible="{Binding !IsSearchMode}">
+					<TextBlock Grid.Column="0"
+							   VerticalAlignment="Center"
+							   FontSize="11"
+							   Foreground="{DynamicResource TextMuted}"
+							   Text="{Binding SearchManager.TotalMessagesText}"/>
 
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <VirtualizingStackPanel HorizontalAlignment="Stretch"/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
+					<!-- Кнопка фильтров -->
+					<Button Grid.Column="1"
+							Classes="IconButton Small"
+							Command="{Binding OpenSearchFiltersCommand}"
+							ToolTip.Tip="Фильтры"
+							Margin="0,0,2,0">
+						<Panel>
+							<PathIcon Data="{StaticResource FilterIcon}"
+									  Width="14" Height="14"
+									  Foreground="{DynamicResource Icon}"/>
+							<Ellipse Width="7" Height="7"
+									 Fill="{DynamicResource Accent}"
+									 HorizontalAlignment="Right"
+									 VerticalAlignment="Top"
+									 Margin="0,-2,-2,0"
+									 IsVisible="{Binding SearchManager.HasActiveFilters}"/>
+						</Panel>
+					</Button>
 
-                    <ListBox.Styles>
-                        <Style Selector="ListBoxItem">
-                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Padding" Value="8"/>
-                            <Setter Property="Margin" Value="0,1,6,1"/>
-                            <Setter Property="CornerRadius" Value="8"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:selected TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:selected TextBlock.ChatPreview">
-                            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-                            <Setter Property="Opacity" Value="0.85"/>
-                        </Style>
-                    </ListBox.Styles>
+					<!-- Кнопка сортировки -->
+					<Button Grid.Column="2"
+							Classes="IconButton Small"
+							Command="{Binding ToggleSortOrderCommand}"
+							ToolTip.Tip="{Binding SearchManager.IsSortNewest,
+							Converter={conv:Converter Name=BoolToString},
+							ConverterParameter='Сначала новые|Сначала старые'}">
+						<Panel>
+							<PathIcon Data="{StaticResource SortIcon}"
+									  Width="14" Height="14"
+									  Foreground="{DynamicResource Icon}"/>
+							<PathIcon Data="{StaticResource SortIcon}"
+									  Width="14" Height="14"
+									  Foreground="{DynamicResource Accent}"
+									  IsVisible="{Binding !SearchManager.IsSortNewest}"/>
+						</Panel>
+					</Button>
+				</Grid>
 
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
-                            <Panel>
-                                <ContentPresenter Content="{Binding}"
-                                                  ContentTemplate="{StaticResource ChatFullTemplate}"
-                                                  IsVisible="{Binding !$parent[views:ChatsView].IsCompactMode}"/>
-                                <ContentPresenter Content="{Binding}"
-                                                  ContentTemplate="{StaticResource ChatCompactTemplate}"
-                                                  IsVisible="{Binding $parent[views:ChatsView].IsCompactMode}"/>
-                            </Panel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+				<!-- Список чатов (обычный режим) -->
+				<ListBox DockPanel.Dock="Top"
+						 ItemsSource="{Binding Chats}"
+						 SelectedItem="{Binding SelectedChat}"
+						 AutomationProperties.Name="Список чатов"
+						 Background="Transparent"
+						 Margin="4,4,0,8"
+						 BorderThickness="0"
+						 HorizontalAlignment="Stretch"
+						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+						 IsVisible="{Binding !IsSearchMode}">
 
-                <!-- Результаты поиска -->
-                <ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
-                              IsVisible="{Binding IsSearchMode}"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8,4,8,8"
-                                HorizontalAlignment="Stretch">
+					<ListBox.ItemsPanel>
+						<ItemsPanelTemplate>
+							<VirtualizingStackPanel HorizontalAlignment="Stretch"/>
+						</ItemsPanelTemplate>
+					</ListBox.ItemsPanel>
 
-                        <!-- Найденные чаты -->
-                        <StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
-                            <TextBlock Classes="SectionHeader"
-                                       Text="Чаты"
-                                       Margin="4,0,0,4"
-                                       IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+					<ListBox.Styles>
+						<Style Selector="ListBoxItem">
+							<Setter Property="HorizontalAlignment" Value="Stretch"/>
+							<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+							<Setter Property="Padding" Value="8"/>
+							<Setter Property="Margin" Value="0,1,6,1"/>
+							<Setter Property="CornerRadius" Value="8"/>
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Cursor" Value="Hand"/>
+						</Style>
+						<Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+							<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+						</Style>
+						<Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+							<Setter Property="Background" Value="{DynamicResource Accent}"/>
+						</Style>
+						<Style Selector="ListBoxItem:selected TextBlock">
+							<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+						</Style>
+						<Style Selector="ListBoxItem:selected TextBlock.ChatPreview">
+							<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+							<Setter Property="Opacity" Value="0.85"/>
+						</Style>
+					</ListBox.Styles>
 
-                            <ListBox ItemsSource="{Binding SearchManager.ChatResults}"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     HorizontalAlignment="Stretch"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     AutomationProperties.Name="Найденные чаты">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <VirtualizingStackPanel HorizontalAlignment="Stretch"/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.Styles>
-                                    <Style Selector="ListBoxItem">
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Margin" Value="0,1"/>
-                                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                    </Style>
-                                </ListBox.Styles>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
-                                        <Button Classes="ChatListItem"
-                                                Margin="0,1"
-                                                Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"
-                                                CommandParameter="{Binding}">
-                                            <Panel>
-                                                <ContentPresenter Content="{Binding}"
-                                                                  ContentTemplate="{StaticResource ChatFullTemplate}"
-                                                                  IsVisible="{Binding !$parent[views:ChatsView].IsCompactMode}"/>
-                                                <controls:AvatarControl Classes="Medium"
-                                                                        Source="{Binding Avatar}"
-                                                                        DisplayName="{Binding Name}"
-                                                                        FallbackIcon="{StaticResource GroupIcon}"
-                                                                        ShowOnlineIndicator="False"
-                                                                        HorizontalAlignment="Center"
-                                                                        IsVisible="{Binding $parent[views:ChatsView].IsCompactMode}"/>
-                                            </Panel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
+					<ListBox.ItemTemplate>
+						<DataTemplate x:DataType="chatItem:ChatListItemViewModel">
+							<Panel>
+								<ContentPresenter Content="{Binding}"
+												  ContentTemplate="{StaticResource ChatFullTemplate}"
+												  IsVisible="{Binding !$parent[views:ChatsView].IsCompactMode}"/>
+								<ContentPresenter Content="{Binding}"
+												  ContentTemplate="{StaticResource ChatCompactTemplate}"
+												  IsVisible="{Binding $parent[views:ChatsView].IsCompactMode}"/>
+							</Panel>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
 
-                        <!-- Разделитель между чатами и сообщениями -->
-                        <Border Height="1"
-                                Background="{DynamicResource BorderDefault}"
-                                Margin="0,8">
-                            <Border.IsVisible>
-                                <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                    <Binding Path="SearchManager.HasChatResults"/>
-                                    <Binding Path="SearchManager.HasMessageResults"/>
-                                    <Binding Path="!IsCompactMode" ElementName="Root"/>
-                                    <Binding Path="!IsChatLocalSearchMode"/>
-                                </MultiBinding>
-                            </Border.IsVisible>
-                        </Border>
+				<!-- Результаты поиска -->
+				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
+							  IsVisible="{Binding IsSearchMode}"
+							  VerticalScrollBarVisibility="Auto"
+							  HorizontalScrollBarVisibility="Disabled">
+					<StackPanel Margin="8,4,8,8"
+								HorizontalAlignment="Stretch">
 
-                        <!-- Найденные сообщения -->
-                        <StackPanel>
-                            <StackPanel.IsVisible>
-                                <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                    <Binding Path="SearchManager.HasMessageResults"/>
-                                    <Binding Path="!IsCompactMode" ElementName="Root"/>
-                                </MultiBinding>
-                            </StackPanel.IsVisible>
+						<!-- Найденные чаты -->
+						<StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
+							<TextBlock Classes="SectionHeader"
+									   Text="Чаты"
+									   Margin="4,0,0,4"
+									   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
-                            <TextBlock Classes="SectionHeader"
-                                       Margin="4,0,0,4"
-                                       Text="{Binding SearchManager.SelectedScope, 
-                                              Converter={conv:Converter Name=SearchScopeToMessagesHeader}}"
-                                       IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+							<ListBox ItemsSource="{Binding SearchManager.ChatResults}"
+									 Background="Transparent"
+									 BorderThickness="0"
+									 HorizontalAlignment="Stretch"
+									 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+									 AutomationProperties.Name="Найденные чаты">
+								<ListBox.ItemsPanel>
+									<ItemsPanelTemplate>
+										<VirtualizingStackPanel HorizontalAlignment="Stretch"/>
+									</ItemsPanelTemplate>
+								</ListBox.ItemsPanel>
+								<ListBox.Styles>
+									<Style Selector="ListBoxItem">
+										<Setter Property="Padding" Value="0"/>
+										<Setter Property="Margin" Value="0,1"/>
+										<Setter Property="HorizontalAlignment" Value="Stretch"/>
+										<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+										<Setter Property="Background" Value="Transparent"/>
+									</Style>
+								</ListBox.Styles>
+								<ListBox.ItemTemplate>
+									<DataTemplate x:DataType="chatItem:ChatListItemViewModel">
+										<Button Classes="ChatListItem"
+												Margin="0,1"
+												Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchedChatCommand}"
+												CommandParameter="{Binding}">
+											<Panel>
+												<ContentPresenter Content="{Binding}"
+																  ContentTemplate="{StaticResource ChatFullTemplate}"
+																  IsVisible="{Binding !$parent[views:ChatsView].IsCompactMode}"/>
+												<controls:AvatarControl Classes="Medium"
+																		Source="{Binding Avatar}"
+																		DisplayName="{Binding Name}"
+																		FallbackIcon="{StaticResource GroupIcon}"
+																		ShowOnlineIndicator="False"
+																		HorizontalAlignment="Center"
+																		IsVisible="{Binding $parent[views:ChatsView].IsCompactMode}"/>
+											</Panel>
+										</Button>
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+							</ListBox>
+						</StackPanel>
 
-                            <ListBox ItemsSource="{Binding SearchManager.MessageResults}"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     HorizontalAlignment="Stretch"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     AutomationProperties.Name="Найденные сообщения">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <VirtualizingStackPanel HorizontalAlignment="Stretch"/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.Styles>
-                                    <Style Selector="ListBoxItem">
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Margin" Value="0,1"/>
-                                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                    </Style>
-                                </ListBox.Styles>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="search:GlobalSearchMessageDto">
-                                        <Button Classes="ChatListItem"
-                                                Margin="0,1"
-                                                Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"
-                                                CommandParameter="{Binding}">
-                                            <ContentPresenter Content="{Binding}"
-                                                              ContentTemplate="{StaticResource MessageSearchResultTemplate}"/>
-                                        </Button>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+						<!-- Разделитель между чатами и сообщениями -->
+						<Border Height="1"
+								Background="{DynamicResource BorderDefault}"
+								Margin="0,8">
+							<Border.IsVisible>
+								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+									<Binding Path="SearchManager.HasChatResults"/>
+									<Binding Path="SearchManager.HasMessageResults"/>
+									<Binding Path="!IsCompactMode" ElementName="Root"/>
+									<Binding Path="!IsChatLocalSearchMode"/>
+								</MultiBinding>
+							</Border.IsVisible>
+						</Border>
 
-                            <Button Content="Показать ещё..."
-                                    HorizontalAlignment="Center"
-                                    Margin="0,12,0,8"
-                                    Padding="20,10"
-                                    Background="{DynamicResource SecondaryBG}"
-                                    Foreground="{DynamicResource TextSecondary}"
-                                    CornerRadius="8"
-                                    FontSize="{StaticResource FontSizeBody}"
-                                    Cursor="Hand"
-                                    AutomationProperties.Name="Загрузить больше результатов"
-                                    IsVisible="{Binding SearchManager.HasMoreMessages}"
-                                    Command="{Binding LoadMoreSearchResultsCommand}"/>
-                        </StackPanel>
+						<!-- Найденные сообщения -->
+						<StackPanel>
+							<StackPanel.IsVisible>
+								<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+									<Binding Path="SearchManager.HasMessageResults"/>
+									<Binding Path="!IsCompactMode" ElementName="Root"/>
+								</MultiBinding>
+							</StackPanel.IsVisible>
 
-                        <!-- Пустые состояния -->
-                        <StackPanel HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Margin="0,48"
-                                    IsVisible="{Binding !SearchManager.HasResults}">
+							<TextBlock Classes="SectionHeader"
+									   Margin="4,0,0,4"
+									   Text="{Binding SearchManager.SelectedScope,
+									   Converter={conv:Converter Name=SearchScopeToMessagesHeader}}"
+									   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
 
-                            <!-- Идёт поиск -->
-                            <StackPanel Spacing="12"
-                                        HorizontalAlignment="Center"
-                                        IsVisible="{Binding SearchManager.IsSearching}">
-                                <shared:CircularProgress IsIndeterminate="True"
-                                                         Size="48"
-                                                         StrokeWidth="4"
-                                                         Foreground="{DynamicResource Accent}"
-                                                         HorizontalAlignment="Center"/>
-                                <TextBlock Text="Поиск..."
-                                           FontSize="{StaticResource FontSizeTitle}"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                            </StackPanel>
+							<ListBox ItemsSource="{Binding SearchManager.MessageResults}"
+									 Background="Transparent"
+									 BorderThickness="0"
+									 HorizontalAlignment="Stretch"
+									 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+									 AutomationProperties.Name="Найденные сообщения">
+								<ListBox.ItemsPanel>
+									<ItemsPanelTemplate>
+										<VirtualizingStackPanel HorizontalAlignment="Stretch"/>
+									</ItemsPanelTemplate>
+								</ListBox.ItemsPanel>
+								<ListBox.Styles>
+									<Style Selector="ListBoxItem">
+										<Setter Property="Padding" Value="0"/>
+										<Setter Property="Margin" Value="0,1"/>
+										<Setter Property="HorizontalAlignment" Value="Stretch"/>
+										<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+										<Setter Property="Background" Value="Transparent"/>
+									</Style>
+								</ListBox.Styles>
+								<ListBox.ItemTemplate>
+									<DataTemplate x:DataType="chat:SearchMessageResultViewModel">
+										<Button Classes="ChatListItem"
+												Margin="0,1"
+												Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"
+												CommandParameter="{Binding Source}">
+											<ContentPresenter Content="{Binding}"
+															  ContentTemplate="{StaticResource MessageSearchResultTemplate}"/>
+										</Button>
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+							</ListBox>
 
-                            <!-- Запрос не введён -->
-                            <StackPanel Spacing="8"
-                                        HorizontalAlignment="Center">
-                                <StackPanel.IsVisible>
-                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                        <Binding Path="!SearchManager.IsSearching"/>
-                                        <Binding Path="SearchManager.SearchQuery" 
-                                                 Converter="{x:Static StringConverters.IsNullOrEmpty}"/>
-                                    </MultiBinding>
-                                </StackPanel.IsVisible>
-                                <PathIcon Data="{StaticResource SearchIcon}"
-                                          Width="48" Height="48"
-                                          Foreground="{DynamicResource TextMuted}"
-                                          Opacity="0.3"
-                                          HorizontalAlignment="Center"/>
-                                <TextBlock Text="Введите запрос"
-                                           FontSize="{StaticResource FontSizeTitle}"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                                <TextBlock Text="{Binding SearchManager.SelectedScope, 
-                                           Converter={conv:Converter Name=SearchScopeToHint}}"
-                                           FontSize="{StaticResource FontSizeSmall}"
-                                           Foreground="{DynamicResource TextMuted}"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                            </StackPanel>
+							<Button Content="Показать ещё..."
+									HorizontalAlignment="Center"
+									Margin="0,12,0,8"
+									Padding="20,10"
+									Background="{DynamicResource SecondaryBG}"
+									Foreground="{DynamicResource TextSecondary}"
+									CornerRadius="8"
+									FontSize="{StaticResource FontSizeBody}"
+									Cursor="Hand"
+									AutomationProperties.Name="Загрузить больше результатов"
+									IsVisible="{Binding SearchManager.HasMoreMessages}"
+									Command="{Binding LoadMoreSearchResultsCommand}"/>
+						</StackPanel>
 
-                            <!-- Ничего не найдено -->
-                            <StackPanel Spacing="8"
-                                        HorizontalAlignment="Center">
-                                <StackPanel.IsVisible>
-                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                        <Binding Path="!SearchManager.IsSearching"/>
-                                        <Binding Path="SearchManager.SearchQuery" 
-                                                 Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
-                                    </MultiBinding>
-                                </StackPanel.IsVisible>
-                                <TextBlock Text="😔"
-                                           FontSize="48"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="Ничего не найдено"
-                                           FontSize="{StaticResource FontSizeTitle}"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                                <TextBlock Text="Попробуйте изменить запрос"
-                                           FontSize="{StaticResource FontSizeSmall}"
-                                           Foreground="{DynamicResource TextMuted}"
-                                           HorizontalAlignment="Center"
-                                           IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                            </StackPanel>
-                        </StackPanel>
+						<!-- Пустые состояния -->
+						<StackPanel HorizontalAlignment="Center"
+									VerticalAlignment="Center"
+									Margin="0,48"
+									IsVisible="{Binding !SearchManager.HasResults}">
 
-                        <!-- Ошибка -->
-                        <Border Classes="AlertError"
-                                Margin="0,8"
-                                IsVisible="{Binding SearchManager.ErrorMessage, 
-                                            Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding SearchManager.ErrorMessage}"
-                                       Foreground="{DynamicResource ErrorBrush}"
-                                       FontSize="{StaticResource FontSizeBody}"
-                                       TextWrapping="Wrap"
-                                       IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </DockPanel>
-        </Grid>
+							<!-- Идёт поиск -->
+							<StackPanel Spacing="12"
+										HorizontalAlignment="Center"
+										IsVisible="{Binding SearchManager.IsSearching}">
+								<shared:CircularProgress IsIndeterminate="True"
+														 Size="48"
+														 StrokeWidth="4"
+														 Foreground="{DynamicResource Accent}"
+														 HorizontalAlignment="Center"/>
+								<TextBlock Text="Поиск..."
+										   FontSize="{StaticResource FontSizeTitle}"
+										   Foreground="{DynamicResource TextSecondary}"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+							</StackPanel>
 
-        <GridSplitter x:Name="GridSplitter"
-                      Grid.Column="1"
-                      Width="4"
-                      ResizeDirection="Columns"
-                      Background="Transparent"
-                      ResizeBehavior="PreviousAndNext"/>
+							<!-- Запрос не введён -->
+							<StackPanel Spacing="8"
+										HorizontalAlignment="Center">
+								<StackPanel.IsVisible>
+									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+										<Binding Path="!SearchManager.IsSearching"/>
+										<Binding Path="SearchManager.SearchQuery"
+												 Converter="{x:Static StringConverters.IsNullOrEmpty}"/>
+									</MultiBinding>
+								</StackPanel.IsVisible>
+								<PathIcon Data="{StaticResource SearchIcon}"
+										  Width="48" Height="48"
+										  Foreground="{DynamicResource TextMuted}"
+										  Opacity="0.3"
+										  HorizontalAlignment="Center"/>
+								<TextBlock Text="Введите запрос"
+										   FontSize="{StaticResource FontSizeTitle}"
+										   Foreground="{DynamicResource TextSecondary}"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+								<TextBlock Text="{Binding SearchManager.SelectedScope,
+								Converter={conv:Converter Name=SearchScopeToHint}}"
+								FontSize="{StaticResource FontSizeSmall}"
+								Foreground="{DynamicResource TextMuted}"
+								HorizontalAlignment="Center"
+								IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+							</StackPanel>
 
-        <Border Grid.Column="2"
-                CornerRadius="16"
-                Background="{DynamicResource SecondaryBG}"
-                BorderBrush="{DynamicResource BorderDefault}"
-                BorderThickness="1"
-                ClipToBounds="True">
-            <Panel>
-                <ContentControl Content="{Binding CurrentChatViewModel}"/>
+							<!-- Ничего не найдено -->
+							<StackPanel Spacing="8"
+										HorizontalAlignment="Center">
+								<StackPanel.IsVisible>
+									<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+										<Binding Path="!SearchManager.IsSearching"/>
+										<Binding Path="SearchManager.SearchQuery"
+												 Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
+									</MultiBinding>
+								</StackPanel.IsVisible>
+								<TextBlock Text="😔"
+										   FontSize="48"
+										   HorizontalAlignment="Center"/>
+								<TextBlock Text="Ничего не найдено"
+										   FontSize="{StaticResource FontSizeTitle}"
+										   Foreground="{DynamicResource TextSecondary}"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+								<TextBlock Text="Попробуйте изменить запрос"
+										   FontSize="{StaticResource FontSizeSmall}"
+										   Foreground="{DynamicResource TextMuted}"
+										   HorizontalAlignment="Center"
+										   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+							</StackPanel>
+						</StackPanel>
 
-                <StackPanel VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                    <StackPanel.IsVisible>
-                        <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                            <Binding Path="SelectedChat" Converter="{x:Static ObjectConverters.IsNull}"/>
-                            <Binding Path="CurrentChatViewModel" Converter="{x:Static ObjectConverters.IsNull}"/>
-                        </MultiBinding>
-                    </StackPanel.IsVisible>
+						<!-- Ошибка -->
+						<Border Classes="AlertError"
+								Margin="0,8"
+								IsVisible="{Binding SearchManager.ErrorMessage,
+								Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+							<TextBlock Text="{Binding SearchManager.ErrorMessage}"
+									   Foreground="{DynamicResource ErrorBrush}"
+									   FontSize="{StaticResource FontSizeBody}"
+									   TextWrapping="Wrap"
+									   IsVisible="{Binding !IsCompactMode, ElementName=Root}"/>
+						</Border>
+					</StackPanel>
+				</ScrollViewer>
+			</DockPanel>
+		</Grid>
 
-                    <PathIcon Data="{StaticResource ChatOutlineIcon}"
-                              Width="64" Height="64"
-                              Foreground="{DynamicResource TextMuted}"
-                              Opacity="0.5"/>
+		<GridSplitter x:Name="GridSplitter"
+					  Grid.Column="1"
+					  Width="4"
+					  ResizeDirection="Columns"
+					  Background="Transparent"
+					  ResizeBehavior="PreviousAndNext"/>
 
-                    <TextBlock Text="Выберите чат"
-                               FontSize="18"
-                               FontWeight="Medium"
-                               Foreground="{DynamicResource TextMuted}"
-                               HorizontalAlignment="Center"
-                               Margin="0,16,0,0"/>
+		<Border Grid.Column="2"
+				CornerRadius="16"
+				Background="{DynamicResource SecondaryBG}"
+				BorderBrush="{DynamicResource BorderDefault}"
+				BorderThickness="1"
+				ClipToBounds="True">
+			<Panel>
+				<ContentControl Content="{Binding CurrentChatViewModel}"/>
 
-                    <TextBlock Text="или начните новый диалог"
-                               FontSize="{StaticResource FontSizeTitle}"
-                               Foreground="{DynamicResource TextMuted}"
-                               Opacity="0.7"
-                               HorizontalAlignment="Center"
-                               Margin="{StaticResource PreviewTopMargin}"/>
-                </StackPanel>
-            </Panel>
-        </Border>
+				<StackPanel VerticalAlignment="Center"
+							HorizontalAlignment="Center">
+					<StackPanel.IsVisible>
+						<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+							<Binding Path="SelectedChat" Converter="{x:Static ObjectConverters.IsNull}"/>
+							<Binding Path="CurrentChatViewModel" Converter="{x:Static ObjectConverters.IsNull}"/>
+						</MultiBinding>
+					</StackPanel.IsVisible>
 
-        <views:ChatInfoPanel x:Name="InfoPanel"
-                             Grid.Column="3"
-                             DataContext="{Binding CurrentChatViewModel}"
-                             OpenProfileCommand="{Binding OpenProfileCommand}"/>
-    </Grid>
+					<PathIcon Data="{StaticResource ChatOutlineIcon}"
+							  Width="64" Height="64"
+							  Foreground="{DynamicResource TextMuted}"
+							  Opacity="0.5"/>
+
+					<TextBlock Text="Выберите чат"
+							   FontSize="18"
+							   FontWeight="Medium"
+							   Foreground="{DynamicResource TextMuted}"
+							   HorizontalAlignment="Center"
+							   Margin="0,16,0,0"/>
+
+					<TextBlock Text="или начните новый диалог"
+							   FontSize="{StaticResource FontSizeTitle}"
+							   Foreground="{DynamicResource TextMuted}"
+							   Opacity="0.7"
+							   HorizontalAlignment="Center"
+							   Margin="{StaticResource PreviewTopMargin}"/>
+				</StackPanel>
+			</Panel>
+		</Border>
+
+		<views:ChatInfoPanel x:Name="InfoPanel"
+							 Grid.Column="3"
+							 DataContext="{Binding CurrentChatViewModel}"
+							 OpenProfileCommand="{Binding OpenProfileCommand}"/>
+	</Grid>
 </UserControl>

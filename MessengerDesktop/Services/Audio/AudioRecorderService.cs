@@ -145,26 +145,28 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         return Task.CompletedTask;
     }
 
-    private static unsafe void OnAudioData(
-        IntPtr input,
-        long frameCount,
-        IOMemoryStream buffer)
+    private static void OnAudioData(IntPtr input, long frameCount, IOMemoryStream buffer)
     {
         if (input == IntPtr.Zero) return;
 
         var byteCount = (int)(frameCount * Channels * (BitsPerSample / 8));
 
+        var temp = System.Buffers.ArrayPool<byte>.Shared.Rent(byteCount);
         try
         {
-            var span = new ReadOnlySpan<byte>(input.ToPointer(), byteCount);
+            System.Runtime.InteropServices.Marshal.Copy(input, temp, 0, byteCount);
             lock (buffer)
             {
-                buffer.Write(span);
+                buffer.Write(temp, 0, byteCount);
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[AudioRecorder] OnAudioData error: {ex.Message}");
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(temp);
         }
     }
 

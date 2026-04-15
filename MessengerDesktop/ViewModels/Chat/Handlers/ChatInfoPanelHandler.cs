@@ -1,6 +1,5 @@
 ﻿using MessengerDesktop.ViewModels.Chat.Managers;
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -119,8 +118,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         try
         {
-            var profileResult = await Ctx.Api.GetAsync<UserDto>(
-                ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
+            var profileResult = await Ctx.Api.GetAsync<UserDto>(ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
 
             if (profileResult is not { Success: true, Data: not null }) return;
 

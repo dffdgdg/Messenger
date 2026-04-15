@@ -6,51 +6,97 @@
              x:DataType="vmDialog:PollDialogViewModel">
 
     <Border Classes="DialogContainer">
-        <StackPanel Spacing="16">
-            <TextBlock Text="Создать опрос" Classes="DialogTitle"/>
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
 
-            <TextBox PlaceholderText="Вопрос" Text="{Binding Question}" Classes="Input"/>
+            <!-- Шапка -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  Margin="24,24,24,16">
+                <TextBlock Grid.Column="0"
+                           Text="Создать опрос"
+                           Classes="DialogTitle"
+                           VerticalAlignment="Center"/>
+            </Grid>
 
-            <TextBlock Text="Варианты ответа" Classes="FieldLabel" FontWeight="DemiBold"/>
+            <!-- Разделитель -->
+            <Border Grid.Row="1" Classes="DialogDivider"/>
 
-            <ItemsControl ItemsSource="{Binding Options}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmDialog:PollDialogViewModel+OptionItem">
-                        <Grid ColumnDefinitions="*,Auto" Margin="0,4">
-                            <TextBox Grid.Column="0" Text="{Binding Text}" Classes="Input"/>
-                            <Button Grid.Column="1"
-                                    Classes="IconButton Small"
-                                    Margin="8,0,0,0"
-                                    Command="{Binding #Root.((vmDialog:PollDialogViewModel)DataContext).RemoveOptionCommand}"
-                                    CommandParameter="{Binding}">
-                                <PathIcon Data="{StaticResource CloseIcon}"
-                                          Width="10" Height="10"
-                                          Foreground="{DynamicResource TextSecondary}"/>
-                            </Button>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- Тело -->
+            <ScrollViewer Grid.Row="2"
+                          Classes="ThinScrollbar"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="16" Margin="24,16,24,16">
 
-            <Button Content="+ Добавить вариант"
-                    Command="{Binding AddOptionCommand}"
-                    Classes="DialogOutline"
-                    HorizontalAlignment="Left"/>
+                    <TextBox PlaceholderText="Вопрос"
+                             Text="{Binding Question}"
+                             Classes="Input"/>
 
-            <StackPanel Spacing="10" Margin="0,8,0,0">
-                <TextBlock Text="Настройки" Classes="FieldLabel" FontWeight="DemiBold"/>
-                <CheckBox Content="Выбор нескольких ответов" IsChecked="{Binding AllowsMultipleAnswers}"/>
-                <CheckBox Content="Анонимное голосование" IsChecked="{Binding IsAnonymous}"/>
-            </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Варианты ответа"
+                                   Classes="FieldLabel"
+                                   FontWeight="DemiBold"/>
 
-            <StackPanel Orientation="Horizontal"
+                        <ItemsControl ItemsSource="{Binding Options}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vmDialog:PollDialogViewModel+OptionItem">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding Text}"
+                                                 Classes="Input"/>
+                                        <Button Grid.Column="1"
+                                                Classes="IconButton Small"
+                                                Margin="8,0,0,0"
+                                                Command="{Binding #Root.((vmDialog:PollDialogViewModel)DataContext).RemoveOptionCommand}"
+                                                CommandParameter="{Binding}">
+                                            <PathIcon Data="{StaticResource CloseIcon}"
+                                                      Width="10" Height="10"
+                                                      Foreground="{DynamicResource TextSecondary}"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="+ Добавить вариант"
+                                Command="{Binding AddOptionCommand}"
+                                Classes="DialogOutline"
+                                HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Настройки"
+                                   Classes="FieldLabel"
+                                   FontWeight="DemiBold"/>
+                        <CheckBox Content="Выбор нескольких ответов"
+                                  IsChecked="{Binding AllowsMultipleAnswers}"/>
+                        <CheckBox Content="Анонимное голосование"
+                                  IsChecked="{Binding IsAnonymous}"/>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Разделитель -->
+            <Border Grid.Row="3" Classes="DialogDivider"/>
+
+            <!-- Футер -->
+            <StackPanel Grid.Row="4"
+                        Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="12"
-                        Margin="0,8,0,0">
-                <Button Content="Отмена" Classes="DialogOutline" Command="{Binding CancelCommand}"/>
-                <Button Content="Создать" Classes="DialogAccent" Command="{Binding CreateCommand}"
-                        IsEnabled="{Binding CanCreate}"/>
+                        Margin="24,16,24,24">
+                <Button Content="Отмена"
+                        Classes="DialogOutline"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="100"/>
+                <Button Content="Создать"
+                        Classes="DialogAccent"
+                        Command="{Binding CreateCommand}"
+                        IsEnabled="{Binding CanCreate}"
+                        MinWidth="100"/>
             </StackPanel>
-        </StackPanel>
+
+        </Grid>
     </Border>
 </UserControl>

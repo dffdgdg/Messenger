@@ -8,195 +8,214 @@
              x:DataType="vmDialog:UserEditDialogViewModel">
 
     <Border Classes="DialogContainer">
-        <StackPanel Spacing="20">
-            <StackPanel Spacing="4">
-                <TextBlock Classes="DialogTitle"
-                           Text="{Binding IsNewUser,
-                               Converter={conv:Converter Name=BoolToString},
-                               ConverterParameter='Создать сотрудника|Редактировать сотрудника'}"/>
-                <TextBlock Text="Заполните данные сотрудника"
-                           Classes="DialogSubtitle"/>
-            </StackPanel>
-
-            <Border Classes="AlertError"
-                    IsVisible="{Binding ErrorMessage,
-                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <Grid ColumnDefinitions="Auto,*">
-                    <PathIcon Data="{StaticResource WarningIcon}"
-                              Width="16" Height="16"
-                              Foreground="{DynamicResource DangerBrush}"
-                              Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding ErrorMessage}"
-                               Foreground="{DynamicResource DangerBrush}"
-                               TextWrapping="Wrap"/>
-                </Grid>
-            </Border>
-
-            <StackPanel Spacing="12">
-                <StackPanel Spacing="6">
-                    <TextBlock Text="Логин" Classes="FieldLabel"/>
-                    <TextBox Text="{Binding Username}"
-                             Classes="Input"
-                             PlaceholderText="username"
-                             IsEnabled="{Binding IsNewUser}">
-                        <TextBox.InnerLeftContent>
-                            <TextBlock Text="@"
-                                       Margin="12,0,4,0"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center"/>
-                        </TextBox.InnerLeftContent>
-                    </TextBox>
-                    <TextBlock Text="Только латинские буквы, цифры и подчёркивания"
-                               Classes="ValidationHint"
-                               IsVisible="{Binding IsNewUser}"/>
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+            <!-- Шапка -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  Margin="24,24,24,16">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Classes="DialogTitle"
+                               Text="{Binding IsNewUser,
+                                   Converter={conv:Converter Name=BoolToString},
+                                   ConverterParameter='Создать сотрудника|Редактировать сотрудника'}"/>
+                    <TextBlock Text="Заполните данные сотрудника"
+                               Classes="DialogSubtitle"/>
                 </StackPanel>
+            </Grid>
 
-                <!-- ФИО -->
-                <StackPanel Spacing="6">
-                    <TextBlock Text="ФИО" Classes="FieldLabel"/>
-                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding Surname}"
+            <!-- Разделитель -->
+            <Border Grid.Row="1" Classes="DialogDivider"/>
+
+            <!-- Тело -->
+            <ScrollViewer Grid.Row="2"
+                          Classes="ThinScrollbar"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="16" Margin="24,16,24,16">
+
+                    <!-- Ошибка -->
+                    <Border Classes="AlertError"
+                            IsVisible="{Binding ErrorMessage,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <PathIcon Data="{StaticResource WarningIcon}"
+                                      Width="16" Height="16"
+                                      Foreground="{DynamicResource DangerBrush}"
+                                      Margin="0,0,8,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ErrorMessage}"
+                                       Foreground="{DynamicResource DangerBrush}"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Логин -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Логин" Classes="FieldLabel"/>
+                        <TextBox Text="{Binding Username}"
                                  Classes="Input"
-                                 PlaceholderText="Фамилия"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Name}"
-                                 Classes="Input"
-                                 PlaceholderText="Имя"/>
-                        <TextBox Grid.Column="2"
-                                 Text="{Binding Midname}"
-                                 Classes="Input"
-                                 PlaceholderText="Отчество"/>
-                    </Grid>
-                    <StackPanel Orientation="Horizontal" Spacing="4"
-                                IsVisible="{Binding DisplayNamePreview,
-                                    Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Будет отображаться как:"
-                                   Classes="ValidationHint"/>
-                        <TextBlock Text="{Binding DisplayNamePreview}"
+                                 PlaceholderText="username"
+                                 IsEnabled="{Binding IsNewUser}">
+                            <TextBox.InnerLeftContent>
+                                <TextBlock Text="@"
+                                           Margin="12,0,4,0"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           VerticalAlignment="Center"/>
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <TextBlock Text="Только латинские буквы, цифры и подчёркивания"
                                    Classes="ValidationHint"
-                                   FontWeight="Medium"
-                                   Foreground="{DynamicResource TextSecondary}"/>
+                                   IsVisible="{Binding IsNewUser}"/>
                     </StackPanel>
-                </StackPanel>
 
-                <!-- Отдел -->
-                <StackPanel Spacing="6">
-                    <TextBlock Text="Отдел" Classes="FieldLabel"/>
-                    <ComboBox ItemsSource="{Binding Departments}"
-                              SelectedItem="{Binding SelectedDepartment}"
-                              Classes="DialogCombo"
-                              PlaceholderText="Выберите отдел"
-                              HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="department:DepartmentDto">
-                                <TextBlock Text="{Binding Name}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
+                    <!-- ФИО -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="ФИО" Classes="FieldLabel"/>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding Surname}"
+                                     Classes="Input"
+                                     PlaceholderText="Фамилия"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Name}"
+                                     Classes="Input"
+                                     PlaceholderText="Имя"/>
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding Midname}"
+                                     Classes="Input"
+                                     PlaceholderText="Отчество"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4"
+                                    IsVisible="{Binding DisplayNamePreview,
+                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="Будет отображаться как:"
+                                       Classes="ValidationHint"/>
+                            <TextBlock Text="{Binding DisplayNamePreview}"
+                                       Classes="ValidationHint"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </StackPanel>
 
-                <Border Height="1"
-                        Background="{DynamicResource BorderDefault}"
-                        Margin="0,4"/>
-                <StackPanel Spacing="8" IsVisible="{Binding IsNewUser}">
+                    <!-- Отдел -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Отдел" Classes="FieldLabel"/>
+                        <ComboBox ItemsSource="{Binding Departments}"
+                                  SelectedItem="{Binding SelectedDepartment}"
+                                  Classes="DialogCombo"
+                                  PlaceholderText="Выберите отдел"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="department:DepartmentDto">
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
 
-                    <TextBlock Text="Пароль" Classes="FieldLabel"/>
+                    <Border Height="1"
+                            Background="{DynamicResource BorderDefault}"
+                            Margin="0,4"/>
 
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding Password}"
-                                 PasswordChar="•"
-                                 Classes="Input"
-                                 PlaceholderText="Пароль">
-                            <TextBox.InnerLeftContent>
-                                <PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Classes="InputIcon"
-                                          Margin="12,0,8,0"/>
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ConfirmPassword}"
-                                 PasswordChar="•"
-                                 Classes="Input"
-                                 PlaceholderText="Подтверждение">
-                            <TextBox.InnerLeftContent>
-                                <PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Classes="InputIcon"
-                                          Margin="12,0,8,0"/>
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
-                    </Grid>
+                    <!-- Пароль (новый пользователь) -->
+                    <StackPanel Spacing="8"
+                                IsVisible="{Binding IsNewUser}">
+                        <TextBlock Text="Пароль" Classes="FieldLabel"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding Password}"
+                                     PasswordChar="•"
+                                     Classes="Input"
+                                     PlaceholderText="Пароль">
+                                <TextBox.InnerLeftContent>
+                                    <PathIcon Data="{StaticResource LockClosedIcon}"
+                                              Classes="InputIcon"
+                                              Margin="12,0,8,0"/>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ConfirmPassword}"
+                                     PasswordChar="•"
+                                     Classes="Input"
+                                     PlaceholderText="Подтверждение">
+                                <TextBox.InnerLeftContent>
+                                    <PathIcon Data="{StaticResource LockClosedIcon}"
+                                              Classes="InputIcon"
+                                              Margin="12,0,8,0"/>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                        </Grid>
+                        <shared:PasswordStrengthControl
+                            IsVisible="{Binding Password,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Strength="{Binding PasswordStrength}"
+                            StrengthLabel="{Binding PasswordStrengthLabel}"
+                            PasswordsMatch="{Binding PasswordsMatch}"
+                            ShowMatch="{Binding ConfirmPassword,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <TextBlock Text="Минимум 6 символов" Classes="ValidationHint"/>
+                    </StackPanel>
 
-	<shared:PasswordStrengthControl
-	IsVisible="{Binding Password,
-	Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-	Strength="{Binding PasswordStrength}"
-	StrengthLabel="{Binding PasswordStrengthLabel}"
-	PasswordsMatch="{Binding PasswordsMatch}"
-	ShowMatch="{Binding ConfirmPassword,
-        Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <TextBlock Text="Минимум 6 символов" Classes="ValidationHint"/>
-                </StackPanel>
-                <StackPanel Spacing="8" IsVisible="{Binding !IsNewUser}">
-
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Новый пароль" Classes="FieldLabel"/>
-                        <TextBlock Text="Оставьте пустым, если не хотите менять пароль"
+                    <!-- Пароль (существующий пользователь) -->
+                    <StackPanel Spacing="8"
+                                IsVisible="{Binding !IsNewUser}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Новый пароль" Classes="FieldLabel"/>
+                            <TextBlock Text="Оставьте пустым, если не хотите менять пароль"
+                                       Classes="ValidationHint"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding NewPassword}"
+                                     PasswordChar="•"
+                                     Classes="Input"
+                                     PlaceholderText="Новый пароль">
+                                <TextBox.InnerLeftContent>
+                                    <PathIcon Data="{StaticResource LockClosedIcon}"
+                                              Classes="InputIcon"
+                                              Margin="12,0,8,0"/>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding NewConfirmPassword}"
+                                     PasswordChar="•"
+                                     Classes="Input"
+                                     PlaceholderText="Подтверждение">
+                                <TextBox.InnerLeftContent>
+                                    <PathIcon Data="{StaticResource LockClosedIcon}"
+                                              Classes="InputIcon"
+                                              Margin="12,0,8,0"/>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                        </Grid>
+                        <shared:PasswordStrengthControl
+                            IsVisible="{Binding NewPassword,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Strength="{Binding NewPasswordStrength}"
+                            StrengthLabel="{Binding NewPasswordStrengthLabel}"
+                            PasswordsMatch="{Binding NewPasswordsMatch}"
+                            ShowMatch="{Binding NewConfirmPassword,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <TextBlock IsVisible="{Binding IsChangingPassword}"
+                                   Text="Все активные сессии сотрудника будут завершены."
                                    Classes="ValidationHint"/>
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding NewPassword}"
-                                 PasswordChar="•"
-                                 Classes="Input"
-                                 PlaceholderText="Новый пароль">
-                            <TextBox.InnerLeftContent>
-                                <PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Classes="InputIcon"
-                                          Margin="12,0,8,0"/>
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding NewConfirmPassword}"
-                                 PasswordChar="•"
-                                 Classes="Input"
-                                 PlaceholderText="Подтверждение">
-                            <TextBox.InnerLeftContent>
-                                <PathIcon Data="{StaticResource LockClosedIcon}"
-                                          Classes="InputIcon"
-                                          Margin="12,0,8,0"/>
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
-                    </Grid>
-
-                    <shared:PasswordStrengthControl
-    IsVisible="{Binding NewPassword,
-        Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-    Strength="{Binding NewPasswordStrength}"
-    StrengthLabel="{Binding NewPasswordStrengthLabel}"
-    PasswordsMatch="{Binding NewPasswordsMatch}"
-    ShowMatch="{Binding NewConfirmPassword,
-        Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <TextBlock IsVisible="{Binding IsChangingPassword}"
-                               Text="Все активные сессии сотрудника будут завершены."
-                               Classes="ValidationHint"/>
                 </StackPanel>
+            </ScrollViewer>
 
-            </StackPanel>
+            <!-- Разделитель -->
+            <Border Grid.Row="3" Classes="DialogDivider"/>
 
-            <Border Height="1"
-                    Background="{DynamicResource BorderDefault}"
-                    Margin="0,4,0,0"/>
-
-            <Grid ColumnDefinitions="*,Auto,Auto">
+            <!-- Футер -->
+            <Grid Grid.Row="4"
+                  ColumnDefinitions="*,Auto,Auto"
+                  Margin="24,16,24,24">
 
                 <StackPanel Grid.Column="0"
-                            Orientation="Horizontal" Spacing="8"
+                            Orientation="Horizontal"
+                            Spacing="8"
                             IsVisible="{Binding IsBusy}"
                             VerticalAlignment="Center">
                     <ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
@@ -210,12 +229,14 @@
                         Classes="DialogOutline"
                         Command="{Binding CancelCommand}"
                         IsEnabled="{Binding !IsBusy}"
+                        MinWidth="100"
                         Margin="0,0,12,0"/>
 
                 <Button Grid.Column="2"
                         Classes="DialogAccent"
                         Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding !IsBusy}">
+                        IsEnabled="{Binding !IsBusy}"
+                        MinWidth="100">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{StaticResource CheckmarkIcon}"
                                   Width="14" Height="14"
@@ -226,8 +247,9 @@
                                        ConverterParameter='Создать|Сохранить'}"/>
                     </StackPanel>
                 </Button>
+
             </Grid>
 
-        </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

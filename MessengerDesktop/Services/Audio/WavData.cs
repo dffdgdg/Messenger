@@ -4,16 +4,12 @@ using System.Text;
 
 namespace MessengerDesktop.Services.Audio;
 
-/// <summary>
-/// Минимальный WAV-парсер для PCM (int16).
-/// Загружает весь файл в память — допустимо для голосовых до 5 минут.
-/// </summary>
 internal sealed class WavData
 {
-    public short[] Samples { get; }     // все сэмплы всех каналов
+    public short[] Samples { get; }
     public int SampleRate { get; }
     public int Channels { get; }
-    public long TotalSamples { get; }   // кол-во сэмплов на канал
+    public long TotalSamples { get; }
     public TimeSpan Duration { get; }
 
     private WavData(short[] samples, int sampleRate, int channels)
@@ -29,18 +25,16 @@ internal sealed class WavData
     {
         using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
 
-        // RIFF
         var riff = new string(reader.ReadChars(4));
         if (riff != "RIFF")
             throw new InvalidDataException("Not a RIFF file");
 
-        reader.ReadInt32(); // ChunkSize — игнорируем
+        reader.ReadInt32();
 
         var wave = new string(reader.ReadChars(4));
         if (wave != "WAVE")
             throw new InvalidDataException("Not a WAVE file");
 
-        // Ищем fmt и data чанки
         int sampleRate = 0, channels = 0, bitsPerSample = 0;
         short[]? samples = null;
 
@@ -52,24 +46,21 @@ internal sealed class WavData
             switch (chunkId)
             {
                 case "fmt ":
-                    var audioFormat = reader.ReadInt16();  // 1 = PCM
+                    var audioFormat = reader.ReadInt16();
                     channels = reader.ReadInt16();
                     sampleRate = reader.ReadInt32();
-                    reader.ReadInt32(); // byteRate
-                    reader.ReadInt16(); // blockAlign
+                    reader.ReadInt32();
+                    reader.ReadInt16();
                     bitsPerSample = reader.ReadInt16();
 
-                    // Пропускаем extension если есть
                     var remaining = chunkSize - 16;
                     if (remaining > 0)
                         reader.ReadBytes(remaining);
 
                     if (audioFormat != 1)
-                        throw new NotSupportedException(
-                            $"Only PCM WAV supported, got format {audioFormat}");
+                        throw new NotSupportedException($"Only PCM WAV supported, got format {audioFormat}");
                     if (bitsPerSample != 16)
-                        throw new NotSupportedException(
-                            $"Only 16-bit WAV supported, got {bitsPerSample} bits");
+                        throw new NotSupportedException($"Only 16-bit WAV supported, got {bitsPerSample} bits");
                     break;
 
                 case "data":
@@ -79,7 +70,6 @@ internal sealed class WavData
                     break;
 
                 default:
-                    // Неизвестный чанк — пропускаем
                     reader.ReadBytes(chunkSize);
                     break;
             }

@@ -331,42 +331,14 @@
 												 Classes="Input"
 												 PasswordChar="•"
 												 PlaceholderText="Повторите пароль"/>
-
-										<StackPanel Orientation="Horizontal"
-													Spacing="5"
-													Height="16"
-													IsVisible="{Binding ShowPasswordMatchIndicator}">
-
-											<StackPanel Orientation="Horizontal"
-														Spacing="5"
-														IsVisible="{Binding PasswordsMatch}">
-												<PathIcon Data="{StaticResource CheckmarkIcon}"
-														  Width="12" Height="12"
-														  Foreground="{DynamicResource SuccessBrush}"/>
-												<TextBlock Text="Пароли совпадают"
-														   Classes="ValidationSuccess"/>
-											</StackPanel>
-
-											<StackPanel Orientation="Horizontal"
-														Spacing="5"
-														IsVisible="{Binding !PasswordsMatch}">
-												<PathIcon Data="{StaticResource CloseIcon}"
-														  Width="12" Height="12"
-														  Foreground="{DynamicResource ErrorBrush}"/>
-												<TextBlock Text="Пароли не совпадают"
-														   Classes="ValidationError"/>
-											</StackPanel>
-										</StackPanel>
 									</StackPanel>
 								</Grid>
 
 								<shared:PasswordStrengthControl
-								IsVisible="{Binding NewPassword,
-								Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
 								Strength="{Binding NewPasswordStrength}"
 								StrengthLabel="{Binding NewPasswordStrengthLabel}"
 								PasswordsMatch="{Binding PasswordsMatch}"
-								ShowMatch="False"/>
+								ShowMatch="True"/>
 
 								<StackPanel Orientation="Horizontal"
 											Spacing="10"

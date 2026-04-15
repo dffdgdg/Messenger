@@ -195,6 +195,7 @@
                 Classes="DialogAnimWrapper"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
+                Margin="0,56,0,24"
                 ZIndex="10001"
                 IsVisible="{Binding IsDialogVisible}">
             <ContentControl Content="{Binding CurrentDialog}">

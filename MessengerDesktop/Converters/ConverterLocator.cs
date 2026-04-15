@@ -69,6 +69,7 @@ public sealed class ConverterLocator
         Add<IndexToTextConverter>("IndexToText");
         Add<PluralizeConverter>("Pluralize");
         Add<ResourceKeyToGeometryConverter>("ResourceGeometry", "ResourceKeyToGeometry");
+        Add<MultiplyConverter>("Multiply");
 
         // Multi converters
         AddMulti<BooleanAndConverter>("BooleanAnd");

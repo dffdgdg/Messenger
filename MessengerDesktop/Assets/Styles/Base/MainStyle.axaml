@@ -328,7 +328,43 @@
 	<Style Selector="ToggleButton.IconButton:disabled">
 		<Setter Property="Opacity" Value="0.5"/>
 	</Style>
+	<Style Selector="Button.ScrollToBottomBtn">
+    <Setter Property="Width" Value="40"/>
+    <Setter Property="Height" Value="40"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="20"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="ZIndex" Value="10"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+            <TransformOperationsTransition Property="RenderTransform" 
+                                           Duration="0:0:0.15" 
+                                           Easing="CubicEaseOut"/>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+    </Setter>
+</Style>
 
+<Style Selector="Button.ScrollToBottomBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+    <Setter Property="CornerRadius" Value="20"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomBtn:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.92)"/>
+</Style>
+
+<Style Selector="Button.ScrollToBottomBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+</Style>
 	<!-- ═══════════════════════════════════════════════════════════════
 	5. КНОПКИ — PRIMARY
 	Главная акцентная кнопка действия
@@ -452,7 +488,7 @@
 
 	<!-- ── Emoji ── -->
 	<Style Selector="Button.EmojiButton">
-		<Setter Property="Background" Value="{DynamicResource TransparentBrush}"/>
+		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="BorderThickness" Value="0"/>
 		<Setter Property="Padding" Value="4"/>
 		<Setter Property="MinWidth" Value="36"/>
@@ -460,12 +496,40 @@
 		<Setter Property="FontSize" Value="20"/>
 		<Setter Property="Cursor" Value="Hand"/>
 		<Setter Property="CornerRadius" Value="6"/>
+		<!-- Добавить переход -->
+		<Setter Property="Transitions">
+			<Transitions>
+				<TransformOperationsTransition Property="RenderTransform"
+											   Duration="0:0:0.1"
+											   Easing="CubicEaseOut"/>
+			</Transitions>
+		</Setter>
 	</Style>
 
 	<Style Selector="Button.EmojiButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
 	</Style>
 
+	<!-- Добавить: лёгкое увеличение при наведении -->
+	<Style Selector="Button.EmojiButton:pointerover">
+		<Setter Property="RenderTransform" Value="scale(1.15)"/>
+	</Style>
+
+	<Style Selector="Button.EmojiButton:pressed">
+		<Setter Property="RenderTransform" Value="scale(0.9)"/>
+	</Style>
+
+	<Style Selector="Button.EmojiButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+	</Style>
+	<!-- Переопределение фона FlyoutPresenter -->
+	<Style Selector="FlyoutPresenter.EmojiPickerFlyout">
+		<Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="Padding" Value="12"/>
+	</Style>
 	<!-- ── Clear ── -->
 	<Style Selector="Button.ClearButton">
 		<Setter Property="Background" Value="Transparent"/>

@@ -3,6 +3,7 @@ using Avalonia.Platform.Storage;
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
+using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
@@ -57,16 +58,25 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     #region Проксированные коллекции и свойства
+
     public string MemberSearchQuery
     {
         get => InfoPanel.MemberSearchQuery;
         set => InfoPanel.MemberSearchQuery = value;
     }
 
+    public string PollSearchQuery
+    {
+        get => InfoPanel.PollSearchQuery;
+        set => InfoPanel.PollSearchQuery = value;
+    }
+
+    public ObservableCollection<MessageViewModel> FilteredPolls => InfoPanel.FilteredPolls;
     public ObservableCollection<UserDto> FilteredMembers => InfoPanel.FilteredMembers;
     public ObservableCollection<MessageViewModel> Messages => MessageManager.Messages;
     public ObservableCollection<LocalFileAttachment> LocalAttachments => Attachments.Attachments;
     public ObservableCollection<UserDto> Members => Context.Members;
+
     public ObservableCollection<UserDto> MembersPreview { get; } = [];
     public ObservableCollection<ChatInfoPanelMediaItem> PhotosItems { get; } = [];
     public ObservableCollection<ChatInfoPanelFileItem> FilesItems { get; } = [];
@@ -92,7 +102,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public bool IsLoadingMuteState => Notification.IsLoadingMuteState;
     public bool HasMoreNewer => MessageManager.HasMoreNewer;
     public bool ShowScrollToBottom => !IsScrolledToBottom;
-
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
 
     public ChatDto? Chat
@@ -126,10 +135,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     #region Observable properties
+
     public ObservableCollection<MessageViewModel> PinnedMessages { get; } = [];
     public int PinnedCount => PinnedMessages.Count;
 
     public bool ShowPinnedSection => CurrentInfoSection == InfoSectionType.Pinned;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPinnedBannerVisible))]
     public partial MessageViewModel? PinnedBannerMessage { get; set; }
@@ -159,7 +170,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public int FilesCount => FilesItems.Count;
 
     public List<string> PopularEmojis { get; } =
-    ["😀", "😂", "😍", "🥰", "😊", "😎", "🤔", "😅", "😭", "😤", "❤", "👍", "👎", "🎉", "🔥", "✨", "💯", "🙏", "👏", "🤝", "💪", "🎁", "📱", "💻", "🎮", "🎵", "📷", "🌟", "⭐", "🌈", "☀️", "🌙"];
+    [
+        "😀","😂","😍","🥰","😊","😎","🤔","😅","😭","😤",
+        "❤","👍","👎","🎉","🔥","✨","💯","🙏","👏","🤝",
+        "💪","🎁","📱","💻","🎮","🎵","📷","🌟","⭐","🌈","☀️","🌙"
+    ];
 
     #endregion
 
@@ -173,9 +188,22 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Init
 
-    public ChatViewModel(int chatId, ChatsViewModel parent, IChatNavigator navigator, IApiClientService apiClient, IAuthManager authManager, IChatInfoPanelStateStore chatInfoPanelStateStore,
-        INotificationService notificationService, IChatNotificationApiService notificationApiService, IDialogService dialogService, IGlobalHubConnection globalHub, IFileDownloadService fileDownloadService,
-        IStorageProvider? storageProvider = null, ILocalCacheService? cacheService = null, IAudioPlayerService? audioPlayer = null)
+    public ChatViewModel(
+        int chatId,
+        ChatsViewModel parent,
+        IChatNavigator navigator,
+        IApiClientService apiClient,
+        IAuthManager authManager,
+        IChatInfoPanelStateStore chatInfoPanelStateStore,
+        INotificationService notificationService,
+        IChatNotificationApiService notificationApiService,
+        IDialogService dialogService,
+        IGlobalHubConnection globalHub,
+        IFileDownloadService fileDownloadService,
+        IPlatformService platformService,
+        IStorageProvider? storageProvider = null,
+        ILocalCacheService? cacheService = null,
+        IAudioPlayerService? audioPlayer = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
@@ -183,9 +211,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         var currentUserId = authManager?.Session.UserId ?? 0;
         UserId = currentUserId;
 
-        Context = new ChatContext(chatId, currentUserId, apiClient ?? throw new ArgumentNullException(nameof(apiClient)), dialogService ?? throw new ArgumentNullException(nameof(dialogService)),
-            globalHub ?? throw new ArgumentNullException(nameof(globalHub)), notificationService ?? throw new ArgumentNullException(nameof(notificationService)),
-            notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService)), fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)), cacheService);
+        Context = new ChatContext(
+            chatId, currentUserId,
+            apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
+            dialogService ?? throw new ArgumentNullException(nameof(dialogService)),
+            globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
+            notificationService ?? throw new ArgumentNullException(nameof(notificationService)),
+            notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService)),
+            fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)),
+            cacheService);
 
         Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
         Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
@@ -193,7 +227,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService, cacheService, audioPlayer, OpenMentionProfileCommand);
+        MessageManager = new ChatMessageManager(
+            chatId, currentUserId, apiClient,
+            () => Context.Members,
+            fileDownloadService, notificationService,
+            cacheService, audioPlayer, OpenMentionProfileCommand);
+
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
 
@@ -202,21 +241,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Forward = new ChatForwardHandler(Context);
         Typing = new ChatTypingHandler(Context);
         Voice = new ChatVoiceHandler(Context, () => Reply.CancelReply());
-        InfoPanel = new ChatInfoPanelHandler(Context, chatInfoPanelStateStore, MemberLoader);
+        InfoPanel = new ChatInfoPanelHandler(Context, chatInfoPanelStateStore, MemberLoader,
+                           platformService ?? throw new ArgumentNullException(nameof(platformService)));
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
+        _hubSubscriber = new ChatHubSubscriber(
+            Context, MessageManager,
+            count => UnreadCount = count,
+            OnHubReconnectedAsync);
 
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
 
-        Context.Chat = new ChatDto
-        {
-            Id = chatId,
-            Name = "Загрузка...",
-            Type = ChatType.Chat
-        };
+        Context.Chat = new ChatDto { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
         _ = InitializeAsync();
     }
@@ -227,7 +265,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         {
             IsInitialLoading = true;
 
-            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(
+                ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
 
             if (chatResult is { Success: true, Data: not null })
             {
@@ -237,8 +276,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
             else
             {
-                throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
+                throw new System.Net.Http.HttpRequestException(
+                    $"Не удалось загрузить чат: {chatResult.Error}");
             }
+
             await LoadPinnedAsync(Context.LifetimeToken, updateBanner: true);
 
             Context.Members = await MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
@@ -255,12 +296,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             if (scrollToIndex < Messages.Count - 1)
             {
-                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} request=ScrollToIndex index={scrollToIndex.Value}");
+                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} ScrollToIndex={scrollToIndex.Value}");
                 Context.RequestScrollToIndex(scrollToIndex.Value);
             }
             else
             {
-                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} request=ScrollToBottom");
+                Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} ScrollToBottom");
                 Context.RequestScrollToBottom();
             }
 
@@ -297,28 +338,42 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Проброс свойств (Property Forwarding)
 
-    private void ForwardProperties(INotifyPropertyChanged source, params (string sourceProp, string targetProp)[] mappings)
+    /// <summary>
+    /// Подписывается на PropertyChanged источника и пробрасывает изменения
+    /// в OnPropertyChanged этого ViewModel по таблице маппингов.
+    /// </summary>
+    private void ForwardProperties(INotifyPropertyChanged source,
+        params (string sourceProp, string targetProp)[] mappings)
     {
         var lookup = mappings.GroupBy(m => m.sourceProp).ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
 
         source.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != null && lookup.TryGetValue(e.PropertyName, out var targets))
-            {
                 foreach (var target in targets)
                     OnPropertyChanged(target);
-            }
         };
     }
 
     private void SubscribePropertyForwarding()
     {
-        ForwardProperties(Typing, (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
-        ForwardProperties(EditDelete, (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
-        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
-        ForwardProperties(Forward, (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)));
-        ForwardProperties(Search, (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
-        ForwardProperties(Voice, (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
+        ForwardProperties(Typing,
+            (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
+
+        ForwardProperties(EditDelete,
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
+
+        ForwardProperties(Reply,
+            (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
+
+        ForwardProperties(Forward,
+            (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)));
+
+        ForwardProperties(Search,
+            (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
+
+        ForwardProperties(Voice,
+            (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
 
         ForwardProperties(InfoPanel,
             (nameof(ChatInfoPanelHandler.IsInfoPanelOpen), nameof(IsInfoPanelOpen)),
@@ -332,7 +387,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             (nameof(ChatInfoPanelHandler.ContactDepartment), nameof(ContactDepartment)),
             (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(ContactLastSeen)),
             (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(IsContactOnline)),
-            (nameof(ChatInfoPanelHandler.MemberSearchQuery), nameof(MemberSearchQuery)));
+            (nameof(ChatInfoPanelHandler.MemberSearchQuery), nameof(MemberSearchQuery)),
+            (nameof(ChatInfoPanelHandler.PollSearchQuery), nameof(PollSearchQuery)));
 
         ForwardProperties(Context,
             (nameof(ChatContext.Chat), nameof(Chat)),
@@ -343,7 +399,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         MessageManager.MessagePinStateChanged += OnMessagePinStateChanged;
 
         Context.Members.CollectionChanged += (_, _) => RefreshInfoPanelLists();
-        InfoPanel.FilteredMembers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(FilteredMembers));
+
+        InfoPanel.FilteredMembers.CollectionChanged += (_, _) =>
+            OnPropertyChanged(nameof(FilteredMembers));
+
+        InfoPanel.FilteredPolls.CollectionChanged += (_, _) =>
+            OnPropertyChanged(nameof(FilteredPolls));
 
         ForwardProperties(Notification,
             (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
@@ -370,6 +431,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         UnreadCount = 0;
         _ = MarkMessagesAsReadAsync();
     }
+
     partial void OnCurrentInfoSectionChanged(InfoSectionType value)
     {
         OnPropertyChanged(nameof(ShowPhotosSection));
@@ -379,40 +441,71 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         OnPropertyChanged(nameof(ShowPinnedSection));
     }
 
-    private void RefreshInfoPanelLists()
-    {
-        ReplaceCollection(MembersPreview, [.. Context.Members.Take(5)]);
+    #endregion
 
-        var visible = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).ToList();
+    #region Helpers
 
-        var photos = visible.SelectMany(m => m.Files.Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url)).Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
-
-        var files = visible.SelectMany(m => m.Files.Where(f => f.PreviewType != "image").Select(f => new ChatInfoPanelFileItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
-
-        var polls = visible.Where(m => m.Poll != null).OrderByDescending(m => m.CreatedAt).ToList();
-
-        ReplaceCollection(PhotosItems, photos);
-        ReplaceCollection(FilesItems, files);
-        ReplaceCollection(PollMessages, polls);
-        OnPropertyChanged(nameof(PhotosCount));
-        OnPropertyChanged(nameof(FilesCount));
-    }
-
-    private static void ReplaceCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
+    /// <summary>
+    /// Заменяет содержимое коллекции без пересоздания объекта
+    /// (биндинги не рвутся).
+    /// </summary>
+    private static void ReplaceCollection<T>(
+        ObservableCollection<T> target,
+        IReadOnlyList<T> source)
     {
         target.Clear();
         foreach (var item in source)
             target.Add(item);
     }
 
+    private void RefreshInfoPanelLists()
+    {
+        ReplaceCollection(MembersPreview, [.. Context.Members.Take(5)]);
+
+        var visible = MessageManager.Messages
+            .Where(m => !m.IsDeleted && !m.IsSystemMessage)
+            .ToList();
+
+        var photos = visible
+            .SelectMany(m => m.Files
+                .Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url))
+                .Select(f => new ChatInfoPanelMediaItem(m, f)))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var files = visible
+            .SelectMany(m => m.Files
+                .Where(f => f.PreviewType != "image")
+                .Select(f => new ChatInfoPanelFileItem(m, f)))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var polls = visible
+            .Where(m => m.Poll != null)
+            .OrderByDescending(m => m.CreatedAt)
+            .ToList();
+
+        ReplaceCollection(PhotosItems, photos);
+        ReplaceCollection(FilesItems, files);
+        ReplaceCollection(PollMessages, polls);
+
+        OnPropertyChanged(nameof(PhotosCount));
+        OnPropertyChanged(nameof(FilesCount));
+
+        // Синхронизировать FilteredPolls при обновлении данных
+        InfoPanel.SetPolls(PollMessages);
+    }
+
     #endregion
 
     #region Messages
+
     private async Task LoadPinnedAsync(CancellationToken ct, bool updateBanner = false)
     {
         try
         {
-            var result = await Context.Api.GetAsync<List<MessageDto>>(ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
+            var result = await Context.Api.GetAsync<List<MessageDto>>(
+                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -440,15 +533,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 }
             });
         }
-        catch (OperationCanceledException) { /* Отмена действия */ }
-        catch (Exception ex) { Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}"); }
+        catch (OperationCanceledException) { /* Отмена */ }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
+        }
     }
 
     private void RebuildPinnedMessages(List<MessageDto> dtos)
     {
-        foreach (var old in PinnedMessages)
-            old.Dispose();
-
+        foreach (var old in PinnedMessages) old.Dispose();
         PinnedMessages.Clear();
 
         foreach (var dto in dtos)
@@ -459,12 +553,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
-        => new(dto, App.Current.Services.GetRequiredService<IFileDownloadService>(), App.Current.Services.GetRequiredService<INotificationService>(),
-            App.Current.Services.GetRequiredService<IAudioPlayerService>(), Context.Api);
-
+        => new(dto,
+            App.Current.Services.GetRequiredService<IFileDownloadService>(),
+            App.Current.Services.GetRequiredService<INotificationService>(),
+            App.Current.Services.GetRequiredService<IAudioPlayerService>(),
+            Context.Api);
 
     [RelayCommand]
-    private async Task CopyUsername() => await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
+    private async Task CopyUsername() =>
+        await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task SendMessage()
@@ -505,7 +602,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
                 msg.Files = forwarding.Files;
 
-            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
+            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(
+                ApiEndpoints.Messages.Create, msg, ct);
 
             if (result.Success && result.Data != null)
             {
@@ -562,6 +660,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     [RelayCommand]
     private void ToggleInfoPanel() => IsInfoPanelOpen = !IsInfoPanelOpen;
+
     private void OpenInfoSection(InfoSectionType section)
     {
         if (section == InfoSectionType.None)
@@ -576,6 +675,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         InfoSectionTitle = InfoSectionTitles.GetValueOrDefault(section, string.Empty);
         IsInfoSectionOpen = true;
     }
+
     [RelayCommand]
     private async Task OpenPinnedSection()
     {
@@ -600,10 +700,18 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private void OpenFilesSection() => OpenInfoSection(InfoSectionType.Files);
 
     [RelayCommand]
-    private void OpenPollsSection() => OpenInfoSection(InfoSectionType.Polls);
+    private void OpenPollsSection()
+    {
+        OpenInfoSection(InfoSectionType.Polls);
+        InfoPanel.OnPollsSectionOpened(PollMessages);
+    }
 
     [RelayCommand]
-    private void OpenMembersSection() => OpenInfoSection(InfoSectionType.Members);
+    private void OpenMembersSection()
+    {
+        OpenInfoSection(InfoSectionType.Members);
+        InfoPanel.OnMembersSectionOpened();
+    }
 
     [RelayCommand]
     private void CloseInfoSection() => OpenInfoSection(InfoSectionType.None);
@@ -611,9 +719,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [RelayCommand]
     private async Task OpenInfoSectionMessageAsync(MessageViewModel? message)
     {
-        if (message == null)
-            return;
-
+        if (message == null) return;
         IsInfoSectionOpen = false;
         await Search.ScrollToMessageAsync(message.Id);
     }
@@ -643,13 +749,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [RelayCommand]
     private void SelectMention(UserDto? user)
     {
-        if (user is null || string.IsNullOrWhiteSpace(user.Username))
-            return;
+        if (user is null || string.IsNullOrWhiteSpace(user.Username)) return;
 
         var text = NewMessage ?? string.Empty;
         var caret = Math.Clamp(_composerCaretIndex, 0, text.Length);
-        if (!TryFindMentionToken(text, caret, out var start, out var _))
-            return;
+        if (!TryFindMentionToken(text, caret, out var start, out _)) return;
 
         var prefix = text[..start];
         var suffix = caret < text.Length ? text[caret..] : string.Empty;
@@ -661,27 +765,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     public bool HandleMentionNavigationKey(Key key)
     {
-        if (!IsMentionSuggestionsOpen || MentionSuggestions.Count == 0)
-            return false;
+        if (!IsMentionSuggestionsOpen || MentionSuggestions.Count == 0) return false;
 
-        if (key == Key.Down)
-        {
-            MentionSelectedIndex = MentionSelectedIndex < MentionSuggestions.Count - 1 ? MentionSelectedIndex + 1 : 0;
-            return true;
-        }
-
-        if (key == Key.Up)
-        {
-            MentionSelectedIndex = MentionSelectedIndex > 0 ? MentionSelectedIndex - 1 : MentionSuggestions.Count - 1;
-            return true;
-        }
-
-        if (key == Key.Enter && MentionSelectedIndex >= 0 && MentionSelectedIndex < MentionSuggestions.Count)
-        {
-            SelectMention(MentionSuggestions[MentionSelectedIndex]);
-            return true;
-        }
-
+        if (key == Key.Down) { MentionSelectedIndex = NextMentionIndex(MentionSelectedIndex); return true; }
+        if (key == Key.Up) { MentionSelectedIndex = PrevMentionIndex(MentionSelectedIndex); return true; }
+        if (key == Key.Enter) return TryConfirmMentionSelection();
         if (key == Key.Escape)
         {
             IsMentionSuggestionsOpen = false;
@@ -690,6 +778,18 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
 
         return false;
+    }
+
+    private int NextMentionIndex(int current) => current < MentionSuggestions.Count - 1 ? current + 1 : 0;
+    private int PrevMentionIndex(int current) => current > 0 ? current - 1 : MentionSuggestions.Count - 1;
+
+    private bool TryConfirmMentionSelection()
+    {
+        if (MentionSelectedIndex < 0 || MentionSelectedIndex >= MentionSuggestions.Count)
+            return false;
+
+        SelectMention(MentionSuggestions[MentionSelectedIndex]);
+        return true;
     }
 
     public void OnComposerSelectionChanged(int caretIndex)
@@ -706,11 +806,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     #endregion
+
     #region Mentions
 
     private void UpdateMentionSuggestions(string? text, int caretIndex)
     {
-        var source = Context.Members.Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username)).ToList();
+        var source = Context.Members
+            .Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username))
+            .ToList();
 
         if (!TryFindMentionToken(text ?? string.Empty, caretIndex, out _, out var token))
         {
@@ -735,7 +838,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         MentionSelectedIndex = IsMentionSuggestionsOpen ? 0 : -1;
     }
 
-    private static bool TryFindMentionToken(string text, int caretIndex, out int tokenStart, out string token)
+    private static bool TryFindMentionToken(
+        string text, int caretIndex,
+        out int tokenStart, out string token)
     {
         tokenStart = -1;
         token = string.Empty;
@@ -744,15 +849,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             return false;
 
         var i = caretIndex - 1;
-        while (i >= 0 && !char.IsWhiteSpace(text[i]))
-            i--;
+        while (i >= 0 && !char.IsWhiteSpace(text[i])) i--;
 
         tokenStart = i + 1;
-        if (tokenStart >= text.Length || text[tokenStart] != '@')
-            return false;
-
-        if (caretIndex <= tokenStart)
-            return false;
+        if (tokenStart >= text.Length || text[tokenStart] != '@') return false;
+        if (caretIndex <= tokenStart) return false;
 
         token = text.Substring(tokenStart + 1, caretIndex - tokenStart - 1);
         return token.All(c => char.IsLetterOrDigit(c) || c == '_');
@@ -763,7 +864,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #region Навигация
 
     [RelayCommand]
-    private async Task OpenCreatePoll() => await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
+    private async Task OpenCreatePoll() =>
+        await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
 
     [RelayCommand]
     private async Task OpenEditChat()
@@ -779,17 +881,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     [RelayCommand]
-    public async Task OpenProfile(int userId) => await _navigator.ShowUserProfileAsync(userId);
+    public async Task OpenProfile(int userId) =>
+        await _navigator.ShowUserProfileAsync(userId);
 
     [RelayCommand]
     private async Task OpenMentionProfile(string? mention)
     {
-        if (string.IsNullOrWhiteSpace(mention))
-            return;
+        if (string.IsNullOrWhiteSpace(mention)) return;
 
         var normalizedUsername = mention.Trim().TrimStart('@');
-        if (string.IsNullOrWhiteSpace(normalizedUsername))
-            return;
+        if (string.IsNullOrWhiteSpace(normalizedUsername)) return;
 
         var user = Members.FirstOrDefault(m =>
             string.Equals(m.Username, normalizedUsername, StringComparison.OrdinalIgnoreCase));
@@ -803,7 +904,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         await SafeExecuteAsync(async ct =>
         {
-            var result = await Context.Api.PostAsync(ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
+            var result = await Context.Api.PostAsync(
+                ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
 
             if (result.Success)
                 SuccessMessage = "Вы покинули чат";
@@ -811,6 +913,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
         });
     }
+
     private void OnMessagePinStateChanged(MessageDto dto)
     {
         Dispatcher.UIThread.Post(() =>
@@ -916,7 +1019,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         try
         {
-            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), ct);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(
+                ApiEndpoints.Chats.ById(Context.ChatId), ct);
 
             if (chatResult is { Success: true, Data: not null })
                 Context.Chat = chatResult.Data;
@@ -924,7 +1028,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             await InfoPanel.ReloadMembersAfterEditAsync();
             RefreshInfoPanelLists();
         }
-        catch (OperationCanceledException) { /* Operation was canceled */ }
+        catch (OperationCanceledException) { /* Отменено */ }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatVM] Не удалось обновить инфопанель: {ex.Message}");
@@ -955,9 +1059,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
-            DisposeCore();
-
+        if (disposing) DisposeCore();
         base.Dispose(disposing);
     }
 
@@ -966,11 +1068,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (Context.IsDisposed) return;
 
         DisposeCommonResources();
-
         await MessageManager.DisposeAsync();
-
         Context.Dispose();
-
         base.Dispose(true);
     }
 
@@ -988,10 +1087,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search.Dispose();
         Notification.Dispose();
         Attachments.Dispose();
+
         MessageManager.MessagePinStateChanged -= OnMessagePinStateChanged;
-        foreach (var msg in PinnedMessages)
-            msg.Dispose();
+
+        foreach (var msg in PinnedMessages) msg.Dispose();
         PinnedMessages.Clear();
     }
+
     #endregion
 }

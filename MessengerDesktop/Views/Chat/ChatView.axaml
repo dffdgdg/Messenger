@@ -274,7 +274,7 @@
 						</ListBox.ItemTemplate>
 					</ListBox>
 
-					<Button Classes="IconButton"
+					<Button Classes="ScrollToBottomBtn"
 							HorizontalAlignment="Right"
 							VerticalAlignment="Bottom"
 							Margin="0,0,24,16"
@@ -283,17 +283,17 @@
 						<Panel>
 							<Path Data="{StaticResource ChevronIcon}"
 								  Fill="{DynamicResource TextPrimary}"
-								  Width="18" Height="18"
+								  Width="16" Height="16"
 								  Stretch="Uniform"
 								  HorizontalAlignment="Center"
-								  Margin="0,25"/>
+								  VerticalAlignment="Center"/>
 							<Border Background="{DynamicResource Accent}"
 									CornerRadius="10"
 									MinWidth="20" Height="20"
 									Padding="6,0"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Top"
-									Margin="0,0,-10,0"
+									Margin="0,0,-8,0"
 									IsVisible="{Binding HasNewMessages}">
 								<TextBlock Text="{Binding UnreadCount, FallbackValue=!}"
 										   FontSize="11"
@@ -584,16 +584,20 @@
 											VerticalAlignment="Bottom">
 										<Button.Flyout>
 											<Flyout Placement="TopEdgeAlignedRight"
-													ShowMode="TransientWithDismissOnPointerMoveAway">
-												<StackPanel Spacing="8">
-													<TextBlock Text="Эмодзи"
-															   Classes="SectionHeader"
-															   Margin="4,0,0,4"/>
+													ShowMode="TransientWithDismissOnPointerMoveAway"
+													FlyoutPresenterClasses="EmojiPickerFlyout">
+												<StackPanel Spacing="6" Width="300">
+
+													<!-- Заголовок -->
+													<TextBlock Text="ЭМОДЗИ"
+															   Classes="CategoryHeader"
+															   Margin="4,0,0,2"/>
+
+													<!-- Сетка эмодзи -->
 													<ItemsControl ItemsSource="{Binding PopularEmojis}">
 														<ItemsControl.ItemsPanel>
 															<ItemsPanelTemplate>
-																<WrapPanel MaxWidth="320"
-																		   Orientation="Horizontal"/>
+																<WrapPanel Orientation="Horizontal"/>
 															</ItemsPanelTemplate>
 														</ItemsControl.ItemsPanel>
 														<ItemsControl.ItemTemplate>
@@ -605,9 +609,11 @@
 															</DataTemplate>
 														</ItemsControl.ItemTemplate>
 													</ItemsControl>
+
 												</StackPanel>
 											</Flyout>
 										</Button.Flyout>
+
 										<Path Data="{StaticResource EmojiIcon}"
 											  Fill="{DynamicResource TextSecondary}"
 											  Width="20" Height="20"

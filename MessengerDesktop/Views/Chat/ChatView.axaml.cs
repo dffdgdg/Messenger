@@ -39,6 +39,9 @@ public partial class ChatView : UserControl
 
     private double _lastExtentHeight;
     private int _scrollToEndRetries;
+    private double _anchorOffset;
+    private double _anchorExtent;
+    private bool _isPollLayoutChanging;
 
     private int _loadingOlderMessages;
     private int _loadingNewerMessages;
@@ -113,8 +116,8 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToMessageRequested += OnScrollToMessageRequested;
         _viewModel.ScrollToIndexRequested += OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
-
         _viewModel.Messages?.CollectionChanged += OnMessagesCollectionChanged;
+        _viewModel.Context.PollSizeChanged += OnPollSizeChanged;
     }
 
     private void DetachFromViewModel()
@@ -125,15 +128,76 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToMessageRequested -= OnScrollToMessageRequested;
         _viewModel.ScrollToIndexRequested -= OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested -= OnScrollToBottomRequested;
-
         _viewModel.Messages?.CollectionChanged -= OnMessagesCollectionChanged;
-
+        _viewModel.Context.PollSizeChanged -= OnPollSizeChanged;
         _viewModel = null;
     }
 
     #endregion
 
     #region ViewModel Event Handlers
+    private void OnPollSizeChanged(double delta)
+    {
+        if (_scrollViewer is null || !_isInitialScrollDone) return;
+        if (Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1) return;
+
+        double currentOffset = _scrollViewer.Offset.Y;
+        double extent = _scrollViewer.Extent.Height;
+        double viewport = _scrollViewer.Viewport.Height;
+
+        bool isAtBottom = extent - viewport - currentOffset < NearBottomThreshold;
+        if (isAtBottom) return; // У дна — не трогаем, Avalonia сам не прыгает
+
+        // delta уже точный — берём из SizeChanged, никаких догадок
+        _scrollViewer.Offset = new Vector(
+            _scrollViewer.Offset.X,
+            Math.Max(0, currentOffset + delta));
+
+        _lastExtentHeight = _scrollViewer.Extent.Height;
+    }
+
+    private void OnPollLayoutChanged()
+    {
+        if (!_isPollLayoutChanging || _scrollViewer is null) return;
+        _isPollLayoutChanging = false;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                if (_scrollViewer is null) return;
+
+                double newExtent = _scrollViewer.Extent.Height;
+                double delta = newExtent - _anchorExtent;
+
+                if (Math.Abs(delta) < 2) return;
+
+                double viewport = _scrollViewer.Viewport.Height;
+                bool wasAtBottom = _anchorExtent - viewport - _anchorOffset < NearBottomThreshold;
+
+                if (wasAtBottom)
+                {
+                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Max(0, newExtent - viewport));
+                }
+                else
+                {
+                    double currentOffset = _scrollViewer.Offset.Y;
+
+                    if (Math.Abs(currentOffset - _anchorOffset) < 2)
+                    {
+                        _scrollViewer.Offset = new Vector(
+                            _scrollViewer.Offset.X,
+                            Math.Max(0, _anchorOffset + delta));
+                    }
+                }
+            }
+            finally
+            {
+                _suppressScrollEvents = false;
+                _lastExtentHeight = _scrollViewer?.Extent.Height ?? _lastExtentHeight;
+            }
+        }, DispatcherPriority.Render);
+    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

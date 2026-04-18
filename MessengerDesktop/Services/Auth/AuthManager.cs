@@ -63,11 +63,13 @@ public sealed class AuthManager : IAuthManager, IDisposable
         }
         catch (HttpRequestException ex)
         {
-            Debug.WriteLine($"AuthManager: Сетевая ошибка при инициализации (токены сохранены): {ex.Message}");
+            Debug.WriteLine($"AuthManager: Сетевая ошибка при инициализации: {ex.Message}");
+            await TryLoadTokensWithoutRefreshAsync();
         }
         catch (TaskCanceledException ex)
         {
-            Debug.WriteLine($"AuthManager: Таймаут при инициализации (токены сохранены): {ex.Message}");
+            Debug.WriteLine($"AuthManager: Таймаут при инициализации: {ex.Message}");
+            await TryLoadTokensWithoutRefreshAsync();
         }
         catch (Exception ex)
         {
@@ -78,6 +80,27 @@ public sealed class AuthManager : IAuthManager, IDisposable
         {
             IsInitialized = true;
             _initializationTcs.TrySetResult();
+        }
+    }
+
+    private async Task TryLoadTokensWithoutRefreshAsync()
+    {
+        try
+        {
+            var storedToken = await _secureStorage.GetAsync<string>(TokenKey);
+            var storedRefreshToken = await _secureStorage.GetAsync<string>(RefreshTokenKey);
+            var storedUserId = await _secureStorage.GetAsync<int?>(UserIdKey);
+            var storedUserRole = await _secureStorage.GetAsync<UserRole>(UserRoleKey);
+
+            if (!string.IsNullOrEmpty(storedToken) && storedUserId.HasValue && !string.IsNullOrEmpty(storedRefreshToken))
+            {
+                Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+                Debug.WriteLine("AuthManager: Токены загружены без refresh (офлайн режим)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"AuthManager: Ошибка загрузки токенов без refresh: {ex.Message}");
         }
     }
 
@@ -105,12 +128,27 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
         Debug.WriteLine("AuthManager: Access token истёк, пробуем refresh...");
 
-        var refreshResult = await _authService.RefreshTokenAsync(storedToken, storedRefreshToken);
+        ApiResponse<TokenResponseDto>? refreshResult = null;
+        try
+        {
+            refreshResult = await _authService.RefreshTokenAsync(storedToken, storedRefreshToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            Debug.WriteLine($"AuthManager: Сетевая ошибка при refresh, сохраняем токены: {ex.Message}");
+            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+            return;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Debug.WriteLine($"AuthManager: Таймаут при refresh, сохраняем токены: {ex.Message}");
+            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+            return;
+        }
 
         if (refreshResult.Success && refreshResult.Data != null)
         {
             Debug.WriteLine("AuthManager: Refresh успешен");
-
             var data = refreshResult.Data;
             await SaveAuthAsync(data.Token, data.RefreshToken, data.UserId, data.Role);
             Session.SetSession(data.Token, data.RefreshToken, data.UserId, data.Role);
@@ -126,7 +164,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
             }
             else
             {
-                Debug.WriteLine("AuthManager: Предполагаемая сетевая ошибка, токены сохранены для повторной попытки");
+                Debug.WriteLine("AuthManager: Неизвестная ошибка, сохраняем токены для повторной попытки");
+                Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
             }
         }
     }
@@ -136,12 +175,16 @@ public sealed class AuthManager : IAuthManager, IDisposable
         if (string.IsNullOrEmpty(error))
             return false;
 
-        if (error.Contains("401") || error.Contains("403"))
-            return true;
+        string[] networkErrors = ["connection", "timeout", "unreachable", "refused", "HttpRequestException", "TaskCanceled", "SocketException",
+        "соединение", "таймаут", "недоступен"];
 
-        string[] authKeywords = ["Unauthorized","Forbidden","Недействительный","Истёк", "Отозван","Заблокирован","Использован","Сессия истекла"];
+        if (networkErrors.Any(e => error.Contains(e, StringComparison.OrdinalIgnoreCase)))
+            return false;
 
-        return authKeywords.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        string[] serverRejections = ["HTTP 401", "HTTP 403", "HTTP Unauthorized", "HTTP Forbidden", "Недействительный refresh token", "Refresh token истёк",
+            "Refresh token уже использован", "Учётная запись заблокирована", "Сессия истекла" ];
+
+        return serverRejections.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> TryRefreshTokenAsync()

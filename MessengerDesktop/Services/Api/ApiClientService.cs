@@ -312,7 +312,7 @@ public sealed class ApiClientService : IApiClientService
                 return new ApiResponse<T>
                 {
                     Success = false,
-                    Error = $"HTTP {response.StatusCode}",
+                    Error = $"HTTP {(int)response.StatusCode}",
                     Details = json,
                     Timestamp = DateTime.UtcNow
                 };
@@ -355,7 +355,7 @@ public sealed class ApiClientService : IApiClientService
                 return new ApiResponse<object>
                 {
                     Success = false,
-                    Error = $"HTTP {response.StatusCode}",
+                    Error = $"HTTP {(int)response.StatusCode}",
                     Details = json,
                     Timestamp = DateTime.UtcNow
                 };

@@ -17,7 +17,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
     IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
     ILocalCacheService? cacheService = null,
     IAudioPlayerService? audioPlayer = null,
-    ICommand? mentionClickCommand = null) : IAsyncDisposable
+    ICommand? mentionClickCommand = null, ChatContext ? chatContext = null) : IAsyncDisposable
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = getMembersFunc ?? throw new ArgumentNullException(nameof(getMembersFunc));
@@ -465,7 +465,7 @@ public sealed class ChatMessageManager(int chatId, int userId, IApiClientService
 
         msg.IsOwn = msg.SenderId == userId;
 
-        var vm = new MessageViewModel(msg, downloadService, notificationService, audioPlayer, _apiClient)
+        var vm = new MessageViewModel(msg, downloadService, notificationService, audioPlayer, _apiClient, chatContext)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,

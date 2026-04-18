@@ -59,6 +59,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string VoicePositionText { get; set; } = "0:00";
     [ObservableProperty] public partial string? VoiceError { get; set; }
     public ICommand? MentionClickCommand { get; set; }
+    private readonly ChatContext? _chatContext;
 
     public string? SenderAvatarUrl { get => SenderAvatar; set => SenderAvatar = value; }
     public bool HasFiles => Files.Count > 0;
@@ -129,8 +130,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     ];
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
-        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null)
+        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, ChatContext? chatContext = null)
     {
+        _chatContext = chatContext;
         _downloadService = downloadService;
         _notificationService = notificationService;
         _audioPlayer = audioPlayer;
@@ -157,7 +159,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         if (message.Poll != null)
         {
-            Poll = CreatePollViewModel(message.Poll);
+            Poll = CreatePollViewModel(message.Poll, chatContext);
             BindPollViewModel(Poll);
         }
         if (Files.Count > 0)
@@ -285,7 +287,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
         else
         {
-            Poll = CreatePollViewModel(pollDto);
+            Poll = CreatePollViewModel(pollDto, _chatContext);
             BindPollViewModel(Poll);
         }
         _ = PersistPollStateToCacheAsync();
@@ -335,13 +337,13 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     public void MarkAsRead() => IsRead = true;
 
-    private static PollViewModel? CreatePollViewModel(PollDto pollDto)
+    private static PollViewModel? CreatePollViewModel(PollDto pollDto, ChatContext? context = null)
     {
         try
         {
             var sp = App.Current.Services;
             var userId = sp.GetRequiredService<IAuthManager>().Session.UserId ?? 0;
-            return userId == 0 ? null : new PollViewModel(pollDto, userId, sp.GetRequiredService<IApiClientService>());
+            return userId == 0 ? null : new PollViewModel(pollDto, userId, sp.GetRequiredService<IApiClientService>(), context);
         }
         catch { return null; }
     }

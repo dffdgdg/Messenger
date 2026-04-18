@@ -1,5 +1,7 @@
-﻿using MessengerDesktop.ViewModels.Chat.Managers;
+﻿using MessengerDesktop.Services.Platform;
+using MessengerDesktop.ViewModels.Chat.Managers;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -7,17 +9,22 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader) : ChatFeatureHandler(context)
+public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader, IPlatformService platformService) : ChatFeatureHandler(context)
 {
     [ObservableProperty] public partial UserDto? ContactUser { get; set; }
     [ObservableProperty] public partial bool IsContactOnline { get; set; }
     [ObservableProperty] public partial string? ContactLastSeen { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FilteredMembers))]
     public partial string MemberSearchQuery { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial string PollSearchQuery { get; set; } = string.Empty;
+
     public ObservableCollection<UserDto> FilteredMembers { get; } = [];
+    public ObservableCollection<MessageViewModel> FilteredPolls { get; } = [];
+
+    private IReadOnlyList<MessageViewModel> _allPolls = [];
 
     public bool IsInfoPanelOpen
     {
@@ -34,6 +41,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     public bool IsGroupChat => Ctx.Chat?.Type is ChatType.Chat or ChatType.Department;
 
     public string InfoPanelTitle => IsContactChat ? "Информация о пользователе" : "Информация о группе";
+
     public string InfoPanelSubtitle => GetInfoPanelSubtitle();
 
     private string GetInfoPanelSubtitle()
@@ -59,7 +67,20 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     public string? ContactUsername => ContactUser?.Username;
     public string? ContactDepartment => ContactUser?.Department;
 
+    #region Property change handlers
+
     partial void OnMemberSearchQueryChanged(string value) => UpdateFilteredMembers();
+    partial void OnPollSearchQueryChanged(string value) => UpdateFilteredPolls();
+
+    #endregion
+
+    #region Members
+
+    public void OnMembersSectionOpened()
+    {
+        MemberSearchQuery = string.Empty;
+        UpdateFilteredMembers();
+    }
 
     private void UpdateFilteredMembers()
     {
@@ -87,6 +108,48 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         }
     }
 
+    #endregion
+
+    #region Polls
+
+    public void OnPollsSectionOpened(IEnumerable<MessageViewModel> polls)
+    {
+        _allPolls = [.. polls];
+        PollSearchQuery = string.Empty;
+        UpdateFilteredPolls();
+    }
+
+    public void SetPolls(IReadOnlyList<MessageViewModel> polls)
+    {
+        _allPolls = polls;
+        UpdateFilteredPolls();
+    }
+
+    private void UpdateFilteredPolls()
+    {
+        FilteredPolls.Clear();
+
+        var query = PollSearchQuery?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrEmpty(query))
+        {
+            foreach (var m in _allPolls)
+                FilteredPolls.Add(m);
+            return;
+        }
+
+        var lower = query.ToLowerInvariant();
+        foreach (var m in _allPolls)
+        {
+            if (m.Content?.Contains(lower, StringComparison.OrdinalIgnoreCase) == true)
+                FilteredPolls.Add(m);
+        }
+    }
+
+    #endregion
+
+    #region Hub subscription
+
     public void Subscribe()
     {
         Ctx.Hub.UserStatusChanged += OnUserStatusChanged;
@@ -94,7 +157,12 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         Ctx.Hub.MemberJoined += OnMemberJoined;
         Ctx.Hub.MemberLeft += OnMemberLeft;
         Ctx.Members.CollectionChanged += OnMembersCollectionChanged;
+        UpdateFilteredMembers();
     }
+
+    #endregion
+
+    #region Contact
 
     public async Task LoadContactUserAsync()
     {
@@ -118,7 +186,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         try
         {
-            var profileResult = await Ctx.Api.GetAsync<UserDto>(ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
+            var profileResult = await Ctx.Api.GetAsync<UserDto>(
+                ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
 
             if (profileResult is not { Success: true, Data: not null }) return;
 
@@ -172,7 +241,12 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     private async Task CopyUsername()
     {
         if (string.IsNullOrEmpty(ContactUsername)) return;
+        await platformService.CopyToClipboardAsync(ContactUsername);
     }
+
+    #endregion
+
+    #region Hub event handlers
 
     private void OnUserStatusChanged(int userId, bool isOnline)
     {
@@ -270,11 +344,9 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         Dispatcher.UIThread.Post(() =>
         {
             var member = Ctx.Members.FirstOrDefault(m => m.Id == userId);
-            if (member != null)
-            {
-                Ctx.Members.Remove(member);
-                UpdateFilteredMembers();
-            }
+            if (member == null) return;
+            Ctx.Members.Remove(member);
+            UpdateFilteredMembers();
         });
     }
 
@@ -283,6 +355,10 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         OnPropertyChanged(nameof(InfoPanelSubtitle));
         UpdateFilteredMembers();
     }
+
+    #endregion
+
+    #region Helpers
 
     internal static string? FormatLastSeen(UserDto contact)
     {
@@ -314,6 +390,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         OnPropertyChanged(nameof(ContactLastSeen));
         OnPropertyChanged(nameof(IsContactOnline));
     }
+
+    #endregion
 
     [RelayCommand]
     public void Toggle() => IsInfoPanelOpen = !IsInfoPanelOpen;

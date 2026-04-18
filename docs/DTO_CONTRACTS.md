@@ -79,6 +79,12 @@
 }
 ```
 
+> ⚠️ `soundsEnabled` присутствует в DTO, но **не персистируется в БД** (отсутствует в модели `UserSetting`).
+> Используется только на клиентской стороне. Серверная персистентность — TODO.
+
+> ⚠️ `notificationsEnabled` в модели `UserSetting` — `bool` (non-nullable),
+> в `UserDto` — `bool?` (nullable). При маппинге учитывать возможный null.
+
 ### CreateUserDto
 ```json
 {
@@ -90,6 +96,12 @@
   "departmentId": "int|null"
 }
 ```
+
+### ResetPasswordAdminDto
+```json
+{ "newPassword": "string" }
+```
+> Используется в `POST /api/admin/users/{id}/reset-password` (только роль Admin).
 
 ### AvatarResponseDto
 ```json
@@ -173,6 +185,7 @@
   "voiceDurationSeconds": null,
   "files": []
 }
+```
 
 ### MessageDto
 ```json
@@ -215,8 +228,9 @@
 }
 ```
 
-**Вычисляемое свойство `showSenderName`:**
-- `true` если предыдущее сообщение от другого отправителя ИЛИ разница > 5 минут
+**Вычисляемое свойство `isPrevSameSender`:**
+- `true` если предыдущее сообщение от того же отправителя И разница < 5 минут
+- Используется для группировки сообщений в UI (скрытие аватара/имени)
 
 ### MessageReplyPreviewDto
 ```json
@@ -310,7 +324,7 @@
   "userId": 0
 }
 ```
-> `userId` перезаписывается сервером из JWT
+> `userId` перезаписывается сервером из JWT — клиент может передавать `0`.
 
 ---
 
@@ -320,7 +334,7 @@
 ```json
 { "chatId": 1, "messageId": 100 }
 ```
-> `messageId = null` → отметить весь чат прочитанным
+> `messageId = null` → отметить весь чат прочитанным.
 
 ### ReadReceiptResponseDto
 ```json
@@ -423,10 +437,12 @@
   "senderName": "Петров Иван",
   "preview": "Привет!",
   "type": "message|poll|mention"
-  }
+}
 ```
 
-> `type = "mention"` используется для сообщений, где текущий пользователь упомянут через `@username`.
+> `type = "mention"` — текущий пользователь упомянут через `@username` в сообщении.
+
+---
 
 ## Enums (строковые значения)
 

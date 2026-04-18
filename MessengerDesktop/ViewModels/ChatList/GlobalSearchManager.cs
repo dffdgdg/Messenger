@@ -250,7 +250,7 @@ public sealed partial class GlobalSearchManager(
             if (ct.IsCancellationRequested) return;
             await ExecuteSearchAsync(query, ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) {/* Игнорируем отмену, вызванную новым поиском */ }
     }
 
     public async Task ExecuteSearchAsync(string query, CancellationToken ct = default)

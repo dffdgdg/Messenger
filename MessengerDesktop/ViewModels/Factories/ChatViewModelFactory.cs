@@ -19,5 +19,5 @@ public class ChatViewModelFactory(IApiClientService apiClient, IAuthManager auth
 {
     public ChatViewModel Create(int chatId, ChatsViewModel parent) =>
         new(chatId, parent, parent.Parent, apiClient, authManager, chatInfoPanelStateStore, notificationService, notificationApiService,
-            dialogService, globalHub, fileDownloadService, platformService.MainWindow?.StorageProvider, cacheService, audioPlayer);
+            dialogService, globalHub, fileDownloadService, platformService, platformService.MainWindow?.StorageProvider, cacheService, audioPlayer);
 }

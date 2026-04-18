@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -10,8 +9,11 @@ namespace MessengerDesktop.ViewModels.Chat;
 public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
-    public event Action<PollDto>? ServerStateApplied;
+    private readonly ChatContext? _chatContext;
 
+    public event Action<PollDto>? ServerStateApplied;
+    public event Action<double>? SizeChanged;
+    internal void NotifySizeChanged(double delta) => SizeChanged?.Invoke(delta);
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
     [ObservableProperty] public partial bool CanVote { get; set; } = true;
@@ -23,9 +25,10 @@ public partial class PollViewModel : BaseViewModel
     public int UserId { get; }
     public bool HasSelection => Options.Any(o => o.IsSelected);
 
-    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient)
+    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient, ChatContext? chatContext = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+        _chatContext = chatContext;
 
         PollId = poll.Id;
         UserId = userId;
@@ -39,7 +42,10 @@ public partial class PollViewModel : BaseViewModel
         {
             opt.PropertyChanged += OnOptionPropertyChanged;
         }
-
+        if (chatContext != null)
+        {
+            SizeChanged += delta => chatContext.NotifyPollSizeChanged(delta);
+        }
         ApplySelectedOptions(poll.SelectedOptionIds);
         CanVote = poll.CanVote;
         HasVoted = !poll.CanVote;
@@ -127,24 +133,11 @@ public partial class PollViewModel : BaseViewModel
     private async Task Vote()
     {
         var selectedIds = Options.Where(o => o.IsSelected).Select(o => o.Id).ToList();
-
-        if (selectedIds.Count == 0)
-        {
-            ErrorMessage = "Необходимо выбрать хотя бы один вариант";
-            return;
-        }
+        if (selectedIds.Count == 0) { ErrorMessage = "Необходимо выбрать хотя бы один вариант"; return; }
 
         await SafeExecuteAsync(async () =>
         {
-            Debug.WriteLine($"[Poll] Voting: PollId={PollId}, Options=[{string.Join(", ", selectedIds)}]");
-
-            var voteDto = new PollVoteDto
-            {
-                PollId = PollId,
-                UserId = UserId,
-                OptionIds = selectedIds
-            };
-
+            var voteDto = new PollVoteDto { PollId = PollId, UserId = UserId, OptionIds = selectedIds };
             var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Polls.Vote, voteDto);
 
             if (result is { Success: true, Data: not null })
@@ -164,8 +157,6 @@ public partial class PollViewModel : BaseViewModel
     {
         await SafeExecuteAsync(async () =>
         {
-            Debug.WriteLine($"[Poll] Cancelling vote: PollId={PollId}");
-
             var voteDto = new PollVoteDto
             {
                 PollId = PollId,

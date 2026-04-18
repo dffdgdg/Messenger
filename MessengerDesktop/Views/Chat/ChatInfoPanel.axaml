@@ -354,9 +354,8 @@
 								</StackPanel>
 
 							</StackPanel>
-							<!-- конец !IsInfoSectionOpen для контакта -->
 
-							<!-- Открытое состояние: только контент секции -->
+							<!-- Открытое состояние-->
 							<StackPanel IsVisible="{Binding IsInfoSectionOpen}"
 										Margin="16,8,16,0"
 										Spacing="4">
@@ -459,16 +458,9 @@
 								</StackPanel>
 
 							</StackPanel>
-							<!-- конец IsInfoSectionOpen для контакта -->
-
 						</StackPanel>
-						<!-- конец Contact Chat -->
-
-
-						<!-- ==================== GROUP CHAT ==================== -->
 						<StackPanel IsVisible="{Binding IsGroupChat}" Spacing="0">
-
-							<!-- Закрытое состояние: шапка + настройки + медиа-кнопки + участники + выход -->
+							<!-- Закрытое состояние -->
 							<StackPanel IsVisible="{Binding !IsInfoSectionOpen}" Spacing="0">
 
 								<StackPanel Margin="16,20,16,16" Spacing="12">
@@ -788,34 +780,60 @@
 									</StackPanel>
 								</StackPanel>
 
-								<StackPanel IsVisible="{Binding ShowPollsSection}">
-									<ItemsControl ItemsSource="{Binding PollMessages}">
+								<StackPanel IsVisible="{Binding ShowPollsSection}" Spacing="8">
+
+									<controls:SearchBox SearchText="{Binding PollSearchQuery, Mode=TwoWay}"
+														Watermark="Поиск по вопросам..."
+														Margin="0,0,0,4"/>
+
+									<ItemsControl ItemsSource="{Binding FilteredPolls}">
 										<ItemsControl.ItemTemplate>
 											<DataTemplate x:DataType="vm:MessageViewModel">
 												<Button Classes="InfoRow"
 														Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
 														CommandParameter="{Binding}">
-													<Grid ColumnDefinitions="Auto,*">
+													<Grid ColumnDefinitions="Auto,*" Margin="0,2">
+
 														<Border Width="36" Height="36"
 																CornerRadius="8"
 																Background="{DynamicResource SurfaceBrush}"
 																VerticalAlignment="Center">
 															<PathIcon Data="{StaticResource PollIcon}"
 																	  Width="18" Height="18"
-																	  Foreground="{DynamicResource TextSecondary}"
+																	  Foreground="{DynamicResource Accent}"
 																	  HorizontalAlignment="Center"
 																	  VerticalAlignment="Center"/>
 														</Border>
+
 														<StackPanel Grid.Column="1"
 																	VerticalAlignment="Center"
 																	Margin="10,0,0,0"
-																	Spacing="2">
-															<TextBlock Text="{Binding SenderName}"
+																	Spacing="3">
+
+															<!-- Content — это и есть вопрос опроса -->
+															<TextBlock Text="{Binding Content}"
 																	   FontSize="13"
-																	   FontWeight="Medium"/>
-															<TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
-																	   FontSize="11"
-																	   Foreground="{DynamicResource TextMuted}"/>
+																	   FontWeight="Medium"
+																	   TextTrimming="CharacterEllipsis"
+																	   MaxLines="2"
+																	   TextWrapping="Wrap"/>
+
+															<StackPanel Orientation="Horizontal" Spacing="4">
+																<TextBlock Text="{Binding SenderName}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource Accent}"
+																		   IsVisible="{Binding SenderName,
+																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																<TextBlock Text="·"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMuted}"
+																		   IsVisible="{Binding SenderName,
+																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																<TextBlock Text="{Binding CreatedAt,
+																StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+																FontSize="11"
+																Foreground="{DynamicResource TextMuted}"/>
+															</StackPanel>
 														</StackPanel>
 													</Grid>
 												</Button>
@@ -824,17 +842,28 @@
 									</ItemsControl>
 
 									<StackPanel Classes="EmptyState"
-												IsVisible="{Binding !PollMessages.Count}">
+												IsVisible="{Binding !FilteredPolls.Count}">
 										<PathIcon Data="{StaticResource PollIcon}"
-												  Width="32" Height="32"
+												  Width="28" Height="28"
 												  Foreground="{DynamicResource TextMuted}"
+												  Opacity="0.4"
 												  HorizontalAlignment="Center"/>
 										<TextBlock Text="Нет опросов"
 												   FontSize="13"
 												   Foreground="{DynamicResource TextMuted}"
 												   HorizontalAlignment="Center"
-												   Margin="0,8,0,0"/>
+												   Margin="0,6,0,0"
+												   IsVisible="{Binding PollSearchQuery,
+												   Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+										<TextBlock Text="Ничего не найдено"
+												   FontSize="13"
+												   Foreground="{DynamicResource TextMuted}"
+												   HorizontalAlignment="Center"
+												   Margin="0,6,0,0"
+												   IsVisible="{Binding PollSearchQuery,
+												   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 									</StackPanel>
+
 								</StackPanel>
 
 								<StackPanel IsVisible="{Binding ShowPinnedSection}" Spacing="4">
@@ -898,19 +927,11 @@
 								</StackPanel>
 
 								<StackPanel IsVisible="{Binding ShowMembersSection}" Spacing="8">
-									<Grid ColumnDefinitions="Auto,*">
-										<PathIcon Data="{StaticResource SearchIcon}"
-												  Width="14" Height="14"
-												  Foreground="{DynamicResource TextMuted}"
-												  VerticalAlignment="Center"
-												  Margin="8,0,0,0"/>
-										<TextBox Grid.Column="1"
-												 Classes="SearchField"
-												 PlaceholderText="Поиск участников..."
-												 Text="{Binding MemberSearchQuery, Mode=TwoWay}"
-												 Margin="-20,0,0,0"
-												 Padding="28,6,8,6"/>
-									</Grid>
+
+									<!-- SearchBox вместо кастомного поля -->
+									<controls:SearchBox SearchText="{Binding MemberSearchQuery, Mode=TwoWay}"
+														Watermark="Поиск участников..."
+														Margin="0,0,0,4"/>
 
 									<ItemsControl ItemsSource="{Binding FilteredMembers}">
 										<ItemsControl.ItemTemplate>
@@ -918,7 +939,7 @@
 												<Button Classes="MemberRow"
 														Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenProfileCommand}"
 														CommandParameter="{Binding Id}">
-													<Grid ColumnDefinitions="Auto,*">
+													<Grid ColumnDefinitions="Auto,*" Margin="0,2">
 														<controls:AvatarControl Classes="Medium"
 																				Source="{Binding Avatar}"
 																				DisplayName="{Binding DisplayName}"
@@ -926,15 +947,30 @@
 														<StackPanel Grid.Column="1"
 																	VerticalAlignment="Center"
 																	Margin="10,0,0,0"
-																	Spacing="1">
+																	Spacing="2">
 															<TextBlock Text="{Binding DisplayName}"
 																	   FontSize="14"
 																	   TextTrimming="CharacterEllipsis"/>
-															<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-																	   FontSize="11"
-																	   Foreground="{DynamicResource TextMuted}"
-																	   TextTrimming="CharacterEllipsis"
-																	   IsVisible="{Binding Username, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+															<StackPanel Orientation="Horizontal"
+																		Spacing="4">
+																<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMuted}"
+																		   TextTrimming="CharacterEllipsis"
+																		   IsVisible="{Binding Username,
+																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																<TextBlock Text="·"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMuted}"
+																		   IsVisible="{Binding Department,
+																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+																<TextBlock Text="{Binding Department}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMuted}"
+																		   TextTrimming="CharacterEllipsis"
+																		   IsVisible="{Binding Department,
+																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+															</StackPanel>
 														</StackPanel>
 													</Grid>
 												</Button>
@@ -942,13 +978,30 @@
 										</ItemsControl.ItemTemplate>
 									</ItemsControl>
 
+									<!-- Пустые состояния -->
 									<StackPanel Classes="EmptyState"
 												IsVisible="{Binding !FilteredMembers.Count}">
+										<PathIcon Data="{StaticResource SearchIcon}"
+												  Width="28" Height="28"
+												  Foreground="{DynamicResource TextMuted}"
+												  Opacity="0.4"
+												  HorizontalAlignment="Center"/>
+										<TextBlock Text="Нет участников"
+												   FontSize="13"
+												   Foreground="{DynamicResource TextMuted}"
+												   HorizontalAlignment="Center"
+												   Margin="0,6,0,0"
+												   IsVisible="{Binding MemberSearchQuery,
+												   Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
 										<TextBlock Text="Никого не найдено"
 												   FontSize="13"
 												   Foreground="{DynamicResource TextMuted}"
-												   HorizontalAlignment="Center"/>
+												   HorizontalAlignment="Center"
+												   Margin="0,6,0,0"
+												   IsVisible="{Binding MemberSearchQuery,
+												   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 									</StackPanel>
+
 								</StackPanel>
 							</StackPanel>
 

@@ -15,7 +15,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:Name="MainWindowRoot"
         Icon="/Assets/avalonia-logo.ico"
-        Title=""
+        Title="ВнутрьСеть"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1"
         Background="{DynamicResource PrimaryBG}"
@@ -38,6 +38,7 @@
             <Setter Property="Opacity" Value="1"/>
             <Setter Property="IsHitTestVisible" Value="True"/>
         </Style>
+
         <Style Selector="Border.DialogAnimWrapper">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
@@ -101,6 +102,8 @@
     </Window.Styles>
 
     <Panel>
+
+        <!-- Основной контент -->
         <ContentControl Content="{Binding CurrentViewModel}"
                         Margin="0,48,0,0"
                         ZIndex="0">
@@ -131,66 +134,98 @@
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
+
+        <!-- Drag-зона для MainMenu: только левая и правая колонки -->
         <Grid Height="48"
               VerticalAlignment="Top"
               ZIndex="100"
               ColumnDefinitions="*,Auto,*"
               IsVisible="{Binding IsMainMenuActive}">
 
-            <Grid Grid.Column="0"
-                  PointerPressed="OnTitleBarPointerPressed"
-                  Background="Transparent">
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Spacing="2"
-                            Margin="0,0,4,0">
-                    <Button Classes="NavArrowButton"
-                            ToolTip.Tip="Назад"
-                            Command="{Binding MainMenu.GoBackCommand}"
-                            IsEnabled="{Binding MainMenu.CanGoBack}">
-                        <Path Data="{StaticResource ChevronLeftIcon}"
-                              Fill="{DynamicResource TextPrimary}"
-                              Width="9" Height="15" Stretch="Uniform"/>
-                    </Button>
-                    <Button Classes="NavArrowButton"
-                            ToolTip.Tip="Вперёд"
-                            Command="{Binding MainMenu.GoForwardCommand}"
-                            IsEnabled="{Binding MainMenu.CanGoForward}">
-                        <Path Data="{StaticResource ChevronForwardIcon}"
-                              Fill="{DynamicResource TextPrimary}"
-                              Width="9" Height="15" Stretch="Uniform"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
+            <!-- Левая drag-зона -->
+            <Panel Grid.Column="0"
+                   Background="Transparent"
+                   PointerPressed="OnTitleBarPointerPressed"/>
+
+            <!-- Центральная колонка — пустая, чтобы соответствовать ширине SearchBox -->
+            <Panel Grid.Column="1"
+                   MinWidth="160"
+                   Width="360"
+                   MaxWidth="460"
+                   IsHitTestVisible="False"/>
+
+            <!-- Правая drag-зона -->
+            <Panel Grid.Column="2"
+                   Background="Transparent"
+                   PointerPressed="OnTitleBarPointerPressed"/>
+        </Grid>
+
+        <!-- UI: кнопки навигации + SearchBox -->
+        <Grid Height="48"
+              VerticalAlignment="Top"
+              ZIndex="101"
+              ColumnDefinitions="*,Auto,*"
+              IsVisible="{Binding IsMainMenuActive}">
+
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Spacing="2"
+                        Margin="0,0,4,0">
+                <Button Classes="NavArrowButton"
+                        ToolTip.Tip="Назад"
+                        Command="{Binding MainMenu.GoBackCommand}"
+                        IsEnabled="{Binding MainMenu.CanGoBack}">
+                    <Path Data="{StaticResource ChevronLeftIcon}"
+                          Fill="{DynamicResource TextPrimary}"
+                          Width="9" Height="15" Stretch="Uniform"/>
+                </Button>
+                <Button Classes="NavArrowButton"
+                        ToolTip.Tip="Вперёд"
+                        Command="{Binding MainMenu.GoForwardCommand}"
+                        IsEnabled="{Binding MainMenu.CanGoForward}">
+                    <Path Data="{StaticResource ChevronForwardIcon}"
+                          Fill="{DynamicResource TextPrimary}"
+                          Width="9" Height="15" Stretch="Uniform"/>
+                </Button>
+            </StackPanel>
 
             <controls:SearchBox Grid.Column="1"
                                 x:Name="GlobalSearchBox"
                                 MinWidth="160"
                                 Width="360"
                                 MaxWidth="460"
-                                VerticalAlignment="Center"
+                                VerticalAlignment="Bottom"
                                 SearchText="{Binding MainMenu.SearchText, Mode=TwoWay}"
                                 Watermark="{Binding MainMenu.SearchManager.SelectedScope,
-                                Converter={conv:Converter Name=SearchScopeToWatermark}}"/>
+                                    Converter={conv:Converter Name=SearchScopeToWatermark}}"/>
+
             <Grid Grid.Column="2"
-                  PointerPressed="OnTitleBarPointerPressed"
-                  Background="Transparent"
+                  IsHitTestVisible="False"
                   Margin="0,0,138,0"/>
         </Grid>
+
+        <!-- Drag-зона для НЕ MainMenu -->
         <Panel Height="48"
                VerticalAlignment="Top"
                ZIndex="99"
                PointerPressed="OnTitleBarPointerPressed"
                Background="Transparent"
                IsVisible="{Binding !IsMainMenuActive}"/>
+
+        <!-- Уведомления -->
         <controls:NotificationOverlay ZIndex="9000"/>
+
+        <!-- Overlay диалогов -->
         <Border x:Name="DialogOverlay"
                 Classes="DialogOverlay"
                 Background="#80000000"
                 ZIndex="10000"
                 IsVisible="{Binding IsDialogVisible}"
                 PointerPressed="OnDialogBackgroundPressed"/>
+
+        <!-- Контейнер диалогов -->
         <Border x:Name="DialogAnimWrapper"
                 Classes="DialogAnimWrapper"
                 HorizontalAlignment="Center"

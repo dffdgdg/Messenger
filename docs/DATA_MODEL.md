@@ -8,38 +8,52 @@
 - **Timestamps**: `timestamp without time zone`
 - **ID**: PostgreSQL sequences (`nextval`)
 
+---
+
 ## PostgreSQL Enum Types
-| PG тип | C# enum | Значения |
-|--------|---------|---------|
-| `chat_role` | `ChatRole` | Member, Admin, Owner |
-| `chat_type` | `ChatType` | Chat, Department, Contact, DepartmentHeads |
-| `theme` | `Theme` | light, dark, system |
-| `system_event_type` | `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged |
+
+| PG тип | C# enum | PG значения |
+|--------|---------|-------------|
+| `chat_role` | `ChatRole` | `member`, `admin`, `owner` |
+| `chat_type` | `ChatType` | `Chat`, `Department`, `Contact`, `department_heads` |
+| `theme` | `Theme` | `light`, `dark`, `system` (через `NpgsqlSnakeCaseNameTranslator`) |
+| `system_event_type` | `SystemEventType` | `chat_created`, `member_added`, `member_removed`, `member_left`, `role_changed` |
+
+> ⚠️ **Несогласованность в `chat_type`**: значения `Chat`, `Department`, `Contact` хранятся в PascalCase,
+> `department_heads` — в snake_case. Это историческая особенность; изменение требует миграции данных.
+> `theme` и `system_event_type` используют стандартный `NpgsqlSnakeCaseNameTranslator` (явный маппинг отсутствует).
 
 ---
+
 ## EF Migrations (workflow)
+
 1. Установить/обновить инструмент:
-   - `dotnet tool update --global dotnet-ef`
+   ```
+   dotnet tool update --global dotnet-ef
+   ```
 2. Создать миграцию из корня репозитория:
-   - `dotnet ef migrations add InitialSchema --project MessengerAPI --startup-project MessengerAPI`
+   ```
+   dotnet ef migrations add InitialSchema --project MessengerAPI --startup-project MessengerAPI
+   ```
 3. Применить миграцию локально:
-   - `dotnet ef database update --project MessengerAPI --startup-project MessengerAPI`
-4. В Docker миграции применятся автоматически при старте API (`Database.MigrateAsync()`).
+   ```
+   dotnet ef database update --project MessengerAPI --startup-project MessengerAPI
+   ```
+4. В Docker миграции применяются автоматически при старте API (`Database.MigrateAsync()`).
 
 > Порядок важен: сначала `migrations add`, потом `database update`.
-> Если сначала выполнить `database update`, EF покажет `No migrations were applied`, что нормально для текущего состояния БД.
 
-> Для PowerShell не используйте запись вида `<MigrationName>` — символы `<` и `>` там интерпретируются как операторы.
-> Рекомендуемое имя миграции: `InitialSchema`, `AddUserSettings`, `AddPollIndexes` и т.д.
+> Для PowerShell не используйте `<MigrationName>` — символы `<` и `>` интерпретируются как операторы.
+> Рекомендуемые имена: `InitialSchema`, `AddUserSettings`, `AddPollIndexes`.
 
 ### Скрипты (быстрый запуск)
-- PowerShell:
-  - `./scripts/db-migration-add.ps1 -Name InitialSchema`
-  - `./scripts/db-migration-add.ps1 -Name AddPollIndexes -Apply` (создать и сразу применить)
-  - `./scripts/db-update.ps1`
+```powershell
+./scripts/db-migration-add.ps1 -Name InitialSchema
+./scripts/db-migration-add.ps1 -Name AddPollIndexes -Apply   # создать и применить
+./scripts/db-update.ps1
+```
 
 ---
-
 
 ## Сущности
 
@@ -61,9 +75,10 @@
 
 **NotMapped**: `DisplayName` → `Surname + Name + Midname`
 
-> ⚠️ `UserRole` (User/Head/Admin) **не хранится** в таблице. Роль вычисляется динамически на основе принадлежности к отделу и статуса руководителя. Хранение в БД — под вопросом (TODO).
+> ⚠️ `UserRole` (User/Head/Admin) **не хранится** в таблице.
+> Роль вычисляется динамически: `department_id = 1` → Admin, `departments.head_id = userId` → Head, иначе → User.
 
-**Связи**: `ChatMembers` (1:N), `Chats` (1:N, CreatedById), `Department` (N:1), `Departments` (1:N, HeadId), `Messages` (1:N), `PollVotes` (1:N), `UserSetting` (1:1), `RefreshTokens` (1:N)
+**Связи**: `ChatMembers` (1:N), `Chats` (1:N via CreatedById), `Department` (N:1), `Departments` (1:N via HeadId), `Messages` (1:N), `PollVotes` (1:N), `UserSetting` (1:1), `RefreshTokens` (1:N)
 
 ---
 
@@ -115,14 +130,19 @@
 | forwarded_from_message_id | int | FK → messages, SET NULL | Self-ref |
 | is_system_message | bool | default false | — |
 | system_event_type | system_event_type | nullable | — |
-| target_user_id | int | FK → users, SET NULL | Для системных |
-| is_pinned | bool | default false | Закреплено ли сообщение |
-| pinned_at | timestamp | nullable | Когда закрепили |
-| pinned_by_user_id | int | FK → users, SET NULL | Кто закрепил |
+| target_user_id | int | FK → users, SET NULL | Для системных сообщений |
+| is_pinned | bool | default false | — |
+| pinned_at | timestamp | nullable | — |
+| pinned_by_user_id | int | FK → users, SET NULL | — |
 
 **NotMapped**: `IsVoiceMessage` → `VoiceMessage != null`
 
-**Индексы**: `idx_messages_chatid_createdat` (пагинация), `idx_messages_reply_to_message_id`, `idx_messages_forwarded_from_message_id`, `idx_messages_target_user_id`, `idx_messages_chatid_ispinned_pinnedat` (быстрая выборка закрепленных)
+**Индексы**:
+- `idx_messages_chatid_createdat` — пагинация
+- `idx_messages_reply_to_message_id`
+- `idx_messages_forwarded_from_message_id`
+- `idx_messages_target_user_id`
+- `idx_messages_chatid_ispinned_pinnedat` — выборка закреплённых
 
 **Связи**: `Chat` (N:1), `Sender` (N:1), `TargetUser` (N:1), `ReplyToMessage` (N:1, self-ref), `ForwardedFromMessage` (N:1, self-ref), `VoiceMessage` (1:0..1), `MessageFiles` (1:N), `Polls` (1:N)
 
@@ -149,7 +169,7 @@ PK = FK → messages (1:1, CASCADE)
 | duration_seconds | double | NOT NULL | — |
 | file_path | text | NOT NULL | — |
 | file_name | varchar(255) | NOT NULL | — |
-| content_type | varchar(100) | default "audio/wav" | — |
+| content_type | varchar(100) | default `audio/wav` | — |
 | file_size | bigint | NOT NULL | Байты |
 
 ---
@@ -177,7 +197,7 @@ PK = FK → messages (1:1, CASCADE)
 | id | int | PK, auto-seq | — |
 | poll_id | int | FK → polls | — |
 | option_text | varchar(50) | NOT NULL | — |
-| position | int | NOT NULL | Порядок |
+| position | int | NOT NULL | Порядок отображения |
 
 ---
 
@@ -219,20 +239,21 @@ PK = FK → messages (1:1, CASCADE)
 |---------|-----|-------------|----------|
 | id | int | PK, auto-seq | — |
 | user_id | int | FK → users, CASCADE | — |
-| token_hash | varchar(128) | NOT NULL | SHA-256 хеш |
-| jwt_id | varchar(64) | NOT NULL | Jti access-токена |
+| token_hash | varchar(128) | NOT NULL | SHA-256 хеш токена |
+| jwt_id | varchar(64) | NOT NULL | `jti` access-токена |
 | created_at | timestamp | NOT NULL | — |
 | expires_at | timestamp | NOT NULL | — |
 | used_at | timestamp | nullable | null = не использован |
 | revoked_at | timestamp | nullable | null = не отозван |
 | replaced_by_token_id | int | FK → refresh_tokens, SET NULL | Следующий в цепочке |
-| family_id | varchar(64) | NOT NULL | ID семейства |
+| family_id | varchar(64) | NOT NULL | ID семейства токенов |
 
 **NotMapped**: `IsActive` → `UsedAt == null && RevokedAt == null && ExpiresAt > UtcNow`
 
 **Индексы**: `idx_refresh_tokens_token_hash`, `idx_refresh_tokens_user_id`, `idx_refresh_tokens_family_id`, `idx_refresh_tokens_expires_at`
 
-> ⚠️ Сам токен **не хранится** — только SHA-256 хеш. При повторном использовании токена вся семья (`family_id`) отзывается целиком.
+> ⚠️ Сам токен **не хранится** — только SHA-256 хеш.
+> При повторном использовании токена вся семья (`family_id`) отзывается целиком.
 
 ---
 
@@ -242,8 +263,11 @@ PK = FK → messages (1:1, CASCADE)
 | Колонка | Тип | Ограничения | Описание |
 |---------|-----|-------------|----------|
 | user_id | int | PK, FK → users | — |
-| theme | theme | nullable | — |
 | notifications_enabled | bool | default true | — |
+
+> ⚠️ `theme` и `sounds_enabled` отсутствуют в таблице.
+> `theme` передаётся в `UserDto` но **не персистируется на сервере** (TODO).
+> `sounds_enabled` — аналогично, только в DTO, хранится локально на клиенте.
 
 ---
 
@@ -259,14 +283,15 @@ PK = FK → messages (1:1, CASCADE)
 ## Особенности модели
 
 ### Partial Classes
-Модели `User`, `Chat`, `ChatMember`, `UserSetting` разделены на partial:
-- Основной файл — колонки и навигации
-- `*.Partial.cs` — enum-свойства (`Type`, `Role`, `Theme`) и `[NotMapped]` свойства
+Модели `User`, `Chat`, `ChatMember`, `UserSetting` разделены на partial-файлы:
+- Основной файл — колонки и навигационные свойства
+- `*.Partial.cs` — enum-свойства (`Type`, `Role`, `Theme`) и `[NotMapped]` вычисляемые свойства
 
 ### Soft Delete
-`Message.is_deleted = true` — записи не удаляются физически.
+`Message.is_deleted = true` — записи не удаляются физически из БД.
 
 ### Каскады
+
 | Отношение | Поведение |
 |-----------|-----------|
 | User → RefreshToken | CASCADE |
@@ -275,6 +300,18 @@ PK = FK → messages (1:1, CASCADE)
 | Остальные FK | SET NULL |
 
 ### Self-referencing
-- `Message` → `Message` (reply, forward)
-- `Department` → `Department` (иерархия)
-- `RefreshToken` → `RefreshToken` (цепочка ротации)
+
+| Модель | Поле | Назначение |
+|--------|------|-----------|
+| `Message` | `reply_to_message_id` | Цитирование |
+| `Message` | `forwarded_from_message_id` | Пересылка |
+| `Department` | `parent_department_id` | Иерархия отделов |
+| `RefreshToken` | `replaced_by_token_id` | Цепочка ротации |
+
+### Известные ограничения
+
+| Поле | Ситуация |
+|------|---------|
+| `sounds_enabled` | Только в `UserDto`, хранится локально на клиенте. В БД отсутствует (TODO) |
+| `chat_type` PG enum | Значения `Chat`/`Department`/`Contact` в PascalCase, `department_heads` в snake_case — историческая несогласованность |
+``

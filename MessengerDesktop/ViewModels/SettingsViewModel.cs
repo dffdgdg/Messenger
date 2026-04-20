@@ -14,6 +14,7 @@ public partial class SettingsViewModel : BaseViewModel
     private readonly IApiClientService _apiClient;
     private readonly ICacheMaintenanceService _cacheMaintenanceService;
     private readonly ISettingsService _settingsService;
+    private readonly IThemeService _themeService;
     private readonly Timer _autoSaveTimer;
     private readonly int _userId;
     private bool _isSaving;
@@ -24,11 +25,13 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] public partial bool NotificationsEnabled { get; set; } = true;
     [ObservableProperty] public partial bool CanBeFoundInSearch { get; set; } = true;
 
-    public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient, ICacheMaintenanceService cacheMaintenanceService, ISettingsService settingsService)
+    public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient,
+        ICacheMaintenanceService cacheMaintenanceService, ISettingsService settingsService, IThemeService themeService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _cacheMaintenanceService = cacheMaintenanceService ?? throw new ArgumentNullException(nameof(cacheMaintenanceService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _userId = mainMenuViewModel?.UserId ?? throw new ArgumentNullException(nameof(mainMenuViewModel));
 
         _autoSaveTimer = new Timer(async _ => await SaveSettingsAsync(), null, Timeout.Infinite, Timeout.Infinite);
@@ -141,6 +144,7 @@ public partial class SettingsViewModel : BaseViewModel
     {
         if (_isSaving || !_isLoaded) return;
         ApplyTheme(value);
+        _themeService.SaveTheme(value);
         ScheduleAutoSave();
     }
 

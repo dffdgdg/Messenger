@@ -10,6 +10,9 @@ public interface IAccessControlService
     Task<Result> CheckIsOwnerAsync(int userId, int chatId);
     Task<Result> CheckIsAdminAsync(int userId, int chatId);
     Task<List<int>> GetUserChatIdsAsync(int userId);
+    Task<List<int>> GetChatMemberIdsAsync(int chatId);
+    Task<ChatType> GetChatTypeAsync(int chatId);
+
 }
 
 public sealed partial class AccessControlService(MessengerDbContext context, ICacheService cache,
@@ -67,8 +70,7 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
         if (_requestCache.TryGetValue(key, out var requestCached))
             return requestCached;
 
-        var member = await cache.GetMembershipAsync(userId, chatId, () =>
-            context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
+        var member = await cache.GetMembershipAsync(userId, chatId, () => context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
 
         _requestCache[key] = member;
 
@@ -76,9 +78,11 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
 
         return member;
     }
+    public async Task<List<int>> GetChatMemberIdsAsync(int chatId) => await context.ChatMembers.Where(m => m.ChatId == chatId).Select(m => m.UserId).ToListAsync();
 
+    public async Task<ChatType> GetChatTypeAsync(int chatId) => await context.Chats.Where(c => c.Id == chatId).Select(c => c.Type).FirstOrDefaultAsync();
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Доступ запрещён: пользователь {UserId} к чату {ChatId}")]
     private partial void LogAccessDenied(int userId, int chatId);

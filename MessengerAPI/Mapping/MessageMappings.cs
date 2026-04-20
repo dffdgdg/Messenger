@@ -80,6 +80,7 @@ public static class MessageMappings
             SystemEventType.MemberRemoved => $"{actor} удалил(а) {target}",
             SystemEventType.MemberLeft => $"{actor} покинул(а) группу",
             SystemEventType.RoleChanged => $"{actor} изменил(а) роль участника {target}",
+            SystemEventType.CallStarted => $"{actor} начал(а) звонок",
             _ => string.IsNullOrWhiteSpace(fallbackContent) ? "Системное сообщение" : fallbackContent
         };
     }

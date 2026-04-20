@@ -13,16 +13,6 @@ public sealed class TokenPair
     public required string JwtId { get; init; }
 }
 
-public interface ITokenService
-{
-    TokenPair GenerateTokenPair(int userId, UserRole? role = null);
-    bool ValidateToken(string token, out int userId);
-    Result<ClaimsPrincipal> GetPrincipalFromExpiredToken(string token);
-    static string HashToken(string token)
-        => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-    TokenValidationParameters GetValidationParameters();
-}
-
 public sealed class TokenService : ITokenService
 {
     private const string SecretPlaceholder = "CHANGE-ME-CONFIGURE-A-REAL-SECRET";
@@ -33,13 +23,9 @@ public sealed class TokenService : ITokenService
     {
         _settings = settings.Value;
 
-        if (string.IsNullOrWhiteSpace(_settings.Secret)
-            || _settings.Secret.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase)
-            || _settings.Secret == SecretPlaceholder)
+        if (string.IsNullOrWhiteSpace(_settings.Secret) || _settings.Secret.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase) || _settings.Secret == SecretPlaceholder)
         {
-            throw new InvalidOperationException(
-                "JWT Secret is not configured. Set 'Jwt:Secret' via environment " +
-                "variable or user-secrets. Do NOT commit secrets to source control.");
+            throw new InvalidOperationException("JWT Secret is not configured. Set 'Jwt:Secret' via environment variable or user-secrets. Do NOT commit secrets to source control.");
         }
 
         if (_settings.Secret.Length < 32)
@@ -129,9 +115,7 @@ public sealed class TokenService : ITokenService
             var handler = new JwtSecurityTokenHandler();
             var principal = handler.ValidateToken(token, validationParameters, out var securityToken);
 
-            if (securityToken is not JwtSecurityToken jwtToken ||
-                !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
-                    StringComparison.InvariantCultureIgnoreCase))
+            if (securityToken is not JwtSecurityToken jwtToken || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
             {
                 return Result<ClaimsPrincipal>.Unauthorized("Недействительный алгоритм токена");
             }
@@ -144,31 +128,24 @@ public sealed class TokenService : ITokenService
         }
     }
 
-    public TokenValidationParameters GetValidationParameters()
+    public TokenValidationParameters GetValidationParameters() => new()
     {
-        return new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = _signingKey,
-            ValidateIssuer = true,
-            ValidIssuer = _settings.Issuer,
-            ValidateAudience = true,
-            ValidAudience = _settings.Audience,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-    }
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = _signingKey,
+        ValidateIssuer = true,
+        ValidIssuer = _settings.Issuer,
+        ValidateAudience = true,
+        ValidAudience = _settings.Audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
 
     public static TokenValidationParameters CreateValidationParameters(IConfiguration config)
     {
         var keyMaterial = config["Jwt:Secret"];
-        if (string.IsNullOrWhiteSpace(keyMaterial)
-            || keyMaterial.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase)
-            || keyMaterial == SecretPlaceholder)
+        if (string.IsNullOrWhiteSpace(keyMaterial) || keyMaterial.StartsWith("CHANGE-ME", StringComparison.OrdinalIgnoreCase) || keyMaterial == SecretPlaceholder)
         {
-            throw new InvalidOperationException(
-                "Jwt:Secret configuration is required. Set via environment " +
-                "variable or user-secrets. Do NOT commit secrets to source control.");
+            throw new InvalidOperationException("Jwt:Secret configuration is required. Set via environment variable or user-secrets. Do NOT commit secrets to source control.");
         }
 
         if (keyMaterial.Length < 32)

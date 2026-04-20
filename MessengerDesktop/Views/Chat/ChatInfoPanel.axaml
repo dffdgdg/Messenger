@@ -569,7 +569,7 @@
 											Command="{Binding OpenPinnedSectionCommand}"
 											IsVisible="{Binding PinnedCount}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
-											<PathIcon Data="{StaticResource PinIcon}"
+											<PathIcon Data="{StaticResource PinStroke}"
 													  Width="18" Height="18"
 													  Foreground="{DynamicResource TextSecondary}"/>
 											<TextBlock Grid.Column="1"

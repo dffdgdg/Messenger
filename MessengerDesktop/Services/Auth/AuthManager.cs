@@ -128,7 +128,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
         Debug.WriteLine("AuthManager: Access token истёк, пробуем refresh...");
 
-        ApiResponse<TokenResponseDto>? refreshResult = null;
+        ApiResponse<TokenResponseDto>? refreshResult;
         try
         {
             refreshResult = await _authService.RefreshTokenAsync(storedToken, storedRefreshToken);
@@ -310,6 +310,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
                 {
                     await _secureStorage.RemoveAsync(SavedUsernameKey);
                 }
+
+                _ = WarmupConnectionAsync();
             }
             else
             {
@@ -331,6 +333,19 @@ public sealed class AuthManager : IAuthManager, IDisposable
         finally
         {
             _operationLock.Release();
+        }
+    }
+    private async Task WarmupConnectionAsync()
+    {
+        try
+        {
+            await Task.Delay(300); // дать время SignalR подключиться
+            await _authService.PingAsync();
+            Debug.WriteLine("AuthManager: Connection warmed up");
+        }
+        catch
+        {
+            // некритично — игнорируем
         }
     }
 

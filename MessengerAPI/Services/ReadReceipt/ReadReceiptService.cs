@@ -11,8 +11,7 @@ public interface IReadReceiptService
     Task<Result<ChatReadInfoDto>> GetChatReadInfoAsync(int userId, int chatId);
 }
 
-public partial class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime,
-    ILogger<ReadReceiptService> logger) : IReadReceiptService
+public partial class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime, ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
     public async Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(int userId, MarkAsReadDto request)
     {
@@ -84,8 +83,7 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
         {
             Count = g.Count(),
             FirstId = g.Min(m => m.Id)
-        })
-        .FirstOrDefaultAsync();
+        }).FirstOrDefaultAsync();
 
         return Result<ChatReadInfoDto>.Success(new ChatReadInfoDto
         {
@@ -182,7 +180,7 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
     };
     #endregion
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}")]
     private partial void LogReadReceipt(int userId, int messageId, int chatId);

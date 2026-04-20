@@ -105,7 +105,6 @@
                     <TextBlock Text="ОТ КОГО"
                                Classes="CategoryHeader"
                                Margin="0"/>
-                    <Border Classes="Section" Padding="4">
                         <controls:FilterAutocomplete
                             SearchText="{Binding SearchManager.SenderSearchText, Mode=TwoWay}"
                             SelectedItem="{Binding SearchManager.SelectedSender, Mode=TwoWay}"
@@ -113,23 +112,19 @@
                             Suggestions="{Binding SearchManager.SenderSuggestions}"
                             Placeholder="Начните вводить имя..."
                             Icon="{StaticResource PersonIcon}"/>
-                    </Border>
 
                     <TextBlock Text="В ЧАТЕ"
                                Classes="CategoryHeader"
                                Margin="0"
                                IsVisible="{Binding SearchManager.IsChatFilterVisible}"/>
-                    <Border Classes="Section"
-                            Padding="4"
-                            IsVisible="{Binding SearchManager.IsChatFilterVisible}">
                         <controls:FilterAutocomplete
                             SearchText="{Binding SearchManager.ChatSearchText, Mode=TwoWay}"
                             SelectedItem="{Binding SearchManager.SelectedChatFilter, Mode=TwoWay}"
                             IsDropdownOpen="{Binding SearchManager.IsChatDropdownOpen, Mode=TwoWay}"
                             Suggestions="{Binding SearchManager.ChatSuggestions}"
                             Placeholder="Начните вводить название..."
-                            Icon="{StaticResource ChatsIcon}"/>
-                    </Border>
+                            Icon="{StaticResource ChatsIcon}"
+                            IsVisible="{Binding SearchManager.IsChatFilterVisible}"/>
 
                     <TextBlock Text="ПЕРИОД"
                                Classes="CategoryHeader"

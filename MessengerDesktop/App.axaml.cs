@@ -13,6 +13,7 @@ using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MessengerDesktop;
 
@@ -50,6 +51,8 @@ public sealed class App : Application, IDisposable
     private static ServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
+
+        services.AddLogging(builder => builder.AddDebug().AddConsole());
 
         services.AddMessengerCoreServices(ApiUrl);
         services.AddMessengerViewModels();

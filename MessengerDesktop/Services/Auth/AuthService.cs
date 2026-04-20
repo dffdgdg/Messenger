@@ -13,6 +13,7 @@ public interface IAuthService
     Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default);
     Task<ApiResponse<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default);
     Task<ApiResponse<object>> RevokeAsync(string token, CancellationToken ct = default);
+    Task PingAsync();
 
     /// <summary>
     /// Локальная проверка: не истёк ли access token.
@@ -23,6 +24,8 @@ public interface IAuthService
 
 public class AuthService(HttpClient httpClient) : IAuthService
 {
+    public async Task PingAsync() => await _httpClient.GetAsync("/");
+
     private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
     private static readonly JwtSecurityTokenHandler TokenHandler = new();
@@ -34,15 +37,11 @@ public class AuthService(HttpClient httpClient) : IAuthService
 
         try
         {
-            // Читаем JWT без валидации подписи — нам нужен только exp
             if (!TokenHandler.CanReadToken(token))
                 return false;
 
             var jwt = TokenHandler.ReadJwtToken(token);
 
-            // Проверяем срок действия с небольшим запасом (30 секунд)
-            // Если до истечения осталось меньше 30 секунд — считаем невалидным,
-            // чтобы refresh произошёл заранее
             const int bufferSeconds = 30;
             return jwt.ValidTo > DateTime.UtcNow.AddSeconds(bufferSeconds);
         }

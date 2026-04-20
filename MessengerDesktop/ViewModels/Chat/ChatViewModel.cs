@@ -3,11 +3,13 @@ using Avalonia.Platform.Storage;
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
+using MessengerDesktop.Services.Call;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerDesktop.ViewModels.Dialog;
+using MessengerShared.DTO.Call;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -54,6 +56,23 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private readonly TaskCompletionSource _initTcs = new();
     private DateTime _lastMarkAsReadTime = DateTime.MinValue;
     private int _composerCaretIndex;
+    private readonly ICallService _callService;
+    private readonly ICallHubConnection _callHub;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
+    public partial bool HasActiveCall { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
+    public partial int ActiveCallParticipantsCount { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsInActiveCall { get; set; }
+
+    public string ActiveCallBannerText => ActiveCallParticipantsCount > 0
+        ? $"Идёт звонок · {ActiveCallParticipantsCount} участн."
+        : "Идёт звонок";
 
     #endregion
 
@@ -188,21 +207,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Init
 
-    public ChatViewModel(
-        int chatId,
-        ChatsViewModel parent,
-        IChatNavigator navigator,
-        IApiClientService apiClient,
-        IAuthManager authManager,
-        IChatInfoPanelStateStore chatInfoPanelStateStore,
-        INotificationService notificationService,
-        IChatNotificationApiService notificationApiService,
-        IDialogService dialogService,
-        IGlobalHubConnection globalHub,
-        IFileDownloadService fileDownloadService,
-        IPlatformService platformService,
-        IStorageProvider? storageProvider = null,
-        ILocalCacheService? cacheService = null,
+    public ChatViewModel(int chatId, ChatsViewModel parent, IChatNavigator navigator, IApiClientService apiClient, IAuthManager authManager,
+        IChatInfoPanelStateStore chatInfoPanelStateStore, INotificationService notificationService, IChatNotificationApiService notificationApiService,
+        IDialogService dialogService, IGlobalHubConnection globalHub, IFileDownloadService fileDownloadService, IPlatformService platformService,
+        ICallService callService, ICallHubConnection callHub, IStorageProvider? storageProvider = null, ILocalCacheService? cacheService = null,
         IAudioPlayerService? audioPlayer = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -211,15 +219,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         var currentUserId = authManager?.Session.UserId ?? 0;
         UserId = currentUserId;
 
-        Context = new ChatContext(
-            chatId, currentUserId,
-            apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
-            dialogService ?? throw new ArgumentNullException(nameof(dialogService)),
-            globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
+        Context = new ChatContext(chatId, currentUserId, apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
+            dialogService ?? throw new ArgumentNullException(nameof(dialogService)), globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
             notificationService ?? throw new ArgumentNullException(nameof(notificationService)),
             notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService)),
-            fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)),
-            cacheService);
+            fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)), cacheService);
 
         Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
         Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
@@ -227,10 +231,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         globalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(
-            chatId, currentUserId, apiClient,
-            () => Context.Members,
-            fileDownloadService, notificationService,
+        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService,
             cacheService, audioPlayer, OpenMentionProfileCommand);
 
         Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
@@ -241,33 +242,44 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Forward = new ChatForwardHandler(Context);
         Typing = new ChatTypingHandler(Context);
         Voice = new ChatVoiceHandler(Context, () => Reply.CancelReply());
-        InfoPanel = new ChatInfoPanelHandler(Context, chatInfoPanelStateStore, MemberLoader,
-                           platformService ?? throw new ArgumentNullException(nameof(platformService)));
+        InfoPanel = new ChatInfoPanelHandler(Context, chatInfoPanelStateStore, MemberLoader, platformService ?? throw new ArgumentNullException(nameof(platformService)));
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(
-            Context, MessageManager,
-            count => UnreadCount = count,
-            OnHubReconnectedAsync);
+        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
 
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
 
         Context.Chat = new ChatDto { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
+        _callService = callService;
+        _callHub = callHub;
+
+        SubscribeCallEvents();
         _ = InitializeAsync();
     }
 
     private async Task InitializeAsync()
     {
+        var sw = Stopwatch.StartNew();
+
         try
         {
             IsInitialLoading = true;
+            Debug.WriteLine($"[ChatVM] Init start chat={Context.ChatId}");
 
-            var chatResult = await Context.Api.GetAsync<ChatDto>(
+            // Фаза 1 — параллельно всё что не зависит друг от друга
+            var chatTask = Context.Api.GetAsync<ChatDto>(
                 ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var readInfoTask = Context.Hub.GetReadInfoAsync(Context.ChatId);
+            var notificationTask = Notification.LoadSettingsAsync(Context.LifetimeToken);
+            var callStateTask = _callHub.GetCallStateAsync(Context.ChatId);
 
+            await Task.WhenAll(chatTask, readInfoTask, notificationTask, callStateTask);
+
+            // Обработка чата
+            var chatResult = chatTask.Result;
             if (chatResult is { Success: true, Data: not null })
             {
                 if (!string.IsNullOrEmpty(chatResult.Data.Avatar))
@@ -280,21 +292,36 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                     $"Не удалось загрузить чат: {chatResult.Error}");
             }
 
-            await LoadPinnedAsync(Context.LifetimeToken, updateBanner: true);
+            // Обработка звонка
+            var callState = callStateTask.Result;
+            if (callState != null)
+            {
+                HasActiveCall = true;
+                ActiveCallParticipantsCount = callState.Participants.Count;
+                IsInActiveCall = _callService.ActiveChatId == Context.ChatId;
+            }
 
-            Context.Members = await MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
+            // Обработка readInfo
+            MessageManager.SetReadInfo(readInfoTask.Result);
 
+            // Фаза 2 — зависит от Context.Chat (нужен тип чата)
+            var membersTask = MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
+            var pinnedTask = LoadPinnedAsync(Context.LifetimeToken, updateBanner: true);
+
+            await Task.WhenAll(membersTask, pinnedTask);
+
+            Context.Members = membersTask.Result;
+
+            // Фаза 3 — зависит от Members (нужен список для Contact)
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
 
             OnPropertyChanged(nameof(InfoPanel));
 
-            var readInfo = await Context.Hub.GetReadInfoAsync(Context.ChatId);
-            MessageManager.SetReadInfo(readInfo);
-
+            // Фаза 4 — загрузка сообщений (зависит от readInfo и Members)
             var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(Context.LifetimeToken);
 
-            if (scrollToIndex < Messages.Count - 1)
+            if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
             {
                 Debug.WriteLine($"[ChatVM] Init chat={Context.ChatId} ScrollToIndex={scrollToIndex.Value}");
                 Context.RequestScrollToIndex(scrollToIndex.Value);
@@ -305,8 +332,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 Context.RequestScrollToBottom();
             }
 
-            await Notification.LoadSettingsAsync(Context.LifetimeToken);
-
             PollsCount = MessageManager.GetPollsCount();
             RefreshInfoPanelLists();
 
@@ -314,7 +339,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             Voice.Initialize(audioRecorder);
 
             InfoPanel.Subscribe();
-
+            Debug.WriteLine($"[ChatVM] Init done chat={Context.ChatId} за {sw.ElapsedMilliseconds}ms");
             _initTcs.TrySetResult();
         }
         catch (OperationCanceledException)
@@ -342,38 +367,30 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     /// Подписывается на PropertyChanged источника и пробрасывает изменения
     /// в OnPropertyChanged этого ViewModel по таблице маппингов.
     /// </summary>
-    private void ForwardProperties(INotifyPropertyChanged source,
-        params (string sourceProp, string targetProp)[] mappings)
+    private void ForwardProperties(INotifyPropertyChanged source, params (string sourceProp, string targetProp)[] mappings)
     {
         var lookup = mappings.GroupBy(m => m.sourceProp).ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
 
         source.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != null && lookup.TryGetValue(e.PropertyName, out var targets))
+            {
                 foreach (var target in targets)
+                {
                     OnPropertyChanged(target);
+                }
+            }
         };
     }
 
     private void SubscribePropertyForwarding()
     {
-        ForwardProperties(Typing,
-            (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
-
-        ForwardProperties(EditDelete,
-            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
-
-        ForwardProperties(Reply,
-            (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
-
-        ForwardProperties(Forward,
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)));
-
-        ForwardProperties(Search,
-            (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
-
-        ForwardProperties(Voice,
-            (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
+        ForwardProperties(Typing, (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
+        ForwardProperties(EditDelete, (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
+        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
+        ForwardProperties(Forward, (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)));
+        ForwardProperties(Search, (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
+        ForwardProperties(Voice, (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
 
         ForwardProperties(InfoPanel,
             (nameof(ChatInfoPanelHandler.IsInfoPanelOpen), nameof(IsInfoPanelOpen)),
@@ -400,17 +417,78 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         Context.Members.CollectionChanged += (_, _) => RefreshInfoPanelLists();
 
-        InfoPanel.FilteredMembers.CollectionChanged += (_, _) =>
-            OnPropertyChanged(nameof(FilteredMembers));
+        InfoPanel.FilteredMembers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(FilteredMembers));
 
-        InfoPanel.FilteredPolls.CollectionChanged += (_, _) =>
-            OnPropertyChanged(nameof(FilteredPolls));
+        InfoPanel.FilteredPolls.CollectionChanged += (_, _) => OnPropertyChanged(nameof(FilteredPolls));
 
         ForwardProperties(Notification,
             (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
             (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
     }
 
+    private void SubscribeCallEvents()
+    {
+        _callHub.ActiveCallStarted += OnActiveCallStarted;
+        _callHub.ActiveCallUpdated += OnActiveCallUpdated;
+        _callHub.ActiveCallEnded += OnActiveCallEnded;
+        _callHub.IncomingCall += OnIncomingCall;
+
+        _callService.CallStarted += OnCallStarted;
+        _callService.CallEnded += OnCallEnded;
+    }
+
+    private void UnsubscribeCallEvents()
+    {
+        _callHub.ActiveCallStarted -= OnActiveCallStarted;
+        _callHub.ActiveCallUpdated -= OnActiveCallUpdated;
+        _callHub.ActiveCallEnded -= OnActiveCallEnded;
+        _callHub.IncomingCall -= OnIncomingCall;
+
+        _callService.CallStarted -= OnCallStarted;
+        _callService.CallEnded -= OnCallEnded;
+    }
+
+    private void OnActiveCallStarted(CallStateDto state)
+    {
+        if (state.ChatId != Context.ChatId) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            HasActiveCall = true;
+            ActiveCallParticipantsCount = state.Participants.Count;
+        });
+    }
+
+    private void OnActiveCallUpdated(CallStateDto state)
+    {
+        if (state.ChatId != Context.ChatId) return;
+        Dispatcher.UIThread.Post(() => ActiveCallParticipantsCount = state.Participants.Count);
+    }
+
+    private void OnActiveCallEnded(string callId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            HasActiveCall = false;
+            ActiveCallParticipantsCount = 0;
+            IsInActiveCall = false;
+        });
+    }
+
+    private void OnIncomingCall(CallInviteDto invite)
+    {
+        // Только если это наш чат и групповой звонок —
+        // показываем баннер (popup обрабатывается глобально в MainMenuViewModel)
+        if (invite.ChatId != Context.ChatId) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            HasActiveCall = true;
+            ActiveCallParticipantsCount = invite.ActiveParticipantsCount;
+        });
+    }
+
+    private void OnCallStarted() => Dispatcher.UIThread.Post(() => IsInActiveCall = true);
+
+    private void OnCallEnded() => Dispatcher.UIThread.Post(() => IsInActiveCall = false);
     #endregion
 
     #region Перехватчики изменений (Partial hooks)
@@ -449,9 +527,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     /// Заменяет содержимое коллекции без пересоздания объекта
     /// (биндинги не рвутся).
     /// </summary>
-    private static void ReplaceCollection<T>(
-        ObservableCollection<T> target,
-        IReadOnlyList<T> source)
+    private static void ReplaceCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
     {
         target.Clear();
         foreach (var item in source)
@@ -462,28 +538,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         ReplaceCollection(MembersPreview, [.. Context.Members.Take(5)]);
 
-        var visible = MessageManager.Messages
-            .Where(m => !m.IsDeleted && !m.IsSystemMessage)
-            .ToList();
+        var visible = MessageManager.Messages.Where(m => !m.IsDeleted && !m.IsSystemMessage).ToList();
 
-        var photos = visible
-            .SelectMany(m => m.Files
-                .Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url))
-                .Select(f => new ChatInfoPanelMediaItem(m, f)))
-            .OrderByDescending(x => x.CreatedAt)
-            .ToList();
+        var photos = visible.SelectMany(m => m.Files.Where(f => f.PreviewType == "image" && !string.IsNullOrWhiteSpace(f.Url))
+            .Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
 
-        var files = visible
-            .SelectMany(m => m.Files
-                .Where(f => f.PreviewType != "image")
-                .Select(f => new ChatInfoPanelFileItem(m, f)))
-            .OrderByDescending(x => x.CreatedAt)
-            .ToList();
+        var files = visible.SelectMany(m => m.Files.Where(f => f.PreviewType != "image").Select(f => new ChatInfoPanelFileItem(m, f)))
+            .OrderByDescending(x => x.CreatedAt).ToList();
 
-        var polls = visible
-            .Where(m => m.Poll != null)
-            .OrderByDescending(m => m.CreatedAt)
-            .ToList();
+        var polls = visible.Where(m => m.Poll != null).OrderByDescending(m => m.CreatedAt).ToList();
 
         ReplaceCollection(PhotosItems, photos);
         ReplaceCollection(FilesItems, files);
@@ -498,14 +561,42 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
+    [RelayCommand]
+    private async Task StartOrJoinCallAsync()
+    {
+        if (Context.IsDisposed) return;
+
+        await SafeExecuteAsync(async _ =>
+        {
+            // Уже в этом звонке — ничего не делаем (UI уже открыт)
+            if (_callService.IsInCall && _callService.ActiveChatId == Context.ChatId)
+                return;
+
+            // Если в другом звонке — сначала покинуть
+            if (_callService.IsInCall)
+                await _callService.LeaveCallAsync();
+
+            if (HasActiveCall)
+            {
+                // Присоединиться к существующему
+                var state = await _callHub.GetCallStateAsync(Context.ChatId);
+                if (state != null)
+                    await _callService.JoinCallAsync(state.CallId, Context.ChatId);
+            }
+            else
+            {
+                // Начать новый
+                await _callService.StartCallAsync(Context.ChatId);
+            }
+        });
+    }
     #region Messages
 
     private async Task LoadPinnedAsync(CancellationToken ct, bool updateBanner = false)
     {
         try
         {
-            var result = await Context.Api.GetAsync<List<MessageDto>>(
-                ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
+            var result = await Context.Api.GetAsync<List<MessageDto>>(ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -553,15 +644,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
-        => new(dto,
-            App.Current.Services.GetRequiredService<IFileDownloadService>(),
-            App.Current.Services.GetRequiredService<INotificationService>(),
-            App.Current.Services.GetRequiredService<IAudioPlayerService>(),
-            Context.Api);
+        => new(dto, App.Current.Services.GetRequiredService<IFileDownloadService>(), App.Current.Services.GetRequiredService<INotificationService>(),
+            App.Current.Services.GetRequiredService<IAudioPlayerService>(), Context.Api);
 
     [RelayCommand]
-    private async Task CopyUsername() =>
-        await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
+    private async Task CopyUsername()
+        => await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task SendMessage()
@@ -602,8 +690,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
                 msg.Files = forwarding.Files;
 
-            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(
-                ApiEndpoints.Messages.Create, msg, ct);
+            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
 
             if (result.Success && result.Data != null)
             {
@@ -811,9 +898,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void UpdateMentionSuggestions(string? text, int caretIndex)
     {
-        var source = Context.Members
-            .Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username))
-            .ToList();
+        var source = Context.Members.Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username)).ToList();
 
         if (!TryFindMentionToken(text ?? string.Empty, caretIndex, out _, out var token))
         {
@@ -823,12 +908,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             return;
         }
 
-        var filtered = source
-            .Where(m => m.Username!.Contains(token, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(m => m.Username!.StartsWith(token, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(m => m.Username)
-            .Take(7)
-            .ToList();
+        var filtered = source.Where(m => m.Username!.Contains(token, StringComparison.OrdinalIgnoreCase)).OrderBy(m => m.Username!.StartsWith(token, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(m => m.Username).Take(7).ToList();
 
         MentionSuggestions.Clear();
         foreach (var member in filtered)
@@ -838,9 +919,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         MentionSelectedIndex = IsMentionSuggestionsOpen ? 0 : -1;
     }
 
-    private static bool TryFindMentionToken(
-        string text, int caretIndex,
-        out int tokenStart, out string token)
+    private static bool TryFindMentionToken(string text, int caretIndex, out int tokenStart, out string token)
     {
         tokenStart = -1;
         token = string.Empty;
@@ -861,11 +940,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Навигация
+    #region Navigation
 
     [RelayCommand]
-    private async Task OpenCreatePoll() =>
-        await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
+    private async Task OpenCreatePoll()
+        => await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
 
     [RelayCommand]
     private async Task OpenEditChat()
@@ -881,8 +960,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     [RelayCommand]
-    public async Task OpenProfile(int userId) =>
-        await _navigator.ShowUserProfileAsync(userId);
+    public async Task OpenProfile(int userId)
+        => await _navigator.ShowUserProfileAsync(userId);
 
     [RelayCommand]
     private async Task OpenMentionProfile(string? mention)
@@ -892,77 +971,69 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         var normalizedUsername = mention.Trim().TrimStart('@');
         if (string.IsNullOrWhiteSpace(normalizedUsername)) return;
 
-        var user = Members.FirstOrDefault(m =>
-            string.Equals(m.Username, normalizedUsername, StringComparison.OrdinalIgnoreCase));
+        var user = Members.FirstOrDefault(m => string.Equals(m.Username, normalizedUsername, StringComparison.OrdinalIgnoreCase));
 
         if (user?.Id > 0)
             await _navigator.ShowUserProfileAsync(user.Id);
     }
 
     [RelayCommand]
-    private async Task LeaveChat()
+    private async Task LeaveChat() => await SafeExecuteAsync(async ct =>
     {
-        await SafeExecuteAsync(async ct =>
-        {
-            var result = await Context.Api.PostAsync(
-                ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
+        var result = await Context.Api.PostAsync(ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
 
-            if (result.Success)
-                SuccessMessage = "Вы покинули чат";
-            else
-                ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
-        });
-    }
+        if (result.Success)
+            SuccessMessage = "Вы покинули чат";
+        else
+            ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
+    });
 
-    private void OnMessagePinStateChanged(MessageDto dto)
+    private void OnMessagePinStateChanged(MessageDto dto) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
+        if (Context.IsDisposed) return;
+
+        if (!dto.IsPinned)
         {
-            if (Context.IsDisposed) return;
-
-            if (!dto.IsPinned)
+            var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
+            if (toRemove != null)
             {
-                var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
-                if (toRemove != null)
-                {
-                    PinnedMessages.Remove(toRemove);
-                    toRemove.Dispose();
-                    OnPropertyChanged(nameof(PinnedCount));
-                    OnPropertyChanged(nameof(HasMultiplePinned));
-                }
-
-                if (PinnedBannerMessage?.Id == dto.Id)
-                {
-                    PinnedBannerMessage?.Dispose();
-                    PinnedBannerMessage = PinnedMessages.Count > 0
-                        ? CreatePinnedMessageViewModel(PinnedMessages[0].Message)
-                        : null;
-                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
-                }
-                return;
-            }
-
-            var existing = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
-            if (existing != null)
-            {
-                existing.ApplyUpdate(dto);
-            }
-            else
-            {
-                PinnedMessages.Insert(0, CreatePinnedMessageViewModel(dto));
+                PinnedMessages.Remove(toRemove);
+                toRemove.Dispose();
                 OnPropertyChanged(nameof(PinnedCount));
                 OnPropertyChanged(nameof(HasMultiplePinned));
             }
 
-            PinnedBannerMessage?.Dispose();
-            PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
-            OnPropertyChanged(nameof(IsPinnedBannerVisible));
-        });
-    }
+            if (PinnedBannerMessage?.Id == dto.Id)
+            {
+                PinnedBannerMessage?.Dispose();
+                PinnedBannerMessage = PinnedMessages.Count > 0
+                    ? CreatePinnedMessageViewModel(PinnedMessages[0].Message)
+                    : null;
+                OnPropertyChanged(nameof(IsPinnedBannerVisible));
+            }
+            return;
+        }
+
+        var existing = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
+        if (existing != null)
+        {
+            existing.ApplyUpdate(dto);
+        }
+        else
+        {
+            PinnedMessages.Insert(0, CreatePinnedMessageViewModel(dto));
+            OnPropertyChanged(nameof(PinnedCount));
+            OnPropertyChanged(nameof(HasMultiplePinned));
+        }
+
+        PinnedBannerMessage?.Dispose();
+        PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
+        OnPropertyChanged(nameof(IsPinnedBannerVisible));
+    });
 
     #endregion
 
-    #region Чтение и скроллинг
+    #region Reading and Scrolling
 
     public async Task OnMessageVisibleAsync(MessageViewModel message)
     {
@@ -996,7 +1067,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Переподключение
+    #region Reconnect
 
     public Task WaitForInitializationAsync() => _initTcs.Task;
 
@@ -1005,9 +1076,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         try
         {
             var ct = Context.LifetimeToken;
-            await Task.WhenAll(
-                MessageManager.GapFillAfterReconnectAsync(ct),
-                RefreshInfoPanelAsync(ct));
+            await Task.WhenAll(MessageManager.GapFillAfterReconnectAsync(ct), RefreshInfoPanelAsync(ct));
         }
         catch (Exception ex)
         {
@@ -1019,8 +1088,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         try
         {
-            var chatResult = await Context.Api.GetAsync<ChatDto>(
-                ApiEndpoints.Chats.ById(Context.ChatId), ct);
+            var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), ct);
 
             if (chatResult is { Success: true, Data: not null })
                 Context.Chat = chatResult.Data;
@@ -1037,7 +1105,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Очистка ресурсов (Dispose)
+    #region Dispose
 
     private void DisposeCore()
     {
@@ -1075,6 +1143,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void DisposeCommonResources()
     {
+        UnsubscribeCallEvents();
         _hubSubscriber.Dispose();
         Context.Hub.SetCurrentChat(null);
 

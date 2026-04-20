@@ -71,7 +71,7 @@
 											Source="{Binding Avatar}"
 											DisplayName="{Binding Name}"
 											FallbackIcon="{StaticResource GroupIcon}"
-											ShowOnlineIndicator="False"
+											ShowOnlineIndicator="True"
 											VerticalAlignment="Center"
 											HorizontalAlignment="Center"/>
 

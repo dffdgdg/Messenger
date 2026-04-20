@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.Services.UI;
+﻿using MessengerDesktop.Services.Call;
+using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Dialog;
 using System;
 using System.Threading.Tasks;
@@ -12,16 +13,18 @@ public partial class MainWindowViewModel : BaseViewModel
     private readonly IAuthManager _authManager;
     private readonly IThemeService _themeService;
     private readonly INotificationService _notificationService;
+    private readonly ActiveCallStore _activeCallStore;
 
     [ObservableProperty] public partial BaseViewModel? CurrentViewModel { get; set; }
     [ObservableProperty] public partial DialogBaseViewModel? CurrentDialog { get; set; }
     [ObservableProperty] public partial bool HasOpenDialogs { get; set; }
     [ObservableProperty] public partial bool IsDialogVisible { get; set; }
+    public ActiveCallStore ActiveCallStore => _activeCallStore;
 
     public ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications => _notificationService.ActiveNotifications;
 
     public MainWindowViewModel(INavigationService navigation, IDialogService dialogService, IAuthManager authManager,
-        IThemeService themeService, INotificationService notificationService)
+        IThemeService themeService, INotificationService notificationService, ActiveCallStore activeCallStore)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -31,6 +34,7 @@ public partial class MainWindowViewModel : BaseViewModel
 
         _navigation.CurrentViewModelChanged += OnNavigationViewModelChanged;
         _dialogService.OnDialogStackChanged += OnDialogStackChanged;
+        _activeCallStore = activeCallStore;
 
         _navigation.NavigateToLogin();
     }
@@ -97,6 +101,7 @@ public partial class MainWindowViewModel : BaseViewModel
 
         base.Dispose(disposing);
     }
+    public Task CloseDialogAsync() => _dialogService.CloseAsync();
 
     public MainMenuViewModel? MainMenu => CurrentViewModel as MainMenuViewModel;
 

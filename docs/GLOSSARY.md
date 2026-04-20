@@ -1,4 +1,4 @@
-# Glossary
+# Glossary.md
 
 ## Роли пользователей (`UserRole`)
 - `User` — обычный пользователь.
@@ -46,7 +46,8 @@
   `GetCurrentUserId()` (из JWT claim), `IsCurrentUser(int)` (проверка SELF).
 - **`BaseService<T>`** — базовый сервис. Содержит `SaveChangesAsync`,
   `FindEntityAsync`, `NormalizePagination`, `Paginate`.
-
+- **`CallHub`** — SignalR hub (`/callHub`, `[Authorize]`). Управление голосовыми звонками. Группы: `user_{userId}`, `chat_{chatId}`.
+- **`CallSessionService`** — backend singleton, in-memory хранилище активных звонков (`ConcurrentDictionary`). Максимум 1 звонок на чат.
 ---
 
 ## Архитектура — Desktop
@@ -68,7 +69,10 @@
 - **`AvatarHelper`** — нормализация URL аватаров + cachebuster (`?t={timestamp}`).
 - **`AuthenticatedImageLoader`** — `AsyncImageLoader` с `Authorization` header
   для загрузки защищённых изображений.
-
+- **`CallHubConnection`** — desktop singleton, SignalR-клиент `/callHub`. Транспортный слой для событий звонков.
+- **`CallService`** — orchestrator звонков на клиенте. Управляет состоянием, UDP P2P аудио, запуском `CallAudioService`.
+- **`CallAudioService`** — Opus encode/decode через Concentus, PortAudio I/O, микширование участников.
+- **`PortAudioLifetime`** — singleton, владеет единственным вызовом `PortAudio.Initialize()` / `Terminate()`.
 ---
 
 ## Паттерны и соглашения
@@ -97,7 +101,7 @@
   Считается на сервере, кэшируется в `GlobalHubConnection._unreadCounts`.
 - **`FirstUnreadMessageId`** — ID первого непрочитанного сообщения.
   Используется для начальной позиции скролла при открытии чата.
-
+- **P2P UDP аудио** — аудиоданные между участниками звонка передаются напрямую по UDP (без сервера). Формат пакета: `[4 bytes userId][4 bytes seq][N bytes Opus]`. Peer discovery — через `WebRtcSignalDto` с `type="udp-endpoint"` поверх SignalR.
 ---
 
 ## База данных

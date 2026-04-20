@@ -28,7 +28,23 @@ public sealed class BoolToStringConverter : BoolToValueConverter<string>
         return base.ConvertCore(value, parameter, culture);
     }
 }
-
+public sealed class BoolToGeometryConverter : BoolToValueConverter<Geometry>
+{
+    protected override Geometry? ConvertCore(bool value, object? parameter, CultureInfo culture)
+    {
+        if (parameter is string param)
+        {
+            var parts = param.Split('|');
+            if (parts.Length == 2)
+            {
+                var geometryString = value ? parts[0] : parts[1];
+                // Парсим строку в Geometry
+                return StreamGeometry.Parse(geometryString);
+            }
+        }
+        return base.ConvertCore(value, parameter, culture);
+    }
+}
 public sealed class BoolToDoubleConverter : BoolToValueConverter<double>;
 
 public sealed class BoolToColorConverter : BoolToValueConverter<Color>;

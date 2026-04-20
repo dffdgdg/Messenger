@@ -104,6 +104,51 @@ await using (var scope = app.Services.CreateAsyncScope())
     await dbContext.Database.MigrateAsync();
 }
 
+_ = Task.Run(async () =>
+{
+    try
+    {
+        await Task.Delay(1500); // ждём пока app.Run поднимется
+        await using var scope = app.Services.CreateAsyncScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
+
+        // Прогреваем самые частые запросы (chatId=-1 вернёт 0 строк, но SQL скомпилируется)
+        await ctx.Messages
+            .Where(m => m.ChatId == -1 && m.IsDeleted != true)
+            .OrderBy(m => m.Id).Take(50)
+            .Include(m => m.Sender)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .AsNoTracking()
+            .ToListAsync();
+
+        await ctx.Messages
+            .Where(m => m.ChatId == -1 && m.IsPinned && m.IsDeleted != true)
+            .Include(m => m.Sender)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .AsNoTracking()
+            .ToListAsync();
+
+        await ctx.ChatMembers
+            .Where(cm => cm.UserId == -1 && cm.ChatId == -1)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+
+        await ctx.ChatMembers
+            .Where(cm => cm.ChatId == -1)
+            .Include(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync();
+
+        app.Logger.LogInformation("EF query cache warmed up");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "EF warmup failed (non-critical)");
+    }
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -143,5 +188,6 @@ app.MapGet("/", (HttpContext context) =>
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<CallHub>("/callHub");
 
 await app.RunAsync();

@@ -16,10 +16,7 @@ public sealed class OnlineUserService : IOnlineUserService
     private readonly Timer _cleanupTimer;
     private bool _disposed;
 
-    public OnlineUserService()
-    {
-        _cleanupTimer = new Timer(callback: _ => CleanupEmptyEntries(), state: null, dueTime: TimeSpan.FromMinutes(5), period: TimeSpan.FromMinutes(5));
-    }
+    public OnlineUserService() => _cleanupTimer = new Timer(_ => CleanupEmptyEntries(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 
     public void UserConnected(int userId, string connectionId)
         => _connections.GetOrAdd(userId, _ => new ConcurrentDictionary<string, byte>()).TryAdd(connectionId, 0);
@@ -32,17 +29,13 @@ public sealed class OnlineUserService : IOnlineUserService
         userConnections.TryRemove(connectionId, out _);
     }
 
-    public bool IsOnline(int userId)
-        => _connections.TryGetValue(userId, out var c) && !c.IsEmpty;
+    public bool IsOnline(int userId) => _connections.TryGetValue(userId, out var c) && !c.IsEmpty;
 
-    public HashSet<int> GetOnlineUserIds()
-        => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
+    public HashSet<int> GetOnlineUserIds() => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
 
-    public HashSet<int> FilterOnline(IEnumerable<int> userIds)
-        => [.. userIds.Where(IsOnline)];
+    public HashSet<int> FilterOnline(IEnumerable<int> userIds) => [.. userIds.Where(IsOnline)];
 
-    public int OnlineCount
-        => _connections.Count(kv => !kv.Value.IsEmpty);
+    public int OnlineCount => _connections.Count(kv => !kv.Value.IsEmpty);
 
     private void CleanupEmptyEntries()
     {

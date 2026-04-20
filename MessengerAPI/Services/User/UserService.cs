@@ -77,6 +77,7 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         var user = userResult.Value!;
 
         var saveResult = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
+
         if (saveResult.IsFailure)
             return Result<AvatarResponseDto>.FromFailure(saveResult);
 

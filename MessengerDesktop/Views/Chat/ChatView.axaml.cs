@@ -28,7 +28,7 @@ public partial class ChatView : UserControl
     private ScrollViewer? _scrollViewer;
     private ListBox? _messagesList;
     private ChatViewModel? _viewModel;
-    private ISettingsService? _settingsService;
+    private readonly ISettingsService? _settingsService;
 
     private bool _isInitialScrollDone;
     private bool _suppressScrollEvents;
@@ -39,8 +39,8 @@ public partial class ChatView : UserControl
 
     private double _lastExtentHeight;
     private int _scrollToEndRetries;
-    private double _anchorOffset;
-    private double _anchorExtent;
+    private readonly double _anchorOffset;
+    private readonly double _anchorExtent;
     private bool _isPollLayoutChanging;
 
     private int _loadingOlderMessages;

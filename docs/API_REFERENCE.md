@@ -1,5 +1,4 @@
-Отлично, теперь вижу реальные сигнатуры. Фиксирую расхождения и пишу актуализированный `API_REFERENCE.md`.
-# API Reference
+# API Reference.md
 
 ## Базовые правила
 - Base URL: `{host}/api/{controller}`

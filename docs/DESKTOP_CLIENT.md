@@ -1,4 +1,4 @@
-# Desktop Client Architecture
+# Desktop Client.md
 
 ## 1. Инициализация (`App.axaml.cs`)
 ```

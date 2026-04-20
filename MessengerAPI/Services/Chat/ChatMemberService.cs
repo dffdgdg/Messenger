@@ -20,8 +20,7 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
         if (adminResult.IsFailure)
             return Result<ChatMemberDto>.FromFailure(adminResult);
 
-        var exists = await _context.ChatMembers.AnyAsync(cm =>
-            cm.ChatId == chatId && cm.UserId == userId);
+        var exists = await _context.ChatMembers.AnyAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
         if (exists)
             return Result<ChatMemberDto>.Conflict("Пользователь уже является участником чата");
@@ -94,8 +93,7 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
         if (ownerResult.IsFailure)
             return Result<ChatMemberDto>.FromFailure(ownerResult);
 
-        var member = await _context.ChatMembers.FirstOrDefaultAsync(cm =>
-            cm.ChatId == chatId && cm.UserId == userId);
+        var member = await _context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return Result<ChatMemberDto>.NotFound("Пользователь не является участником чата");
@@ -144,8 +142,7 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
         NotificationsEnabled = member.NotificationsEnabled
     };
 
-    #region Log messages
-
+    #region Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} добавлен в чат {ChatId} пользователем {AddedBy}")]
     private partial void LogMemberAdded(int userId, int chatId, int addedBy);
 

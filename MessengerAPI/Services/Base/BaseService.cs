@@ -44,7 +44,6 @@ public abstract class BaseService<T>(MessengerDbContext context, ILogger<T> logg
     private static bool IsUniqueViolation(DbUpdateException ex)
     {
         var message = ex.InnerException?.Message ?? "";
-        return message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) || message.Contains("unique", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("23505");
+        return message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) || message.Contains("unique", StringComparison.OrdinalIgnoreCase) || message.Contains("23505");
     }
 }

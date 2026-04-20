@@ -1,4 +1,4 @@
-# Architecture
+# Architecture.md
 
 ## 1. Состав решения
 
@@ -60,6 +60,9 @@ Model/DbContext → EF Core + PostgreSQL
 | `OnlineUserService` | `ConcurrentDictionary` онлайн-статусов, несколько соединений на юзера |
 | `HubNotifier` | Fire-and-forget отправка в SignalR, ошибки логируются |
 | `HttpUrlBuilder` | Абсолютные URL через `HttpContext` |
+| `CallSessionService` | In-memory хранилище активных звонков (`ConcurrentDictionary`). Создание, join, leave, завершение сессий. Максимум 1 звонок на чат |
+
+> Помимо `ChatHub` существует `CallHub` (`/callHub`, `[Authorize]`) — отдельный hub для голосовых звонков. Группы: `user_{userId}`, `chat_{chatId}`. RPC методы: `InitiateCall`, `JoinCall`, `LeaveCall`, `DeclineCall`, `CancelCall`, `SendSignal`, `ToggleMute`, `GetCallState`.
 
 ### SignalR Hub (`/chatHub`)
 - `[Authorize]`, endpoint `/chatHub`
@@ -112,6 +115,10 @@ Model/DbContext → EF Core + PostgreSQL
 | `NavigationService` | Singleton | Переключение основных вкладок |
 | `DialogService` | Singleton | Стек модальных окон, SemaphoreSlim + Channel |
 | `NotificationService` | Singleton | In-app уведомления (overlay) |
+| `CallHubConnection` | Singleton | SignalR-клиент `/callHub`, транспорт событий звонков |
+| `CallService` | Singleton | Orchestrator звонков: состояние, UDP P2P, запуск аудио |
+| `CallAudioService` | — | Opus encode/decode, PortAudio I/O, микширование участников |
+| `PortAudioLifetime` | Singleton | Единственный `PortAudio.Initialize()` / `Terminate()` |
 
 > ⚠️ `AudioRecorderService` регистрируется дважды в `ServiceCollectionExtensions` — баг,
 > фактически используется последняя регистрация.
@@ -125,6 +132,7 @@ Model/DbContext → EF Core + PostgreSQL
 
 > Остальные ViewModel (`ChatViewModel`, `ChatsViewModel`, диалоги и т.д.)
 > создаются через фабрики или `new` — не регистрируются в DI напрямую.
+> `CallViewModel` и `IncomingCallViewModel` создаются через `new` в `MainMenuViewModel` — не регистрируются в DI.
 
 ### HttpClient (настройки)
 ```csharp
@@ -240,7 +248,25 @@ OnNotificationReceived
   → NotificationService.Show()
   → callback → MainMenuViewModel.OpenNotificationAsync
 ```
+### Звонок — исходящий
+```
+StartCallAsync(chatId):
+  → InitUdp + _audio.Start
+  → hub.InitiateCallAsync
+  → сервер: CallStateUpdated → OnCallStateUpdated
+  → MainMenuViewModel._callViewShown = true
+  → ShowCallViewAsync → CallViewModel
+```
 
+### Звонок — входящий
+```
+hub.IncomingCall → OnIncomingCall
+  → ShowDialogAsync(IncomingCallViewModel)
+  → Принять → JoinCallAsync + GetCallStateAsync
+  → ShowCallViewAsync → CallViewModel
+  → Отклонить (1:1) → DeclineCallAsync
+  → Позже (группа) → просто закрыть диалог
+```
 ---
 
 ## 6. Технический долг
@@ -255,6 +281,11 @@ OnNotificationReceived
 | Gap Fill | При долгом оффлайне часть истории теряется из view |
 | Аудио | macOS не тестировался |
 | DI | `AudioRecorderService` зарегистрирован дважды (дублирующая регистрация) |
+| P2P транспорт | UDP без STUN/TURN — работает только при прямой видимости IP (LAN) |
+| NAT traversal | Не реализован |
+| Reconnect в звонке | `UpdateConnectionId` в интерфейсе есть, но не вызывается при реконнекте CallHub |
+| Звонки — состояние | Только in-memory на сервере, при рестарте API все активные звонки теряются |
+| `IsSpeaking` | Поле в DTO/VM присутствует, VAD не реализован |
 
 ---
 
@@ -266,14 +297,16 @@ MessengerAPI/
 ├── Common/          # Result<T>, AppDateTime, ValidationHelper, UrlHelpers
 ├── Configuration/   # DI регистрация, JWT, RateLimit, Swagger, StaticFiles
 ├── Controllers/     # BaseController + все контроллеры
-├── Hubs/            # ChatHub.cs
+├── Hubs/            # ChatHub.cs, CallHub.cs
 ├── Mapping/         # UserMappings, ChatMappings, MessageMappings, FileMappings, PollMappings
 ├── Middleware/      # ExceptionHandlingMiddleware, MissingFileCleanupMiddleware
 ├── Model/           # EF-модели + MessengerDbContext + Partial.cs
 ├── Services/
 │   ├── Auth/        # AuthService, TokenService
 │   ├── Base/        # BaseService
-│   ├── Chat/        # ChatService, ChatMemberService, NotificationService, SystemMessageService
+│   ├── Chat/        # ChatService, ChatMemberService, NotificationService, 
+│   ├── Call/        # CallSessionService, ICallSessionService, CallSession, CallParticipant
+SystemMessageService
 │   ├── Department/  # DepartmentService
 │   ├── Infrastructure/  # CacheService, AccessControlService, HubNotifier, HttpUrlBuilder, OnlineUserService
 │   │   └── Postgres/    # EnumNameTranslator, EnumTypeMappings
@@ -309,6 +342,8 @@ MessengerDesktop/
 │   ├── Api/         # ApiClientService
 │   ├── Audio/       # AudioPlayerService, AudioRecorderService, WavData
 │   ├── Auth/        # AuthManager, AuthService, SecureStorage, SessionStore
+│   ├── Call/        # CallHubConnection, CallService, CallAudioService, ICallHubConnection, ICallService
+│   ├── Audio/       # AudioPlayerService, AudioRecorderService, PortAudioLifetime, WavData
 │   ├── Cache/       # CacheMaintenanceService
 │   ├── Navigation/  # NavigationService, DialogService
 │   ├── Platform/    # PlatformService
@@ -318,6 +353,7 @@ MessengerDesktop/
 ├── ViewModels/
 │   ├── Admin/       # AdminViewModel, UsersTabViewModel, DepartmentsTabViewModel
 │   ├── Auth/        # LoginViewModel
+│   ├── Call/        # CallViewModel, CallParticipantViewModel, IncomingCallViewModel
 │   ├── Chat/        # ChatViewModel + все компоненты
 │   │   ├── Handlers/    # ChatEditDeleteHandler, ChatReplyHandler, ChatForwardHandler,
 │   │   │                # ChatTypingHandler, ChatVoiceHandler, ChatInfoPanelHandler,
@@ -335,6 +371,7 @@ MessengerDesktop/
 │   ├── ProfileViewModel.cs
 │   └── SettingsViewModel.cs
 ├── Views/           # Зеркалит структуру ViewModels (*.axaml + *.axaml.cs)
+│   ├── Call/        # CallView.axaml, IncomingCallDialog.axaml
 │   ├── Chat/
 │   │   └── MessageParts/  # Text, Voice, Poll, File, System, Reply, Forward, DateSeparator
 │   ├── Controls/
@@ -354,6 +391,7 @@ MessengerDesktop/
 MessengerShared/
 ├── DTO/
 │   ├── Auth/        # LoginRequest, AuthResponseDto, TokenResponseDto, RefreshTokenRequest
+│   ├── Call/        # CallInviteDto, CallStateDto, CallParticipantDto, WebRtcSignalDto
 │   ├── Chat/        # ChatDto, ChatMemberDto, UpdateChatDto, ChatNotificationSettingsDto, UpdateChatMemberDto
 │   ├── Department/  # DepartmentDto, UpdateDepartmentMemberDto
 │   ├── Message/     # MessageDto, CreateMessageRequest, UpdateMessageDto, PagedMessagesDto,
@@ -365,7 +403,7 @@ MessengerShared/
 │   ├── Search/      # GlobalSearchDto, GlobalSearchResponseDto, SearchMessagesDto
 │   └── User/        # UserDto, CreateUserDto, ChangePasswordDto, ChangeUsernameDto,
 │                    # AvatarResponseDto, ResetPasswordAdminDto
-├── Enum/            # ChatRole, ChatType, Theme, SystemEventTypes, UserRoles
+├── Enum/            # ChatRole, ChatType, Theme, SystemEventTypes, UserRoles, CallStatus, CallEndReason
 └── Response/        # ApiResponse<T>, ApiResponseHelper
 ```
 

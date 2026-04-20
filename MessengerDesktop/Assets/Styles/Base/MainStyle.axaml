@@ -1720,5 +1720,149 @@
 	<Style Selector="views|ChatsView[IsCompactMode=True] ListBox">
 		<Setter Property="Margin" Value="4"/>
 	</Style>
+	<!-- ═══════════════════════════════════════
+     ЗВОНОК — CallControlButton
+═══════════════════════════════════════ -->
+
+<Style Selector="Button.CallControlButton">
+    <Setter Property="Width" Value="52"/>
+    <Setter Property="Height" Value="52"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="26"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+            <TransformOperationsTransition Property="RenderTransform"
+                                           Duration="0:0:0.12"
+                                           Easing="CubicEaseOut"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Button.CallControlButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="CornerRadius" Value="26"/>
+</Style>
+
+<Style Selector="Button.CallControlButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource FourthBG}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.92)"/>
+</Style>
+
+<!-- Нормальное состояние кнопки — иконка серая -->
+<Style Selector="Button.CallControlButton Path">
+    <Setter Property="Fill" Value="{DynamicResource TextSecondary}"/>
+</Style>
+
+<!-- Активный мут — иконка красная, фон красный приглушённый -->
+<Style Selector="Button.CallControlButton.Active">
+    <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Active Path">
+    <Setter Property="Fill" Value="{DynamicResource DangerBrush}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Active:pointerover Path">
+    <Setter Property="Fill" Value="White"/>
+</Style>
+
+<!-- Danger (завершить звонок) -->
+<Style Selector="Button.CallControlButton.Danger">
+    <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+    <Setter Property="Width" Value="56"/>
+    <Setter Property="Height" Value="56"/>
+    <Setter Property="CornerRadius" Value="28"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Danger /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+    <Setter Property="CornerRadius" Value="28"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
+</Style>
+
+<Style Selector="Button.CallControlButton.Danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerPressedBrush}"/>
+</Style>
+
+<!-- ═══════════════════════════════════════
+     ЗВОНОК — CallControlBar
+═══════════════════════════════════════ -->
+
+<Style Selector="Border.CallControlBar">
+    <Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+    <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="Padding" Value="0,16,0,20"/>
+    <Setter Property="MinHeight" Value="88"/>
+</Style>
+
+<!-- ═══════════════════════════════════════
+     ЗВОНОК — CallParticipantCard
+═══════════════════════════════════════ -->
+
+<Style Selector="Border.CallParticipantCard">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="BorderThickness" Value="1.5"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+            <BrushTransition Property="Background" Duration="0:0:0.2"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.CallParticipantCard.Speaking">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+	<!-- ===== CALL TILE ===== -->
+
+<Style Selector="Border.CallTile">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Margin" Value="6"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+            <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.CallTile.Speaking">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BoxShadow" Value="0 0 12 #3390EC40"/>
+</Style>
+
+<!-- ===== CONTROL BAR OVERRIDE ===== -->
+
+<Style Selector="Border.CallControlBar">
+    <Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+    <Setter Property="Padding" Value="16"/>
+    <Setter Property="BorderThickness" Value="0"/>
+</Style>
 
 </Styles>

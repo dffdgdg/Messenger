@@ -5,13 +5,6 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace MessengerAPI.Services.Auth;
 
-public interface IAuthService
-{
-    Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default);
-    Task<Result<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default);
-    Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default);
-}
-
 public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 {
     private readonly ITokenService _tokenService;
@@ -21,8 +14,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     private readonly string _dummyHash;
     private const int MaxActiveSessions = 5;
 
-    public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings,
-        IOptions<JwtSettings> jwtSettings, AppDateTime appDateTime, ILogger<AuthService> logger) : base(context, logger)
+    public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings, IOptions<JwtSettings> jwtSettings, AppDateTime appDateTime, ILogger<AuthService> logger)
+        : base(context, logger)
     {
         _tokenService = tokenService;
         _settings = settings.Value;
@@ -39,8 +32,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         if (string.IsNullOrWhiteSpace(password))
             return Result<AuthResponseDto>.Failure("Пароль обязателен");
 
-        var user = await _context.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
 
         if (user is null)
         {
@@ -97,8 +89,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
-        var storedToken = await _context.RefreshTokens.Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
+        var storedToken = await _context.RefreshTokens.Include(rt => rt.User).FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
 
         if (storedToken is null)
         {
@@ -198,12 +189,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     {
         var now = _appDateTime.UtcNow;
 
-        var activeFamilies = await _context.RefreshTokens
-            .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
-            .GroupBy(rt => rt.FamilyId)
-            .Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) })
-            .OrderByDescending(f => f.LatestCreatedAt)
-            .ToListAsync(ct);
+        var activeFamilies = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
+            .GroupBy(rt => rt.FamilyId).Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) }).OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
 
         if (activeFamilies.Count >= MaxActiveSessions)
         {
@@ -211,10 +198,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
             if (familiesToRevoke.Count > 0)
             {
-                var revokedCount = await _context.RefreshTokens
-                    .Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null)
-                    .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
-
+                var revokedCount = await _context.RefreshTokens.Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
                 LogSessionLimitExceeded(userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
             }
         }
@@ -222,18 +206,14 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     private async Task RevokeTokenFamilyAsync(string familyId, CancellationToken ct)
     {
-        var revokedCount = await _context.RefreshTokens
-            .Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
+        var revokedCount = await _context.RefreshTokens.Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
 
         LogFamilyRevoked(revokedCount, familyId);
     }
 
     private async Task CleanupExpiredTokensAsync(int userId, CancellationToken ct)
     {
-        var expiredCount = await _context.RefreshTokens
-            .Where(rt => rt.UserId == userId && rt.ExpiresAt < _appDateTime.UtcNow.AddDays(-60))
-            .ExecuteDeleteAsync(ct);
+        var expiredCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiresAt < _appDateTime.UtcNow.AddDays(-60)).ExecuteDeleteAsync(ct);
 
         if (expiredCount > 0)
         {
@@ -259,7 +239,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     #endregion
 
-    #region Log Messages
+    #region Log
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Неудачная попытка входа: {Username}")]
     private partial void LogFailedLogin(string username);

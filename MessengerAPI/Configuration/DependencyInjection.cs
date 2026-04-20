@@ -1,4 +1,5 @@
 ﻿using MessengerAPI.Services.Auth;
+using MessengerAPI.Services.Call;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.Department;
 using MessengerAPI.Services.Infrastructure.Postgres;
@@ -44,7 +45,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<AppDateTime>();
-
+        services.AddSingleton<ICallSessionService, CallSessionService>();
         services.AddSingleton<IOnlineUserService, OnlineUserService>();
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<IAccessControlService, AccessControlService>();

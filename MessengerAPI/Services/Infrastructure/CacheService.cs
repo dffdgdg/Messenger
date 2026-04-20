@@ -100,7 +100,7 @@ public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logg
 
     #endregion
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Cache HIT: user_chats_{UserId}")]
     private partial void LogUserChatsHit(int userId);

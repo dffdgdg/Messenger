@@ -1,9 +1,12 @@
-﻿using MessengerDesktop.Services.Realtime;
+﻿using MessengerDesktop.Services.Call;
+using MessengerDesktop.Services.Realtime;
+using MessengerDesktop.ViewModels.Call;
 using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
+using MessengerShared.DTO.Call;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -23,6 +26,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private readonly IChatsViewModelFactory _chatsFactory;
     private readonly IServiceProvider _sp;
     private readonly IGlobalHubConnection _globalHub;
+    private readonly ICallHubConnection _callHub;
     private readonly Stack<int> _backHistory = [], _forwardHistory = [];
 
     private ChatsViewModel? _chatsVm, _contactsVm;
@@ -32,6 +36,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private SettingsViewModel? _settingsVm;
     private CancellationTokenSource? _searchCts;
     private readonly GlobalSearchManager _searchManager;
+    private readonly ActiveCallStore _activeCallStore;
+    public CallBannerViewModel CallBanner { get; }
 
     [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
     [ObservableProperty] public partial int UserId { get; set; }
@@ -49,33 +55,192 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public GlobalSearchManager SearchManager => _searchManager;
     public bool IsSearchMode => _searchManager.IsSearchMode;
 
-    public MainMenuViewModel(MainWindowViewModel mainWindowVm, IApiClientService api, IAuthManager auth, IChatsViewModelFactory chatsFactory, IServiceProvider sp, IGlobalHubConnection globalHub)
+    public MainMenuViewModel(
+        MainWindowViewModel mainWindowVm,
+        IApiClientService api,
+        IAuthManager auth,
+        IChatsViewModelFactory chatsFactory,
+        IServiceProvider sp,
+        IGlobalHubConnection globalHub,
+        ICallHubConnection callHub, ActiveCallStore activeCallStore)
     {
         _mainWindowVm = mainWindowVm ?? throw new ArgumentNullException(nameof(mainWindowVm));
         _api = api ?? throw new ArgumentNullException(nameof(api));
         _auth = auth ?? throw new ArgumentNullException(nameof(auth));
         _chatsFactory = chatsFactory ?? throw new ArgumentNullException(nameof(chatsFactory));
         _sp = sp ?? throw new ArgumentNullException(nameof(sp));
-        _globalHub = globalHub;
+        _globalHub = globalHub ?? throw new ArgumentNullException(nameof(globalHub));
+        _callHub = callHub ?? throw new ArgumentNullException(nameof(callHub));
+        _callHub.IncomingCall += OnIncomingCall;
+        _callHub.CallStateUpdated += OnCallStateUpdated;
+        _activeCallStore = activeCallStore;
+
+        CallBanner = new CallBannerViewModel(activeCallStore, _sp.GetRequiredService<ICallService>());
 
         UserId = _auth.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
-        _searchManager = new GlobalSearchManager(UserId, startWithChatsScope: true, _api, getUsersFunc: () => Task.FromResult(AllContacts.Select(u => new SearchFilterItem(u.Id,u.DisplayName ?? u.Username ?? string.Empty,u.Avatar)).ToList()),
-            getChatsFunc: () => Task.FromResult(UserChats.Select(c => new SearchFilterItem(c.Id,c.Name ?? string.Empty,c.Avatar)).ToList()));
+
+        _searchManager = new GlobalSearchManager(
+            UserId,
+            startWithChatsScope: true,
+            _api,
+            getUsersFunc: () => Task.FromResult(AllContacts.Select(u => new SearchFilterItem(u.Id, u.DisplayName ?? u.Username ?? string.Empty, u.Avatar)).ToList()),
+            getChatsFunc: () => Task.FromResult(UserChats.Select(c => new SearchFilterItem(c.Id, c.Name ?? string.Empty, c.Avatar)).ToList()));
+
         _searchManager.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(GlobalSearchManager.IsSearchMode))
                 OnPropertyChanged(nameof(IsSearchMode));
         };
+
+        _auth.Session.SessionChanged += OnSessionChanged;
+
         CurrentMenuViewModel = _chatsVm = _chatsFactory.Create(this, isGroupMode: true);
 
         _ = LoadContactsAndChatsAsync();
-        _ = InitGlobalHubAsync();
+
+        if (_auth.Session.IsAuthenticated)
+        {
+            _ = InitGlobalHubAsync();
+        }
+    }
+    private void OnSessionChanged()
+    {
+        if (_auth.Session.IsAuthenticated && !_callHub.IsConnected)
+        {
+            _ = InitGlobalHubAsync();
+        }
     }
 
     private async Task InitGlobalHubAsync()
     {
-        try { await _globalHub.ConnectAsync(); }
-        catch (Exception ex) { Debug.WriteLine($"Failed to connect global hub: {ex.Message}"); }
+        try
+        {
+            await _globalHub.ConnectAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to connect global hub: {ex.Message}");
+        }
+
+        try
+        {
+            await _callHub.ConnectAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to connect call hub: {ex.Message}");
+        }
+    }
+
+    private void OnIncomingCall(CallInviteDto invite) => Dispatcher.UIThread.Post(async () =>
+    {
+        try
+        {
+            if (!_callHub.IsConnected)
+            {
+                Debug.WriteLine("[MainMenuViewModel] IncomingCall: CallHub не подключён, пропуск");
+                return;
+            }
+
+            var callService = _sp.GetRequiredService<ICallService>();
+            var vm = new IncomingCallViewModel(callService, invite);
+            vm.Accepted += acceptedInvite => _ = OnCallAcceptedAsync(acceptedInvite);
+            await _mainWindowVm.ShowDialogAsync(vm);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainMenuViewModel] IncomingCall popup error: {ex.Message}");
+        }
+    });
+
+    private async Task OnCallAcceptedAsync(CallInviteDto invite)
+    {
+        try
+        {
+            var callService = _sp.GetRequiredService<ICallService>();
+            await callService.JoinCallAsync(invite.CallId, invite.ChatId);
+
+            await Task.Delay(300);
+
+            var state = await _callHub.GetCallStateAsync(invite.ChatId);
+            if (state == null)
+            {
+                Debug.WriteLine("[MainMenuViewModel] OnCallAccepted: GetCallState вернул null");
+                return;
+            }
+
+            var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name
+                           ?? invite.ChatName;
+
+            _ = OpenCallChatAsync(invite);
+            Dispatcher.UIThread.Post(() => _ = ShowCallViewAsync(state, chatName, invite.IsGroupCall));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainMenuViewModel] OnCallAccepted error: {ex.Message}");
+        }
+    }
+
+    private Task ShowCallViewAsync(CallStateDto state, string chatName, bool isGroupCall)
+    {
+        if (_activeCallStore.ActiveCall != null)
+        {
+            _activeCallStore.OpenCallUi();
+            return Task.CompletedTask;
+        }
+
+        var callService = _sp.GetRequiredService<ICallService>();
+        var callVm = new CallViewModel(callService, _callHub, _activeCallStore);
+        callVm.Initialize(state, chatName, isGroupCall);
+
+        _activeCallStore.ActiveCall = callVm;
+        _activeCallStore.OpenCallUi();
+
+        return Task.CompletedTask;
+    }
+
+    private void OnCallStateUpdated(CallStateDto state)
+    {
+        if (_activeCallStore.IsInCall) return;
+
+        var callService = _sp.GetRequiredService<ICallService>();
+        var myUserId = _auth.Session.UserId ?? 0;
+
+        // Только инициатор — принимающая сторона обрабатывает в OnCallAcceptedAsync
+        if (state.InitiatorId != myUserId) return;
+        if (callService.ActiveChatId != state.ChatId) return;
+
+        var chatName = UserChats.FirstOrDefault(c => c.Id == state.ChatId)?.Name ?? string.Empty;
+        Dispatcher.UIThread.Post(() => _ = ShowCallViewAsync(state, chatName, state.IsGroupCall));
+    }
+
+    private async Task OpenCallChatAsync(CallInviteDto invite)
+    {
+        try
+        {
+            var chat = UserChats.FirstOrDefault(c => c.Id == invite.ChatId);
+            if (chat == null)
+            {
+                var r = await _api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(invite.ChatId));
+                if (r is { Success: true, Data: not null })
+                {
+                    chat = r.Data;
+                    if (UserChats.All(c => c.Id != chat.Id))
+                        UserChats.Insert(0, chat);
+                }
+                else
+                {
+                    Debug.WriteLine($"[MainMenuViewModel] Failed to load chat {invite.ChatId}");
+                    return;
+                }
+            }
+
+            await SwitchToTabAndOpenChatAsync(chat);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainMenuViewModel] OpenCallChat error: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -84,13 +249,11 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         if (SearchManager == null) return;
         SearchManager.EnterSearchMode();
 
-        var dialog = new SearchFiltersDialogViewModel(
-            SearchManager,
-            applyAction: () => SearchManager.ApplyFiltersAsync(),
-            clearAction: () => SearchManager.ApplyFiltersAsync());
+        var dialog = new SearchFiltersDialogViewModel(SearchManager, () => SearchManager.ApplyFiltersAsync(), () => SearchManager.ApplyFiltersAsync());
 
         await ShowDialogAsync(dialog);
     }
+
     [RelayCommand]
     private void ClearSenderFilter()
     {
@@ -123,6 +286,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         SearchManager.ResetFilters();
         await SearchManager.ApplyFiltersAsync();
     }
+
     #region Navigation
 
     [RelayCommand]
@@ -225,7 +389,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     #region Search
 
-
     partial void OnSearchTextChanged(string value)
     {
         _searchCts?.Cancel();
@@ -277,7 +440,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     [RelayCommand]
     private async Task LoadMoreSearchResults() => await SearchManager.LoadMoreMessagesAsync();
-
 
     #endregion
 
@@ -405,9 +567,11 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка открытия диалога: {ex.Message}"; }
     }
+
     public Task ShowDialogAsync(DialogBaseViewModel dialogViewModel)
         => _mainWindowVm.ShowDialogAsync(dialogViewModel);
 
+    //public Task CloseDialogAsync() => _dialogService.CloseAsync();
     #endregion
 
     #region API operations
@@ -533,11 +697,22 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         if (disposing)
         {
-            _searchCts?.Cancel(); _searchCts?.Dispose();
-            DisposeVm(ref _chatsVm); DisposeVm(ref _contactsVm);
-            DisposeVm(ref _deptVm); DisposeVm(ref _profileVm);
-            DisposeVm(ref _adminVm); DisposeVm(ref _settingsVm);
-            if (_globalHub is IAsyncDisposable ad) _ = SafeDisposeAsync(ad);
+            _auth.Session.SessionChanged -= OnSessionChanged;
+            _callHub.IncomingCall -= OnIncomingCall;
+            _callHub.CallStateUpdated -= OnCallStateUpdated;
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            DisposeVm(ref _chatsVm);
+            DisposeVm(ref _contactsVm);
+            DisposeVm(ref _deptVm);
+            DisposeVm(ref _profileVm);
+            DisposeVm(ref _adminVm);
+            DisposeVm(ref _settingsVm);
+
+            if (_globalHub is IAsyncDisposable globalAd)
+                _ = SafeDisposeAsync(globalAd);
+
+            _ = SafeDisposeAsync(_callHub);
         }
         base.Dispose(disposing);
     }

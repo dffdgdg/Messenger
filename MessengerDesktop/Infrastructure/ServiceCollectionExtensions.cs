@@ -2,13 +2,16 @@
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Cache;
+using MessengerDesktop.Services.Call;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Call;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Factories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -19,7 +22,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMessengerCoreServices(this IServiceCollection services, string apiBaseUrl)
     {
-        services.AddSingleton<LocalDatabase>(_ =>
+        services.AddSingleton(_ =>
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             var dbDir = Path.Combine(appData, "MessengerDesktop");
@@ -37,8 +40,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGlobalHubConnection, GlobalHubConnection>();
         services.AddSingleton<IChatNotificationApiService, ChatNotificationApiService>();
         services.AddSingleton<IChatInfoPanelStateStore, ChatInfoPanelStateStore>();
-        services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
+        services.AddSingleton<PortAudioLifetime>();
+        services.AddSingleton<CallAudioService>();
+
+        services.AddSingleton<ICallHubConnection>(sp =>
+            new CallHubConnection(sp.GetRequiredService<ISessionStore>(), sp.GetRequiredService<ILogger<CallHubConnection>>(), apiBaseUrl));
+
+        services.AddSingleton<ICallService, CallService>();
+        services.AddSingleton<ActiveCallStore>();
+        services.AddSingleton<CallBannerViewModel>();
 
         services.AddSingleton(_ =>
         {
@@ -46,9 +57,9 @@ public static class ServiceCollectionExtensions
             {
                 CheckCertificateRevocationList = false,
                 UseProxy = false,
-#if DEBUG
+                #if DEBUG
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-#endif
+                #endif
             };
 
             return new HttpClient(handler)

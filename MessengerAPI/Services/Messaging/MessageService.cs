@@ -42,7 +42,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
         .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
         .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender);
-
+    private IQueryable<Message> MessagesLight() => _context.Messages
+        .Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles).AsNoTracking();
     private async Task<Result<T>?> CheckAccessAsync<T>(int userId, int chatId)
     {
         var result = await accessControl.CheckIsMemberAsync(userId, chatId);
@@ -87,8 +88,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         if (await CheckAccessAsync<MessageDto>(senderId, request.ChatId) is { } denied) return denied;
 
-        if (!request.IsVoiceMessage && !request.ForwardedFromMessageId.HasValue
-            && string.IsNullOrWhiteSpace(request.Content) && request.Files is not { Count: > 0 })
+        if (!request.IsVoiceMessage && !request.ForwardedFromMessageId.HasValue && string.IsNullOrWhiteSpace(request.Content) && request.Files is not { Count: > 0 })
         {
             return Result<MessageDto>.Failure("Сообщение должно содержать текст или файлы");
         }
@@ -196,46 +196,42 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
         var half = count / 2;
 
-        var before = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
-            .OrderByDescending(m => m.Id).Take(half + 1).AsNoTracking().ToListAsync();
+        var before = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true).OrderByDescending(m => m.Id).Take(half + 1).AsNoTracking().ToListAsync();
 
-        var after = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
-            .OrderBy(m => m.Id).Take(half).AsNoTracking().ToListAsync();
+        var after = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true).OrderBy(m => m.Id).Take(half).AsNoTracking().ToListAsync();
 
         var msgs = before.OrderBy(m => m.Id).Concat(after).Select(m => m.ToDto(userId, urlBuilder)).ToList();
 
         var oldestId = before.Count > 0 ? before.Min(m => m.Id) : messageId;
         var newestId = after.Count > 0 ? after.Max(m => m.Id) : messageId;
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(msgs,
-            hasOlder: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true),
-            hasNewer: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true)));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(msgs, await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true),
+            await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true)));
     }
 
-    public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
+    public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(
+    int chatId, int messageId, int userId, int count)
     {
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
 
-        var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true)
-            .OrderByDescending(m => m.Id).Take(count).AsNoTracking().ToListAsync();
+        var messages = await MessagesLight().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true).OrderByDescending(m => m.Id).Take(count).ToListAsync();
 
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
 
         return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
-            hasOlder: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true), hasNewer: true));
+            await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true), hasNewer: true));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
     {
         if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
 
-        var messages = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
-            .OrderBy(m => m.Id).Take(count).AsNoTracking().ToListAsync();
+        var messages = await MessagesLight().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true).OrderBy(m => m.Id).Take(count).ToListAsync();
 
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.Select(m => m.ToDto(userId, urlBuilder))], hasOlder: true,
-            hasNewer: await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true)));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.Select(m => m.ToDto(userId, urlBuilder))],hasOlder: true,
+            await _context.Messages.AnyAsync(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true)));
     }
 
     #endregion
@@ -366,10 +362,13 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         if (await CheckAccessAsync<List<MessageDto>>(userId, chatId) is { } denied) return denied;
 
-        var pinned = await MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsPinned && m.IsDeleted != true)
-            .OrderByDescending(m => m.PinnedAt ?? m.CreatedAt).AsNoTracking().ToListAsync();
+        var pinned = await MessagesLight()
+            .Where(m => m.ChatId == chatId && m.IsPinned && m.IsDeleted != true)
+            .OrderByDescending(m => m.PinnedAt ?? m.CreatedAt)
+            .ToListAsync();
 
-        return Result<List<MessageDto>>.Success([.. pinned.Select(m => m.ToDto(userId, urlBuilder))]);
+        return Result<List<MessageDto>>.Success(
+            [.. pinned.Select(m => m.ToDto(userId, urlBuilder))]);
     }
 
     #endregion
@@ -433,9 +432,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     DateTime? dateFrom = null, DateTime? dateTo = null,
     bool oldestFirst = false)
     {
-        var q = _context.Messages
-            .Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && !m.IsSystemMessage
-            && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{query}%"))))
+        var q = _context.Messages.Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && !m.IsSystemMessage && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{query}%"))))
             .Include(m => m.Sender).Include(m => m.Chat).Include(m => m.MessageFiles).Include(m => m.VoiceMessage).Include(m => m.Polls).AsNoTracking();
 
         if (senderId.HasValue)
@@ -508,8 +505,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         const int max = 5;
         var result = new List<ChatDto>();
 
-        var dialogs = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact).Include(c => c.ChatMembers)
-            .ThenInclude(cm => cm.User).AsNoTracking().ToListAsync();
+        var dialogs = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact).Include(c => c.ChatMembers).ThenInclude(cm => cm.User).AsNoTracking().ToListAsync();
 
         foreach (var chat in dialogs)
         {
@@ -531,8 +527,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             }
         }
 
-        var groups = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type != ChatType.Contact && (!hasQuery
-        || EF.Functions.ILike(c.Name ?? "", $"%{query}%"))).Take(max).AsNoTracking().ToListAsync();
+        var groups = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type != ChatType.Contact && (!hasQuery || EF.Functions.ILike(c.Name ?? "", $"%{query}%"))).Take(max).AsNoTracking().ToListAsync();
 
         result.AddRange(groups.Select(c => c.ToDto(urlBuilder)));
         return [.. result.Take(max)];
@@ -653,7 +648,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     #endregion
 
-    #region Logging
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Сообщение {MessageId} создано в чате {ChatId}")]
     private partial void LogMessageCreated(int messageId, int chatId);

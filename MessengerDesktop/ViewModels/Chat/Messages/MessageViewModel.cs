@@ -78,7 +78,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool CanEdit => IsOwn && !IsDeleted && !IsSystemMessage && Poll == null && !IsVoiceMessage && !HasForward;
     public bool ShowFilesOnlyMeta => !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
     public string DisplayContent => IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
-    public bool HasStructuredSystemMessage => IsSystemMessage && SystemEventType.HasValue;
+    public bool HasStructuredSystemMessage => IsSystemMessage && SystemEventType.HasValue && SystemEventType
+            != MessengerShared.Enum.SystemEventType.CallEnded && SystemEventType != MessengerShared.Enum.SystemEventType.CallStarted;
     public bool CanOpenSenderProfile => SenderId > 0;
     public bool HasSystemTargetUser => TargetUserId > 0;
     public int SystemTargetUserId => TargetUserId ?? 0;
@@ -100,6 +101,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         MessengerShared.Enum.SystemEventType.MemberRemoved => " удалил(а) ",
         MessengerShared.Enum.SystemEventType.MemberLeft => " покинул(а) группу",
         MessengerShared.Enum.SystemEventType.RoleChanged => " изменил(а) роль участника ",
+        MessengerShared.Enum.SystemEventType.CallStarted => " начал(а) звонок",
         _ => string.Empty
     };
 
@@ -213,6 +215,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private void OnPositionChanged(int msgId, TimeSpan pos)
     {
         if (msgId != Id) return;
+
         PostIfNotDisposed(() =>
         {
             var dur = _audioPlayer?.Duration ?? TimeSpan.Zero;
@@ -384,10 +387,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private static readonly TimeSpan GroupingThreshold = TimeSpan.FromMinutes(2);
 
-    public static bool CanGroup(MessageViewModel a, MessageViewModel b) =>
-        !a.IsSystemMessage && !b.IsSystemMessage && a.SenderId == b.SenderId
-        && !a.IsDeleted && !b.IsDeleted && a.CreatedAt.Date == b.CreatedAt.Date
-        && (b.CreatedAt - a.CreatedAt).Duration() <= GroupingThreshold;
+    public static bool CanGroup(MessageViewModel a, MessageViewModel b) => !a.IsSystemMessage && !b.IsSystemMessage && a.SenderId == b.SenderId
+        && !a.IsDeleted && !b.IsDeleted && a.CreatedAt.Date == b.CreatedAt.Date && (b.CreatedAt - a.CreatedAt).Duration() <= GroupingThreshold;
 
     public static void RecalculateGrouping(IList<MessageViewModel> msgs) =>
         ApplyGrouping(msgs, 0, msgs.Count - 1);

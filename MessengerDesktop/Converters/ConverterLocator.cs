@@ -25,6 +25,7 @@ public sealed class ConverterLocator
     {
         // Boolean converters
         Add(new BoolToStringConverter { TrueValue = "True", FalseValue = "False" }, "BoolToString");
+        Add<BoolToGeometryConverter>("BoolToGeometry");
         Add(new BoolToDoubleConverter { TrueValue = 90, FalseValue = 0 }, "BoolToRotation", "BooleanToRotateTransform");
         Add(new BoolToDoubleConverter { TrueValue = 1.0, FalseValue = 0.5 }, "BoolToOpacity");
         Add(new BoolToColorConverter { TrueValue = Color.Parse("#22C55E"), FalseValue = Color.Parse("#6B7280") }, "BoolToOnline");

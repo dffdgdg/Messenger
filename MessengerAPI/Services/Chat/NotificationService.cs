@@ -9,8 +9,7 @@ public interface INotificationService
     Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
 }
 
-public sealed partial class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,
-    ILogger<NotificationService> logger) : INotificationService
+public sealed partial class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder, ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendNotificationAsync(int userId, MessageDto message)
     {
@@ -112,7 +111,7 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
     }
     #endregion
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Не удалось отправить уведомление пользователю {UserId}")]
     private partial void LogNotificationFailed(int userId, Exception ex);

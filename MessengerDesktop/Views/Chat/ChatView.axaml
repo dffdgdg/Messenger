@@ -75,8 +75,9 @@
 		<Border Grid.Column="0"
 				CornerRadius="16"
 				Background="{DynamicResource SecondaryBG}">
-			<Grid RowDefinitions="Auto,Auto,*,Auto">
+			<Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
 
+				<!-- Шапка чата -->
 				<Border Grid.Row="0"
 						BorderBrush="{DynamicResource BorderDefault}"
 						BorderThickness="0,0,0,1"
@@ -99,6 +100,20 @@
 								CornerRadius="4"
 								Margin="8">
 							<StackPanel Orientation="Horizontal">
+								<!-- Кнопка звонка -->
+								<Button Classes="IconButton"
+										ToolTip.Tip="{Binding HasActiveCall,
+										Converter={conv:Converter Name=BoolToString},
+										ConverterParameter='Войти в звонок|Начать звонок'}"
+										CornerRadius="4,0,0,4"
+										Command="{Binding StartOrJoinCallCommand}">
+									<Path Data="{StaticResource Call}"
+										  Fill="{Binding Foreground,
+										  RelativeSource={RelativeSource AncestorType=Button}}"
+										  Width="20" Height="20"
+										  Stretch="Uniform"/>
+								</Button>
+								<!-- Кнопка поиска -->
 								<ToggleButton Classes="IconButton"
 											  ToolTip.Tip="Поиск"
 											  CornerRadius="4,0,0,4"
@@ -109,6 +124,7 @@
 										  Width="20" Height="20"
 										  Stretch="Uniform"/>
 								</ToggleButton>
+								<!-- Кнопка инфопанели -->
 								<ToggleButton Classes="IconButton"
 											  ToolTip.Tip="Информация о канале"
 											  CornerRadius="0"
@@ -119,6 +135,7 @@
 										  Width="20" Height="20"
 										  Stretch="Uniform"/>
 								</ToggleButton>
+								<!-- Кнопка меню -->
 								<Button Classes="IconButton"
 										ToolTip.Tip="Меню"
 										CornerRadius="0,4,4,0">
@@ -161,6 +178,8 @@
 						</Border>
 					</Grid>
 				</Border>
+
+				<!-- Баннер закреплённого сообщения -->
 				<Border Grid.Row="1"
 						IsVisible="{Binding IsPinnedBannerVisible}"
 						BorderBrush="{DynamicResource BorderDefault}"
@@ -214,7 +233,60 @@
 						</Grid>
 					</Button>
 				</Border>
-				<Panel Grid.Row="2" Grid.RowSpan="2">
+
+				<!-- Баннер активного звонка -->
+				<Border Grid.Row="2"
+						IsVisible="{Binding HasActiveCall}"
+						Background="{DynamicResource AccentMuted}"
+						BorderBrush="{DynamicResource BorderDefault}"
+						BorderThickness="0,0,0,1"
+						ZIndex="5">
+					<Grid ColumnDefinitions="Auto,*,Auto"
+						  Margin="16,8">
+
+						<!-- Иконка -->
+						<Border Grid.Column="0"
+								Classes="HeaderIconBadge"
+								Width="32" Height="32"
+								CornerRadius="8"
+								Margin="0,0,12,0">
+							<Path Data="{StaticResource Call}"
+								  Fill="{DynamicResource TextOnAccent}"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"
+								  Stretch="Uniform"
+								  Margin="7"/>
+						</Border>
+
+						<!-- Текст -->
+						<StackPanel Grid.Column="1"
+									VerticalAlignment="Center"
+									Spacing="1">
+							<TextBlock Text="{Binding ActiveCallBannerText}"
+									   FontSize="13"
+									   FontWeight="SemiBold"
+									   Foreground="{DynamicResource Accent}"/>
+							<TextBlock Text="{Binding IsInActiveCall,
+							Converter={conv:Converter Name=BoolToString},
+							ConverterParameter='Вы участвуете · нажмите чтобы вернуться|Нажмите чтобы войти'}"
+							FontSize="11"
+							Foreground="{DynamicResource TextSecondary}"/>
+						</StackPanel>
+
+						<!-- Кнопка -->
+						<Button Grid.Column="2"
+								Classes="DialogAccent"
+								Padding="12,6"
+								FontSize="12"
+								Command="{Binding StartOrJoinCallCommand}"
+								Content="{Binding IsInActiveCall,
+								Converter={conv:Converter Name=BoolToString},
+								ConverterParameter='Открыть|Войти'}"/>
+					</Grid>
+				</Border>
+
+				<!-- Фоновый паттерн для сообщений -->
+				<Panel Grid.Row="3" Grid.RowSpan="2">
 					<Border Opacity="0.4">
 						<Border.Background>
 							<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
@@ -243,7 +315,8 @@
 					</Canvas>
 				</Panel>
 
-				<Panel Grid.Row="2">
+				<!-- Область сообщений (сдвинута на Row=3) -->
+				<Panel Grid.Row="3">
 					<skeleton:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
 					<ListBox x:Name="MessagesList"
@@ -283,7 +356,7 @@
 						<Panel>
 							<Path Data="{StaticResource ChevronIcon}"
 								  Fill="{DynamicResource TextPrimary}"
-								  Width="16" Height="16"
+								  Margin="10"
 								  Stretch="Uniform"
 								  HorizontalAlignment="Center"
 								  VerticalAlignment="Center"/>
@@ -306,9 +379,11 @@
 					</Button>
 				</Panel>
 
-				<Border Grid.Row="3" VerticalAlignment="Bottom" Padding="16,0,16,20">
+				<!-- Панель ввода (сдвинута на Row=4) -->
+				<Border Grid.Row="4" VerticalAlignment="Bottom" Padding="16,0,16,20">
 					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
 
+						<!-- Режим редактирования -->
 						<Border Grid.Row="0"
 								Classes="EditModePanel"
 								IsVisible="{Binding EditDelete.IsEditMode}">
@@ -346,6 +421,7 @@
 							</Grid>
 						</Border>
 
+						<!-- Режим ответа -->
 						<Border Grid.Row="1"
 								Classes="EditModePanel"
 								IsVisible="{Binding Reply.IsReplyMode}">
@@ -385,6 +461,7 @@
 							</Grid>
 						</Border>
 
+						<!-- Предпросмотр вложений -->
 						<ItemsControl Grid.Row="3"
 									  ItemsSource="{Binding LocalAttachments}"
 									  Margin="0,0,0,8"
@@ -439,6 +516,7 @@
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
 
+						<!-- Запись голоса -->
 						<Border Grid.Row="4"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="12"
@@ -501,6 +579,7 @@
 							</Grid>
 						</Border>
 
+						<!-- Отправка голоса -->
 						<Border Grid.Row="4"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="12"
@@ -523,6 +602,7 @@
 							</StackPanel>
 						</Border>
 
+						<!-- Ошибка голосового сообщения -->
 						<Border Grid.Row="4"
 								Background="#33FF4444"
 								CornerRadius="10"
@@ -536,6 +616,7 @@
 									   TextWrapping="Wrap"/>
 						</Border>
 
+						<!-- Основное поле ввода -->
 						<Border Grid.Row="5"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="14"
@@ -706,6 +787,7 @@
 							</Grid>
 						</Border>
 
+						<!-- Альтернативная панель при записи голоса -->
 						<Border Grid.Row="5"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="14"

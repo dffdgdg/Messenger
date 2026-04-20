@@ -169,8 +169,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         if (!exists)
             return Result<List<UserDto>>.NotFound($"Отдел с ID {departmentId} не найден");
 
-        var users = await _context.Users.Where(u => u.DepartmentId == departmentId)
-            .Include(u => u.Department).AsNoTracking().ToListAsync(ct);
+        var users = await _context.Users.Where(u => u.DepartmentId == departmentId).Include(u => u.Department).AsNoTracking().ToListAsync(ct);
 
         var result = users.ConvertAll(u => new UserDto
         {
@@ -299,7 +298,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
     #endregion
 
-    #region Log Messages
+    #region Log
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Отдел создан: {DepartmentId} '{Name}'")]
     private partial void LogDepartmentCreated(int departmentId, string name);

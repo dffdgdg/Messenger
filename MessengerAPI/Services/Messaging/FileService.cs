@@ -139,7 +139,7 @@ public partial class FileService(MessengerDbContext context,IAccessControlServic
             Directory.CreateDirectory(directory);
     }
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Изображение сохранено: {FilePath}")]
     private partial void LogImageSaved(string filePath);

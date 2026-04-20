@@ -262,7 +262,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     #endregion
 
-    #region Create / Update / Delete
+    #region CRUD
 
     public async Task<Result<ChatDto>> CreateChatAsync(ChatDto dto)
     {
@@ -485,8 +485,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
     #region Private Helpers
 
     private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
-        => await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact)
-        .Where(c => c.ChatMembers.Any(cm => cm.UserId == userId)).Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
+        => await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
+        .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
 
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
         => (await GetDialogPartnersAsync([chatId], currentUserId)).GetValueOrDefault(chatId);
@@ -496,17 +496,14 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         if (chatIds.Count == 0)
             return [];
 
-        var partners = await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId).Include(cm => cm.User)
-            .AsNoTracking().ToListAsync();
+        var partners = await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 
-        return partners.Where(p => p.User is not null).ToDictionary(
-            p => p.ChatId,
-            p => new DialogPartnerInfo
-            {
-                UserId = p.User!.Id,
-                DisplayName = p.User.FormatDisplayName(),
-                AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar)
-            });
+        return partners.Where(p => p.User is not null).ToDictionary(p => p.ChatId, p => new DialogPartnerInfo
+        {
+            UserId = p.User!.Id,
+            DisplayName = p.User.FormatDisplayName(),
+            AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar)
+        });
     }
 
     private static string? Truncate(string? text, int maxLength)
@@ -514,14 +511,12 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         if (string.IsNullOrEmpty(text))
             return null;
 
-        return text.Length <= maxLength
-            ? text
-            : text[..maxLength] + "...";
+        return text.Length <= maxLength ? text : text[..maxLength] + "...";
     }
 
     #endregion
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Чат {ChatId} создан пользователем {UserId}")]
     private partial void LogChatCreated(int chatId, int userId);

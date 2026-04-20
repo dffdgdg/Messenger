@@ -1,4 +1,4 @@
-# DTO Contracts
+# DTO Contracts.md
 
 Все DTO находятся в проекте **MessengerShared** (`MessengerShared.Dto.*`).
 Все API-ответы обёрнуты в `ApiResponse<T>`.
@@ -453,4 +453,67 @@
 | `UserRole` | `User`, `Head`, `Admin` |
 | `Theme` | `light`, `dark`, `system` |
 | `SystemEventType` | `chat_created`, `member_added`, `member_removed`, `member_left`, `role_changed` |
+| `CallStatus` | `Ringing`, `Active`, `Ended` |
+| `CallEndReason` | `Ended`, `Cancelled`, `Timeout`, `Declined` |
+
+
+## Call
+
+### CallInviteDto
+```json
+{
+  "callId": "guid",
+  "chatId": 1,
+  "chatName": "IT отдел",
+  "initiatorId": 2,
+  "initiatorName": "Петров Иван",
+  "initiatorAvatar": "https://...",
+  "activeParticipantsCount": 1,
+  "isGroupCall": false
+}
 ```
+
+### CallStateDto
+```json
+{
+  "callId": "guid",
+  "chatId": 1,
+  "status": "Ringing|Active|Ended",
+  "initiatorId": 2,
+  "startedAt": "2025-01-01T12:00:00Z",
+  "isGroupCall": false,
+  "participants": [
+    {
+      "userId": 2,
+      "displayName": "Петров Иван",
+      "avatarUrl": "https://...",
+      "isMuted": false,
+      "isSpeaking": false
+    }
+  ]
+}
+```
+
+### CallParticipantDto
+```json
+{
+  "userId": 2,
+  "displayName": "Петров Иван",
+  "avatarUrl": "https://...",
+  "isMuted": false,
+  "isSpeaking": false
+}
+```
+> `isSpeaking` присутствует в DTO, но VAD не реализован — всегда `false`.
+
+### WebRtcSignalDto
+```json
+{
+  "callId": "guid",
+  "fromUserId": 2,
+  "targetUserId": 3,
+  "type": "offer|answer|ice-candidate|udp-endpoint",
+  "payload": "SDP строка, JSON ICE candidate или ip:port"
+}
+```
+> `fromUserId` заполняется **сервером** из JWT — клиент передаёт `0`.

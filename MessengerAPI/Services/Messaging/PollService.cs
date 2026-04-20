@@ -14,8 +14,7 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
 {
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
-        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == pollId);
+        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
 
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос с ID {pollId} не найден");
@@ -146,7 +145,7 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
         return updatedPollResult;
     }
 
-    #region Log messages
+    #region Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Опрос создан в чате {ChatId}")]
     private partial void LogPollCreated(int chatId);

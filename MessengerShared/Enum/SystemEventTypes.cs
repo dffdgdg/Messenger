@@ -9,5 +9,7 @@ public enum SystemEventType
     [EnumMember(Value = "member_added")] MemberAdded,
     [EnumMember(Value = "member_removed")] MemberRemoved,
     [EnumMember(Value = "member_left")] MemberLeft,
-    [EnumMember(Value = "role_changed")] RoleChanged
+    [EnumMember(Value = "role_changed")] RoleChanged,
+    [EnumMember(Value = "call_started")] CallStarted,
+    [EnumMember(Value = "call_ended")] CallEnded
 }

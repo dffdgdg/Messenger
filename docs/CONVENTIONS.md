@@ -1,4 +1,4 @@
-# Code Conventions
+# Conventions.md
 
 ## Общие настройки
 - **Фреймворк**: .NET 10.0, Nullable enabled, Implicit usings enabled

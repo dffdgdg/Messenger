@@ -7,12 +7,12 @@ public sealed class UsersController(IUserService userService, ILogger<UsersContr
     : BaseController<UsersController>(logger)
 {
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAllUsers(CancellationToken ct)
-        => await ExecuteAsync(() => userService.GetAllUsersAsync(ct),"Пользователи получены успешно");
+    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAllUsers(CancellationToken ct) => await ExecuteAsync(()
+        => userService.GetAllUsersAsync(ct),"Пользователи получены успешно");
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<UserDto>>> GetUser(int id, CancellationToken ct)
-        => await ExecuteAsync(() => userService.GetUserAsync(id, ct));
+    public async Task<ActionResult<ApiResponse<UserDto>>> GetUser(int id, CancellationToken ct) => await ExecuteAsync(()
+        => userService.GetUserAsync(id, ct));
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto userDto, CancellationToken ct)
@@ -43,14 +43,14 @@ public sealed class UsersController(IUserService userService, ILogger<UsersContr
     }
 
     [HttpGet("online")]
-    public async Task<ActionResult<ApiResponse<OnlineUsersResponseDto>>> GetOnlineUsers(CancellationToken ct)
-        => await ExecuteAsync(() => userService.GetOnlineUsersAsync(ct), "Список онлайн пользователей получен");
+    public async Task<ActionResult<ApiResponse<OnlineUsersResponseDto>>> GetOnlineUsers(CancellationToken ct) => await ExecuteAsync(()
+        => userService.GetOnlineUsersAsync(ct), "Список онлайн пользователей получен");
 
     [HttpGet("{id}/status")]
-    public async Task<ActionResult<ApiResponse<OnlineStatusDto>>> GetUserOnlineStatus(int id, CancellationToken ct)
-        => await ExecuteAsync(() => userService.GetOnlineStatusAsync(id, ct));
+    public async Task<ActionResult<ApiResponse<OnlineStatusDto>>> GetUserOnlineStatus(int id, CancellationToken ct) => await ExecuteAsync(()
+        => userService.GetOnlineStatusAsync(id, ct));
 
     [HttpPost("status/batch")]
-    public async Task<ActionResult<ApiResponse<List<OnlineStatusDto>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct)
-        => await ExecuteAsync(() => userService.GetOnlineStatusesAsync(userIds, ct));
+    public async Task<ActionResult<ApiResponse<List<OnlineStatusDto>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct) => await ExecuteAsync(()
+        => userService.GetOnlineStatusesAsync(userIds, ct));
 }

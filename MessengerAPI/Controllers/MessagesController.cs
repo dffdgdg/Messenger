@@ -1,11 +1,11 @@
-﻿using MessengerAPI.Services.Messaging;
+﻿using MessengerAPI.Controllers.Requests;
+using MessengerAPI.Services.Messaging;
 using MessengerShared.DTO.Message;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class MessagesController(IMessageService messageService,
-    ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
+public sealed class MessagesController(IMessageService messageService, ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
     [EnableRateLimiting("messaging")]
@@ -22,8 +22,8 @@ public sealed class MessagesController(IMessageService messageService,
     }, "Сообщение успешно отредактировано");
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteMessage(int id)
-        => await ExecuteAsync(() => messageService.DeleteMessageAsync(id, GetCurrentUserId()), "Сообщение успешно удалено");
+    public async Task<IActionResult> DeleteMessage(int id) => await ExecuteAsync(()
+        => messageService.DeleteMessageAsync(id, GetCurrentUserId()), "Сообщение успешно удалено");
 
     [HttpPost("{id}/pin")]
     public async Task<ActionResult<ApiResponse<MessageDto>>> PinMessage(int id) => await ExecuteAsync(()
@@ -38,8 +38,8 @@ public sealed class MessagesController(IMessageService messageService,
         => messageService.GetPinnedMessagesAsync(chatId, GetCurrentUserId()), "Закрепленные сообщения получены");
 
     [HttpGet("chat/{chatId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetChatMessages(int chatId,[FromQuery] int page = 1, [FromQuery] int pageSize = 15)
-        => await ExecuteAsync(() => messageService.GetChatMessagesAsync(chatId, GetCurrentUserId(), page, pageSize), "Сообщения получены успешно");
+    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetChatMessages(int chatId, [FromQuery] PagedQuery paged) => await ExecuteAsync(()
+        => messageService.GetChatMessagesAsync(chatId, GetCurrentUserId(), paged.Page, paged.PageSize), "Сообщения получены успешно");
 
     [HttpGet("chat/{chatId}/around/{messageId}")]
     public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetMessagesAround(int chatId, int messageId,[FromQuery] int count = 50) => await ExecuteAsync(()
@@ -55,33 +55,18 @@ public sealed class MessagesController(IMessageService messageService,
 
     [HttpGet("chat/{chatId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(
-        int chatId,
-        [FromQuery] string query = "",
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        [FromQuery] int? senderId = null,
-        [FromQuery] bool? hasFiles = null,
-        [FromQuery] bool? hasVoice = null,
-        [FromQuery] bool? hasPoll = null,
-        [FromQuery] bool? onlyText = null,
-        [FromQuery] DateTime? dateFrom = null,
-        [FromQuery] DateTime? dateTo = null,
-        [FromQuery] bool oldestFirst = false) => await ExecuteAsync(()
-            => messageService.SearchMessagesAsync(
-                chatId, GetCurrentUserId(), query, page, pageSize,
-                senderId, hasFiles, hasVoice, hasPoll, onlyText,
-                dateFrom, dateTo, oldestFirst));
+    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(int chatId, [FromQuery] SearchMessagesQueryDto query) => await ExecuteAsync(()
+        => messageService.SearchMessagesAsync(chatId, GetCurrentUserId(), query.Query, query.Page, query.PageSize, query.SenderId, query.HasFiles, query.HasVoice,
+            query.HasPoll, query.OnlyText, query.DateFrom, query.DateTo, query.OldestFirst));
 
     [HttpGet("user/{userId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId,[FromQuery] string query = "",[FromQuery] int page = 1,[FromQuery] int pageSize = 20,
-        [FromQuery] int? senderId = null,[FromQuery] int? filterChatId = null,[FromQuery] bool? hasFiles = null,[FromQuery] bool? hasVoice = null,[FromQuery] bool? hasPoll = null,
-        [FromQuery] bool? onlyText = null, [FromQuery] DateTime? dateFrom = null, [FromQuery] DateTime? dateTo = null, [FromQuery] bool oldestFirst = false)
+    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId, [FromQuery] GlobalSearchQueryDto query)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<GlobalSearchResponseDto>();
 
-        return await ExecuteAsync(() => messageService.GlobalSearchAsync(userId, query, page, pageSize, senderId, filterChatId, hasFiles, hasVoice, hasPoll, onlyText, dateFrom, dateTo, oldestFirst));
+        return await ExecuteAsync(() => messageService.GlobalSearchAsync(userId, query.Query, query.Page, query.PageSize, query.SenderId, query.FilterChatId, query.HasFiles,
+            query.HasVoice, query.HasPoll, query.OnlyText, query.DateFrom, query.DateTo, query.OldestFirst));
     }
 }

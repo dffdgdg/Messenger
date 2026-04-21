@@ -159,6 +159,8 @@ GET /chat/{chatId}/search
 
 Ответ: `SearchMessagesResponseDto`
 
+> Query-модель backend: `SearchMessagesQueryDto` (все параметры из таблицы выше).
+
 ### Глобальный поиск (Rate: search)
 
 ```
@@ -182,6 +184,8 @@ GET /user/{userId}/search
 | `oldestFirst` | bool | false | Порядок (старые→новые) |
 
 Ответ: `GlobalSearchResponseDto`
+
+> Query-модель backend: `GlobalSearchQueryDto` (наследует `SearchMessagesQueryDto` и добавляет `filterChatId`).
 
 **MessageDto**: `{ id, chatId, senderId, senderName, senderAvatarUrl, content, createdAt, isOwn, isPrevSameSender, editedAt, isEdited, isDeleted, isPinned, pinnedAt, pinnedByUserId, replyToMessageId, replyToMessage, forwardedFromMessageId, forwardedFrom, isSystemMessage, systemEventType, targetUserId, targetUserName, isVoiceMessage, voiceDurationSeconds, voiceFileUrl, voiceFileName, voiceContentType, voiceFileSize, poll, files }`
 

@@ -2,8 +2,7 @@
 
 namespace MessengerAPI.Controllers;
 
-public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, ILogger<ReadReceiptsController> logger)
-    : BaseController<ReadReceiptsController>(logger)
+public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, ILogger<ReadReceiptsController> logger) : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]
     public async Task<ActionResult<ApiResponse<ReadReceiptResponseDto>>> MarkAsRead([FromBody] MarkAsReadDto request) => await ExecuteAsync(()

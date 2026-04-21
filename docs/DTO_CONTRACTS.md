@@ -517,3 +517,43 @@
 }
 ```
 > `fromUserId` заполняется **сервером** из JWT — клиент передаёт `0`.
+---
+
+## Search
+
+### SearchMessagesQueryDto
+```json
+{
+  "query": "строка поиска",
+  "page": 1,
+  "pageSize": 20,
+  "senderId": null,
+  "hasFiles": null,
+  "hasVoice": null,
+  "hasPoll": null,
+  "onlyText": null,
+  "dateFrom": null,
+  "dateTo": null,
+  "oldestFirst": false
+}
+```
+> Используется как query-модель для `GET /api/messages/chat/{chatId}/search`.
+
+### GlobalSearchQueryDto
+```json
+{
+  "query": "строка поиска",
+  "page": 1,
+  "pageSize": 20,
+  "senderId": null,
+  "filterChatId": null,
+  "hasFiles": null,
+  "hasVoice": null,
+  "hasPoll": null,
+  "onlyText": null,
+  "dateFrom": null,
+  "dateTo": null,
+  "oldestFirst": false
+}
+```
+> Используется как query-модель для `GET /api/messages/user/{userId}/search`.

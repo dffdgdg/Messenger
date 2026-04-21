@@ -7,7 +7,6 @@ namespace MessengerAPI.Hubs;
 public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService, AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
-
     public override async Task OnConnectedAsync()
     {
         var userId = GetCurrentUserId();
@@ -187,7 +186,7 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
     #endregion
 
-    #region Typing & Online
+    #region Typing and Online
 
     public async Task SendTyping(int chatId)
     {

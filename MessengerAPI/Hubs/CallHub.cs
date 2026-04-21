@@ -196,13 +196,10 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         if (shouldEnd)
         {
-            // Все ушли — завершаем
             await TerminateCallAsync(callId, chatId, CallEndReason.Ended);
         }
         else if (isGroup)
         {
-            // Звонок продолжается — уведомить чат что участник ушёл
-            // (чтобы кнопка "войти" обновила счётчик)
             await Clients.Group($"chat_{chatId}").SendAsync("ActiveCallUpdated", await ToStateDtoAsync(session));
         }
     }
@@ -384,8 +381,7 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
     }
 
     // Делегируем поиск сервису — он знает все сессии
-    private IEnumerable<CallSession> FindSessionsForUser(int userId) =>
-        callSessions.GetAllSessionsForUser(userId);
+    private IEnumerable<CallSession> FindSessionsForUser(int userId) => callSessions.GetAllSessionsForUser(userId);
 
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Звонок {CallId} в чате {ChatId} завершён по таймауту")]

@@ -8,7 +8,6 @@ using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Call;
-using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Factories;
 using Microsoft.Extensions.DependencyInjection;

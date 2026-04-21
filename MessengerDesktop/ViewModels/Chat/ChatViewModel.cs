@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -222,8 +223,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         UserId = currentUserId;
 
-        Context = new ChatContext(chatId, currentUserId, dependencies.ApiClient, dependencies.DialogService, dependencies.GlobalHub,
-            dependencies.NotificationService, dependencies.NotificationApiService, dependencies.FileDownloadService, dependencies.CacheService);
+        Context = new ChatContext(chatId, currentUserId, dependencies.Core, dependencies.Media, dependencies.Cache);
 
         Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
         Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
@@ -231,9 +231,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         dependencies.GlobalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, dependencies.ApiClient, () => Context.Members,
-             dependencies.FileDownloadService, dependencies.NotificationService, dependencies.CacheService, dependencies.AudioPlayer,
-             OpenMentionProfileCommand);
+        MessageManager = new ChatMessageManager(Context, dependencies.Media, OpenMentionProfileCommand);
 
         Attachments = new ChatAttachmentManager(chatId, dependencies.ApiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, dependencies.ApiClient);
@@ -286,7 +284,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
             else
             {
-                throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
+                throw new HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
 
             var callState = callStateTask.Result;

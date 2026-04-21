@@ -67,7 +67,7 @@ Initialize():
 
 | Компонент | Ответственность |
 |-----------|----------------|
-| `ChatMessageManager` | CRUD сообщений, пагинация, буферизация истории, gap-fill |
+| `ChatMessageManager` | CRUD сообщений, пагинация, буферизация истории, gap-fill. Инициализируется через `ChatContext` + `ChatMediaServices` |
 | `ChatAttachmentManager` | Выбор файлов, предпросмотр, загрузка на сервер |
 | `ChatMemberLoader` | Загрузка списка участников |
 | `ChatVoiceHandler` | Запись микрофона, отправка голосовых |
@@ -84,6 +84,10 @@ Initialize():
 - `IApiClientService`, `IGlobalHubConnection`
 - `LifetimeToken` (отмена при закрытии чата)
 - События координации: `ScrollToMessageRequested`, `CompositionModeReset`
+
+Для ограничения размера сигнатуры конструктора `ChatContext` переиспользуются
+групповые DI-бандлы из `ChatViewModelDependencies`:
+`ChatCoreServices`, `ChatMediaServices`, `ChatCacheServices`.
 
 ### Mention-composer (`@username`)
 - При вводе определяется mention-токен у каретки (`@...`)

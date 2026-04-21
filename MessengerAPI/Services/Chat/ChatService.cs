@@ -1,5 +1,4 @@
-﻿using MessengerAPI.Infrastructure;
-using MessengerAPI.Services.Base;
+﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
 

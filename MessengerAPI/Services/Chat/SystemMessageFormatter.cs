@@ -1,4 +1,4 @@
-﻿namespace MessengerAPI.Infrastructure;
+﻿namespace MessengerAPI.Services.Chat;
 
 public static class SystemMessageFormatter
 {

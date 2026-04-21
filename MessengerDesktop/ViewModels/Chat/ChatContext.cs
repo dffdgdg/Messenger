@@ -12,12 +12,10 @@ namespace MessengerDesktop.ViewModels.Chat;
 /// и события координации между handlers.
 /// Не содержит бизнес-логики.
 /// </summary>
-public sealed class ChatContext(int chatId, int currentUserId, IApiClientService api, IDialogService dialogs,
-    IGlobalHubConnection hub,INotificationService notifications, IChatNotificationApiService notificationApi,
-    IFileDownloadService fileDownload, ILocalCacheService? cache) : ObservableObject, IDisposable
+public sealed class ChatContext : ObservableObject, IDisposable
 {
-    public int ChatId { get; } = chatId;
-    public int CurrentUserId { get; } = currentUserId;
+    public int ChatId { get; }
+    public int CurrentUserId { get; }
 
     private ChatDto? _chat;
     public ChatDto? Chat
@@ -34,13 +32,30 @@ public sealed class ChatContext(int chatId, int currentUserId, IApiClientService
         set => SetProperty(ref _members, value);
     }
 
-    public IApiClientService Api { get; } = api;
-    public IDialogService Dialogs { get; } = dialogs;
-    public IGlobalHubConnection Hub { get; } = hub;
-    public INotificationService Notifications { get; } = notifications;
-    public IChatNotificationApiService NotificationApi { get; } = notificationApi;
-    public IFileDownloadService FileDownload { get; } = fileDownload;
-    public ILocalCacheService? Cache { get; } = cache;
+    public IApiClientService Api { get; }
+    public IDialogService Dialogs { get; }
+    public IGlobalHubConnection Hub { get; }
+    public INotificationService Notifications { get; }
+    public IChatNotificationApiService NotificationApi { get; }
+    public IFileDownloadService FileDownload { get; }
+    public ILocalCacheService? Cache { get; }
+
+    public ChatContext(int chatId, int currentUserId, ChatCoreServices core, MediaServices media, CacheServices cache)
+    {
+        ArgumentNullException.ThrowIfNull(core);
+        ArgumentNullException.ThrowIfNull(media);
+        ArgumentNullException.ThrowIfNull(cache);
+
+        ChatId = chatId;
+        CurrentUserId = currentUserId;
+        Api = core.ApiClient;
+        Dialogs = core.DialogService;
+        Hub = core.GlobalHub;
+        Notifications = core.NotificationService;
+        NotificationApi = core.NotificationApiService;
+        FileDownload = media.FileDownloadService;
+        Cache = cache.CacheService;
+    }
 
     public event Action<MessageViewModel, bool>? ScrollToMessageRequested;
     public event Action<int, bool>? ScrollToIndexRequested;

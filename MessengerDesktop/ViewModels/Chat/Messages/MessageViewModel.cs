@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -116,6 +117,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private readonly INotificationService? _notificationService;
     private readonly IApiClientService? _apiClient;
     private readonly IAudioPlayerService? _audioPlayer;
+    private static readonly TimeSpan VoiceLoadTimeout = TimeSpan.FromSeconds(20);
     private byte[]? _cachedAudioBytes;
     private bool _disposed, _subscribedToPlayer;
     private PollViewModel? _boundPollVm;
@@ -176,6 +178,26 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     }
 
     private static string FormatTime(TimeSpan t) => t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"m\:ss");
+
+    private static string BuildMediaUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri))
+            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+
+        if (!Uri.TryCreate(App.ApiUrl, UriKind.Absolute, out var apiUri))
+            return absoluteUri.ToString();
+
+        var sameHost = string.Equals(absoluteUri.Host, apiUri.Host, StringComparison.OrdinalIgnoreCase)
+            && absoluteUri.Port == apiUri.Port;
+
+        if (sameHost)
+            return absoluteUri.ToString();
+
+        if (!absoluteUri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            return absoluteUri.ToString();
+
+        return new Uri(apiUri, absoluteUri.PathAndQuery).ToString();
+    }
 
     private void SubscribeToAudioPlayer()
     {
@@ -238,6 +260,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(VoiceFileUrl)) { VoiceError = "URL аудио недоступен"; return; }
 
         VoiceError = null;
+        var mediaUrl = BuildMediaUrl(VoiceFileUrl);
 
         if (_audioPlayer.CurrentMessageId == Id && _audioPlayer.IsPaused) { _audioPlayer.Resume(); return; }
 
@@ -246,13 +269,19 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             IsVoiceLoading = true;
             try
             {
-                await using var stream = await _apiClient.GetStreamAsync(VoiceFileUrl);
+                using var timeoutCts = new CancellationTokenSource(VoiceLoadTimeout);
+                await using var stream = await _apiClient.GetStreamAsync(mediaUrl, timeoutCts.Token);
+
                 if (stream == null) { VoiceError = "Не удалось загрузить аудио"; IsVoiceLoading = false; return; }
 
                 await using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
+                await stream.CopyToAsync(ms, timeoutCts.Token);
                 if (_disposed) return;
                 _cachedAudioBytes = ms.ToArray();
+            }
+            catch (OperationCanceledException)
+            {
+                VoiceError = "Не удалось загрузить голосовое: превышено время ожидания.";
             }
             catch (Exception ex) { VoiceError = $"Ошибка: {ex.Message}"; }
             finally { IsVoiceLoading = false; }
@@ -273,8 +302,9 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(VoiceFileUrl) || _downloadService == null) return;
         try
         {
+            var mediaUrl = BuildMediaUrl(VoiceFileUrl);
             var name = $"voice_{Id}_{CreatedAt:yyyyMMdd_HHmmss}.wav";
-            var path = await _downloadService.DownloadFileAsync(VoiceFileUrl, name);
+            var path = await _downloadService.DownloadFileAsync(mediaUrl, name);
             if (path != null) _notificationService?.ShowSuccessAsync($"Голосовое сохранено: {name}", copyToClipboard: false);
         }
         catch (Exception ex) { _notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false); }

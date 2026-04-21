@@ -89,9 +89,9 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         services.AddSingleton<ChatCoreServices>();
-        services.AddSingleton<ChatMediaServices>();
-        services.AddSingleton<ChatCallServices>();
-        services.AddSingleton<ChatCacheServices>();
+        services.AddSingleton<MediaServices>();
+        services.AddSingleton<CallServices>();
+        services.AddSingleton<CacheServices>();
         services.AddSingleton<ChatViewModelDependencies>();
 
         return services;

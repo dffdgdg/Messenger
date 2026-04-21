@@ -6,6 +6,7 @@ using MessengerDesktop.Services.Call;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerDesktop.ViewModels.Dialog;
+using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.DTO.Call;
 using System;
 using System.Collections.Generic;

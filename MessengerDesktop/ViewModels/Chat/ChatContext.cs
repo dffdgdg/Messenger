@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Factories;
 using System;
 using System.Threading;
 

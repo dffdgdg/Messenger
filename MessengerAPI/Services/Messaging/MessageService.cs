@@ -75,6 +75,35 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     private static string EscapeLikePattern(string pattern)
         => string.IsNullOrEmpty(pattern) ? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+    private static IQueryable<Message> ApplyMessageSearchFilters(IQueryable<Message> query, int? senderId, DateTime? dateFrom, DateTime? dateTo,
+        bool hasFiles, bool hasVoice, bool hasPoll, bool onlyText)
+    {
+        if (senderId.HasValue)
+            query = query.Where(m => m.SenderId == senderId.Value);
+
+        if (dateFrom.HasValue)
+            query = query.Where(m => m.CreatedAt >= dateFrom.Value);
+
+        if (dateTo.HasValue)
+            query = query.Where(m => m.CreatedAt < dateTo.Value.AddDays(1));
+
+        if (hasFiles)
+            query = query.Where(m => m.MessageFiles.Any());
+
+        if (hasVoice)
+            query = query.Where(m => m.VoiceMessage != null);
+
+        if (hasPoll)
+            query = query.Where(m => m.Polls.Any());
+
+        if (onlyText)
+            query = query.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
+
+        return query;
+    }
+
+    private static IQueryable<Message> ApplyMessageSorting(IQueryable<Message> query, bool oldestFirst)
+        => oldestFirst ? query.OrderBy(m => m.CreatedAt) : query.OrderByDescending(m => m.CreatedAt);
 
     #endregion
 
@@ -378,28 +407,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var q = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true && !m.IsSystemMessage
             && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escaped}%")))).AsNoTracking();
 
-        if (query.SenderId.HasValue)
-            q = q.Where(m => m.SenderId == query.SenderId.Value);
+        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo, query.HasFiles == true, query.HasVoice == true,
+            query.HasPoll == true, query.OnlyText == true);
 
-        if (query.DateFrom.HasValue)
-            q = q.Where(m => m.CreatedAt >= query.DateFrom.Value);
-
-        if (query.DateTo.HasValue)
-            q = q.Where(m => m.CreatedAt < query.DateTo.Value.AddDays(1));
-
-        if (query.HasFiles == true)
-            q = q.Where(m => m.MessageFiles.Any());
-
-        if (query.HasVoice == true)
-            q = q.Where(m => m.VoiceMessage != null);
-
-        if (query.HasPoll == true)
-            q = q.Where(m => m.Polls.Any());
-
-        if (query.OnlyText == true)
-            q = q.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
-
-        q = query.OldestFirst ? q.OrderBy(m => m.CreatedAt) : q.OrderByDescending(m => m.CreatedAt);
+        q = ApplyMessageSorting(q, query.OldestFirst);
 
         var total = await q.CountAsync();
         var messages = await Paginate(q, np, nps).ToListAsync();
@@ -419,28 +430,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var q = _context.Messages.Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && !m.IsSystemMessage && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escapedQuery}%"))))
             .Include(m => m.Sender).Include(m => m.Chat).Include(m => m.MessageFiles).Include(m => m.VoiceMessage).Include(m => m.Polls).AsNoTracking();
 
-        if (query.SenderId.HasValue)
-            q = q.Where(m => m.SenderId == query.SenderId.Value);
+        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo, query.HasFiles == true, query.HasVoice == true,
+            query.HasPoll == true, query.OnlyText == true);
 
-        if (query.DateFrom.HasValue)
-            q = q.Where(m => m.CreatedAt >= query.DateFrom.Value);
-
-        if (query.DateTo.HasValue)
-            q = q.Where(m => m.CreatedAt < query.DateTo.Value.AddDays(1));
-
-        if (query.HasFiles == true)
-            q = q.Where(m => m.MessageFiles.Any());
-
-        if (query.HasVoice == true)
-            q = q.Where(m => m.VoiceMessage != null);
-
-        if (query.HasPoll == true)
-            q = q.Where(m => m.Polls.Any());
-
-        if (query.OnlyText == true)
-            q = q.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
-
-        q = query.OldestFirst ? q.OrderBy(m => m.CreatedAt) : q.OrderByDescending(m => m.CreatedAt);
+        q = ApplyMessageSorting(q, query.OldestFirst);
 
         var total = await q.CountAsync();
         var messages = await Paginate(q, page, pageSize).ToListAsync();

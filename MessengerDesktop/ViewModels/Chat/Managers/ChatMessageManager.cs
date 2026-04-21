@@ -2,6 +2,7 @@
 using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Factories;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

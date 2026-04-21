@@ -26,11 +26,7 @@ public partial class LoginViewModel : BaseViewModel
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
 
-        InitializeAsync().ContinueWith(t =>
-        {
-            if (t.IsFaulted)
-                Debug.WriteLine($"Login init failed: {t.Exception?.Flatten().Message}");
-        }, TaskScheduler.FromCurrentSynchronizationContext());
+        _ = InitializeAsync();
     }
 
     protected override void OnIsBusyUpdated(bool value) => LoginCommand.NotifyCanExecuteChanged();
@@ -63,14 +59,16 @@ public partial class LoginViewModel : BaseViewModel
 
             if (completed != initTask)
             {
-                ErrorMessage = "Сервер не отвечает. Попробуйте позже.";
+                ErrorMessage = "Не удалось автоматически восстановить сессию. Войдите вручную или попробуйте снова.";
                 CanRetryAutoLogin = true;
+                await LoadSavedUsernameAsync();
+                _ = ObserveLateInitializationAsync(initTask);
                 return;
             }
 
             await initTask;
 
-            if (_authManager.Session.IsAuthenticated)
+            if (_authManager.HasValidSession())
             {
                 Debug.WriteLine("LoginVM: Сессия восстановлена, переход в MainMenu");
                 _navigation.NavigateToMainMenu();
@@ -88,6 +86,26 @@ public partial class LoginViewModel : BaseViewModel
         finally
         {
             IsInitializing = false;
+        }
+    }
+    private async Task ObserveLateInitializationAsync(Task initTask)
+    {
+        try
+        {
+            await initTask;
+
+            if (!_authManager.Session.IsAuthenticated)
+                return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Debug.WriteLine("LoginVM: Поздняя автоинициализация завершилась успешно, переход в MainMenu");
+                _navigation.NavigateToMainMenu();
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"LoginVM: Ошибка поздней автоинициализации: {ex.Message}");
         }
     }
 
@@ -169,11 +187,12 @@ public partial class LoginViewModel : BaseViewModel
 
                 if (completed != initTask)
                 {
-                    ErrorMessage = "Сервер не отвечает. Попробуйте позже.";
-                    return;
+                    Debug.WriteLine("LoginVM: Инициализация AuthManager не завершилась вовремя, продолжаем ручной вход");
                 }
-
-                await initTask;
+                else
+                {
+                    await initTask;
+                }
             }
 
             var result = await _authManager.LoginAsync(Username, Password, RememberMe);

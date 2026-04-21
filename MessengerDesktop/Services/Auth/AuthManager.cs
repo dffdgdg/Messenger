@@ -13,6 +13,7 @@ public interface IAuthManager
 {
     bool IsInitialized { get; }
     ISessionStore Session { get; }
+    bool HasValidSession();
     Task InitializeAsync();
     Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password, bool rememberMe);
     Task<ApiResponse<object>> LogoutAsync();
@@ -44,6 +45,11 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
+    public bool HasValidSession()
+    {
+        var token = Session.Token;
+        return !string.IsNullOrWhiteSpace(token) && Session.UserId.HasValue && _authService.IsAccessTokenValid(token);
+    }
 
     public AuthManager(IAuthService authService, ISecureStorageService secureStorage, ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
     {

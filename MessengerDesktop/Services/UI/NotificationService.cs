@@ -15,11 +15,9 @@ public interface INotificationService : IDisposable
 
     void Initialize();
 
-    void Show(string title,string message, DesktopNotificationType type = DesktopNotificationType.Information,
-        int durationMs = 3000, Func<Task>? onClick = null);
+    void Show(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, int durationMs = 3000, Func<Task>? onClick = null);
 
-    Task ShowAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information,
-        bool copyToClipboard = false, Func<Task>? onClick = null);
+    Task ShowAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, bool copyToClipboard = false, Func<Task>? onClick = null);
 
     Task ShowErrorAsync(string message, bool copyToClipboard = false);
     Task ShowSuccessAsync(string message, bool copyToClipboard = false);
@@ -39,12 +37,11 @@ public class NotificationService : INotificationService
     private readonly SemaphoreSlim _sync = new(1, 1);
 
     private int _disposed;
-    private volatile bool _initialized;
+    private int _initializedFlag;
 
     public NotificationService(IPlatformService platformService)
     {
         _platformService = platformService ?? throw new ArgumentNullException(nameof(platformService));
-
         ActiveNotifications = new ReadOnlyObservableCollection<DesktopNotificationViewModel>(_activeNotifications);
     }
 
@@ -52,25 +49,25 @@ public class NotificationService : INotificationService
 
     public ReadOnlyObservableCollection<DesktopNotificationViewModel> ActiveNotifications { get; }
 
+    private bool IsInitialized => Volatile.Read(ref _initializedFlag) == 1;
+    private bool IsDisposed => Interlocked.CompareExchange(ref _disposed, 0, 0) == 1;
+
     public void Initialize()
     {
-        if (_initialized)
+        if (Interlocked.CompareExchange(ref _initializedFlag, 1, 0) != 0)
         {
-            Debug.WriteLine("NotificationService already initialized");
+            Debug.WriteLine("[NotificationService] Сервис уже инициализирован");
             return;
         }
-
-        _initialized = true;
     }
 
-    public void Show(string title,string message, DesktopNotificationType type = DesktopNotificationType.Information,
-        int durationMs = DefaultDurationMs, Func<Task>? onClick = null)
+    public void Show(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, int durationMs = DefaultDurationMs, Func<Task>? onClick = null)
     {
         ThrowIfDisposed();
 
-        if (!_initialized)
+        if (!IsInitialized)
         {
-            Debug.WriteLine($"[NotificationService] Cannot show notification (not initialized): {title} - {message}");
+            Debug.WriteLine($"[NotificationService] Невозможно показать уведомление (сервис не инициализирован): {title} - {message}");
             return;
         }
 
@@ -82,13 +79,12 @@ public class NotificationService : INotificationService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Debug.WriteLine($"[NotificationService] Failed to show notification: {ex.Message}");
+                Debug.WriteLine($"[NotificationService] Ошибка при отображении уведомления: {ex.Message}");
             }
         });
     }
 
-    public async Task ShowAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information,
-        bool copyToClipboard = false, Func<Task>? onClick = null)
+    public async Task ShowAsync(string title, string message, DesktopNotificationType type = DesktopNotificationType.Information, bool copyToClipboard = false, Func<Task>? onClick = null)
     {
         ThrowIfDisposed();
 
@@ -98,17 +94,13 @@ public class NotificationService : INotificationService
             await _platformService.CopyToClipboardAsync(message);
     }
 
-    public Task ShowErrorAsync(string message, bool copyToClipboard = false) =>
-        ShowAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
+    public Task ShowErrorAsync(string message, bool copyToClipboard = false) => ShowAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
 
-    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) =>
-        ShowAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
+    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) => ShowAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
 
-    public Task ShowWarningAsync(string message, bool copyToClipboard = false) =>
-        ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
+    public Task ShowWarningAsync(string message, bool copyToClipboard = false) => ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
 
-    public Task ShowInfoAsync(string message, bool copyToClipboard = false) =>
-        ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
+    public Task ShowInfoAsync(string message, bool copyToClipboard = false) => ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
 
     private async Task ShowInternalAsync(string title, string message, DesktopNotificationType type, int durationMs, Func<Task>? onClick)
     {
@@ -136,22 +128,25 @@ public class NotificationService : INotificationService
         }
 
         if (stale is not null)
+        {
             foreach (var s in stale)
+            {
                 await CloseNotificationAsync(s);
+            }
+        }
 
-        _ = RunLifetimeAsync(notification, cts.Token);
+        _ = RunLifetimeAsync(notification, cts.Token).ContinueWith(t => Debug.WriteLine($"[NotificationService] Ошибка в RunLifetimeAsync: {t.Exception?.GetBaseException().Message}"),
+            TaskContinuationOptions.OnlyOnFaulted);
     }
 
-    private async Task RunLifetimeAsync(
-        DesktopNotificationViewModel notification,
-        CancellationToken ct)
+    private async Task RunLifetimeAsync(DesktopNotificationViewModel notification, CancellationToken ct)
     {
         try
         {
             await Task.Delay(notification.DurationMs, ct);
             await Dispatcher.UIThread.InvokeAsync(() => CloseNotificationAsync(notification));
         }
-        catch (OperationCanceledException) { /* canceled — normal path */ }
+        catch (OperationCanceledException) { /* ожидаемо */ }
     }
 
     private async Task CloseNotificationAsync(DesktopNotificationViewModel notification)
@@ -180,23 +175,18 @@ public class NotificationService : INotificationService
 
         if (IsDisposed) return;
 
+        await _sync.WaitAsync();
         try
         {
-            await _sync.WaitAsync();
-            try
-            {
-                _activeNotifications.Remove(notification);
-            }
-            finally
-            {
-                _sync.Release();
-            }
+            _activeNotifications.Remove(notification);
         }
-        catch (ObjectDisposedException) { /* _sync was disposed in Dispose() while we awaited the animation — ignore. */ }
+        catch (ObjectDisposedException) { /* _sync disposed во время анимации */ }
+        finally
+        {
+            if (!IsDisposed)
+                _sync.Release();
+        }
     }
-
-    private bool IsDisposed =>
-        Interlocked.CompareExchange(ref _disposed, 0, 0) == 1;
 
     private void ThrowIfDisposed() =>
         ObjectDisposedException.ThrowIf(IsDisposed, nameof(NotificationService));
@@ -206,18 +196,22 @@ public class NotificationService : INotificationService
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        if (disposing)
+        if (!disposing) return;
+
+        foreach (var cts in _lifetimes.Values)
         {
-            foreach (var cts in _lifetimes.Values)
+            try
             {
                 cts.Cancel();
                 cts.Dispose();
             }
-            _lifetimes.Clear();
-            _activeNotifications.Clear();
-            _initialized = false;
-            _sync.Dispose();
+            catch (ObjectDisposedException) { }
         }
+
+        _lifetimes.Clear();
+        _activeNotifications.Clear();
+        Interlocked.Exchange(ref _initializedFlag, 0);
+        _sync.Dispose();
     }
 
     public void Dispose()
@@ -226,11 +220,27 @@ public class NotificationService : INotificationService
         GC.SuppressFinalize(this);
     }
 }
-public sealed partial class DesktopNotificationViewModel(string title, string message, DesktopNotificationType type,
-    int durationMs, Func<DesktopNotificationViewModel, Task> closeAsync, Func<Task>? onClick = null) : ObservableObject
+
+public sealed partial class DesktopNotificationViewModel(string title, string message, DesktopNotificationType type, int durationMs,
+    Func<DesktopNotificationViewModel, Task> closeAsync, Func<Task>? onClick = null) : ObservableObject
 {
-    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync =
-        closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
+    private static class NotificationColors
+    {
+        public const string Success = "#31C48D";
+        public const string Warning = "#F6AD55";
+        public const string Error = "#F56565";
+        public const string Information = "#4F8CFF";
+    }
+
+    private static class NotificationIcons
+    {
+        public const string Success = "✓";
+        public const string Warning = "!";
+        public const string Error = "✕";
+        public const string Information = "i";
+    }
+
+    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync = closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
 
     public Guid Id { get; } = Guid.NewGuid();
     public string Title { get; } = title;
@@ -241,18 +251,18 @@ public sealed partial class DesktopNotificationViewModel(string title, string me
 
     public string AccentHex => Type switch
     {
-        DesktopNotificationType.Success => "#31C48D",
-        DesktopNotificationType.Warning => "#F6AD55",
-        DesktopNotificationType.Error => "#F56565",
-        _ => "#4F8CFF"
+        DesktopNotificationType.Success => NotificationColors.Success,
+        DesktopNotificationType.Warning => NotificationColors.Warning,
+        DesktopNotificationType.Error => NotificationColors.Error,
+        _ => NotificationColors.Information
     };
 
     public string IconGlyph => Type switch
     {
-        DesktopNotificationType.Success => "✓",
-        DesktopNotificationType.Warning => "!",
-        DesktopNotificationType.Error => "✕",
-        _ => "i"
+        DesktopNotificationType.Success => NotificationIcons.Success,
+        DesktopNotificationType.Warning => NotificationIcons.Warning,
+        DesktopNotificationType.Error => NotificationIcons.Error,
+        _ => NotificationIcons.Information
     };
 
     [ObservableProperty]

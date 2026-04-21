@@ -1,0 +1,25 @@
+﻿namespace MessengerAPI.Infrastructure;
+
+public static class SystemMessageFormatter
+{
+    private const string DefaultActor = "Пользователь";
+    private const string DefaultTarget = "пользователя";
+    private const string DefaultSystemMessage = "Системное сообщение";
+
+    public static string Format(SystemEventType? eventType, string? senderName, string? targetName, string? fallback = null)
+    {
+        var actor = string.IsNullOrWhiteSpace(senderName) ? DefaultActor : senderName;
+        var target = string.IsNullOrWhiteSpace(targetName) ? DefaultTarget : targetName;
+
+        return eventType switch
+        {
+            SystemEventType.ChatCreated => $"{actor} создал(а) группу",
+            SystemEventType.MemberAdded => $"{actor} добавил(а) {target}",
+            SystemEventType.MemberRemoved => $"{actor} удалил(а) {target}",
+            SystemEventType.MemberLeft => $"{actor} покинул(а) группу",
+            SystemEventType.RoleChanged => $"{actor} изменил(а) роль {target}",
+            SystemEventType.CallStarted => $"{actor} начал(а) звонок",
+            _ => fallback ?? DefaultSystemMessage
+        };
+    }
+}

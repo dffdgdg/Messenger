@@ -1,4 +1,5 @@
-﻿using MessengerAPI.Services.Base;
+﻿using MessengerAPI.Infrastructure;
+using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
 
@@ -31,125 +32,78 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         if (chatIds.Count == 0)
             return Result<List<ChatDto>>.Success([]);
 
-        var chatsData = await _context.Chats.Where(c => chatIds.Contains(c.Id)).GroupJoin(_context.Messages.Where(m => m.IsDeleted != true), chat => chat.Id, msg => msg.ChatId, (chat, msgs) => new
-        {
-            Chat = chat,
-            LastMessage = msgs.OrderByDescending(m => m.CreatedAt).Select(m => new
-            {
-                m.Id,
-                m.Content,
-                m.CreatedAt,
-                m.IsSystemMessage,
-                m.SenderId,
-                m.IsVoiceMessage,
-                m.SystemEventType,
-                m.TargetUserId,
-                SenderName = m.Sender!.FormatDisplayName(),
-                TargetUserName = m.TargetUser != null ? m.TargetUser.FormatDisplayName() : null,
-                HasPoll = m.Polls.Count != 0,
-                HasFiles = m.MessageFiles.Count != 0
-            }).FirstOrDefault()
-        }).AsNoTracking().ToListAsync();
-
+        var chatsData = await LoadChatsWithLastMessageAsync(chatIds);
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
-
         var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact).Select(c => c.Chat.Id).ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
-        var result = chatsData.ConvertAll(item =>
-        {
-            var msg = item.LastMessage;
-            string? preview = null;
-            string? senderName = null;
-            bool isSystem = false;
-            bool isPoll = false;
+        var result = chatsData.ConvertAll(item => BuildChatDto(item, unreadCounts, dialogPartners));
 
-            if (msg != null)
-            {
-                isSystem = msg.IsSystemMessage;
-                isPoll = msg.HasPoll;
-
-                if (msg.IsSystemMessage)
-                {
-                    preview = BuildSystemPreview(msg.SystemEventType, msg.SenderName, msg.TargetUserName);
-                    senderName = null;
-                }
-                else if (msg.HasPoll)
-                {
-                    preview = Truncate(msg.Content, 50);
-                    senderName = msg.SenderName;
-                }
-                else if (msg.IsVoiceMessage)
-                {
-                    preview = "Голосовое сообщение";
-                    senderName = msg.SenderName;
-                }
-                else if (msg.HasFiles && string.IsNullOrWhiteSpace(msg.Content))
-                {
-                    preview = "Вложение";
-                    senderName = msg.SenderName;
-                }
-                else if (msg.HasFiles && !string.IsNullOrWhiteSpace(msg.Content))
-                {
-                    preview = Truncate(msg.Content, 50);
-                    senderName = msg.SenderName;
-                }
-                else
-                {
-                    preview = Truncate(msg.Content, 50);
-                    senderName = msg.SenderName;
-                }
-            }
-
-            var dto = new ChatDto
-            {
-                Id = item.Chat.Id,
-                Type = item.Chat.Type,
-                CreatedById = item.Chat.CreatedById ?? 0,
-                LastMessageDate = msg?.CreatedAt ?? item.Chat.LastMessageTime,
-                LastMessagePreview = preview,
-                LastMessageSenderName = senderName,
-                LastMessageSenderId = msg?.SenderId,
-                LastMessageIsSystem = isSystem,
-                LastMessageIsPoll = isPoll,
-                LastMessageIsVoice = msg?.IsVoiceMessage ?? false,
-                UnreadCount = unreadCounts.GetValueOrDefault(item.Chat.Id, 0)
-            };
-
-            if (item.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
-            {
-                dto.Name = partner.DisplayName;
-                dto.Avatar = partner.AvatarUrl;
-            }
-            else
-            {
-                dto.Name = item.Chat.Name;
-                dto.Avatar = urlBuilder.BuildUrl(item.Chat.Avatar);
-            }
-
-            return dto;
-        });
-
-        var sorted = result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate).ToList();
-
-        return Result<List<ChatDto>>.Success(sorted);
+        return Result<List<ChatDto>>.Success([.. result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate)]);
     }
-
-    private static string BuildSystemPreview(SystemEventType? eventType, string? senderName, string? targetName)
+    private async Task<List<ChatWithLastMessage>> LoadChatsWithLastMessageAsync(List<int> chatIds)
     {
-        var actor = string.IsNullOrWhiteSpace(senderName) ? "Пользователь" : senderName;
-        var target = string.IsNullOrWhiteSpace(targetName) ? "пользователя" : targetName;
+        return await _context.Chats.Where(c => chatIds.Contains(c.Id)).GroupJoin(_context.Messages.Where(m => m.IsDeleted != true), chat => chat.Id, msg => msg.ChatId,
+            (chat, msgs) => new ChatWithLastMessage
+            {
+                Chat = chat,
+                LastMessage = msgs.OrderByDescending(m => m.CreatedAt).Select(m => new LastMessageInfo(
+                    m.Id, m.Content, m.CreatedAt, m.IsSystemMessage,
+                    m.SenderId, m.IsVoiceMessage, m.SystemEventType, m.TargetUserId,
+                    m.Sender!.FormatDisplayName(),
+                    m.TargetUser != null ? m.TargetUser.FormatDisplayName() : null,
+                    m.Polls.Count != 0,
+                    m.MessageFiles.Count != 0)).FirstOrDefault()
+            }).AsNoTracking().ToListAsync();
+    }
+    private ChatDto BuildChatDto(ChatWithLastMessage item, Dictionary<int, int> unreadCounts,Dictionary<int, DialogPartnerInfo> dialogPartners)
+    {
+        var msg = item.LastMessage;
+        var (preview, senderName, isSystem) = msg is not null ? BuildLastMessagePreview(msg) : (null, null, false);
 
-        return eventType switch
+        var dto = new ChatDto
         {
-            SystemEventType.ChatCreated => $"{actor} создал(а) группу",
-            SystemEventType.MemberAdded => $"{actor} добавил(а) {target}",
-            SystemEventType.MemberRemoved => $"{actor} удалил(а) {target}",
-            SystemEventType.MemberLeft => $"{actor} покинул(а) группу",
-            SystemEventType.RoleChanged => $"{actor} изменил(а) роль {target}",
-            _ => "Системное сообщение"
+            Id = item.Chat.Id,
+            Type = item.Chat.Type,
+            CreatedById = item.Chat.CreatedById ?? 0,
+            LastMessageDate = msg?.CreatedAt ?? item.Chat.LastMessageTime,
+            LastMessagePreview = preview,
+            LastMessageSenderName = senderName,
+            LastMessageSenderId = msg?.SenderId,
+            LastMessageIsSystem = isSystem,
+            LastMessageIsPoll = msg?.HasPoll ?? false,
+            LastMessageIsVoice = msg?.IsVoiceMessage ?? false,
+            UnreadCount = unreadCounts.GetValueOrDefault(item.Chat.Id, 0)
         };
+
+        if (item.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
+        {
+            dto.Name = partner.DisplayName;
+            dto.Avatar = partner.AvatarUrl;
+        }
+        else
+        {
+            dto.Name = item.Chat.Name;
+            dto.Avatar = urlBuilder.BuildUrl(item.Chat.Avatar);
+        }
+
+        return dto;
+    }
+    private static (string? Preview, string? SenderName, bool IsSystem) BuildLastMessagePreview(
+        LastMessageInfo msg)
+    {
+        if (msg.IsSystemMessage)
+            return (SystemMessageFormatter.Format(msg.SystemEventType, msg.SenderName, msg.TargetUserName), null, true);
+
+        var preview = msg switch
+        {
+            { IsVoiceMessage: true } => "Голосовое сообщение",
+            { HasFiles: true, Content: null or "" } => "Вложение",
+            _ => Truncate(msg.Content, 50)
+        };
+
+        return (preview, msg.SenderName, false);
     }
 
     public async Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId)
@@ -486,7 +440,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     private async Task<Model.Chat?> FindExistingContactChatAsync(int userId, int contactUserId)
         => await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
-        .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
+            .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
 
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
         => (await GetDialogPartnersAsync([chatId], currentUserId)).GetValueOrDefault(chatId);
@@ -534,6 +488,14 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
     private partial void LogAvatarRemoved(int chatId);
 
     #endregion
+    private sealed record LastMessageInfo(int Id, string? Content, DateTime CreatedAt, bool IsSystemMessage, int? SenderId, bool IsVoiceMessage,
+        SystemEventType? SystemEventType, int? TargetUserId, string? SenderName, string? TargetUserName, bool HasPoll, bool HasFiles);
+
+    private sealed record ChatWithLastMessage
+    {
+        public Model.Chat Chat { get; init; } = null!;
+        public LastMessageInfo? LastMessage { get; init; }
+    }
 
     private readonly record struct DialogPartnerInfo
     {

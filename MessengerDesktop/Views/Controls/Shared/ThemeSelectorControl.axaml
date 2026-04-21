@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="MessengerDesktop.Views.Controls.ThemeSelectorControl"
              x:Name="Root">
+    
     <UserControl.Resources>
         <ControlTemplate x:Key="LightPreview">
             <Border Background="#F7F8FA" CornerRadius="8" BorderThickness="1" BorderBrush="#20000000">
@@ -39,14 +40,23 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="RootBorder" Background="{TemplateBinding Background}"
                             BorderThickness="2" BorderBrush="{DynamicResource BorderDefault}"
                             CornerRadius="12" Padding="12">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          HorizontalContentAlignment="Stretch"/>
+                        <StackPanel Spacing="10" HorizontalAlignment="Stretch">
+                            <ContentPresenter Content="{TemplateBinding Content}" 
+                                              HorizontalContentAlignment="Stretch"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                <Grid Width="18" Height="18">
+                                    <Ellipse Stroke="{DynamicResource BorderDefault}" StrokeThickness="2"/>
+                                    <Ellipse x:Name="CheckMark" Fill="{DynamicResource Accent}" Width="10" Height="10" IsVisible="False"/>
+                                </Grid>
+                                <TextBlock Text="{TemplateBinding Tag}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
                 </ControlTemplate>
             </Setter>
@@ -56,64 +66,35 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
             <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
         </Style>
+        <Style Selector="RadioButton.ThemeOption:checked /template/ Ellipse#CheckMark">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
         
-        <RadioButton Grid.Column="0" Classes="ThemeOption" GroupName="TS"
+        <RadioButton Grid.Column="0" Classes="ThemeOption" GroupName="TS" Tag="Светлая"
                      IsChecked="{Binding IsLightSelected, ElementName=Root, Mode=TwoWay}">
-            <StackPanel Spacing="10" HorizontalAlignment="Stretch">
-                <TemplatedControl Template="{StaticResource LightPreview}" Height="100" HorizontalAlignment="Stretch"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                    <Grid Width="18" Height="18">
-                        <Ellipse Stroke="{DynamicResource BorderDefault}" StrokeThickness="2"/>
-                        <Ellipse Fill="{DynamicResource Accent}" Width="10" Height="10"
-                                 IsVisible="{Binding IsLightSelected, ElementName=Root}"/>
-                    </Grid>
-                    <TextBlock Text="Светлая" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
+            <TemplatedControl Template="{StaticResource LightPreview}" Height="100"/>
         </RadioButton>
 
-        <RadioButton Grid.Column="1" Classes="ThemeOption" GroupName="TS"
+        <RadioButton Grid.Column="1" Classes="ThemeOption" GroupName="TS" Tag="Тёмная"
                      IsChecked="{Binding IsDarkSelected, ElementName=Root, Mode=TwoWay}">
-            <StackPanel Spacing="10" HorizontalAlignment="Stretch">
-                <TemplatedControl Template="{StaticResource DarkPreview}" Height="100" HorizontalAlignment="Stretch"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                    <Grid Width="18" Height="18">
-                        <Ellipse Stroke="{DynamicResource BorderDefault}" StrokeThickness="2"/>
-                        <Ellipse Fill="{DynamicResource Accent}" Width="10" Height="10"
-                                 IsVisible="{Binding IsDarkSelected, ElementName=Root}"/>
-                    </Grid>
-                    <TextBlock Text="Тёмная" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
+            <TemplatedControl Template="{StaticResource DarkPreview}" Height="100"/>
         </RadioButton>
 
-        <RadioButton Grid.Column="2" Classes="ThemeOption" GroupName="TS"
+        <RadioButton Grid.Column="2" Classes="ThemeOption" GroupName="TS" Tag="Системная"
                      IsChecked="{Binding IsSystemSelected, ElementName=Root, Mode=TwoWay}">
-            <StackPanel Spacing="10" HorizontalAlignment="Stretch">
-                <Grid Height="100" HorizontalAlignment="Stretch">
-                    <TemplatedControl Template="{StaticResource LightPreview}" 
-                                      HorizontalAlignment="Stretch"
-                                      IsVisible="{Binding !IsSystemDarkNow, ElementName=Root}"/>
-                    <TemplatedControl Template="{StaticResource DarkPreview}" 
-                                      HorizontalAlignment="Stretch"
-                                      IsVisible="{Binding IsSystemDarkNow, ElementName=Root}"/>
-                    <Border VerticalAlignment="Top" HorizontalAlignment="Right" 
-                            Background="{DynamicResource Accent}" CornerRadius="4" Margin="4" Padding="4,2">
-                        <TextBlock Text="AUTO" FontSize="9" FontWeight="Bold" Foreground="White"/>
-                    </Border>
-                </Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                    <Grid Width="18" Height="18">
-                        <Ellipse Stroke="{DynamicResource BorderDefault}" StrokeThickness="2"/>
-                        <Ellipse Fill="{DynamicResource Accent}" Width="10" Height="10"
-                                 IsVisible="{Binding IsSystemSelected, ElementName=Root}"/>
-                    </Grid>
-                    <TextBlock Text="Системная" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
+            <Grid Height="100">
+                <TemplatedControl Template="{StaticResource LightPreview}" 
+                                  IsVisible="{Binding !IsSystemDarkNow, ElementName=Root}"/>
+                <TemplatedControl Template="{StaticResource DarkPreview}" 
+                                  IsVisible="{Binding IsSystemDarkNow, ElementName=Root}"/>
+                <Border VerticalAlignment="Top" HorizontalAlignment="Right" 
+                        Background="{DynamicResource Accent}" CornerRadius="4" Margin="4" Padding="4,2">
+                    <TextBlock Text="AUTO" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                </Border>
+            </Grid>
         </RadioButton>
     </Grid>
 </UserControl>

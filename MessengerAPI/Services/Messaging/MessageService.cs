@@ -451,24 +451,24 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         return (messages.ConvertAll(m => BuildSearchDto(m, escapedQuery, partners)), total, total > ((page - 1) * pageSize) + pageSize);
     }
 
-    public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, GlobalSearchQueryDto queryDto)
+    public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, GlobalSearchQueryDto query)
     {
-        var (np, nps) = NormalizePagination(queryDto.Page, queryDto.PageSize, 50);
+        var (np, nps) = NormalizePagination(query.Page, query.PageSize, 50);
 
-        var hasQuery = !string.IsNullOrWhiteSpace(queryDto.Query);
-        var escaped = hasQuery ? EscapeLikePattern(queryDto.Query) : string.Empty;
+        var hasQuery = !string.IsNullOrWhiteSpace(query.Query);
+        var escaped = hasQuery ? EscapeLikePattern(query.Query) : string.Empty;
 
         var chatIds = await _context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync();
 
         if (chatIds.Count == 0)
-            return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = queryDto.Page });
+            return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = query.Page });
 
-        if (queryDto.FilterChatId.HasValue)
-            chatIds = [.. chatIds.Where(id => id == queryDto.FilterChatId.Value)];
+        if (query.FilterChatId.HasValue)
+            chatIds = [.. chatIds.Where(id => id == query.FilterChatId.Value)];
 
-        var chats = (hasQuery && queryDto.FilterChatId == null) ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery) : [];
+        var chats = (hasQuery && query.FilterChatId == null) ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery) : [];
 
-        var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(chatIds, escaped, userId, queryDto, np, nps, hasQuery);
+        var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(chatIds, escaped, userId, query, np, nps, hasQuery);
 
         return Result<GlobalSearchResponseDto>.Success(new()
         {
@@ -494,8 +494,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             if (partner is null) continue;
 
             var name = partner.FormatDisplayName();
-            if (!hasQuery || name.Contains(query, StringComparison.OrdinalIgnoreCase) || (partner.Username ?? "")
-                .Contains(query, StringComparison.OrdinalIgnoreCase))
+            if (!hasQuery || name.Contains(query, StringComparison.OrdinalIgnoreCase) || (partner.Username ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
             {
                 result.Add(new ChatDto
                 {

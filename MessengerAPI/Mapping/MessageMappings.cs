@@ -1,29 +1,33 @@
-﻿namespace MessengerAPI.Mapping;
+﻿using MessengerAPI.Infrastructure;
+
+namespace MessengerAPI.Mapping;
 
 public static class MessageMappings
 {
+    private const string DeletedMessagePlaceholder = "[Сообщение удалено]";
+
     public static MessageDto ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
         var isSystem = message.IsSystemMessage;
-        var voice = message.VoiceMessage;
+        var isPinnedAndVisible = message.IsPinned && !isDeleted;
         var senderName = message.Sender?.FormatDisplayName();
         var targetUserName = isSystem ? message.TargetUser?.FormatDisplayName() : null;
+        var voice = message.VoiceMessage;
 
         return new MessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
             SenderId = message.SenderId,
-            Content = isDeleted ? "[Сообщение удалено]"
-                : (isSystem ? BuildSystemMessageContent(message.SystemEventType, senderName, targetUserName, message.Content) : message.Content),
+            Content = ResolveContent(message, isDeleted, isSystem, senderName, targetUserName),
             CreatedAt = message.CreatedAt,
             EditedAt = message.EditedAt,
             IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,
             IsDeleted = isDeleted,
-            IsPinned = message.IsPinned && !isDeleted,
-            PinnedAt = message.IsPinned && !isDeleted ? message.PinnedAt : null,
-            PinnedByUserId = message.IsPinned && !isDeleted ? message.PinnedByUserId : null,
+            IsPinned = isPinnedAndVisible,
+            PinnedAt = isPinnedAndVisible ? message.PinnedAt : null,
+            PinnedByUserId = isPinnedAndVisible ? message.PinnedByUserId : null,
             SenderName = senderName,
             SenderAvatarUrl = message.Sender?.Avatar.BuildFullUrl(urlBuilder),
             IsOwn = !isSystem && currentUserId.HasValue && message.SenderId == currentUserId,
@@ -49,16 +53,21 @@ public static class MessageMappings
         };
     }
 
-    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message) => new()
+    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
     {
-        Id = message.Id,
-        ChatId = message.ChatId,
-        SenderId = message.SenderId,
-        SenderName = message.Sender?.FormatDisplayName(),
-        Content = message.IsDeleted ?? false ? "[Сообщение удалено]" : message.Content,
-        CreatedAt = message.CreatedAt,
-        IsDeleted = message.IsDeleted ?? false
-    };
+        var isDeleted = message.IsDeleted ?? false;
+
+        return new MessageReplyPreviewDto
+        {
+            Id = message.Id,
+            ChatId = message.ChatId,
+            SenderId = message.SenderId,
+            SenderName = message.Sender?.FormatDisplayName(),
+            Content = isDeleted ? DeletedMessagePlaceholder : message.Content,
+            CreatedAt = message.CreatedAt,
+            IsDeleted = isDeleted
+        };
+    }
 
     public static MessageForwardInfoDto ToForwardInfoDto(this Message message) => new()
     {
@@ -69,20 +78,10 @@ public static class MessageMappings
         OriginalCreatedAt = message.CreatedAt
     };
 
-    private static string BuildSystemMessageContent(SystemEventType? eventType, string? senderName, string? targetUserName, string? fallbackContent)
+    private static string ResolveContent(Message message, bool isDeleted, bool isSystem, string? senderName, string? targetName)
     {
-        var actor = string.IsNullOrWhiteSpace(senderName) ? "Пользователь" : senderName;
-        var target = string.IsNullOrWhiteSpace(targetUserName) ? "пользователя" : targetUserName;
-
-        return eventType switch
-        {
-            SystemEventType.ChatCreated => $"{actor} создал(а) группу",
-            SystemEventType.MemberAdded => $"{actor} добавил(а) {target}",
-            SystemEventType.MemberRemoved => $"{actor} удалил(а) {target}",
-            SystemEventType.MemberLeft => $"{actor} покинул(а) группу",
-            SystemEventType.RoleChanged => $"{actor} изменил(а) роль участника {target}",
-            SystemEventType.CallStarted => $"{actor} начал(а) звонок",
-            _ => string.IsNullOrWhiteSpace(fallbackContent) ? "Системное сообщение" : fallbackContent
-        };
+        if (isDeleted) return DeletedMessagePlaceholder;
+        if (isSystem) return SystemMessageFormatter.Format(message.SystemEventType, senderName, targetName, message.Content);
+        return message.Content ?? string.Empty;
     }
 }

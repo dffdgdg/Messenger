@@ -54,7 +54,9 @@ Initialize():
 ### Жизненный цикл
 1. Клик → `ChatsViewModel.SelectedChatChanged`
 2. `ChatViewModelFactory.Create(chatId)` → новый экземпляр
-  - Фабрика передаёт агрегатор зависимостей `ChatViewModelDependencies`, чтобы не раздувать сигнатуру конструктора `ChatViewModel`
+   - Фабрика передаёт агрегатор `ChatViewModelDependencies`
+  - `ChatViewModelDependencies` собирается из групп DI-сервисов: `ChatCoreServices`, `ChatMediaServices`, `ChatCallServices`, `ChatCacheServices` (сигнатуры конструкторов остаются компактными)
+
 3. `InitializeAsync()`:
    - Загрузить metadata чата
    - Загрузить участников (`ChatMemberLoader`)

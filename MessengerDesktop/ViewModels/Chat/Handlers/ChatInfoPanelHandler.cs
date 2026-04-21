@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader, IPlatformService platformService) : ChatFeatureHandler(context)
+public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader, IPlatformService platformService)
+    : ChatFeatureHandler(context)
 {
     [ObservableProperty] public partial UserDto? ContactUser { get; set; }
     [ObservableProperty] public partial bool IsContactOnline { get; set; }
@@ -186,8 +187,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
         try
         {
-            var profileResult = await Ctx.Api.GetAsync<UserDto>(
-                ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
+            var profileResult = await Ctx.Api.GetAsync<UserDto>(ApiEndpoints.Users.ById(contact.Id), Ctx.LifetimeToken);
 
             if (profileResult is not { Success: true, Data: not null }) return;
 
@@ -248,15 +248,12 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
     #region Hub event handlers
 
-    private void OnUserStatusChanged(int userId, bool isOnline)
+    private void OnUserStatusChanged(int userId, bool isOnline) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!IsAlive) return;
-            UpdateContactStatus(userId, isOnline);
-            UpdateMemberStatus(userId, isOnline);
-        });
-    }
+        if (!IsAlive) return;
+        UpdateContactStatus(userId, isOnline);
+        UpdateMemberStatus(userId, isOnline);
+    });
 
     private void UpdateContactStatus(int userId, bool isOnline)
     {
@@ -281,16 +278,13 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         if (idx >= 0) Ctx.Members[idx] = member;
     }
 
-    private void OnUserProfileUpdated(UserDto updated)
+    private void OnUserProfileUpdated(UserDto updated) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!IsAlive) return;
-            UpdateContactProfile(updated);
-            ReplaceMemberInList(updated);
-            UpdateFilteredMembers();
-        });
-    }
+        if (!IsAlive) return;
+        UpdateContactProfile(updated);
+        ReplaceMemberInList(updated);
+        UpdateFilteredMembers();
+    });
 
     private void UpdateContactProfile(UserDto updated)
     {

@@ -89,6 +89,10 @@ public static class ServiceCollectionExtensions
             return new FileDownloadService(httpClient);
         });
         services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
+        services.AddSingleton<ChatCoreServices>();
+        services.AddSingleton<ChatMediaServices>();
+        services.AddSingleton<ChatCallServices>();
+        services.AddSingleton<ChatCacheServices>();
         services.AddSingleton<ChatViewModelDependencies>();
 
         return services;

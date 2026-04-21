@@ -11,8 +11,8 @@ public partial class IncomingCallViewModel : DialogBaseViewModel
     private readonly ICallService _callService;
     private readonly CallInviteDto _invite;
 
-    [ObservableProperty] public partial string CallerName { get; set; } = string.Empty;
-    [ObservableProperty] public partial string ChatName { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CallerName { get; set; }
+    [ObservableProperty] public partial string ChatName { get; set; }
     [ObservableProperty] public partial string? CallerAvatar { get; set; }
     [ObservableProperty] public partial bool IsGroupCall { get; set; }
     [ObservableProperty] public partial int ActiveParticipantsCount { get; set; }

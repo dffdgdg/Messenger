@@ -26,20 +26,15 @@ public partial class CallViewModel : BaseViewModel
     public bool ShowWaitingState => Participants.Count <= 1;
 
     public int GridColumns => Participants.Count switch
-    {
-        1 => 1, 2 => 2, <= 4 => 2, <= 6 => 3, <= 9 => 3, _ => 4
-    };
+    { 1 => 1, 2 => 2, <= 4 => 2, <= 6 => 3, <= 9 => 3, _ => 4 };
 
     public int GridRows => Participants.Count switch
-        { 1 => 1, 2 => 1, <= 4 => 2, <= 6 => 2, <= 9 => 3, _ => 3 };
+    { 1 => 1, 2 => 1, <= 4 => 2, <= 6 => 2, <= 9 => 3, _ => 3 };
 
     private readonly DispatcherTimer _durationTimer;
     private DateTime _callStartedAt;
 
-    public CallViewModel(
-        ICallService callService,
-        ICallHubConnection hub,
-        ActiveCallStore store)
+    public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store)
     {
         _callService = callService;
         _hub = hub;

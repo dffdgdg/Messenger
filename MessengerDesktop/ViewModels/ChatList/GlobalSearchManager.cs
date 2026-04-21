@@ -287,17 +287,23 @@ public sealed partial class GlobalSearchManager(
 
     private async Task ExecuteGlobalSearchAsync(string query, int page, CancellationToken ct)
     {
-        var url = ApiEndpoints.Messages.Search(
-            userId, query, page, AppConstants.SearchPageSize,
-            senderId: ServerSenderId,
-            filterChatId: SelectedChatFilter?.Id,
-            hasFiles: ServerHasFiles,
-            hasVoice: ServerHasVoice,
-            hasPoll: ServerHasPoll,
-            onlyText: ServerOnlyText,
-            dateFrom: DateFromFilter?.DateTime,
-            dateTo: DateToFilter?.DateTime,
-            oldestFirst: ServerOldestFirst);
+        var dto = new GlobalSearchQueryDto
+        {
+            Query = query,
+            Page = page,
+            PageSize = AppConstants.SearchPageSize,
+            SenderId = ServerSenderId,
+            FilterChatId = SelectedChatFilter?.Id,
+            HasFiles = ServerHasFiles,
+            HasVoice = ServerHasVoice,
+            HasPoll = ServerHasPoll,
+            OnlyText = ServerOnlyText,
+            DateFrom = DateFromFilter?.DateTime,
+            DateTo = DateToFilter?.DateTime,
+            OldestFirst = ServerOldestFirst
+        };
+
+        var url = ApiEndpoints.Messages.Search(userId, dto);
 
         var result = await apiClient.GetAsync<GlobalSearchResponseDto>(url, ct);
 
@@ -340,16 +346,22 @@ public sealed partial class GlobalSearchManager(
 
         var chatId = ChatLocalSearchChatId.Value;
 
-        var url = ApiEndpoints.Messages.ChatSearch(
-            chatId, query, page, AppConstants.SearchPageSize,
-            senderId: ServerSenderId,
-            hasFiles: ServerHasFiles,
-            hasVoice: ServerHasVoice,
-            hasPoll: ServerHasPoll,
-            onlyText: ServerOnlyText,
-            dateFrom: DateFromFilter?.DateTime,
-            dateTo: DateToFilter?.DateTime,
-            oldestFirst: ServerOldestFirst);
+        var dto = new SearchMessagesQueryDto
+        {
+            Query = query,
+            Page = page,
+            PageSize = AppConstants.SearchPageSize,
+            SenderId = ServerSenderId,
+            HasFiles = ServerHasFiles,
+            HasVoice = ServerHasVoice,
+            HasPoll = ServerHasPoll,
+            OnlyText = ServerOnlyText,
+            DateFrom = DateFromFilter?.DateTime,
+            DateTo = DateToFilter?.DateTime,
+            OldestFirst = ServerOldestFirst
+        };
+
+        var url = ApiEndpoints.Messages.ChatSearch(chatId, dto);
 
         var result = await apiClient.GetAsync<SearchMessagesResponseDto>(url, ct);
 

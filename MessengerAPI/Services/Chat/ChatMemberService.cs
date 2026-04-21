@@ -38,7 +38,9 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
         var saveResult = await SaveChangesAsync();
         if (saveResult.IsFailure)
+        {
             return Result<ChatMemberDto>.FromFailure(saveResult);
+        }
 
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
@@ -143,6 +145,7 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
     };
 
     #region Log
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} добавлен в чат {ChatId} пользователем {AddedBy}")]
     private partial void LogMemberAdded(int userId, int chatId, int addedBy);
 
@@ -151,5 +154,6 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Роль пользователя {UserId} в чате {ChatId} изменена на {Role}")]
     private partial void LogRoleUpdated(int userId, int chatId, ChatRole role);
+
     #endregion
 }

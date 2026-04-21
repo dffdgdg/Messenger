@@ -73,29 +73,14 @@ public static class ApiEndpoints
         public static string After(int chatId, int afterId, int userId, int count)
             => $"{Base}/chat/{chatId}/after/{afterId}?userId={userId}&count={count}";
 
-        public static string Search(int userId,string query,int page,int pageSize,int? senderId = null,int? filterChatId = null,bool? hasFiles = null,
-            bool? hasVoice = null,bool? hasPoll = null,bool? onlyText = null,DateTime? dateFrom = null,DateTime? dateTo = null,bool oldestFirst = false)
+        public static string Search(int userId, GlobalSearchQueryDto dto)
         {
-            var sb = new StringBuilder($"{Base}/user/{userId}/search?query={Uri.EscapeDataString(query ?? string.Empty)}&page={page}&pageSize={pageSize}");
+            var sb = new StringBuilder($"{Base}/user/{userId}/search?query={Uri.EscapeDataString(dto.Query ?? string.Empty)}&page={dto.Page}&pageSize={dto.PageSize}");
 
-            if (senderId.HasValue)
-                sb.Append($"&senderId={senderId.Value}");
-            if (filterChatId.HasValue)
-                sb.Append($"&filterChatId={filterChatId.Value}");
-            if (hasFiles.HasValue)
-                sb.Append($"&hasFiles={hasFiles.Value.ToString().ToLowerInvariant()}");
-            if (hasVoice.HasValue)
-                sb.Append($"&hasVoice={hasVoice.Value.ToString().ToLowerInvariant()}");
-            if (hasPoll.HasValue)
-                sb.Append($"&hasPoll={hasPoll.Value.ToString().ToLowerInvariant()}");
-            if (onlyText.HasValue)
-                sb.Append($"&onlyText={onlyText.Value.ToString().ToLowerInvariant()}");
-            if (dateFrom.HasValue)
-                sb.Append($"&dateFrom={dateFrom.Value:yyyy-MM-dd}");
-            if (dateTo.HasValue)
-                sb.Append($"&dateTo={dateTo.Value:yyyy-MM-dd}");
-            if (oldestFirst)
-                sb.Append("&oldestFirst=true");
+            AppendSearchParameters(sb, dto);
+
+            if (dto.FilterChatId.HasValue)
+                sb.Append($"&filterChatId={dto.FilterChatId.Value}");
 
             return sb.ToString();
         }
@@ -103,29 +88,33 @@ public static class ApiEndpoints
         /// <summary>
         /// GET api/messages/chat/{chatId}/search
         /// </summary>
-        public static string ChatSearch(int chatId,string query,int page,int pageSize,int? senderId = null,bool? hasFiles = null,bool? hasVoice = null,bool? hasPoll = null,
-            bool? onlyText = null,DateTime? dateFrom = null,DateTime? dateTo = null,bool oldestFirst = false)
+        public static string ChatSearch(int chatId, SearchMessagesQueryDto dto)
         {
-            var sb = new StringBuilder($"{Base}/chat/{chatId}/search?query={Uri.EscapeDataString(query ?? string.Empty)}&page={page}&pageSize={pageSize}");
+            var sb = new StringBuilder($"{Base}/chat/{chatId}/search?query={Uri.EscapeDataString(dto.Query ?? string.Empty)}&page={dto.Page}&pageSize={dto.PageSize}");
 
-            if (senderId.HasValue)
-                sb.Append($"&senderId={senderId.Value}");
-            if (hasFiles.HasValue)
-                sb.Append($"&hasFiles={hasFiles.Value.ToString().ToLowerInvariant()}");
-            if (hasVoice.HasValue)
-                sb.Append($"&hasVoice={hasVoice.Value.ToString().ToLowerInvariant()}");
-            if (hasPoll.HasValue)
-                sb.Append($"&hasPoll={hasPoll.Value.ToString().ToLowerInvariant()}");
-            if (onlyText.HasValue)
-                sb.Append($"&onlyText={onlyText.Value.ToString().ToLowerInvariant()}");
-            if (dateFrom.HasValue)
-                sb.Append($"&dateFrom={dateFrom.Value:yyyy-MM-dd}");
-            if (dateTo.HasValue)
-                sb.Append($"&dateTo={dateTo.Value:yyyy-MM-dd}");
-            if (oldestFirst)
-                sb.Append("&oldestFirst=true");
+            AppendSearchParameters(sb, dto);
 
             return sb.ToString();
+        }
+
+        private static void AppendSearchParameters(StringBuilder sb, SearchMessagesQueryDto dto)
+        {
+            if (dto.SenderId.HasValue)
+                sb.Append($"&senderId={dto.SenderId.Value}");
+            if (dto.HasFiles.HasValue)
+                sb.Append($"&hasFiles={dto.HasFiles.Value.ToString().ToLowerInvariant()}");
+            if (dto.HasVoice.HasValue)
+                sb.Append($"&hasVoice={dto.HasVoice.Value.ToString().ToLowerInvariant()}");
+            if (dto.HasPoll.HasValue)
+                sb.Append($"&hasPoll={dto.HasPoll.Value.ToString().ToLowerInvariant()}");
+            if (dto.OnlyText.HasValue)
+                sb.Append($"&onlyText={dto.OnlyText.Value.ToString().ToLowerInvariant()}");
+            if (dto.DateFrom.HasValue)
+                sb.Append($"&dateFrom={dto.DateFrom.Value:yyyy-MM-dd}");
+            if (dto.DateTo.HasValue)
+                sb.Append($"&dateTo={dto.DateTo.Value:yyyy-MM-dd}");
+            if (dto.OldestFirst)
+                sb.Append("&oldestFirst=true");
         }
     }
 

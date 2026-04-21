@@ -1,16 +1,12 @@
 ﻿using Avalonia.Input;
 using Avalonia.Platform.Storage;
-using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Call;
-using MessengerDesktop.Services.Platform;
-using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Chat.Managers;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.DTO.Call;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -36,6 +32,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Зависимости и хэндлеры
 
+    private readonly IFileDownloadService _fileDownloadService;
+    private readonly INotificationService _notificationService;
+    private readonly IAudioPlayerService _audioPlayerService;
+
     public ChatContext Context { get; }
     public ChatsViewModel Parent { get; }
 
@@ -58,6 +58,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private int _composerCaretIndex;
     private readonly ICallService _callService;
     private readonly ICallHubConnection _callHub;
+    private readonly IAudioRecorderService _audioRecorderService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
@@ -70,9 +71,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [ObservableProperty]
     public partial bool IsInActiveCall { get; set; }
 
-    public string ActiveCallBannerText => ActiveCallParticipantsCount > 0
-        ? $"Идёт звонок · {ActiveCallParticipantsCount} участн."
-        : "Идёт звонок";
+    public string ActiveCallBannerText => ActiveCallParticipantsCount > 0 ? $"Идёт звонок · {ActiveCallParticipantsCount} участн." : "Идёт звонок";
 
     #endregion
 
@@ -214,6 +213,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         ArgumentNullException.ThrowIfNull(dependencies);
 
+        _fileDownloadService = dependencies.FileDownloadService;
+        _notificationService = dependencies.NotificationService;
+        _audioPlayerService = dependencies.AudioPlayer;
+        _audioRecorderService = dependencies.AudioRecorder;
+
         var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
 
         UserId = currentUserId;
@@ -266,16 +270,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             IsInitialLoading = true;
             Debug.WriteLine($"[ChatVM] Init start chat={Context.ChatId}");
 
-            // Фаза 1 — параллельно всё что не зависит друг от друга
-            var chatTask = Context.Api.GetAsync<ChatDto>(
-                ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var chatTask = Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
             var readInfoTask = Context.Hub.GetReadInfoAsync(Context.ChatId);
             var notificationTask = Notification.LoadSettingsAsync(Context.LifetimeToken);
             var callStateTask = _callHub.GetCallStateAsync(Context.ChatId);
 
             await Task.WhenAll(chatTask, readInfoTask, notificationTask, callStateTask);
 
-            // Обработка чата
             var chatResult = chatTask.Result;
             if (chatResult is { Success: true, Data: not null })
             {
@@ -285,11 +286,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
             else
             {
-                throw new System.Net.Http.HttpRequestException(
-                    $"Не удалось загрузить чат: {chatResult.Error}");
+                throw new System.Net.Http.HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
 
-            // Обработка звонка
             var callState = callStateTask.Result;
             if (callState != null)
             {
@@ -298,10 +297,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 IsInActiveCall = _callService.ActiveChatId == Context.ChatId;
             }
 
-            // Обработка readInfo
             MessageManager.SetReadInfo(readInfoTask.Result);
 
-            // Фаза 2 — зависит от Context.Chat (нужен тип чата)
             var membersTask = MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
             var pinnedTask = LoadPinnedAsync(Context.LifetimeToken, updateBanner: true);
 
@@ -309,13 +306,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             Context.Members = membersTask.Result;
 
-            // Фаза 3 — зависит от Members (нужен список для Contact)
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
 
             OnPropertyChanged(nameof(InfoPanel));
 
-            // Фаза 4 — загрузка сообщений (зависит от readInfo и Members)
             var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(Context.LifetimeToken);
 
             if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
@@ -332,7 +327,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             PollsCount = MessageManager.GetPollsCount();
             RefreshInfoPanelLists();
 
-            var audioRecorder = App.Current.Services.GetRequiredService<IAudioRecorderService>();
+            var audioRecorder = _audioRecorderService;
             Voice.Initialize(audioRecorder);
 
             InfoPanel.Subscribe();
@@ -461,15 +456,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Dispatcher.UIThread.Post(() => ActiveCallParticipantsCount = state.Participants.Count);
     }
 
-    private void OnActiveCallEnded(string callId)
+    private void OnActiveCallEnded(string callId) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            HasActiveCall = false;
-            ActiveCallParticipantsCount = 0;
-            IsInActiveCall = false;
-        });
-    }
+        HasActiveCall = false;
+        ActiveCallParticipantsCount = 0;
+        IsInActiveCall = false;
+    });
 
     private void OnIncomingCall(CallInviteDto invite)
     {
@@ -552,7 +544,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         OnPropertyChanged(nameof(PhotosCount));
         OnPropertyChanged(nameof(FilesCount));
 
-        // Синхронизировать FilteredPolls при обновлении данных
         InfoPanel.SetPolls(PollMessages);
     }
 
@@ -565,24 +556,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         await SafeExecuteAsync(async _ =>
         {
-            // Уже в этом звонке — ничего не делаем (UI уже открыт)
             if (_callService.IsInCall && _callService.ActiveChatId == Context.ChatId)
                 return;
 
-            // Если в другом звонке — сначала покинуть
             if (_callService.IsInCall)
                 await _callService.LeaveCallAsync();
 
             if (HasActiveCall)
             {
-                // Присоединиться к существующему
                 var state = await _callHub.GetCallStateAsync(Context.ChatId);
                 if (state != null)
                     await _callService.JoinCallAsync(state.CallId, Context.ChatId);
             }
             else
             {
-                // Начать новый
                 await _callService.StartCallAsync(Context.ChatId);
             }
         });
@@ -599,29 +586,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             {
                 if (Context.IsDisposed) return;
 
-                if (result is { Success: true, Data.Count: > 0 })
-                {
-                    RebuildPinnedMessages(result.Data);
-                    if (updateBanner)
-                    {
-                        PinnedBannerMessage?.Dispose();
-                        PinnedBannerMessage = CreatePinnedMessageViewModel(result.Data[0]);
-                        OnPropertyChanged(nameof(IsPinnedBannerVisible));
-                    }
-                }
-                else if (updateBanner)
-                {
-                    PinnedBannerMessage?.Dispose();
-                    PinnedBannerMessage = null;
-                    OnPropertyChanged(nameof(IsPinnedBannerVisible));
-                    foreach (var old in PinnedMessages) old.Dispose();
-                    PinnedMessages.Clear();
-                    OnPropertyChanged(nameof(PinnedCount));
-                    OnPropertyChanged(nameof(HasMultiplePinned));
-                }
+                var data = result is { Success: true, Data.Count: > 0 } ? result.Data : [];
+
+                RebuildPinnedMessages(data);
+
+                if (!updateBanner) return;
+
+                PinnedBannerMessage?.Dispose();
+                PinnedBannerMessage = data.Count > 0 ? CreatePinnedMessageViewModel(data[0]) : null;
             });
         }
-        catch (OperationCanceledException) { /* Отмена */ }
+        catch (OperationCanceledException) { /* ожидаемо */ }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
@@ -641,8 +616,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
-        => new(dto, App.Current.Services.GetRequiredService<IFileDownloadService>(), App.Current.Services.GetRequiredService<INotificationService>(),
-            App.Current.Services.GetRequiredService<IAudioPlayerService>(), Context.Api);
+        => new(dto, _fileDownloadService, _notificationService, _audioPlayerService, Context.Api);
 
     [RelayCommand]
     private async Task CopyUsername()
@@ -985,32 +959,40 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
     });
 
-    private void OnMessagePinStateChanged(MessageDto dto) => Dispatcher.UIThread.Post(() =>
+    private void OnMessagePinStateChanged(MessageDto dto) => Dispatcher.UIThread.Post(() => HandlePinStateChanged(dto));
+
+    private void HandlePinStateChanged(MessageDto dto)
     {
         if (Context.IsDisposed) return;
 
         if (!dto.IsPinned)
         {
-            var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
-            if (toRemove != null)
-            {
-                PinnedMessages.Remove(toRemove);
-                toRemove.Dispose();
-                OnPropertyChanged(nameof(PinnedCount));
-                OnPropertyChanged(nameof(HasMultiplePinned));
-            }
-
-            if (PinnedBannerMessage?.Id == dto.Id)
-            {
-                PinnedBannerMessage?.Dispose();
-                PinnedBannerMessage = PinnedMessages.Count > 0
-                    ? CreatePinnedMessageViewModel(PinnedMessages[0].Message)
-                    : null;
-                OnPropertyChanged(nameof(IsPinnedBannerVisible));
-            }
+            RemovePinnedMessage(dto.Id);
             return;
         }
 
+        AddOrUpdatePinnedMessage(dto);
+    }
+
+    private void RemovePinnedMessage(int messageId)
+    {
+        var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == messageId);
+        if (toRemove != null)
+        {
+            PinnedMessages.Remove(toRemove);
+            toRemove.Dispose();
+            OnPropertyChanged(nameof(PinnedCount));
+            OnPropertyChanged(nameof(HasMultiplePinned));
+        }
+
+        if (PinnedBannerMessage?.Id != messageId) return;
+
+        PinnedBannerMessage?.Dispose();
+        PinnedBannerMessage = PinnedMessages.Count > 0 ? CreatePinnedMessageViewModel(PinnedMessages[0].Message) : null;
+    }
+
+    private void AddOrUpdatePinnedMessage(MessageDto dto)
+    {
         var existing = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
         if (existing != null)
         {
@@ -1025,8 +1007,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         PinnedBannerMessage?.Dispose();
         PinnedBannerMessage = CreatePinnedMessageViewModel(dto);
-        OnPropertyChanged(nameof(IsPinnedBannerVisible));
-    });
+    }
 
     #endregion
 
@@ -1112,7 +1093,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         try
         {
-            MessageManager.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _ = MessageManager.DisposeAsync().AsTask().ConfigureAwait(false);
         }
         catch (Exception ex)
         {

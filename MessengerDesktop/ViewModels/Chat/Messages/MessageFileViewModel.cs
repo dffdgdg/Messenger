@@ -11,19 +11,10 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
     INotificationService? notificationService = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
-    private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"
-    };
+    private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz" };
     private static readonly HashSet<string> PdfExtensions = new(StringComparer.OrdinalIgnoreCase) { ".pdf" };
-    private static readonly HashSet<string> WordExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".doc", ".docx", ".rtf", ".odt"
-    };
-    private static readonly HashSet<string> ExcelExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".xls", ".xlsx", ".csv", ".ods"
-    };
+    private static readonly HashSet<string> WordExtensions = new(StringComparer.OrdinalIgnoreCase) { ".doc", ".docx", ".rtf", ".odt" };
+    private static readonly HashSet<string> ExcelExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xls", ".xlsx", ".csv", ".ods" };
 
     private CancellationTokenSource? _downloadCts;
     private readonly Lock _ctsLock = new();
@@ -75,8 +66,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
     private bool IsExcelFile => ContentType.Contains("excel", StringComparison.OrdinalIgnoreCase)
         || ContentType.Contains("spreadsheet", StringComparison.OrdinalIgnoreCase) || ExcelExtensions.Contains(FileExtension);
 
-    private bool IsArchiveFile =>
-        ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+    private bool IsArchiveFile => ContentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
         || ContentType.Contains("rar", StringComparison.OrdinalIgnoreCase)
         || ContentType.Contains("7z", StringComparison.OrdinalIgnoreCase)
         || ContentType.Contains("archive", StringComparison.OrdinalIgnoreCase)
@@ -240,7 +230,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
         < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
         < 1024L * 1024 * 1024
-            => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        => $"{bytes / (1024.0 * 1024.0):F1} MB",
         _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
     };
 

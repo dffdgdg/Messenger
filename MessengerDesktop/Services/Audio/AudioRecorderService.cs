@@ -1,6 +1,8 @@
 ﻿using PortAudioSharp;
 using System;
+using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using IOStream = System.IO.Stream;
@@ -20,6 +22,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
     private IOMemoryStream? _buffer;
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lock = new();
+    private readonly object _bufferLock = new();
     private bool _disposed;
     private bool _portAudioInitialized;
 
@@ -44,29 +47,29 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
 
                 if (PortAudio.DefaultInputDevice == PortAudio.NoDevice)
                 {
-                    Debug.WriteLine("[AudioRecorder] No input device found");
+                    Debug.WriteLine("[AudioRecorder] микрофон не обнаружен");
                     return Task.FromResult(false);
                 }
 
-                var inputParams = new StreamParameters
+                var inParams = new StreamParameters
                 {
                     device = PortAudio.DefaultInputDevice,
                     channelCount = Channels,
                     sampleFormat = SampleFormat.Int16,
-                    suggestedLatency = PortAudio
-                        .GetDeviceInfo(PortAudio.DefaultInputDevice)
-                        .defaultLowInputLatency,
+                    suggestedLatency = PortAudio.GetDeviceInfo(PortAudio.DefaultInputDevice).defaultLowInputLatency,
                     hostApiSpecificStreamInfo = IntPtr.Zero
                 };
 
                 var capturedBuffer = _buffer;
+                var capturedLock = _bufferLock;
 
-                _paStream = new Stream(inParams: inputParams, outParams: null, sampleRate: SampleRate, framesPerBuffer: FramesPerBuffer, streamFlags: StreamFlags.ClipOff, callback: (input, _, frameCount, ref _, _, _) =>
-                {
-                    OnAudioData(input, (long)frameCount, capturedBuffer);
-                    return StreamCallbackResult.Continue;
-                },
-                userData: IntPtr.Zero);
+                _paStream = new Stream(inParams, outParams: null, SampleRate, FramesPerBuffer, StreamFlags.ClipOff,
+                    callback: (input, _, frameCount, ref _, _, _) =>
+                    {
+                        OnAudioData(input, frameCount, capturedBuffer, capturedLock);
+                        return StreamCallbackResult.Continue;
+                    },
+                    userData: IntPtr.Zero);
 
                 _paStream.Start();
                 _stopwatch.Restart();
@@ -75,7 +78,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AudioRecorder] Start failed: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] ошибка запуска: {ex.Message}");
                 CleanupInternal();
                 return Task.FromResult(false);
             }
@@ -97,7 +100,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
                 try { _paStream.Stop(); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[AudioRecorder] Stream stop warning: {ex.Message}");
+                    Debug.WriteLine($"[AudioRecorder] предупреждение остановки потока: {ex.Message}");
                 }
 
                 var audioData = _buffer.ToArray();
@@ -118,7 +121,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AudioRecorder] Stop failed: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] ошибка остановки: {ex.Message}");
                 CleanupInternal();
                 return Task.FromResult<AudioRecordingResult?>(null);
             }
@@ -135,7 +138,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
                 try { _paStream.Stop(); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[AudioRecorder] Cancel warning: {ex.Message}");
+                    Debug.WriteLine($"[AudioRecorder] предупреждение отмены: {ex.Message}");
                 }
             }
 
@@ -145,28 +148,29 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         return Task.CompletedTask;
     }
 
-    private static void OnAudioData(IntPtr input, long frameCount, IOMemoryStream buffer)
+    private static void OnAudioData(IntPtr input, long frameCount, IOMemoryStream buffer, object bufferLock)
     {
         if (input == IntPtr.Zero) return;
 
         var byteCount = (int)(frameCount * Channels * (BitsPerSample / 8));
+        var temp = ArrayPool<byte>.Shared.Rent(byteCount);
 
-        var temp = System.Buffers.ArrayPool<byte>.Shared.Rent(byteCount);
         try
         {
-            System.Runtime.InteropServices.Marshal.Copy(input, temp, 0, byteCount);
-            lock (buffer)
+            Marshal.Copy(input, temp, 0, byteCount);
+
+            lock (bufferLock)
             {
                 buffer.Write(temp, 0, byteCount);
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[AudioRecorder] OnAudioData error: {ex.Message}");
+            Debug.WriteLine($"[AudioRecorder] OnAudioData ошибка: {ex.Message}");
         }
         finally
         {
-            System.Buffers.ArrayPool<byte>.Shared.Return(temp);
+            ArrayPool<byte>.Shared.Return(temp);
         }
     }
 
@@ -175,10 +179,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         const int byteRate = SampleRate * Channels * (BitsPerSample / 8);
         const short blockAlign = (short)(Channels * (BitsPerSample / 8));
 
-        using var writer = new IOBinaryWriter(
-            stream,
-            System.Text.Encoding.ASCII,
-            leaveOpen: true);
+        using var writer = new IOBinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true);
 
         writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
         writer.Write(36 + dataLength);
@@ -223,7 +224,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
             try { _paStream.Dispose(); }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AudioRecorder] Dispose warning: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] Dispose предупреждение: {ex.Message}");
             }
             _paStream = null;
         }
@@ -242,7 +243,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[AudioRecorder] CheckSupported failed: {ex.Message}");
+            Debug.WriteLine($"[AudioRecorder] CheckSupported ошибка: {ex.Message}");
             return false;
         }
     }
@@ -259,7 +260,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
             try { PortAudio.Terminate(); }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AudioRecorder] Terminate warning: {ex.Message}");
+                Debug.WriteLine($"[AudioRecorder] Terminate предупреждение: {ex.Message}");
             }
         }
     }

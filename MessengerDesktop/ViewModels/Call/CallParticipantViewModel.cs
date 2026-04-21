@@ -10,6 +10,7 @@ public partial class CallParticipantViewModel(CallParticipantDto dto) : Observab
     [ObservableProperty] public partial bool IsMuted { get; set; } = dto.IsMuted;
     [ObservableProperty] public partial double AvatarSize { get; set; } = 56;
     [ObservableProperty] public partial bool IsSpeaking { get; set; } = dto.IsSpeaking;
+
     private bool _hasVideo;
 
     public bool HasVideo

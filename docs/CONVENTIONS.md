@@ -255,6 +255,8 @@ MessengerDesktop.ViewModels.Chat.ChatViewModel
 | `AddMessengerCoreServices(apiBaseUrl)` | Все сервисы (API, Auth, Cache, Navigation, Realtime, Storage, UI, Audio, Platform) |
 | `AddMessengerViewModels()` | Все ViewModel-ы |
 
+> Для построения `ChatViewModelDependencies` используются групповые singleton-обёртки: `ChatCoreServices`, `ChatMediaServices`, `ChatCallServices`, `ChatCacheServices` (уменьшение размера сигнатур конструкторов).
+
 **Lifetimes (Desktop)**:
 
 | Lifetime | Сервисы |

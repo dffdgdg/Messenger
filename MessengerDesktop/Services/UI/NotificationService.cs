@@ -196,16 +196,17 @@ public class NotificationService : INotificationService
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        if (!disposing) return;
-
-        foreach (var cts in _lifetimes.Values)
+        if (disposing)
         {
-            try
+            foreach (var cts in _lifetimes.Values)
             {
-                cts.Cancel();
-                cts.Dispose();
+                try
+                {
+                    cts.Cancel();
+                    cts.Dispose();
+                }
+                catch (ObjectDisposedException) { /* Токен уже освобожден */ }
             }
-            catch (ObjectDisposedException) { }
         }
 
         _lifetimes.Clear();

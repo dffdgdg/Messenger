@@ -25,61 +25,68 @@ internal sealed class WavData
     {
         using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
 
-        var riff = new string(reader.ReadChars(4));
-        if (riff != "RIFF")
+        ReadRiffHeader(reader);
+
+        var (sampleRate, channels) = ReadFmtChunk(reader);
+        var samples = ReadDataChunk(reader);
+
+        return new WavData(samples, sampleRate, channels);
+    }
+
+    private static void ReadRiffHeader(BinaryReader reader)
+    {
+        if (ReadTag(reader) != "RIFF")
             throw new InvalidDataException("Not a RIFF file");
 
         reader.ReadInt32();
 
-        var wave = new string(reader.ReadChars(4));
-        if (wave != "WAVE")
+        if (ReadTag(reader) != "WAVE")
             throw new InvalidDataException("Not a WAVE file");
+    }
 
-        int sampleRate = 0, channels = 0, bitsPerSample = 0;
-        short[]? samples = null;
+    private static (int sampleRate, int channels) ReadFmtChunk(BinaryReader reader)
+    {
+        if (ReadTag(reader) != "fmt ")
+            throw new InvalidDataException("Expected 'fmt ' chunk");
 
-        while (stream.Position < stream.Length - 8)
+        var chunkSize = reader.ReadInt32();
+        var audioFormat = reader.ReadInt16();
+        var channels = reader.ReadInt16();
+        var sampleRate = reader.ReadInt32();
+
+        reader.ReadInt32(); // byteRate
+        reader.ReadInt16(); // blockAlign
+
+        var bitsPerSample = reader.ReadInt16();
+
+        if (chunkSize > 16)
+            reader.ReadBytes(chunkSize - 16);
+
+        if (audioFormat != 1)
+            throw new NotSupportedException($"Поддерживается только PCM WAV, получен формат {audioFormat}");
+
+        if (bitsPerSample != 16)
+            throw new NotSupportedException($"Поддерживается только 16-битный WAV, получено {bitsPerSample} бит");
+
+        return (sampleRate, channels);
+    }
+
+    private static short[] ReadDataChunk(BinaryReader reader)
+    {
+        while (ReadTag(reader) != "data")
         {
-            var chunkId = new string(reader.ReadChars(4));
             var chunkSize = reader.ReadInt32();
-
-            switch (chunkId)
-            {
-                case "fmt ":
-                    var audioFormat = reader.ReadInt16();
-                    channels = reader.ReadInt16();
-                    sampleRate = reader.ReadInt32();
-                    reader.ReadInt32();
-                    reader.ReadInt16();
-                    bitsPerSample = reader.ReadInt16();
-
-                    var remaining = chunkSize - 16;
-                    if (remaining > 0)
-                        reader.ReadBytes(remaining);
-
-                    if (audioFormat != 1)
-                        throw new NotSupportedException($"Only PCM WAV supported, got format {audioFormat}");
-                    if (bitsPerSample != 16)
-                        throw new NotSupportedException($"Only 16-bit WAV supported, got {bitsPerSample} bits");
-                    break;
-
-                case "data":
-                    var rawBytes = reader.ReadBytes(chunkSize);
-                    samples = new short[rawBytes.Length / 2];
-                    Buffer.BlockCopy(rawBytes, 0, samples, 0, rawBytes.Length);
-                    break;
-
-                default:
-                    reader.ReadBytes(chunkSize);
-                    break;
-            }
-
-            if (samples != null && sampleRate != 0) break;
+            reader.ReadBytes(chunkSize);
         }
 
-        if (samples == null || sampleRate == 0 || channels == 0)
-            throw new InvalidDataException("WAV file is missing fmt or data chunk");
+        var dataSize = reader.ReadInt32();
+        var rawBytes = reader.ReadBytes(dataSize);
 
-        return new WavData(samples, sampleRate, channels);
+        var samples = new short[rawBytes.Length / 2];
+        Buffer.BlockCopy(rawBytes, 0, samples, 0, rawBytes.Length);
+        return samples;
     }
+
+    private static string ReadTag(BinaryReader reader) =>
+        new(reader.ReadChars(4));
 }

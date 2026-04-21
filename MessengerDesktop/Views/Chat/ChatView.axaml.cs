@@ -39,9 +39,6 @@ public partial class ChatView : UserControl
 
     private double _lastExtentHeight;
     private int _scrollToEndRetries;
-    private readonly double _anchorOffset;
-    private readonly double _anchorExtent;
-    private bool _isPollLayoutChanging;
 
     private int _loadingOlderMessages;
     private int _loadingNewerMessages;
@@ -146,57 +143,11 @@ public partial class ChatView : UserControl
         double viewport = _scrollViewer.Viewport.Height;
 
         bool isAtBottom = extent - viewport - currentOffset < NearBottomThreshold;
-        if (isAtBottom) return; // У дна — не трогаем, Avalonia сам не прыгает
+        if (isAtBottom) return;
 
-        // delta уже точный — берём из SizeChanged, никаких догадок
-        _scrollViewer.Offset = new Vector(
-            _scrollViewer.Offset.X,
-            Math.Max(0, currentOffset + delta));
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Max(0, currentOffset + delta));
 
         _lastExtentHeight = _scrollViewer.Extent.Height;
-    }
-
-    private void OnPollLayoutChanged()
-    {
-        if (!_isPollLayoutChanging || _scrollViewer is null) return;
-        _isPollLayoutChanging = false;
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
-            {
-                if (_scrollViewer is null) return;
-
-                double newExtent = _scrollViewer.Extent.Height;
-                double delta = newExtent - _anchorExtent;
-
-                if (Math.Abs(delta) < 2) return;
-
-                double viewport = _scrollViewer.Viewport.Height;
-                bool wasAtBottom = _anchorExtent - viewport - _anchorOffset < NearBottomThreshold;
-
-                if (wasAtBottom)
-                {
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Max(0, newExtent - viewport));
-                }
-                else
-                {
-                    double currentOffset = _scrollViewer.Offset.Y;
-
-                    if (Math.Abs(currentOffset - _anchorOffset) < 2)
-                    {
-                        _scrollViewer.Offset = new Vector(
-                            _scrollViewer.Offset.X,
-                            Math.Max(0, _anchorOffset + delta));
-                    }
-                }
-            }
-            finally
-            {
-                _suppressScrollEvents = false;
-                _lastExtentHeight = _scrollViewer?.Extent.Height ?? _lastExtentHeight;
-            }
-        }, DispatcherPriority.Render);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -702,23 +653,17 @@ public partial class ChatView : UserControl
         return true;
     }
 
-    private static void ScheduleAction(Func<Task> action, int delayMs = 50)
+    private static void ScheduleAction(Func<Task> action, int delayMs = 50) => Dispatcher.UIThread.Post(async () =>
     {
-        Dispatcher.UIThread.Post(async () =>
-        {
-            await Task.Delay(delayMs);
-            await action();
-        }, DispatcherPriority.Background);
-    }
+        await Task.Delay(delayMs);
+        await action();
+    }, DispatcherPriority.Background);
 
-    private static void ScheduleAction(Action action, int delayMs = 50)
+    private static void ScheduleAction(Action action, int delayMs = 50) => Dispatcher.UIThread.Post(async () =>
     {
-        Dispatcher.UIThread.Post(async () =>
-        {
-            await Task.Delay(delayMs);
-            action();
-        }, DispatcherPriority.Background);
-    }
+        await Task.Delay(delayMs);
+        action();
+    }, DispatcherPriority.Background);
 
     private void ScheduleScrollAction(Action action)
     {

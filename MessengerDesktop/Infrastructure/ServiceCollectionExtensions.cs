@@ -8,6 +8,7 @@ using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Call;
+using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Factories;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,8 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PortAudioLifetime>();
         services.AddSingleton<CallAudioService>();
 
-        services.AddSingleton<ICallHubConnection>(sp =>
-            new CallHubConnection(sp.GetRequiredService<ISessionStore>(), sp.GetRequiredService<ILogger<CallHubConnection>>(), apiBaseUrl));
+        services.AddSingleton<ICallHubConnection>(sp => new CallHubConnection(sp.GetRequiredService<ISessionStore>(), sp.GetRequiredService<ILogger<CallHubConnection>>(), apiBaseUrl));
 
         services.AddSingleton<ICallService, CallService>();
         services.AddSingleton<ActiveCallStore>();
@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
             return new FileDownloadService(httpClient);
         });
         services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
+        services.AddSingleton<ChatViewModelDependencies>();
 
         return services;
     }

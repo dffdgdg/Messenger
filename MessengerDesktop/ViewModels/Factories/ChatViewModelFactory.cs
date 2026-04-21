@@ -1,10 +1,4 @@
-﻿using MessengerDesktop.Data.Repositories;
-using MessengerDesktop.Services.Audio;
-using MessengerDesktop.Services.Call;
-using MessengerDesktop.Services.Platform;
-using MessengerDesktop.Services.Realtime;
-using MessengerDesktop.Services.UI;
-using MessengerDesktop.ViewModels.Chat;
+﻿using MessengerDesktop.ViewModels.Chat;
 
 namespace MessengerDesktop.ViewModels.Factories;
 
@@ -13,12 +7,8 @@ public interface IChatViewModelFactory
     ChatViewModel Create(int chatId, ChatsViewModel parent);
 }
 
-public class ChatViewModelFactory(IApiClientService apiClient, IAuthManager authManager, IChatInfoPanelStateStore chatInfoPanelStateStore,
-    INotificationService notificationService, IChatNotificationApiService notificationApiService, IDialogService dialogService,
-    IGlobalHubConnection globalHub, IFileDownloadService fileDownloadService, IPlatformService platformService, ICallService callService,
-    ICallHubConnection callHub, ILocalCacheService cacheService, IAudioPlayerService audioPlayer) : IChatViewModelFactory
+public class ChatViewModelFactory(ChatViewModelDependencies dependencies) : IChatViewModelFactory
 {
-    public ChatViewModel Create(int chatId, ChatsViewModel parent) => new(chatId, parent, parent.Parent, apiClient, authManager, chatInfoPanelStateStore,
-        notificationService, notificationApiService, dialogService, globalHub, fileDownloadService, platformService, callService, callHub,
-        platformService.MainWindow?.StorageProvider, cacheService, audioPlayer);
+    public ChatViewModel Create(int chatId, ChatsViewModel parent) => new(chatId, parent, parent.Parent, dependencies,
+        dependencies.PlatformService.MainWindow?.StorageProvider);
 }

@@ -207,42 +207,39 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Init
 
-    public ChatViewModel(int chatId, ChatsViewModel parent, IChatNavigator navigator, IApiClientService apiClient, IAuthManager authManager,
-        IChatInfoPanelStateStore chatInfoPanelStateStore, INotificationService notificationService, IChatNotificationApiService notificationApiService,
-        IDialogService dialogService, IGlobalHubConnection globalHub, IFileDownloadService fileDownloadService, IPlatformService platformService,
-        ICallService callService, ICallHubConnection callHub, IStorageProvider? storageProvider = null, ILocalCacheService? cacheService = null,
-        IAudioPlayerService? audioPlayer = null)
+    public ChatViewModel(int chatId, ChatsViewModel parent, IChatNavigator navigator, ChatViewModelDependencies dependencies, IStorageProvider? storageProvider = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
 
-        var currentUserId = authManager?.Session.UserId ?? 0;
+        ArgumentNullException.ThrowIfNull(dependencies);
+
+        var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
+
         UserId = currentUserId;
 
-        Context = new ChatContext(chatId, currentUserId, apiClient ?? throw new ArgumentNullException(nameof(apiClient)),
-            dialogService ?? throw new ArgumentNullException(nameof(dialogService)), globalHub ?? throw new ArgumentNullException(nameof(globalHub)),
-            notificationService ?? throw new ArgumentNullException(nameof(notificationService)),
-            notificationApiService ?? throw new ArgumentNullException(nameof(notificationApiService)),
-            fileDownloadService ?? throw new ArgumentNullException(nameof(fileDownloadService)), cacheService);
+        Context = new ChatContext(chatId, currentUserId, dependencies.ApiClient, dependencies.DialogService, dependencies.GlobalHub,
+            dependencies.NotificationService, dependencies.NotificationApiService, dependencies.FileDownloadService, dependencies.CacheService);
 
         Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
         Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
         Context.ScrollToBottomRequested += () => ScrollToBottomRequested?.Invoke();
 
-        globalHub.SetCurrentChat(chatId);
+        dependencies.GlobalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(chatId, currentUserId, apiClient, () => Context.Members, fileDownloadService, notificationService,
-            cacheService, audioPlayer, OpenMentionProfileCommand);
+        MessageManager = new ChatMessageManager(chatId, currentUserId, dependencies.ApiClient, () => Context.Members,
+             dependencies.FileDownloadService, dependencies.NotificationService, dependencies.CacheService, dependencies.AudioPlayer,
+             OpenMentionProfileCommand);
 
-        Attachments = new ChatAttachmentManager(chatId, apiClient, storageProvider);
-        MemberLoader = new ChatMemberLoader(chatId, currentUserId, apiClient);
+        Attachments = new ChatAttachmentManager(chatId, dependencies.ApiClient, storageProvider);
+        MemberLoader = new ChatMemberLoader(chatId, currentUserId, dependencies.ApiClient);
 
         EditDelete = new ChatEditDeleteHandler(Context);
         Reply = new ChatReplyHandler(Context, MessageManager);
         Forward = new ChatForwardHandler(Context);
         Typing = new ChatTypingHandler(Context);
         Voice = new ChatVoiceHandler(Context, () => Reply.CancelReply());
-        InfoPanel = new ChatInfoPanelHandler(Context, chatInfoPanelStateStore, MemberLoader, platformService ?? throw new ArgumentNullException(nameof(platformService)));
+        InfoPanel = new ChatInfoPanelHandler(Context, dependencies.ChatInfoPanelStateStore, MemberLoader, dependencies.PlatformService);
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
@@ -253,8 +250,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         Context.Chat = new ChatDto { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
-        _callService = callService;
-        _callHub = callHub;
+        _callService = dependencies.CallService;
+        _callHub = dependencies.CallHub;
 
         SubscribeCallEvents();
         _ = InitializeAsync();

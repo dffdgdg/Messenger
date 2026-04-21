@@ -55,14 +55,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     public GlobalSearchManager SearchManager => _searchManager;
     public bool IsSearchMode => _searchManager.IsSearchMode;
 
-    public MainMenuViewModel(
-        MainWindowViewModel mainWindowVm,
-        IApiClientService api,
-        IAuthManager auth,
-        IChatsViewModelFactory chatsFactory,
-        IServiceProvider sp,
-        IGlobalHubConnection globalHub,
-        ICallHubConnection callHub, ActiveCallStore activeCallStore)
+    public MainMenuViewModel(MainWindowViewModel mainWindowVm, IApiClientService api, IAuthManager auth, IChatsViewModelFactory chatsFactory,
+        IServiceProvider sp, IGlobalHubConnection globalHub, ICallHubConnection callHub, ActiveCallStore activeCallStore)
     {
         _mainWindowVm = mainWindowVm ?? throw new ArgumentNullException(nameof(mainWindowVm));
         _api = api ?? throw new ArgumentNullException(nameof(api));
@@ -79,10 +73,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         UserId = _auth.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
 
-        _searchManager = new GlobalSearchManager(
-            UserId,
-            startWithChatsScope: true,
-            _api,
+        _searchManager = new GlobalSearchManager(UserId, true, _api,
             getUsersFunc: () => Task.FromResult(AllContacts.Select(u => new SearchFilterItem(u.Id, u.DisplayName ?? u.Username ?? string.Empty, u.Avatar)).ToList()),
             getChatsFunc: () => Task.FromResult(UserChats.Select(c => new SearchFilterItem(c.Id, c.Name ?? string.Empty, c.Avatar)).ToList()));
 
@@ -269,16 +260,13 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     }
 
     [RelayCommand]
-    private void ClearContentFilter() =>
-        SearchManager.ContentFilter = SearchContentFilter.Any;
+    private void ClearContentFilter() => SearchManager.ContentFilter = SearchContentFilter.Any;
 
     [RelayCommand]
-    private void ClearDateFrom() =>
-        SearchManager.DateFromFilter = null;
+    private void ClearDateFrom() => SearchManager.DateFromFilter = null;
 
     [RelayCommand]
-    private void ClearDateTo() =>
-        SearchManager.DateToFilter = null;
+    private void ClearDateTo() => SearchManager.DateToFilter = null;
 
     [RelayCommand]
     private async Task ClearAllFilters()
@@ -570,8 +558,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     public Task ShowDialogAsync(DialogBaseViewModel dialogViewModel)
         => _mainWindowVm.ShowDialogAsync(dialogViewModel);
-
-    //public Task CloseDialogAsync() => _dialogService.CloseAsync();
     #endregion
 
     #region API operations

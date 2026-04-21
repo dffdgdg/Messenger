@@ -10,8 +10,7 @@ namespace MessengerDesktop.Views.Controls.Shared;
 
 public class RichMessageTextBlock : SelectableTextBlock
 {
-    public static readonly StyledProperty<string?> RawTextProperty =
-        AvaloniaProperty.Register<RichMessageTextBlock, string?>(nameof(RawText));
+    public static readonly StyledProperty<string?> RawTextProperty = AvaloniaProperty.Register<RichMessageTextBlock, string?>(nameof(RawText));
 
     public string? RawText
     {
@@ -19,8 +18,7 @@ public class RichMessageTextBlock : SelectableTextBlock
         set => SetValue(RawTextProperty, value);
     }
 
-    public static readonly StyledProperty<ICommand?> MentionClickCommandProperty =
-        AvaloniaProperty.Register<RichMessageTextBlock, ICommand?>(nameof(MentionClickCommand));
+    public static readonly StyledProperty<ICommand?> MentionClickCommandProperty = AvaloniaProperty.Register<RichMessageTextBlock, ICommand?>(nameof(MentionClickCommand));
 
     public ICommand? MentionClickCommand
     {

@@ -15,7 +15,8 @@ public static class MessageMappings
             Id = message.Id,
             ChatId = message.ChatId,
             SenderId = message.SenderId,
-            Content = isDeleted ? "[Сообщение удалено]" : (isSystem ? BuildSystemMessageContent(message.SystemEventType, senderName, targetUserName, message.Content) : message.Content),
+            Content = isDeleted ? "[Сообщение удалено]"
+                : (isSystem ? BuildSystemMessageContent(message.SystemEventType, senderName, targetUserName, message.Content) : message.Content),
             CreatedAt = message.CreatedAt,
             EditedAt = message.EditedAt,
             IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,

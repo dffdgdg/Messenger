@@ -31,7 +31,7 @@ public sealed class App : Application, IDisposable
     public override void Initialize()
     {
         var config = BuildConfiguration();
-        ApiUrl = config["ApiUrl"] ?? "http://localhost:5274/";
+        ApiUrl = ResolveApiUrl(config);
         Debug.WriteLine($"[App] ApiUrl = {ApiUrl}");
         AvaloniaXamlLoader.Load(this);
         Services = ConfigureServices();
@@ -39,14 +39,21 @@ public sealed class App : Application, IDisposable
 
     private static IConfiguration BuildConfiguration()
     {
-        var env = Environment.GetEnvironmentVariable("MESSENGER_ENV") ?? "Local";
+        var env = Environment.GetEnvironmentVariable("MESSENGER_ENV");
+        var builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json", optional: true);
+        if (!string.IsNullOrWhiteSpace(env))
+            builder.AddJsonFile($"appsettings.{env}.json", optional: true);
 
-        return new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true)
-            .AddJsonFile($"appsettings.{env}.json", optional: true)
-            .AddEnvironmentVariables("MESSENGER_")
-            .Build();
+        return builder.AddEnvironmentVariables("MESSENGER_").Build();
+    }
+
+    private static string ResolveApiUrl(IConfiguration configuration)
+    {
+        var apiUrl = configuration["ApiUrl"] ?? configuration["Api:BaseUrl"] ?? "http://192.168.137.1:5274/";
+        if (!apiUrl.EndsWith("/"))
+            apiUrl += "/";
+
+        return apiUrl;
     }
     private static ServiceProvider ConfigureServices()
     {

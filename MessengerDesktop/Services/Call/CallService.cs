@@ -1,4 +1,5 @@
-﻿using MessengerShared.DTO.Call;
+﻿using MessengerDesktop.ViewModels.Factories;
+using MessengerShared.DTO.Call;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -46,6 +47,7 @@ public sealed partial class CallService : ICallService
         _logger = logger;
 
         _audio.OnEncodedFrame += SendAudioToAllPeers;
+        _audio.SpeakingStateChanged += OnSpeakingStateChanged;
         SubscribeHubEvents();
     }
 
@@ -291,6 +293,7 @@ public sealed partial class CallService : ICallService
 
     private void SubscribeHubEvents()
     {
+        _hub.ParticipantSpeakingChanged += OnParticipantSpeakingChanged;
         _hub.CallStateUpdated += OnCallStateUpdated;
         _hub.CallParticipantJoined += OnParticipantJoined;
         _hub.CallParticipantLeft += OnParticipantLeft;
@@ -298,8 +301,17 @@ public sealed partial class CallService : ICallService
         _hub.SignalReceived += OnSignalReceived;
     }
 
+    private void OnParticipantSpeakingChanged(string callId, int userId, bool isSpeaking)
+    {
+        if (callId != _activeCallId) return;
+        ParticipantSpeakingChanged?.Invoke(userId, isSpeaking);
+    }
+
+    public event Action<int, bool>? ParticipantSpeakingChanged;
+
     private void UnsubscribeHubEvents()
     {
+        _hub.ParticipantSpeakingChanged -= OnParticipantSpeakingChanged;
         _hub.CallStateUpdated -= OnCallStateUpdated;
         _hub.CallParticipantJoined -= OnParticipantJoined;
         _hub.CallParticipantLeft -= OnParticipantLeft;
@@ -323,6 +335,18 @@ public sealed partial class CallService : ICallService
             if (_endpointAnnounced.TryAdd(p.UserId, true))
                 _ = AnnounceUdpEndpointAsync(p.UserId);
         }
+    }
+
+    private void OnSpeakingStateChanged(bool isSpeaking)
+    {
+        if (_activeCallId == null) return;
+
+        _ = _hub.ToggleSpeakingAsync(_activeCallId, isSpeaking)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    LogSpeakingToggleFailed(t.Exception?.GetBaseException());
+            }, TaskScheduler.Default);
     }
 
     private void OnParticipantJoined(string callId, CallParticipantDto participant)
@@ -373,6 +397,7 @@ public sealed partial class CallService : ICallService
         _peerEndpoints.Clear();
         _endpointAnnounced.Clear();
         _localIp = null;
+        _audio.SpeakingStateChanged -= OnSpeakingStateChanged;
 
         _audio.Stop();
     }
@@ -425,5 +450,7 @@ public sealed partial class CallService : ICallService
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Зарегистрирован endpoint peer userId={UserId} → {Endpoint}")]
     private partial void LogPeerEndpointRegistered(int userId, IPEndPoint endpoint);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ToggleSpeaking SignalR error")]
+    private partial void LogSpeakingToggleFailed(Exception? ex);
     #endregion
 }

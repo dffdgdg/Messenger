@@ -193,7 +193,7 @@
 								</Button.Styles>
 								<Path Data="{StaticResource DeclineCallIcon}"  Stretch="Uniform"
 										   Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center"
-										   Fill="{DynamicResource TextOnAccent}"/>
+										   Fill="{DynamicResource DangerBrush}"/>
 							</Button>
 						</StackPanel>
 					</StackPanel>

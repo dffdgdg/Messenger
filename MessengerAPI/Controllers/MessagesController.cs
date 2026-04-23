@@ -52,14 +52,14 @@ public sealed class MessagesController(IMessageService messageService,ILogger<Me
     public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetMessagesAfter(int chatId, int messageId, [FromQuery] int count = 30) => await ExecuteAsync(()
         => messageService.GetMessagesAfterAsync(chatId, messageId, GetCurrentUserId(), count));
 
-    [HttpGet("chat/{chatId}/search")]
+    [HttpPost("chat/{chatId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages( int chatId, [FromQuery] SearchMessagesQueryDto query) => await ExecuteAsync(()
-        => messageService.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
+    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(int chatId, [FromBody] SearchMessagesQueryDto query)
+        => await ExecuteAsync(() => messageService.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
 
-    [HttpGet("user/{userId}/search")]
+    [HttpPost("user/{userId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId, [FromQuery] GlobalSearchQueryDto query)
+    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId, [FromBody] GlobalSearchQueryDto query)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<GlobalSearchResponseDto>();

@@ -17,6 +17,8 @@ public interface ICallHubConnection : IAsyncDisposable
     Task CancelCallAsync(string callId);
     Task SendSignalAsync(WebRtcSignalDto signal);
     Task ToggleMuteAsync(string callId, bool isMuted);
+    Task ToggleSpeakingAsync(string callId, bool isSpeaking);
+    event Action<string, int, bool>? ParticipantSpeakingChanged;
     Task<CallStateDto?> GetCallStateAsync(int chatId);
     event Action<CallInviteDto>? IncomingCall;
     event Action<string, CallParticipantDto>? CallParticipantJoined;
@@ -31,6 +33,8 @@ public interface ICallHubConnection : IAsyncDisposable
     event Action<string>? CallError;
     Task ConnectAsync(CancellationToken ct = default);
     Task DisconnectAsync();
+    Task SendCallMessageAsync(string callId, string text);
+    event Action<CallChatMessageDto>? CallMessageReceived;
 }
 
 public sealed partial class CallHubConnection : ICallHubConnection
@@ -38,6 +42,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     private readonly HubConnection _hub;
     private readonly ILogger<CallHubConnection> _logger;
     private int _disposed;
+    public event Action<CallChatMessageDto>? CallMessageReceived;
 
     public event Action<CallInviteDto>? IncomingCall;
     public event Action<string, CallParticipantDto>? CallParticipantJoined;
@@ -50,6 +55,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     public event Action<CallStateDto>? ActiveCallUpdated;
     public event Action<string>? ActiveCallEnded;
     public event Action<string>? CallError;
+    public event Action<string, int, bool>? ParticipantSpeakingChanged;
 
     public bool IsConnected => _hub.State == HubConnectionState.Connected;
 
@@ -91,9 +97,13 @@ public sealed partial class CallHubConnection : ICallHubConnection
             LogSignalReceived(signal.Type, signal.FromUserId, signal.TargetUserId);
             SignalReceived?.Invoke(signal);
         });
+        _hub.On<CallChatMessageDto>("CallMessageReceived", dto => CallMessageReceived?.Invoke(dto));
 
         _hub.On<string, int, bool>("ParticipantMuteChanged", (callId, userId, isMuted) =>
             ParticipantMuteChanged?.Invoke(callId, userId, isMuted));
+
+        _hub.On<string, int, bool>("ParticipantSpeakingChanged", (callId, userId, isSpeaking) =>
+            ParticipantSpeakingChanged?.Invoke(callId, userId, isSpeaking));
 
         _hub.On<CallStateDto>("CallStateUpdated", dto =>
         {
@@ -152,9 +162,13 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     public Task SendSignalAsync(WebRtcSignalDto signal)
         => SafeInvokeAsync("SendSignal", signal);
+    public Task SendCallMessageAsync(string callId, string text)
+     => SafeInvokeAsync("SendCallMessage", callId, text);
 
     public Task ToggleMuteAsync(string callId, bool isMuted)
         => SafeInvokeAsync("ToggleMute", callId, isMuted);
+    public async Task ToggleSpeakingAsync(string callId, bool isSpeaking)
+        => await SafeInvokeAsync("ToggleSpeaking", callId, isSpeaking);
 
     public async Task<CallStateDto?> GetCallStateAsync(int chatId)
     {

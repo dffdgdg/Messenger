@@ -287,6 +287,7 @@ public sealed partial class GlobalSearchManager(
 
     private async Task ExecuteGlobalSearchAsync(string query, int page, CancellationToken ct)
     {
+        System.Diagnostics.Debug.WriteLine($"ExecuteGlobal: ContentFilter={ContentFilter}, ServerHasVoice={ServerHasVoice}, dto.HasVoice будет={ContentFilter == SearchContentFilter.WithVoice}");
         var dto = new GlobalSearchQueryDto
         {
             Query = query,
@@ -303,9 +304,8 @@ public sealed partial class GlobalSearchManager(
             OldestFirst = ServerOldestFirst
         };
 
-        var url = ApiEndpoints.Messages.Search(userId, dto);
-
-        var result = await apiClient.GetAsync<GlobalSearchResponseDto>(url, ct);
+        var url = ApiEndpoints.Messages.Search(userId);
+        var result = await apiClient.PostAsync<GlobalSearchQueryDto, GlobalSearchResponseDto>(url, dto, ct);
 
         if (ct.IsCancellationRequested) return;
 
@@ -361,9 +361,8 @@ public sealed partial class GlobalSearchManager(
             OldestFirst = ServerOldestFirst
         };
 
-        var url = ApiEndpoints.Messages.ChatSearch(chatId, dto);
-
-        var result = await apiClient.GetAsync<SearchMessagesResponseDto>(url, ct);
+        var url = ApiEndpoints.Messages.ChatSearch(chatId);
+        var result = await apiClient.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(url, dto, ct);
 
         if (ct.IsCancellationRequested) return;
 
@@ -497,6 +496,11 @@ public sealed partial class GlobalSearchManager(
 
     public async Task ApplyFiltersAsync()
     {
+        System.Diagnostics.Debug.WriteLine(
+        $"ApplyFilters: ContentFilter={ContentFilter}, " +
+        $"ServerHasVoice={ServerHasVoice}, " +
+        $"HasActiveFilters={HasActiveFilters}");
+
         EnterSearchMode();
 
         if (string.IsNullOrWhiteSpace(SearchQuery) && !HasActiveFilters)

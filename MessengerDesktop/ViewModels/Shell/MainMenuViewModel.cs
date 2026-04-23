@@ -181,8 +181,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
 
         var callService = _sp.GetRequiredService<ICallService>();
-        var callVm = new CallViewModel(callService, _callHub, _activeCallStore);
-        callVm.Initialize(state, chatName, isGroupCall);
+        var audioService = _sp.GetRequiredService<CallAudioService>();
+        var callVm = new CallViewModel(callService, _callHub, _activeCallStore, audioService);
+        callVm.Initialize(state, chatName, isGroupCall, _auth.Session.UserId ?? 0);
 
         _activeCallStore.ActiveCall = callVm;
         _activeCallStore.OpenCallUi();
@@ -558,6 +559,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     public Task ShowDialogAsync(DialogBaseViewModel dialogViewModel)
         => _mainWindowVm.ShowDialogAsync(dialogViewModel);
+
     #endregion
 
     #region API operations
@@ -610,8 +612,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         catch (Exception ex) { ErrorMessage = $"Ошибка: {ex.Message}"; return false; }
     }
 
-    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds,
-        Stream? avatarStream, string? avatarName, bool avatarRemoved, Action<ChatDto>? onSuccess)
+    private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream,
+        string? avatarName, bool avatarRemoved, Action<ChatDto>? onSuccess)
     {
         try
         {

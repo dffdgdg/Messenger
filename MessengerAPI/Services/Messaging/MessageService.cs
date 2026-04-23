@@ -457,7 +457,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = query.Page });
 
         if (query.FilterChatId.HasValue)
+        {
             chatIds = [.. chatIds.Where(id => id == query.FilterChatId.Value)];
+        }
 
         var chats = (hasQuery && query.FilterChatId == null) ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery) : [];
 

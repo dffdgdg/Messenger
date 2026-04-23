@@ -126,6 +126,18 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         return true;
     }
 
+    public bool SetSpeaking(string callId, int userId, bool isSpeaking)
+    {
+        if (!_calls.TryGetValue(callId, out var session))
+            return false;
+
+        if (!session.ActiveParticipants.TryGetValue(userId, out var p))
+            return false;
+
+        p.IsSpeaking = isSpeaking;
+        return true;
+    }
+
     public Task<TimeSpan> EndCallAsync(string callId)
     {
         if (!_calls.TryRemove(callId, out var session))
@@ -153,7 +165,7 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         IsGroupCall = session.IsGroupCall,
         Participants = [.. session.ActiveParticipants.Values.Select(p => new CallParticipantDto
         {
-            UserId = p.UserId, IsMuted = p.IsMuted, DisplayName = nameResolver(p.UserId) ?? $"User {p.UserId}", AvatarUrl = avatarResolver(p.UserId)
+            UserId = p.UserId, IsMuted = p.IsMuted, IsSpeaking = p.IsSpeaking, DisplayName = nameResolver(p.UserId) ?? $"User {p.UserId}", AvatarUrl = avatarResolver(p.UserId)
         })]
     };
 

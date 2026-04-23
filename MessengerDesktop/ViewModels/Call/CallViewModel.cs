@@ -6,11 +6,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Call;
 
+public enum CallSidePanelMode { Chat, Participants }
+
 public partial class CallViewModel : BaseViewModel
 {
     private readonly ICallService _callService;
     private readonly ICallHubConnection _hub;
     private readonly ActiveCallStore _store;
+    private int _myUserId;
 
     [ObservableProperty] public partial string CallId { get; set; } = string.Empty;
     [ObservableProperty] public partial int ChatId { get; set; }
@@ -18,11 +21,19 @@ public partial class CallViewModel : BaseViewModel
     [ObservableProperty] public partial bool IsMuted { get; set; }
     [ObservableProperty] public partial bool IsGroupCall { get; set; }
     [ObservableProperty] public partial string DurationText { get; set; } = "0:00";
+    [ObservableProperty] public partial bool IsChatPanelOpen { get; set; }
+    [ObservableProperty] public partial string MessageInput { get; set; } = string.Empty;
+    [ObservableProperty] public partial int UnreadChatCount { get; set; }
+    [ObservableProperty] public partial CallSidePanelMode SidePanelMode { get; set; } = CallSidePanelMode.Chat;
+
+    public bool IsChatMode => SidePanelMode == CallSidePanelMode.Chat;
+    public bool IsParticipantsMode => SidePanelMode == CallSidePanelMode.Participants;
+    public bool HasUnread => UnreadChatCount > 0;
 
     public ObservableCollection<CallParticipantViewModel> Participants { get; } = [];
+    public ObservableCollection<CallChatMessageViewModel> ChatMessages { get; } = [];
 
     public bool IsSingleParticipant => Participants.Count == 1;
-
     public bool ShowWaitingState => Participants.Count <= 1;
 
     public int GridColumns => Participants.Count switch
@@ -33,24 +44,38 @@ public partial class CallViewModel : BaseViewModel
 
     private readonly DispatcherTimer _durationTimer;
     private DateTime _callStartedAt;
+    private readonly CallAudioService _audioService;
 
-    public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store)
+    public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store, CallAudioService audioService)
     {
         _callService = callService;
         _hub = hub;
         _store = store;
+        _audioService = audioService;
 
-        _durationTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
+        _durationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _durationTimer.Tick += OnDurationTick;
 
         SubscribeHubEvents();
+        _callService.ParticipantSpeakingChanged += OnParticipantSpeakingChanged;
+        _callService.MuteChanged += OnMuteChangedExternally;
+        _audioService.SpeakingStateChanged += OnLocalSpeakingStateChanged;
     }
 
-    public void Initialize(CallStateDto state, string chatName, bool isGroupCall)
+    public bool NoiseSuppressionEnabled
     {
+        get => _audioService.NoiseSuppressionEnabled;
+        set
+        {
+            if (_audioService.NoiseSuppressionEnabled == value) return;
+            _audioService.NoiseSuppressionEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public void Initialize(CallStateDto state, string chatName, bool isGroupCall, int myUserId)
+    {
+        _myUserId = myUserId;
         CallId = state.CallId;
         ChatId = state.ChatId;
         ChatName = chatName;
@@ -66,9 +91,19 @@ public partial class CallViewModel : BaseViewModel
     }
 
     public double ParticipantAvatarSize => Participants.Count switch
+        { 1 => 100, 2 => 80, <= 4 => 56, <= 9 => 40, _ => 32 };
+
+    partial void OnSidePanelModeChanged(CallSidePanelMode value)
     {
-        1 => 100, 2 => 80, <= 4 => 56, <= 9 => 40, _ => 32
-    };
+        OnPropertyChanged(nameof(IsChatMode));
+        OnPropertyChanged(nameof(IsParticipantsMode));
+
+        if (value == CallSidePanelMode.Chat)
+        {
+            UnreadChatCount = 0;
+            OnPropertyChanged(nameof(HasUnread));
+        }
+    }
 
     private void OnParticipantsChanged()
     {
@@ -84,11 +119,7 @@ public partial class CallViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task ToggleMuteAsync()
-    {
-        await _callService.ToggleMuteAsync();
-        IsMuted = _callService.IsMuted;
-    }
+    private async Task ToggleMuteAsync() => await _callService.ToggleMuteAsync();
 
     [RelayCommand]
     private async Task LeaveCallAsync()
@@ -101,6 +132,42 @@ public partial class CallViewModel : BaseViewModel
     [RelayCommand]
     private void CloseUi() => _store.CloseCallUi();
 
+    [RelayCommand]
+    private void ToggleChatPanel()
+    {
+        if (!IsChatPanelOpen)
+        {
+            IsChatPanelOpen = true;
+            SidePanelMode = CallSidePanelMode.Chat;
+            UnreadChatCount = 0;
+            OnPropertyChanged(nameof(HasUnread));
+        }
+        else if (SidePanelMode == CallSidePanelMode.Chat)
+        {
+            IsChatPanelOpen = false;
+        }
+        else
+        {
+            SidePanelMode = CallSidePanelMode.Chat;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenParticipantsPanel()
+    {
+        IsChatPanelOpen = true;
+        SidePanelMode = CallSidePanelMode.Participants;
+    }
+
+    [RelayCommand]
+    private async Task SendChatMessageAsync()
+    {
+        var text = MessageInput.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+        MessageInput = string.Empty;
+        await _hub.SendCallMessageAsync(CallId, text);
+    }
+
     private void SubscribeHubEvents()
     {
         _hub.CallParticipantJoined += OnParticipantJoined;
@@ -108,6 +175,7 @@ public partial class CallViewModel : BaseViewModel
         _hub.ParticipantMuteChanged += OnParticipantMuteChanged;
         _hub.CallEnded += OnCallEnded;
         _hub.ActiveCallUpdated += OnActiveCallUpdated;
+        _hub.CallMessageReceived += OnCallMessageReceived;
     }
 
     private void UnsubscribeHubEvents()
@@ -117,12 +185,15 @@ public partial class CallViewModel : BaseViewModel
         _hub.ParticipantMuteChanged -= OnParticipantMuteChanged;
         _hub.CallEnded -= OnCallEnded;
         _hub.ActiveCallUpdated -= OnActiveCallUpdated;
+        _hub.CallMessageReceived -= OnCallMessageReceived;
+        _callService.ParticipantSpeakingChanged -= OnParticipantSpeakingChanged;
+        _callService.MuteChanged -= OnMuteChangedExternally;
+        _audioService.SpeakingStateChanged -= OnLocalSpeakingStateChanged;
     }
 
     private void OnParticipantJoined(string callId, CallParticipantDto dto)
     {
         if (callId != CallId) return;
-
         Dispatcher.UIThread.Post(() =>
         {
             if (Participants.Any(p => p.UserId == dto.UserId)) return;
@@ -134,7 +205,6 @@ public partial class CallViewModel : BaseViewModel
     private void OnParticipantLeft(string callId, int userId)
     {
         if (callId != CallId) return;
-
         Dispatcher.UIThread.Post(() =>
         {
             var vm = Participants.FirstOrDefault(p => p.UserId == userId);
@@ -149,7 +219,6 @@ public partial class CallViewModel : BaseViewModel
     private void OnParticipantMuteChanged(string callId, int userId, bool isMuted)
     {
         if (callId != CallId) return;
-
         Dispatcher.UIThread.Post(() =>
         {
             var vm = Participants.FirstOrDefault(p => p.UserId == userId);
@@ -157,10 +226,28 @@ public partial class CallViewModel : BaseViewModel
         });
     }
 
+    private void OnMuteChangedExternally(bool isMuted)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsMuted = isMuted;
+            var me = Participants.FirstOrDefault(p => p.UserId == _myUserId);
+            me?.IsMuted = isMuted;
+        });
+    }
+
+    private void OnParticipantSpeakingChanged(int userId, bool isSpeaking) => Dispatcher.UIThread.Post(() =>
+    {
+        var vm = Participants.FirstOrDefault(p => p.UserId == userId);
+        vm?.IsSpeaking = isSpeaking;
+    });
+
+    private void OnLocalSpeakingStateChanged(bool isSpeaking) => Dispatcher.UIThread.Post(() =>
+        Participants.FirstOrDefault(p => p.UserId == _myUserId)?.IsSpeaking = isSpeaking);
+
     private void OnCallEnded(string callId, CallEndReason reason)
     {
         if (callId != CallId) return;
-
         Dispatcher.UIThread.Post(() =>
         {
             Cleanup();
@@ -171,7 +258,6 @@ public partial class CallViewModel : BaseViewModel
     private void OnActiveCallUpdated(CallStateDto state)
     {
         if (state.CallId != CallId) return;
-
         Dispatcher.UIThread.Post(() =>
         {
             var incoming = state.Participants.Select(p => p.UserId).ToHashSet();
@@ -187,10 +273,27 @@ public partial class CallViewModel : BaseViewModel
         });
     }
 
+    private void OnCallMessageReceived(CallChatMessageDto dto)
+    {
+        if (dto.CallId != CallId) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            ChatMessages.Add(new CallChatMessageViewModel(dto, _myUserId));
+
+            if (!IsChatPanelOpen || SidePanelMode != CallSidePanelMode.Chat)
+            {
+                UnreadChatCount++;
+                OnPropertyChanged(nameof(HasUnread));
+            }
+        });
+    }
+
     private void OnDurationTick(object? sender, EventArgs e)
     {
         var elapsed = DateTime.UtcNow - _callStartedAt;
-        DurationText = elapsed.TotalHours >= 1 ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}" : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
+        DurationText = elapsed.TotalHours >= 1
+            ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}"
+            : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
     }
 
     private void Cleanup()

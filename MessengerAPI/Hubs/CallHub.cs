@@ -300,6 +300,30 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
     }
 
     /// <summary>
+    /// Обновить VAD-статус (говорит / молчит).
+    /// </summary>
+    public async Task ToggleSpeaking(string callId, bool isSpeaking)
+    {
+        var userId = CurrentUserId;
+        var session = callSessions.GetCall(callId);
+        if (session == null) return;
+
+        if (!session.ActiveParticipants.ContainsKey(userId)) return;
+
+        callSessions.SetSpeaking(callId, userId, isSpeaking);
+
+        var others = session.ActiveParticipants.Values
+            .Where(p => p.UserId != userId)
+            .Select(p => p.ConnectionId)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .ToList();
+
+        if (others.Count == 0) return;
+
+        await Clients.Clients(others).SendAsync("ParticipantSpeakingChanged", callId, userId, isSpeaking);
+    }
+
+    /// <summary>
     /// Получить состояние активного звонка в чате (для реконнекта или позднего входа).
     /// </summary>
     public async Task<CallStateDto?> GetCallState(int chatId)
@@ -360,6 +384,37 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
                 await systemMessages.CreateCallEndedMessageAsync(chatId, initiatorId, duration);
             }
         }
+    }
+
+    /// <summary>
+    /// Отправить сообщение в чат звонка (ephemeral, не сохраняется).
+    /// </summary>
+    public async Task SendCallMessage(string callId, string text)
+    {
+        var userId = CurrentUserId;
+        var session = callSessions.GetCall(callId);
+        if (session == null) return;
+
+        if (!session.ActiveParticipants.ContainsKey(userId)) return;
+
+        if (string.IsNullOrWhiteSpace(text) || text.Length > 2000) return;
+
+        var (name, avatar) = await GetUserInfoAsync(userId);
+
+        var message = new CallChatMessageDto
+        {
+            CallId = callId,
+            SenderId = userId,
+            SenderName = name ?? $"User {userId}",
+            SenderAvatar = avatar,
+            Text = text.Trim(),
+            SentAt = DateTime.UtcNow
+        };
+
+        // Рассылаем всем активным участникам включая отправителя
+        var connectionIds = session.ActiveParticipants.Values.Select(p => p.ConnectionId).Where(c => !string.IsNullOrEmpty(c)).ToList();
+
+        await Clients.Clients(connectionIds).SendAsync("CallMessageReceived", message);
     }
 
     private async Task StartRingingTimeoutAsync(string callId, int chatId, int timeoutSeconds)

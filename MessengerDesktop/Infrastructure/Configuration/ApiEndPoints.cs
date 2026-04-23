@@ -85,6 +85,8 @@ public static class ApiEndpoints
             return sb.ToString();
         }
 
+        public static string Search(int userId) => $"{Base}/user/{userId}/search";
+        public static string ChatSearch(int chatId) => $"{Base}/chat/{chatId}/search";
         /// <summary>
         /// GET api/messages/chat/{chatId}/search
         /// </summary>

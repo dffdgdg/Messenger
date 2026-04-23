@@ -275,8 +275,13 @@
 				<StackPanel DockPanel.Dock="Top"
 							Orientation="Horizontal"
 							Spacing="6"
-							Margin="8,0,8,4"
-							IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+							Margin="8,0,8,4">
+					<StackPanel.IsVisible>
+						<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+							<Binding Path="IsSearchMode"/>
+							<Binding Path="!IsCompactMode" ElementName="Root"/>
+						</MultiBinding>
+					</StackPanel.IsVisible>
 
 					<ToggleButton Content="Все"
 								  Classes="SwitchSmall"

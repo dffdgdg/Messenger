@@ -271,19 +271,3 @@ GET /user/{userId}/search
 
 **CreateUserDto**: `{ username, password, surname, name, midname?, departmentId? }`
 ```
-
----
-
-## Итог изменений
-
-| # | Изменение |
-|---|-----------|
-| 1 | Добавлен `DELETE /messages/{id}` с описанием прав |
-| 2 | Добавлен `POST /admin/users/{id}/reset-password` |
-| 3 | Поиск в чате: расширен до 11 параметров |
-| 4 | Глобальный поиск: расширен до 12 параметров + `filterChatId` |
-| 5 | Разделены типы ответов: `SearchMessagesResponseDto` vs `GlobalSearchResponseDto` |
-| 6 | Добавлено предупреждение о валидации id в `PUT /messages/{id}` |
-| 7 | Добавлен `DepartmentHeads` в описание `ChatType` |
-| 8 | `UserDto` выровнен с актуальным набором полей |
-| 9 | Убран `TranscriptionBackgroundService` из HostedService |

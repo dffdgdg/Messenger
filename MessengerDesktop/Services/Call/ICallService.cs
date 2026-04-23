@@ -9,6 +9,7 @@ public interface ICallService : IAsyncDisposable
     bool IsMuted { get; }
     string? ActiveCallId { get; }
     int? ActiveChatId { get; }
+    event Action<int, bool>? ParticipantSpeakingChanged;
 
     /// <summary>Инициировать исходящий звонок</summary>
     Task StartCallAsync(int chatId);

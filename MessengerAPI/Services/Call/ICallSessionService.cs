@@ -43,4 +43,5 @@ public interface ICallSessionService
     CallStateDto ToStateDto(CallSession session, Func<int, string?> avatarResolver, Func<int, string?> nameResolver);
 
     IEnumerable<CallSession> GetAllSessionsForUser(int userId);
+    bool SetSpeaking(string callId, int userId, bool isSpeaking);
 }

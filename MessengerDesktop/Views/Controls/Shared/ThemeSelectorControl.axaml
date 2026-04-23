@@ -2,99 +2,180 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="MessengerDesktop.Views.Controls.ThemeSelectorControl"
              x:Name="Root">
-    
+
     <UserControl.Resources>
         <ControlTemplate x:Key="LightPreview">
-            <Border Background="#F7F8FA" CornerRadius="8" BorderThickness="1" BorderBrush="#20000000">
-                <Grid ColumnDefinitions="30,*">
-                    <Border Grid.Column="0" Background="#EDF0F3"/>
-                    <Border Grid.Column="1" Background="#FFFFFF" Margin="1,0,0,0">
-                        <StackPanel Margin="6" Spacing="4">
-                            <Border Height="14" Width="50" HorizontalAlignment="Right" Background="#EEFFDE" CornerRadius="6,6,2,6"/>
-                            <Border Height="14" Width="40" HorizontalAlignment="Left" Background="#F7F8FA" CornerRadius="6,6,6,2"/>
-                            <Border Height="8" Width="20" HorizontalAlignment="Right" Background="#2481CC" CornerRadius="4" Opacity="0.6"/>
-                        </StackPanel>
+            <Border Background="#FFFFFF" Padding="10,8">
+                <Grid RowDefinitions="*,Auto">
+                    <StackPanel Grid.Row="0" Spacing="5" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                        <Border Height="10" Width="48" Background="#E9EDF5" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="10" Width="36" Background="#E9EDF5" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="10" Width="42" Background="#E8F1FF" CornerRadius="5,5,2,5" HorizontalAlignment="Right"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Height="18" Background="#F4F6FB" CornerRadius="9" Padding="8,0">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <Border Height="4" Width="24" Background="#D8DEE9" CornerRadius="2" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <Border Grid.Column="1" Width="12" Height="12" Background="#2B74D9" CornerRadius="6"/>
+                        </Grid>
                     </Border>
                 </Grid>
             </Border>
         </ControlTemplate>
 
         <ControlTemplate x:Key="DarkPreview">
-            <Border Background="#12121A" CornerRadius="8" BorderThickness="1" BorderBrush="#20000000">
-                <Grid ColumnDefinitions="30,*">
-                    <Border Grid.Column="0" Background="#1A1A24"/>
-                    <Border Grid.Column="1" Background="#0A0A0F" Margin="1,0,0,0">
-                        <StackPanel Margin="6" Spacing="4">
-                            <Border Height="14" Width="50" HorizontalAlignment="Right" Background="#3390EC" CornerRadius="6,6,2,6"/>
-                            <Border Height="14" Width="40" HorizontalAlignment="Left" Background="#22222E" CornerRadius="6,6,6,2"/>
-                            <Border Height="8" Width="20" HorizontalAlignment="Right" Background="#3390EC" CornerRadius="4" Opacity="0.8"/>
-                        </StackPanel>
+            <Border Background="#12121A" Padding="10,8">
+                <Grid RowDefinitions="*,Auto">
+                    <StackPanel Grid.Row="0" Spacing="5" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                        <Border Height="10" Width="48" Background="#1A1A24" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="10" Width="36" Background="#1A1A24" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="10" Width="42" Background="#2B5378" CornerRadius="5,5,2,5" HorizontalAlignment="Right"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Height="18" Background="#1A1A24" CornerRadius="9" Padding="8,0">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <Border Height="4" Width="24" Background="#2A2A38" CornerRadius="2" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <Border Grid.Column="1" Width="12" Height="12" Background="#3390EC" CornerRadius="6"/>
+                        </Grid>
                     </Border>
                 </Grid>
             </Border>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="SystemPreview">
+            <Grid ColumnDefinitions="*,*">
+                <Border Grid.Column="0" Background="#FFFFFF" Padding="10,8,0,8" ClipToBounds="True">
+                    <Grid RowDefinitions="*,Auto">
+                        <StackPanel Grid.Row="0" Spacing="5" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                            <Border Height="10" Width="48" Background="#E9EDF5" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                            <Border Height="10" Width="36" Background="#E9EDF5" CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                            <Border Height="10" Opacity="0"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Height="18" Background="#F4F6FB" CornerRadius="9,0,0,9" Padding="8,0">
+                            <Border Height="4" Width="24" Background="#D8DEE9" CornerRadius="2" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="0" Width="1" Background="#15000000" HorizontalAlignment="Right" ZIndex="2"/>
+                <Border Grid.Column="1" Width="1" Background="#10FFFFFF" HorizontalAlignment="Left" ZIndex="2"/>
+
+                <Border Grid.Column="1" Background="#12121A" Padding="0,8,10,8" ClipToBounds="True">
+                    <Grid RowDefinitions="*,Auto">
+                        <StackPanel Grid.Row="0" Spacing="5" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                            <Border Height="10" Opacity="0"/>
+                            <Border Height="10" Opacity="0"/>
+                            <Border Height="10" Width="42" Background="#2B5378" CornerRadius="5,5,2,5" HorizontalAlignment="Right"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Height="18" Background="#1A1A24" CornerRadius="0,9,9,0" Padding="0,0,8,0">
+                            <Border Width="12" Height="12" Background="#3390EC" CornerRadius="6" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
         </ControlTemplate>
     </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="RadioButton.ThemeOption">
-            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="RootBorder" Background="{TemplateBinding Background}"
-                            BorderThickness="2" BorderBrush="{DynamicResource BorderDefault}"
-                            CornerRadius="12" Padding="12">
-                        <StackPanel Spacing="10" HorizontalAlignment="Stretch">
-                            <ContentPresenter Content="{TemplateBinding Content}" 
-                                              HorizontalContentAlignment="Stretch"/>
-                            
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                                <Grid Width="18" Height="18">
-                                    <Ellipse Stroke="{DynamicResource BorderDefault}" StrokeThickness="2"/>
-                                    <Ellipse x:Name="CheckMark" Fill="{DynamicResource Accent}" Width="10" Height="10" IsVisible="False"/>
-                                </Grid>
-                                <TextBlock Text="{TemplateBinding Tag}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </StackPanel>
+                    <Border x:Name="RootBorder"
+                            BorderThickness="2"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            CornerRadius="12"
+                            ClipToBounds="True"
+                            Background="{DynamicResource ThirdBG}">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                                <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                            </Transitions>
+                        </Border.Transitions>
+
+                        <Grid RowDefinitions="*,Auto">
+                            <Border Grid.Row="0" Height="100" CornerRadius="10,10,0,0" ClipToBounds="True">
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  HorizontalContentAlignment="Stretch"
+                                                  VerticalContentAlignment="Stretch"/>
+                            </Border>
+
+                            <Border Grid.Row="1" BorderThickness="0,1,0,0"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    Padding="0,10,0,12">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="7">
+                                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                        <Ellipse x:Name="OuterCircle" Stroke="{DynamicResource BorderHover}" StrokeThickness="1.5" Fill="Transparent">
+                                            <Ellipse.Transitions>
+                                                <Transitions>
+                                                    <BrushTransition Property="Fill" Duration="0:0:0.15"/>
+                                                    <BrushTransition Property="Stroke" Duration="0:0:0.15"/>
+                                                </Transitions>
+                                            </Ellipse.Transitions>
+                                        </Ellipse>
+                                        <Ellipse x:Name="InnerDot" Fill="White" Width="6" Height="6" Opacity="0">
+                                            <Ellipse.Transitions>
+                                                <Transitions>
+                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                                                </Transitions>
+                                            </Ellipse.Transitions>
+                                        </Ellipse>
+                                    </Panel>
+
+                                    <TextBlock x:Name="Label" Text="{TemplateBinding Tag}" FontSize="12" FontWeight="Medium"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}">
+                                        <TextBlock.Transitions>
+                                            <Transitions>
+                                                <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                                            </Transitions>
+                                        </TextBlock.Transitions>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter>
         </Style>
-        
+
+        <Style Selector="RadioButton.ThemeOption:pointerover /template/ Border#RootBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+        </Style>
+
         <Style Selector="RadioButton.ThemeOption:checked /template/ Border#RootBorder">
             <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
         </Style>
-        <Style Selector="RadioButton.ThemeOption:checked /template/ Ellipse#CheckMark">
-            <Setter Property="IsVisible" Value="True"/>
+        <Style Selector="RadioButton.ThemeOption:checked /template/ Ellipse#OuterCircle">
+            <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeOption:checked /template/ Ellipse#InnerDot">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeOption:checked /template/ TextBlock#Label">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-        
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
         <RadioButton Grid.Column="0" Classes="ThemeOption" GroupName="TS" Tag="Светлая"
                      IsChecked="{Binding IsLightSelected, ElementName=Root, Mode=TwoWay}">
-            <TemplatedControl Template="{StaticResource LightPreview}" Height="100"/>
+            <TemplatedControl Template="{StaticResource LightPreview}"/>
         </RadioButton>
 
         <RadioButton Grid.Column="1" Classes="ThemeOption" GroupName="TS" Tag="Тёмная"
                      IsChecked="{Binding IsDarkSelected, ElementName=Root, Mode=TwoWay}">
-            <TemplatedControl Template="{StaticResource DarkPreview}" Height="100"/>
+            <TemplatedControl Template="{StaticResource DarkPreview}"/>
         </RadioButton>
 
         <RadioButton Grid.Column="2" Classes="ThemeOption" GroupName="TS" Tag="Системная"
                      IsChecked="{Binding IsSystemSelected, ElementName=Root, Mode=TwoWay}">
-            <Grid Height="100">
-                <TemplatedControl Template="{StaticResource LightPreview}" 
-                                  IsVisible="{Binding !IsSystemDarkNow, ElementName=Root}"/>
-                <TemplatedControl Template="{StaticResource DarkPreview}" 
-                                  IsVisible="{Binding IsSystemDarkNow, ElementName=Root}"/>
-                <Border VerticalAlignment="Top" HorizontalAlignment="Right" 
-                        Background="{DynamicResource Accent}" CornerRadius="4" Margin="4" Padding="4,2">
-                    <TextBlock Text="AUTO" FontSize="9" FontWeight="Bold" Foreground="White"/>
-                </Border>
-            </Grid>
+            <TemplatedControl Template="{StaticResource SystemPreview}"/>
         </RadioButton>
     </Grid>
 </UserControl>

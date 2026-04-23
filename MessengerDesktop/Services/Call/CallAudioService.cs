@@ -16,6 +16,12 @@ public sealed class CallAudioService : IDisposable
     private const int FrameDurationMs = 20;
     private const int FrameSamples = SampleRate * FrameDurationMs / 1000; // 960
     private const int MaxEncodedBytes = 4000;
+    private const double VadFloorThreshold = 0.008;  // абсолютный минимум — ниже этого всегда тишина
+    private const double VadSpeechMultiplier = 2.5;   // речь должна быть в 2.5 раза громче фона
+    private const int VadSilenceHoldMs = 1200;
+    private const int VadDebounceMs = 150;
+    private double _noiseFloor = 0.02;
+    private const double NoiseFloorAlpha = 0.005; // скорость адаптации — медленная
 
     private Stream? _inputStream;
     private Stream? _outputStream;
@@ -32,11 +38,23 @@ public sealed class CallAudioService : IDisposable
     private readonly Lock _stateLock = new();
 
     private readonly PortAudioLifetime _portAudio;
+    private readonly NoiseReducer _noiseReducer = new(FrameSamples);
 
     public event Action<byte[], int>? OnEncodedFrame;
 
     public bool IsRunning => _isRunning;
     public bool IsMuted => _isMuted;
+    private bool _isSpeaking;
+    private DateTime _lastVoiceDetectedAt = DateTime.MinValue;
+    private DateTime _lastSpeakingChangeSentAt = DateTime.MinValue;
+
+    public event Action<bool>? SpeakingStateChanged;
+
+    public bool NoiseSuppressionEnabled
+    {
+        get => _noiseReducer.IsEnabled;
+        set => _noiseReducer.IsEnabled = value;
+    }
 
     public CallAudioService(PortAudioLifetime portAudio)
     {
@@ -170,8 +188,17 @@ public sealed class CallAudioService : IDisposable
 
         try
         {
+            Span<short> mutable = stackalloc short[pcmFrame.Length];
+            pcmFrame.CopyTo(mutable);
+
+            ProcessVoiceActivity(mutable);
+
+            bool hasSpeech = _noiseReducer.Process(mutable);
+
+            if (!hasSpeech) return;
+
             Span<byte> encoded = stackalloc byte[MaxEncodedBytes];
-            var encodedLength = _encoder.Encode(pcmFrame, FrameSamples, encoded, MaxEncodedBytes);
+            int encodedLength = _encoder.Encode(mutable, FrameSamples, encoded, MaxEncodedBytes);
 
             if (encodedLength > 0)
             {
@@ -184,6 +211,39 @@ public sealed class CallAudioService : IDisposable
         {
             Debug.WriteLine($"[CallAudio] Encode error: {ex.Message}");
         }
+    }
+
+    private void ProcessVoiceActivity(ReadOnlySpan<short> samples)
+    {
+        var now = DateTime.UtcNow;
+
+        // RMS сырого сигнала
+        double sumSquares = 0;
+        for (int i = 0; i < samples.Length; i++)
+            sumSquares += (double)samples[i] * samples[i];
+        double rms = Math.Sqrt(sumSquares / samples.Length) / short.MaxValue;
+
+        // Адаптируем уровень фона только в тишине
+        if (!_isSpeaking)
+            _noiseFloor = (_noiseFloor * (1 - NoiseFloorAlpha)) + (rms * NoiseFloorAlpha);
+
+        double threshold = Math.Max(VadFloorThreshold, _noiseFloor * VadSpeechMultiplier);
+
+        bool hasVoice = rms > threshold;
+
+        if (hasVoice)
+            _lastVoiceDetectedAt = now;
+
+        bool shouldBeSpeaking = (now - _lastVoiceDetectedAt).TotalMilliseconds < VadSilenceHoldMs;
+
+        if (shouldBeSpeaking == _isSpeaking) return;
+
+        if ((now - _lastSpeakingChangeSentAt).TotalMilliseconds < VadDebounceMs) return;
+
+        _isSpeaking = shouldBeSpeaking;
+        _lastSpeakingChangeSentAt = now;
+
+        SpeakingStateChanged?.Invoke(_isSpeaking);
     }
 
     private void StartOutputStream()
@@ -261,6 +321,8 @@ public sealed class CallAudioService : IDisposable
     private void StopInternal()
     {
         _isRunning = false;
+        _isSpeaking = false;
+        _lastVoiceDetectedAt = DateTime.MinValue;
 
         StopStream(ref _inputStream);
         StopStream(ref _outputStream);

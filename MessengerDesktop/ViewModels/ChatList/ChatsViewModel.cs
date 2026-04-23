@@ -73,12 +73,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         if (!_authManager.Session.UserId.HasValue) return;
 
-        SearchManager = new GlobalSearchManager(
-            _authManager.Session.UserId.Value,
-            IsGroupMode,
-            _apiClient,
-            getUsersFunc: LoadUsersForFilterAsync,
-            getChatsFunc: LoadChatsForFilterAsync);
+        SearchManager = new GlobalSearchManager(_authManager.Session.UserId.Value, IsGroupMode, _apiClient, getUsersFunc: LoadUsersForFilterAsync, getChatsFunc: LoadChatsForFilterAsync);
 
         SearchManager.PropertyChanged += OnSearchManagerPropertyChanged;
     }
@@ -148,10 +143,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     }
 
     [RelayCommand]
-    private void SetSearchScope(SearchScopeMode scope)
-    {
-        SearchManager?.UseScope(scope);
-    }
+    private void SetSearchScope(SearchScopeMode scope) => SearchManager?.UseScope(scope);
+
     [RelayCommand]
     private async Task OpenSearchFilters()
     {
@@ -274,38 +267,35 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
-    public async Task OpenOrCreateDialogWithUserAsync(UserDto user)
+    public async Task OpenOrCreateDialogWithUserAsync(UserDto user) => await SafeExecuteAsync(async () =>
     {
-        await SafeExecuteAsync(async () =>
+        await LoadChats();
+
+        var existingChat = await FindDialogWithUser(user.Id);
+        if (existingChat != null)
         {
-            await LoadChats();
+            var item = FindChat(existingChat.Id) ?? InsertAndReturn(new ChatListItemViewModel(existingChat));
+            OpenChatCommand.Execute(item);
+            return;
+        }
 
-            var existingChat = await FindDialogWithUser(user.Id);
-            if (existingChat != null)
-            {
-                var item = FindChat(existingChat.Id) ?? InsertAndReturn(new ChatListItemViewModel(existingChat));
-                OpenChatCommand.Execute(item);
-                return;
-            }
+        var userId = _authManager.Session.UserId ?? 0;
+        var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create,
+            new ChatDto { Name = user.Id.ToString(), Type = ChatType.Contact, CreatedById = userId });
 
-            var userId = _authManager.Session.UserId ?? 0;
-            var result = await _apiClient.PostAsync<ChatDto, ChatDto>(ApiEndpoints.Chats.Create,
-                new ChatDto { Name = user.Id.ToString(), Type = ChatType.Contact, CreatedById = userId });
+        if (!result.Success || result.Data == null)
+        {
+            ErrorMessage = $"Ошибка создания диалога: {result.Error}";
+            return;
+        }
 
-            if (!result.Success || result.Data == null)
-            {
-                ErrorMessage = $"Ошибка создания диалога: {result.Error}";
-                return;
-            }
+        result.Data.Name = user.DisplayName ?? user.Username;
+        result.Data.Avatar = user.Avatar;
 
-            result.Data.Name = user.DisplayName ?? user.Username;
-            result.Data.Avatar = user.Avatar;
-
-            var created = new ChatListItemViewModel(result.Data);
-            Chats.Add(created);
-            OpenChatCommand.Execute(created);
-        });
-    }
+        var created = new ChatListItemViewModel(result.Data);
+        Chats.Add(created);
+        OpenChatCommand.Execute(created);
+    });
 
     [RelayCommand]
     private async Task CreateGroup()

@@ -66,7 +66,7 @@
 								<GradientStop Color="{DynamicResource LoginLogoEnd}" Offset="1"/>
 							</LinearGradientBrush>
 						</Border.Background>
-						<Path Data="{StaticResource LogoIcon}"
+						<Image Source="/Resources/Images/Logo.svg"
 							  Width="28" Height="28" Stretch="Uniform"
 							  Fill="{DynamicResource TextOnAccent}"
 							  HorizontalAlignment="Center" VerticalAlignment="Center"/>

@@ -104,62 +104,31 @@
 						</Grid>
 					</Grid>
 
-					<StackPanel Grid.Column="2" Orientation="Horizontal"
-								Spacing="8" Margin="0,0,8,0"
-								VerticalAlignment="Center">
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="0,0,12,0" VerticalAlignment="Center">
+    
+    <Border Background="{DynamicResource AccentSubtle}"
+            CornerRadius="16" 
+            Padding="12,6"
+            IsVisible="{Binding ShowUserCount}"
+            ToolTip.Tip="{Binding UserCountText}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource PeopleIcon}" Width="14" Height="14" Foreground="{DynamicResource Accent}"/>
+            <TextBlock Text="{Binding UserCount}" VerticalAlignment="Center" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Accent}"/>
+        </StackPanel>
+    </Border>
 
-						<Border Background="{DynamicResource AccentMuted}"
-								CornerRadius="12" Padding="10,4"
-								IsVisible="{Binding ShowUserCount}"
-								ToolTip.Tip="{Binding UserCountText}">
-							<StackPanel Orientation="Horizontal" Spacing="6">
-								<PathIcon Data="{StaticResource PeopleIcon}"
-										  Width="14" Height="14"
-										  Foreground="{DynamicResource Accent}"
-										  Margin="5,0,0,0"/>
-								<TextBlock Text="{Binding UserCount}"
-										   VerticalAlignment="Center"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource Accent}"/>
-							</StackPanel>
-						</Border>
+    <Border Background="{DynamicResource WarningSubtle}"
+            CornerRadius="16" Padding="12,6"
+            IsVisible="{Binding !ShowUserCount}">
+        <TextBlock Text="Пусто" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource WarningBrush}"/>
+    </Border>
 
-						<Border Background="{DynamicResource WarningBgBrush}"
-								CornerRadius="12" Padding="10,4"
-								IsVisible="{Binding !ShowUserCount}"
-								ToolTip.Tip="Нет сотрудников">
-							<TextBlock Text="Пусто"
-									   VerticalAlignment="Center" HorizontalAlignment="Center"
-									   Foreground="{DynamicResource WarningBrush}"/>
-						</Border>
-
-						<Border Background="{DynamicResource CardBgBrush}"
-								CornerRadius="12" Padding="8,4"
-								IsVisible="{Binding HasChildren}"
-								ToolTip.Tip="Подотделов">
-							<StackPanel Orientation="Horizontal" Spacing="4">
-								<PathIcon Data="{StaticResource FolderIcon}"
-										  Width="12" Height="12"
-										  Margin="4,0,0,0"
-										  Foreground="{DynamicResource TextMuted}"/>
-								<TextBlock Text="{Binding Children.Count}"
-										   FontSize="11" VerticalAlignment="Center"
-										   Foreground="{DynamicResource TextMuted}"/>
-							</StackPanel>
-						</Border>
-
-						<StackPanel Classes="DepartmentActions"
-									Orientation="Horizontal" Spacing="4">
-							<Button Classes="IconButton Small"
-									Command="{Binding $parent[local:DepartmentCardView].EditCommand}"
-									CommandParameter="{Binding Department}"
-									ToolTip.Tip="Редактировать">
-								<PathIcon Data="{StaticResource EditIcon}"
-										  Width="14" Height="14"
-										  Foreground="{DynamicResource Icon}"/>
-							</Button>
-						</StackPanel>
-					</StackPanel>
+    <StackPanel Classes="DepartmentActions" Orientation="Horizontal" Spacing="4">
+        <Button Classes="IconButton" Command="{Binding $parent[local:DepartmentCardView].EditCommand}" CommandParameter="{Binding Department}">
+            <PathIcon Data="{StaticResource EditIcon}" Width="16" Height="16" Foreground="{DynamicResource TextSecondary}"/>
+        </Button>
+    </StackPanel>
+</StackPanel>
 				</Grid>
 			</Grid>
 		</Border>

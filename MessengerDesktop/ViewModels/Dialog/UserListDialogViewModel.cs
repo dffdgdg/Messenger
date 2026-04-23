@@ -28,8 +28,8 @@ public partial class UserListDialogViewModel : DialogBaseViewModel
     public int SelectedCount => Items.Count(x => x.IsSelected);
 
     public UserListDialogViewModel(string title, IEnumerable<UserListItemViewModel> allItems, bool allowEdit,
-    Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> reviewSelector, Action<List<int>> applySelection,
-    string editButtonText, string emptyMessage)
+        Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> reviewSelector, Action<List<int>> applySelection,
+        string editButtonText, string emptyMessage)
     {
         Items = [];
         FilteredItems = [];

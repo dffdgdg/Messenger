@@ -63,25 +63,20 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public event Action? ScrollToBottomRequested;
     public event Action<double>? PollSizeChanged;
     public void NotifyPollSizeChanged(double delta) => PollSizeChanged?.Invoke(delta);
-    public void RequestScrollToMessage(MessageViewModel msg, bool highlight = false)
-        => ScrollToMessageRequested?.Invoke(msg, highlight);
+    public void RequestScrollToMessage(MessageViewModel msg, bool highlight = false) => ScrollToMessageRequested?.Invoke(msg, highlight);
 
-    public void RequestScrollToIndex(int index, bool highlight = false)
-        => ScrollToIndexRequested?.Invoke(index, highlight);
+    public void RequestScrollToIndex(int index, bool highlight = false) => ScrollToIndexRequested?.Invoke(index, highlight);
 
-    public void RequestScrollToBottom()
-        => ScrollToBottomRequested?.Invoke();
+    public void RequestScrollToBottom() => ScrollToBottomRequested?.Invoke();
 
     public event Action? CompositionModeReset;
 
-    public void ResetCompositionModes()
-        => CompositionModeReset?.Invoke();
+    public void ResetCompositionModes() => CompositionModeReset?.Invoke();
 
     public bool IsDisposed { get; private set; }
 
     private CancellationTokenSource? _lifetimeCts = new();
-    public CancellationToken LifetimeToken
-        => _lifetimeCts?.Token ?? CancellationToken.None;
+    public CancellationToken LifetimeToken => _lifetimeCts?.Token ?? CancellationToken.None;
 
     public void Dispose()
     {

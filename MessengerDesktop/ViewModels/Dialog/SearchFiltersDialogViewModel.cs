@@ -45,16 +45,13 @@ public sealed partial class SearchFiltersDialogViewModel : DialogBaseViewModel
     public GlobalSearchManager SearchManager => _searchManager;
 
     [RelayCommand]
-    private void SetSearchContentFilter(SearchContentFilter filter) =>
-        SearchManager.ContentFilter = filter;
+    private void SetSearchContentFilter(SearchContentFilter filter) => SearchManager.ContentFilter = filter;
 
     [RelayCommand]
-    private void SetSearchScope(SearchScopeMode scope) =>
-        SearchManager.UseScope(scope);
+    private void SetSearchScope(SearchScopeMode scope) => SearchManager.UseScope(scope);
 
     [RelayCommand]
-    private void SetSearchAuthorFilter(SearchAuthorFilter filter) =>
-        SearchManager.AuthorFilter = filter;
+    private void SetSearchAuthorFilter(SearchAuthorFilter filter) => SearchManager.AuthorFilter = filter;
 
     [RelayCommand]
     private async Task Apply()

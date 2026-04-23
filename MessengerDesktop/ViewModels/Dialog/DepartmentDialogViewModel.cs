@@ -44,14 +44,11 @@ public partial class DepartmentDialogViewModel : DialogBaseViewModel
     {
         var currentDepartmentId = current?.Id;
 
-        var parents = _allDepartments.Where(d => d.Id > 0 && d.Id != currentDepartmentId)
-            .OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
+        var parents = _allDepartments.Where(d => d.Id > 0 && d.Id != currentDepartmentId).OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
 
         AvailableParents = new ObservableCollection<DepartmentDto>(parents);
 
-        SelectedParent = current?.ParentDepartmentId is int parentId
-            ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder
-            : NoParentPlaceholder;
+        SelectedParent = current?.ParentDepartmentId is int parentId ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder : NoParentPlaceholder;
     }
 
     partial void OnNameChanged(string value)

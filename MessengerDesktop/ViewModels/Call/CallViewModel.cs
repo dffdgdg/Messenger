@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.Services.Call;
 using MessengerShared.DTO.Call;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -25,6 +26,11 @@ public partial class CallViewModel : BaseViewModel
     [ObservableProperty] public partial string MessageInput { get; set; } = string.Empty;
     [ObservableProperty] public partial int UnreadChatCount { get; set; }
     [ObservableProperty] public partial CallSidePanelMode SidePanelMode { get; set; } = CallSidePanelMode.Chat;
+    public IReadOnlyList<string> PopularEmojis { get; } =
+    [
+        "😀", "😂", "😊", "😍", "🤔", "👍", "👏", "🙏",
+        "🔥", "🎉", "❤️", "😢", "😎", "🤝", "🙌", "✅"
+    ];
 
     public bool IsChatMode => SidePanelMode == CallSidePanelMode.Chat;
     public bool IsParticipantsMode => SidePanelMode == CallSidePanelMode.Participants;
@@ -168,6 +174,14 @@ public partial class CallViewModel : BaseViewModel
         await _hub.SendCallMessageAsync(CallId, text);
     }
 
+    [RelayCommand]
+    private void InsertEmoji(string emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji)) return;
+        MessageInput += emoji;
+    }
+
+
     private void SubscribeHubEvents()
     {
         _hub.CallParticipantJoined += OnParticipantJoined;
@@ -226,15 +240,12 @@ public partial class CallViewModel : BaseViewModel
         });
     }
 
-    private void OnMuteChangedExternally(bool isMuted)
+    private void OnMuteChangedExternally(bool isMuted) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            IsMuted = isMuted;
-            var me = Participants.FirstOrDefault(p => p.UserId == _myUserId);
-            me?.IsMuted = isMuted;
-        });
-    }
+        IsMuted = isMuted;
+        var me = Participants.FirstOrDefault(p => p.UserId == _myUserId);
+        me?.IsMuted = isMuted;
+    });
 
     private void OnParticipantSpeakingChanged(int userId, bool isSpeaking) => Dispatcher.UIThread.Post(() =>
     {
@@ -291,9 +302,7 @@ public partial class CallViewModel : BaseViewModel
     private void OnDurationTick(object? sender, EventArgs e)
     {
         var elapsed = DateTime.UtcNow - _callStartedAt;
-        DurationText = elapsed.TotalHours >= 1
-            ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}"
-            : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
+        DurationText = elapsed.TotalHours >= 1 ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}" : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
     }
 
     private void Cleanup()

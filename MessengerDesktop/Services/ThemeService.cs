@@ -61,16 +61,13 @@ public class ThemeService(ISettingsService settings) : IThemeService
         }
     }
 
-    private void ApplyTheme(AppTheme theme)
+    private void ApplyTheme(AppTheme theme) => _app.RequestedThemeVariant = theme switch
     {
-        _app.RequestedThemeVariant = theme switch
-        {
-            AppTheme.dark => ThemeVariant.Dark,
-            AppTheme.light => ThemeVariant.Light,
-            AppTheme.system => ThemeVariant.Default,
-            _ => ThemeVariant.Default
-        };
-    }
+        AppTheme.dark => ThemeVariant.Dark,
+        AppTheme.light => ThemeVariant.Light,
+        AppTheme.system => ThemeVariant.Default,
+        _ => ThemeVariant.Default
+    };
 
     private AppTheme GetCurrentTheme()
     {

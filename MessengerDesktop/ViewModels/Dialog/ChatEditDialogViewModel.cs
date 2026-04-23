@@ -137,8 +137,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     private void ApplyUserFilter()
     {
-        var source = string.IsNullOrWhiteSpace(SearchUserQuery) ? AvailableUsers
-            : AvailableUsers.Where(u => (u.DisplayName?.Contains(SearchUserQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+        var source = string.IsNullOrWhiteSpace(SearchUserQuery) ? AvailableUsers : AvailableUsers.Where(u => (u.DisplayName?.Contains(SearchUserQuery, StringComparison.OrdinalIgnoreCase) ?? false)
             || (u.Username?.Contains(SearchUserQuery, StringComparison.OrdinalIgnoreCase) ?? false));
 
         FilteredUsers = new ObservableCollection<UserListItemViewModel>(source);
@@ -147,32 +146,26 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     public List<int> GetSelectedUserIds() => [.. AvailableUsers.Where(u => u.IsSelected).Select(u => u.Id)];
 
     [RelayCommand]
-    private Task ManageParticipants() => ShowUserListDialog("Участники", AvailableUsers, CanManageParticipants,
-        items => items.Where(x => x.IsSelected),
-        selectedIds =>
-        {
-            foreach (var u in AvailableUsers)
-                u.IsSelected = selectedIds.Contains(u.Id);
+    private Task ManageParticipants() => ShowUserListDialog("Участники", AvailableUsers, CanManageParticipants, items => items.Where(x => x.IsSelected), selectedIds =>
+    {
+        foreach (var u in AvailableUsers)
+            u.IsSelected = selectedIds.Contains(u.Id);
 
-            var set = selectedIds.ToHashSet();
-            SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(set.Contains));
-            NotifySelectionChanged();
-        },
-        "Изменить состав", "Участники не выбраны");
+        var set = selectedIds.ToHashSet();
+        SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(set.Contains));
+        NotifySelectionChanged();
+    },"Изменить состав", "Участники не выбраны");
 
     [RelayCommand]
-    private Task ManageAdmins() => ShowUserListDialog("Администраторы",
-        AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList(), CanManageAdmins,
-        items => items.Where(x => x.IsSelected),
-        ids =>
+    private Task ManageAdmins() => ShowUserListDialog("Администраторы", AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList(), CanManageAdmins,
+        items => items.Where(x => x.IsSelected), ids =>
         {
             SelectedAdminIds = new ObservableCollection<int>(ids);
             OnPropertyChanged(nameof(AdminsCount));
         }, "Изменить роли", "Администраторы не назначены");
 
-    private Task ShowUserListDialog<T>(string title, T source, bool canManage, Func<IEnumerable<UserListItemViewModel>,
-        IEnumerable<UserListItemViewModel>> filter, Action<List<int>> onConfirm, string confirmText, string emptyText)
-        where T : IEnumerable<UserListItemViewModel>
+    private Task ShowUserListDialog<T>(string title, T source, bool canManage, Func<IEnumerable<UserListItemViewModel>, IEnumerable<UserListItemViewModel>> filter, Action<List<int>> onConfirm,
+        string confirmText, string emptyText) where T : IEnumerable<UserListItemViewModel>
     {
         if (ShowDialogAction == null) return Task.CompletedTask;
 

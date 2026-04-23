@@ -137,17 +137,14 @@ public partial class FilterAutocomplete : UserControl
             IsDropdownOpen = true;
     }
 
-    private void OnInputLostFocus(object? sender, FocusChangedEventArgs e)
+    private void OnInputLostFocus(object? sender, FocusChangedEventArgs e) => Dispatcher.UIThread.Post(() =>
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (IsPointerOver)
-                return;
+        if (IsPointerOver)
+            return;
 
-            if (IsPointerOverPopup())
-                return;
+        if (IsPointerOverPopup())
+            return;
 
-            IsDropdownOpen = false;
-        }, DispatcherPriority.Background);
-    }
+        IsDropdownOpen = false;
+    }, DispatcherPriority.Background);
 }

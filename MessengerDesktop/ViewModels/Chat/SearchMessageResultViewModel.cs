@@ -34,15 +34,15 @@ public sealed class SearchMessageResultViewModel
         }
 
         if (msg.HasVoice)
-            return ("🎤 Голосовое сообщение", HidePrefix: false);
+            return ("Голосовое сообщение", HidePrefix: false);
 
         var text = msg.HighlightedContent ?? msg.Content;
 
         if (msg.HasFiles && string.IsNullOrWhiteSpace(text))
-            return ("📎 Вложение", HidePrefix: false);
+            return ("Вложение", HidePrefix: false);
 
         if (msg.HasFiles)
-            return ($"📎 {text}", HidePrefix: false);
+            return ($"{text}", HidePrefix: false);
 
         return (ChatPreviewFormatter.BuildContentPreview(text), HidePrefix: false);
     }

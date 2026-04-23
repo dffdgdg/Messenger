@@ -67,10 +67,7 @@ public partial class SearchBox : UserControl
         _focusSubscribed = true;
     }
 
-    private void OnSearchInputGotFocus(object? sender, Avalonia.Input.FocusChangedEventArgs e)
-    {
-        RaiseEvent(new RoutedEventArgs(SearchFocusedEvent));
-    }
+    private void OnSearchInputGotFocus(object? sender, Avalonia.Input.FocusChangedEventArgs e) => RaiseEvent(new RoutedEventArgs(SearchFocusedEvent));
 
     public void FocusInput() => this.FindControl<TextBox>("SearchInput")?.Focus();
 }

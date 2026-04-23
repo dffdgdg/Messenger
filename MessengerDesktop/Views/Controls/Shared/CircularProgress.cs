@@ -72,18 +72,8 @@ public class CircularProgress : Control
 
     private IDisposable? _timerSubscription;
 
-    static CircularProgress()
-    {
-        AffectsRender<CircularProgress>(
-            ValueProperty,
-            MaximumProperty,
-            MinimumProperty,
-            StrokeWidthProperty,
-            SizeProperty,
-            ForegroundProperty,
-            BackgroundTrackProperty,
-            IsIndeterminateProperty);
-    }
+    static CircularProgress() => AffectsRender<CircularProgress>(ValueProperty, MaximumProperty, MinimumProperty, StrokeWidthProperty, SizeProperty,
+        ForegroundProperty, BackgroundTrackProperty, IsIndeterminateProperty);
 
     public CircularProgress()
     {
@@ -158,26 +148,22 @@ public class CircularProgress : Control
         var radius = (size - strokeWidth) / 2;
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
 
-        // Фоновый трек
         if (BackgroundTrack != null)
         {
             var trackPen = new Pen(BackgroundTrack, strokeWidth, lineCap: PenLineCap.Round);
             context.DrawEllipse(null, trackPen, center, radius, radius);
         }
 
-        // Прогресс
         if (Foreground == null) return;
 
         var pen = new Pen(Foreground, strokeWidth, lineCap: PenLineCap.Round);
 
         if (IsIndeterminate)
         {
-            // Анимированная дуга для неопределённого состояния
             DrawIndeterminateArc(context, center, radius, pen);
         }
         else
         {
-            // Обычный прогресс
             DrawProgressArc(context, center, radius, pen);
         }
     }

@@ -1,6 +1,7 @@
 ﻿using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.Dto.Department;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels;
@@ -12,16 +13,26 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     public partial int SelectedTabIndex { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUsers))]
+    [NotifyPropertyChangedFor(nameof(HasDepartments))]
     public partial string SearchQuery { get; set; } = string.Empty;
 
     public UsersTabViewModel UsersTab { get; }
     public DepartmentsTabViewModel DepartmentsTab { get; }
 
     public BaseViewModel CurrentTab => SelectedTabIndex == 0 ? UsersTab : DepartmentsTab;
+
     public IEnumerable<DepartmentGroup> FilteredGroupedUsers => UsersTab.FilteredGroups;
 
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments =>
         DepartmentsTab.FilteredDepartments;
+
+    // Есть ли вообще хоть один пользователь в отфильтрованных группах
+    public bool HasUsers => FilteredGroupedUsers?.Any(g => g.Users.Count > 0) == true;
+
+    // Есть ли хоть один отдел после фильтрации
+    public bool HasDepartments => FilteredHierarchicalDepartments?.Any() == true;
+
     public AdminViewModel(
         UsersTabViewModel usersTab,
         DepartmentsTabViewModel departmentsTab)
@@ -34,7 +45,10 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
             PropagateMessages(e.PropertyName, UsersTab);
 
             if (e.PropertyName is nameof(UsersTab.FilteredGroups) or nameof(UsersTab.GroupedUsers))
+            {
                 OnPropertyChanged(nameof(FilteredGroupedUsers));
+                OnPropertyChanged(nameof(HasUsers));
+            }
         };
 
         DepartmentsTab.PropertyChanged += (_, e) =>
@@ -42,7 +56,10 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
             PropagateMessages(e.PropertyName, DepartmentsTab);
 
             if (e.PropertyName is nameof(DepartmentsTab.FilteredDepartments) or nameof(DepartmentsTab.HierarchicalDepartments))
+            {
                 OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
+                OnPropertyChanged(nameof(HasDepartments));
+            }
         };
 
         _ = InitializeAsync();
@@ -57,7 +74,10 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
         OnPropertyChanged(nameof(FilteredGroupedUsers));
         OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
+        OnPropertyChanged(nameof(HasUsers));
+        OnPropertyChanged(nameof(HasDepartments));
     }
+
     partial void OnSearchQueryChanged(string value)
     {
         UsersTab.SearchQuery = value;
@@ -65,9 +85,15 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
         OnPropertyChanged(nameof(FilteredGroupedUsers));
         OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
+        OnPropertyChanged(nameof(HasUsers));
+        OnPropertyChanged(nameof(HasDepartments));
     }
 
     partial void OnSelectedTabIndexChanged(int value) => ClearMessages();
+
+    // Сброс поиска — используется кнопкой в пустом состоянии
+    [RelayCommand]
+    private void ClearSearch() => SearchQuery = string.Empty;
 
     [RelayCommand]
     private async Task OpenEditUserDialog(UserDto user) =>
@@ -99,6 +125,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
             OnPropertyChanged(nameof(FilteredGroupedUsers));
             OnPropertyChanged(nameof(FilteredHierarchicalDepartments));
+            OnPropertyChanged(nameof(HasUsers));
+            OnPropertyChanged(nameof(HasDepartments));
 
             SuccessMessage = "Данные обновлены";
         });
@@ -113,7 +141,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
             await DepartmentsTab.CreateCommand.ExecuteAsync(null);
     }
 
-    private static HierarchicalDepartmentViewModel? FindDepartmentItem(IEnumerable<HierarchicalDepartmentViewModel> items, int departmentId)
+    private static HierarchicalDepartmentViewModel? FindDepartmentItem(
+        IEnumerable<HierarchicalDepartmentViewModel> items, int departmentId)
     {
         foreach (var item in items)
         {

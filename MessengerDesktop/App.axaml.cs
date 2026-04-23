@@ -50,7 +50,7 @@ public sealed class App : Application, IDisposable
     private static string ResolveApiUrl(IConfiguration configuration)
     {
         var apiUrl = configuration["ApiUrl"] ?? configuration["Api:BaseUrl"] ?? "http://192.168.137.1:5274/";
-        if (!apiUrl.EndsWith("/"))
+        if (!apiUrl.EndsWith('/'))
             apiUrl += "/";
 
         return apiUrl;

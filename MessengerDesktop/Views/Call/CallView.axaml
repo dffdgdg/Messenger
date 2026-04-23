@@ -5,6 +5,29 @@
              xmlns:conv="using:MessengerDesktop.Converters"
              x:Class="MessengerDesktop.Views.Call.CallView"
              x:DataType="vm:CallViewModel">
+      <UserControl.Styles>
+        <Style Selector="TextBox.ChatInput">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,12"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="MaxHeight" Value="120"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+        <Style Selector="TextBox.ChatInput /template/ Border,
+		TextBox.ChatInput:focus-within /template/ Border,
+		TextBox.ChatInput:pointerover /template/ Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Styles>
 
     <Border Classes="PageContainer" Margin="0">
         <Grid ColumnDefinitions="*,Auto">
@@ -215,9 +238,9 @@
             </Grid>
 
             <!-- Боковая панель -->
-            <Border Grid.Column="1"
+            <Border x:Name="SidePanel"
+                    Grid.Column="1"
                     Width="340"
-                    IsVisible="{Binding IsChatPanelOpen}"
                     Background="{DynamicResource PrimaryBG}"
                     BorderBrush="{DynamicResource BorderDefault}"
                     BorderThickness="1,0,0,0"
@@ -367,35 +390,75 @@
                             IsVisible="{Binding IsChatMode}"
                             BorderBrush="{DynamicResource BorderDefault}"
                             BorderThickness="0,1,0,0"
-                            Padding="16"
+                            Padding="12"
                             Background="{DynamicResource PrimaryBG}">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <TextBox Grid.Column="0"
-                                     Text="{Binding MessageInput, Mode=TwoWay}"
-                                     PlaceholderText="Написать сообщение..."
-                                     MaxLength="2000"
-                                     AcceptsReturn="True" MaxHeight="100"
-                                     VerticalAlignment="Center"
-                                     CornerRadius="16"
-                                     Padding="16,10"
-                                     FontSize="14"
-                                     Background="{DynamicResource SecondaryBG}"
-                                     BorderThickness="1"
-                                     BorderBrush="{DynamicResource ControlBorder}">
-                                <TextBox.KeyBindings>
-                                    <KeyBinding Gesture="Enter"
-                                                Command="{Binding SendChatMessageCommand}"/>
-                                </TextBox.KeyBindings>
-                            </TextBox>
-                            <Button Grid.Column="1"
-                                    Command="{Binding SendChatMessageCommand}"
-                                    Classes="IconButton Accent"
-                                    Width="40" Height="40" CornerRadius="20"
-                                    VerticalAlignment="Bottom">
-                                <Path Data="{StaticResource SendIcon}"
-                                      Fill="White" Stretch="Uniform" Margin="10"/>
-                            </Button>
-                        </Grid>
+                        <Border Background="{DynamicResource PrimaryBG}"
+                                CornerRadius="14">
+                            <Grid Margin="4" ColumnDefinitions="*,Auto,Auto">
+                                <TextBox Grid.Column="0"
+                                         Classes="ChatInput"
+                                         Text="{Binding MessageInput, Mode=TwoWay}"
+                                         PlaceholderText="Сообщение..."
+                                         MaxLength="2000">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter"
+                                                    Command="{Binding SendChatMessageCommand}"/>
+                                    </TextBox.KeyBindings>
+                                </TextBox>
+
+                                <Button Grid.Column="1"
+                                        Classes="IconButton"
+                                        ToolTip.Tip="Эмодзи"
+                                        Width="44" Height="44"
+                                        CornerRadius="10"
+                                        VerticalAlignment="Bottom">
+                                    <Button.Flyout>
+                                        <Flyout Placement="TopEdgeAlignedRight"
+                                                ShowMode="TransientWithDismissOnPointerMoveAway"
+                                                FlyoutPresenterClasses="EmojiPickerFlyout">
+                                            <StackPanel Spacing="6" Width="300">
+                                                <TextBlock Text="ЭМОДЗИ"
+                                                           Classes="CategoryHeader"
+                                                           Margin="4,0,0,2"/>
+                                                <ItemsControl ItemsSource="{Binding PopularEmojis}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Classes="EmojiButton"
+                                                                    Content="{Binding}"
+                                                                    Command="{Binding $parent[UserControl].((vm:CallViewModel)DataContext).InsertEmojiCommand}"
+                                                                    CommandParameter="{Binding}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Path Data="{StaticResource EmojiIcon}"
+                                          Fill="{DynamicResource TextSecondary}"
+                                          Width="20" Height="20"
+                                          Stretch="Uniform"/>
+                                </Button>
+
+                                <Button Grid.Column="2"
+                                        Classes="Primary"
+                                        Margin="4"
+                                        Width="36" Height="36"
+                                        CornerRadius="10"
+                                        Padding="0"
+                                        Command="{Binding SendChatMessageCommand}"
+                                        VerticalAlignment="Bottom"
+                                        ToolTip.Tip="Отправить">
+                                    <Path Data="{StaticResource SendIcon}"
+                                          Fill="White" Width="18" Height="18"
+                                          Stretch="Uniform"/>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </Border>
 
                 </Grid>

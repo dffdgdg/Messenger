@@ -217,13 +217,11 @@ public sealed class CallAudioService : IDisposable
     {
         var now = DateTime.UtcNow;
 
-        // RMS сырого сигнала
         double sumSquares = 0;
         for (int i = 0; i < samples.Length; i++)
             sumSquares += (double)samples[i] * samples[i];
         double rms = Math.Sqrt(sumSquares / samples.Length) / short.MaxValue;
 
-        // Адаптируем уровень фона только в тишине
         if (!_isSpeaking)
             _noiseFloor = (_noiseFloor * (1 - NoiseFloorAlpha)) + (rms * NoiseFloorAlpha);
 

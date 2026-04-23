@@ -16,7 +16,7 @@
 		x:Class="MessengerDesktop.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		x:Name="MainWindowRoot"
-		Icon="/Assets/avalonia-logo.ico"
+		Icon="/Assets/LogoCircle.ico"
 		Title="ВнутрьСеть"
 		ExtendClientAreaToDecorationsHint="True"
 		ExtendClientAreaTitleBarHeightHint="-1"
@@ -136,32 +136,27 @@
 			</ContentControl.DataTemplates>
 		</ContentControl>
 
-		<!-- Drag-зона для MainMenu: только левая и правая колонки -->
 		<Grid Height="48"
 			  VerticalAlignment="Top"
 			  ZIndex="100"
 			  ColumnDefinitions="*,Auto,*"
 			  IsVisible="{Binding IsMainMenuActive}">
 
-			<!-- Левая drag-зона -->
 			<Panel Grid.Column="0"
 				   Background="Transparent"
 				   PointerPressed="OnTitleBarPointerPressed"/>
 
-			<!-- Центральная колонка — пустая, чтобы соответствовать ширине SearchBox -->
 			<Panel Grid.Column="1"
 				   MinWidth="160"
 				   Width="360"
 				   MaxWidth="460"
 				   IsHitTestVisible="False"/>
 
-			<!-- Правая drag-зона -->
 			<Panel Grid.Column="2"
 				   Background="Transparent"
 				   PointerPressed="OnTitleBarPointerPressed"/>
 		</Grid>
 
-		<!-- UI: кнопки навигации + SearchBox -->
 		<Grid Height="48"
 			  VerticalAlignment="Top"
 			  ZIndex="101"
@@ -207,7 +202,6 @@
 				  Margin="0,0,138,0"/>
 		</Grid>
 
-		<!-- Drag-зона для НЕ MainMenu -->
 		<Panel Height="48"
 			   VerticalAlignment="Top"
 			   ZIndex="99"
@@ -215,10 +209,8 @@
 			   Background="Transparent"
 			   IsVisible="{Binding !IsMainMenuActive}"/>
 
-		<!-- Уведомления -->
 		<controls:NotificationOverlay ZIndex="9000"/>
 
-		<!-- CallView поверх content area -->
 		<Border ZIndex="1001"
 				IsVisible="{Binding ActiveCallStore.IsCallUiOpen}"
 				Margin="82,56,9,9"
@@ -233,7 +225,6 @@
 			</ContentControl>
 		</Border>
 
-		<!-- Overlay диалогов -->
 		<Border x:Name="DialogOverlay"
 				Classes="DialogOverlay"
 				Background="#80000000"

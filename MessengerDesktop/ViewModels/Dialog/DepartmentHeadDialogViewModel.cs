@@ -91,9 +91,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
 
         AvailableParents = new ObservableCollection<DepartmentDto>(parents);
 
-        SelectedParent = current?.ParentDepartmentId is int parentId
-            ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder
-            : NoParentPlaceholder;
+        SelectedParent = current?.ParentDepartmentId is int parentId ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder : NoParentPlaceholder;
     }
 
     private HashSet<int> GetDescendantIds(int rootId)
@@ -165,8 +163,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела",
-            $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела", $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
         var confirmed = await confirmDialog.Result;

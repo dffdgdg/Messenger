@@ -1865,5 +1865,66 @@
     <Setter Property="Padding" Value="16"/>
     <Setter Property="BorderThickness" Value="0"/>
 </Style>
+	<!-- ═══════════════════════════════════════════════════════════════
+     ADMIN — UserCard
+═══════════════════════════════════════════════════════════════ -->
 
+<!-- Карточка пользователя -->
+<Style Selector="Border.UserCard">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.UserCard:pointerover">
+    <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+</Style>
+
+<!-- Показывать Actions только при наведении на UserCard -->
+<Style Selector="Border.UserCard StackPanel.Actions">
+    <Setter Property="Opacity" Value="0"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.UserCard:pointerover StackPanel.Actions">
+    <Setter Property="Opacity" Value="1"/>
+</Style>
+
+<!-- Инициалы -->
+<Style Selector="TextBlock.UserInitials">
+    <Setter Property="FontSize" Value="15"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+</Style>
+
+<!-- Бейдж "заблокирован" (inline) -->
+<Style Selector="Border.BanBadge">
+    <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="6,2"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+</Style>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADMIN — Toast уведомления
+═══════════════════════════════════════════════════════════════ -->
+
+<Style Selector="Border.Toast">
+    <Setter Property="MinWidth" Value="260"/>
+    <Setter Property="MaxWidth" Value="380"/>
+    <Setter Property="Padding" Value="14,12"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BoxShadow" Value="0 4 16 0 #25000000"/>
+</Style>
 </Styles>

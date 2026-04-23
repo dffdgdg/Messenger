@@ -103,11 +103,9 @@ public partial class ChatsView : UserControl
         if (width <= 0)
             return;
 
-        var nextForceCompact = _forceCompactMode ? width < FORCE_COMPACT_EXIT_WIDTH
-            : width <= FORCE_COMPACT_ENTER_WIDTH;
+        var nextForceCompact = _forceCompactMode ? width < FORCE_COMPACT_EXIT_WIDTH : width <= FORCE_COMPACT_ENTER_WIDTH;
 
-        var nextHideInfoPanel = _hideInfoPanelForWidth ? width < HIDE_INFO_PANEL_EXIT_WIDTH
-            : width <= HIDE_INFO_PANEL_ENTER_WIDTH;
+        var nextHideInfoPanel = _hideInfoPanelForWidth ? width < HIDE_INFO_PANEL_EXIT_WIDTH : width <= HIDE_INFO_PANEL_ENTER_WIDTH;
 
         var layoutChanged = nextForceCompact != _forceCompactMode || nextHideInfoPanel != _hideInfoPanelForWidth;
 

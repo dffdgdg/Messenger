@@ -14,13 +14,8 @@ public enum SearchAuthorFilter { Any = 0, Me = 1, Others = 2 }
 
 public sealed record SearchFilterItem(int Id, string DisplayName, string? Avatar);
 
-public sealed partial class GlobalSearchManager(
-    int userId,
-    bool startWithChatsScope,
-    IApiClientService apiClient,
-    Func<Task<List<SearchFilterItem>>>? getUsersFunc = null,
-    Func<Task<List<SearchFilterItem>>>? getChatsFunc = null,
-    int debounceMs = AppConstants.DefaultDebounceMs) : ObservableObject, IDisposable
+public sealed partial class GlobalSearchManager(int userId, bool startWithChatsScope, IApiClientService apiClient, Func<Task<List<SearchFilterItem>>>? getUsersFunc = null,
+    Func<Task<List<SearchFilterItem>>>? getChatsFunc = null, int debounceMs = AppConstants.DefaultDebounceMs) : ObservableObject, IDisposable
 {
     private List<SearchFilterItem>? _cachedUsers;
     private List<SearchFilterItem>? _cachedChats;
@@ -29,19 +24,17 @@ public sealed partial class GlobalSearchManager(
 
     private bool _disposed;
     public bool IsChatFilterVisible => SelectedScope != SearchScopeMode.Contacts && SelectedScope != SearchScopeMode.CurrentChatMessages;
-    // Sender autocomplete
+
     [ObservableProperty] public partial ObservableCollection<SearchFilterItem> SenderSuggestions { get; set; } = [];
     [ObservableProperty] public partial SearchFilterItem? SelectedSender { get; set; }
     [ObservableProperty] public partial string SenderSearchText { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsSenderDropdownOpen { get; set; }
 
-    // Chat autocomplete
     [ObservableProperty] public partial ObservableCollection<SearchFilterItem> ChatSuggestions { get; set; } = [];
     [ObservableProperty] public partial SearchFilterItem? SelectedChatFilter { get; set; }
     [ObservableProperty] public partial string ChatSearchText { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsChatDropdownOpen { get; set; }
 
-    // Search state
     [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsSearching { get; set; }
     [ObservableProperty] public partial bool IsSearchMode { get; set; }
@@ -49,14 +42,12 @@ public sealed partial class GlobalSearchManager(
     [ObservableProperty] public partial bool HasMoreMessages { get; set; }
     [ObservableProperty] public partial string? ErrorMessage { get; set; }
 
-    // Scope
     [ObservableProperty] public partial SearchScopeMode SelectedScope { get; set; } = startWithChatsScope ? SearchScopeMode.Chats : SearchScopeMode.All;
     [ObservableProperty] public partial int? ChatLocalSearchChatId { get; set; }
     [ObservableProperty] public partial ChatType? ChatLocalSearchChatType { get; set; }
     [ObservableProperty] public partial string? ChatLocalSearchChatName { get; set; }
     [ObservableProperty] public partial string? ChatLocalSearchChatAvatar { get; set; }
 
-    // Filters
     [ObservableProperty] public partial SearchSortOrder SortOrder { get; set; } = SearchSortOrder.Newest;
     [ObservableProperty] public partial string MentionFilter { get; set; } = string.Empty;
     [ObservableProperty] public partial SearchContentFilter ContentFilter { get; set; } = SearchContentFilter.Any;
@@ -78,16 +69,9 @@ public sealed partial class GlobalSearchManager(
     public bool IsEmpty => !IsSearching && !string.IsNullOrWhiteSpace(SearchQuery) && !HasResults;
     public bool IsSortNewest => SortOrder == SearchSortOrder.Newest;
 
-    public bool HasActiveFilters =>
-        SelectedSender != null ||
-        SelectedChatFilter != null ||
-        !string.IsNullOrWhiteSpace(MentionFilter) ||
-        ContentFilter != SearchContentFilter.Any ||
-        AuthorFilter != SearchAuthorFilter.Any ||
-        DateFromFilter.HasValue ||
-        DateToFilter.HasValue;
+    public bool HasActiveFilters => SelectedSender != null || SelectedChatFilter != null || !string.IsNullOrWhiteSpace(MentionFilter) || ContentFilter != SearchContentFilter.Any ||
+        AuthorFilter != SearchAuthorFilter.Any || DateFromFilter.HasValue || DateToFilter.HasValue;
 
-    // Computed filter params для передачи на сервер
     private bool? ServerHasFiles => ContentFilter == SearchContentFilter.WithFiles ? true : null;
     private bool? ServerHasVoice => ContentFilter == SearchContentFilter.WithVoice ? true : null;
     private bool? ServerHasPoll => ContentFilter == SearchContentFilter.WithPolls ? true : null;
@@ -96,9 +80,7 @@ public sealed partial class GlobalSearchManager(
 
     // senderId: Me → свой userId, выбранный отправитель → его Id, иначе null
     // AuthorFilter.Others не выразить через senderId — фильтруем на клиенте
-    private int? ServerSenderId => AuthorFilter == SearchAuthorFilter.Me
-        ? userId
-        : SelectedSender?.Id;
+    private int? ServerSenderId => AuthorFilter == SearchAuthorFilter.Me ? userId : SelectedSender?.Id;
 
     #region Property change handlers
 
@@ -496,10 +478,7 @@ public sealed partial class GlobalSearchManager(
 
     public async Task ApplyFiltersAsync()
     {
-        System.Diagnostics.Debug.WriteLine(
-        $"ApplyFilters: ContentFilter={ContentFilter}, " +
-        $"ServerHasVoice={ServerHasVoice}, " +
-        $"HasActiveFilters={HasActiveFilters}");
+        System.Diagnostics.Debug.WriteLine($"ApplyFilters: ContentFilter={ContentFilter}, ServerHasVoice={ServerHasVoice}, HasActiveFilters={HasActiveFilters}");
 
         EnterSearchMode();
 
@@ -512,8 +491,7 @@ public sealed partial class GlobalSearchManager(
         await ExecuteSearchAsync(SearchQuery, CancellationToken.None);
     }
 
-    public void ToggleSortOrder()
-        => SortOrder = SortOrder == SearchSortOrder.Newest ? SearchSortOrder.Oldest : SearchSortOrder.Newest;
+    public void ToggleSortOrder() => SortOrder = SortOrder == SearchSortOrder.Newest ? SearchSortOrder.Oldest : SearchSortOrder.Newest;
 
     public void ResetFilters()
     {

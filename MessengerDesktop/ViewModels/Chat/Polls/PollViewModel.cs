@@ -153,28 +153,25 @@ public partial class PollViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task CancelVote()
+    private async Task CancelVote() => await SafeExecuteAsync(async () =>
     {
-        await SafeExecuteAsync(async () =>
+        var voteDto = new PollVoteDto
         {
-            var voteDto = new PollVoteDto
-            {
-                PollId = PollId,
-                UserId = UserId,
-                OptionIds = []
-            };
+            PollId = PollId,
+            UserId = UserId,
+            OptionIds = []
+        };
 
-            var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Polls.Vote, voteDto);
+        var result = await _apiClient.PostAsync<PollVoteDto, PollDto>(ApiEndpoints.Polls.Vote, voteDto);
 
-            if (result is { Success: true, Data: not null })
-            {
-                ApplyDto(result.Data);
-                ServerStateApplied?.Invoke(result.Data);
-            }
-            else
-            {
-                ErrorMessage = $"Ошибка отмены голоса: {result.Error}";
-            }
-        });
-    }
+        if (result is { Success: true, Data: not null })
+        {
+            ApplyDto(result.Data);
+            ServerStateApplied?.Invoke(result.Data);
+        }
+        else
+        {
+            ErrorMessage = $"Ошибка отмены голоса: {result.Error}";
+        }
+    });
 }

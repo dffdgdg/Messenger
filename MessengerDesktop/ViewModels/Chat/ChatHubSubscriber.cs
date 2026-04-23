@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messageManager,
-    Action<int> onUnreadCountChanged, Func<Task> onReconnected) : IDisposable
+public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messageManager, Action<int> onUnreadCountChanged, Func<Task> onReconnected) : IDisposable
 {
     private bool _subscribed;
 

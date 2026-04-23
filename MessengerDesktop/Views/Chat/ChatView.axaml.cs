@@ -413,8 +413,7 @@ public partial class ChatView : UserControl
 
     private bool IsLoadingOlder() => Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1;
     private bool IsInitialLoading() => _viewModel?.IsInitialLoading == true;
-    private bool ShouldLoadNewerMessages(bool isNearBottom)
-        => isNearBottom && _viewModel?.HasMoreNewer == true && !IsInitialLoading();
+    private bool ShouldLoadNewerMessages(bool isNearBottom) => isNearBottom && _viewModel?.HasMoreNewer == true && !IsInitialLoading();
 
     #endregion
 

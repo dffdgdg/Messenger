@@ -59,8 +59,7 @@ public partial class MainWindow : Window
     private void UnsubscribeSearchBox()
     {
         if (!_searchBoxSubscribed) return;
-        if (GlobalSearchBox != null)
-            GlobalSearchBox.SearchFocused -= OnGlobalSearchFocused;
+        GlobalSearchBox?.SearchFocused -= OnGlobalSearchFocused;
         _searchBoxSubscribed = false;
     }
 

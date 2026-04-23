@@ -24,5 +24,5 @@ public abstract class ChatFeatureHandler(ChatContext context) : ObservableObject
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void DisposeManaged() { }
+    protected virtual void DisposeManaged() { /* Expected to be overridden by derived classes */ }
 }

@@ -18,8 +18,7 @@ public sealed partial class CallBannerViewModel : ObservableObject, IDisposable
         _callService.MuteChanged += OnMuteChanged;
     }
 
-    private void OnMuteChanged(bool isMuted)
-        => OnPropertyChanged(nameof(IsMuted));
+    private void OnMuteChanged(bool isMuted) => OnPropertyChanged(nameof(IsMuted));
 
     [RelayCommand]
     private void ToggleCallUi() => _store.ToggleCallUi();
@@ -43,6 +42,5 @@ public sealed partial class CallBannerViewModel : ObservableObject, IDisposable
     public string ChatName => _store.ActiveCall?.ChatName ?? string.Empty;
     public string DurationText => _store.ActiveCall?.DurationText ?? string.Empty;
 
-    public void Dispose()
-        => _callService.MuteChanged -= OnMuteChanged;
+    public void Dispose() => _callService.MuteChanged -= OnMuteChanged;
 }

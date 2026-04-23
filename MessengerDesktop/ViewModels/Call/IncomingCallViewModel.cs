@@ -47,16 +47,13 @@ public partial class IncomingCallViewModel : DialogBaseViewModel
     });
 
     [RelayCommand]
-    private async Task DeclineAsync()
+    private async Task DeclineAsync() => await SafeExecuteAsync(async () =>
     {
-        await SafeExecuteAsync(async () =>
-        {
-            if (!IsGroupCall)
-                await _callService.DeclineCallAsync(_invite.CallId);
+        if (!IsGroupCall)
+            await _callService.DeclineCallAsync(_invite.CallId);
 
-            await RequestCloseAsync();
-        });
-    }
+        await RequestCloseAsync();
+    });
 
     protected override Task Cancel() => DeclineAsync();
 }

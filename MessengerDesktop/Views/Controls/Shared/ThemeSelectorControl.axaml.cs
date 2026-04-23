@@ -26,10 +26,7 @@ public partial class ThemeSelectorControl : UserControl
     public bool IsDarkSelected { get => GetValue(IsDarkSelectedProperty); set => SetValue(IsDarkSelectedProperty, value); }
     public bool IsSystemSelected { get => GetValue(IsSystemSelectedProperty); set => SetValue(IsSystemSelectedProperty, value); }
 
-    public ThemeSelectorControl()
-    {
-        InitializeComponent();
-    }
+    public ThemeSelectorControl() => InitializeComponent();
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {

@@ -75,16 +75,13 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     public bool NewPasswordSegment3 => NewPasswordStrength >= 3;
     public bool NewPasswordSegment4 => NewPasswordStrength >= 4;
 
-    public bool NewPasswordsMatch =>
-        !string.IsNullOrEmpty(NewPassword) && NewPassword == NewConfirmPassword;
+    public bool NewPasswordsMatch => !string.IsNullOrEmpty(NewPassword) && NewPassword == NewConfirmPassword;
 
     public bool IsNewUser => _originalUser is null;
 
-    public bool IsChangingPassword =>
-        !string.IsNullOrWhiteSpace(NewPassword) || !string.IsNullOrWhiteSpace(NewConfirmPassword);
+    public bool IsChangingPassword => !string.IsNullOrWhiteSpace(NewPassword) || !string.IsNullOrWhiteSpace(NewConfirmPassword);
 
-    public string DisplayNamePreview =>
-        string.Join(" ", new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
+    public string DisplayNamePreview => string.Join(" ", new[] { Surname, Name, Midname }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     public Func<CreateUserDto, Task>? CreateAction { get; set; }
     public Func<UserDto, Task>? UpdateAction { get; set; }
@@ -185,12 +182,10 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
         return null;
     }
-    private bool CanSaveExecute() => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name)
-        && ValidatePasswordSection() is null;
+    private bool CanSaveExecute() => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name) && ValidatePasswordSection() is null;
 
     private static string TrimLower(string value) => value.Trim().ToLowerInvariant();
-    private static string? TrimOrNull(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private CreateUserDto BuildCreateDto() => new()
     {

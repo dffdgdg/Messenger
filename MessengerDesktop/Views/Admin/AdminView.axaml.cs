@@ -36,8 +36,7 @@ public partial class AdminView : UserControl
         _mainGrid = this.FindControl<Grid>("MainGrid");
         _gridSplitter = this.FindControl<GridSplitter>("GridSplitter");
 
-        this.GetObservable(BoundsProperty)
-            .Subscribe(new AnonymousObserver<Rect>(_ => EvaluateResponsiveLayout()));
+        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => EvaluateResponsiveLayout()));
 
         if (_gridSplitter is not null)
         {
@@ -103,9 +102,7 @@ public partial class AdminView : UserControl
         if (width <= 0)
             return;
 
-        var nextForceCompact = _forceCompactMode ? width < FORCE_COMPACT_EXIT_WIDTH : width <= FORCE_COMPACT_ENTER_WIDTH;
-
-        _forceCompactMode = nextForceCompact;
+        _forceCompactMode = _forceCompactMode ? width < FORCE_COMPACT_EXIT_WIDTH : width <= FORCE_COMPACT_ENTER_WIDTH;
 
         if (_forceCompactMode && !IsCompactMode && _mainGrid?.ColumnDefinitions[0] is ColumnDefinition compactCol)
         {

@@ -73,22 +73,18 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     public string DepartmentDisplay => User?.Department ?? string.Empty;
     public bool HasAvatar => !string.IsNullOrWhiteSpace(User?.Avatar);
 
-    public bool IsUsernameValid =>
-        string.IsNullOrEmpty(TempUsername) || UsernameRegex().IsMatch(TempUsername.Trim());
+    public bool IsUsernameValid => string.IsNullOrEmpty(TempUsername) || UsernameRegex().IsMatch(TempUsername.Trim());
 
-    public bool CanSaveUsername =>
-        !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
+    public bool CanSaveUsername => !string.IsNullOrWhiteSpace(TempUsername) && TempUsername.Trim().Length >= 3 && IsUsernameValid;
 
-    public bool IsNewPasswordValid =>
-        string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
+    public bool IsNewPasswordValid => string.IsNullOrEmpty(NewPassword) || NewPassword.Length >= 6;
 
     public bool ShowPasswordMatchIndicator => !string.IsNullOrEmpty(ConfirmPassword);
 
     public int NewPasswordStrength => PasswordHelper.CalculateStrength(NewPassword);
     public string NewPasswordStrengthLabel => PasswordHelper.ToStrengthLabel(NewPasswordStrength);
 
-    public bool PasswordsMatch =>
-        !string.IsNullOrEmpty(ConfirmPassword) && NewPassword == ConfirmPassword;
+    public bool PasswordsMatch => !string.IsNullOrEmpty(ConfirmPassword) && NewPassword == ConfirmPassword;
 
     public bool CanSavePassword => !string.IsNullOrWhiteSpace(CurrentPassword) && !string.IsNullOrWhiteSpace(NewPassword) && NewPassword.Length >= 6
         && PasswordsMatch;

@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null,
-    INotificationService? notificationService = null) : ObservableObject, IDisposable
+public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null, INotificationService? notificationService = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
     private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz" };

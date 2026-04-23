@@ -164,14 +164,11 @@ public partial class SettingsViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task ClearCacheAsync()
+    private async Task ClearCacheAsync() => await SafeExecuteAsync(async () =>
     {
-        await SafeExecuteAsync(async () =>
-        {
-            await _cacheMaintenanceService.ClearAllDataAsync();
-            SuccessMessage = "Кэш успешно очищен";
-        });
-    }
+        await _cacheMaintenanceService.ClearAllDataAsync();
+        SuccessMessage = "Кэш успешно очищен";
+    });
 
     protected override void Dispose(bool disposing)
     {

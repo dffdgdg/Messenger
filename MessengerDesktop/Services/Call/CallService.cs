@@ -121,8 +121,7 @@ public sealed partial class CallService : ICallService
         CallEnded?.Invoke();
     }
 
-    public async Task DeclineCallAsync(string callId)
-        => await _hub.DeclineCallAsync(callId);
+    public async Task DeclineCallAsync(string callId) => await _hub.DeclineCallAsync(callId);
 
     public async Task CancelCallAsync()
     {
@@ -341,12 +340,11 @@ public sealed partial class CallService : ICallService
     {
         if (_activeCallId == null) return;
 
-        _ = _hub.ToggleSpeakingAsync(_activeCallId, isSpeaking)
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    LogSpeakingToggleFailed(t.Exception?.GetBaseException());
-            }, TaskScheduler.Default);
+        _ = _hub.ToggleSpeakingAsync(_activeCallId, isSpeaking).ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                LogSpeakingToggleFailed(t.Exception?.GetBaseException());
+        }, TaskScheduler.Default);
     }
 
     private void OnParticipantJoined(string callId, CallParticipantDto participant)

@@ -398,10 +398,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             (nameof(ChatInfoPanelHandler.MemberSearchQuery), nameof(MemberSearchQuery)),
             (nameof(ChatInfoPanelHandler.PollSearchQuery), nameof(PollSearchQuery)));
 
-        ForwardProperties(Context,
-            (nameof(ChatContext.Chat), nameof(Chat)),
-            (nameof(ChatContext.Members), nameof(Members)),
-            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
+        ForwardProperties(Context, (nameof(ChatContext.Chat), nameof(Chat)), (nameof(ChatContext.Members), nameof(Members)), (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
 
         MessageManager.Messages.CollectionChanged += (_, _) => RefreshInfoPanelLists();
         MessageManager.MessagePinStateChanged += OnMessagePinStateChanged;
@@ -464,8 +461,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void OnIncomingCall(CallInviteDto invite)
     {
-        // Только если это наш чат и групповой звонок —
-        // показываем баннер (popup обрабатывается глобально в MainMenuViewModel)
         if (invite.ChatId != Context.ChatId) return;
         Dispatcher.UIThread.Post(() =>
         {

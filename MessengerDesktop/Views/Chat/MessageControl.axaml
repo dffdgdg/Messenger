@@ -1,215 +1,348 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:MessengerDesktop.Views.Controls"
-             xmlns:conv="using:MessengerDesktop.Converters"
-             xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts"
-             xmlns:shared="using:MessengerDesktop.Views.Chat.MessageParts.Shared"
-             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
-             x:Class="MessengerDesktop.Views.Chat.MessageControl"
-             x:DataType="vmChat:MessageViewModel"
-             x:Name="BubbleRoot">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:controls="using:MessengerDesktop.Views.Controls"
+			 xmlns:conv="using:MessengerDesktop.Converters"
+			 xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts"
+			 xmlns:shared="using:MessengerDesktop.Views.Chat.MessageParts.Shared"
+			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+			 x:Class="MessengerDesktop.Views.Chat.MessageControl"
+			 x:DataType="vmChat:MessageViewModel"
+			 x:Name="BubbleRoot">
+	<UserControl.Styles>
+		<!-- ── Обёртка строки сообщения (hover-фон) ── -->
+		<Style Selector="Border.MessageWrapper">
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-    <StackPanel>
-        <parts:DateSeparatorPart/>
+		<Style Selector="Border.MessageWrapper:pointerover">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
+		<!-- ── Подсветка найденного сообщения ── -->
+		<Style Selector="Border.MessageHighlight">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.4"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <parts:SystemMessagePart OpenProfileCommand="{Binding #BubbleRoot.OpenProfileCommand}"/>
+		<Style Selector="Border.MessageHighlight.Highlighted">
+			<Setter Property="Background" Value="{DynamicResource MessageHighlightBrush}"/>
+		</Style>
+		<!-- ── Avatar ── -->
+		<Style Selector="Button.AvatarButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Border Classes="MessageHighlight MessageWrapper"
-                Classes.Highlighted="{Binding IsHighlighted}"
-                Classes.DeletedMessage="{Binding IsDeleted}"
-                IsVisible="{Binding !IsSystemMessage}"
-                Padding="12,2,12,2"
-                Margin="{Binding IsContinuation,
-                    Converter={conv:Converter Name=BoolToThickness},
-                    ConverterParameter='0,1,0,0|0,4,0,0'}"
-                AutomationProperties.Name="{Binding SenderName}"
-                AutomationProperties.HelpText="{Binding DisplayContent}">
+		<Style Selector="Button.AvatarButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-            <Border.Styles>
-                <Style Selector="Border.DeletedMessage">
-                    <Setter Property="Opacity" Value="0.55"/>
-                </Style>
+		<Style Selector="Button.AvatarButton:pointerover">
+			<Setter Property="Opacity" Value="0.85"/>
+		</Style>
 
-                <Style Selector="Border.MessageWrapper StackPanel.QuickActions">
-                    <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="Transitions">
-                        <Transitions>
-                            <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
-                        </Transitions>
-                    </Setter>
-                </Style>
-                <Style Selector="Border.MessageWrapper:pointerover StackPanel.QuickActions">
-                    <Setter Property="Opacity" Value="1"/>
-                </Style>
-            </Border.Styles>
+		<Style Selector="Button.AvatarButton:pressed">
+			<Setter Property="Opacity" Value="0.7"/>
+		</Style>
 
-            <Border.ContextFlyout>
-                <MenuFlyout>
-                    <MenuItem Header="Ответить"
-                              Command="{Binding #BubbleRoot.ReplyCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding !IsDeleted}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource ReplyIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Переслать"
-                              Command="{Binding #BubbleRoot.ForwardCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding !IsDeleted}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource ForwardIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Редактировать"
-                              Command="{Binding #BubbleRoot.EditMessageCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding CanEdit}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource EditIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Копировать текст"
-                              Command="{Binding #BubbleRoot.CopyTextCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding Content,
-                                  Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CopyIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Закрепить"
-                              Command="{Binding #BubbleRoot.TogglePinCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ShowPinAction}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource PinIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Открепить"
-                              Command="{Binding #BubbleRoot.TogglePinCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ShowUnpinAction}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource PinIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="Скачать аудио"
-                              Command="{Binding DownloadVoiceCommand}"
-                              IsVisible="{Binding ShowVoiceMessage}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource DownloadIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                   <MenuItem Header="Отменить голос"
-                             Command="{Binding Poll.CancelVoteCommand, FallbackValue={x:Null}}"
-                             IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource CloseIcon}"
-                                  Fill="{DynamicResource TextPrimary}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <Separator IsVisible="{Binding CanDelete}"/>
-                    <MenuItem Header="Удалить"
-                              Command="{Binding #BubbleRoot.DeleteMessageCommand}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding CanDelete}"
-                              Foreground="{DynamicResource DangerBrush}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource DeleteIcon}"
-                                  Fill="{DynamicResource DangerBrush}"
-                                  Width="14" Height="14" Stretch="Uniform"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                </MenuFlyout>
-            </Border.ContextFlyout>
+		<!-- ── Имя отправителя ── -->
+		<Style Selector="Button.SenderNameButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="14,0,14,4"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+		</Style>
 
-            <Grid ColumnDefinitions="Auto,*,Auto">
+		<Style Selector="Button.SenderNameButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-                <Panel Grid.Column="0"
-                       Width="40"
-                       VerticalAlignment="Bottom"
-                       Margin="0,0,8,0"
-                       IsVisible="{Binding !IsOwn}">
-                    <Button Classes="AvatarButton"
-                            IsVisible="{Binding ShowSenderName}"
-                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
-                            CommandParameter="{Binding SenderId}"
-                            Width="36" Height="36"
-                            ToolTip.Tip="{Binding SenderName}">
-                        <controls:AvatarControl Classes="Small"
-                                                Source="{Binding SenderAvatarUrl}"
-                                                DisplayName="{Binding SenderName}"
-                                                ShowOnlineIndicator="False"/>
-                    </Button>
-                </Panel>
+		<Style Selector="Button.SenderNameButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-                <StackPanel Grid.Column="1"
-                            HorizontalAlignment="{Binding IsOwn,
-                                Converter={conv:Converter Name=BoolToHAlignment},
-                                ConverterParameter='Right|Left'}"
-                            MaxWidth="520">
+		<Style Selector="Button.SenderNameButton:pointerover TextBlock">
+			<Setter Property="TextDecorations" Value="Underline"/>
+		</Style>
 
-                    <Button Classes="SenderNameButton"
-                            IsVisible="{Binding ShowSenderName}"
-                            Command="{Binding #BubbleRoot.OpenProfileCommand}"
-                            CommandParameter="{Binding SenderId}">
-                        <TextBlock Text="{Binding SenderName}"
-                                   FontWeight="SemiBold"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource Accent}"
-                                   Margin="0,0,0,2"/>
-                    </Button>
+		<Style Selector="Button.SenderNameButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-                    <Border Classes="MessageBubble"
-                            Classes.Own="{Binding IsOwn}"
-                            Classes.Other="{Binding !IsOwn}"
-                            Classes.Alone="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Alone}"
-                            Classes.First="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=First}"
-                            Classes.Middle="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Middle}"
-                            Classes.Last="{Binding GroupPosition,
-                                Converter={conv:Converter Name=EnumEquals},
-                                ConverterParameter=Last}"
-                            IsVisible="{Binding !HasPoll}">
-                        <StackPanel>
-                            <shared:ForwardHeaderBlock/>
-                            <shared:ReplyPreviewBlock
-                                ScrollToReplyCommand="{Binding #BubbleRoot.ScrollToReplyCommand}"/>
-                            <parts:VoiceMessagePart/>
-                            <parts:TextMessagePart/>
-                            <parts:DeletedMessagePart/>
-                        </StackPanel>
-                    </Border>
+		<Style Selector="Button.SenderNameButton:focus /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+		<!-- ── Базовый пузырь ── -->
+		<Style Selector="Border.MessageBubble">
+			<Setter Property="Padding" Value="12,8"/>
+			<Setter Property="MinWidth" Value="48"/>
+			<Setter Property="MaxWidth" Value="520"/>
+			<Setter Property="BoxShadow" Value="{DynamicResource MessageBubbleShadow}"/>
+		</Style>
+		<!-- ── Свои сообщения (Own) ── -->
+		<Style Selector="Border.MessageBubble.Own.Alone">
+			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+			<Setter Property="CornerRadius" Value="18"/>
+		</Style>
 
-                    <parts:PollMessagePart/>
-                </StackPanel>
+		<Style Selector="Border.MessageBubble.Own.First">
+			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+			<Setter Property="CornerRadius" Value="18,18,4,18"/>
+		</Style>
 
-                <shared:MessageQuickActions
-                    Grid.Column="2"
-                    ReplyCommand="{Binding #BubbleRoot.ReplyCommand}"
-                    ForwardCommand="{Binding #BubbleRoot.ForwardCommand}"/>
-            </Grid>
-        </Border>
-    </StackPanel>
+		<Style Selector="Border.MessageBubble.Own.Middle">
+			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+			<Setter Property="CornerRadius" Value="18,4,4,18"/>
+		</Style>
+
+		<Style Selector="Border.MessageBubble.Own.Last">
+			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+			<Setter Property="CornerRadius" Value="18,4,18,18"/>
+		</Style>
+
+		<!-- ── Чужие сообщения (Other) ── -->
+		<Style Selector="Border.MessageBubble.Other.Alone">
+			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+			<Setter Property="CornerRadius" Value="18"/>
+		</Style>
+
+		<Style Selector="Border.MessageBubble.Other.First">
+			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+			<Setter Property="CornerRadius" Value="18,18,18,4"/>
+		</Style>
+
+		<Style Selector="Border.MessageBubble.Other.Middle">
+			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+			<Setter Property="CornerRadius" Value="4,18,18,4"/>
+		</Style>
+
+		<Style Selector="Border.MessageBubble.Other.Last">
+			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+			<Setter Property="CornerRadius" Value="4,18,18,18"/>
+		</Style>
+	</UserControl.Styles>
+
+	<StackPanel>
+		<parts:DateSeparatorPart/>
+
+		<parts:SystemMessagePart OpenProfileCommand="{Binding #BubbleRoot.OpenProfileCommand}"/>
+
+		<Border Classes="MessageHighlight MessageWrapper"
+				Classes.Highlighted="{Binding IsHighlighted}"
+				Classes.DeletedMessage="{Binding IsDeleted}"
+				IsVisible="{Binding !IsSystemMessage}"
+				Padding="12,2,12,2"
+				Margin="{Binding IsContinuation,
+				Converter={conv:Converter Name=BoolToThickness},
+				ConverterParameter='0,1,0,0|0,4,0,0'}"
+				AutomationProperties.Name="{Binding SenderName}"
+				AutomationProperties.HelpText="{Binding DisplayContent}">
+
+			<Border.Styles>
+				<Style Selector="Border.DeletedMessage">
+					<Setter Property="Opacity" Value="0.55"/>
+				</Style>
+
+				<Style Selector="Border.MessageWrapper StackPanel.QuickActions">
+					<Setter Property="Opacity" Value="0"/>
+					<Setter Property="Transitions">
+						<Transitions>
+							<DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+						</Transitions>
+					</Setter>
+				</Style>
+				<Style Selector="Border.MessageWrapper:pointerover StackPanel.QuickActions">
+					<Setter Property="Opacity" Value="1"/>
+				</Style>
+			</Border.Styles>
+
+			<Border.ContextFlyout>
+				<MenuFlyout>
+					<MenuItem Header="Ответить"
+							  Command="{Binding #BubbleRoot.ReplyCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding !IsDeleted}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource ReplyIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Переслать"
+							  Command="{Binding #BubbleRoot.ForwardCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding !IsDeleted}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource ForwardIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Редактировать"
+							  Command="{Binding #BubbleRoot.EditMessageCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding CanEdit}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource EditIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Копировать текст"
+							  Command="{Binding #BubbleRoot.CopyTextCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding Content,
+							  Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource CopyIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Закрепить"
+							  Command="{Binding #BubbleRoot.TogglePinCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding ShowPinAction}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource PinIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Открепить"
+							  Command="{Binding #BubbleRoot.TogglePinCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding ShowUnpinAction}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource PinIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Скачать аудио"
+							  Command="{Binding DownloadVoiceCommand}"
+							  IsVisible="{Binding ShowVoiceMessage}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource DownloadIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Отменить голос"
+							  Command="{Binding Poll.CancelVoteCommand, FallbackValue={x:Null}}"
+							  IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource CloseIcon}"
+								  Fill="{DynamicResource TextPrimary}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<Separator IsVisible="{Binding CanDelete}"/>
+					<MenuItem Header="Удалить"
+							  Command="{Binding #BubbleRoot.DeleteMessageCommand}"
+							  CommandParameter="{Binding}"
+							  IsVisible="{Binding CanDelete}"
+							  Foreground="{DynamicResource DangerBrush}">
+						<MenuItem.Icon>
+							<Path Data="{StaticResource DeleteIcon}"
+								  Fill="{DynamicResource DangerBrush}"
+								  Width="14" Height="14" Stretch="Uniform"/>
+						</MenuItem.Icon>
+					</MenuItem>
+				</MenuFlyout>
+			</Border.ContextFlyout>
+
+			<Grid ColumnDefinitions="Auto,*,Auto">
+
+				<Panel Grid.Column="0"
+					   Width="40"
+					   VerticalAlignment="Bottom"
+					   Margin="0,0,8,0"
+					   IsVisible="{Binding !IsOwn}">
+					<Button Classes="AvatarButton"
+							IsVisible="{Binding ShowSenderName}"
+							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							CommandParameter="{Binding SenderId}"
+							Width="36" Height="36"
+							ToolTip.Tip="{Binding SenderName}">
+						<controls:AvatarControl Classes="Small"
+												Source="{Binding SenderAvatarUrl}"
+												DisplayName="{Binding SenderName}"
+												ShowOnlineIndicator="False"/>
+					</Button>
+				</Panel>
+
+				<StackPanel Grid.Column="1"
+							HorizontalAlignment="{Binding IsOwn,
+							Converter={conv:Converter Name=BoolToHAlignment},
+							ConverterParameter='Right|Left'}"
+							MaxWidth="520">
+
+					<Button Classes="SenderNameButton"
+							IsVisible="{Binding ShowSenderName}"
+							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							CommandParameter="{Binding SenderId}">
+						<TextBlock Text="{Binding SenderName}"
+								   FontWeight="SemiBold"
+								   FontSize="13"
+								   Foreground="{DynamicResource Accent}"
+								   Margin="0,0,0,2"/>
+					</Button>
+
+					<Border Classes="MessageBubble"
+							Classes.Own="{Binding IsOwn}"
+							Classes.Other="{Binding !IsOwn}"
+							Classes.Alone="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Alone}"
+							Classes.First="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=First}"
+							Classes.Middle="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Middle}"
+							Classes.Last="{Binding GroupPosition,
+							Converter={conv:Converter Name=EnumEquals},
+							ConverterParameter=Last}"
+							IsVisible="{Binding !HasPoll}">
+						<StackPanel>
+							<shared:ForwardHeaderBlock/>
+							<shared:ReplyPreviewBlock
+							ScrollToReplyCommand="{Binding #BubbleRoot.ScrollToReplyCommand}"/>
+							<parts:VoiceMessagePart/>
+							<parts:TextMessagePart/>
+							<parts:DeletedMessagePart/>
+						</StackPanel>
+					</Border>
+
+					<parts:PollMessagePart/>
+				</StackPanel>
+
+				<shared:MessageQuickActions
+				Grid.Column="2"
+				ReplyCommand="{Binding #BubbleRoot.ReplyCommand}"
+				ForwardCommand="{Binding #BubbleRoot.ForwardCommand}"/>
+			</Grid>
+		</Border>
+	</StackPanel>
 </UserControl>

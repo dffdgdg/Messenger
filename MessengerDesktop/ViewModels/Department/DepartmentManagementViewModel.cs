@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Services.UI;
 using MessengerShared.Dto.Department;
+using MessengerShared.Dto.Online;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -143,21 +144,42 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         var membersResult = await _apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Departments.Members((int)_departmentId), ct);
 
-        if (membersResult is { Success: true, Data: not null })
-        {
-            var memberVms = membersResult.Data.Where(u => u.Id != CurrentUserId)
-                .Select(u => new DepartmentMemberViewModel(u)).OrderByDescending(m => m.IsOnline).ThenBy(m => m.DisplayName);
-
-            Members = new ObservableCollection<DepartmentMemberViewModel>(memberVms);
-
-            OnPropertyChanged(nameof(FilteredMembers));
-            OnPropertyChanged(nameof(OnlineCount));
-            OnPropertyChanged(nameof(TotalCount));
-        }
-        else
+        if (membersResult is not { Success: true, Data: not null })
         {
             ErrorMessage = $"Ошибка загрузки сотрудников: {membersResult.Error}";
+            return;
         }
+
+        var users = membersResult.Data.Where(u => u.Id != CurrentUserId).ToList();
+
+        var userIds = users.ConvertAll(u => u.Id);
+
+        if (userIds.Count > 0)
+        {
+            var statusResult = await _apiClient.PostAsync<List<int>, List<OnlineStatusDto>>(ApiEndpoints.Users.StatusBatch, userIds, ct);
+
+            if (statusResult is { Success: true, Data: not null })
+            {
+                var statusMap = statusResult.Data.ToDictionary(s => s.UserId, s => s.IsOnline);
+
+                foreach (var user in users)
+                {
+                    if (statusMap.TryGetValue(user.Id, out var isOnline))
+                        user.IsOnline = isOnline;
+                }
+            }
+        }
+
+        var memberVms = users
+            .Select(u => new DepartmentMemberViewModel(u))
+            .OrderByDescending(m => m.IsOnline)
+            .ThenBy(m => m.DisplayName);
+
+        Members = new ObservableCollection<DepartmentMemberViewModel>(memberVms);
+
+        OnPropertyChanged(nameof(FilteredMembers));
+        OnPropertyChanged(nameof(OnlineCount));
+        OnPropertyChanged(nameof(TotalCount));
     }
 
     private async Task LoadAvailableUsersAsync(CancellationToken ct)

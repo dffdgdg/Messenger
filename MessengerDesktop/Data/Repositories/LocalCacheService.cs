@@ -3,6 +3,7 @@ using MessengerDesktop.Data.Mappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MessengerDesktop.Data.Repositories;
@@ -10,6 +11,12 @@ namespace MessengerDesktop.Data.Repositories;
 public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository messageRepo,IChatCacheRepository chatRepo)
     : ILocalCacheService
 {
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
+
     private readonly IMessageCacheRepository _messageRepo = messageRepo ?? throw new ArgumentNullException(nameof(messageRepo));
     private readonly IChatCacheRepository _chatRepo = chatRepo ?? throw new ArgumentNullException(nameof(chatRepo));
     private readonly LocalDatabase _localDb = localDb ?? throw new ArgumentNullException(nameof(localDb));
@@ -23,6 +30,12 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
     {
         var entity = message.ToEntity();
         await _messageRepo.UpsertAsync(entity);
+    }
+
+    public async Task UpdatePollThreadAsync(PollDto poll)
+    {
+        var pollJson = JsonSerializer.Serialize(poll, JsonOpts);
+        await _messageRepo.UpdatePollThreadAsync(poll.MessageId, pollJson);
     }
 
     public async Task UpsertMessagesAsync(IEnumerable<MessageDto> messages)

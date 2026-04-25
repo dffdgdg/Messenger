@@ -14,6 +14,8 @@ public interface IMessageCacheRepository
 
     /// <summary>Пометить сообщение как удалённое (мягкое удаление)</summary>
     Task MarkDeletedAsync(int messageId);
+    /// <summary>Обновить poll_json у исходного сообщения и всех его пересылок</summary>
+    Task UpdatePollThreadAsync(int originalMessageId, string pollJson);
 
     /// <summary>Последние N сообщений чата (от новых к старым → разворачиваем)</summary>
     Task<List<CachedMessage>> GetLatestAsync(int chatId, int count);

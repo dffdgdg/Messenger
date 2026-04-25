@@ -1,7 +1,8 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:controls="using:MessengerDesktop.Controls"
-             xmlns:converters="using:MessengerDesktop.Converters"
+			 xmlns:converters="using:MessengerDesktop.Converters"
+			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
 			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -139,13 +140,16 @@
 	</UserControl.Styles>
 
 	<Grid>
+		<!-- Изображение -->
 		<Border Classes="ImageAttachment"
 				HorizontalAlignment="Left"
-				IsVisible="{Binding IsImage}"
-				AutomationProperties.Name="{Binding FileName}"
-				AutomationProperties.HelpText="Вложенное изображение">
+				Width="280"
+				Height="200"
+				IsVisible="{Binding IsImage}">
 			<Grid>
-				<Border Classes="ImagePlaceholder">
+				<!-- Плейсхолдер — заполняет весь контейнер -->
+				<Border Classes="ImagePlaceholder"
+						IsVisible="{Binding !IsImageLoaded}">
 					<StackPanel HorizontalAlignment="Center"
 								VerticalAlignment="Center"
 								Spacing="6">
@@ -159,15 +163,16 @@
 								   FontSize="11"
 								   Foreground="{DynamicResource TextMuted}"
 								   Opacity="0.6"
-								   HorizontalAlignment="Center"
-								   IsVisible="{Binding FileSizeFormatted,
-								   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+								   HorizontalAlignment="Center"/>
 					</StackPanel>
 				</Border>
 
-				<Image Stretch="Uniform"
+				<!-- Картинка — UniformToFill заполняет 280×200 без изменения размеров контейнера -->
+				<Image x:Name="AttachmentImage"
+					   Stretch="UniformToFill"
 					   asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"/>
 
+				<!-- Оверлей -->
 				<Border Classes="ImageOverlay">
 					<StackPanel Orientation="Horizontal"
 								HorizontalAlignment="Center"
@@ -203,6 +208,7 @@
 			</Grid>
 		</Border>
 
+		<!-- Файл -->
 		<Border Classes="FileAttachment"
 				HorizontalAlignment="Stretch"
 				IsVisible="{Binding !IsImage}"
@@ -229,17 +235,16 @@
 								   TextTrimming="CharacterEllipsis"
 								   Foreground="{DynamicResource TextPrimary}"/>
 						<TextBlock Text="{Binding FileSizeFormatted}"
-							   FontSize="11"
-							   Foreground="{DynamicResource TextMuted}"
-							   IsVisible="{Binding FileSizeFormatted,
-							   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+								   FontSize="11"
+								   Foreground="{DynamicResource TextMuted}"
+								   IsVisible="{Binding FileSizeFormatted,
+								   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 					</StackPanel>
 
 					<StackPanel Grid.Column="2"
 								Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Spacing="2">
-
 						<Button Classes="FileActionButton"
 								Command="{Binding DownloadCommand}"
 								IsVisible="{Binding !IsDownloading}"

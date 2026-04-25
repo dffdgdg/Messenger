@@ -40,7 +40,9 @@ public sealed class AuthManager : IAuthManager, IDisposable
     private const string CachedUserIdKey = "cached_user_id";
     private const string RememberMeKey = "remember_me";
     private const string SavedUsernameKey = "saved_username";
-
+#if DEBUG
+    private const int DebugStartupRefreshDelayMs = 2500;
+#endif
     private bool _disposed;
 
     public bool IsInitialized { get; private set; }
@@ -65,6 +67,9 @@ public sealed class AuthManager : IAuthManager, IDisposable
     {
         try
         {
+#if DEBUG
+            await ApplyDebugStartupDelayAsync();
+#endif
             await LoadStoredSessionAsync();
         }
         catch (HttpRequestException ex)
@@ -88,7 +93,19 @@ public sealed class AuthManager : IAuthManager, IDisposable
             _initializationTcs.TrySetResult();
         }
     }
+#if DEBUG
+    /// <summary>
+    /// Небольшая пауза в Debug, чтобы API успел подняться при одновременном старте проектов в IDE.
+    /// </summary>
+    private static async Task ApplyDebugStartupDelayAsync()
+    {
+        if (!Debugger.IsAttached)
+            return;
 
+        Debug.WriteLine($"AuthManager: DEBUG-пауза {DebugStartupRefreshDelayMs}ms перед восстановлением сессии");
+        await Task.Delay(DebugStartupRefreshDelayMs);
+    }
+#endif
     private async Task TryLoadTokensWithoutRefreshAsync()
     {
         try

@@ -19,7 +19,7 @@ namespace MessengerDesktop.Views.Chat;
 public partial class ChatView : UserControl
 {
     private const int MaxScrollToEndRetries = 10;
-    private const int VisibilityCheckDelayMs = 300;
+    private const double VisibilityCheckDelayMs = 300;
     private const double NearBottomThreshold = 50;
     private const double NearTopThreshold = 100;
     private const int ScrollStateSaveDebounceMs = 350;
@@ -36,10 +36,9 @@ public partial class ChatView : UserControl
     private bool _isRestoringScrollState;
     private bool _scrollStateRestored;
     private ChatScrollState? _pendingScrollState;
+    private bool _suppressPositionTracking;
 
-    private double _lastExtentHeight;
     private int _scrollToEndRetries;
-
     private int _loadingOlderMessages;
     private int _loadingNewerMessages;
 
@@ -79,9 +78,7 @@ public partial class ChatView : UserControl
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         DetachFromViewModel();
-
         _viewModel = DataContext as ChatViewModel;
-
         ResetState();
         AttachToViewModel();
     }
@@ -92,7 +89,6 @@ public partial class ChatView : UserControl
         _isInitialScrollDone = false;
         _scrollToEndRetries = 0;
         _suppressScrollEvents = false;
-        _lastExtentHeight = 0;
         _isScrollViewerInitialized = false;
         _isRestoringScrollState = false;
         _scrollStateRestored = false;
@@ -101,7 +97,6 @@ public partial class ChatView : UserControl
         Interlocked.Exchange(ref _loadingNewerMessages, 0);
 
         _pendingScrollState = LoadScrollState();
-
         EnsureMessagesHidden();
     }
 
@@ -114,7 +109,6 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToIndexRequested += OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
         _viewModel.Messages?.CollectionChanged += OnMessagesCollectionChanged;
-        _viewModel.Context.PollSizeChanged += OnPollSizeChanged;
     }
 
     private void DetachFromViewModel()
@@ -126,29 +120,12 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToIndexRequested -= OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested -= OnScrollToBottomRequested;
         _viewModel.Messages?.CollectionChanged -= OnMessagesCollectionChanged;
-        _viewModel.Context.PollSizeChanged -= OnPollSizeChanged;
         _viewModel = null;
     }
 
     #endregion
 
     #region ViewModel Event Handlers
-    private void OnPollSizeChanged(double delta)
-    {
-        if (_scrollViewer is null || !_isInitialScrollDone) return;
-        if (Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1) return;
-
-        double currentOffset = _scrollViewer.Offset.Y;
-        double extent = _scrollViewer.Extent.Height;
-        double viewport = _scrollViewer.Viewport.Height;
-
-        bool isAtBottom = extent - viewport - currentOffset < NearBottomThreshold;
-        if (isAtBottom) return;
-
-        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Max(0, currentOffset + delta));
-
-        _lastExtentHeight = _scrollViewer.Extent.Height;
-    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -222,9 +199,7 @@ public partial class ChatView : UserControl
         _scrollViewer.ScrollChanged += OnScrollChanged;
 
         _isScrollViewerInitialized = true;
-        _lastExtentHeight = _scrollViewer.Extent.Height;
-
-        Debug.WriteLine("[ChatView] ScrollViewer attached successfully");
+        Debug.WriteLine("[ChatView] ScrollViewer attached");
     }
 
     private void EnsureScrollViewer() => FindScrollViewer();
@@ -254,7 +229,6 @@ public partial class ChatView : UserControl
             if (_viewModel is null || index < 0 || index >= _viewModel.Messages.Count)
                 return;
 
-
             ScrollToItem(_viewModel.Messages[index]);
             _isInitialScrollDone = true;
             EnsureMessagesVisible();
@@ -277,14 +251,7 @@ public partial class ChatView : UserControl
     {
         EnsureScrollViewer();
         if (_messagesList is null) return;
-
         _messagesList.ScrollIntoView(message);
-
-        ScheduleAction(() =>
-        {
-            if (_messagesList.ContainerFromItem(message) is Control control)
-                control.BringIntoView();
-        }, 50);
     }
 
     #endregion
@@ -312,7 +279,7 @@ public partial class ChatView : UserControl
             return;
         }
 
-        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, extent - viewport);
+        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, extent - viewport);
         await Task.Delay(80);
 
         FinishScrollToBottom();
@@ -338,9 +305,6 @@ public partial class ChatView : UserControl
             _viewModel.HasNewMessages = false;
             _viewModel.UnreadCount = 0;
         }
-
-        if (_scrollViewer is not null)
-            _lastExtentHeight = _scrollViewer.Extent.Height;
     }
 
     private void EnsureMessagesVisible()
@@ -359,7 +323,7 @@ public partial class ChatView : UserControl
 
     #region Main Scroll Handler
 
-    private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
         if (_scrollViewer is null || _viewModel is null) return;
 
@@ -369,20 +333,16 @@ public partial class ChatView : UserControl
         if (_suppressScrollEvents || !_isInitialScrollDone || _viewModel.IsSearchMode)
             return;
 
-        HandleExtentChange();
-        HandleScrollPosition();
+        bool isLoading = Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1 ||
+                         Interlocked.CompareExchange(ref _loadingNewerMessages, 0, 0) == 1;
+
+        if (!_suppressPositionTracking && !isLoading)
+        {
+            HandleScrollPosition();
+        }
 
         _saveScrollStateTimer.Stop();
         _saveScrollStateTimer.Start();
-    }
-
-    private void HandleExtentChange()
-    {
-        if (_scrollViewer is null) return;
-        double currentExtent = _scrollViewer.Extent.Height;
-
-        if (Math.Abs(currentExtent - _lastExtentHeight) > 2)
-            _lastExtentHeight = currentExtent;
     }
 
     private void HandleScrollPosition()
@@ -413,7 +373,8 @@ public partial class ChatView : UserControl
 
     private bool IsLoadingOlder() => Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1;
     private bool IsInitialLoading() => _viewModel?.IsInitialLoading == true;
-    private bool ShouldLoadNewerMessages(bool isNearBottom) => isNearBottom && _viewModel?.HasMoreNewer == true && !IsInitialLoading();
+    private bool ShouldLoadNewerMessages(bool isNearBottom) =>
+        isNearBottom && _viewModel?.HasMoreNewer == true && !IsInitialLoading();
 
     #endregion
 
@@ -443,12 +404,19 @@ public partial class ChatView : UserControl
             return;
         }
 
+        if (_scrollViewer.Extent.Height < 1)
+        {
+            ScheduleAction(TryRestoreSavedScrollState, 80);
+            return;
+        }
+
         _isRestoringScrollState = true;
         _suppressScrollEvents = true;
 
         try
         {
             var state = _pendingScrollState;
+
             if (state.IsAtBottom)
             {
                 _scrollToEndRetries = 0;
@@ -456,9 +424,7 @@ public partial class ChatView : UserControl
             }
             else
             {
-                var maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
-                var targetOffset = Math.Clamp(state.OffsetY, 0, maxOffset);
-                _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetOffset);
+                WaitForStableExtentAndRestore(state.OffsetY);
             }
 
             _scrollStateRestored = true;
@@ -468,8 +434,50 @@ public partial class ChatView : UserControl
         finally
         {
             _isRestoringScrollState = false;
-            _suppressScrollEvents = false;
         }
+    }
+
+    private void WaitForStableExtentAndRestore(double targetOffsetY)
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            if (_scrollViewer is null) return;
+
+            double lastExtent = -1;
+            int stableCount = 0;
+
+            for (int i = 0; i < 30; i++)
+            {
+                await Task.Delay(50);
+                if (_scrollViewer is null) return;
+
+                double currentExtent = _scrollViewer.Extent.Height;
+
+                if (Math.Abs(currentExtent - lastExtent) < 2)
+                {
+                    stableCount++;
+                    if (stableCount >= 2) break;
+                }
+                else
+                {
+                    stableCount = 0;
+                }
+
+                lastExtent = currentExtent;
+            }
+
+            if (_scrollViewer is null) return;
+
+            var maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
+            var targetOffset = Math.Clamp(targetOffsetY, 0, maxOffset);
+
+            _suppressScrollEvents = true;
+            _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, targetOffset);
+
+            Dispatcher.UIThread.Post(
+                () => _suppressScrollEvents = false,
+                DispatcherPriority.Background);
+        }, DispatcherPriority.Background);
     }
 
     private void SaveScrollState()
@@ -533,34 +541,30 @@ public partial class ChatView : UserControl
 
         var prevExtent = _scrollViewer.Extent.Height;
         var prevOffset = _scrollViewer.Offset.Y;
-        var prevCount = _viewModel.Messages.Count;
 
-        _suppressScrollEvents = true;
+        _suppressPositionTracking = true;
 
         try
         {
             await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
-            await PreserveScrollPositionAfterLoadingAsync(prevExtent, prevOffset, prevCount);
+
+            double newExtent = await WaitForExtentChangeAsync(prevExtent);
+
+            if (newExtent - prevExtent > 5)
+            {
+                _suppressScrollEvents = true;
+                _scrollViewer.Offset = new Avalonia.Vector(
+                    _scrollViewer.Offset.X,
+                    prevOffset + (newExtent - prevExtent));
+
+                Dispatcher.UIThread.Post(
+                    () => _suppressScrollEvents = false,
+                    DispatcherPriority.Background);
+            }
         }
         finally
         {
-            _lastExtentHeight = _scrollViewer.Extent.Height;
-            _suppressScrollEvents = false;
-        }
-    }
-
-    private async Task PreserveScrollPositionAfterLoadingAsync(double prevExtent, double prevOffset, int prevCount)
-    {
-        if (_scrollViewer is null || _viewModel is null) return;
-
-        int added = _viewModel.Messages.Count - prevCount;
-        if (added <= 0) return;
-
-        double newExtent = await WaitForExtentChangeAsync(prevExtent);
-
-        if (newExtent - prevExtent > 5)
-        {
-            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, prevOffset + (newExtent - prevExtent));
+            _suppressPositionTracking = false;
         }
     }
 
@@ -608,7 +612,7 @@ public partial class ChatView : UserControl
         var transform = item.TransformToVisual(_scrollViewer!);
         if (transform is null) return false;
 
-        var top = transform.Value.Transform(new Point(0, 0)).Y;
+        var top = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
         var bottom = top + item.Bounds.Height;
 
         return bottom > 0 && top < viewportHeight;
@@ -616,26 +620,20 @@ public partial class ChatView : UserControl
 
     private void ComposerTextBox_OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_viewModel is null)
-            return;
-
+        if (_viewModel is null) return;
         if (_viewModel.HandleMentionNavigationKey(e.Key))
             e.Handled = true;
     }
 
     private void ComposerTextBox_OnKeyUp(object? sender, KeyEventArgs e)
     {
-        if (_viewModel is null || sender is not TextBox textBox)
-            return;
-
+        if (_viewModel is null || sender is not TextBox textBox) return;
         _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
     }
 
     private void ComposerTextBox_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_viewModel is null || sender is not TextBox textBox)
-            return;
-
+        if (_viewModel is null || sender is not TextBox textBox) return;
         _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
     }
 
@@ -643,26 +641,21 @@ public partial class ChatView : UserControl
 
     #region Helpers
 
-    private bool ShouldIgnoreInitialScrollRequest()
-    {
-        if (_scrollStateRestored || _pendingScrollState is null)
-            return false;
+    private bool ShouldIgnoreInitialScrollRequest() => !_scrollStateRestored && _pendingScrollState is not null;
 
-        Debug.WriteLine("[ChatView] Пропуск стартового скролл-запроса: ожидается восстановление сохранённой позиции.");
-        return true;
-    }
+    private static void ScheduleAction(Func<Task> action, int delayMs = 50) =>
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await Task.Delay(delayMs);
+            await action();
+        }, DispatcherPriority.Background);
 
-    private static void ScheduleAction(Func<Task> action, int delayMs = 50) => Dispatcher.UIThread.Post(async () =>
-    {
-        await Task.Delay(delayMs);
-        await action();
-    }, DispatcherPriority.Background);
-
-    private static void ScheduleAction(Action action, int delayMs = 50) => Dispatcher.UIThread.Post(async () =>
-    {
-        await Task.Delay(delayMs);
-        action();
-    }, DispatcherPriority.Background);
+    private static void ScheduleAction(Action action, int delayMs = 50) =>
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await Task.Delay(delayMs);
+            action();
+        }, DispatcherPriority.Background);
 
     private void ScheduleScrollAction(Action action)
     {

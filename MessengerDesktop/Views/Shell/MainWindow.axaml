@@ -16,7 +16,7 @@
 		x:Class="MessengerDesktop.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		x:Name="MainWindowRoot"
-		Icon="/Assets/LogoCircle.ico"
+		Icon="/Assets/logo-circle.ico"
 		Title="ВнутрьСеть"
 		ExtendClientAreaToDecorationsHint="True"
 		ExtendClientAreaTitleBarHeightHint="-1"
@@ -106,7 +106,9 @@
 	<Panel>
 
 		<ContentControl Content="{Binding CurrentViewModel}"
-						Margin="0,48,0,0"
+						Margin="{Binding IsMainMenuActive,
+								Converter={conv:Converter Name=BoolToThickness},
+								ConverterParameter='0,48,0,0|0'}"
 						ZIndex="0">
 			<ContentControl.DataTemplates>
 				<DataTemplate DataType="vm:LoginViewModel">

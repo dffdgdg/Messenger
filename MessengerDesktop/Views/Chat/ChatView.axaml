@@ -13,6 +13,66 @@
 			 Background="Transparent">
 
 	<UserControl.Styles>
+		<!-- Сброс фона Flat-кнопки внутри пиннед-баннера -->
+		<Style Selector="Border.PinnedBanner Button.Flat /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Border.PinnedBanner Button.Flat:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
+
+		<Style Selector="Border.PinnedBanner Button.Flat:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
+		<Style Selector="ListBox.MessagesList">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+		<Style Selector="Button.MentionItem">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+			<Setter Property="MinHeight" Value="52"/>
+		</Style>
+
+		<Style Selector="Button.MentionItem /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Button.MentionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
+
+		<Style Selector="Button.MentionItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
+		<!-- ── Превью вложения ── -->
+		<Style Selector="Border.AttachmentPreview">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="10"/>
+		</Style>
+		<!-- ── Панель режима редактирования ── -->
+		<Style Selector="Border.EditModePanel">
+			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="12,10"/>
+			<Setter Property="Margin" Value="0,0,0,8"/>
+		</Style>
+		<!-- ── Иконка-бейдж в заголовке диалога ── -->
+		<Style Selector="Border.HeaderIconBadge">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="Width" Value="44"/>
+			<Setter Property="Height" Value="44"/>
+			<Setter Property="CornerRadius" Value="12"/>
+		</Style>
+
 		<Style Selector="TextBox.ChatInput">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
@@ -98,7 +158,8 @@
 								HorizontalAlignment="Right"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="4"
-								Margin="8">
+								Margin="8"
+								BoxShadow="0 4 20 0 #18000000">
 							<StackPanel Orientation="Horizontal">
 								<!-- Кнопка звонка -->
 								<Button Classes="IconButton"
@@ -107,9 +168,8 @@
 										ConverterParameter='Войти в звонок|Начать звонок'}"
 										CornerRadius="4,0,0,4"
 										Command="{Binding StartOrJoinCallCommand}">
-									<Path Data="{StaticResource Call}"
-										  Fill="{Binding Foreground,
-										  RelativeSource={RelativeSource AncestorType=Button}}"
+									<Path Data="{StaticResource CallOutline}"
+										  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
 										  Width="20" Height="20"
 										  Stretch="Uniform"/>
 								</Button>
@@ -181,11 +241,13 @@
 
 				<!-- Баннер закреплённого сообщения -->
 				<Border Grid.Row="1"
+						Classes="PinnedBanner"
+
 						IsVisible="{Binding IsPinnedBannerVisible}"
 						BorderBrush="{DynamicResource BorderDefault}"
 						BorderThickness="0,0,0,1"
-						Background="{DynamicResource SecondaryBG}"
-						ZIndex="5">
+						Background="{DynamicResource InfoBgBrush}"
+						ZIndex="155">
 					<Button Classes="Flat"
 							HorizontalAlignment="Stretch"
 							HorizontalContentAlignment="Stretch"
@@ -227,6 +289,7 @@
 									IsVisible="{Binding HasMultiplePinned}">
 								<TextBlock Text="{Binding PinnedCount}"
 										   FontSize="12"
+										   VerticalAlignment="Center"
 										   HorizontalAlignment="Center"
 										   Foreground="{DynamicResource TextMuted}"/>
 							</Border>
@@ -243,20 +306,6 @@
 						ZIndex="5">
 					<Grid ColumnDefinitions="Auto,*,Auto"
 						  Margin="16,8">
-
-						<!-- Иконка -->
-						<Border Grid.Column="0"
-								Classes="HeaderIconBadge"
-								Width="32" Height="32"
-								CornerRadius="8"
-								Margin="0,0,12,0">
-							<Path Data="{StaticResource Call}"
-								  Fill="{DynamicResource TextOnAccent}"
-								  HorizontalAlignment="Center"
-								  VerticalAlignment="Center"
-								  Stretch="Uniform"
-								  Margin="7"/>
-						</Border>
 
 						<!-- Текст -->
 						<StackPanel Grid.Column="1"
@@ -319,15 +368,15 @@
 				<Panel Grid.Row="3">
 					<skeleton:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
-					<ListBox x:Name="MessagesList"
-							 Classes="MessagesList"
-							 ItemsSource="{Binding Messages}"
-							 Margin="0,8"
-							 Padding="16,0"
-							 IsVisible="{Binding !IsInitialLoading}"
-							 ScrollViewer.VerticalScrollBarVisibility="Auto"
-							 SelectionMode="Single,Toggle">
-						<ListBox.ItemsPanel>
+	<ListBox x:Name="MessagesList"
+         Classes="MessagesList"
+         ItemsSource="{Binding Messages}"
+         Margin="0,8"
+         Padding="16,0"
+         IsVisible="{Binding !IsInitialLoading}"
+         ScrollViewer.VerticalScrollBarVisibility="Auto"
+         SelectionMode="Single,Toggle">
+		<ListBox.ItemsPanel>
 							<ItemsPanelTemplate>
 								<VirtualizingStackPanel/>
 							</ItemsPanelTemplate>
@@ -620,7 +669,8 @@
 						<Border Grid.Row="5"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="14"
-								IsVisible="{Binding !Voice.IsVoiceRecording}">
+								IsVisible="{Binding !Voice.IsVoiceRecording}"
+								BoxShadow="0 4 20 0 #18000000">
 							<Grid>
 								<Grid Margin="4" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
 									<Button Grid.Column="0"
@@ -706,12 +756,31 @@
 											Width="44" Height="44"
 											CornerRadius="10"
 											VerticalAlignment="Bottom"
-											Command="{Binding Voice.StartRecordingCommand}">
+											Command="{Binding Voice.StartRecordingCommand}"
+											IsVisible="{Binding NewMessage,
+											Converter={x:Static StringConverters.IsNullOrEmpty}}">
 										<Path Data="{StaticResource MicrophoneIcon}"
 											  Fill="{DynamicResource TextSecondary}"
 											  Width="20" Height="20"
 											  Stretch="Uniform"/>
 									</Button>
+									<Button Grid.Column="3"
+											Classes="Primary"
+											Width="36" Height="36"
+											CornerRadius="10"
+											Padding="0"
+											VerticalAlignment="Bottom"
+											Margin="4"
+											Command="{Binding SendMessageCommand}"
+											ToolTip.Tip="Отправить"
+											IsVisible="{Binding NewMessage,
+											Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+										<Path Data="{StaticResource SendIcon}"
+											  Fill="White" Width="18" Height="18"
+											  Stretch="Uniform"/>
+									</Button>
+
+									<!-- Кнопка отправки/сохранения — только в режиме редактирования -->
 									<Button Grid.Column="4"
 											Classes="Primary"
 											Margin="4"
@@ -720,19 +789,11 @@
 											Padding="0"
 											Command="{Binding SendMessageCommand}"
 											VerticalAlignment="Bottom"
-											ToolTip.Tip="{Binding EditDelete.IsEditMode,
-											Converter={conv:Converter Name=BoolToString},
-											ConverterParameter='Сохранить|Отправить'}">
-										<Panel>
-											<Path Data="{StaticResource SendIcon}"
-												  Fill="White" Width="18" Height="18"
-												  Stretch="Uniform"
-												  IsVisible="{Binding !EditDelete.IsEditMode}"/>
-											<Path Data="{StaticResource CheckmarkIcon}"
-												  Fill="White" Width="18" Height="18"
-												  Stretch="Uniform"
-												  IsVisible="{Binding EditDelete.IsEditMode}"/>
-										</Panel>
+											IsVisible="{Binding EditDelete.IsEditMode}"
+											ToolTip.Tip="Сохранить">
+										<Path Data="{StaticResource CheckmarkIcon}"
+											  Fill="White" Width="18" Height="18"
+											  Stretch="Uniform"/>
 									</Button>
 								</Grid>
 								<Popup IsOpen="{Binding IsMentionSuggestionsOpen}"
@@ -791,7 +852,8 @@
 						<Border Grid.Row="5"
 								Background="{DynamicResource PrimaryBG}"
 								CornerRadius="14"
-								IsVisible="{Binding Voice.IsVoiceRecording}">
+								IsVisible="{Binding Voice.IsVoiceRecording}"
+								BoxShadow="0 4 20 0 #18000000">
 							<Grid Margin="4" ColumnDefinitions="*,Auto">
 								<TextBlock Grid.Column="0"
 										   Text="Нажмите для отправки →"

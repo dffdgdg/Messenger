@@ -13,14 +13,18 @@ public static class MessageMappings
         var isPinnedAndVisible = message.IsPinned && !isDeleted;
         var senderName = message.Sender?.FormatDisplayName();
         var targetUserName = isSystem ? message.TargetUser?.FormatDisplayName() : null;
-        var voice = message.VoiceMessage;
+        var forwardedSource = message.ForwardedFromMessage;
+        var voice = message.VoiceMessage ?? forwardedSource?.VoiceMessage;
+        var resolvedFiles = message.MessageFiles?.Count > 0 ? message.MessageFiles : forwardedSource?.MessageFiles;
+        var resolvedPoll = message.Polls?.FirstOrDefault() ?? forwardedSource?.Polls?.FirstOrDefault();
+        var resolvedContent = !string.IsNullOrWhiteSpace(message.Content) ? message.Content : forwardedSource?.Content;
 
         return new MessageDto
         {
             Id = message.Id,
             ChatId = message.ChatId,
             SenderId = message.SenderId,
-            Content = ResolveContent(message, isDeleted, isSystem, senderName, targetUserName),
+            Content = ResolveContent(message, isDeleted, isSystem, senderName, targetUserName, resolvedContent),
             CreatedAt = message.CreatedAt,
             EditedAt = message.EditedAt,
             IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,
@@ -48,8 +52,8 @@ public static class MessageMappings
             VoiceContentType = voice?.ContentType,
             VoiceFileSize = voice?.FileSize,
 
-            Files = isDeleted ? [] : message.MessageFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
-            Poll = isDeleted ? null : message.Polls?.FirstOrDefault()?.ToDto(currentUserId)
+            Files = isDeleted ? [] : resolvedFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
+            Poll = isDeleted ? null : resolvedPoll?.ToDto(currentUserId)
         };
     }
 
@@ -78,10 +82,10 @@ public static class MessageMappings
         OriginalCreatedAt = message.CreatedAt
     };
 
-    private static string ResolveContent(Message message, bool isDeleted, bool isSystem, string? senderName, string? targetName)
+    private static string ResolveContent(Message message, bool isDeleted, bool isSystem, string? senderName, string? targetName, string? resolvedContent)
     {
         if (isDeleted) return DeletedMessagePlaceholder;
         if (isSystem) return SystemMessageFormatter.Format(message.SystemEventType, senderName, targetName, message.Content);
-        return message.Content ?? string.Empty;
+        return resolvedContent ?? string.Empty;
     }
 }

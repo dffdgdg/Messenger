@@ -94,17 +94,23 @@ public class NotificationService : INotificationService
             await _platformService.CopyToClipboardAsync(message);
     }
 
-    public Task ShowErrorAsync(string message, bool copyToClipboard = false) => ShowAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
+    public Task ShowErrorAsync(string message, bool copyToClipboard = false)
+        => ShowAsync("Ошибка", message, DesktopNotificationType.Error, copyToClipboard);
 
-    public Task ShowSuccessAsync(string message, bool copyToClipboard = false) => ShowAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
+    public Task ShowSuccessAsync(string message, bool copyToClipboard = false)
+        => ShowAsync("Успех", message, DesktopNotificationType.Success, copyToClipboard);
 
-    public Task ShowWarningAsync(string message, bool copyToClipboard = false) => ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
+    public Task ShowWarningAsync(string message, bool copyToClipboard = false)
+        => ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
 
-    public Task ShowInfoAsync(string message, bool copyToClipboard = false) => ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
+    public Task ShowInfoAsync(string message, bool copyToClipboard = false)
+        => ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
 
     private async Task ShowInternalAsync(string title, string message, DesktopNotificationType type, int durationMs, Func<Task>? onClick)
     {
-        var notification = new DesktopNotificationViewModel(title, message, type, durationMs, CloseNotificationAsync, onClick);
+        var notification = new DesktopNotificationViewModel(
+            title, message, type, durationMs, CloseNotificationAsync, onClick);
+
         var cts = new CancellationTokenSource();
 
         List<DesktopNotificationViewModel>? stale = null;
@@ -115,6 +121,9 @@ public class NotificationService : INotificationService
             _lifetimes[notification.Id] = cts;
             _activeNotifications.Insert(0, notification);
             notification.IsVisible = true;
+
+            // Запускаем анимацию прогресс-бара
+            notification.StartProgress();
 
             for (var i = _activeNotifications.Count - 1; i >= MaxVisibleNotifications; i--)
             {
@@ -130,13 +139,13 @@ public class NotificationService : INotificationService
         if (stale is not null)
         {
             foreach (var s in stale)
-            {
                 await CloseNotificationAsync(s);
-            }
         }
 
-        _ = RunLifetimeAsync(notification, cts.Token).ContinueWith(t => Debug.WriteLine($"[NotificationService] Ошибка в RunLifetimeAsync: {t.Exception?.GetBaseException().Message}"),
-            TaskContinuationOptions.OnlyOnFaulted);
+        _ = RunLifetimeAsync(notification, cts.Token)
+            .ContinueWith(
+                t => Debug.WriteLine($"[NotificationService] Ошибка в RunLifetimeAsync: {t.Exception?.GetBaseException().Message}"),
+                TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private async Task RunLifetimeAsync(DesktopNotificationViewModel notification, CancellationToken ct)
@@ -162,6 +171,7 @@ public class NotificationService : INotificationService
                 return;
 
             notification.IsVisible = false;
+            notification.StopProgress();
         }
         finally
         {
@@ -241,7 +251,12 @@ public sealed partial class DesktopNotificationViewModel(string title, string me
         public const string Information = "i";
     }
 
-    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync = closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
+    private const double MaxProgressWidth = 332d;
+
+    private readonly Func<DesktopNotificationViewModel, Task> _closeAsync =
+        closeAsync ?? throw new ArgumentNullException(nameof(closeAsync));
+
+    private CancellationTokenSource? _progressCts;
 
     public Guid Id { get; } = Guid.NewGuid();
     public string Title { get; } = title;
@@ -269,9 +284,55 @@ public sealed partial class DesktopNotificationViewModel(string title, string me
     [ObservableProperty]
     public partial bool IsVisible { get; set; }
 
+    [ObservableProperty]
+    public partial double ProgressWidth { get; set; } = MaxProgressWidth;
+
+    /// <summary>
+    /// Запускает убывающую анимацию прогресс-бара.
+    /// Вызывать сразу после IsVisible = true.
+    /// </summary>
+    public void StartProgress()
+    {
+        StopProgress();
+        _progressCts = new CancellationTokenSource();
+        _ = AnimateProgressAsync(_progressCts.Token);
+    }
+
+    /// <summary>
+    /// Останавливает анимацию прогресс-бара (при закрытии).
+    /// </summary>
+    public void StopProgress()
+    {
+        _progressCts?.Cancel();
+        _progressCts = null;
+    }
+
+    private async Task AnimateProgressAsync(CancellationToken ct)
+    {
+        const int TickMs = 16;
+
+        var totalTicks = DurationMs / TickMs;
+        var stepWidth = MaxProgressWidth / totalTicks;
+
+        ProgressWidth = MaxProgressWidth;
+
+        try
+        {
+            for (var i = 0; i < totalTicks; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                await Task.Delay(TickMs, ct);
+                ProgressWidth = Math.Max(0d, MaxProgressWidth - (stepWidth * (i + 1)));
+            }
+        }
+        catch (OperationCanceledException) { /* уведомление закрыли раньше времени */ }
+    }
+
     [RelayCommand]
     private async Task ActivateAsync()
     {
+        StopProgress();
+
         if (onClick is not null)
             await onClick();
 
@@ -279,5 +340,9 @@ public sealed partial class DesktopNotificationViewModel(string title, string me
     }
 
     [RelayCommand]
-    private Task CloseAsync() => _closeAsync(this);
+    private Task CloseAsync()
+    {
+        StopProgress();
+        return _closeAsync(this);
+    }
 }

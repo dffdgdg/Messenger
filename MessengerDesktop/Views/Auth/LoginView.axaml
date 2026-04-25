@@ -3,6 +3,28 @@
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 x:Class="MessengerDesktop.Views.LoginView"
 			 x:DataType="vm:LoginViewModel">
+	<UserControl.Styles>
+			<Style Selector="Border.AlertSuccess, Border.MessageSuccess">
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="Padding" Value="14,12"/>
+		<Setter Property="Background" Value="{DynamicResource SuccessBgBrush}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+	</Style>
+			<!-- ── CheckBox «Запомнить» ── -->
+	<Style Selector="CheckBox.RememberMe">
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		<Setter Property="FontSize" Value="13"/>
+		<Setter Property="Cursor" Value="Hand"/>
+	</Style>
+		<Style Selector="Border.AlertError, Border.MessageError">
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="Padding" Value="14,12"/>
+		<Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+	</Style>
+	</UserControl.Styles>
 	<Grid>
 		<Panel>
 			<Border>
@@ -59,18 +81,11 @@
 
 			<StackPanel Spacing="28">
 				<StackPanel Spacing="16" HorizontalAlignment="Center">
-					<Border Width="56" Height="56" CornerRadius="14" HorizontalAlignment="Center">
-						<Border.Background>
-							<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-								<GradientStop Color="{DynamicResource LoginLogoStart}" Offset="0"/>
-								<GradientStop Color="{DynamicResource LoginLogoEnd}" Offset="1"/>
-							</LinearGradientBrush>
-						</Border.Background>
-						<Image Source="/Resources/Images/Logo.svg"
-							  Width="28" Height="28" Stretch="Uniform"
-							  Fill="{DynamicResource TextOnAccent}"
-							  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-					</Border>
+					<Path Data="{StaticResource LogoIcon}"
+						  Fill="{DynamicResource Accent}"
+						   Width="56" Height="56" 
+						   HorizontalAlignment="Center" 
+						   Stretch="Uniform"/>
 
 					<StackPanel Spacing="6">
 						<TextBlock Text="ВнутрьСеть" FontSize="20" FontWeight="SemiBold"

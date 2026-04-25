@@ -1,5 +1,7 @@
-﻿using MessengerDesktop.ViewModels.Admin;
+﻿using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.Dto.Department;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +10,10 @@ namespace MessengerDesktop.ViewModels;
 
 public partial class AdminViewModel : BaseViewModel, IRefreshable
 {
+    private readonly INotificationService _notificationService;
+    private string? _lastShownError;
+    private string? _lastShownSuccess;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentTab))]
     public partial int SelectedTabIndex { get; set; }
@@ -33,12 +39,11 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     // Есть ли хоть один отдел после фильтрации
     public bool HasDepartments => FilteredHierarchicalDepartments?.Any() == true;
 
-    public AdminViewModel(
-        UsersTabViewModel usersTab,
-        DepartmentsTabViewModel departmentsTab)
+    public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab, INotificationService notificationService)
     {
         UsersTab = usersTab;
         DepartmentsTab = departmentsTab;
+        _notificationService = notificationService;
 
         UsersTab.PropertyChanged += (_, e) =>
         {
@@ -128,7 +133,7 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
             OnPropertyChanged(nameof(HasUsers));
             OnPropertyChanged(nameof(HasDepartments));
 
-            SuccessMessage = "Данные обновлены";
+            await _notificationService.ShowSuccessAsync("Данные обновлены");
         });
     }
 
@@ -159,9 +164,26 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     private void PropagateMessages(string? propertyName, BaseViewModel source)
     {
         if (propertyName == nameof(ErrorMessage) && !string.IsNullOrEmpty(source.ErrorMessage))
-            ErrorMessage = source.ErrorMessage;
+        {
+            if (!string.Equals(_lastShownError, source.ErrorMessage, StringComparison.Ordinal))
+            {
+                _lastShownError = source.ErrorMessage;
+                _ = _notificationService.ShowErrorAsync(source.ErrorMessage);
+            }
+
+            ErrorMessage = null;
+        }
+
 
         else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage))
-            SuccessMessage = source.SuccessMessage;
+        {
+            if (!string.Equals(_lastShownSuccess, source.SuccessMessage, StringComparison.Ordinal))
+            {
+                _lastShownSuccess = source.SuccessMessage;
+                _ = _notificationService.ShowSuccessAsync(source.SuccessMessage);
+            }
+
+            SuccessMessage = null;
+        }
     }
 }

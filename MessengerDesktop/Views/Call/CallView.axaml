@@ -6,6 +6,26 @@
              x:Class="MessengerDesktop.Views.Call.CallView"
              x:DataType="vm:CallViewModel">
       <UserControl.Styles>
+          	<!-- ===== CALL TILE ===== -->
+
+	<Style Selector="Border.CallTile">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Setter Property="CornerRadius" Value="14"/>
+		<Setter Property="Margin" Value="6"/>
+		<Setter Property="ClipToBounds" Value="True"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+				<BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+			</Transitions>
+		</Setter>
+	</Style>
+
+	<Style Selector="Border.CallTile.Speaking">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="BoxShadow" Value="0 0 12 #3390EC40"/>
+	</Style>
         <Style Selector="TextBox.ChatInput">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -26,6 +46,25 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+          <Style Selector="ToggleButton.CallToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style Selector="ToggleButton.CallToggleButton:checked">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="ToggleButton.CallToggleButton Path">
+            <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+        </Style>
+
+        <Style Selector="Button.CallToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style Selector="Button.CallToggleButton.Active">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="Button.CallToggleButton Path">
+            <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
         </Style>
     </UserControl.Styles>
 
@@ -92,13 +131,13 @@
                                 Background="{DynamicResource SecondaryBG}"
                                 BorderBrush="{DynamicResource ControlBorder}"
                                 Command="{Binding CloseUiCommand}"
-                                Classes="IconButton"
+                                Classes="ScrollToBottomBtn"
                                 ToolTip.Tip="Свернуть окно звонка"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
-                                Width="40" Height="40" CornerRadius="20">
+                                Width="50" Height="50" CornerRadius="12">
                             <Path Data="{StaticResource ChevronIcon}"
-                                  Margin="10" Stretch="Uniform"
+                                  Margin="14" Stretch="Uniform"
                                   Fill="{DynamicResource TextSecondary}"/>
                         </Button>
                     </Grid>
@@ -171,12 +210,10 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     Spacing="12" Margin="16,0">
 
-                            <ToggleButton Classes="IconButton"
-                                          IsChecked="{Binding NoiseSuppressionEnabled}"
+                            <ToggleButton Classes="IconButton CallToggleButton"                                          IsChecked="{Binding NoiseSuppressionEnabled}"
                                           ToolTip.Tip="Шумоподавление"
                                           Width="48" Height="48" CornerRadius="24">
                                 <Path Data="{StaticResource Noise}"
-                                      Fill="{DynamicResource TextPrimary}"
                                       Stretch="Uniform" Margin="12"/>
                             </ToggleButton>
 
@@ -196,12 +233,11 @@
                             <!-- Кнопка чата с бейджем -->
                             <Panel Width="48" Height="48">
                                 <Button Command="{Binding ToggleChatPanelCommand}"
-                                        Classes="IconButton"
+                                        Classes="IconButton CallToggleButton"
                                         Classes.Active="{Binding IsChatPanelOpen}"
                                         Width="48" Height="48" CornerRadius="24"
                                         ToolTip.Tip="Чат звонка">
                                     <Path Data="{StaticResource ChatsIcon}"
-                                          Fill="{DynamicResource TextPrimary}"
                                           Stretch="Uniform" Margin="12"/>
                                 </Button>
                                 <Border IsVisible="{Binding HasUnread}"

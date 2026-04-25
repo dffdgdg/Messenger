@@ -137,7 +137,16 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
 
         if (poll.Message != null)
         {
-            await hubNotifier.SendToChatAsync(poll.Message.ChatId, "ReceivePollUpdate", updatedPollResult.Value!);
+            var affectedChatIds = await _context.Messages
+                .Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
+                .Select(m => m.ChatId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var chatId in affectedChatIds)
+            {
+                await hubNotifier.SendToChatAsync(chatId, "ReceivePollUpdate", updatedPollResult.Value!);
+            }
         }
 
         LogUserVoted(voteDto.UserId, voteDto.PollId);

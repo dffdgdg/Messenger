@@ -7,21 +7,34 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null, INotificationService? notificationService = null) : ObservableObject, IDisposable
+public sealed partial class MessageFileViewModel(
+    MessageFileDto file,
+    IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null,
+    ChatContext? chatContext = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
     private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz" };
     private static readonly HashSet<string> PdfExtensions = new(StringComparer.OrdinalIgnoreCase) { ".pdf" };
     private static readonly HashSet<string> WordExtensions = new(StringComparer.OrdinalIgnoreCase) { ".doc", ".docx", ".rtf", ".odt" };
     private static readonly HashSet<string> ExcelExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xls", ".xlsx", ".csv", ".ods" };
-
     private CancellationTokenSource? _downloadCts;
     private readonly Lock _ctsLock = new();
     private bool _disposed;
 
     public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
-    [ObservableProperty] public partial bool IsDownloading { get; set; }
+    [ObservableProperty]
+    public partial double ImageWidth { get; set; } = double.NaN;
+
+    [ObservableProperty]
+    public partial double ImageHeight { get; set; } = double.NaN;
+
+    [ObservableProperty]
+    public partial bool IsImageLoaded { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDownloading { get; set; }
 
     [ObservableProperty]
     public partial double DownloadProgress { get; set; }
@@ -85,6 +98,19 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
     };
 
     public string FileSizeFormatted => FormatFileSize(File.FileSize);
+
+    public void SetImageDimensions(double width, double height)
+    {
+        if (width <= 0 || height <= 0) return;
+
+        const double maxWidth = 320.0;
+        const double maxHeight = 320.0;
+
+        var ratio = Math.Min(maxWidth / width, maxHeight / height);
+        ImageWidth = width * ratio;
+        ImageHeight = height * ratio;
+        IsImageLoaded = true;
+    }
 
     [RelayCommand]
     private async Task DownloadAsync()
@@ -228,8 +254,7 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
         0 => "0 B",
         < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-        < 1024L * 1024 * 1024
-        => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        < 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
         _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
     };
 
@@ -242,10 +267,8 @@ public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownl
         if (string.IsNullOrEmpty(extension))
             return fileName[..Math.Max(1, maxLength - 1)] + "…";
 
-        var nameWithoutExtension =
-            Path.GetFileNameWithoutExtension(fileName);
-        var availableNameLength =
-            maxLength - extension.Length - 1;
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var availableNameLength = maxLength - extension.Length - 1;
 
         if (availableNameLength <= 0)
             return "…" + extension;

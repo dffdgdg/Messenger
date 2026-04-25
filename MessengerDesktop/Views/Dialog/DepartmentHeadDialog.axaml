@@ -5,7 +5,15 @@
              xmlns:department="using:MessengerShared.Dto.Department"
              x:Class="MessengerDesktop.Views.DepartmentHeadDialog"
              x:DataType="vmDialog:DepartmentHeadDialogViewModel">
-
+    <UserControl.Styles>
+        <Style Selector="Border.AlertInfo">
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="Padding" Value="14,12"/>
+		<Setter Property="Background" Value="{DynamicResource InfoBgBrush}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource InfoBorderBrush}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+	</Style>
+    </UserControl.Styles>
     <Border Classes="DialogContainer">
         <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
 

@@ -12,6 +12,7 @@
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<UseRidGraph>true</UseRidGraph>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -44,6 +45,10 @@
 	  <Compile Remove="Assets\Styles\ChatInfoSkeleton.axaml.cs" />
 	  <Compile Remove="Assets\Styles\ChatListSkeleton.axaml.cs" />
 	  <Compile Remove="Assets\Styles\ChatMessagesSkeleton.axaml.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Assets\logo.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

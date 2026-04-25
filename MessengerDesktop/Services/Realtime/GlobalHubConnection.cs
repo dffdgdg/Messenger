@@ -271,7 +271,11 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _ = SafeCacheAsync(() => _cache.MarkMessageDeletedAsync(evt.MessageId), "delete");
         PostUI(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
     }
-    private void OnPollUpdated(PollDto poll) => PostUI(() => PollUpdatedGlobally?.Invoke(poll));
+    private void OnPollUpdated(PollDto poll)
+    {
+        _ = SafeCacheAsync(() => _cache.UpdatePollThreadAsync(poll), "poll update");
+        PostUI(() => PollUpdatedGlobally?.Invoke(poll));
+    }
 
     #endregion
 

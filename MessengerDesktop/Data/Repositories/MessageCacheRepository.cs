@@ -35,6 +35,10 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     public async Task MarkDeletedAsync(int messageId) =>
         await Db.ExecuteAsync("UPDATE messages SET is_deleted = 1, content = NULL, poll_json = NULL, files_json = NULL WHERE id = ?", messageId);
 
+    public async Task UpdatePollThreadAsync(int originalMessageId, string pollJson)
+        => await Db.ExecuteAsync("UPDATE messages SET poll_json = ? WHERE is_deleted = 0 AND (id = ? OR forwarded_from_message_id = ?)",
+            pollJson, originalMessageId, originalMessageId);
+
     public async Task<List<CachedMessage>> GetLatestAsync(int chatId, int count)
     {
         var messages = await Db.QueryAsync<CachedMessage>("SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?", chatId, count);

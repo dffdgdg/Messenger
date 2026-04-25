@@ -3,6 +3,7 @@
 
     <Color x:Key="TopBg">#FFFFFF</Color>
     <Color x:Key="BaseBg">#F4F6FB</Color>
+    <SolidColorBrush x:Key="PinnedBannerBg" Color="#F0F5FF"/>
 
     <SolidColorBrush x:Key="ChatHeaderBg" Color="#F8FAFD"/>
     <Color x:Key="ChatMessagesBgTop">#F7F9FD</Color>

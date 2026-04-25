@@ -61,8 +61,6 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public event Action<MessageViewModel, bool>? ScrollToMessageRequested;
     public event Action<int, bool>? ScrollToIndexRequested;
     public event Action? ScrollToBottomRequested;
-    public event Action<double>? PollSizeChanged;
-    public void NotifyPollSizeChanged(double delta) => PollSizeChanged?.Invoke(delta);
     public void RequestScrollToMessage(MessageViewModel msg, bool highlight = false) => ScrollToMessageRequested?.Invoke(msg, highlight);
 
     public void RequestScrollToIndex(int index, bool highlight = false) => ScrollToIndexRequested?.Invoke(index, highlight);

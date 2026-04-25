@@ -12,8 +12,6 @@ public partial class PollViewModel : BaseViewModel
     private readonly ChatContext? _chatContext;
 
     public event Action<PollDto>? ServerStateApplied;
-    public event Action<double>? SizeChanged;
-    internal void NotifySizeChanged(double delta) => SizeChanged?.Invoke(delta);
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
     [ObservableProperty] public partial bool CanVote { get; set; } = true;
@@ -42,10 +40,7 @@ public partial class PollViewModel : BaseViewModel
         {
             opt.PropertyChanged += OnOptionPropertyChanged;
         }
-        if (chatContext != null)
-        {
-            SizeChanged += delta => chatContext.NotifyPollSizeChanged(delta);
-        }
+
         ApplySelectedOptions(poll.SelectedOptionIds);
         CanVote = poll.CanVote;
         HasVoted = !poll.CanVote;

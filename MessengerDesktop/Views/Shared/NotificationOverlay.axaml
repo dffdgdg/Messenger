@@ -1,143 +1,243 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:MessengerDesktop.ViewModels"
-             x:Class="MessengerDesktop.Views.Controls.NotificationOverlay"
-             x:DataType="vm:MainWindowViewModel" >
-    <ItemsControl ItemsSource="{Binding ActiveNotifications}"
-                  HorizontalAlignment="Right"
-                  VerticalAlignment="Top"
-                  Margin="0,56,16,0"
-                  IsHitTestVisible="True"
-                  ZIndex="9500">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <StackPanel Orientation="Vertical" Spacing="8"/>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Border IsVisible="{Binding IsVisible}"
-                        Background="{DynamicResource SecondaryBG}"
-                        BorderBrush="{DynamicResource BorderDefault}"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        BoxShadow="{DynamicResource DialogShadow}"
-                        Width="340"
-                        ClipToBounds="True"
-                        RenderTransformOrigin="1,0"
-                        Opacity="1">
-                    <Border.Transitions>
-                        <Transitions>
-                            <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
-                        </Transitions>
-                    </Border.Transitions>
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:MessengerDesktop.ViewModels"
+			 x:Class="MessengerDesktop.Views.Controls.NotificationOverlay"
+			 x:DataType="vm:MainWindowViewModel">
+	<UserControl.Styles>
+		<!-- ── Кликабельная область уведомления ── -->
+		<Style Selector="Button.NotificationBody">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="CornerRadius" Value="16,0,0,16"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-                    <Grid RowDefinitions="Auto,*">
-                        <Border Background="{Binding AccentHex}"
-                                Height="3"
-                                CornerRadius="14,14,0,0"
-                                Grid.Row="0"/>
+		<Style Selector="Button.NotificationBody /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="16,0,0,16"/>
+		</Style>
 
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto"
-                              Margin="0">
+		<Style Selector="Button.NotificationBody:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
 
-                            <Button Grid.Column="0"
-                                    Command="{Binding ActivateCommand}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="16,14,8,14"
-                                    HorizontalContentAlignment="Stretch"
-                                    VerticalContentAlignment="Stretch"
-                                    Cursor="Hand"
-                                    CornerRadius="0">
-                                <Button.Styles>
-                                    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-                                    </Style>
-                                    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-                                    </Style>
-                                </Button.Styles>
+		<Style Selector="Button.NotificationBody:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
 
-                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
-                                    <Border Grid.Row="0"
-                                            Grid.Column="0"
-                                            Background="{Binding AccentHex}"
-                                            Width="28"
-                                            Height="28"
-                                            CornerRadius="8"
-                                            Margin="0,0,10,0"
-                                            Grid.RowSpan="2"
-                                            VerticalAlignment="Top">
-                                        <TextBlock Text="{Binding IconGlyph}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource TextOnAccent}"
-                                                   FontWeight="Bold"
-                                                   FontSize="13"/>
-                                    </Border>
+		<!-- ── Кнопка закрытия уведомления ── -->
+		<Style Selector="Button.NotificationClose">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Width" Value="26"/>
+			<Setter Property="Height" Value="26"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Opacity" Value="0.6"/>
+			<Setter Property="FocusAdorner" Value="{x:Null}"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+					<TransformOperationsTransition Property="RenderTransform"
+												   Duration="0:0:0.12"
+												   Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-                                    <TextBlock Grid.Row="0"
-                                               Grid.Column="1"
-                                               Text="{Binding Title}"
-                                               FontWeight="SemiBold"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource TextPrimary}"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="1"/>
+		<Style Selector="Button.NotificationClose /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="8"/>
+		</Style>
 
-                                    <TextBlock Grid.Row="1"
-                                               Grid.Column="1"
-                                               Text="{Binding Message}"
-                                               TextWrapping="Wrap"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextSecondary}"
-                                               MaxHeight="48"
-                                               Margin="0,2,0,0"
-                                               LineHeight="16"/>
+		<Style Selector="Button.NotificationClose:pointerover">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="RenderTransform" Value="scale(1.1)"/>
+		</Style>
 
-                                    <TextBlock Grid.Row="2"
-                                               Grid.Column="1"
-                                               Text="Нажмите, чтобы открыть"
-                                               IsVisible="{Binding IsClickable}"
-                                               FontSize="11"
-                                               FontWeight="Medium"
-                                               Foreground="{Binding AccentHex}"
-                                               Margin="0,6,0,0"
-                                               Opacity="0.85"/>
-                                </Grid>
-                            </Button>
+		<Style Selector="Button.NotificationClose:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+		</Style>
 
-                            <Button Grid.Column="1"
-                                    Command="{Binding CloseCommand}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="0"
-                                    Width="32"
-                                    Height="32"
-                                    Margin="0,8,8,0"
-                                    VerticalAlignment="Top"
-                                    CornerRadius="8"
-                                    Cursor="Hand">
-                                <Button.Styles>
-                                    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-                                    </Style>
-                                    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-                                    </Style>
-                                </Button.Styles>
-                                <PathIcon Width="10"
-                                          Height="10"
-                                          Foreground="{DynamicResource TextMuted}"
-                                          Data="{StaticResource CloseIcon}"/>
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+		<Style Selector="Button.NotificationClose:pointerover PathIcon">
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+		</Style>
+
+		<Style Selector="Button.NotificationClose:pressed">
+			<Setter Property="RenderTransform" Value="scale(0.92)"/>
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+
+		<Style Selector="Button.NotificationClose:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource DangerBorderBrush}"/>
+		</Style>
+	</UserControl.Styles>
+
+	<ItemsControl ItemsSource="{Binding ActiveNotifications}"
+				  HorizontalAlignment="Right"
+				  VerticalAlignment="Top"
+				  Margin="0,60,20,0"
+				  IsHitTestVisible="False"
+				  ZIndex="9500">
+
+		<ItemsControl.ItemsPanel>
+			<ItemsPanelTemplate>
+				<StackPanel Orientation="Vertical" Spacing="10"/>
+			</ItemsPanelTemplate>
+		</ItemsControl.ItemsPanel>
+
+		<ItemsControl.ItemTemplate>
+			<DataTemplate>
+
+				<!-- Анимационная обёртка -->
+				<Border Classes="NotificationCard"
+						IsVisible="{Binding IsVisible}"
+						Width="360"
+						IsHitTestVisible="True"
+						RenderTransformOrigin="1,0.5">
+
+					<Border.Styles>
+						<Style Selector="Border.NotificationCard">
+							<Setter Property="Opacity" Value="0"/>
+							<Setter Property="RenderTransform" Value="translateX(24px) scale(0.96)"/>
+						</Style>
+						<Style Selector="Border.NotificationCard[IsVisible=true]">
+							<Setter Property="Opacity" Value="1"/>
+							<Setter Property="RenderTransform" Value="translateX(0) scale(1)"/>
+						</Style>
+					</Border.Styles>
+
+					<Border.Transitions>
+						<Transitions>
+							<DoubleTransition Property="Opacity"
+											  Duration="0:0:0.3"
+											  Easing="CubicEaseOut"/>
+							<TransformOperationsTransition Property="RenderTransform"
+														   Duration="0:0:0.4"
+														   Easing="BackEaseOut"/>
+						</Transitions>
+					</Border.Transitions>
+
+					<!-- Карточка -->
+					<Border Background="{DynamicResource SecondaryBG}"
+							BorderBrush="{DynamicResource BorderDefault}"
+							BorderThickness="1"
+							CornerRadius="16"
+							BoxShadow="{DynamicResource DialogShadow}"
+							ClipToBounds="True">
+
+						<Grid RowDefinitions="Auto,3">
+
+							<!-- ── Строка контента ── -->
+							<Grid Grid.Row="0"
+								  ColumnDefinitions="*,Auto">
+
+								<!-- Кликабельная область -->
+								<Button Grid.Column="0"
+										Classes="NotificationBody"
+										Command="{Binding ActivateCommand}"
+										Padding="14,14,8,14">
+
+									<Grid ColumnDefinitions="Auto,*">
+
+										<!-- Иконка типа -->
+										<Border Grid.Column="0"
+												Background="{Binding AccentHex}"
+												Width="36"
+												Height="36"
+												CornerRadius="11"
+												Margin="0,0,12,0"
+												VerticalAlignment="Top">
+											<TextBlock Text="{Binding IconGlyph}"
+													   HorizontalAlignment="Center"
+													   VerticalAlignment="Center"
+													   Foreground="{DynamicResource TextOnAccent}"
+													   FontWeight="Bold"
+													   FontSize="15"/>
+										</Border>
+
+										<!-- Текст -->
+										<StackPanel Grid.Column="1"
+													Spacing="3"
+													VerticalAlignment="Center">
+
+											<TextBlock Text="{Binding Title}"
+													   FontSize="13"
+													   FontWeight="SemiBold"
+													   TextTrimming="CharacterEllipsis"
+													   MaxLines="1"/>
+
+											<TextBlock Text="{Binding Message}"
+													   Classes="SectionItemDesc"
+													   FontSize="12"
+													   TextWrapping="Wrap"
+													   LineHeight="17"
+													   MaxLines="2"/>
+
+											<!-- Бейдж «Открыть» -->
+											<StackPanel Orientation="Horizontal"
+														IsVisible="{Binding IsClickable}"
+														Margin="0,5,0,0">
+												<Border Background="{Binding AccentHex}"
+														Opacity="0.15"
+														CornerRadius="4"
+														Padding="6,2">
+													<TextBlock Text="Открыть →"
+															   FontSize="11"
+															   FontWeight="SemiBold"
+															   Foreground="{Binding AccentHex}"/>
+												</Border>
+											</StackPanel>
+
+										</StackPanel>
+									</Grid>
+								</Button>
+
+								<!-- Кнопка закрытия -->
+								<Button Grid.Column="1"
+										Classes="NotificationClose"
+										Command="{Binding CloseCommand}"
+										Margin="0,10,10,0"
+										VerticalAlignment="Top">
+									<PathIcon Width="9"
+											  Height="9"
+											  Foreground="{DynamicResource TextMuted}"
+											  Data="{StaticResource CloseIcon}"/>
+								</Button>
+
+							</Grid>
+
+							<!-- ── Прогресс-бар таймера ── -->
+							<Border Grid.Row="1"
+									Background="{Binding AccentHex}"
+									Opacity="0.45"
+									Height="3"
+									Width="{Binding ProgressWidth}"
+									HorizontalAlignment="Left"
+									VerticalAlignment="Stretch">
+								<Border.Transitions>
+									<Transitions>
+										<DoubleTransition Property="Width"
+														  Duration="0:0:0.1"
+														  Easing="LinearEasing"/>
+									</Transitions>
+								</Border.Transitions>
+							</Border>
+
+						</Grid>
+					</Border>
+				</Border>
+
+			</DataTemplate>
+		</ItemsControl.ItemTemplate>
+	</ItemsControl>
 </UserControl>

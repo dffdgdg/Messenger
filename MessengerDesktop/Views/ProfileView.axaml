@@ -7,6 +7,35 @@
 			 x:Class="MessengerDesktop.Views.ProfileView"
 			 x:DataType="vm:ProfileViewModel"
 			 Background="{DynamicResource PrimaryBG}">
+	<UserControl.Styles>
+		<!-- ── Значение поля ── -->
+	<Style Selector="TextBlock.FieldValue">
+		<Setter Property="FontSize" Value="14"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+	</Style>
+		<!-- ── Валидация: ошибка ── -->
+		<Style Selector="TextBlock.ValidationError">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+		</Style>
+
+		<!-- ── Баннер превью (отображается как) ── -->
+		<Style Selector="Border.PreviewBanner">
+			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="12,10"/>
+		</Style>
+
+		<!-- ── Префикс поля ввода (@) ── -->
+		<Style Selector="Border.InputPrefix">
+			<Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+			<Setter Property="BorderThickness" Value="1,1,0,1"/>
+			<Setter Property="CornerRadius" Value="8,0,0,8"/>
+			<Setter Property="Padding" Value="12,0"/>
+			<Setter Property="Height" Value="40"/>
+		</Style>
+	</UserControl.Styles>
 	<Border Classes="PageContainer">
 		<ScrollViewer VerticalScrollBarVisibility="Auto"
 					  HorizontalScrollBarVisibility="Disabled"
@@ -399,55 +428,6 @@
 									Padding="20,8"/>
 						</Grid>
 					</Border>
-
-					<Border Classes="AlertError"
-							IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-						<Grid ColumnDefinitions="Auto,*,Auto">
-							<PathIcon Data="{StaticResource WarningIcon}"
-									  Width="18" Height="18"
-									  Foreground="{DynamicResource ErrorBrush}"
-									  VerticalAlignment="Center"/>
-							<TextBlock Grid.Column="1"
-									   Text="{Binding ErrorMessage}"
-									   Foreground="{DynamicResource ErrorBrush}"
-									   FontSize="13"
-									   TextWrapping="Wrap"
-									   Margin="10,0"/>
-							<Button Grid.Column="2"
-									Classes="IconButton Small"
-									Command="{Binding ClearErrorCommand}"
-									ToolTip.Tip="Закрыть">
-								<PathIcon Data="{StaticResource CloseIcon}"
-										  Width="14" Height="14"
-										  Foreground="{DynamicResource ErrorBrush}"/>
-							</Button>
-						</Grid>
-					</Border>
-
-					<Border Classes="AlertSuccess"
-							IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-						<Grid ColumnDefinitions="Auto,*,Auto">
-							<PathIcon Data="{StaticResource CheckmarkIcon}"
-									  Width="18" Height="18"
-									  Foreground="{DynamicResource SuccessBrush}"
-									  VerticalAlignment="Center"/>
-							<TextBlock Grid.Column="1"
-									   Text="{Binding SuccessMessage}"
-									   Foreground="{DynamicResource SuccessBrush}"
-									   FontSize="13"
-									   TextWrapping="Wrap"
-									   Margin="10,0"/>
-							<Button Grid.Column="2"
-									Classes="IconButton Small"
-									Command="{Binding ClearSuccessCommand}"
-									ToolTip.Tip="Закрыть">
-								<PathIcon Data="{StaticResource CloseIcon}"
-										  Width="14" Height="14"
-										  Foreground="{DynamicResource SuccessBrush}"/>
-							</Button>
-						</Grid>
-					</Border>
-
 				</StackPanel>
 			</Border>
 		</ScrollViewer>

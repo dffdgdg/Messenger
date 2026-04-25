@@ -37,9 +37,20 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     #region Base Query & Helpers
 
     private IQueryable<Message> MessagesWithIncludes() => _context.Messages.Include(m => m.Sender).Include(m => m.TargetUser).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
-        .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender);
+        .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes);
+
     private IQueryable<Message> MessagesLight() => _context.Messages
-        .Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles).AsNoTracking();
+        .Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+        .AsNoTracking();
+
     private async Task<Result<T>?> CheckAccessAsync<T>(int userId, int chatId)
     {
         var result = await accessControl.CheckIsMemberAsync(userId, chatId);
@@ -165,7 +176,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var save = await SaveChangesAsync();
         if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
 
-        var created = await MessagesWithIncludes().FirstAsync(m => m.Id == message.Id);
+        var created = await MessagesWithIncludes().AsNoTracking().FirstAsync(m => m.Id == message.Id);
         var senderDto = created.ToDto(senderId, urlBuilder);
 
         await BroadcastToMembersAsync(created, message.ChatId, "ReceiveMessageDto");

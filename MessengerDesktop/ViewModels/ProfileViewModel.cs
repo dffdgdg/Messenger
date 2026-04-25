@@ -2,6 +2,7 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using MessengerDesktop.Infrastructure;
+using MessengerDesktop.Services.UI;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -12,6 +13,7 @@ namespace MessengerDesktop.ViewModels;
 public partial class ProfileViewModel : BaseViewModel, IRefreshable
 {
     private readonly IApiClientService _api;
+    private readonly INotificationService _notificationService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FullName), nameof(Username), nameof(SurnameDisplay), nameof(NameDisplay), nameof(MidnameDisplay),
@@ -106,10 +108,11 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     IAsyncRelayCommand IRefreshable.RefreshCommand => RefreshCommand;
 
-    public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager)
+    public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager, INotificationService notificationService)
     {
         _api = apiClient;
-        UserId = authManager.Session.UserId ?? throw new InvalidOperationException("User not authenticated");
+        _notificationService = notificationService;
+        UserId = authManager.Session.UserId ?? throw new InvalidOperationException("Польователь не авторизовван");
         _ = LoadUser();
     }
 
@@ -172,13 +175,13 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         if (User == null) return;
         if (string.IsNullOrWhiteSpace(TempSurname) && string.IsNullOrWhiteSpace(TempName))
         {
-            ErrorMessage = "Укажите хотя бы имя или фамилию";
+            await _notificationService.ShowErrorAsync("Укажите хотя бы имя или фамилию");
             return;
         }
 
         await SafeExecuteAsync(async () =>
         {
-            var r = await _api.PutAsync<UserDto>(ApiEndpoints.Users.ById(User.Id), new UserDto
+            var result = await _api.PutAsync<object>(ApiEndpoints.Users.ById(User.Id), new UserDto
             {
                 Id = User.Id,
                 Username = User.Username,
@@ -189,15 +192,15 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 Department = User.Department
             });
 
-            if (r.Success)
+            if (result.Success)
             {
-                User = r.Data;
+                await LoadUser();
                 IsEditingProfile = false;
-                SuccessMessage = "Профиль обновлён";
+                await _notificationService.ShowSuccessAsync("Профиль обновлён");
             }
             else
             {
-                ErrorMessage = r.Error;
+                await _notificationService.ShowErrorAsync(result.Error ?? "Не удалось обновить профиль");
             }
         });
     }
@@ -235,20 +238,18 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
         await SafeExecuteAsync(async () =>
         {
-            var r = await _api.PutAsync<object>(
-                ApiEndpoints.Users.Username(User.Id),
-                new ChangeUsernameDto { NewUsername = newUsername });
+            var r = await _api.PutAsync<object>(ApiEndpoints.Users.Username(User.Id), new ChangeUsernameDto { NewUsername = newUsername });
 
             if (r.Success)
             {
                 User.Username = newUsername;
                 OnPropertyChanged(nameof(User));
                 IsEditingUsername = false;
-                SuccessMessage = "Username успешно изменён";
+                await _notificationService.ShowSuccessAsync("Username успешно изменён");
             }
             else
             {
-                ErrorMessage = r.Error;
+                await _notificationService.ShowErrorAsync(r.Error ?? "Не удалось изменить username");
             }
         });
     }
@@ -280,11 +281,11 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             {
                 IsEditingPassword = false;
                 CurrentPassword = NewPassword = ConfirmPassword = string.Empty;
-                SuccessMessage = "Пароль успешно изменён";
+                await _notificationService.ShowSuccessAsync("Пароль успешно изменён");
             }
             else
             {
-                ErrorMessage = result.Error;
+                await _notificationService.ShowErrorAsync(result.Error ?? "Не удалось изменить пароль");
             }
         });
     }
@@ -316,7 +317,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             RefreshAvatarUrl(forceCacheBuster: true);
             OnPropertyChanged(nameof(HasAvatar));
             await LoadAvatarAsync();
-            SuccessMessage = "Аватар обновлён";
+            await _notificationService.ShowSuccessAsync("Аватар обновлён");
         });
     }
 
@@ -335,11 +336,11 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
                 AvatarBitmap = null;
                 RefreshAvatarUrl();
                 OnPropertyChanged(nameof(HasAvatar));
-                SuccessMessage = "Аватар удалён";
+                await _notificationService.ShowSuccessAsync("Аватар удалён");
             }
             else
             {
-                ErrorMessage = result.Error ?? "Не удалось удалить аватар";
+                await _notificationService.ShowErrorAsync(result.Error ?? "Не удалось удалить аватар");
             }
         });
     }
@@ -351,7 +352,6 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     private void CancelAllEditing()
     {
         IsEditingProfile = IsEditingUsername = IsEditingPassword = false;
-        ErrorMessage = null;
         TempSurname = TempName = TempMidname = string.Empty;
         TempUsername = string.Empty;
         CurrentPassword = NewPassword = ConfirmPassword = string.Empty;

@@ -26,7 +26,5 @@ public partial class PollMessagePart : UserControl
 
         double delta = e.NewSize.Height - e.PreviousSize.Height;
         if (Math.Abs(delta) < 1) return;
-
-        _pollViewModel?.NotifySizeChanged(delta);
     }
 }

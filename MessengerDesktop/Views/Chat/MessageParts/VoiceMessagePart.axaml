@@ -1,86 +1,216 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
-             xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts.Shared"
-             xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
-             x:Class="MessengerDesktop.Views.Chat.MessageParts.VoiceMessagePart"
-             x:DataType="vmChat:MessageViewModel"
-             x:Name="VoiceRoot">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
+			 xmlns:parts="using:MessengerDesktop.Views.Chat.MessageParts.Shared"
+			 xmlns:vmChat="using:MessengerDesktop.ViewModels.Chat"
+			 x:Class="MessengerDesktop.Views.Chat.MessageParts.VoiceMessagePart"
+			 x:DataType="vmChat:MessageViewModel"
+			 x:Name="VoiceRoot">
+	<UserControl.Styles>
+		<!-- ── Кнопка Play/Pause ── -->
+		<Style Selector="Button.VoicePlayBtn">
+			<Setter Property="Width" Value="36"/>
+			<Setter Property="Height" Value="36"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="18"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-    <Border Classes="VoicePlayerContainer"
-            IsVisible="{Binding ShowVoiceMessage}">
-        <StackPanel Spacing="0">
+		<Style Selector="Button.VoicePlayBtn /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="CornerRadius" Value="18"/>
+		</Style>
 
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+		<Style Selector="Button.VoicePlayBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+		</Style>
 
-                <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                        Classes="VoicePlayBtn"
-                        Width="46" Height="46"
-                        Command="{Binding PlayVoiceCommand}"
-                        IsVisible="{Binding ShowPlayButton}"
-                        ToolTip.Tip="Воспроизвести">
-                    <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
-                </Button>
+		<Style Selector="Button.VoicePlayBtn:pressed">
+			<Setter Property="RenderTransform" Value="scale(0.92)"/>
+		</Style>
 
-                <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                        Classes="VoicePlayBtn"
-                        Width="46" Height="46"
-                        Command="{Binding PauseVoiceCommand}"
-                        IsVisible="{Binding ShowPauseButton}"
-                        ToolTip.Tip="Пауза">
-                    <PathIcon Data="{StaticResource PauseIcon}" Width="20" Height="20"/>
-                </Button>
+		<Style Selector="Button.VoicePlayBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+		</Style>
 
-                <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                        Classes="VoicePlayBtn"
-                        Width="46" Height="46"
-                        Command="{Binding PlayVoiceCommand}"
-                        IsVisible="{Binding ShowResumeButton}"
-                        ToolTip.Tip="Продолжить">
-                    <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
-                </Button>
+		<Style Selector="Button.VoicePlayBtn PathIcon">
+			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+		</Style>
+		<!-- ── Индикатор загрузки ── -->
+		<Style Selector="Border.VoiceLoadingContainer">
+			<Setter Property="Width" Value="36"/>
+			<Setter Property="Height" Value="36"/>
+			<Setter Property="CornerRadius" Value="18"/>
+			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+		</Style>
+		<!-- ── Бейдж с таймкодом ── -->
+		<Style Selector="Border.VoiceTimeBadge">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="8,3"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.2"/>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+				</Transitions>
+			</Setter>
+		</Style>
 
-                <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                        Classes="VoiceLoadingContainer"
-                        Width="46" Height="46"
-                        IsVisible="{Binding IsVoiceLoading}">
-                    <shared:CircularProgress Width="22" Height="22"
-                                             IsIndeterminate="True"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"/>
-                </Border>
+		<!-- ── Контейнер плеера ── -->
+		<Style Selector="Border.VoicePlayerContainer">
+			<Setter Property="MinWidth" Value="280"/>
+			<Setter Property="MaxWidth" Value="400"/>
+		</Style>
 
-                <Slider Grid.Row="0" Grid.Column="1"
-                        Classes="VoiceSlider"
-                        Value="{Binding VoicePositionPercent}"
-                        Margin="12,0,10,0"
-                        VerticalAlignment="Center"
-                        IsEnabled="{Binding IsVoicePlaying}"/>
+		<Style Selector="TextBlock.VoiceTime">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<!-- ── Ошибка воспроизведения ── -->
+		<Style Selector="TextBlock.VoiceError">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="Margin" Value="0,4,0,0"/>
+		</Style>
+		<!-- ── Слайдер прогресса ── -->
+		<Style Selector="Slider.VoiceSlider">
+			<Setter Property="MinHeight" Value="24"/>
+			<Setter Property="Height" Value="24"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0"/>
+			<Setter Property="Minimum" Value="0"/>
+			<Setter Property="Maximum" Value="100"/>
+			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		</Style>
 
-                <Grid Grid.Row="1" Grid.Column="1"
-                      Margin="12,2,0,0">
-                    <Border HorizontalAlignment="Left" Classes="VoiceTimeBadge">
-                        <TextBlock Classes="VoiceTime">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="{}{0} / {1}">
-                                    <Binding Path="VoicePositionText"/>
-                                    <Binding Path="VoiceDurationFormatted"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </Border>
+		<Style Selector="Slider.VoiceSlider /template/ Border#TrackBackground">
+			<Setter Property="Height" Value="4"/>
+			<Setter Property="CornerRadius" Value="2"/>
+			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+		</Style>
 
-                    <parts:MessageMetaBlock
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Opacity="0.7"/>
-                </Grid>
-            </Grid>
+		<Style Selector="Slider.VoiceSlider /template/ Thumb">
+			<Setter Property="Width" Value="14"/>
+			<Setter Property="Height" Value="14"/>
+		</Style>
 
-            <TextBlock Text="{Binding VoiceError}"
-                       Classes="VoiceError"
-                       IsVisible="{Binding VoiceError,
-                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        </StackPanel>
-    </Border>
+		<Style Selector="Slider.VoiceSlider /template/ Thumb /template/ Border">
+			<Setter Property="Background" Value="{DynamicResource Accent}"/>
+			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="Width" Value="14"/>
+			<Setter Property="Height" Value="14"/>
+			<Setter Property="BoxShadow" Value="0 1 4 #40000000"/>
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
+
+		<Style Selector="Slider.VoiceSlider /template/ Thumb:pointerover /template/ Border">
+			<Setter Property="RenderTransform" Value="scale(1.25)"/>
+			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+		</Style>
+
+		<Style Selector="Slider.VoiceSlider /template/ Thumb:pressed /template/ Border">
+			<Setter Property="RenderTransform" Value="scale(1.15)"/>
+			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+		</Style>
+
+		<Style Selector="Slider.VoiceSlider:disabled">
+			<Setter Property="Opacity" Value="0.4"/>
+		</Style>
+	</UserControl.Styles>
+	<Border Classes="VoicePlayerContainer"
+			IsVisible="{Binding ShowVoiceMessage}">
+		<StackPanel Spacing="0">
+
+			<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+
+				<Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+						Classes="VoicePlayBtn"
+						Width="46" Height="46"
+						Command="{Binding PlayVoiceCommand}"
+						IsVisible="{Binding ShowPlayButton}"
+						ToolTip.Tip="Воспроизвести">
+					<PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
+				</Button>
+
+				<Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+						Classes="VoicePlayBtn"
+						Width="46" Height="46"
+						Command="{Binding PauseVoiceCommand}"
+						IsVisible="{Binding ShowPauseButton}"
+						ToolTip.Tip="Пауза">
+					<PathIcon Data="{StaticResource PauseIcon}" Width="20" Height="20"/>
+				</Button>
+
+				<Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+						Classes="VoicePlayBtn"
+						Width="46" Height="46"
+						Command="{Binding PlayVoiceCommand}"
+						IsVisible="{Binding ShowResumeButton}"
+						ToolTip.Tip="Продолжить">
+					<PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
+				</Button>
+
+				<Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+						Classes="VoiceLoadingContainer"
+						Width="46" Height="46"
+						IsVisible="{Binding IsVoiceLoading}">
+					<shared:CircularProgress Width="22" Height="22"
+											 IsIndeterminate="True"
+											 HorizontalAlignment="Center"
+											 VerticalAlignment="Center"/>
+				</Border>
+
+				<Slider Grid.Row="0" Grid.Column="1"
+						Classes="VoiceSlider"
+						Value="{Binding VoicePositionPercent}"
+						Margin="12,0,10,0"
+						VerticalAlignment="Center"
+						IsEnabled="{Binding IsVoicePlaying}"/>
+
+				<Grid Grid.Row="1" Grid.Column="1"
+					  Margin="12,2,0,0">
+					<Border HorizontalAlignment="Left" Classes="VoiceTimeBadge">
+						<TextBlock Classes="VoiceTime">
+							<TextBlock.Text>
+								<MultiBinding StringFormat="{}{0} / {1}">
+									<Binding Path="VoicePositionText"/>
+									<Binding Path="VoiceDurationFormatted"/>
+								</MultiBinding>
+							</TextBlock.Text>
+						</TextBlock>
+					</Border>
+
+					<parts:MessageMetaBlock
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Opacity="0.7"/>
+				</Grid>
+			</Grid>
+
+			<TextBlock Text="{Binding VoiceError}"
+					   Classes="VoiceError"
+					   IsVisible="{Binding VoiceError,
+					   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+		</StackPanel>
+	</Border>
 </UserControl>

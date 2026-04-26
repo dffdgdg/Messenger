@@ -4,7 +4,7 @@
              xmlns:controls="using:MessengerDesktop.Views.Controls"
              xmlns:conv="using:MessengerDesktop.Converters"
              x:Class="MessengerDesktop.Views.Call.CallView"
-             x:DataType="vm:CallViewModel">
+             x:DataType="vm:CallViewModel" Background="{DynamicResource PrimaryBG}">
       <UserControl.Styles>
           	<!-- ===== CALL TILE ===== -->
 

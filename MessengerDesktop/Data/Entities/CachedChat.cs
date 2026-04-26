@@ -19,6 +19,10 @@ public class CachedChat
     [Column("last_message_is_poll")] public bool LastMessageIsPoll { get; set; }
     [Column("last_message_is_voice")] public bool LastMessageIsVoice { get; set; }
     [Column("cached_at")] public long CachedAtTicks { get; set; }
+
+    [Column("show_history_for_new_members")]
+    public bool ShowHistoryForNewMembers { get; set; } = true;
+
     [Ignore]
     public DateTime? LastMessageDate => LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
 }

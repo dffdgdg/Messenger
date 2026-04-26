@@ -12,4 +12,5 @@ public partial class Chat
     public virtual User? CreatedBy { get; set; }
     public virtual Department? Department { get; set; }
     public virtual ICollection<Message> Messages { get; set; } = [];
+    public bool ShowHistoryForNewMembers { get; set; } = true;
 }

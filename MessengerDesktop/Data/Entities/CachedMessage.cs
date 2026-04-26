@@ -18,6 +18,7 @@ public class CachedMessage
     [SQLite.Column("is_own")] public bool IsOwn { get; set; }
     [SQLite.Column("is_voice_message")] public bool IsVoiceMessage { get; set; }
     [SQLite.Column("voice_duration_seconds")] public double? VoiceDurationSeconds { get; set; }
+    [SQLite.Column("voice_waveform")] public string? VoiceWaveform { get; set; }
     [SQLite.Column("voice_file_url")] public string? VoiceFileUrl { get; set; }
     [SQLite.Column("voice_file_name")] public string? VoiceFileName { get; set; }
     [SQLite.Column("voice_content_type")] public string? VoiceContentType { get; set; }

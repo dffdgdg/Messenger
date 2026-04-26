@@ -12,7 +12,7 @@ public interface IAccessControlService
     Task<List<int>> GetUserChatIdsAsync(int userId);
     Task<List<int>> GetChatMemberIdsAsync(int chatId);
     Task<ChatType> GetChatTypeAsync(int chatId);
-
+    Task<ChatMember?> GetChatMemberAsync(int userId, int chatId);
 }
 
 public sealed partial class AccessControlService(MessengerDbContext context, ICacheService cache,
@@ -62,6 +62,8 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
         LogAdminRequired(userId, chatId);
         return Result.Forbidden("Требуются права администратора");
     }
+
+    public async Task<ChatMember?> GetChatMemberAsync(int userId, int chatId) => await GetMembershipAsync(userId, chatId);
 
     private async Task<ChatMember?> GetMembershipAsync(int userId, int chatId)
     {

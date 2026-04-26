@@ -263,7 +263,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         return (batches, totalAdded);
     }
 
-    private async Task ResetToLatestAsync(CancellationToken ct)
+    public async Task ResetToLatestAsync(CancellationToken ct)
     {
         try
         {

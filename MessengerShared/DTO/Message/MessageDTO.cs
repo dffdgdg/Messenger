@@ -47,6 +47,7 @@ public class MessageDto
 
     public bool IsVoiceMessage { get; set; }
     public double? VoiceDurationSeconds { get; set; }
+    public string? VoiceWaveform { get; set; }
     public string? VoiceFileUrl { get; set; }
     public string? VoiceFileName { get; set; }
     public string? VoiceContentType { get; set; }

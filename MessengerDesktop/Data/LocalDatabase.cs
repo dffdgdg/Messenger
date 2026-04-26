@@ -9,7 +9,7 @@ namespace MessengerDesktop.Data;
 
 public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 {
-    private const int SchemaVersion = 5;
+    private const int SchemaVersion = 7;
 
     private readonly SQLiteAsyncConnection _db;
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -120,31 +120,23 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
     }
 
-    private async Task DropAllTablesAsync()
+    private async Task DropAllTablesAsync() => await _db.RunInTransactionAsync(conn =>
     {
-        await _db.RunInTransactionAsync(conn =>
-        {
-            conn.Execute("DROP TABLE IF EXISTS messages");
-            conn.Execute("DROP TABLE IF EXISTS chats");
-            conn.Execute("DROP TABLE IF EXISTS users");
-            conn.Execute("DROP TABLE IF EXISTS read_pointers");
-            conn.Execute("DROP TABLE IF EXISTS chat_sync_state");
-            conn.Execute("DROP TABLE IF EXISTS messages_fts");
-        });
-    }
+        conn.Execute("DROP TABLE IF EXISTS messages");
+        conn.Execute("DROP TABLE IF EXISTS chats");
+        conn.Execute("DROP TABLE IF EXISTS users");
+        conn.Execute("DROP TABLE IF EXISTS read_pointers");
+        conn.Execute("DROP TABLE IF EXISTS chat_sync_state");
+        conn.Execute("DROP TABLE IF EXISTS messages_fts");
+    });
 
-    private async Task CreateIndexesAsync()
+    private async Task CreateIndexesAsync() => await _db.RunInTransactionAsync(conn =>
     {
-        await _db.RunInTransactionAsync(conn =>
-        {
-            conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id ON messages(chat_id, id DESC)");
-            conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc ON messages(chat_id, id ASC)");
-            conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_last_msg ON chats(last_message_date DESC)");
-            conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
-        });
-
-        Debug.WriteLine("[LocalDB] Indexes created");
-    }
+        conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id ON messages(chat_id, id DESC)");
+        conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc ON messages(chat_id, id ASC)");
+        conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_last_msg ON chats(last_message_date DESC)");
+        conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
+    });
 
     private async Task CreateFtsAsync()
     {

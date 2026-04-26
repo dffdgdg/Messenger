@@ -49,6 +49,7 @@ public sealed class ConverterLocator
 
         // Domain converters
         Add<ThemeToDisplayConverter>("ThemeToDisplay");
+        Add<ChatRoleToDisplayConverter>("RoleToDisplay");
         Add<InitialsConverter>("Initials", "InitialsConverter");
         Add<SearchScopeToTitleConverter>("SearchScopeToTitle");
         Add<SearchScopeToWatermarkConverter>("SearchScopeToWatermark");

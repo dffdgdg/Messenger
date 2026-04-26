@@ -1,13 +1,14 @@
 ﻿using PortAudioSharp;
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using IOStream = System.IO.Stream;
-using IOMemoryStream = System.IO.MemoryStream;
 using IOBinaryWriter = System.IO.BinaryWriter;
+using IOMemoryStream = System.IO.MemoryStream;
+using IOStream = System.IO.Stream;
 
 namespace MessengerDesktop.Services.Audio;
 
@@ -23,6 +24,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lock = new();
     private readonly object _bufferLock = new();
+    private List<byte> _waveformPeaks = [];
     private bool _disposed;
     private bool _portAudioInitialized;
 
@@ -43,6 +45,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
                 CleanupInternal();
 
                 _buffer = new IOMemoryStream();
+                _waveformPeaks = [];
                 WriteWavHeader(_buffer, 0);
 
                 if (PortAudio.DefaultInputDevice == PortAudio.NoDevice)
@@ -62,11 +65,12 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
 
                 var capturedBuffer = _buffer;
                 var capturedLock = _bufferLock;
+                var capturedPeaks = _waveformPeaks;
 
                 _paStream = new Stream(inParams, outParams: null, SampleRate, FramesPerBuffer, StreamFlags.ClipOff,
                     callback: (input, _, frameCount, ref _, _, _) =>
                     {
-                        OnAudioData(input, frameCount, capturedBuffer, capturedLock);
+                        OnAudioData(input, frameCount, capturedBuffer, capturedLock, capturedPeaks);
                         return StreamCallbackResult.Continue;
                     },
                     userData: IntPtr.Zero);
@@ -113,7 +117,8 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
                     AudioStream = resultStream,
                     FileName = $"voice_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav",
                     ContentType = "audio/wav",
-                    Duration = duration
+                    Duration = duration,
+                    Waveform = DownsampleWaveform(_waveformPeaks, 100)
                 };
 
                 CleanupInternal();
@@ -148,7 +153,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         return Task.CompletedTask;
     }
 
-    private static void OnAudioData(IntPtr input, long frameCount, IOMemoryStream buffer, object bufferLock)
+    private static void OnAudioData(IntPtr input, long frameCount, IOMemoryStream buffer, object bufferLock, List<byte> peaks)
     {
         if (input == IntPtr.Zero) return;
 
@@ -163,6 +168,22 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
             {
                 buffer.Write(temp, 0, byteCount);
             }
+
+            short maxPeak = 0;
+            int sampleCount = byteCount / 2;
+            var span = new ReadOnlySpan<byte>(temp, 0, byteCount);
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                short sample = BitConverter.ToInt16(span.Slice(i * 2, 2));
+                if (sample > maxPeak) maxPeak = sample;
+                else if (-sample > maxPeak) maxPeak = (short)-sample;
+            }
+
+            lock (peaks)
+            {
+                peaks.Add((byte)(maxPeak / 128));
+            }
         }
         catch (Exception ex)
         {
@@ -174,10 +195,35 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
         }
     }
 
+    private static string DownsampleWaveform(List<byte> peaks, int targetBars)
+    {
+        if (peaks.Count == 0) return string.Empty;
+        if (peaks.Count <= targetBars) return Convert.ToBase64String(peaks.ToArray());
+
+        var result = new byte[targetBars];
+        double step = (double)peaks.Count / targetBars;
+
+        for (int i = 0; i < targetBars; i++)
+        {
+            int start = (int)(i * step);
+            int end = (int)((i + 1) * step);
+            end = Math.Min(end, peaks.Count);
+
+            byte max = 0;
+            for (int j = start; j < end; j++)
+            {
+                if (peaks[j] > max) max = peaks[j];
+            }
+            result[i] = max;
+        }
+
+        return Convert.ToBase64String(result);
+    }
+
     private static void WriteWavHeader(IOStream stream, int dataLength)
     {
         const int byteRate = SampleRate * Channels * (BitsPerSample / 8);
-        const short blockAlign = (short)(Channels * (BitsPerSample / 8));
+        const short blockAlign = Channels * (BitsPerSample / 8);
 
         using var writer = new IOBinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true);
 

@@ -20,6 +20,7 @@ public class ChatDto
     public bool LastMessageIsVoice { get; set; }
     public bool LastMessageHasFilesOnly { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore]
+    [JsonIgnore]
     public bool HideSenderPrefix { get; set; }
+    public bool ShowHistoryForNewMembers { get; set; } = true;
 }

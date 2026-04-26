@@ -27,6 +27,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, UserDto>? MemberJoined;
     event Action<int, int>? MemberLeft;
     event Action? Reconnected;
+    event Action<ChatDto>? ChatUpdated;
 
     bool IsConnected { get; }
     Task ConnectAsync(CancellationToken ct = default);
@@ -78,6 +79,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action<int, UserDto>? MemberJoined;
     public event Action<int, int>? MemberLeft;
     public event Action? Reconnected;
+    public event Action<ChatDto>? ChatUpdated;
 
     #endregion
 
@@ -201,8 +203,14 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, int, int?, DateTime?>("MessageRead", (c, u, m, t) => PostUI(() => MessageRead?.Invoke(c, u, m, t))));
         _subs.Add(_hub.On<int, UserDto>("MemberJoined", (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
         _subs.Add(_hub.On<int, int>("MemberLeft", (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
+        _subs.Add(_hub.On<ChatDto>("ChatUpdated", OnChatUpdated));
     }
 
+    private void OnChatUpdated(ChatDto chat)
+    {
+        _ = SafeCacheAsync(() => _cache.UpsertChatsAsync([chat]), "chat update");
+        PostUI(() => ChatUpdated?.Invoke(chat));
+    }
     private void UnsubscribeHubEvents()
     {
         foreach (var s in _subs) try { s.Dispose(); } catch { /* Ignored */ }

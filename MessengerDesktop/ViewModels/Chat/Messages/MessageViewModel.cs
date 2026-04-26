@@ -55,6 +55,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string? DateSeparatorText { get; set; }
     [ObservableProperty] public partial bool IsVoiceMessage { get; set; }
     [ObservableProperty] public partial double? VoiceDurationSeconds { get; set; }
+    [ObservableProperty] public partial string? VoiceWaveform { get; set; }
     [ObservableProperty] public partial string? VoiceFileUrl { get; set; }
     [ObservableProperty] public partial bool IsVoicePlaying { get; set; }
     [ObservableProperty] public partial bool IsVoicePaused { get; set; }
@@ -145,8 +146,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             (message.IsEdited, message.IsDeleted, message.EditedAt, message.Poll, message.Files ?? []);
         IsPinned = message.IsPinned;
         (SenderName, SenderAvatar) = (message.SenderName, message.SenderAvatarUrl);
-        (IsVoiceMessage, VoiceDurationSeconds, VoiceFileUrl) =
-            (message.IsVoiceMessage, message.VoiceDurationSeconds, message.VoiceFileUrl);
+        (IsVoiceMessage, VoiceDurationSeconds, VoiceWaveform, VoiceFileUrl) =
+            (message.IsVoiceMessage, message.VoiceDurationSeconds, message.VoiceWaveform, message.VoiceFileUrl);
         (IsSystemMessage, SystemEventType, TargetUserId, TargetUserName) =
             (message.IsSystemMessage, message.SystemEventType, message.TargetUserId, message.TargetUserName);
         (ReplyToMessageId, ForwardedFromMessageId) =

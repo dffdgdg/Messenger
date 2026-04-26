@@ -173,7 +173,7 @@
                                     Background="{DynamicResource AccentMuted}"
                                     CornerRadius="6"
                                     Padding="10,3">
-                                <TextBlock Text="{Binding CurrentUserRole}"
+                                <TextBlock Text="{Binding CurrentUserRole, Converter={conv:Converter Name=RoleToDisplay}}"
                                            FontSize="12"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource Accent}"/>
@@ -201,9 +201,10 @@
                                                    FontSize="14"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
-                                                 VerticalAlignment="Center"
-                                                 OnContent="" OffContent=""
-                                                 Margin="0,0,-8,0"/>
+                                                  VerticalAlignment="Center"
+                                                  OnContent="" OffContent=""
+                                                  IsChecked="{Binding ShowHistoryForNewMembers}"
+                                                  IsEnabled="{Binding CanManageParticipants}" />
                                 </Grid>
                             </Border>
                         </Border>

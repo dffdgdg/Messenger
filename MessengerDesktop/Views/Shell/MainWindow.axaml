@@ -216,7 +216,6 @@
 		<Border ZIndex="1001"
 				IsVisible="{Binding ActiveCallStore.IsCallUiOpen}"
 				Margin="82,56,9,9"
-				CornerRadius="16"
 				ClipToBounds="True">
 			<ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
 				<ContentControl.DataTemplates>

@@ -55,6 +55,7 @@ public partial class MessengerDbContext : DbContext
             entity.Property(e => e.LastMessageTime).HasColumnType("timestamp without time zone").HasColumnName("last_message_time");
             entity.Property(e => e.Name).HasMaxLength(100).HasColumnName("name");
             entity.Property(e => e.Type).HasColumnName("type").HasColumnType("chat_type");
+            entity.Property(e => e.ShowHistoryForNewMembers).HasColumnName("show_history_for_new_members").HasDefaultValue(true);
             entity.HasOne(d => d.CreatedBy).WithMany(p => p.Chats).HasForeignKey(d => d.CreatedById).OnDelete(DeleteBehavior.Cascade).HasConstraintName("Chats_CreatedById_fkey");
         });
 
@@ -130,6 +131,7 @@ public partial class MessengerDbContext : DbContext
             entity.ToTable("voice_messages");
             entity.Property(e => e.MessageId).ValueGeneratedNever().HasColumnName("message_id");
             entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
+            entity.Property(e => e.Waveform).HasColumnName("waveform");
             entity.Property(e => e.FilePath).HasColumnName("file_path");
             entity.Property(e => e.FileName).HasMaxLength(255).HasColumnName("file_name");
             entity.Property(e => e.ContentType).HasMaxLength(100).HasDefaultValue("audio/wav").HasColumnName("content_type");

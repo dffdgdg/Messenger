@@ -16,5 +16,6 @@ public class CreateMessageRequest
     public string? VoiceContentType { get; set; }
     public long? VoiceFileSize { get; set; }
     public double? VoiceDurationSeconds { get; set; }
+    public string? VoiceWaveform { get; set; }
     public List<MessageFileDto>? Files { get; set; }
 }

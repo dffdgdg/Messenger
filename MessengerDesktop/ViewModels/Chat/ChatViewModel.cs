@@ -266,6 +266,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
+        Context.Hub.ChatUpdated += OnChatUpdated;
 
         Context.Chat = new ChatDto { Id = chatId, Name = "Загрузка...", Type = ChatType.Chat };
 
@@ -1146,10 +1147,27 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Attachments.Dispose();
 
         MessageManager.MessagePinStateChanged -= OnMessagePinStateChanged;
+        Context.Hub.ChatUpdated -= OnChatUpdated;
 
         foreach (var msg in PinnedMessages) msg.Dispose();
         PinnedMessages.Clear();
     }
 
+    private async void OnChatUpdated(ChatDto chat)
+    {
+        if (chat.Id != Context.ChatId || Context.IsDisposed)
+            return;
+
+        Context.Chat = chat;
+
+        try
+        {
+            await MessageManager.ResetToLatestAsync(Context.LifetimeToken);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] Ошибка при обновлении после ChatUpdated: {ex.Message}");
+        }
+    }
     #endregion
 }

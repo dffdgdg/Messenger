@@ -20,10 +20,12 @@ public interface IChatService
 }
 
 public partial class ChatService(MessengerDbContext context, IAccessControlService accessControl, IFileService fileService, IOnlineUserService onlineService,
-    IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, ICacheService cacheService, ISystemMessageService systemMessages,
+    IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, ICacheService cacheService, ISystemMessageService systemMessages, IHubNotifier hubNotifier,
     AppDateTime appDateTime, ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     #region Get Chats
+
+    private readonly IHubNotifier _hubNotifier = hubNotifier;
 
     public async Task<Result<List<ChatDto>>> GetUserChatsAsync(int userId)
     {
@@ -87,6 +89,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             dto.Avatar = urlBuilder.BuildUrl(item.Chat.Avatar);
         }
 
+        dto.ShowHistoryForNewMembers = item.Chat.ShowHistoryForNewMembers;
+
         return dto;
     }
     private static (string? Preview, string? SenderName, bool IsSystem) BuildLastMessagePreview(
@@ -121,7 +125,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             Id = chat.Id,
             Type = chat.Type,
             CreatedById = chat.CreatedById ?? 0,
-            LastMessageDate = chat.LastMessageTime
+            LastMessageDate = chat.LastMessageTime,
+            ShowHistoryForNewMembers = chat.ShowHistoryForNewMembers
         };
 
         if (chat.Type == ChatType.Contact)
@@ -318,21 +323,31 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             chat.Type = dto.ChatType.Value;
         }
 
+        if (dto.ShowHistoryForNewMembers.HasValue)
+        {
+            chat.ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers.Value;
+        }
+
         var saveResult = await SaveChangesAsync();
         if (saveResult.IsFailure)
             return Result<ChatDto>.FromFailure(saveResult);
 
         LogChatUpdated(chatId, userId);
 
-        return Result<ChatDto>.Success(new ChatDto
+        var updatedDto = new ChatDto
         {
             Id = chat.Id,
             Name = chat.Name,
             Type = chat.Type,
             CreatedById = chat.CreatedById ?? 0,
             LastMessageDate = chat.LastMessageTime,
-            Avatar = urlBuilder.BuildUrl(chat.Avatar)
-        });
+            Avatar = urlBuilder.BuildUrl(chat.Avatar),
+            ShowHistoryForNewMembers = chat.ShowHistoryForNewMembers
+        };
+
+        await _hubNotifier.SendToChatAsync(chatId, "ChatUpdated", updatedDto);
+
+        return Result<ChatDto>.Success(updatedDto);
     }
 
     public async Task<Result> DeleteChatAsync(int chatId, int userId)

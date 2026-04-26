@@ -32,6 +32,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     [ObservableProperty] public partial Bitmap? AvatarPreview { get; set; }
     [ObservableProperty] public partial ChatRole CurrentUserRole { get; set; } = ChatRole.Owner;
     [ObservableProperty] public partial ObservableCollection<int> SelectedAdminIds { get; set; } = [];
+    [ObservableProperty] public partial bool ShowHistoryForNewMembers { get; set; }
 
     public bool IsNewChat => _originalChat == null;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
@@ -63,6 +64,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         await LoadUsersAsync();
         if (_originalChat?.Avatar is { } url)
             await LoadAvatarFromUrlAsync(url);
+        ShowHistoryForNewMembers = _originalChat?.ShowHistoryForNewMembers ?? true;
         IsBusy = false;
     });
 
@@ -284,7 +286,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
                 Id = _originalChat?.Id ?? 0,
                 Name = Name.Trim(),
                 Type = ChatType.Chat,
-                CreatedById = _currentUserId
+                CreatedById = _currentUserId,
+                ShowHistoryForNewMembers = ShowHistoryForNewMembers
             };
 
             if (SaveAction == null) { await RequestCloseAsync(); return; }

@@ -197,7 +197,7 @@
 			<Setter Property="Width" Value="36"/>
 			<Setter Property="Height" Value="36"/>
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="CornerRadius" Value="18"/>
+			<Setter Property="CornerRadius" Value="164"/>
 			<Setter Property="Cursor" Value="Hand"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Background" Value="{DynamicResource Accent}"/>

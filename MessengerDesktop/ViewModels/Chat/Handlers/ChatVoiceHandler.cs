@@ -167,6 +167,7 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
                 SenderId = Ctx.CurrentUserId,
                 IsVoiceMessage = true,
                 VoiceDurationSeconds = recording.Duration.TotalSeconds,
+                VoiceWaveform = recording.Waveform,
                 VoiceFileUrl = uploadResult.Data.Url,
                 VoiceFileName = uploadResult.Data.FileName,
                 VoiceContentType = uploadResult.Data.ContentType,

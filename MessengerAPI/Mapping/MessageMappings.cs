@@ -47,6 +47,7 @@ public static class MessageMappings
 
             IsVoiceMessage = voice != null,
             VoiceDurationSeconds = voice?.DurationSeconds,
+            VoiceWaveform = voice?.Waveform,
             VoiceFileUrl = isDeleted ? null : voice?.FilePath.BuildFullUrl(urlBuilder),
             VoiceFileName = voice?.FileName,
             VoiceContentType = voice?.ContentType,

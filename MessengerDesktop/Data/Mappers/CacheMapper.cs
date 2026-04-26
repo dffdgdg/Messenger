@@ -30,6 +30,7 @@ public static class CacheMapper
         IsOwn = dto.IsOwn,
         IsVoiceMessage = dto.IsVoiceMessage,
         VoiceDurationSeconds = dto.VoiceDurationSeconds,
+        VoiceWaveform = dto.VoiceWaveform,
         VoiceFileUrl = dto.VoiceFileUrl,
         VoiceFileName = dto.VoiceFileName,
         VoiceContentType = dto.VoiceContentType,
@@ -74,6 +75,7 @@ public static class CacheMapper
             SenderAvatarUrl = entity.SenderAvatarUrl,
             IsVoiceMessage = entity.IsVoiceMessage,
             VoiceDurationSeconds = entity.VoiceDurationSeconds,
+            VoiceWaveform = entity.VoiceWaveform,
             VoiceFileUrl = entity.VoiceFileUrl,
             VoiceFileName = entity.VoiceFileName,
             VoiceContentType = entity.VoiceContentType,
@@ -145,6 +147,7 @@ public static class CacheMapper
         LastMessageIsSystem = dto.LastMessageIsSystem,
         LastMessageIsPoll = dto.LastMessageIsPoll,
         LastMessageIsVoice = dto.LastMessageIsVoice,
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers,
         CachedAtTicks = DateTime.UtcNow.Ticks
     };
 
@@ -162,6 +165,7 @@ public static class CacheMapper
         LastMessageIsSystem = entity.LastMessageIsSystem,
         LastMessageIsPoll = entity.LastMessageIsPoll,
         LastMessageIsVoice = entity.LastMessageIsVoice,
+        ShowHistoryForNewMembers = entity.ShowHistoryForNewMembers
     };
 
     #endregion

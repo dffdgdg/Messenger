@@ -143,7 +143,7 @@
 								 ConverterParameter=Admin}"/>
 				</StackPanel>
 
-				<!-- Плашка активного звонка (Вертикальная плитка для узкого сайдбара) -->
+				<!-- Плашка активного звонка  -->
 				<Border DockPanel.Dock="Bottom"
 						Width="72"
 						Margin="0,0,0,10"
@@ -154,7 +154,7 @@
 						ClipToBounds="True"
 						IsVisible="{Binding CallBanner.Store.IsInCall}">
 
-					<!-- Добавляем легкую тень для плавающего эффекта (как в CallTile) -->
+					<!-- Добавляем легкую тень для плавающего эффекта -->
 					<Border.BoxShadow>
 						<BoxShadows>0 4 12 #2090EC40</BoxShadows>
 					</Border.BoxShadow>
@@ -289,7 +289,7 @@
 			<Border Grid.Column="1"
 					Background="{DynamicResource SecondaryBG}"
 					Margin="0,8,9,9"
-					CornerRadius="8">
+					CornerRadius="7">
 				<ContentControl Content="{Binding CurrentMenuViewModel}"/>
 			</Border>
 		</Grid>

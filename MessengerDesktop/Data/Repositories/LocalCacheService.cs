@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.Data.Repositories;
 
-public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository messageRepo,IChatCacheRepository chatRepo)
+public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository messageRepo, IChatCacheRepository chatRepo)
     : ILocalCacheService
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = CacheJsonContext.Default
     };
 
     private readonly IMessageCacheRepository _messageRepo = messageRepo ?? throw new ArgumentNullException(nameof(messageRepo));
@@ -47,7 +48,7 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
 
     public async Task MarkMessageDeletedAsync(int messageId) => await _messageRepo.MarkDeletedAsync(messageId);
 
-    public async Task<CachedMessagesResult?> GetMessagesAsync(int chatId, int count)
+    public async Task<CachedMessagesResult?> GetMessagesAsync(int chatId, int count) => await Task.Run(async () =>
     {
         var syncState = await GetSyncStateAsync(chatId);
         if (syncState == null) return null;
@@ -64,72 +65,79 @@ public class LocalCacheService(LocalDatabase localDb,IMessageCacheRepository mes
             CacheOldestId = syncState.OldestLoadedId,
             CacheNewestId = syncState.NewestLoadedId
         };
-    }
+    });
 
     public async Task<CachedMessagesResult?> GetMessagesBeforeAsync(int chatId, int beforeId, int count)
     {
-        var cached = await _messageRepo.GetBeforeAsync(chatId, beforeId, count);
-        if (cached.Count == 0) return null;
-
-        var syncState = await GetSyncStateAsync(chatId);
-
-        var isComplete = cached.Count >= count || (syncState is { HasMoreOlder: false } && cached.Count > 0 && cached[0].Id == (syncState.OldestLoadedId ?? 0));
-
-        return new CachedMessagesResult
+        return await Task.Run(async () =>
         {
-            Messages = cached.ConvertAll(m => m.ToDto()),
-            HasMoreOlder = syncState?.HasMoreOlder ?? true,
-            HasMoreNewer = true,
-            IsComplete = isComplete,
-            CacheOldestId = syncState?.OldestLoadedId,
-            CacheNewestId = syncState?.NewestLoadedId
-        };
+            var cached = await _messageRepo.GetBeforeAsync(chatId, beforeId, count);
+            if (cached.Count == 0) return null;
+
+            var syncState = await GetSyncStateAsync(chatId);
+            var isComplete = cached.Count >= count || (syncState is { HasMoreOlder: false } && cached.Count > 0 && cached[0].Id == (syncState.OldestLoadedId ?? 0));
+
+            return new CachedMessagesResult
+            {
+                Messages = cached.ConvertAll(m => m.ToDto()),
+                HasMoreOlder = syncState?.HasMoreOlder ?? true,
+                HasMoreNewer = true,
+                IsComplete = isComplete,
+                CacheOldestId = syncState?.OldestLoadedId,
+                CacheNewestId = syncState?.NewestLoadedId
+            };
+        });
     }
 
     public async Task<CachedMessagesResult?> GetMessagesAfterAsync(int chatId, int afterId, int count)
     {
-        var cached = await _messageRepo.GetAfterAsync(chatId, afterId, count);
-        if (cached.Count == 0) return null;
-
-        var syncState = await GetSyncStateAsync(chatId);
-
-        return new CachedMessagesResult
+        return await Task.Run(async () =>
         {
-            Messages = cached.ConvertAll(m => m.ToDto()),
-            HasMoreOlder = true,
-            HasMoreNewer = syncState?.HasMoreNewer ?? true,
-            IsComplete = cached.Count >= count,
-            CacheOldestId = syncState?.OldestLoadedId,
-            CacheNewestId = syncState?.NewestLoadedId
-        };
+            var cached = await _messageRepo.GetAfterAsync(chatId, afterId, count);
+            if (cached.Count == 0) return null;
+
+            var syncState = await GetSyncStateAsync(chatId);
+
+            return new CachedMessagesResult
+            {
+                Messages = cached.ConvertAll(m => m.ToDto()),
+                HasMoreOlder = true,
+                HasMoreNewer = syncState?.HasMoreNewer ?? true,
+                IsComplete = cached.Count >= count,
+                CacheOldestId = syncState?.OldestLoadedId,
+                CacheNewestId = syncState?.NewestLoadedId
+            };
+        });
     }
 
     public async Task<CachedMessagesResult?> GetMessagesAroundAsync(int chatId, int messageId, int count)
     {
-        var halfCount = count / 2;
-        var cached = await _messageRepo.GetAroundAsync(chatId, messageId, halfCount);
-        if (cached.Count == 0) return null;
-
-        var syncState = await GetSyncStateAsync(chatId);
-
-        var hasTarget = cached.Any(m => m.Id == messageId);
-
-        return new CachedMessagesResult
+        return await Task.Run(async () =>
         {
-            Messages = cached.ConvertAll(m => m.ToDto()),
-            HasMoreOlder = syncState?.HasMoreOlder ?? true,
-            HasMoreNewer = syncState?.HasMoreNewer ?? true,
-            IsComplete = hasTarget,
-            CacheOldestId = syncState?.OldestLoadedId,
-            CacheNewestId = syncState?.NewestLoadedId
-        };
+            var halfCount = count / 2;
+            var cached = await _messageRepo.GetAroundAsync(chatId, messageId, halfCount);
+            if (cached.Count == 0) return null;
+
+            var syncState = await GetSyncStateAsync(chatId);
+            var hasTarget = cached.Any(m => m.Id == messageId);
+
+            return new CachedMessagesResult
+            {
+                Messages = cached.ConvertAll(m => m.ToDto()),
+                HasMoreOlder = syncState?.HasMoreOlder ?? true,
+                HasMoreNewer = syncState?.HasMoreNewer ?? true,
+                IsComplete = hasTarget,
+                CacheOldestId = syncState?.OldestLoadedId,
+                CacheNewestId = syncState?.NewestLoadedId
+            };
+        });
     }
 
-    public async Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50)
+    public async Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50) => await Task.Run(async () =>
     {
         var cached = await _messageRepo.SearchAsync(query, limit);
         return cached.ConvertAll(m => m.ToDto());
-    }
+    });
 
     public async Task<List<ChatDto>> GetChatsAsync(bool isGroupMode)
     {

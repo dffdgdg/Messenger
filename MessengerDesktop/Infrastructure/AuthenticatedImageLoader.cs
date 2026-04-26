@@ -20,7 +20,7 @@ public sealed class AuthenticatedImageLoader : BaseWebImageLoader
     private readonly string _cacheDirectory;
 
     private readonly LinkedList<(string Key, byte[] Data)> _lruList = new();
-    private readonly Dictionary<string, LinkedListNode<(string Key, byte[] Data)>> _lruMap = new();
+    private readonly Dictionary<string, LinkedListNode<(string Key, byte[] Data)>> _lruMap = [];
     private readonly Lock _lruLock = new();
     private const int MaxRamCacheItems = 50;
     private long _ramCacheBytes;

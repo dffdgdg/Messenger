@@ -204,7 +204,8 @@
 			</Border>
 
 			<Grid Grid.Row="1">
-				<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"/>
+				<skeleton:ChatInfoSkeleton IsVisible="{Binding IsInitialLoading}"
+                                          IsContactChat="{Binding IsContactChat}"/>
 
 				<ScrollViewer Classes="ThinScrollbar AutoHideScrollbar"
 							  IsVisible="{Binding !IsInitialLoading}">

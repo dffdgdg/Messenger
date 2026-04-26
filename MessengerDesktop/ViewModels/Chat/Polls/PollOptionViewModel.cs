@@ -6,7 +6,7 @@ public partial class PollOptionViewModel : ObservableObject
 {
     private readonly PollViewModel _pollViewModel;
     private readonly PollOptionDto _option;
-
+    public double VotesFraction => VotesPercentage / 100.0;
     [ObservableProperty] public partial bool IsSelected { get; set; }
     [ObservableProperty] public partial int VotesCount { get; set; }
     [ObservableProperty] public partial double VotesPercentage { get; set; }

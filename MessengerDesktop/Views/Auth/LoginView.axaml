@@ -88,7 +88,7 @@
 						   Stretch="Uniform"/>
 
 					<StackPanel Spacing="6">
-						<TextBlock Text="ВнутрьСеть" FontSize="20" FontWeight="SemiBold"
+						<TextBlock Text="ВнутрьСеть" FontSize="20" FontWeight="Bold"
 								   HorizontalAlignment="Center"/>
 						<TextBlock Text="Войдите в свой аккаунт" FontSize="14"
 								   HorizontalAlignment="Center"

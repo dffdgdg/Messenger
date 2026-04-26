@@ -27,5 +27,6 @@
         <FluentTheme/>
         <StyleInclude Source="avares://MessengerDesktop/Assets/Styles/Base/Animations.axaml"/>
         <StyleInclude Source="avares://MessengerDesktop/Assets/Styles/Base/MainStyle.axaml"/>
+        <StyleInclude Source="avares://MessengerDesktop/Assets/Styles/MessageStyles.axaml"/>
     </Application.Styles>
 </Application>

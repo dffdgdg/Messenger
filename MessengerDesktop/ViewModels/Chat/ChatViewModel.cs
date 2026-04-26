@@ -232,8 +232,15 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         dependencies.GlobalHub.SetCurrentChat(chatId);
 
-        MessageManager = new ChatMessageManager(Context, dependencies.Media, OpenMentionProfileCommand);
+        var chatCommands = new ChatCommands
+        {
+            OpenProfile = OpenProfileCommand // Эта команда уже доступна — [RelayCommand]
+        };
 
+        // 2. Создаём MessageManager с пустым контейнером
+        MessageManager = new ChatMessageManager(Context, dependencies.Media, chatCommands, OpenMentionProfileCommand);
+
+        // 3. Создаём все суб-хэндлеры (Reply теперь может использовать MessageManager)
         Attachments = new ChatAttachmentManager(chatId, dependencies.ApiClient, storageProvider);
         MemberLoader = new ChatMemberLoader(chatId, currentUserId, dependencies.ApiClient);
 
@@ -246,8 +253,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
-        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
+        // 4. Заполняем команды — теперь все хэндлеры инициализированы
+        chatCommands.Edit = EditDelete.StartEditCommand;
+        chatCommands.Copy = EditDelete.CopyMessageTextCommand;
+        chatCommands.Delete = EditDelete.DeleteMessageCommand;
+        chatCommands.TogglePin = EditDelete.TogglePinCommand;
+        chatCommands.Reply = Reply.StartReplyCommand;
+        chatCommands.ScrollToReply = Reply.ScrollToReplyOriginalCommand;
+        chatCommands.Forward = Forward.StartForwardCommand;
 
+        // 5. Подписки
+        _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
 

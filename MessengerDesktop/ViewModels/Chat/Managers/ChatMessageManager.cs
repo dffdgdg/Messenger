@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Data.Entities;
 using MessengerDesktop.Data.Repositories;
+using MessengerDesktop.Infrastructure;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.UI;
 using MessengerDesktop.ViewModels.Factories;
@@ -14,7 +15,8 @@ using System.Windows.Input;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(ChatContext context, MediaServices media, ICommand? mentionClickCommand = null) : IAsyncDisposable
+public sealed class ChatMessageManager(ChatContext context, MediaServices media,
+    ChatCommands? chatCommands = null, ICommand? mentionClickCommand = null) : IAsyncDisposable
 {
     private readonly ChatContext _chatContext = context ?? throw new ArgumentNullException(nameof(context));
     private readonly IApiClientService _apiClient = context.Api;
@@ -23,8 +25,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private readonly INotificationService? _notificationService = context.Notifications;
     private readonly ILocalCacheService? _cacheService = context.Cache;
     private readonly IAudioPlayerService? _audioPlayer = (media ?? throw new ArgumentNullException(nameof(media))).AudioPlayer;
-
-    private readonly ICommand? _mentionClickCommand = mentionClickCommand;
     private readonly int _chatId = context.ChatId;
     private readonly int _userId = context.CurrentUserId;
 
@@ -33,19 +33,23 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private volatile bool _hasMoreOlder = true;
     private volatile bool _hasMoreNewer;
     private readonly HashSet<int> _loadedMessageIds = [];
+    private readonly Dictionary<int, MessageViewModel> _messageIndex = [];
 
     private int _isLoading;
     private readonly CancellationTokenSource _disposeCts = new();
     private readonly Lock _bgLock = new();
     private readonly List<Task> _backgroundTasks = [];
 
+    // ── Кеш members lookup ──
+    private Dictionary<int, UserDto>? _membersLookup;
+
     private const int MaxGapFillBatches = 5;
-    private const int MaxMessagesInMemory = 200;
-    private const int TrimBatchSize = 80;
+    private const int MaxMessagesInMemory = 60;
+    private const int TrimBatchSize = 20;
     private const int DefaultPage = AppConstants.DefaultPageSize;
     private const int LoadMorePage = AppConstants.LoadMorePageSize;
 
-    public ObservableCollection<MessageViewModel> Messages { get; } = [];
+    public RangeObservableCollection<MessageViewModel> Messages { get; } = [];
     public bool IsLoading => Volatile.Read(ref _isLoading) != 0;
     public bool HasMoreOlder => _hasMoreOlder;
     public bool HasMoreNewer => _hasMoreNewer;
@@ -63,6 +67,9 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         FirstUnreadMessageId = info.FirstUnreadMessageId;
         Debug.WriteLine($"[MessageManager] ReadInfo: lastRead={LastReadMessageId}, firstUnread={FirstUnreadMessageId}");
     }
+
+    /// <summary>Сбросить кеш участников (вызывать при обновлении members)</summary>
+    public void InvalidateMembersCache() => _membersLookup = null;
 
     public Task<int?> LoadInitialMessagesAsync(CancellationToken ct = default)
         => WithLoadingGuardAsync(() => LoadInitialCoreAsync(ct));
@@ -91,7 +98,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     {
         if (_cacheService == null) return null;
 
-        var cached = await _cacheService.GetMessagesAsync(_chatId, DefaultPage);
+        var cached = await Task.Run(() => _cacheService.GetMessagesAsync(_chatId, DefaultPage));
+
         if (cached is not { Messages.Count: > 0 }) return null;
 
         RenderMessages(cached.Messages);
@@ -118,7 +126,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     {
         if (_cacheService != null)
         {
-            var cached = await _cacheService.GetMessagesAroundAsync(_chatId, messageId, DefaultPage);
+            var cached = await Task.Run(() => _cacheService.GetMessagesAroundAsync(_chatId, messageId, DefaultPage));
+
             if (cached is { IsComplete: true, Messages.Count: > 0 })
             {
                 RenderMessages(cached.Messages);
@@ -171,8 +180,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private async Task<DirectionalPage?> TryLoadDirectionalFromCacheAsync(LoadDirection dir, int anchorId, int count, CancellationToken ct)
     {
         var cached = dir == LoadDirection.Older
-            ? await _cacheService!.GetMessagesBeforeAsync(_chatId, anchorId, count)
-            : await _cacheService!.GetMessagesAfterAsync(_chatId, anchorId, count);
+            ? await Task.Run(() => _cacheService!.GetMessagesBeforeAsync(_chatId, anchorId, count))
+            : await Task.Run(() => _cacheService!.GetMessagesAfterAsync(_chatId, anchorId, count));
 
         if (cached is { IsComplete: true, Messages.Count: > 0 })
             return new(cached.Messages, GetCachedHasMore(cached, dir));
@@ -218,7 +227,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
                 Debug.WriteLine($"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batches} батчей");
             }
         }
-        catch (OperationCanceledException) { /* Отменено */ }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}"); }
         finally { EndLoading(); }
     }
@@ -299,7 +308,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
             await SafeUpdateSyncStateAsync();
         }
-        catch (OperationCanceledException) { /* Отменено */ }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}"); }
     }
 
@@ -310,6 +319,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         var vm = CreateMessageViewModel(message);
         if (message.SenderId != _userId) vm.IsUnread = true;
 
+        _messageIndex[message.Id] = vm;
         Messages.Add(vm);
         TrackBounds(message.Id);
         UpdateDateSeparatorForNewMessage(vm);
@@ -338,7 +348,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     public void HandleMessageUpdated(MessageDto dto)
     {
-        var existing = Messages.FirstOrDefault(m => m.Id == dto.Id);
+        var existing = FindMessage(dto.Id);
 
         var pinChanged = existing == null ? dto.IsPinned : existing.IsPinned != dto.IsPinned;
 
@@ -379,36 +389,63 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private void MutateMessages(List<MessageDto> dtos, bool append)
     {
-        var lookup = BuildMembersLookup();
-        var startIndex = Messages.Count;
-        var added = false;
+        var lookup = GetMembersLookup();
+        var newVms = new List<MessageViewModel>();
 
-        var ordered = append ? dtos : dtos.AsEnumerable().Reverse();
-
-        foreach (var msg in ordered)
+        foreach (var msg in append ? dtos : dtos.AsEnumerable().Reverse())
         {
             if (!_loadedMessageIds.Add(msg.Id)) continue;
-
             var vm = CreateMessageViewModel(msg, lookup);
-            if (append) Messages.Add(vm);
-            else Messages.Insert(0, vm);
-
+            newVms.Add(vm);
+            _messageIndex[msg.Id] = vm;
             TrackBounds(msg.Id);
-            added = true;
         }
 
-        if (!added) return;
-
-        UpdateDateSeparators();
+        if (newVms.Count == 0) return;
 
         if (append)
         {
-            TrimOldMessagesFromStart();
+            var startIndex = Messages.Count;
+            Messages.AddRange(newVms);
+
+            UpdateDateSeparatorsForRange(startIndex > 0 ? startIndex - 1 : 0, Messages.Count - 1);
             UpdateGroupingFrom(Math.Max(0, startIndex - 1));
+
+            TrimOldMessagesFromStart();
         }
         else
         {
-            RecalculateGrouping();
+            Messages.InsertRange(0, newVms);
+
+            UpdateDateSeparatorsForRange(0, Math.Min(newVms.Count, Messages.Count - 1));
+            RecalculateGroupingForRange(0, Math.Min(newVms.Count, Messages.Count - 1));
+        }
+    }
+
+    private void UpdateDateSeparatorsForRange(int startIndex, int endIndex)
+    {
+        for (var i = startIndex; i <= endIndex; i++)
+        {
+            var msg = Messages[i];
+            var prevDate = i > 0 ? Messages[i - 1].CreatedAt.Date : (DateTime?)null;
+            var date = msg.CreatedAt.Date;
+
+            var isNew = prevDate == null || date != prevDate.Value;
+            msg.ShowDateSeparator = isNew;
+            msg.DateSeparatorText = isNew ? FormatDateSeparator(date) : null;
+        }
+    }
+
+    private void RecalculateGroupingForRange(int startIndex, int endIndex)
+    {
+        for (var i = startIndex; i <= endIndex; i++)
+        {
+            var cur = Messages[i];
+            var prev = i > 0 ? Messages[i - 1] : null;
+            var next = i < Messages.Count - 1 ? Messages[i + 1] : null;
+
+            cur.IsContinuation = prev != null && MessageViewModel.CanGroup(prev, cur);
+            cur.HasNextFromSame = next != null && MessageViewModel.CanGroup(cur, next);
         }
     }
 
@@ -422,15 +459,19 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private void RenderMessages(List<MessageDto> messages)
     {
         ClearAllState();
-        var lookup = BuildMembersLookup();
+        var lookup = GetMembersLookup();
+        var newVms = new List<MessageViewModel>();
 
         foreach (var msg in messages)
         {
             if (!_loadedMessageIds.Add(msg.Id)) continue;
-            Messages.Add(CreateMessageViewModel(msg, lookup));
+            var vm = CreateMessageViewModel(msg, lookup);
+            newVms.Add(vm);
+            _messageIndex[msg.Id] = vm;
             TrackBounds(msg.Id);
         }
 
+        Messages.AddRange(newVms);
         UpdateDateSeparators();
         RecalculateGrouping();
     }
@@ -440,6 +481,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         DisposeAllMessages();
         Messages.Clear();
         _loadedMessageIds.Clear();
+        _messageIndex.Clear();
         _oldestLoadedMessageId = null;
         _newestLoadedMessageId = null;
         _hasMoreOlder = true;
@@ -451,13 +493,17 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         if (Messages.Count <= MaxMessagesInMemory) return;
 
         var removeCount = Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory);
-        for (var i = 0; i < removeCount; i++)
+
+        var toRemove = Messages.Take(removeCount).ToList();
+
+        foreach (var msg in toRemove)
         {
-            var msg = Messages[0];
             _loadedMessageIds.Remove(msg.Id);
+            _messageIndex.Remove(msg.Id);
             DisposeMessage(msg);
-            Messages.RemoveAt(0);
         }
+
+        Messages.RemoveRange(toRemove);
 
         _hasMoreOlder = true;
         RecalculateBounds();
@@ -465,7 +511,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private MessageViewModel CreateMessageViewModel(MessageDto msg, Dictionary<int, UserDto>? lookup = null)
     {
-        lookup ??= BuildMembersLookup();
+        lookup ??= GetMembersLookup();
         lookup.TryGetValue(msg.SenderId, out var sender);
 
         msg.IsOwn = msg.SenderId == _userId;
@@ -474,7 +520,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,
-            MentionClickCommand = _mentionClickCommand
+            MentionClickCommand = mentionClickCommand,
+            Commands = chatCommands // ── Инжектируем команды чата ──
         };
 
         if (LastReadMessageId.HasValue && msg.Id > LastReadMessageId.Value && msg.SenderId != _userId)
@@ -483,7 +530,11 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         return vm;
     }
 
-    private Dictionary<int, UserDto> BuildMembersLookup() => _getMembersFunc().ToDictionary(m => m.Id);
+    // ── Кешированный members lookup ──
+    private Dictionary<int, UserDto> GetMembersLookup()
+    {
+        return _membersLookup ??= _getMembersFunc().ToDictionary(m => m.Id);
+    }
 
     private void DisposeAllMessages()
     {
@@ -576,8 +627,9 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private void RecalculateBounds()
     {
         if (Messages.Count == 0) { _oldestLoadedMessageId = _newestLoadedMessageId = null; return; }
-        _oldestLoadedMessageId = Messages.Min(m => m.Id);
-        _newestLoadedMessageId = Messages.Max(m => m.Id);
+        // Сообщения отсортированы по Id — берём крайние
+        _oldestLoadedMessageId = Messages[0].Id;
+        _newestLoadedMessageId = Messages[^1].Id;
     }
 
     private void UpdateDateSeparators()
@@ -612,7 +664,9 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         return date.ToString(date.Year == today.Year ? "d MMMM" : "d MMMM yyyy", culture);
     }
 
-    private MessageViewModel? FindMessage(int id) => Messages.FirstOrDefault(m => m.Id == id);
+    // ── O(1) поиск по индексу ──
+    private MessageViewModel? FindMessage(int id) => _messageIndex.TryGetValue(id, out var vm) ? vm : null;
+
     private int? LastIndexOrNull() => Messages.Count > 0 ? Messages.Count - 1 : null;
 
     private int? FindIndexById(int id)
@@ -645,7 +699,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         var task = Task.Run(async () =>
         {
             try { token.ThrowIfCancellationRequested(); await action(); }
-            catch (OperationCanceledException) { /* Отменено */ }
+            catch (OperationCanceledException) { }
             catch (Exception ex) { Debug.WriteLine($"[MessageManager] Фоновая ошибка в {caller}: {ex.Message}"); }
         }, token);
 
@@ -663,7 +717,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         Task[] pending;
         lock (_bgLock) pending = [.. _backgroundTasks];
 
-        try { await Task.WhenAll(pending); } catch { /* Ignored */ }
+        try { await Task.WhenAll(pending); } catch { }
 
         DisposeAllMessages();
         _disposeCts.Dispose();

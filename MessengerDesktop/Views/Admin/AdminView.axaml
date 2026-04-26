@@ -6,6 +6,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vm="using:MessengerDesktop.ViewModels"
 			 xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:skeleton="using:MessengerDesktop.Views.Controls.Skeleton"
 			 x:Class="MessengerDesktop.Views.AdminView"
 			 x:DataType="vm:AdminViewModel"
 			 x:Name="Root"
@@ -170,33 +171,16 @@
 					<Panel>
 						<Border IsVisible="{Binding IsBusy}"
 								Background="{DynamicResource PrimaryBG}"
-								Opacity="0.85"
 								ZIndex="10"
-								CornerRadius="14,14,0,0"/>
-
-						<StackPanel VerticalAlignment="Center"
-									HorizontalAlignment="Center"
-									Spacing="16"
-									ZIndex="11"
-									IsVisible="{Binding IsBusy}">
-							<Border Width="48" Height="48"
-									CornerRadius="24"
-									Background="{DynamicResource AccentMuted}"
-									HorizontalAlignment="Center"
-									BoxShadow="0 4 12 0 #1A000000">
-								<ProgressBar IsIndeterminate="True"
-											 Width="24" Height="24"
-											 Classes="Circular"
-											 Foreground="{DynamicResource Accent}"/>
-							</Border>
-							<TextBlock Text="Загрузка..."
-									   FontSize="14"
-									   FontWeight="Medium"
-									   Foreground="{DynamicResource TextSecondary}"
-									   HorizontalAlignment="Center"/>
-						</StackPanel>
+								CornerRadius="14,14,0,0">
+							<Panel>
+								<skeleton:AdminUsersSkeleton IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equals}, ConverterParameter=0}"/>
+								<skeleton:AdminDepartmentsSkeleton IsVisible="{Binding SelectedTabIndex, Converter={conv:Converter Name=Equals}, ConverterParameter=1}"/>
+							</Panel>
+						</Border>
 
 						<TransitioningContentControl Content="{Binding CurrentTab}"
+													 IsVisible="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}"
 													 HorizontalContentAlignment="Stretch"
 													 VerticalContentAlignment="Stretch">
 							<TransitioningContentControl.PageTransition>

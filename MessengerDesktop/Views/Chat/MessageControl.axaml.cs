@@ -1,79 +1,69 @@
-using System.Windows.Input;
+using MessengerDesktop.ViewModels.Chat;
+using System;
+using System.ComponentModel;
 
 namespace MessengerDesktop.Views.Chat;
 
 public partial class MessageControl : UserControl
 {
-    public MessageControl() => InitializeComponent();
+    private Border? _bubbleBorder;
+    private string? _lastBubbleClasses;
+    private MessageViewModel? _lastVm;
 
-    public static readonly StyledProperty<ICommand?> EditMessageCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(EditMessageCommand));
-
-    public static readonly StyledProperty<ICommand?> CopyTextCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(CopyTextCommand));
-
-    public static readonly StyledProperty<ICommand?> DeleteMessageCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(DeleteMessageCommand));
-
-    public static readonly StyledProperty<ICommand?> TogglePinCommandProperty =
-       AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(TogglePinCommand));
-
-    public static readonly StyledProperty<ICommand?> OpenProfileCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(OpenProfileCommand));
-
-    public static readonly StyledProperty<ICommand?> ReplyCommandProperty =
-       AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ReplyCommand));
-
-    public static readonly StyledProperty<ICommand?> ScrollToReplyCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ScrollToReplyCommand));
-
-    public static readonly StyledProperty<ICommand?> ForwardCommandProperty =
-        AvaloniaProperty.Register<MessageControl, ICommand?>(nameof(ForwardCommand));
-
-    public ICommand? EditMessageCommand
+    public MessageControl()
     {
-        get => GetValue(EditMessageCommandProperty);
-        set => SetValue(EditMessageCommandProperty, value);
+        InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
     }
 
-    public ICommand? CopyTextCommand
+    private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        get => GetValue(CopyTextCommandProperty);
-        set => SetValue(CopyTextCommandProperty, value);
+        _lastVm?.PropertyChanged -= OnViewModelPropertyChanged;
+        _lastVm = null;
+
+        if (DataContext is MessageViewModel vm)
+        {
+            _lastVm = vm;
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+            ApplyBubbleClasses(vm.BubbleClasses);
+        }
     }
 
-    public ICommand? DeleteMessageCommand
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        get => GetValue(DeleteMessageCommandProperty);
-        set => SetValue(DeleteMessageCommandProperty, value);
-    }
-    public ICommand? TogglePinCommand
-    {
-        get => GetValue(TogglePinCommandProperty);
-        set => SetValue(TogglePinCommandProperty, value);
+        if (e.PropertyName == nameof(MessageViewModel.BubbleClasses)
+            && sender is MessageViewModel vm)
+        {
+            ApplyBubbleClasses(vm.BubbleClasses);
+        }
     }
 
-    public ICommand? OpenProfileCommand
+    private void ApplyBubbleClasses(string? newClasses)
     {
-        get => GetValue(OpenProfileCommandProperty);
-        set => SetValue(OpenProfileCommandProperty, value);
+        _bubbleBorder ??= this.FindControl<Border>("BubbleBorder");
+        if (_bubbleBorder == null) return;
+
+        if (!string.IsNullOrEmpty(_lastBubbleClasses))
+        {
+            foreach (var cls in _lastBubbleClasses.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                _bubbleBorder.Classes.Remove(cls);
+        }
+
+        _lastBubbleClasses = newClasses;
+
+        if (!string.IsNullOrEmpty(newClasses))
+        {
+            _bubbleBorder.Classes.AddRange(newClasses.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
     }
 
-    public ICommand? ReplyCommand
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        get => GetValue(ReplyCommandProperty);
-        set => SetValue(ReplyCommandProperty, value);
-    }
+        base.OnDetachedFromVisualTree(e);
+        _lastVm?.PropertyChanged -= OnViewModelPropertyChanged;
+        _lastVm = null;
 
-    public ICommand? ScrollToReplyCommand
-    {
-        get => GetValue(ScrollToReplyCommandProperty);
-        set => SetValue(ScrollToReplyCommandProperty, value);
-    }
-
-    public ICommand? ForwardCommand
-    {
-        get => GetValue(ForwardCommandProperty);
-        set => SetValue(ForwardCommandProperty, value);
+        _bubbleBorder = null;
+        _lastBubbleClasses = null;
     }
 }

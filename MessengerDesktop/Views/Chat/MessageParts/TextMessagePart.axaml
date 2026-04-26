@@ -9,7 +9,6 @@
              x:Name="TextPartRoot">
 
     <StackPanel>
-
         <StackPanel IsVisible="{Binding HasTextContent}">
             <shared:RichMessageTextBlock
                 FontSize="15"

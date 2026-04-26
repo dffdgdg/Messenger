@@ -6,19 +6,6 @@
              x:Class="MessengerDesktop.Views.Chat.MessageParts.PollMessagePart"
              x:DataType="vmChat:MessageViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="Border.PollBubble">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="18"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="MaxWidth" Value="360"/>
-            <Setter Property="MinWidth" Value="280"/>
-        </Style>
-        <Style Selector="Border.PollBubble.Own">
-            <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-        </Style>
-    </UserControl.Styles>
-
     <Border Classes="PollBubble"
             Classes.Own="{Binding IsOwn}"
             IsVisible="{Binding HasPoll}">

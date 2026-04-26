@@ -13,6 +13,7 @@
 		<UseRidGraph>true</UseRidGraph>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -39,6 +40,7 @@
 	  <AvaloniaXaml Remove="Assets\Styles\ChatListSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\ChatMessagesSkeleton.axaml" />
 	  <AvaloniaXaml Remove="Assets\Styles\Controls.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\MessageStyles.axaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -72,7 +74,7 @@
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
-		<PackageReference Include="SIPSorcery" Version="10.0.3" />
+		<PackageReference Include="SIPSorcery" Version="10.0.5" />
 		<PackageReference Include="Concentus" Version="2.2.2" />
 	</ItemGroup>
 
@@ -85,6 +87,9 @@
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
 		<AvaloniaResource Update="Assets\Styles\Base\Animations.axaml">
+		  <SubType>Designer</SubType>
+		</AvaloniaResource>
+		<AvaloniaResource Update="Assets\Styles\MessageStyles.axaml">
 		  <SubType>Designer</SubType>
 		</AvaloniaResource>
 	</ItemGroup>
@@ -114,6 +119,7 @@
 	  <Folder Include="Assets\Images\Icons\" />
 	  <Folder Include="Assets\Images\Avatars\" />
 	  <Folder Include="Assets\Images\Illustrations\" />
+	  <Folder Include="Views\Controls\Admin\" />
 	</ItemGroup>
 	
 	<ItemGroup>

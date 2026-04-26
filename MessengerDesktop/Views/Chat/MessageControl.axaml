@@ -8,153 +8,18 @@
 			 x:Class="MessengerDesktop.Views.Chat.MessageControl"
 			 x:DataType="vmChat:MessageViewModel"
 			 x:Name="BubbleRoot">
-	<UserControl.Styles>
-		<!-- ── Обёртка строки сообщения (hover-фон) ── -->
-		<Style Selector="Border.MessageWrapper">
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.1"/>
-				</Transitions>
-			</Setter>
-		</Style>
-
-		<Style Selector="Border.MessageWrapper:pointerover">
-			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-		</Style>
-		<!-- ── Подсветка найденного сообщения ── -->
-		<Style Selector="Border.MessageHighlight">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.4"/>
-				</Transitions>
-			</Setter>
-		</Style>
-
-		<Style Selector="Border.MessageHighlight.Highlighted">
-			<Setter Property="Background" Value="{DynamicResource MessageHighlightBrush}"/>
-		</Style>
-		<!-- ── Avatar ── -->
-		<Style Selector="Button.AvatarButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="FocusAdorner" Value="{x:Null}"/>
-			<Setter Property="Opacity" Value="1"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
-
-		<Style Selector="Button.AvatarButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-
-		<Style Selector="Button.AvatarButton:pointerover">
-			<Setter Property="Opacity" Value="0.85"/>
-		</Style>
-
-		<Style Selector="Button.AvatarButton:pressed">
-			<Setter Property="Opacity" Value="0.7"/>
-		</Style>
-
-		<!-- ── Имя отправителя ── -->
-		<Style Selector="Button.SenderNameButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="14,0,14,4"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="FocusAdorner" Value="{x:Null}"/>
-			<Setter Property="HorizontalAlignment" Value="Left"/>
-		</Style>
-
-		<Style Selector="Button.SenderNameButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-
-		<Style Selector="Button.SenderNameButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-
-		<Style Selector="Button.SenderNameButton:pointerover TextBlock">
-			<Setter Property="TextDecorations" Value="Underline"/>
-		</Style>
-
-		<Style Selector="Button.SenderNameButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-
-		<Style Selector="Button.SenderNameButton:focus /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-		<!-- ── Базовый пузырь ── -->
-		<Style Selector="Border.MessageBubble">
-			<Setter Property="Padding" Value="12,8"/>
-			<Setter Property="MinWidth" Value="48"/>
-			<Setter Property="MaxWidth" Value="520"/>
-			<Setter Property="BoxShadow" Value="{DynamicResource MessageBubbleShadow}"/>
-		</Style>
-		<!-- ── Свои сообщения (Own) ── -->
-		<Style Selector="Border.MessageBubble.Own.Alone">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Own.First">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,18,4,18"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Own.Middle">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,4,4,18"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Own.Last">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,4,18,18"/>
-		</Style>
-
-		<!-- ── Чужие сообщения (Other) ── -->
-		<Style Selector="Border.MessageBubble.Other.Alone">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="18"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Other.First">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="18,18,18,4"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Other.Middle">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="4,18,18,4"/>
-		</Style>
-
-		<Style Selector="Border.MessageBubble.Other.Last">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="4,18,18,18"/>
-		</Style>
-	</UserControl.Styles>
-
 	<StackPanel>
 		<parts:DateSeparatorPart/>
 
-		<parts:SystemMessagePart OpenProfileCommand="{Binding #BubbleRoot.OpenProfileCommand}"/>
+		<parts:SystemMessagePart IsVisible="{Binding IsSystemMessage}"
+								 OpenProfileCommand="{Binding Commands.OpenProfile}"/>
 
 		<Border Classes="MessageHighlight MessageWrapper"
 				Classes.Highlighted="{Binding IsHighlighted}"
 				Classes.DeletedMessage="{Binding IsDeleted}"
 				IsVisible="{Binding !IsSystemMessage}"
 				Padding="12,2,12,2"
-				Margin="{Binding IsContinuation,
-				Converter={conv:Converter Name=BoolToThickness},
-				ConverterParameter='0,1,0,0|0,4,0,0'}"
+				Margin="0,2,0,2"
 				AutomationProperties.Name="{Binding SenderName}"
 				AutomationProperties.HelpText="{Binding DisplayContent}">
 
@@ -179,7 +44,7 @@
 			<Border.ContextFlyout>
 				<MenuFlyout>
 					<MenuItem Header="Ответить"
-							  Command="{Binding #BubbleRoot.ReplyCommand}"
+							  Command="{Binding Commands.Reply}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding !IsDeleted}">
 						<MenuItem.Icon>
@@ -189,7 +54,7 @@
 						</MenuItem.Icon>
 					</MenuItem>
 					<MenuItem Header="Переслать"
-							  Command="{Binding #BubbleRoot.ForwardCommand}"
+							  Command="{Binding Commands.Forward}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding !IsDeleted}">
 						<MenuItem.Icon>
@@ -199,7 +64,7 @@
 						</MenuItem.Icon>
 					</MenuItem>
 					<MenuItem Header="Редактировать"
-							  Command="{Binding #BubbleRoot.EditMessageCommand}"
+							  Command="{Binding Commands.Edit}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding CanEdit}">
 						<MenuItem.Icon>
@@ -209,7 +74,7 @@
 						</MenuItem.Icon>
 					</MenuItem>
 					<MenuItem Header="Копировать текст"
-							  Command="{Binding #BubbleRoot.CopyTextCommand}"
+							  Command="{Binding Commands.Copy}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding Content,
 							  Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -220,7 +85,7 @@
 						</MenuItem.Icon>
 					</MenuItem>
 					<MenuItem Header="Закрепить"
-							  Command="{Binding #BubbleRoot.TogglePinCommand}"
+							  Command="{Binding Commands.TogglePin}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding ShowPinAction}">
 						<MenuItem.Icon>
@@ -230,7 +95,7 @@
 						</MenuItem.Icon>
 					</MenuItem>
 					<MenuItem Header="Открепить"
-							  Command="{Binding #BubbleRoot.TogglePinCommand}"
+							  Command="{Binding Commands.TogglePin}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding ShowUnpinAction}">
 						<MenuItem.Icon>
@@ -259,7 +124,7 @@
 					</MenuItem>
 					<Separator IsVisible="{Binding CanDelete}"/>
 					<MenuItem Header="Удалить"
-							  Command="{Binding #BubbleRoot.DeleteMessageCommand}"
+							  Command="{Binding Commands.Delete}"
 							  CommandParameter="{Binding}"
 							  IsVisible="{Binding CanDelete}"
 							  Foreground="{DynamicResource DangerBrush}">
@@ -281,7 +146,7 @@
 					   IsVisible="{Binding !IsOwn}">
 					<Button Classes="AvatarButton"
 							IsVisible="{Binding ShowSenderName}"
-							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							Command="{Binding Commands.OpenProfile}"
 							CommandParameter="{Binding SenderId}"
 							Width="36" Height="36"
 							ToolTip.Tip="{Binding SenderName}">
@@ -300,7 +165,7 @@
 
 					<Button Classes="SenderNameButton"
 							IsVisible="{Binding ShowSenderName}"
-							Command="{Binding #BubbleRoot.OpenProfileCommand}"
+							Command="{Binding Commands.OpenProfile}"
 							CommandParameter="{Binding SenderId}">
 						<TextBlock Text="{Binding SenderName}"
 								   FontWeight="SemiBold"
@@ -309,26 +174,12 @@
 								   Margin="0,0,0,2"/>
 					</Button>
 
-					<Border Classes="MessageBubble"
-							Classes.Own="{Binding IsOwn}"
-							Classes.Other="{Binding !IsOwn}"
-							Classes.Alone="{Binding GroupPosition,
-							Converter={conv:Converter Name=EnumEquals},
-							ConverterParameter=Alone}"
-							Classes.First="{Binding GroupPosition,
-							Converter={conv:Converter Name=EnumEquals},
-							ConverterParameter=First}"
-							Classes.Middle="{Binding GroupPosition,
-							Converter={conv:Converter Name=EnumEquals},
-							ConverterParameter=Middle}"
-							Classes.Last="{Binding GroupPosition,
-							Converter={conv:Converter Name=EnumEquals},
-							ConverterParameter=Last}"
+					<!-- ── 1 биндинг Classes вместо 6 ── -->
+					<Border x:Name="BubbleBorder"
 							IsVisible="{Binding !HasPoll}">
 						<StackPanel>
 							<shared:ForwardHeaderBlock/>
-							<shared:ReplyPreviewBlock
-							ScrollToReplyCommand="{Binding #BubbleRoot.ScrollToReplyCommand}"/>
+							<shared:ReplyPreviewBlock ScrollToReplyCommand="{Binding Commands.ScrollToReply}"/>
 							<parts:VoiceMessagePart/>
 							<parts:TextMessagePart/>
 							<parts:DeletedMessagePart/>
@@ -338,10 +189,9 @@
 					<parts:PollMessagePart/>
 				</StackPanel>
 
-				<shared:MessageQuickActions
-				Grid.Column="2"
-				ReplyCommand="{Binding #BubbleRoot.ReplyCommand}"
-				ForwardCommand="{Binding #BubbleRoot.ForwardCommand}"/>
+				<shared:MessageQuickActions Grid.Column="2"
+											ReplyCommand="{Binding ReplyActionCommand}"
+											ForwardCommand="{Binding ForwardActionCommand}"/>
 			</Grid>
 		</Border>
 	</StackPanel>

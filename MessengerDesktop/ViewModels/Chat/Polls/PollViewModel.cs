@@ -9,7 +9,6 @@ namespace MessengerDesktop.ViewModels.Chat;
 public partial class PollViewModel : BaseViewModel
 {
     private readonly IApiClientService _apiClient;
-    private readonly ChatContext? _chatContext;
 
     public event Action<PollDto>? ServerStateApplied;
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
@@ -23,10 +22,9 @@ public partial class PollViewModel : BaseViewModel
     public int UserId { get; }
     public bool HasSelection => Options.Any(o => o.IsSelected);
 
-    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient, ChatContext? chatContext = null)
+    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-        _chatContext = chatContext;
 
         PollId = poll.Id;
         UserId = userId;

@@ -5,44 +5,7 @@
              x:Class="MessengerDesktop.Views.Chat.MessageParts.SystemMessagePart"
              x:DataType="vmChat:MessageViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="Button.SystemUserLink">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="Height" Value="NaN"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusAdorner" Value="{x:Null}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style Selector="Button.SystemUserLink /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.SystemUserLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-
-        <Style Selector="Button.SystemUserLink:pointerover TextBlock">
-            <Setter Property="TextDecorations" Value="Underline"/>
-        </Style>
-
-        <Style Selector="Button.SystemUserLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-
-        <Style Selector="Button.SystemUserLink:focus /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-    </UserControl.Styles>
-
-    <Border IsVisible="{Binding IsSystemMessage}"
-            HorizontalAlignment="Center"
+    <Border HorizontalAlignment="Center"
             Margin="0,8">
         <Border Background="{DynamicResource SecondaryBG}"
                 CornerRadius="12"

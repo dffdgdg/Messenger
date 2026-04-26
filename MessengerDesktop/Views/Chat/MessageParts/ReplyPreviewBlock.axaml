@@ -5,26 +5,6 @@
              x:DataType="vmChat:MessageViewModel"
              x:Name="ReplyRoot">
 
-    <UserControl.Styles>
-        <Style Selector="Button.ReplyPreviewButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
-            <Setter Property="Opacity" Value="0.75"/>
-        </Style>
-    </UserControl.Styles>
-
     <Button Classes="ReplyPreviewButton"
             IsVisible="{Binding HasReply}"
             Command="{Binding #ReplyRoot.ScrollToReplyCommand}"

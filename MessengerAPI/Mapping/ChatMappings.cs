@@ -21,6 +21,9 @@ public static class ChatMappings
         {
             dto.Name = dialogPartner.FormatDisplayName();
             dto.Avatar = dialogPartner.Avatar.BuildFullUrl(urlBuilder);
+            dto.ContactUserId = dialogPartner.Id;
+            dto.ContactStatusType = dialogPartner.StatusType;
+            dto.ContactStatusExpiresAt = dialogPartner.StatusExpiresAt;
         }
 
         return dto;

@@ -24,7 +24,6 @@
 	</UserControl.Resources>
 
 	<UserControl.Styles>
-		<!-- ── Состояния навигации ── -->
 		<Style Selector="RadioButton.NavButton:pointerover, RadioButton.IconButton:pointerover">
 			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
@@ -73,6 +72,7 @@
 			<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 		</Style>
+
 		<Style Selector="Button.SearchResultItem">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
@@ -97,12 +97,33 @@
 			<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
 			<Setter Property="Margin" Value="8,6,8,2"/>
 		</Style>
+
+		<Style Selector="FlyoutPresenter.StatusMenuFlyout">
+			<Setter Property="Padding" Value="0" />
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="BorderThickness" Value="0" />
+			<Setter Property="MinHeight" Value="0" />
+			<Setter Property="MinWidth" Value="0" />
+		</Style>
+
+		<Style Selector="Button.StatusMenuItem">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="12,8"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Left"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		</Style>
+		<Style Selector="Button.StatusMenuItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
 	</UserControl.Styles>
 
 	<Panel>
 		<Grid ColumnDefinitions="82,*">
 
-			<!-- Боковая навигация -->
 			<DockPanel Grid.Column="0"
 					   LastChildFill="False"
 					   Margin="5,0,5,0">
@@ -143,7 +164,6 @@
 								 ConverterParameter=Admin}"/>
 				</StackPanel>
 
-				<!-- Плашка активного звонка  -->
 				<Border DockPanel.Dock="Bottom"
 						Width="72"
 						Margin="0,0,0,10"
@@ -154,13 +174,11 @@
 						ClipToBounds="True"
 						IsVisible="{Binding CallBanner.Store.IsInCall}">
 
-					<!-- Добавляем легкую тень для плавающего эффекта -->
 					<Border.BoxShadow>
 						<BoxShadows>0 4 12 #2090EC40</BoxShadows>
 					</Border.BoxShadow>
 
 					<StackPanel Spacing="0">
-						<!-- 1. Верхняя часть: Кликабельная зона для открытия окна звонка -->
 						<Button Background="Transparent"
 								BorderThickness="0"
 								Padding="0,10,0,8"
@@ -176,7 +194,6 @@
 							</Button.Styles>
 
 							<StackPanel Spacing="4" HorizontalAlignment="Center">
-								<!-- Аватар чата/звонка. Если ChatAvatar нет в ViewModel, сработает DisplayName и FallbackIcon -->
 								<controls:AvatarControl
 								Classes="Medium"
 								Width="32" Height="32"
@@ -184,7 +201,6 @@
 								FallbackIcon="{StaticResource GroupIcon}"
 								ShowOnlineIndicator="False"/>
 
-								<!-- Таймер (Длительность) -->
 								<TextBlock Text="{Binding CallBanner.DurationText}"
 										   FontSize="11"
 										   FontWeight="SemiBold"
@@ -193,10 +209,8 @@
 							</StackPanel>
 						</Button>
 
-						<!-- Разделитель -->
 						<Border Height="1" Background="{DynamicResource BorderDefault}" Margin="8,0"/>
 
-						<!-- 2. Нижняя часть: Кнопки управления (Мини-формат) -->
 						<StackPanel Orientation="Horizontal"
 									HorizontalAlignment="Center"
 									Spacing="4">
@@ -253,14 +267,47 @@
 							Margin="0,0,0,10"
 							HorizontalAlignment="Center">
 
-					<RadioButton Classes="NavButton" GroupName="MainNav"
-								 Tag="{DynamicResource ProfileIcon}"
-								 Content="Профиль" ToolTip.Tip="Мой профиль"
-								 IsChecked="{Binding SelectedMenuIndex, Mode=OneWay,
-								 Converter={conv:Converter Name=Equality},
-								 ConverterParameter=3}"
-								 Command="{Binding SetItemCommand}"
-								 CommandParameter="{StaticResource Index3}"/>
+					<Grid HorizontalAlignment="Center">
+						<RadioButton Classes="NavButton" GroupName="MainNav"
+									 Tag="{DynamicResource ProfileIcon}"
+									 Content="Профиль" ToolTip.Tip="Мой профиль (правый клик — статус)"
+									 IsChecked="{Binding SelectedMenuIndex, Mode=OneWay,
+									 Converter={conv:Converter Name=Equality},
+									 ConverterParameter=3}"
+									 Command="{Binding SetItemCommand}"
+									 CommandParameter="{StaticResource Index3}">
+
+							<RadioButton.ContextMenu>
+								<ContextMenu>
+									<MenuItem Header="В сети" Command="{Binding SetStatusCommand}" CommandParameter="Online">
+										<MenuItem.Icon><Ellipse Width="10" Height="10" Fill="#43A047" /></MenuItem.Icon>
+									</MenuItem>
+									<MenuItem Header="Отошёл" Command="{Binding SetStatusCommand}" CommandParameter="Away">
+										<MenuItem.Icon><Ellipse Width="10" Height="10" Fill="#FFA000" /></MenuItem.Icon>
+									</MenuItem>
+									<MenuItem Header="Занят" Command="{Binding SetStatusCommand}" CommandParameter="Busy">
+										<MenuItem.Icon><Ellipse Width="10" Height="10" Fill="#E53935" /></MenuItem.Icon>
+									</MenuItem>
+									<MenuItem Header="Не беспокоить" Command="{Binding SetStatusCommand}" CommandParameter="DnD">
+										<MenuItem.Icon><Ellipse Width="10" Height="10" Fill="#9C27B0" /></MenuItem.Icon>
+									</MenuItem>
+									<Separator />
+									<MenuItem Header="Занят на 15 минут" Command="{Binding SetStatusCommand}" CommandParameter="Busy15m" />
+									<MenuItem Header="Занят на 30 минут" Command="{Binding SetStatusCommand}" CommandParameter="Busy30m" />
+									<MenuItem Header="Занят на 1 час" Command="{Binding SetStatusCommand}" CommandParameter="Busy1h" />
+								</ContextMenu>
+							</RadioButton.ContextMenu>
+						</RadioButton>
+
+						<Ellipse Width="14" Height="14"
+								 Fill="{Binding CurrentStatusColor}"
+								 Stroke="White"
+								 StrokeThickness="1.5"
+								 HorizontalAlignment="Center"
+								 VerticalAlignment="Bottom"
+								 Margin="18,8,0,23"
+								 IsHitTestVisible="False"/>
+					</Grid>
 
 					<RadioButton Classes="NavButton" GroupName="MainNav"
 								 Tag="{DynamicResource SettingsIcon}"
@@ -285,7 +332,6 @@
 				</StackPanel>
 			</DockPanel>
 
-			<!-- Контентная область -->
 			<Border Grid.Column="1"
 					Background="{DynamicResource SecondaryBG}"
 					Margin="0,8,9,9"
@@ -310,7 +356,6 @@
 
 			<StackPanel>
 
-				<!-- Тулбар: скоупы + фильтры -->
 				<Grid ColumnDefinitions="*,Auto"
 					  Margin="4,4,4,6">
 
@@ -350,7 +395,6 @@
 						</ToggleButton>
 					</StackPanel>
 
-					<!-- Кнопка фильтров -->
 					<Button Grid.Column="1"
 							Classes="IconButton Small"
 							Command="{Binding OpenSearchFiltersCommand}"
@@ -370,12 +414,10 @@
 					</Button>
 				</Grid>
 
-				<!-- Разделитель -->
 				<Border Height="1"
 						Background="{DynamicResource BorderDefault}"
 						Margin="4,0,4,6"/>
 
-				<!-- Индикатор загрузки -->
 				<StackPanel Orientation="Horizontal"
 							HorizontalAlignment="Center"
 							Spacing="8"
@@ -389,14 +431,12 @@
 							   Margin="0"/>
 				</StackPanel>
 
-				<!-- Результаты -->
 				<ScrollViewer MaxHeight="380"
 							  VerticalScrollBarVisibility="Auto"
 							  HorizontalScrollBarVisibility="Disabled"
 							  Classes="ThinScrollbar">
 					<StackPanel Spacing="2">
 
-						<!-- ── Чаты ── -->
 						<StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
 							<TextBlock Text="ЧАТЫ" Classes="SearchGroupLabel"/>
 
@@ -442,7 +482,6 @@
 							</ItemsControl>
 						</StackPanel>
 
-						<!-- Разделитель между секциями -->
 						<Border Height="1"
 								Background="{DynamicResource BorderDefault}"
 								Margin="8,4">
@@ -454,7 +493,6 @@
 							</Border.IsVisible>
 						</Border>
 
-						<!-- ── Сообщения ── -->
 						<StackPanel IsVisible="{Binding SearchManager.HasMessageResults}">
 							<Grid ColumnDefinitions="*,Auto" Margin="0,0,4,0">
 								<TextBlock Grid.Column="0"
@@ -478,7 +516,6 @@
 											<Grid ColumnDefinitions="Auto,*,Auto"
 												  Margin="2,2">
 
-												<!-- Аватар чата -->
 												<controls:AvatarControl
 												Grid.Column="0"
 												Classes="Small"
@@ -488,13 +525,11 @@
 												ShowOnlineIndicator="False"
 												VerticalAlignment="Center"/>
 
-												<!-- Тело результата -->
 												<StackPanel Grid.Column="1"
 															Margin="10,0,8,0"
 															VerticalAlignment="Center"
 															Spacing="3">
 
-													<!-- Чат · Отправитель -->
 													<StackPanel Orientation="Horizontal"
 																Spacing="4">
 														<TextBlock Text="{Binding ChatName}"
@@ -516,7 +551,6 @@
 																   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 													</StackPanel>
 
-													<!-- Превью сообщения -->
 													<TextBlock Text="{Binding Preview}"
 															   Foreground="{DynamicResource TextSecondary}"
 															   FontSize="12"
@@ -526,7 +560,6 @@
 															   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 												</StackPanel>
 
-												<!-- Дата -->
 												<TextBlock Grid.Column="2"
 														   Text="{Binding CreatedAt,
 														   Converter={conv:Converter Name=MessageTime}}"
@@ -541,7 +574,6 @@
 							</ItemsControl>
 						</StackPanel>
 
-						<!-- ── Пустые состояния ── -->
 						<StackPanel HorizontalAlignment="Center"
 									Margin="0,20"
 									Spacing="10">
@@ -559,7 +591,6 @@
 									  Opacity="0.4"
 									  HorizontalAlignment="Center"/>
 
-							<!-- Нет запроса -->
 							<TextBlock HorizontalAlignment="Center"
 									   Foreground="{DynamicResource TextMuted}"
 									   FontSize="13"
@@ -568,7 +599,6 @@
 								Введите запрос для поиска
 							</TextBlock>
 
-							<!-- Нет результатов -->
 							<StackPanel HorizontalAlignment="Center"
 										Spacing="4"
 										IsVisible="{Binding SearchManager.SearchQuery,
@@ -585,7 +615,6 @@
 							</StackPanel>
 						</StackPanel>
 
-						<!-- Кнопка "Показать ещё" -->
 						<Button Classes="DialogOutline"
 								HorizontalAlignment="Center"
 								Margin="0,4,0,4"

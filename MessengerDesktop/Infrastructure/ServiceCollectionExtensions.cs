@@ -110,7 +110,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainMenuViewModel>();
         services.AddTransient<AdminViewModel>();
-        services.AddTransient<ProfileViewModel>();
+        services.AddTransient<ProfileViewModel>(sp => new ProfileViewModel(sp.GetRequiredService<IApiClientService>(),
+            sp.GetRequiredService<IAuthManager>(), sp.GetRequiredService<INotificationService>(),
+            sp.GetRequiredService<IGlobalHubConnection>()));
+
         services.AddTransient<DepartmentManagementViewModel>();
         services.AddTransient<SettingsViewModel>();
 

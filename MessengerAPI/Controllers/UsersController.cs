@@ -47,10 +47,10 @@ public sealed class UsersController(IUserService userService, ILogger<UsersContr
         => userService.GetOnlineUsersAsync(ct), "Список онлайн пользователей получен");
 
     [HttpGet("{id}/status")]
-    public async Task<ActionResult<ApiResponse<OnlineStatusDto>>> GetUserOnlineStatus(int id, CancellationToken ct) => await ExecuteAsync(()
+    public async Task<ActionResult<ApiResponse<UserStatusDto>>> GetUserOnlineStatus(int id, CancellationToken ct) => await ExecuteAsync(()
         => userService.GetOnlineStatusAsync(id, ct));
 
     [HttpPost("status/batch")]
-    public async Task<ActionResult<ApiResponse<List<OnlineStatusDto>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct) => await ExecuteAsync(()
+    public async Task<ActionResult<ApiResponse<List<UserStatusDto>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct) => await ExecuteAsync(()
         => userService.GetOnlineStatusesAsync(userIds, ct));
 }

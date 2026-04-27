@@ -156,7 +156,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
 
         if (userIds.Count > 0)
         {
-            var statusResult = await _apiClient.PostAsync<List<int>, List<OnlineStatusDto>>(ApiEndpoints.Users.StatusBatch, userIds, ct);
+            var statusResult = await _apiClient.PostAsync<List<int>, List<UserStatusDto>>(ApiEndpoints.Users.StatusBatch, userIds, ct);
 
             if (statusResult is { Success: true, Data: not null })
             {

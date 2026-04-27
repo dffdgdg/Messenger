@@ -66,6 +66,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IUserStatusService, UserStatusService>();
+        services.AddHostedService<StatusCleanupHostedService>();
 
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatMemberService, ChatMemberService>();

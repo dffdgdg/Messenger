@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessengerShared.Enum;
+using System;
 
 namespace MessengerDesktop.ViewModels.Chats;
 
@@ -17,32 +18,31 @@ public partial class ChatListItemViewModel : ObservableObject
         LastMessagePreview = dto.LastMessagePreview;
         LastMessageSenderName = dto.LastMessageSenderName;
         UnreadCount = dto.UnreadCount;
+
+        // Для контактных чатов — ID собеседника
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
     }
 
     public int Id { get; }
     public ChatType Type { get; }
     public int CreatedById { get; }
+    public int? ContactUserId { get; set; }
 
-    [ObservableProperty]
-    public partial string? Name { get; set; }
+    [ObservableProperty] public partial string? Name { get; set; }
+    [ObservableProperty] public partial DateTime? LastMessageDate { get; set; }
+    [ObservableProperty] public partial string? Avatar { get; set; }
+    [ObservableProperty] public partial string? LastMessagePreview { get; set; }
+    [ObservableProperty] public partial string? LastMessageSenderName { get; set; }
+    [ObservableProperty] public partial int UnreadCount { get; set; }
+    [ObservableProperty] public partial bool HideSenderPrefix { get; set; }
+    [ObservableProperty] public partial bool ContactIsOnline { get; set; }
+    [ObservableProperty] public partial UserStatusType ContactStatusType { get; set; } = UserStatusType.Online;
+    [ObservableProperty] public partial DateTime? ContactStatusExpiresAt { get; set; }
 
-    [ObservableProperty]
-    public partial DateTime? LastMessageDate { get; set; }
-
-    [ObservableProperty]
-    public partial string? Avatar { get; set; }
-
-    [ObservableProperty]
-    public partial string? LastMessagePreview { get; set; }
-
-    [ObservableProperty]
-    public partial string? LastMessageSenderName { get; set; }
-
-    [ObservableProperty]
-    public partial int UnreadCount { get; set; }
-
-    [ObservableProperty]
-    public partial bool HideSenderPrefix { get; set; }
+    public bool ShowStatusIndicator => Type == ChatType.Contact;
 
     public ChatDto ToDto() => new()
     {
@@ -67,5 +67,9 @@ public partial class ChatListItemViewModel : ObservableObject
         LastMessageSenderName = dto.LastMessageSenderName;
         UnreadCount = dto.UnreadCount;
         HideSenderPrefix = dto.HideSenderPrefix;
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
     }
 }

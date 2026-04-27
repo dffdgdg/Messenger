@@ -148,6 +148,10 @@ public static class CacheMapper
         LastMessageIsPoll = dto.LastMessageIsPoll,
         LastMessageIsVoice = dto.LastMessageIsVoice,
         ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers,
+        ContactUserId = dto.ContactUserId,
+        ContactIsOnline = dto.ContactIsOnline,
+        ContactStatusType = (int)dto.ContactStatusType,
+        ContactStatusExpiresAtTicks = dto.ContactStatusExpiresAt?.ToUniversalTime().Ticks,
         CachedAtTicks = DateTime.UtcNow.Ticks
     };
 
@@ -165,7 +169,11 @@ public static class CacheMapper
         LastMessageIsSystem = entity.LastMessageIsSystem,
         LastMessageIsPoll = entity.LastMessageIsPoll,
         LastMessageIsVoice = entity.LastMessageIsVoice,
-        ShowHistoryForNewMembers = entity.ShowHistoryForNewMembers
+        ShowHistoryForNewMembers = entity.ShowHistoryForNewMembers,
+        ContactUserId = entity.ContactUserId,
+        ContactIsOnline = entity.ContactIsOnline,
+        ContactStatusType = (UserStatusType)entity.ContactStatusType,
+        ContactStatusExpiresAt = entity.ContactStatusExpiresAt
     };
 
     #endregion

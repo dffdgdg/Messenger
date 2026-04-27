@@ -82,6 +82,9 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         {
             dto.Name = partner.DisplayName;
             dto.Avatar = partner.AvatarUrl;
+            dto.ContactUserId = partner.UserId;
+            dto.ContactStatusType = partner.StatusType;
+            dto.ContactStatusExpiresAt = partner.StatusExpiresAt;
         }
         else
         {
@@ -464,13 +467,22 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         if (chatIds.Count == 0)
             return [];
 
-        var partners = await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId).Include(cm => cm.User).AsNoTracking().ToListAsync();
+        var partners = await _context.ChatMembers
+            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId)
+            .Include(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var partnerUserIds = partners.ConvertAll(p => p.User!.Id);
+        var onlineIds = onlineService.FilterOnline(partnerUserIds);
 
         return partners.Where(p => p.User is not null).ToDictionary(p => p.ChatId, p => new DialogPartnerInfo
         {
             UserId = p.User!.Id,
             DisplayName = p.User.FormatDisplayName(),
-            AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar)
+            AvatarUrl = urlBuilder.BuildUrl(p.User.Avatar),
+            StatusType = p.User.StatusType,
+            StatusExpiresAt = p.User.StatusExpiresAt,
         });
     }
 
@@ -516,5 +528,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         public int UserId { get; init; }
         public string DisplayName { get; init; }
         public string? AvatarUrl { get; init; }
+        public UserStatusType StatusType { get; init; }
+        public DateTime? StatusExpiresAt { get; init; }
     }
 }

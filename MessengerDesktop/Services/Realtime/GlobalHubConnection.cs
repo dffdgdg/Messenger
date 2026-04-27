@@ -2,7 +2,9 @@
 using MessengerDesktop.Helpers;
 using MessengerDesktop.Services.Storage;
 using MessengerDesktop.Services.UI;
-using Microsoft.AspNetCore.SignalR.Client;
+using MessengerShared.Dto.Online;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client; // только клиентская библиотека
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +16,7 @@ namespace MessengerDesktop.Services.Realtime;
 public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
 {
     event Action<NotificationDto>? NotificationReceived;
-    event Action<int, bool>? UserStatusChanged;
+    event Action<UserStatusDto>? UserStatusChanged;
     event Action<int, int>? UnreadCountChanged;
     event Action<int>? TotalUnreadChanged;
     event Action<MessageDto>? MessageReceivedGlobally;
@@ -40,10 +42,15 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     Task<ChatReadInfoDto?> GetReadInfoAsync(int chatId);
     Task MarkMessageAsReadAsync(int chatId, int messageId);
     Task SendTypingAsync(int chatId);
+    Task SetStatusAsync(UserStatusType status, string? duration = null);
 }
 
-public sealed class GlobalHubConnection(IAuthManager authManager, INotificationService notificationService, INavigationService navigationService,
-    ISettingsService settingsService, ILocalCacheService cacheService) : IGlobalHubConnection
+public sealed class GlobalHubConnection(
+    IAuthManager authManager,
+    INotificationService notificationService,
+    INavigationService navigationService,
+    ISettingsService settingsService,
+    ILocalCacheService cacheService) : IGlobalHubConnection
 {
     private const int NoChatId = -1;
     private const string NotificationTypePoll = "poll";
@@ -66,7 +73,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     #region Events
 
     public event Action<NotificationDto>? NotificationReceived;
-    public event Action<int, bool>? UserStatusChanged;
+    public event Action<UserStatusDto>? UserStatusChanged;
     public event Action<int, int>? UnreadCountChanged;
     public event Action<int>? TotalUnreadChanged;
     public event Action<MessageDto>? MessageReceivedGlobally;
@@ -98,8 +105,11 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         if (Interlocked.CompareExchange(ref _connectState, 1, 0) != 0) return;
         try
         {
-            _hub = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub",
-                o => o.AccessTokenProvider = () => Task.FromResult(_auth.Session.Token)).WithAutomaticReconnect().Build();
+            _hub = new HubConnectionBuilder()
+                .WithUrl($"{App.ApiUrl}chatHub",
+                    o => o.AccessTokenProvider = () => Task.FromResult(_auth.Session.Token))
+                .WithAutomaticReconnect()
+                .Build();
 
             SubscribeHubEvents();
             _hub.Reconnecting += OnReconnecting;
@@ -129,17 +139,35 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
     #region Hub invoke helpers
 
-    private async Task<T?> InvokeAsync<T>(string method, params object[] args)
+    private async Task<T?> SafeInvokeAsync<T>(string method, params object?[] args)
     {
         if (_hub?.State != HubConnectionState.Connected) return default;
-        try { return await _hub.InvokeAsync<T>(method, args); }
+        try
+        {
+            return args.Length switch
+            {
+                0 => await _hub.InvokeAsync<T>(method),
+                1 => await _hub.InvokeAsync<T>(method, args[0]),
+                2 => await _hub.InvokeAsync<T>(method, args[0], args[1]),
+                _ => throw new InvalidOperationException($"Unexpected args count: {args.Length}")
+            };
+        }
         catch (Exception ex) { Log($"{method} error: {ex.Message}"); return default; }
     }
 
-    private async Task InvokeAsync(string method, params object[] args)
+    private async Task SafeInvokeAsync(string method, params object?[] args)
     {
         if (_hub?.State != HubConnectionState.Connected) return;
-        try { await _hub.InvokeAsync(method, args); }
+        try
+        {
+            switch (args.Length)
+            {
+                case 0: await _hub.InvokeAsync(method); break;
+                case 1: await _hub.InvokeAsync(method, args[0]); break;
+                case 2: await _hub.InvokeAsync(method, args[0], args[1]); break;
+                default: throw new InvalidOperationException($"Unexpected args count: {args.Length}");
+            }
+        }
         catch (Exception ex) { Log($"{method} error: {ex.Message}"); }
     }
 
@@ -148,7 +176,10 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     #region Chat-level RPC
 
     public Task<ChatReadInfoDto?> GetReadInfoAsync(int chatId)
-        => InvokeAsync<ChatReadInfoDto?>("GetReadInfo", chatId);
+        => SafeInvokeAsync<ChatReadInfoDto?>("GetReadInfo", chatId);
+
+    public Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
+        => SafeInvokeAsync<AllUnreadCountsDto?>("GetUnreadCounts");
 
     public async Task MarkMessageAsReadAsync(int chatId, int messageId)
     {
@@ -157,7 +188,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         if ((now - _lastReadTime).TotalMilliseconds < AppConstants.MarkAsReadDebounceMs) return;
         _lastSentReadMsgId = messageId;
         _lastReadTime = now;
-        await InvokeAsync("MarkMessageAsRead", chatId, messageId);
+        await SafeInvokeAsync("MarkMessageAsRead", chatId, (object)messageId);
     }
 
     public async Task SendTypingAsync(int chatId)
@@ -165,11 +196,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         var now = DateTime.UtcNow;
         if ((now - _lastTypingTime).TotalMilliseconds < AppConstants.TypingSendDebounceMs) return;
         _lastTypingTime = now;
-        await InvokeAsync("SendTyping", chatId);
+        await SafeInvokeAsync("SendTyping", chatId);
     }
-
-    public Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
-        => InvokeAsync<AllUnreadCountsDto?>("GetUnreadCounts");
 
     public async Task MarkChatAsReadAsync(int chatId)
     {
@@ -177,10 +205,36 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         try
         {
             UpdateUnread(chatId, 0);
-            await _hub.InvokeAsync("MarkAsRead", chatId, (int?)null);
+            await _hub.InvokeAsync("MarkAsRead", chatId, (object?)null);
             await SafeCacheAsync(() => _cache.UpdateReadPointerAsync(chatId, null, 0), "read pointer");
         }
         catch (Exception ex) { Log($"MarkChatAsRead error: {ex.Message}"); }
+    }
+
+    public async Task SetStatusAsync(UserStatusType status, string? duration = null)
+    {
+        if (_hub?.State != HubConnectionState.Connected)
+        {
+            Log($"[SetStatus] Hub not connected, state={_hub?.State}");
+            return;
+        }
+
+        Log($"[SetStatus] Invoking: status={(int)status} ({status}), duration={duration ?? "null"}");
+
+        try
+        {
+            await _hub.InvokeAsync("SetStatus", (int)status, duration);
+            Log("[SetStatus] Success");
+        }
+        catch (HubException hex)
+        {
+            Log($"[SetStatus] HubException: {hex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log($"[SetStatus] Error: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     #endregion
@@ -190,9 +244,21 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     private void SubscribeHubEvents()
     {
         if (_hub is null) return;
+
         _subs.Add(_hub.On<NotificationDto>("ReceiveNotification", OnNotificationReceived));
-        _subs.Add(_hub.On<int>("UserOnline", id => PostUI(() => UserStatusChanged?.Invoke(id, true))));
-        _subs.Add(_hub.On<int>("UserOffline", id => PostUI(() => UserStatusChanged?.Invoke(id, false))));
+
+        _subs.Add(_hub.On<int>("UserOnline", id =>
+            PostUI(() => UserStatusChanged?.Invoke(new UserStatusDto(id, true, null, UserStatusType.Online, null)))));
+
+        _subs.Add(_hub.On<int>("UserOffline", id =>
+            PostUI(() => UserStatusChanged?.Invoke(new UserStatusDto(id, false, DateTime.UtcNow, UserStatusType.Online, null)))));
+
+        _subs.Add(_hub.On<UserStatusDto>("UserStatusChanged", dto =>
+        {
+            Log($"UserStatusChanged received: userId={dto.UserId}, status={dto.StatusType}, expires={dto.StatusExpiresAt}");
+            PostUI(() => UserStatusChanged?.Invoke(dto));
+        }));
+
         _subs.Add(_hub.On<UserDto>("UserProfileUpdated", u => PostUI(() => UserProfileUpdated?.Invoke(u))));
         _subs.Add(_hub.On<int, int>("UnreadCountUpdated", (cid, cnt) => UpdateUnread(cid, cnt)));
         _subs.Add(_hub.On<MessageDto>("ReceiveMessageDto", OnNewMessageReceived));
@@ -211,9 +277,10 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _ = SafeCacheAsync(() => _cache.UpsertChatsAsync([chat]), "chat update");
         PostUI(() => ChatUpdated?.Invoke(chat));
     }
+
     private void UnsubscribeHubEvents()
     {
-        foreach (var s in _subs) try { s.Dispose(); } catch { /* Ignored */ }
+        foreach (var s in _subs) try { s.Dispose(); } catch { /* ignored */ }
         _subs.Clear();
     }
 
@@ -251,9 +318,17 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         {
             try
             {
-                _notify.Show(n.ChatName ?? "Новое сообщение", n.Type == NotificationTypePoll ? n.Preview ?? "Новый опрос" : $"{n.SenderName}: {n.Preview}",
-                    DesktopNotificationType.Information, 5000, () => _nav.CurrentViewModel is MainMenuViewModel vm
-                        ? vm.OpenNotificationAsync(n) : Task.CompletedTask);
+                _notify.Show(
+                    n.ChatName ?? "Новое сообщение",
+                    n.Type == NotificationTypePoll
+                        ? n.Preview ?? "Новый опрос"
+                        : $"{n.SenderName}: {n.Preview}",
+                    DesktopNotificationType.Information,
+                    5000,
+                    () => _nav.CurrentViewModel is MainMenuViewModel vm
+                        ? vm.OpenNotificationAsync(n)
+                        : Task.CompletedTask);
+
                 NotificationReceived?.Invoke(n);
             }
             catch (Exception ex) { Log($"Ошибка отображения уведомления: {ex.Message}"); }
@@ -279,6 +354,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _ = SafeCacheAsync(() => _cache.MarkMessageDeletedAsync(evt.MessageId), "delete");
         PostUI(() => MessageDeletedGlobally?.Invoke(evt.MessageId, evt.ChatId));
     }
+
     private void OnPollUpdated(PollDto poll)
     {
         _ = SafeCacheAsync(() => _cache.UpdatePollThreadAsync(poll), "poll update");
@@ -350,10 +426,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         {
             await _cache.UpsertMessageAsync(msg);
             var uid = _auth.Session.UserId;
-
             var (preview, _) = ChatPreviewFormatter.BuildPreviewWithMeta(msg, uid);
             var senderName = ChatPreviewFormatter.FormatSenderName(msg.SenderName, msg.SenderId, uid);
-
             await _cache.UpdateChatLastMessageAsync(msg.ChatId, preview, senderName, msg.CreatedAt);
         }
         catch (Exception ex) { Log($"Cache incoming error: {ex.Message}"); }

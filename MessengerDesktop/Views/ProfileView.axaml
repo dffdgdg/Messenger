@@ -9,10 +9,10 @@
 			 Background="{DynamicResource PrimaryBG}">
 	<UserControl.Styles>
 		<!-- ── Значение поля ── -->
-	<Style Selector="TextBlock.FieldValue">
-		<Setter Property="FontSize" Value="14"/>
-		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-	</Style>
+		<Style Selector="TextBlock.FieldValue">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+		</Style>
 		<!-- ── Валидация: ошибка ── -->
 		<Style Selector="TextBlock.ValidationError">
 			<Setter Property="FontSize" Value="11"/>
@@ -111,7 +111,62 @@
 							</StackPanel>
 						</Grid>
 					</Border>
+					<!-- Секция статуса -->
+					<Border Classes="Section">
+						<StackPanel Spacing="12">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+									<Ellipse Width="14" Height="14"
+											 Fill="{Binding CurrentStatusColor}"
+											 VerticalAlignment="Center"/>
+									<TextBlock Text="Статус"
+											   Classes="SectionItemTitle"/>
+								</StackPanel>
 
+								<Button Grid.Column="2"
+										Classes="IconButton Small"
+										ToolTip.Tip="Сменить статус">
+									<Button.Flyout>
+										<MenuFlyout Placement="BottomEdgeAlignedRight">
+											<MenuItem Header="В сети" Command="{Binding SetStatusCommand}" CommandParameter="Online">
+												<MenuItem.Icon>
+													<Ellipse Width="10" Height="10" Fill="#43A047" />
+												</MenuItem.Icon>
+											</MenuItem>
+											<MenuItem Header="Отошёл" Command="{Binding SetStatusCommand}" CommandParameter="Away">
+												<MenuItem.Icon>
+													<Ellipse Width="10" Height="10" Fill="#FFA000" />
+												</MenuItem.Icon>
+											</MenuItem>
+											<MenuItem Header="Занят" Command="{Binding SetStatusCommand}" CommandParameter="Busy">
+												<MenuItem.Icon>
+													<Ellipse Width="10" Height="10" Fill="#E53935" />
+												</MenuItem.Icon>
+											</MenuItem>
+											<MenuItem Header="Не беспокоить" Command="{Binding SetStatusCommand}" CommandParameter="DnD">
+												<MenuItem.Icon>
+													<Ellipse Width="10" Height="10" Fill="#9C27B0" />
+												</MenuItem.Icon>
+											</MenuItem>
+											<Separator />
+											<MenuItem Header="Занят на 15 мин" Command="{Binding SetStatusCommand}" CommandParameter="Busy15m" />
+											<MenuItem Header="Занят на 30 мин" Command="{Binding SetStatusCommand}" CommandParameter="Busy30m" />
+											<MenuItem Header="Занят на 1 час" Command="{Binding SetStatusCommand}" CommandParameter="Busy1h" />
+											<MenuItem Header="Не беспокоить 1 час" Command="{Binding SetStatusCommand}" CommandParameter="DnD1h" />
+											<MenuItem Header="Не беспокоить 2 часа" Command="{Binding SetStatusCommand}" CommandParameter="DnD2h" />
+										</MenuFlyout>
+									</Button.Flyout>
+									<PathIcon Data="{StaticResource EditIcon}"
+											  Width="16" Height="16"
+											  Foreground="{DynamicResource TextSecondary}"/>
+								</Button>
+							</Grid>
+
+							<TextBlock Text="{Binding CurrentStatusText}"
+									   FontSize="14"
+									   Foreground="{DynamicResource TextSecondary}"/>
+						</StackPanel>
+					</Border>
 					<Border Classes="Section">
 						<StackPanel Spacing="16">
 

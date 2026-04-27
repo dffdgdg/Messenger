@@ -23,4 +23,8 @@ public class ChatDto
     [JsonIgnore]
     public bool HideSenderPrefix { get; set; }
     public bool ShowHistoryForNewMembers { get; set; } = true;
+    public int? ContactUserId { get; set; }
+    public bool ContactIsOnline { get; set; }
+    public UserStatusType ContactStatusType { get; set; } = UserStatusType.Online;
+    public DateTime? ContactStatusExpiresAt { get; set; }
 }

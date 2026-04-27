@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessengerShared.Enum;
+using System;
 using System.Collections.Generic;
 
 namespace MessengerDesktop.Views.Controls;
@@ -31,6 +32,9 @@ public partial class AvatarControl : UserControl
 
     public static readonly StyledProperty<bool> IsCircularProperty = AvaloniaProperty.Register<AvatarControl, bool>(nameof(IsCircular), true);
 
+    // ───── НОВЫЕ свойства статуса ─────
+    public static readonly StyledProperty<UserStatusType> StatusTypeProperty = AvaloniaProperty.Register<AvatarControl, UserStatusType>(nameof(StatusType), UserStatusType.Online);
+
     public IImage? ImageBitmap
     {
         get => GetValue(ImageBitmapProperty);
@@ -41,34 +45,44 @@ public partial class AvatarControl : UserControl
     #region Direct Properties
 
     private CornerRadius _onlineIndicatorCornerRadius = new(5);
-    public static readonly DirectProperty<AvatarControl, CornerRadius>OnlineIndicatorCornerRadiusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, CornerRadius>(nameof(OnlineIndicatorCornerRadius), o => o.OnlineIndicatorCornerRadius);
+    public static readonly DirectProperty<AvatarControl, CornerRadius> OnlineIndicatorCornerRadiusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, CornerRadius>(nameof(OnlineIndicatorCornerRadius), o => o.OnlineIndicatorCornerRadius);
 
     private string? _imageSource;
-    public static readonly DirectProperty<AvatarControl, string?>ImageSourceProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string?>(nameof(ImageSource), o => o.ImageSource);
+    public static readonly DirectProperty<AvatarControl, string?> ImageSourceProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string?>(nameof(ImageSource), o => o.ImageSource);
 
     private bool _hasImage;
-    public static readonly DirectProperty<AvatarControl, bool>HasImageProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(HasImage), o => o.HasImage);
+    public static readonly DirectProperty<AvatarControl, bool> HasImageProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(HasImage), o => o.HasImage);
 
     private bool _showInitials;
-    public static readonly DirectProperty<AvatarControl, bool>ShowInitialsProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowInitials), o => o.ShowInitials);
+    public static readonly DirectProperty<AvatarControl, bool> ShowInitialsProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowInitials), o => o.ShowInitials);
 
     private bool _showIcon;
-    public static readonly DirectProperty<AvatarControl, bool>ShowIconProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowIcon), o => o.ShowIcon);
+    public static readonly DirectProperty<AvatarControl, bool> ShowIconProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowIcon), o => o.ShowIcon);
 
     private string _initials = "?";
-    public static readonly DirectProperty<AvatarControl, string>InitialsProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string>(nameof(Initials), o => o.Initials);
+    public static readonly DirectProperty<AvatarControl, string> InitialsProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string>(nameof(Initials), o => o.Initials);
 
     private Geometry? _iconData;
-    public static readonly DirectProperty<AvatarControl, Geometry?>IconDataProperty = AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>(nameof(IconData), o => o.IconData);
+    public static readonly DirectProperty<AvatarControl, Geometry?> IconDataProperty = AvaloniaProperty.RegisterDirect<AvatarControl, Geometry?>(nameof(IconData), o => o.IconData);
 
     private double _onlineIndicatorSize = 10;
-    public static readonly DirectProperty<AvatarControl, double>OnlineIndicatorSizeProperty = AvaloniaProperty.RegisterDirect<AvatarControl, double>(nameof(OnlineIndicatorSize), o => o.OnlineIndicatorSize);
+    public static readonly DirectProperty<AvatarControl, double> OnlineIndicatorSizeProperty = AvaloniaProperty.RegisterDirect<AvatarControl, double>(nameof(OnlineIndicatorSize), o => o.OnlineIndicatorSize);
 
     private bool _showOnlineStatus;
-    public static readonly DirectProperty<AvatarControl, bool>ShowOnlineStatusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowOnlineStatus), o => o.ShowOnlineStatus);
+    public static readonly DirectProperty<AvatarControl, bool> ShowOnlineStatusProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(ShowOnlineStatus), o => o.ShowOnlineStatus);
 
     private bool _hasBitmapImage;
-    public static readonly DirectProperty<AvatarControl, bool>HasBitmapImageProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(HasBitmapImage), o => o.HasBitmapImage);
+    public static readonly DirectProperty<AvatarControl, bool> HasBitmapImageProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(HasBitmapImage), o => o.HasBitmapImage);
+
+    // ───── НОВЫЕ direct properties для цвета статуса ─────
+    private IBrush _onlineIndicatorBackground = Brushes.LimeGreen;
+    public static readonly DirectProperty<AvatarControl, IBrush> OnlineIndicatorBackgroundProperty = AvaloniaProperty.RegisterDirect<AvatarControl, IBrush>(nameof(OnlineIndicatorBackground), o => o.OnlineIndicatorBackground);
+
+    private bool _isStatusTemporary;
+    public static readonly DirectProperty<AvatarControl, bool> IsStatusTemporaryProperty = AvaloniaProperty.RegisterDirect<AvatarControl, bool>(nameof(IsStatusTemporary), o => o.IsStatusTemporary);
+
+    private string _statusTooltip = "В сети";
+    public static readonly DirectProperty<AvatarControl, string> StatusTooltipProperty = AvaloniaProperty.RegisterDirect<AvatarControl, string>(nameof(StatusTooltip), o => o.StatusTooltip);
     #endregion
 
     #region Property Accessors
@@ -139,6 +153,12 @@ public partial class AvatarControl : UserControl
         set => SetValue(IsCircularProperty, value);
     }
 
+    public UserStatusType StatusType
+    {
+        get => GetValue(StatusTypeProperty);
+        set => SetValue(StatusTypeProperty, value);
+    }
+
     public CornerRadius OnlineIndicatorCornerRadius
     {
         get => _onlineIndicatorCornerRadius;
@@ -198,6 +218,25 @@ public partial class AvatarControl : UserControl
         get => _hasBitmapImage;
         private set => SetAndRaise(HasBitmapImageProperty, ref _hasBitmapImage, value);
     }
+
+    // ───── НОВЫЕ accessors ─────
+    public IBrush OnlineIndicatorBackground
+    {
+        get => _onlineIndicatorBackground;
+        private set => SetAndRaise(OnlineIndicatorBackgroundProperty, ref _onlineIndicatorBackground, value);
+    }
+
+    public bool IsStatusTemporary
+    {
+        get => _isStatusTemporary;
+        private set => SetAndRaise(IsStatusTemporaryProperty, ref _isStatusTemporary, value);
+    }
+
+    public string StatusTooltip
+    {
+        get => _statusTooltip;
+        private set => SetAndRaise(StatusTooltipProperty, ref _statusTooltip, value);
+    }
     #endregion
 
     /// <summary>
@@ -226,6 +265,7 @@ public partial class AvatarControl : UserControl
 
         UpdateComputedProperties();
         UpdateCornerRadius();
+        UpdateStatusColor();
     }
 
     static AvatarControl()
@@ -238,6 +278,7 @@ public partial class AvatarControl : UserControl
         SizeProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.OnSizeChanged());
         IsCircularProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateCornerRadius());
         ImageBitmapProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
+        StatusTypeProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateStatusColor());
     }
 
     private void UpdateComputedProperties()
@@ -290,6 +331,31 @@ public partial class AvatarControl : UserControl
             return url;
 
         return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+    }
+
+    /// <summary>
+    /// Обновляет цвет и тултип индикатора в зависимости от статуса
+    /// </summary>
+    private void UpdateStatusColor()
+    {
+        if (!IsOnline)
+        {
+            ShowOnlineStatus = false;
+            return;
+        }
+
+        var (color, tooltip) = StatusType switch
+        {
+            UserStatusType.Online => ("#43A047", "В сети"),
+            UserStatusType.Away => ("#FFA000", "Отошёл"),
+            UserStatusType.Busy => ("#E53935", "Занят"),
+            UserStatusType.DoNotDisturb => ("#9C27B0", "Не беспокоить"),
+            _ => ("#43A047", "В сети")
+        };
+
+        OnlineIndicatorBackground = new SolidColorBrush(Color.Parse(color));
+        StatusTooltip = tooltip;
+        ShowOnlineStatus = ShowOnlineIndicator;
     }
 
     private void UpdateOnlineStatus() => ShowOnlineStatus = IsOnline && ShowOnlineIndicator;

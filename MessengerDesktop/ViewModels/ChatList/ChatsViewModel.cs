@@ -5,6 +5,7 @@ using MessengerDesktop.ViewModels.Chat;
 using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
+using MessengerShared.Dto.Online;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -62,6 +63,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.TotalUnreadChanged += OnTotalUnreadChanged;
         _globalHub.UnreadCountChanged += OnUnreadCountChanged;
         _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
+        _globalHub.UserStatusChanged += OnUserStatusChanged;
 
         InitializeSearchManager();
         _ = LoadChats().ContinueWith(
@@ -204,6 +206,19 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         chat.HideSenderPrefix = hidePrefix;
 
         MoveChatToTop(chat);
+    }
+
+    private void OnUserStatusChanged(UserStatusDto status)
+    {
+        foreach (var chat in Chats)
+        {
+            if (chat.Type == ChatType.Contact && chat.ContactUserId == status.UserId)
+            {
+                chat.ContactIsOnline = status.IsOnline;
+                chat.ContactStatusType = status.StatusType;
+                chat.ContactStatusExpiresAt = status.StatusExpiresAt;
+            }
+        }
     }
 
     [RelayCommand]
@@ -581,6 +596,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.TotalUnreadChanged -= OnTotalUnreadChanged;
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
+            _globalHub.UserStatusChanged -= OnUserStatusChanged;
             SearchManager?.PropertyChanged -= OnSearchManagerPropertyChanged;
             _subscribedChatVm?.PropertyChanged -= OnChatVmPropertyChanged;
 

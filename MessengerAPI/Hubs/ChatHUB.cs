@@ -8,34 +8,38 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 {
     #region Connection Lifecycle
     public override async Task OnConnectedAsync()
+{
+    var userId = GetCurrentUserId();
+    if (!userId.HasValue)
     {
-        var userId = GetCurrentUserId();
-        if (!userId.HasValue)
-        {
-            await base.OnConnectedAsync();
-            return;
-        }
-
-        onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
-
-        using var scope = scopeFactory.CreateScope();
-        var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
-
-        var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
-
-        var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
-        await Task.WhenAll(joinTasks);
-
-        await Clients.Others.SendAsync("UserOnline", userId.Value);
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
-        }
-
         await base.OnConnectedAsync();
+        return;
     }
+
+    onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
+    await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
+
+    using var scope = scopeFactory.CreateScope();
+    var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
+    var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
+
+    var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
+
+    var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
+    await Task.WhenAll(joinTasks);
+
+    await Clients.Others.SendAsync("UserOnline", userId.Value);
+
+    var statusDto = await statusService.GetStatusAsync(userId.Value);
+    await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
+
+    if (logger.IsEnabled(LogLevel.Information))
+    {
+        logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
+    }
+
+    await base.OnConnectedAsync();
+}
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
@@ -210,6 +214,45 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
         return [.. onlineUserService.FilterOnline(await accessControl.GetUserChatIdsAsync(chatId))];
     }
+
+    public async Task SetStatus(int statusRaw, string? duration = null)
+    {
+        logger.LogInformation(
+            "[SetStatus] CALLED — connectionId={ConnectionId}, statusRaw={StatusRaw}, duration={Duration}",
+            Context.ConnectionId, statusRaw, duration);
+
+        var userId = GetRequiredUserId();
+
+        if (!System.Enum.IsDefined(typeof(UserStatusType), statusRaw))
+        {
+            logger.LogWarning("[SetStatus] Invalid statusRaw={StatusRaw} from userId={UserId}", statusRaw, userId);
+            throw new HubException($"Неверный статус: {statusRaw}");
+        }
+
+        var userStatus = (UserStatusType)statusRaw;
+        var parsedDuration = ParseDuration(duration);
+
+        logger.LogInformation(
+            "[SetStatus] userId={UserId}, status={Status}, duration={Duration}",
+            userId, userStatus, parsedDuration);
+
+        using var scope = scopeFactory.CreateScope();
+        var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
+        await statusService.SetStatusAsync(userId, userStatus, parsedDuration);
+    }
+
+    private static TimeSpan? ParseDuration(string? duration) => duration switch
+    {
+        "15m" => TimeSpan.FromMinutes(15),
+        "30m" => TimeSpan.FromMinutes(30),
+        "1h" => TimeSpan.FromHours(1),
+        "2h" => TimeSpan.FromHours(2),
+        "4h" => TimeSpan.FromHours(4),
+        "8h" => TimeSpan.FromHours(8),
+        "24h" => TimeSpan.FromHours(24),
+        _ => null
+    };
+
 
     #endregion
 

@@ -41,20 +41,6 @@
                 Background="{Binding PlaceholderBackground, ElementName=Root}">
 
             <Panel>
-                <!--
-                    CRITICAL: Wrap Image in a Panel with IsVisible=HasImage.
-                    
-                    WHY: AsyncImageLoader evaluates its Source binding
-                    even when the Image itself has IsVisible=false.
-                    By collapsing the PARENT Panel, the Image control
-                    is removed from the visual tree entirely, and
-                    AsyncImageLoader never fires.
-                    
-                    Without this wrapper:
-                    - Source=null → AsyncImageLoader tries to load "" → error
-                    - Source="file.pptx" → tries to decode as bitmap → crash
-                    - Source="avatar.webp" but no token → 401 → log spam
-                -->
                 <Image Source="{Binding ImageBitmap, ElementName=Root}"
                        Stretch="UniformToFill"
                        IsVisible="{Binding HasBitmapImage, ElementName=Root}"/>
@@ -87,11 +73,12 @@
                 Width="{Binding OnlineIndicatorSize, ElementName=Root}"
                 Height="{Binding OnlineIndicatorSize, ElementName=Root}"
                 CornerRadius="{Binding OnlineIndicatorCornerRadius, ElementName=Root}"
-                Background="{DynamicResource OnlineStatus}"
+                Background="{Binding OnlineIndicatorBackground, ElementName=Root}"
                 BorderBrush="{DynamicResource PrimaryBG}"
                 BorderThickness="2"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Margin="0,0,-2,-2"/>
+                Margin="0,0,-2,-2"
+                ToolTip.Tip="{Binding StatusTooltip, ElementName=Root}"/>
     </Panel>
 </UserControl>

@@ -23,6 +23,14 @@ public class CachedChat
     [Column("show_history_for_new_members")]
     public bool ShowHistoryForNewMembers { get; set; } = true;
 
+    [Column("contact_user_id")] public int? ContactUserId { get; set; }
+    [Column("contact_is_online")] public bool ContactIsOnline { get; set; }
+    [Column("contact_status_type")] public int ContactStatusType { get; set; }
+    [Column("contact_status_expires_at")] public long? ContactStatusExpiresAtTicks { get; set; }
+
     [Ignore]
     public DateTime? LastMessageDate => LastMessageDateTicks.HasValue ? new DateTime(LastMessageDateTicks.Value, DateTimeKind.Utc) : null;
+
+    [Ignore]
+    public DateTime? ContactStatusExpiresAt => ContactStatusExpiresAtTicks.HasValue ? new DateTime(ContactStatusExpiresAtTicks.Value, DateTimeKind.Utc) : null;
 }

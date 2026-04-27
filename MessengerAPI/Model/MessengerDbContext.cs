@@ -223,6 +223,10 @@ public partial class MessengerDbContext : DbContext
             entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
             entity.Property(e => e.Surname).HasMaxLength(50).HasColumnName("surname");
             entity.Property(e => e.Username).HasMaxLength(32).HasColumnName("username");
+
+            entity.Property(e => e.StatusType).HasColumnName("status_type").HasDefaultValue(UserStatusType.Online).HasConversion<int>();
+            entity.Property(e => e.StatusExpiresAt).HasColumnType("timestamp without time zone").HasColumnName("status_expires_at");
+
             entity.HasOne(d => d.Department).WithMany(p => p.Users).HasForeignKey(d => d.DepartmentId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("Users_DepartmentId_fkey");
         });
 

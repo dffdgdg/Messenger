@@ -1,4 +1,6 @@
-﻿namespace MessengerAPI.Model;
+﻿using MessengerShared.Enum;
+
+namespace MessengerAPI.Model;
 
 public partial class User
 {
@@ -13,6 +15,9 @@ public partial class User
     public string? Midname { get; set; }
     public string? Surname { get; set; }
     public bool IsBanned { get; set; }
+    public UserStatusType StatusType { get; set; } = UserStatusType.Online;
+    public DateTime? StatusExpiresAt { get; set; }
+
     public virtual ICollection<ChatMember> ChatMembers { get; set; } = [];
     public virtual ICollection<Chat> Chats { get; set; } = [];
     public virtual Department? Department { get; set; }

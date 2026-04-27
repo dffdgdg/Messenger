@@ -6,6 +6,7 @@ using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerDesktop.ViewModels.Factories;
+using MessengerShared.Dto.Online;
 using MessengerShared.DTO.Call;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -37,6 +38,17 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     private CancellationTokenSource? _searchCts;
     private readonly GlobalSearchManager _searchManager;
     private readonly ActiveCallStore _activeCallStore;
+    [ObservableProperty]
+    public partial UserStatusType CurrentStatusType { get; set; } = UserStatusType.Online;
+
+    [ObservableProperty]
+    public partial string CurrentStatusText { get; set; } = "В сети";
+
+    [ObservableProperty]
+    public partial string CurrentStatusColor { get; set; } = "#43A047";
+
+    [ObservableProperty]
+    public partial string? CurrentStatusDuration { get; set; }
     public CallBannerViewModel CallBanner { get; }
 
     [ObservableProperty] public partial BaseViewModel? CurrentMenuViewModel { get; set; }
@@ -68,6 +80,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _callHub.IncomingCall += OnIncomingCall;
         _callHub.CallStateUpdated += OnCallStateUpdated;
         _activeCallStore = activeCallStore;
+        _globalHub.UserStatusChanged += OnUserStatusChanged;
 
         CallBanner = new CallBannerViewModel(activeCallStore, _sp.GetRequiredService<ICallService>());
 
@@ -204,6 +217,30 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         var chatName = UserChats.FirstOrDefault(c => c.Id == state.ChatId)?.Name ?? string.Empty;
         Dispatcher.UIThread.Post(() => _ = ShowCallViewAsync(state, chatName, state.IsGroupCall));
+    }
+
+    private void OnUserStatusChanged(UserStatusDto status)
+    {
+        if (status.UserId != UserId) return;
+
+        CurrentStatusType = status.StatusType;
+        CurrentStatusText = status.IsOnline ? status.StatusType switch
+        {
+            UserStatusType.Online => "В сети",
+            UserStatusType.Away => "Отошёл",
+            UserStatusType.Busy => "Занят",
+            UserStatusType.DoNotDisturb => "Не беспокоить",
+            _ => "В сети"
+        } : "Не в сети";
+
+        CurrentStatusColor = status.IsOnline ? status.StatusType switch
+        {
+            UserStatusType.Online => "#43A047",
+            UserStatusType.Away => "#FFA000",
+            UserStatusType.Busy => "#E53935",
+            UserStatusType.DoNotDisturb => "#9C27B0",
+            _ => "#43A047"
+        } : "#9E9E9E";
     }
 
     private async Task OpenCallChatAsync(CallInviteDto invite)
@@ -678,7 +715,26 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     };
 
     #endregion
+    [RelayCommand]
+    private async Task SetStatusAsync(string param)
+    {
+        Debug.WriteLine($"[MainMenu] SetStatus called with param: {param}");
+        var (status, duration) = param switch
+        {
+            "Online" => (UserStatusType.Online, (string?)null),
+            "Away" => (UserStatusType.Away, (string?)null),
+            "Busy" => (UserStatusType.Busy, (string?)null),
+            "DnD" => (UserStatusType.DoNotDisturb, (string?)null),
+            "Busy15m" => (UserStatusType.Busy, "15m"),
+            "Busy30m" => (UserStatusType.Busy, "30m"),
+            "Busy1h" => (UserStatusType.Busy, "1h"),
+            "DnD1h" => (UserStatusType.DoNotDisturb, "1h"),
+            "DnD2h" => (UserStatusType.DoNotDisturb, "2h"),
+            _ => (UserStatusType.Online, (string?)null)
+        };
 
+        await _globalHub.SetStatusAsync(status, duration);
+    }
     #region Dispose
 
     protected override void Dispose(bool disposing)
@@ -688,6 +744,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             _auth.Session.SessionChanged -= OnSessionChanged;
             _callHub.IncomingCall -= OnIncomingCall;
             _callHub.CallStateUpdated -= OnCallStateUpdated;
+            _globalHub.UserStatusChanged -= OnUserStatusChanged;
             _searchCts?.Cancel();
             _searchCts?.Dispose();
             DisposeVm(ref _chatsVm);

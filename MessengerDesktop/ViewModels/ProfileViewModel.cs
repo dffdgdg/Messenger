@@ -2,7 +2,9 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using MessengerDesktop.Infrastructure;
+using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.UI;
+using MessengerShared.Dto.Online;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -24,6 +26,19 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [ObservableProperty] public partial bool IsEditingProfile { get; set; }
     [ObservableProperty] public partial bool IsEditingUsername { get; set; }
     [ObservableProperty] public partial bool IsEditingPassword { get; set; }
+    private readonly IGlobalHubConnection _globalHub;
+
+    [ObservableProperty]
+    public partial UserStatusType CurrentStatusType { get; set; } = UserStatusType.Online;
+
+    [ObservableProperty]
+    public partial string CurrentStatusText { get; set; } = "В сети";
+
+    [ObservableProperty]
+    public partial string CurrentStatusColor { get; set; } = "#43A047";
+
+    [ObservableProperty]
+    public partial string? SelectedDuration { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TempFullName))]
@@ -108,11 +123,14 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
     IAsyncRelayCommand IRefreshable.RefreshCommand => RefreshCommand;
 
-    public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager, INotificationService notificationService)
+    public ProfileViewModel(IApiClientService apiClient, IAuthManager authManager, INotificationService notificationService, IGlobalHubConnection globalHub)
     {
         _api = apiClient;
         _notificationService = notificationService;
-        UserId = authManager.Session.UserId ?? throw new InvalidOperationException("Польователь не авторизовван");
+        _globalHub = globalHub;
+        UserId = authManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
+
+        _globalHub.UserStatusChanged += OnUserStatusChanged;
         _ = LoadUser();
     }
 
@@ -204,7 +222,52 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             }
         });
     }
+    private void OnUserStatusChanged(UserStatusDto status)
+    {
+        if (status.UserId != UserId) return;
 
+        CurrentStatusType = status.StatusType;
+        CurrentStatusText = status.IsOnline ? status.StatusType switch
+        {
+            UserStatusType.Online => "В сети",
+            UserStatusType.Away => "Отошёл",
+            UserStatusType.Busy => "Занят",
+            UserStatusType.DoNotDisturb => "Не беспокоить",
+            _ => "В сети"
+        } : "Не в сети";
+
+        CurrentStatusColor = status.IsOnline ? status.StatusType switch
+        {
+            UserStatusType.Online => "#43A047",
+            UserStatusType.Away => "#FFA000",
+            UserStatusType.Busy => "#E53935",
+            UserStatusType.DoNotDisturb => "#9C27B0",
+            _ => "#43A047"
+        } : "#9E9E9E";
+    }
+
+    [RelayCommand]
+    private async Task SetStatus(string param)
+    {
+        var (status, duration) = param switch
+        {
+            "Online" => (UserStatusType.Online, (string?)null),
+            "Away" => (UserStatusType.Away, (string?)null),
+            "Busy" => (UserStatusType.Busy, (string?)null),
+            "DnD" => (UserStatusType.DoNotDisturb, (string?)null),
+            "Busy15m" => (UserStatusType.Busy, "15m"),
+            "Busy30m" => (UserStatusType.Busy, "30m"),
+            "Busy1h" => (UserStatusType.Busy, "1h"),
+            "DnD1h" => (UserStatusType.DoNotDisturb, "1h"),
+            "DnD2h" => (UserStatusType.DoNotDisturb, "2h"),
+            _ => (UserStatusType.Online, (string?)null)
+        };
+
+        await _globalHub.SetStatusAsync(status, duration);
+    }
+
+    [RelayCommand]
+    private void SetDuration(string duration) => SelectedDuration = duration;
     #endregion
 
     #region Username editing
@@ -375,6 +438,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     {
         if (disposing)
         {
+            _globalHub.UserStatusChanged -= OnUserStatusChanged;
             AvatarBitmap?.Dispose();
             AvatarBitmap = null;
         }

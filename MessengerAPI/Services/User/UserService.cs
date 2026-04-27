@@ -12,8 +12,8 @@ public interface IUserService
     Task<Result> UpdateUserAsync(int id, UserDto dto, CancellationToken ct = default);
     Task<Result<AvatarResponseDto>> UploadAvatarAsync(int id, IFormFile file, CancellationToken ct = default);
     Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default);
-    Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default);
-    Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default);
+    Task<Result<UserStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default);
+    Task<Result<List<UserStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default);
     Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDto dto, CancellationToken ct = default);
     Task<Result> ChangePasswordAsync(int id, ChangePasswordDto dto, CancellationToken ct = default);
 }
@@ -99,25 +99,25 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
         => Task.FromResult(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto { OnlineUserIds = [.. onlineService.GetOnlineUserIds()],
             TotalOnline = onlineService.GetOnlineUserIds().ToList().Count }));
 
-    public async Task<Result<OnlineStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
+    public async Task<Result<UserStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
         var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline }).FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-        return Result<OnlineStatusDto>.Success(new OnlineStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
+        return Result<UserStatusDto>.Success(new UserStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
     }
 
-    public async Task<Result<List<OnlineStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)
+    public async Task<Result<List<UserStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)
     {
         if (userIds is null || userIds.Count == 0)
-            return Result<List<OnlineStatusDto>>.Failure("Список ID пользователей не может быть пустым");
+            return Result<List<UserStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
         var users = await _context.Users.Where(u => userIds.Contains(u.Id)).AsNoTracking().Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
 
         var onlineIds = onlineService.FilterOnline(userIds);
 
-        var result = users.ConvertAll(u => new OnlineStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+        var result = users.ConvertAll(u => new UserStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
-        return Result<List<OnlineStatusDto>>.Success(result);
+        return Result<List<UserStatusDto>>.Success(result);
     }
 
     public async Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDto dto, CancellationToken ct = default)

@@ -1,5 +1,6 @@
 ﻿using MessengerDesktop.Services.Platform;
 using MessengerDesktop.ViewModels.Chat.Managers;
+using MessengerShared.Dto.Online;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -248,12 +249,25 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
 
     #region Hub event handlers
 
-    private void OnUserStatusChanged(int userId, bool isOnline) => Dispatcher.UIThread.Post(() =>
+    private void OnUserStatusChanged(UserStatusDto status) => Dispatcher.UIThread.Post(() =>
     {
         if (!IsAlive) return;
-        UpdateContactStatus(userId, isOnline);
-        UpdateMemberStatus(userId, isOnline);
+        UpdateContactStatus(status.UserId, status.IsOnline);
+        UpdateMemberStatus(status.UserId, status.IsOnline);
+        UpdateMemberStatusType(status);
     });
+
+    private void UpdateMemberStatusType(UserStatusDto status)
+    {
+        var member = Ctx.Members.FirstOrDefault(m => m.Id == status.UserId);
+        if (member == null) return;
+
+        member.StatusType = status.StatusType;
+        member.StatusExpiresAt = status.StatusExpiresAt;
+
+        var idx = Ctx.Members.IndexOf(member);
+        if (idx >= 0) Ctx.Members[idx] = member;
+    }
 
     private void UpdateContactStatus(int userId, bool isOnline)
     {

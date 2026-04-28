@@ -30,10 +30,11 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 
     await Clients.Others.SendAsync("UserOnline", userId.Value);
 
-    var statusDto = await statusService.GetStatusAsync(userId.Value);
-    await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
+        var statusResult = await statusService.GetStatusAsync(userId.Value);
+        if (statusResult.TryUnwrap(out var statusDto, logger))
+            await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
 
-    if (logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Information))
     {
         logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
     }
@@ -91,9 +92,9 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         using var scope = scopeFactory.CreateScope();
         var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
 
-        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (result.IsFailure)
-            throw new HubException(result.Error);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure)
+            throw new HubException(access.Error);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}");
         if (logger.IsEnabled(LogLevel.Debug))
@@ -208,19 +209,15 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         using var scope = scopeFactory.CreateScope();
         var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
 
-        var memberCheck = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (memberCheck.IsFailure)
-            throw new HubException(memberCheck.Error);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure)
+            throw new HubException(access.Error);
 
         return [.. onlineUserService.FilterOnline(await accessControl.GetUserChatIdsAsync(chatId))];
     }
 
     public async Task SetStatus(int statusRaw, string? duration = null)
     {
-        logger.LogInformation(
-            "[SetStatus] CALLED — connectionId={ConnectionId}, statusRaw={StatusRaw}, duration={Duration}",
-            Context.ConnectionId, statusRaw, duration);
-
         var userId = GetRequiredUserId();
 
         if (!System.Enum.IsDefined(typeof(UserStatusType), statusRaw))
@@ -230,29 +227,14 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         }
 
         var userStatus = (UserStatusType)statusRaw;
-        var parsedDuration = ParseDuration(duration);
-
-        logger.LogInformation(
-            "[SetStatus] userId={UserId}, status={Status}, duration={Duration}",
-            userId, userStatus, parsedDuration);
+        var parsedDuration = duration.Parse();
 
         using var scope = scopeFactory.CreateScope();
         var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
-        await statusService.SetStatusAsync(userId, userStatus, parsedDuration);
+        var result = await statusService.SetStatusAsync(userId, userStatus, parsedDuration);
+        if (result.IsFailure)
+            throw new HubException(result.Error);
     }
-
-    private static TimeSpan? ParseDuration(string? duration) => duration switch
-    {
-        "15m" => TimeSpan.FromMinutes(15),
-        "30m" => TimeSpan.FromMinutes(30),
-        "1h" => TimeSpan.FromHours(1),
-        "2h" => TimeSpan.FromHours(2),
-        "4h" => TimeSpan.FromHours(4),
-        "8h" => TimeSpan.FromHours(8),
-        "24h" => TimeSpan.FromHours(24),
-        _ => null
-    };
-
 
     #endregion
 

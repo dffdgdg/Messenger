@@ -2,20 +2,20 @@ using MessengerAPI.Services.Messaging;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class PollsController(IPollService pollService, ILogger<PollsController> logger) : BaseController<PollsController>(logger)
+public sealed class PollsController(IPollService poll, ILogger<PollsController> logger) : BaseController<PollsController>(logger)
 {
     [HttpGet("{pollId}")]
-    public async Task<ActionResult<ApiResponse<PollDto>>> GetPoll(int pollId) => await ExecuteAsync(()
-        => pollService.GetPollAsync(pollId, GetCurrentUserId()));
+    public async Task<IActionResult> GetPoll(int pollId)
+        => Map(await poll.GetPollAsync(pollId, GetCurrentUserId()));
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> CreatePoll([FromBody] CreatePollDto dto) => await ExecuteAsync(()
-        => pollService.CreatePollAsync(dto, GetCurrentUserId()), "Опрос успешно создан");
+    public async Task<IActionResult> CreatePoll([FromBody] CreatePollDto dto)
+        => Map(await poll.CreatePollAsync(dto, GetCurrentUserId()));
 
     [HttpPost("vote")]
-    public async Task<ActionResult<ApiResponse<PollDto>>> Vote([FromBody] PollVoteDto voteDto)
+    public async Task<IActionResult> Vote([FromBody] PollVoteDto voteDto)
     {
         voteDto.UserId = GetCurrentUserId();
-        return await ExecuteAsync(() => pollService.VoteAsync(voteDto),"Голос учтён");
+        return Map(await poll.VoteAsync(voteDto));
     }
 }

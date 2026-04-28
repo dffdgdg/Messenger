@@ -2,88 +2,85 @@
 
 namespace MessengerAPI.Controllers;
 
-public sealed class ChatsController(IChatService chatService, IChatMemberService chatMemberService, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
+public sealed class ChatsController(IChatService chat, IChatMemberService member, ILogger<ChatsController> logger)
+    : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
-    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserDialogs(int userId)
+    public async Task<IActionResult> GetUserDialogs(int userId)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
-
-        return await ExecuteAsync(() => chatService.GetUserDialogsAsync(userId), "Диалоги пользователя получены успешно");
+        return Map(await chat.GetUserDialogsAsync(userId));
     }
 
     [HttpGet("user/{userId}/contact/{contactUserId}")]
-    public async Task<ActionResult<ApiResponse<ChatDto>>> GetContactChat(int userId, int contactUserId)
+    public async Task<IActionResult> GetContactChat(int userId, int contactUserId)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<ChatDto>();
-
-        return await ExecuteAsync(() => chatService.GetContactChatAsync(userId, contactUserId));
+        return Map(await chat.GetContactChatAsync(userId, contactUserId));
     }
 
     [HttpGet("user/{userId}/groups")]
-    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserGroups(int userId)
+    public async Task<IActionResult> GetUserGroups(int userId)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
-
-        return await ExecuteAsync(() => chatService.GetUserGroupsAsync(userId), "Групповые чаты пользователя получены успешно");
+        return Map(await chat.GetUserGroupsAsync(userId));
     }
 
     [HttpGet("user/{userId}")]
-    public async Task<ActionResult<ApiResponse<List<ChatDto>>>> GetUserChats(int userId)
+    public async Task<IActionResult> GetUserChats(int userId)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<List<ChatDto>>("Доступ к чатам пользователя запрещён");
-
-        return await ExecuteAsync(() => chatService.GetUserChatsAsync(userId), "Чаты пользователя получены успешно");
+        return Map(await chat.GetUserChatsAsync(userId));
     }
 
     [HttpGet("{chatId}")]
-    public async Task<ActionResult<ApiResponse<ChatDto>>> GetChat(int chatId) => await ExecuteAsync(()
-        => chatService.GetChatForUserAsync(chatId, GetCurrentUserId()));
+    public async Task<IActionResult> GetChat(int chatId)
+        => Map(await chat.GetChatForUserAsync(chatId, GetCurrentUserId()));
 
     [HttpGet("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetMembers(int chatId) => await ExecuteAsync(()
-        => chatService.GetChatMembersAsync(chatId, GetCurrentUserId()));
+    public async Task<IActionResult> GetMembers(int chatId)
+        => Map(await chat.GetChatMembersAsync(chatId, GetCurrentUserId()));
 
     [HttpGet("{chatId}/members/detailed")]
-    public async Task<ActionResult<ApiResponse<List<ChatMemberDto>>>> GetChatMembersDetailed(int chatId) => await ExecuteAsync(()
-        => chatMemberService.GetMembersAsync(chatId, GetCurrentUserId()), "Участники чата получены успешно");
+    public async Task<IActionResult> GetChatMembersDetailed(int chatId)
+        => Map(await member.GetMembersAsync(chatId, GetCurrentUserId()));
 
     [HttpPost("{chatId}/members")]
-    public async Task<ActionResult<ApiResponse<ChatMemberDto>>> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto) => await ExecuteAsync(()
-        => chatMemberService.AddMemberAsync(chatId, dto.UserId, GetCurrentUserId()), "Участник чата добавлен успешно");
+    public async Task<IActionResult> AddChatMember(int chatId, [FromBody] UpdateChatMemberDto dto)
+        => Map(await member.AddMemberAsync(chatId, dto.UserId, GetCurrentUserId()));
 
     [HttpDelete("{chatId}/members/{userId}")]
-    public async Task<IActionResult> RemoveChatMember(int chatId, int userId) => await ExecuteAsync(()
-        => chatMemberService.RemoveMemberAsync(chatId, userId, GetCurrentUserId()), "Участник чата удалён успешно");
+    public async Task<IActionResult> RemoveChatMember(int chatId, int userId)
+        => Map(await member.RemoveMemberAsync(chatId, userId, GetCurrentUserId()));
 
     [HttpPut("{chatId}/members/{userId}/role")]
-    public async Task<ActionResult<ApiResponse<ChatMemberDto>>> UpdateChatMemberRole(int chatId, int userId, [FromQuery] ChatRole role) => await ExecuteAsync(()
-        => chatMemberService.UpdateRoleAsync(chatId, userId, role, GetCurrentUserId()), "Роль участника чата обновлена успешно");
+    public async Task<IActionResult> UpdateChatMemberRole(int chatId, int userId, [FromQuery] ChatRole role)
+        => Map(await member.UpdateRoleAsync(chatId, userId, role, GetCurrentUserId()));
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<ChatDto>>> CreateChat([FromBody] ChatDto chatDto)
+    public async Task<IActionResult> CreateChat([FromBody] ChatDto chatDto)
     {
         chatDto.CreatedById = GetCurrentUserId();
-        return await ExecuteAsync(() => chatService.CreateChatAsync(chatDto), "Чат успешно создан");
+        return Map(await chat.CreateChatAsync(chatDto));
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<ChatDto>>> UpdateChat(int id, [FromBody] UpdateChatDto dto) => await ExecuteAsync(()
-        => chatService.UpdateChatAsync(id, GetCurrentUserId(), dto), "Чат обновлён");
+    public async Task<IActionResult> UpdateChat(int id, [FromBody] UpdateChatDto dto)
+        => Map(await chat.UpdateChatAsync(id, GetCurrentUserId(), dto));
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteChat(int id) => await ExecuteAsync(()
-        => chatService.DeleteChatAsync(id, GetCurrentUserId()), "Чат успешно удалён");
+    public async Task<IActionResult> DeleteChat(int id)
+        => Map(await chat.DeleteChatAsync(id, GetCurrentUserId()));
 
     [HttpPost("{id}/avatar")]
-    public async Task<ActionResult<ApiResponse<string>>> UploadAvatar(int id, IFormFile file) => await ExecuteAsync(()
-        => chatService.UploadChatAvatarAsync(id, GetCurrentUserId(), file), "Аватар обновлён");
+    public async Task<IActionResult> UploadAvatar(int id, IFormFile file)
+        => Map(await chat.UploadChatAvatarAsync(id, GetCurrentUserId(), file));
 
     [HttpDelete("{id}/avatar")]
-    public async Task<IActionResult> RemoveAvatar(int id) => await ExecuteAsync(()
-        => chatService.RemoveChatAvatarAsync(id, GetCurrentUserId()), "Аватар удалён");
+    public async Task<IActionResult> RemoveAvatar(int id)
+        => Map(await chat.RemoveChatAvatarAsync(id, GetCurrentUserId()));
 }

@@ -1,7 +1,7 @@
 ﻿using MessengerAPI.Services.Base;
 using MessengerShared.Dto.Auth;
-using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace MessengerAPI.Services.Auth;
 
@@ -57,7 +57,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var saveResult = await SaveRefreshTokenAsync(user.Id, tokenPair, ct);
         if (saveResult.IsFailure)
-            return Result<AuthResponseDto>.Internal("Ошибка при сохранении сессии");
+            return saveResult.As<AuthResponseDto>();
 
         var response = new AuthResponseDto
         {
@@ -77,8 +77,9 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     public async Task<Result<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default)
     {
         var principalResult = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+
         if (principalResult.IsFailure)
-            return Result<TokenResponseDto>.FromFailure(principalResult);
+            return principalResult.As<TokenResponseDto>();
 
         var principal = principalResult.Value!;
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -89,7 +90,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
-        var storedToken = await _context.RefreshTokens.Include(rt => rt.User).FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
+        var storedToken = await _context.RefreshTokens.Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
 
         if (storedToken is null)
         {
@@ -121,7 +123,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         storedToken.UsedAt = _appDateTime.UtcNow;
 
-        var newRefreshToken = new Model.RefreshToken
+        var newRefreshToken = new RefreshToken
         {
             UserId = userId,
             TokenHash = ITokenService.HashToken(newTokenPair.RefreshToken),
@@ -131,10 +133,10 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
             FamilyId = storedToken.FamilyId
         };
 
-        _context.RefreshTokens.Add(newRefreshToken);
-        await _context.SaveChangesAsync(ct);
+        storedToken.ReplacedByToken = newRefreshToken;
 
-        storedToken.ReplacedByTokenId = newRefreshToken.Id;
+        _context.RefreshTokens.Add(newRefreshToken);
+
         await _context.SaveChangesAsync(ct);
 
         LogTokenRotated(userId);

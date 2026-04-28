@@ -1,4 +1,6 @@
-﻿namespace MessengerAPI.Services.Chat;
+﻿using MessengerAPI.Services.Base;
+
+namespace MessengerAPI.Services.Chat;
 
 public interface INotificationService
 {
@@ -8,38 +10,19 @@ public interface INotificationService
     Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request);
     Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId);
 }
-
-public sealed partial class NotificationService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder, ILogger<NotificationService> logger) : INotificationService
+public sealed partial class NotificationService(MessengerDbContext context, IHubNotifier hubNotifier, IUrlBuilder urlBuilder, ILogger<NotificationService> logger)
+    : BaseService<NotificationService>(context, logger), INotificationService
 {
-    public async Task SendNotificationAsync(int userId, MessageDto message)
-    {
-        try
-        {
-            var notification = await BuildNotificationAsync(message, "message");
-            await hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
-        }
-        catch (Exception ex)
-        {
-            LogNotificationFailed(userId,ex);
-        }
-    }
+    private readonly IHubNotifier _hubNotifier = hubNotifier;
+    private readonly IUrlBuilder _urlBuilder = urlBuilder;
 
-    public async Task SendMentionNotificationAsync(int userId, MessageDto message)
-    {
-        try
-        {
-            var notification = await BuildNotificationAsync(message, "mention");
-            await hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
-        }
-        catch (Exception ex)
-        {
-            LogNotificationFailed(userId, ex);
-        }
-    }
+    public Task SendNotificationAsync(int userId, MessageDto message) => SendNotificationInternalAsync(userId, message, "message");
+
+    public Task SendMentionNotificationAsync(int userId, MessageDto message) => SendNotificationInternalAsync(userId, message, "mention");
 
     public async Task<Result<ChatNotificationSettingsDto>> GetChatNotificationSettingsAsync(int userId, int chatId)
     {
-        var member = await context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId);
+        var member = await GetMemberAsync(userId, chatId);
 
         if (member is null)
             return Result<ChatNotificationSettingsDto>.Failure($"Пользователь не является участником чата {chatId}");
@@ -53,13 +36,15 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
 
     public async Task<Result<ChatNotificationSettingsDto>> SetChatMuteAsync(int userId, ChatNotificationSettingsDto request)
     {
-        var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == request.ChatId);
+        var member = await GetMemberAsync(userId, request.ChatId, tracked: true);
 
         if (member is null)
             return Result<ChatNotificationSettingsDto>.Failure($"Пользователь не является участником чата {request.ChatId}");
 
         member.NotificationsEnabled = request.NotificationsEnabled;
-        await context.SaveChangesAsync();
+
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<ChatNotificationSettingsDto>();
 
         LogNotificationSettingsChanged(userId, request.NotificationsEnabled ? "включил" : "отключил", request.ChatId);
 
@@ -72,51 +57,75 @@ public sealed partial class NotificationService(MessengerDbContext context,IHubN
 
     public async Task<Result<List<ChatNotificationSettingsDto>>> GetAllChatSettingsAsync(int userId)
     {
-        var settings = await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new ChatNotificationSettingsDto
+        var settings = await _context.ChatMembers.Where(cm => cm.UserId == userId).AsNoTracking().Select(cm => new ChatNotificationSettingsDto
         {
             ChatId = cm.ChatId,
             NotificationsEnabled = cm.NotificationsEnabled
-        }).AsNoTracking().ToListAsync();
+        }).ToListAsync();
 
         return Result<List<ChatNotificationSettingsDto>>.Success(settings);
     }
 
-    #region Private Methods
+    private async Task SendNotificationInternalAsync(int userId, MessageDto message, string type)
+    {
+        try
+        {
+            var notification = await BuildNotificationAsync(message, type);
+            await _hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
+        }
+        catch (Exception ex)
+        {
+            LogNotificationFailed(userId, ex);
+        }
+    }
+
+    private async Task<ChatMember?> GetMemberAsync(int userId, int chatId, bool tracked = false)
+    {
+        var query = _context.ChatMembers.Where(cm => cm.UserId == userId && cm.ChatId == chatId);
+        return tracked ? await query.FirstOrDefaultAsync() : await query.AsNoTracking().FirstOrDefaultAsync();
+    }
 
     private async Task<NotificationDto> BuildNotificationAsync(MessageDto message, string type)
     {
-        var chat = await context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
+        var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == message.ChatId);
+        var isContact = chat?.Type == ChatType.Contact;
 
         return new NotificationDto
         {
-            Type = type == "mention" ? "mention" : message.Poll != null ? "poll" : "message",
+            Type = ResolveNotificationType(type, message),
             ChatId = message.ChatId,
-            ChatName = chat?.Type == ChatType.Contact ? message.SenderName : chat?.Name,
-            ChatAvatar = chat?.Type == ChatType.Contact ? message.SenderAvatarUrl : urlBuilder.BuildUrl(chat?.Avatar),
+            ChatName = isContact ? message.SenderName : chat?.Name,
+            ChatAvatar = isContact ? message.SenderAvatarUrl : _urlBuilder.BuildUrl(chat?.Avatar),
             MessageId = message.Id,
             SenderId = message.SenderId,
             SenderName = message.SenderName,
             SenderAvatar = message.SenderAvatarUrl,
-            Preview = type == "mention" ? $"Вас упомянули: {TruncateText(message.Content, 100)}" : message.Poll != null ? $"{message.Content}" : TruncateText(message.Content, 100),
+            Preview = ResolvePreview(type, message),
             CreatedAt = message.CreatedAt
         };
     }
 
-    private static string? TruncateText(string? content, int maxLength)
+    private static string ResolveNotificationType(string type, MessageDto message) => type switch
     {
-        if (string.IsNullOrEmpty(content))
-            return null;
+        "mention" => "mention", _ => message.Poll != null ? "poll" : "message"
+    };
 
-        return content.Length <= maxLength ? content : content[..maxLength] + "...";
-    }
-    #endregion
+    private static string? ResolvePreview(string type, MessageDto message) => type switch
+    {
+        "mention" => $"Вас упомянули: {TruncateText(message.Content, 100)}",
+        _ => TruncateText(message.Content, 100)
+    };
 
-    #region Log
+    private static string? TruncateText(string? content, int maxLength)
+        => string.IsNullOrEmpty(content) ? null : content.Length <= maxLength ? content : content[..maxLength] + "...";
+
+    #region Logging
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Не удалось отправить уведомление пользователю {UserId}")]
     private partial void LogNotificationFailed(int userId, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} {Action} уведомления для чата {ChatId}", EventName = "ChatNotificationSettingsChanged")]
     private partial void LogNotificationSettingsChanged(int userId, string action, int chatId);
+
     #endregion
 }

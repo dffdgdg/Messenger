@@ -46,8 +46,7 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         if (dto.DepartmentId.HasValue)
         {
-            var deptExists = await _context.Departments
-                .AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
+            var deptExists = await _context.Departments.AnyAsync(d => d.Id == dto.DepartmentId.Value, ct);
             if (!deptExists)
                 return Result<UserDto>.NotFound("Указанный отдел не существует");
         }
@@ -71,13 +70,13 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         _context.Users.Add(user);
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return Result<UserDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save.As<UserDto>();
 
         LogUserCreated(username, user.Id);
 
-        var created = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
+        var created = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting)
+            .AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
 
         return Result<UserDto>.Success(created.ToDto());
     }
@@ -121,9 +120,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
         user.Midname = dto.Midname?.Trim();
         user.DepartmentId = dto.DepartmentId;
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return Result<UserDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save.As<UserDto>();
 
         LogUserUpdated(userId);
 
@@ -135,8 +133,7 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
     {
         var userResult = await FindEntityAsync<Model.User>(userId, ct);
-        if (userResult.IsFailure)
-            return Result.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult;
 
         var user = userResult.Value!;
         user.IsBanned = !user.IsBanned;
@@ -146,9 +143,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
             await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
         }
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogBanStatusChanged(userId, user.IsBanned ? "заблокирован" : "разблокирован");
         return Result.Success();
@@ -169,9 +165,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogPasswordReset(userId);
         return Result.Success();
@@ -189,8 +184,5 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь ID={UserId} {Action}", EventName = "UserBanStatusChanged")]
     private partial void LogBanStatusChanged(int userId, string action);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Пользователь ID={UserId} удалён администратором")]
-    private partial void LogUserDeleted(int userId);
     #endregion
 }

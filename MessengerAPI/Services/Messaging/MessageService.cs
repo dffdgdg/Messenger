@@ -1,10 +1,8 @@
 ﻿using MessengerAPI.Services.Base;
 using MessengerAPI.Services.Chat;
 using MessengerAPI.Services.ReadReceipt;
-using MessengerShared.Dto.Search;
 using MessengerShared.DTO.Message;
 using System.Text.RegularExpressions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MessengerAPI.Services.Messaging;
 
@@ -36,12 +34,12 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     #region Base Query & Helpers
 
-    private IQueryable<Message> MessagesWithIncludes() => _context.Messages.Include(m => m.Sender).Include(m => m.TargetUser).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
-        .Include(m => m.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes);
+    private IQueryable<Message> MessagesWithIncludes() => _context.Messages.Include(m => m.Sender).Include(m => m.TargetUser)
+        .Include(m => m.VoiceMessage).Include(m => m.MessageFiles).Include(m => m.Polls).ThenInclude(p => p.PollOptions)
+        .ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles).Include(m => m.ForwardedFromMessage)
+        .ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes);
 
     private IQueryable<Message> MessagesLight() => _context.Messages
         .Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
@@ -51,17 +49,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
         .AsNoTracking();
 
-    private async Task<Result<T>?> CheckAccessAsync<T>(int userId, int chatId)
-    {
-        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
-        return result.IsFailure ? Result<T>.FromFailure(result) : null;
-    }
-
-    private async Task<Result?> CheckAccessAsync(int userId, int chatId)
-    {
-        var result = await accessControl.CheckIsMemberAsync(userId, chatId);
-        return result.IsFailure ? result : null;
-    }
+    private async Task<Result?> EnsureAccessAsync(int userId, int chatId)
+        => await accessControl.EnsureMemberOfAsync(userId, chatId);
 
     private string StripBaseUrl(string? url)
     {
@@ -122,15 +111,17 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<MessageDto>> CreateMessageAsync(int senderId, CreateMessageRequest request)
     {
-        if (await CheckAccessAsync<MessageDto>(senderId, request.ChatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(senderId, request.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
 
-        if (!request.IsVoiceMessage && !request.ForwardedFromMessageId.HasValue && string.IsNullOrWhiteSpace(request.Content) && request.Files is not { Count: > 0 })
+        if (!request.IsVoiceMessage && !request.ForwardedFromMessageId.HasValue
+            && string.IsNullOrWhiteSpace(request.Content) && request.Files is not { Count: > 0 })
         {
             return Result<MessageDto>.Failure("Сообщение должно содержать текст или файлы");
         }
 
         var refCheck = await ValidateReferencesAsync(request);
-        if (refCheck.IsFailure) return Result<MessageDto>.FromFailure(refCheck);
+        if (refCheck.IsFailure) return refCheck.As<MessageDto>();
 
         var message = new Message
         {
@@ -175,7 +166,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         await MarkChatUpdatedAsync(request.ChatId);
 
         var save = await SaveChangesAsync();
-        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+        if (save.IsFailure) return save.As<MessageDto>();
 
         var created = await MessagesWithIncludes().AsNoTracking().FirstAsync(m => m.Id == message.Id);
         var senderDto = created.ToDto(senderId, urlBuilder);
@@ -208,7 +199,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
     {
-        if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<PagedMessagesDto>();
 
         var (np, nps) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
 
@@ -234,9 +226,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count)
     {
-        if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
-        var half = count / 2;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<PagedMessagesDto>();
 
+        var half = count / 2;
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
         var beforeQuery = MessagesWithIncludes()
@@ -245,7 +238,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             beforeQuery = beforeQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
-        var afterQuery = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true).AsNoTracking();
+        var afterQuery = MessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
+            .AsNoTracking();
         if (cutoff.HasValue)
             afterQuery = afterQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
@@ -272,10 +267,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
     {
-        if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<PagedMessagesDto>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-
         var query = MessagesLight().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true);
 
         if (cutoff.HasValue)
@@ -288,18 +283,16 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             hasOlderQuery = hasOlderQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(
-            [.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
-            await hasOlderQuery.AnyAsync(),
-            hasNewer: true));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
+            await hasOlderQuery.AnyAsync(), hasNewer: true));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
     {
-        if (await CheckAccessAsync<PagedMessagesDto>(userId, chatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<PagedMessagesDto>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-
         var query = MessagesLight().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true);
 
         if (cutoff.HasValue)
@@ -312,9 +305,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             hasNewerQuery = hasNewerQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(
-            [.. messages.Select(m => m.ToDto(userId, urlBuilder))],
-            hasOlder: true,
+        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.Select(m => m.ToDto(userId, urlBuilder))], hasOlder: true,
             await hasNewerQuery.AnyAsync()));
     }
 
@@ -326,7 +317,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
-        if (await CheckAccessAsync<MessageDto>(userId, message.ChatId) is { } denied) return denied;
+
+        var access = await EnsureAccessAsync(userId, message.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
 
         if (message.SenderId != userId)
             return Result<MessageDto>.Forbidden("Вы можете изменять только свои сообщения");
@@ -350,7 +343,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         message.PinnedByUserId = null;
 
         var save = await SaveChangesAsync();
-        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+        if (save.IsFailure) return save.As<MessageDto>();
 
         await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
         LogMessageUpdated(messageId);
@@ -367,7 +360,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var message = await _context.Messages.Include(m => m.VoiceMessage).Include(m => m.MessageFiles).FirstOrDefaultAsync(m => m.Id == messageId);
 
         if (message is null) return Result.NotFound($"Сообщение с ID {messageId} не найдено");
-        if (await CheckAccessAsync(userId, message.ChatId) is { } denied) return denied;
+
+        var access = await EnsureAccessAsync(userId, message.ChatId);
+        if (access.IsFailure) return access;
 
         if (message.SenderId != userId)
             return Result.Forbidden("Вы можете удалять только свои сообщения");
@@ -393,7 +388,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save;
 
-        await hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted", new { MessageId = messageId, message.ChatId });
+        await hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted",
+            new { MessageId = messageId, message.ChatId });
         LogMessageDeleted(messageId);
 
         return Result.Success();
@@ -407,18 +403,21 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
-        if (await CheckAccessAsync<MessageDto>(userId, message.ChatId) is { } denied) return denied;
-        if (message.IsDeleted == true) return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
+
+        var access = await EnsureAccessAsync(userId, message.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
+
+        if (message.IsDeleted == true)
+            return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
 
         message.IsPinned = true;
         message.PinnedAt = appDateTime.UtcNow;
         message.PinnedByUserId = userId;
 
         var save = await SaveChangesAsync();
-        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+        if (save.IsFailure) return save.As<MessageDto>();
 
         await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
-
         return Result<MessageDto>.Success(message.ToDto(userId, urlBuilder));
     }
 
@@ -426,7 +425,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
-        if (await CheckAccessAsync<MessageDto>(userId, message.ChatId) is { } denied) return denied;
+
+        var access = await EnsureAccessAsync(userId, message.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
 
         if (!message.IsPinned)
             return Result<MessageDto>.Failure("Сообщение уже не закреплено");
@@ -436,7 +437,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         message.PinnedByUserId = null;
 
         var save = await SaveChangesAsync();
-        if (save.IsFailure) return Result<MessageDto>.FromFailure(save);
+        if (save.IsFailure) return save.As<MessageDto>();
 
         await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
         return Result<MessageDto>.Success(message.ToDto(userId, urlBuilder));
@@ -444,16 +445,16 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<List<MessageDto>>> GetPinnedMessagesAsync(int chatId, int userId)
     {
-        if (await CheckAccessAsync<List<MessageDto>>(userId, chatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<List<MessageDto>>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-
         var query = MessagesLight().Where(m => m.ChatId == chatId && m.IsPinned && m.IsDeleted != true).AsNoTracking();
+
         if (cutoff.HasValue)
             query = query.Where(m => m.CreatedAt >= cutoff.Value);
 
         var pinned = await query.OrderByDescending(m => m.PinnedAt ?? m.CreatedAt).ToListAsync();
-
         return Result<List<MessageDto>>.Success([.. pinned.Select(m => m.ToDto(userId, urlBuilder))]);
     }
 
@@ -463,7 +464,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<SearchMessagesResponseDto>> SearchMessagesAsync(int chatId, int userId, SearchMessagesQueryDto query)
     {
-        if (await CheckAccessAsync<SearchMessagesResponseDto>(userId, chatId) is { } denied) return denied;
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure) return access.As<SearchMessagesResponseDto>();
 
         var (np, nps) = NormalizePagination(query.Page, query.PageSize, _settings.MaxPageSize);
         var hasQuery = !string.IsNullOrWhiteSpace(query.Query);
@@ -476,14 +478,13 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             q = q.Where(m => m.CreatedAt >= cutoff.Value);
 
-        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo, query.HasFiles == true, query.HasVoice == true,
-            query.HasPoll == true, query.OnlyText == true);
+        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo,
+            query.HasFiles == true, query.HasVoice == true, query.HasPoll == true, query.OnlyText == true);
 
         q = ApplyMessageSorting(q, query.OldestFirst);
 
         var total = await q.CountAsync();
         var messages = await Paginate(q, np, nps).ToListAsync();
-
         var ordered = query.OldestFirst ? messages.AsEnumerable() : messages.AsEnumerable().Reverse();
 
         return Result<SearchMessagesResponseDto>.Success(new()

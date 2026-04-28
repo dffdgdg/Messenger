@@ -1,56 +1,55 @@
 ﻿using MessengerAPI.Services.User;
-using MessengerShared.Dto.Online;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class UsersController(IUserService userService, ILogger<UsersController> logger)
+public sealed class UsersController(IUserService user, ILogger<UsersController> logger)
     : BaseController<UsersController>(logger)
 {
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAllUsers(CancellationToken ct) => await ExecuteAsync(()
-        => userService.GetAllUsersAsync(ct),"Пользователи получены успешно");
+    public async Task<IActionResult> GetAllUsers(CancellationToken ct)
+        => Map(await user.GetAllUsersAsync(ct));
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<UserDto>>> GetUser(int id, CancellationToken ct) => await ExecuteAsync(()
-        => userService.GetUserAsync(id, ct));
+    public async Task<IActionResult> GetUser(int id, CancellationToken ct)
+        => Map(await user.GetUserAsync(id, ct));
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto userDto, CancellationToken ct)
     {
         if (!IsCurrentUser(id)) return Forbidden();
-        return await ExecuteAsync(() => userService.UpdateUserAsync(id, userDto, ct),"Пользователь обновлён успешно");
+        return Map(await user.UpdateUserAsync(id, userDto, ct));
     }
 
     [HttpPost("{id}/avatar")]
-    public async Task<ActionResult<ApiResponse<AvatarResponseDto>>> UploadAvatar(int id, IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> UploadAvatar(int id, IFormFile file, CancellationToken ct)
     {
         if (!IsCurrentUser(id)) return Forbidden<AvatarResponseDto>();
-        return await ExecuteAsync(() => userService.UploadAvatarAsync(id, file, ct), "Аватар загружен успешно");
+        return Map(await user.UploadAvatarAsync(id, file, ct));
     }
 
     [HttpPut("{id}/username")]
     public async Task<IActionResult> ChangeUsername(int id, [FromBody] ChangeUsernameDto dto, CancellationToken ct)
     {
         if (!IsCurrentUser(id)) return Forbidden();
-        return await ExecuteAsync(() => userService.ChangeUsernameAsync(id, dto, ct), "Username успешно изменён");
+        return Map(await user.ChangeUsernameAsync(id, dto, ct));
     }
 
     [HttpPut("{id}/password")]
     public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto, CancellationToken ct)
     {
         if (!IsCurrentUser(id)) return Forbidden();
-        return await ExecuteAsync(() => userService.ChangePasswordAsync(id, dto, ct), "Пароль успешно изменён");
+        return Map(await user.ChangePasswordAsync(id, dto, ct));
     }
 
     [HttpGet("online")]
-    public async Task<ActionResult<ApiResponse<OnlineUsersResponseDto>>> GetOnlineUsers(CancellationToken ct) => await ExecuteAsync(()
-        => userService.GetOnlineUsersAsync(ct), "Список онлайн пользователей получен");
+    public async Task<IActionResult> GetOnlineUsers(CancellationToken ct)
+        => Map(await user.GetOnlineUsersAsync(ct));
 
     [HttpGet("{id}/status")]
-    public async Task<ActionResult<ApiResponse<UserStatusDto>>> GetUserOnlineStatus(int id, CancellationToken ct) => await ExecuteAsync(()
-        => userService.GetOnlineStatusAsync(id, ct));
+    public async Task<IActionResult> GetUserOnlineStatus(int id, CancellationToken ct)
+        => Map(await user.GetOnlineStatusAsync(id, ct));
 
     [HttpPost("status/batch")]
-    public async Task<ActionResult<ApiResponse<List<UserStatusDto>>>> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct) => await ExecuteAsync(()
-        => userService.GetOnlineStatusesAsync(userIds, ct));
+    public async Task<IActionResult> GetUsersOnlineStatus([FromBody] List<int> userIds, CancellationToken ct)
+        => Map(await user.GetOnlineStatusesAsync(userIds, ct));
 }

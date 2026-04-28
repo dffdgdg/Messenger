@@ -6,9 +6,6 @@ public interface IAccessControlService
     Task<bool> IsOwnerAsync(int userId, int chatId);
     Task<bool> IsAdminAsync(int userId, int chatId);
     Task<ChatRole?> GetRoleAsync(int userId, int chatId);
-    Task<Result> CheckIsMemberAsync(int userId, int chatId);
-    Task<Result> CheckIsOwnerAsync(int userId, int chatId);
-    Task<Result> CheckIsAdminAsync(int userId, int chatId);
     Task<List<int>> GetUserChatIdsAsync(int userId);
     Task<List<int>> GetChatMemberIdsAsync(int chatId);
     Task<ChatType> GetChatTypeAsync(int chatId);
@@ -35,33 +32,6 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
 
     public async Task<ChatRole?> GetRoleAsync(int userId, int chatId)
         => (await GetMembershipAsync(userId, chatId))?.Role;
-
-    public async Task<Result> CheckIsMemberAsync(int userId, int chatId)
-    {
-        if (await IsMemberAsync(userId, chatId))
-            return Result.Success();
-
-        LogAccessDenied(userId, chatId);
-        return Result.Forbidden("У вас нет доступа к этому чату");
-    }
-
-    public async Task<Result> CheckIsOwnerAsync(int userId, int chatId)
-    {
-        if (await IsOwnerAsync(userId, chatId))
-            return Result.Success();
-
-        LogOwnerRequired(userId, chatId);
-        return Result.Forbidden("Только владелец чата может выполнить это действие");
-    }
-
-    public async Task<Result> CheckIsAdminAsync(int userId, int chatId)
-    {
-        if (await IsAdminAsync(userId, chatId))
-            return Result.Success();
-
-        LogAdminRequired(userId, chatId);
-        return Result.Forbidden("Требуются права администратора");
-    }
 
     public async Task<ChatMember?> GetChatMemberAsync(int userId, int chatId) => await GetMembershipAsync(userId, chatId);
 

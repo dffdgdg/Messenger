@@ -3,6 +3,7 @@ using MessengerDesktop.Data.Repositories;
 using MessengerDesktop.Services.Audio;
 using MessengerDesktop.Services.Cache;
 using MessengerDesktop.Services.Call;
+using MessengerDesktop.Services.Network;
 using MessengerDesktop.Services.Platform;
 using MessengerDesktop.Services.Realtime;
 using MessengerDesktop.Services.Storage;
@@ -93,6 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CallServices>();
         services.AddSingleton<CacheServices>();
         services.AddSingleton<ChatViewModelDependencies>();
+        services.AddSingleton<IServerDiscoveryService, ServerDiscoveryService>();
 
         return services;
     }

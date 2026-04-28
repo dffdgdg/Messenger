@@ -16,9 +16,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 {
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
-        var adminResult = await accessControl.CheckIsAdminAsync(addedByUserId, chatId);
-        if (adminResult.IsFailure)
-            return Result<ChatMemberDto>.FromFailure(adminResult);
+        var admin = await accessControl.EnsureAdminOfAsync(addedByUserId, chatId);
+        if (admin.IsFailure) return admin.As<ChatMemberDto>();
 
         var exists = await _context.ChatMembers.AnyAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
@@ -36,11 +35,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
         _context.ChatMembers.Add(member);
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-        {
-            return Result<ChatMemberDto>.FromFailure(saveResult);
-        }
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<ChatMemberDto>();
 
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
@@ -56,9 +52,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
     {
         if (userId != removedByUserId)
         {
-            var adminResult = await accessControl.CheckIsAdminAsync(removedByUserId, chatId);
-            if (adminResult.IsFailure)
-                return adminResult;
+            var admin = await accessControl.EnsureAdminOfAsync(removedByUserId, chatId);
+            if (admin.IsFailure) return admin;
         }
 
         var member = await _context.ChatMembers.FirstOrDefaultAsync(cm =>
@@ -72,9 +67,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
         _context.ChatMembers.Remove(member);
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save;
 
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
@@ -91,9 +85,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
     public async Task<Result<ChatMemberDto>> UpdateRoleAsync(int chatId, int userId, ChatRole newRole, int updatedByUserId)
     {
-        var ownerResult = await accessControl.CheckIsOwnerAsync(updatedByUserId, chatId);
-        if (ownerResult.IsFailure)
-            return Result<ChatMemberDto>.FromFailure(ownerResult);
+        var owner = await accessControl.EnsureOwnerOfAsync(updatedByUserId, chatId);
+        if (owner.IsFailure) return owner.As<ChatMemberDto>();
 
         var member = await _context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
@@ -108,9 +101,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
         member.Role = newRole;
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-            return Result<ChatMemberDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<ChatMemberDto>();
 
         cache.InvalidateMembership(userId, chatId);
 
@@ -123,9 +115,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context,ICacheS
 
     public async Task<Result<List<ChatMemberDto>>> GetMembersAsync(int chatId, int userId)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (accessResult.IsFailure)
-            return Result<List<ChatMemberDto>>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure) return access.As<List<ChatMemberDto>>();
 
         var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
 

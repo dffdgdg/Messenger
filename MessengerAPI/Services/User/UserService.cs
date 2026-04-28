@@ -21,9 +21,6 @@ public interface IUserService
 public partial class UserService(MessengerDbContext context,IFileService fileService,IOnlineUserService onlineService,IUrlBuilder urlBuilder,ILogger<UserService> logger)
     : BaseService<UserService>(context, logger), IUserService
 {
-    [GeneratedRegex("^[a-z0-9_]{3,30}$")]
-    private static partial Regex UsernameRegex();
-
     public async Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default)
     {
         var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().ToListAsync(ct);
@@ -71,21 +68,17 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
             return Result<AvatarResponseDto>.Failure("Файл не предоставлен");
 
         var userResult = await FindEntityAsync<Model.User>(id, ct);
-        if (userResult.IsFailure)
-            return Result<AvatarResponseDto>.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult.As<AvatarResponseDto>();
 
         var user = userResult.Value!;
 
         var saveResult = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
-
-        if (saveResult.IsFailure)
-            return Result<AvatarResponseDto>.FromFailure(saveResult);
+        if (saveResult.IsFailure) return saveResult.As<AvatarResponseDto>();
 
         user.Avatar = saveResult.Value;
 
-        var dbSaveResult = await SaveChangesAsync(ct);
-        if (dbSaveResult.IsFailure)
-            return Result<AvatarResponseDto>.FromFailure(dbSaveResult);
+        var dbSave = await SaveChangesAsync(ct);
+        if (dbSave.IsFailure) return dbSave.As<AvatarResponseDto>();
 
         LogAvatarUpdated(id);
 
@@ -96,8 +89,14 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
     }
 
     public Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default)
-        => Task.FromResult(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto { OnlineUserIds = [.. onlineService.GetOnlineUserIds()],
-            TotalOnline = onlineService.GetOnlineUserIds().ToList().Count }));
+    {
+        var onlineIds = onlineService.GetOnlineUserIds();
+        return Task.FromResult(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto
+        {
+            OnlineUserIds = [.. onlineIds],
+            TotalOnline = onlineIds.Count
+        }));
+    }
 
     public async Task<Result<UserStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
@@ -127,22 +126,20 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
 
         var username = dto.NewUsername.Trim().ToLower();
 
-        if (!UsernameRegex().IsMatch(username))
-            return Result.Failure("Username должен содержать 3-30 символов (латинские буквы, цифры, подчёркивания)");
+        var validation = ValidationHelper.ValidateUsername(dto.NewUsername);
+        if (validation.IsFailure) return validation;
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
         if (exists)
             return Result.Conflict("Этот username уже занят");
 
         var userResult = await FindEntityAsync<Model.User>(id, ct);
-        if (userResult.IsFailure)
-            return Result.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult;
 
         userResult.Value!.Username = username;
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogUsernameChanged(id);
         return Result.Success();
@@ -160,8 +157,7 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
             return Result.Failure("Пароль должен содержать минимум 6 символов");
 
         var userResult = await FindEntityAsync<Model.User>(id, ct);
-        if (userResult.IsFailure)
-            return Result.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult;
 
         var user = userResult.Value!;
 
@@ -170,9 +166,8 @@ public partial class UserService(MessengerDbContext context,IFileService fileSer
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogPasswordChanged(id);
         return Result.Success();

@@ -89,9 +89,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
         _context.Departments.Add(entity);
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return Result<DepartmentDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save.As<DepartmentDto>();
 
         LogDepartmentCreated(entity.Id, entity.Name);
 
@@ -104,8 +103,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
     public async Task<Result> UpdateDepartmentAsync(int id, DepartmentDto dto, CancellationToken ct = default)
     {
         var entityResult = await FindEntityAsync<Model.Department>(id, ct);
-        if (entityResult.IsFailure)
-            return Result.FromFailure(entityResult);
+        if (entityResult.IsFailure) return entityResult;
 
         var entity = entityResult.Value!;
 
@@ -118,8 +116,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         if (dto.ParentDepartmentId.HasValue)
         {
             var cycleCheck = await CheckNoCycleAsync(id, dto.ParentDepartmentId.Value, ct);
-            if (cycleCheck.IsFailure)
-                return cycleCheck;
+            if (cycleCheck.IsFailure) return cycleCheck;
         }
 
         if (dto.Head.HasValue)
@@ -133,9 +130,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         entity.ParentDepartmentId = dto.ParentDepartmentId;
         entity.HeadId = dto.Head;
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogDepartmentUpdated(id);
         return Result.Success();
@@ -144,8 +140,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
     public async Task<Result> DeleteDepartmentAsync(int id, CancellationToken ct = default)
     {
         var entityResult = await FindEntityAsync<Model.Department>(id, ct);
-        if (entityResult.IsFailure)
-            return Result.FromFailure(entityResult);
+        if (entityResult.IsFailure) return entityResult;
 
         if (await _context.Departments.AnyAsync(d => d.ParentDepartmentId == id, ct))
             return Result.Failure("Нельзя удалить отдел с дочерними отделами");
@@ -155,9 +150,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
         _context.Departments.Remove(entityResult.Value!);
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogDepartmentDeleted(id);
         return Result.Success();
@@ -190,15 +184,13 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
     public async Task<Result> AddUserToDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default)
     {
         var canManageResult = await CheckCanManageAsync(requesterId, departmentId, ct);
-        if (canManageResult.IsFailure)
-            return canManageResult;
+        if (canManageResult.IsFailure) return canManageResult;
 
         if (!await _context.Departments.AnyAsync(d => d.Id == departmentId, ct))
             return Result.NotFound($"Отдел с ID {departmentId} не найден");
 
         var userResult = await FindEntityAsync<Model.User>(userId, ct);
-        if (userResult.IsFailure)
-            return Result.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult;
 
         var user = userResult.Value!;
 
@@ -210,9 +202,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
         user.DepartmentId = departmentId;
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogUserAddedToDepartment(userId, departmentId);
 
@@ -222,12 +213,10 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
     public async Task<Result> RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default)
     {
         var canManageResult = await CheckCanManageAsync(requesterId, departmentId, ct);
-        if (canManageResult.IsFailure)
-            return canManageResult;
+        if (canManageResult.IsFailure) return canManageResult;
 
         var userResult = await FindEntityAsync<Model.User>(userId, ct);
-        if (userResult.IsFailure)
-            return Result.FromFailure(userResult);
+        if (userResult.IsFailure) return userResult;
 
         var user = userResult.Value!;
 
@@ -240,9 +229,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
         user.DepartmentId = null;
 
-        var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
 
         LogUserRemovedFromDepartment(userId, departmentId);
 

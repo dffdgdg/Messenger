@@ -133,6 +133,10 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
+	
+	<ItemGroup>
+	  <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+	</ItemGroup>
 	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
 		<BaseOutputPath>/tmp/MessengerDesktop/bin/</BaseOutputPath>
 		<BaseIntermediateOutputPath>/tmp/MessengerDesktop/obj/</BaseIntermediateOutputPath>

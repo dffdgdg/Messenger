@@ -18,7 +18,7 @@ public class StatusCleanupHostedService(IServiceScopeFactory scopeFactory, ILogg
                 logger.LogError(ex, "Error cleaning up expired statuses");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
     }
 }

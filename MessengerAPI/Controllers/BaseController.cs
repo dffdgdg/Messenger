@@ -18,36 +18,50 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
 
     protected bool IsCurrentUser(int userId) => GetCurrentUserId() == userId;
 
+    protected IActionResult Map<TResult>(Result<TResult> result)
+    {
+        if (result.IsSuccess)
+            return Ok(ApiResponse<TResult>.Ok(result.Value));
+
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+        return MapFailureToObjectResult(result);
+    }
+
+    protected IActionResult Map(Result result)
+    {
+        if (result.IsSuccess)
+            return Ok(ApiResponse<object>.Ok(null));
+
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+        return MapFailureToObjectResult(result);
+    }
+
+    protected IActionResult Forbidden(string error = "Доступ запрещён")
+        => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(error));
+
+    protected IActionResult Forbidden<TData>(string error = "Доступ запрещён")
+        => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<TData>.Fail(error));
+
     protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<Result<TResult>>> action, string? successMessage = null)
     {
         var result = await action();
-
         if (result.IsSuccess)
             return Ok(ApiResponse<TResult>.Ok(result.Value!, successMessage));
-
         return MapFailure<TResult>(result);
     }
 
     protected async Task<IActionResult> ExecuteAsync(Func<Task<Result>> action, string? successMessage = null)
     {
-        if ((await action()).IsSuccess)
+        var result = await action();
+        if (result.IsSuccess)
             return Ok(ApiResponse<object>.Ok(null, successMessage));
-
-        return MapFailure(await action());
+        return MapFailure(result);
     }
-
-    protected ActionResult Forbidden(string error = "Доступ запрещён")
-        => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(error));
-
-    protected ActionResult<ApiResponse<TData>> Forbidden<TData>(string error = "Доступ запрещён")
-        => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<TData>.Fail(error));
 
     private ActionResult<ApiResponse<TData>> MapFailure<TData>(Result result)
     {
         _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
-
         var response = ApiResponse<TData>.Fail(result.Error!);
-
         return result.ErrorType switch
         {
             ResultErrorType.Unauthorized => Unauthorized(response),
@@ -62,9 +76,12 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
     private ObjectResult MapFailure(Result result)
     {
         _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+        return MapFailureToObjectResult(result);
+    }
 
+    private ObjectResult MapFailureToObjectResult(Result result)
+    {
         var response = ApiResponse<object>.Fail(result.Error!);
-
         return result.ErrorType switch
         {
             ResultErrorType.Unauthorized => Unauthorized(response),
@@ -73,6 +90,6 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
             ResultErrorType.Conflict => Conflict(response),
             ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
             _ => BadRequest(response)
-        } ?? new ObjectResult(response) { StatusCode = StatusCodes.Status400BadRequest };
+        };
     }
 }

@@ -14,23 +14,22 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
 {
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
-        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
+        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
+            .Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
 
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос с ID {pollId} не найден");
 
-        var accessResult = await accessControl.CheckIsMemberAsync(userId, poll.Message!.ChatId);
-        if (accessResult.IsFailure)
-            return Result<PollDto>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(userId, poll.Message!.ChatId);
+        if (access.IsFailure) return access.As<PollDto>();
 
         return Result<PollDto>.Success(poll.ToDto(userId));
     }
 
     public async Task<Result<MessageDto>> CreatePollAsync(CreatePollDto dto, int createdByUserId)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(createdByUserId, dto.ChatId);
-        if (accessResult.IsFailure)
-            return Result<MessageDto>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(createdByUserId, dto.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
 
         if (string.IsNullOrWhiteSpace(dto.Question))
             return Result<MessageDto>.Failure("Вопрос опроса обязателен");
@@ -96,9 +95,8 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос {voteDto.PollId} не найден");
 
-        var accessResult = await accessControl.CheckIsMemberAsync(voteDto.UserId, poll.Message!.ChatId);
-        if (accessResult.IsFailure)
-            return Result<PollDto>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(voteDto.UserId, poll.Message!.ChatId);
+        if (access.IsFailure) return access.As<PollDto>();
 
         List<int> optionIds;
         if (voteDto.OptionIds?.Count > 0)
@@ -127,21 +125,16 @@ public partial class PollService(MessengerDbContext context,IAccessControlServic
             });
         }
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-            return Result<PollDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<PollDto>();
 
         var updatedPollResult = await GetPollAsync(voteDto.PollId, voteDto.UserId);
-        if (updatedPollResult.IsFailure)
-            return updatedPollResult;
+        if (updatedPollResult.IsFailure) return updatedPollResult;
 
         if (poll.Message != null)
         {
-            var affectedChatIds = await _context.Messages
-                .Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
-                .Select(m => m.ChatId)
-                .Distinct()
-                .ToListAsync();
+            var affectedChatIds = await _context.Messages.Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
+                .Select(m => m.ChatId).Distinct().ToListAsync();
 
             foreach (var chatId in affectedChatIds)
             {

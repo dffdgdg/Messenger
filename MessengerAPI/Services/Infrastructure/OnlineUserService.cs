@@ -42,8 +42,9 @@ public sealed class OnlineUserService : IOnlineUserService
         var removedCount = 0;
 
         foreach (var kvp in _connections)
-        { if (kvp.Value.IsEmpty && _connections.TryRemove(kvp))
-            { removedCount++; }
+        {
+            if (kvp.Value.IsEmpty && _connections.TryRemove(kvp))
+                removedCount++;
         }
     }
 

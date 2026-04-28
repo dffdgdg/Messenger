@@ -2,17 +2,18 @@
 
 namespace MessengerAPI.Controllers;
 
-public sealed class ReadReceiptsController(IReadReceiptService readReceiptService, ILogger<ReadReceiptsController> logger) : BaseController<ReadReceiptsController>(logger)
+public sealed class ReadReceiptsController(IReadReceiptService receipt, ILogger<ReadReceiptsController> logger)
+    : BaseController<ReadReceiptsController>(logger)
 {
     [HttpPost("mark-read")]
-    public async Task<ActionResult<ApiResponse<ReadReceiptResponseDto>>> MarkAsRead([FromBody] MarkAsReadDto request) => await ExecuteAsync(()
-        => readReceiptService.MarkAsReadAsync(GetCurrentUserId(), request));
+    public async Task<IActionResult> MarkAsRead([FromBody] MarkAsReadDto request)
+        => Map(await receipt.MarkAsReadAsync(GetCurrentUserId(), request));
 
     [HttpGet("chat/{chatId}/unread-count")]
-    public async Task<ActionResult<ApiResponse<int>>> GetUnreadCount(int chatId) => await ExecuteAsync(()
-        => readReceiptService.GetUnreadCountAsync(GetCurrentUserId(), chatId));
+    public async Task<IActionResult> GetUnreadCount(int chatId)
+        => Map(await receipt.GetUnreadCountAsync(GetCurrentUserId(), chatId));
 
     [HttpGet("unread-counts")]
-    public async Task<ActionResult<ApiResponse<AllUnreadCountsDto>>> GetAllUnreadCounts() => await ExecuteAsync(()
-        => readReceiptService.GetAllUnreadCountsAsync(GetCurrentUserId()));
+    public async Task<IActionResult> GetAllUnreadCounts()
+        => Map(await receipt.GetAllUnreadCountsAsync(GetCurrentUserId()));
 }

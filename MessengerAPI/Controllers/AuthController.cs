@@ -4,20 +4,21 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class AuthController(IAuthService authService, ILogger<AuthController> logger) : BaseController<AuthController>(logger)
+public sealed class AuthController(IAuthService auth, ILogger<AuthController> logger)
+    : BaseController<AuthController>(logger)
 {
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     [HttpPost("login")]
-    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> Login([FromBody] LoginRequest request, CancellationToken ct) => await ExecuteAsync(()
-        => authService.LoginAsync(request.Username, request.Password, ct), "Авторизация прошла успешно");
+    public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
+        => Map(await auth.LoginAsync(request.Username, request.Password, ct));
 
     [AllowAnonymous]
     [HttpPost("refresh")]
-    public async Task<ActionResult<ApiResponse<TokenResponseDto>>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct) => await ExecuteAsync(()
-        => authService.RefreshTokenAsync(request.AccessToken, request.RefreshToken, ct), "Токен обновлён");
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
+        => Map(await auth.RefreshTokenAsync(request.AccessToken, request.RefreshToken, ct));
 
     [HttpPost("revoke")]
-    public async Task<IActionResult> Revoke(CancellationToken ct) => await ExecuteAsync(()
-        => authService.RevokeRefreshTokenAsync(GetCurrentUserId(), ct), "Все токены отозваны");
+    public async Task<IActionResult> Revoke(CancellationToken ct)
+        => Map(await auth.RevokeRefreshTokenAsync(GetCurrentUserId(), ct));
 }

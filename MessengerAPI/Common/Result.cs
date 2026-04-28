@@ -80,47 +80,29 @@ public sealed class Result<T> : Result
 
 public static class ResultExtensions
 {
-    /// <summary>
-    /// Извлекает значение или возвращает null с логированием ошибки.
-    /// Для reference types в Hub/fire-and-forget контекстах.
-    /// </summary>
+    public static Result<T> As<T>(this Result result) => Result<T>.FromFailure(result);
+
     public static T? UnwrapOrDefault<T>(this Result<T> result, ILogger logger, [CallerMemberName] string caller = "") where T : class
     {
-        if (result.IsSuccess)
-        {
-            return result.Value;
-        }
-
+        if (result.IsSuccess) return result.Value;
         logger.LogWarning("{Method} failed: {Error}", caller, result.Error);
         return default;
     }
 
-    /// <summary>
-    /// Извлекает значение или возвращает fallback с логированием ошибки.
-    /// Для value types и случаев с осмысленным default.
-    /// </summary>
-    public static T UnwrapOrFallback<T>(this Result<T> result, T fallback,ILogger logger, [CallerMemberName] string caller = "")
+    public static T UnwrapOrFallback<T>(this Result<T> result, T fallback, ILogger logger, [CallerMemberName] string caller = "")
     {
-        if (result.IsSuccess)
-        {
-            return result.Value!;
-        }
-
+        if (result.IsSuccess) return result.Value!;
         logger.LogWarning("{Method} failed: {Error}", caller, result.Error);
         return fallback;
     }
 
-    /// <summary>
-    /// Try-паттерн для Result. Возвращает true при успехе и out-значение.
-    /// </summary>
-    public static bool TryUnwrap<T>(this Result<T> result,[NotNullWhen(true)] out T? value,ILogger? logger = null, [CallerMemberName] string caller = "")
+    public static bool TryUnwrap<T>(this Result<T> result, [NotNullWhen(true)] out T? value, ILogger? logger = null, [CallerMemberName] string caller = "")
     {
         if (result.IsSuccess && result.Value is not null)
         {
             value = result.Value;
             return true;
         }
-
         logger?.LogWarning("{Method} failed: {Error}", caller, result.Error);
         value = default;
         return false;

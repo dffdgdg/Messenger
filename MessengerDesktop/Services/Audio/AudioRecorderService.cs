@@ -19,7 +19,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
     private const int BitsPerSample = 16;
     private const int FramesPerBuffer = 512;
 
-    private PortAudioSharp.Stream? _paStream;
+    private Stream? _paStream;
     private IOMemoryStream? _buffer;
     private readonly Stopwatch _stopwatch = new();
     private readonly Lock _lock = new();

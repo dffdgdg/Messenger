@@ -205,7 +205,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
             return false;
 
         string[] serverRejections = ["HTTP 401", "HTTP 403", "HTTP Unauthorized", "HTTP Forbidden", "Недействительный refresh token", "Refresh token истёк",
-            "Refresh token уже использован", "Учётная запись заблокирована", "Сессия истекла" ];
+            "Refresh token уже использован", "Учётная запись заблокирована", "Сессия истекла"];
 
         return serverRejections.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }

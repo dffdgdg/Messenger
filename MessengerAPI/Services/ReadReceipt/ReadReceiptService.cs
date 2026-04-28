@@ -21,13 +21,11 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
             return Result<ReadReceiptResponseDto>.Failure($"Пользователь {userId} не является участником чата {request.ChatId}");
 
         var targetResult = await DetermineTargetMessageIdAsync(request);
-        if (targetResult.IsFailure)
-            return Result<ReadReceiptResponseDto>.FromFailure(targetResult);
+        if (targetResult.IsFailure) return targetResult.As<ReadReceiptResponseDto>();
 
         var targetMessageId = targetResult.Value;
 
-        if (targetMessageId > 0
-            && (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
+        if (targetMessageId > 0 && (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
         {
             member.LastReadMessageId = targetMessageId;
             member.LastReadAt = appDateTime.UtcNow;

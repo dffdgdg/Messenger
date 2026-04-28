@@ -4,66 +4,65 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class MessagesController(IMessageService messageService,ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
+public sealed class MessagesController(IMessageService message, ILogger<MessagesController> logger)
+    : BaseController<MessagesController>(logger)
 {
     [HttpPost]
     [EnableRateLimiting("messaging")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> CreateMessage([FromBody] CreateMessageRequest request) => await ExecuteAsync(()
-        => messageService.CreateMessageAsync(GetCurrentUserId(), request), "Сообщение успешно отправлено");
+    public async Task<IActionResult> CreateMessage([FromBody] CreateMessageRequest request)
+        => Map(await message.CreateMessageAsync(GetCurrentUserId(), request));
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> UpdateMessage(int id, [FromBody] UpdateMessageDto updateDto) => await ExecuteAsync(async () =>
+    public async Task<IActionResult> UpdateMessage(int id, [FromBody] UpdateMessageDto updateDto)
     {
         if (id != updateDto.Id)
-            return Result<MessageDto>.Failure("Несоответствие ID сообщения");
-
-        return await messageService.UpdateMessageAsync(id, GetCurrentUserId(), updateDto);
-    }, "Сообщение успешно отредактировано");
+            return Map(Result.Failure("Несоответствие ID сообщения"));
+        return Map(await message.UpdateMessageAsync(id, GetCurrentUserId(), updateDto));
+    }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMessage(int id)
-        => await ExecuteAsync(() => messageService.DeleteMessageAsync(id, GetCurrentUserId()), "Сообщение успешно удалено");
+        => Map(await message.DeleteMessageAsync(id, GetCurrentUserId()));
 
     [HttpPost("{id}/pin")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> PinMessage(int id) => await ExecuteAsync(()
-        => messageService.PinMessageAsync(id, GetCurrentUserId()), "Сообщение закреплено");
+    public async Task<IActionResult> PinMessage(int id)
+        => Map(await message.PinMessageAsync(id, GetCurrentUserId()));
 
     [HttpDelete("{id}/pin")]
-    public async Task<ActionResult<ApiResponse<MessageDto>>> UnpinMessage(int id) => await ExecuteAsync(()
-        => messageService.UnpinMessageAsync(id, GetCurrentUserId()), "Сообщение откреплено");
+    public async Task<IActionResult> UnpinMessage(int id)
+        => Map(await message.UnpinMessageAsync(id, GetCurrentUserId()));
 
     [HttpGet("chat/{chatId}/pinned")]
-    public async Task<ActionResult<ApiResponse<List<MessageDto>>>> GetPinnedMessages(int chatId) => await ExecuteAsync(()
-        => messageService.GetPinnedMessagesAsync(chatId, GetCurrentUserId()), "Закрепленные сообщения получены");
+    public async Task<IActionResult> GetPinnedMessages(int chatId)
+        => Map(await message.GetPinnedMessagesAsync(chatId, GetCurrentUserId()));
 
     [HttpGet("chat/{chatId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetChatMessages(int chatId, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
-        => await ExecuteAsync(() => messageService.GetChatMessagesAsync(chatId, GetCurrentUserId(), page, pageSize), "Сообщения получены успешно");
+    public async Task<IActionResult> GetChatMessages(int chatId, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
+        => Map(await message.GetChatMessagesAsync(chatId, GetCurrentUserId(), page, pageSize));
 
     [HttpGet("chat/{chatId}/around/{messageId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetMessagesAround(int chatId, int messageId, [FromQuery] int count = 50) => await ExecuteAsync(()
-        => messageService.GetMessagesAroundAsync(chatId, messageId, GetCurrentUserId(), count));
+    public async Task<IActionResult> GetMessagesAround(int chatId, int messageId, [FromQuery] int count = 50)
+        => Map(await message.GetMessagesAroundAsync(chatId, messageId, GetCurrentUserId(), count));
 
     [HttpGet("chat/{chatId}/before/{messageId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetMessagesBefore(int chatId, int messageId, [FromQuery] int count = 30) => await ExecuteAsync(()
-        => messageService.GetMessagesBeforeAsync(chatId, messageId, GetCurrentUserId(), count));
+    public async Task<IActionResult> GetMessagesBefore(int chatId, int messageId, [FromQuery] int count = 30)
+        => Map(await message.GetMessagesBeforeAsync(chatId, messageId, GetCurrentUserId(), count));
 
     [HttpGet("chat/{chatId}/after/{messageId}")]
-    public async Task<ActionResult<ApiResponse<PagedMessagesDto>>> GetMessagesAfter(int chatId, int messageId, [FromQuery] int count = 30) => await ExecuteAsync(()
-        => messageService.GetMessagesAfterAsync(chatId, messageId, GetCurrentUserId(), count));
+    public async Task<IActionResult> GetMessagesAfter(int chatId, int messageId, [FromQuery] int count = 30)
+        => Map(await message.GetMessagesAfterAsync(chatId, messageId, GetCurrentUserId(), count));
 
     [HttpPost("chat/{chatId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<SearchMessagesResponseDto>>> SearchMessages(int chatId, [FromBody] SearchMessagesQueryDto query)
-        => await ExecuteAsync(() => messageService.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
+    public async Task<IActionResult> SearchMessages(int chatId, [FromBody] SearchMessagesQueryDto query)
+        => Map(await message.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
 
     [HttpPost("user/{userId}/search")]
     [EnableRateLimiting("search")]
-    public async Task<ActionResult<ApiResponse<GlobalSearchResponseDto>>> GlobalSearch(int userId, [FromBody] GlobalSearchQueryDto query)
+    public async Task<IActionResult> GlobalSearch(int userId, [FromBody] GlobalSearchQueryDto query)
     {
         if (!IsCurrentUser(userId))
             return Forbidden<GlobalSearchResponseDto>();
-
-        return await ExecuteAsync(() => messageService.GlobalSearchAsync(userId, query));
+        return Map(await message.GlobalSearchAsync(userId, query));
     }
 }

@@ -49,11 +49,46 @@ public sealed class App : Application, IDisposable
 
     private static string ResolveApiUrl(IConfiguration configuration)
     {
-        var apiUrl = configuration["ApiUrl"] ?? configuration["Api:BaseUrl"] ?? "http://192.168.137.1:5274/";
+        var savedUrl = TryLoadSavedServerUrl();
+        if (savedUrl is not null)
+            return savedUrl;
+
+        var apiUrl = configuration["ApiUrl"] ?? configuration["Api:BaseUrl"] ?? "http://localhost:5274/";
+
         if (!apiUrl.EndsWith('/'))
             apiUrl += "/";
 
         return apiUrl;
+    }
+    private static string? TryLoadSavedServerUrl()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var filePath = System.IO.Path.Combine(appData, "MessengerDesktop", "settings.json");
+
+            if (!System.IO.File.Exists(filePath))
+                return null;
+
+            var json = System.IO.File.ReadAllText(filePath);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("server_url", out var el))
+            {
+                var url = el.GetString();
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    Debug.WriteLine($"[App] Загружен сохранённый URL: {url}");
+                    return url;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[App] Не удалось загрузить сохранённый URL: {ex.Message}");
+        }
+
+        return null;
     }
     private static ServiceProvider ConfigureServices()
     {

@@ -15,10 +15,9 @@ using System.Windows.Input;
 
 namespace MessengerDesktop.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(ChatContext context, MediaServices media,
-    ChatCommands? chatCommands = null, ICommand? mentionClickCommand = null) : IAsyncDisposable
+public sealed class ChatMessageManager(ChatContext context, MediaServices media, ChatCommands? chatCommands = null,
+    ICommand? mentionClickCommand = null) : IAsyncDisposable
 {
-    private readonly ChatContext _chatContext = context ?? throw new ArgumentNullException(nameof(context));
     private readonly IApiClientService _apiClient = context.Api;
     private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = () => context.Members;
     private readonly IFileDownloadService? _downloadService = context.FileDownload;
@@ -516,12 +515,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
         msg.IsOwn = msg.SenderId == _userId;
 
-        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient, _chatContext)
+        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,
             MentionClickCommand = mentionClickCommand,
-            Commands = chatCommands // ── Инжектируем команды чата ──
+            Commands = chatCommands
         };
 
         if (LastReadMessageId.HasValue && msg.Id > LastReadMessageId.Value && msg.SenderId != _userId)

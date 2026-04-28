@@ -1,13 +1,17 @@
-using MessengerAPI.Services.Messaging;
+﻿using MessengerAPI.Services.Messaging;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class FilesController(IFileService fileService, ILogger<FilesController> logger) : BaseController<FilesController>(logger)
+public sealed class FilesController(IFileService fileService, IOptions<MessengerSettings> settings, ILogger<FilesController> logger)
+    : BaseController<FilesController>(logger)
 {
-    private const long MaxFileSizeBytes = 100 * 1024 * 1024;
-
     [HttpPost("upload")]
-    [RequestSizeLimit(MaxFileSizeBytes)]
-    public async Task<ActionResult<ApiResponse<MessageFileDto>>> Upload([FromQuery] int chatId, IFormFile file) => await ExecuteAsync(()
-        => fileService.SaveMessageFileAsync(file, chatId, GetCurrentUserId()), "���� �������� �������");
+    [EnableRateLimiting("upload")]
+    public async Task<IActionResult> Upload([FromQuery] int chatId, IFormFile file)
+    {
+        if (file.Length > settings.Value.MaxFileSizeBytes)
+            return BadRequest(ApiResponse<MessageFileDto>.Fail("Файл превышает максимально допустимый размер"));
+        return Map(await fileService.SaveMessageFileAsync(file, chatId, GetCurrentUserId()));
+    }
 }

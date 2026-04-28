@@ -52,9 +52,8 @@ public partial class FileService(MessengerDbContext context,IAccessControlServic
 
     public async Task<Result<MessageFileDto>> SaveMessageFileAsync(IFormFile file, int chatId, int userId)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (accessResult.IsFailure)
-            return Result<MessageFileDto>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure) return access.As<MessageFileDto>();
 
         if (file is null || file.Length == 0)
             return Result<MessageFileDto>.Failure("Файл не предоставлен");

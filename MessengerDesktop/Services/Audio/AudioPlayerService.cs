@@ -8,7 +8,7 @@ namespace MessengerDesktop.Services.Audio;
 
 public sealed class AudioPlayerService : IAudioPlayerService
 {
-    private PortAudioSharp.Stream? _paStream;
+    private Stream? _paStream;
     private WavData? _wavData;
     private Timer? _positionTimer;
     private readonly Lock _lock = new();
@@ -218,9 +218,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
 
         Interlocked.Exchange(ref _positionSamples, pos + available);
 
-        return available < totalSamplesNeeded
-            ? StreamCallbackResult.Complete
-            : StreamCallbackResult.Continue;
+        return available < totalSamplesNeeded ? StreamCallbackResult.Complete : StreamCallbackResult.Continue;
     }
 
     private void OnPositionTick(object? state)

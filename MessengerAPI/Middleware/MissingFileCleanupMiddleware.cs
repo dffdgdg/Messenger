@@ -1,6 +1,4 @@
-﻿
-namespace MessengerAPI.Middleware;
-
+﻿namespace MessengerAPI.Middleware;
 public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {
     private static readonly PathString[] WatchedPrefixes = [new("/uploads"), new("/avatars")];
@@ -29,35 +27,35 @@ public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
         var logger = context.RequestServices.GetRequiredService<ILogger<MissingFileCleanupMiddleware>>();
 
         var alternativePath = $"/{relativePath}";
-        var messageFiles = await dbContext.MessageFiles.Where(f => f.Path == relativePath || f.Path == alternativePath).ToListAsync(context.RequestAborted);
 
-        var usersWithAvatar = await dbContext.Users.Where(u => u.Avatar == relativePath || u.Avatar == alternativePath).ToListAsync(context.RequestAborted);
-
-        var chatsWithAvatar = await dbContext.Chats.Where(c => c.Avatar == relativePath || c.Avatar == alternativePath).ToListAsync(context.RequestAborted);
-
-        if (messageFiles.Count == 0 && usersWithAvatar.Count == 0 && chatsWithAvatar.Count == 0)
+        var hasReferences = await CheckAnyReferenceAsync(dbContext, relativePath, alternativePath, context.RequestAborted);
+        if (!hasReferences)
             return;
 
-        dbContext.MessageFiles.RemoveRange(messageFiles);
+        await CleanupReferencesAsync(dbContext, relativePath, alternativePath, context.RequestAborted);
 
-        foreach (var user in usersWithAvatar)
-            user.Avatar = null;
-
-        foreach (var chat in chatsWithAvatar)
-            chat.Avatar = null;
-
-        await dbContext.SaveChangesAsync(context.RequestAborted);
-
-        LogMissingFileCleaned(logger, relativePath, messageFiles.Count, usersWithAvatar.Count, chatsWithAvatar.Count);
+        LogMissingFileCleaned(logger, relativePath);
     }
 
     private static bool IsWatchedRequest(PathString path)
-        => WatchedPrefixes.Any(prefix => path.StartsWithSegments(prefix));
+        => WatchedPrefixes.Any(path.StartsWithSegments);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Ссылка на отсутствующий файл {Path} очищена из БД. Удалено вложений: {Files}, очищено аватаров пользователей: {Users}, чатов: {Chats}")]
-    private static partial void LogMissingFileCleaned(ILogger logger, string path, int files, int users, int chats);
+    private static async Task<bool> CheckAnyReferenceAsync(MessengerDbContext dbContext, string path, string altPath, CancellationToken ct) => await dbContext.MessageFiles.AnyAsync(f => f.Path == path || f.Path == altPath, ct)
+            || await dbContext.Users.AnyAsync(u => u.Avatar == path || u.Avatar == altPath, ct)
+            || await dbContext.Chats.AnyAsync(c => c.Avatar == path || c.Avatar == altPath, ct);
+
+    private static async Task CleanupReferencesAsync(MessengerDbContext dbContext, string path, string altPath, CancellationToken ct)
+    {
+        await dbContext.MessageFiles.Where(f => f.Path == path || f.Path == altPath).ExecuteDeleteAsync(ct);
+
+        await dbContext.Users.Where(u => u.Avatar == path || u.Avatar == altPath).ExecuteUpdateAsync(setter => setter.SetProperty(u => u.Avatar, (string?)null), ct);
+
+        await dbContext.Chats.Where(c => c.Avatar == path || c.Avatar == altPath).ExecuteUpdateAsync(setter => setter.SetProperty(c => c.Avatar, (string?)null), ct);
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ссылка на отсутствующий файл {Path} очищена из БД")]
+    private static partial void LogMissingFileCleaned(ILogger logger, string path);
 }
-
 public static class MissingFileCleanupMiddlewareExtensions
 {
     public static IApplicationBuilder UseMissingFileCleanup(this IApplicationBuilder app)

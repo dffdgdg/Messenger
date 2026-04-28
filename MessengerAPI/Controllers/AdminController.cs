@@ -4,28 +4,27 @@ namespace MessengerAPI.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin")]
-public class AdminController(IAdminService adminService, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
+[Authorize(Roles = nameof(UserRole.Admin))]
+public class AdminController(IAdminService admin, ILogger<AdminController> logger)
+    : BaseController<AdminController>(logger)
 {
-    private readonly IAdminService _admin = adminService;
-
     [HttpGet("users")]
-    public Task<ActionResult<ApiResponse<List<UserDto>>>> GetUsers(CancellationToken ct) => ExecuteAsync(()
-        => _admin.GetUsersAsync(ct));
+    public async Task<IActionResult> GetUsers(CancellationToken ct)
+        => Map(await admin.GetUsersAsync(ct));
 
     [HttpPost("users")]
-    public Task<ActionResult<ApiResponse<UserDto>>> CreateUser([FromBody] CreateUserDto dto, CancellationToken ct) => ExecuteAsync(()
-        => _admin.CreateUserAsync(dto, ct));
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto, CancellationToken ct)
+        => Map(await admin.CreateUserAsync(dto, ct));
 
     [HttpPut("users/{id:int}")]
-    public Task<ActionResult<ApiResponse<UserDto>>> UpdateUser(int id,[FromBody] UserDto dto,CancellationToken ct) => ExecuteAsync(()
-        => _admin.UpdateUserAsync(id, dto, ct));
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto dto, CancellationToken ct)
+        => Map(await admin.UpdateUserAsync(id, dto, ct));
 
     [HttpPost("users/{id:int}/toggle-ban")]
-    public Task<IActionResult> ToggleBan(int id, CancellationToken ct) => ExecuteAsync(()
-        => _admin.ToggleBanAsync(id, ct));
+    public async Task<IActionResult> ToggleBan(int id, CancellationToken ct)
+        => Map(await admin.ToggleBanAsync(id, ct));
 
     [HttpPost("users/{id:int}/reset-password")]
-    public Task<IActionResult> ResetPassword(int id,[FromBody] ResetPasswordAdminDto dto,CancellationToken ct) => ExecuteAsync(()
-        => _admin.ResetPasswordAsync(id, dto.NewPassword, ct));
+    public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetPasswordAdminDto dto, CancellationToken ct)
+        => Map(await admin.ResetPasswordAsync(id, dto.NewPassword, ct));
 }

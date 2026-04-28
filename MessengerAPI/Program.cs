@@ -1,5 +1,6 @@
 ﻿using MessengerAPI.Hubs;
 using MessengerAPI.Middleware;
+using MessengerAPI.Services;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -92,6 +93,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<UdpDiscoveryService>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials()));
 
 var app = builder.Build();

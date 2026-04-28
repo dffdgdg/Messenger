@@ -12,7 +12,7 @@ public interface IChatService
     Task<Result<List<ChatDto>>> GetUserGroupsAsync(int userId);
     Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId);
     Task<Result<List<UserDto>>> GetChatMembersAsync(int chatId, int userId);
-    Task<Result<ChatDto>> CreateChatAsync(ChatDto dto);
+    Task<Result<ChatDto>> CreateChatAsync(ChatDto dto, CancellationToken ct = default);
     Task<Result<ChatDto>> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto);
     Task<Result> DeleteChatAsync(int chatId, int userId);
     Task<Result<string>> UploadChatAvatarAsync(int chatId, int userId, IFormFile file);
@@ -114,9 +114,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     public async Task<Result<ChatDto>> GetChatForUserAsync(int chatId, int userId)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (accessResult.IsFailure)
-            return Result<ChatDto>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure) return access.As<ChatDto>();
 
         var chat = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
 
@@ -196,11 +195,11 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     public async Task<Result<List<UserDto>>> GetChatMembersAsync(int chatId, int userId)
     {
-        var accessResult = await accessControl.CheckIsMemberAsync(userId, chatId);
-        if (accessResult.IsFailure)
-            return Result<List<UserDto>>.FromFailure(accessResult);
+        var access = await accessControl.EnsureMemberOfAsync(userId, chatId);
+        if (access.IsFailure) return access.As<List<UserDto>>();
 
-        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Include(cm => cm.User).AsNoTracking().ToListAsync();
+        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId)
+            .Include(cm => cm.User).AsNoTracking().ToListAsync();
 
         var memberIds = members.ConvertAll(m => m.UserId);
         var onlineIds = onlineService.FilterOnline(memberIds);
@@ -225,7 +224,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     #region CRUD
 
-    public async Task<Result<ChatDto>> CreateChatAsync(ChatDto dto)
+    public async Task<Result<ChatDto>> CreateChatAsync(ChatDto dto, CancellationToken ct = default)
     {
         if (dto.CreatedById <= 0)
             return Result<ChatDto>.Failure("Некорректный ID создателя");
@@ -235,7 +234,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         {
             contactUserId = parsedContactId;
 
-            var contactExists = await _context.Users.AnyAsync(u => u.Id == contactUserId);
+            var contactExists = await _context.Users.AnyAsync(u => u.Id == contactUserId, ct);
             if (!contactExists)
                 return Result<ChatDto>.NotFound("Указанный собеседник не найден");
 
@@ -248,64 +247,72 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             return Result<ChatDto>.Failure("Название чата обязательно");
         }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync(ct);
 
-        var chat = new Model.Chat
+        try
         {
-            Name = dto.Type == ChatType.Contact ? null : dto.Name?.Trim(),
-            Type = dto.Type,
-            CreatedById = dto.CreatedById,
-            CreatedAt = appDateTime.UtcNow
-        };
+            var chat = new Model.Chat
+            {
+                Name = dto.Type == ChatType.Contact ? null : dto.Name?.Trim(),
+                Type = dto.Type,
+                CreatedById = dto.CreatedById,
+                CreatedAt = appDateTime.UtcNow,
+                ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers
+            };
 
-        _context.Chats.Add(chat);
-        await _context.SaveChangesAsync();
+            _context.Chats.Add(chat);
+            await _context.SaveChangesAsync(ct);
 
-        _context.ChatMembers.Add(new ChatMember
-        {
-            ChatId = chat.Id,
-            UserId = dto.CreatedById,
-            Role = ChatRole.Owner,
-            JoinedAt = appDateTime.UtcNow
-        });
-
-        if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
-        {
             _context.ChatMembers.Add(new ChatMember
             {
                 ChatId = chat.Id,
-                UserId = contactUserId.Value,
-                Role = ChatRole.Member,
+                UserId = dto.CreatedById,
+                Role = ChatRole.Owner,
                 JoinedAt = appDateTime.UtcNow
             });
+
+            if (dto.Type == ChatType.Contact && contactUserId.HasValue && contactUserId.Value != dto.CreatedById)
+            {
+                _context.ChatMembers.Add(new ChatMember
+                {
+                    ChatId = chat.Id,
+                    UserId = contactUserId.Value,
+                    Role = ChatRole.Member,
+                    JoinedAt = appDateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            cacheService.InvalidateUserChats(dto.CreatedById);
+            if (contactUserId.HasValue)
+                cacheService.InvalidateUserChats(contactUserId.Value);
+
+            if (chat.Type != ChatType.Contact)
+                await systemMessages.CreateAsync(chat.Id, dto.CreatedById, SystemEventType.ChatCreated);
+
+            LogChatCreated(chat.Id, dto.CreatedById);
+
+            return Result<ChatDto>.Success(new ChatDto
+            {
+                Id = chat.Id,
+                Name = chat.Name,
+                Type = chat.Type,
+                CreatedById = dto.CreatedById
+            });
         }
-
-        await _context.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        cacheService.InvalidateUserChats(dto.CreatedById);
-        if (contactUserId.HasValue)
-            cacheService.InvalidateUserChats(contactUserId.Value);
-
-        if (chat.Type != ChatType.Contact)
-            await systemMessages.CreateAsync(chat.Id, dto.CreatedById, SystemEventType.ChatCreated);
-
-        LogChatCreated(chat.Id, dto.CreatedById);
-
-        return Result<ChatDto>.Success(new ChatDto
+        catch
         {
-            Id = chat.Id,
-            Name = chat.Name,
-            Type = chat.Type,
-            CreatedById = dto.CreatedById
-        });
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<Result<ChatDto>> UpdateChatAsync(int chatId, int userId, UpdateChatDto dto)
     {
-        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
-        if (adminResult.IsFailure)
-            return Result<ChatDto>.FromFailure(adminResult);
+        var admin = await accessControl.EnsureAdminOfAsync(userId, chatId);
+        if (admin.IsFailure) return admin.As<ChatDto>();
 
         var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId);
 
@@ -331,9 +338,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             chat.ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers.Value;
         }
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-            return Result<ChatDto>.FromFailure(saveResult);
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<ChatDto>();
 
         LogChatUpdated(chatId, userId);
 
@@ -355,9 +361,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     public async Task<Result> DeleteChatAsync(int chatId, int userId)
     {
-        var ownerResult = await accessControl.CheckIsOwnerAsync(userId, chatId);
-        if (ownerResult.IsFailure)
-            return ownerResult;
+        var owner = await accessControl.EnsureOwnerOfAsync(userId, chatId);
+        if (owner.IsFailure) return owner;
 
         var chat = await _context.Chats.Include(c => c.ChatMembers).FirstOrDefaultAsync(c => c.Id == chatId);
 
@@ -371,9 +376,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         _context.ChatMembers.RemoveRange(chat.ChatMembers);
         _context.Chats.Remove(chat);
 
-        var saveResult = await SaveChangesAsync();
-        if (saveResult.IsFailure)
-            return saveResult;
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save;
 
         foreach (var memberId in memberIds)
         {
@@ -388,13 +392,11 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     public async Task<Result> RemoveChatAvatarAsync(int chatId, int userId)
     {
-        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
-        if (adminResult.IsFailure)
-            return Result.FromFailure(adminResult);
+        var admin = await accessControl.EnsureAdminOfAsync(userId, chatId);
+        if (admin.IsFailure) return admin;
 
         var chatResult = await FindEntityAsync<Model.Chat>(chatId);
-        if (chatResult.IsFailure)
-            return Result.FromFailure(chatResult);
+        if (chatResult.IsFailure) return chatResult;
 
         var chat = chatResult.Value!;
 
@@ -406,9 +408,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
         chat.Avatar = null;
 
-        var dbSaveResult = await SaveChangesAsync();
-        if (dbSaveResult.IsFailure)
-            return Result.FromFailure(dbSaveResult);
+        var dbSave = await SaveChangesAsync();
+        if (dbSave.IsFailure) return dbSave;
 
         LogAvatarRemoved(chatId);
 
@@ -417,9 +418,8 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
     public async Task<Result<string>> UploadChatAvatarAsync(int chatId, int userId, IFormFile file)
     {
-        var adminResult = await accessControl.CheckIsAdminAsync(userId, chatId);
-        if (adminResult.IsFailure)
-            return Result<string>.FromFailure(adminResult);
+        var admin = await accessControl.EnsureAdminOfAsync(userId, chatId);
+        if (admin.IsFailure) return admin.As<string>();
 
         if (file is null || file.Length == 0)
             return Result<string>.Failure("Файл не загружен");
@@ -428,8 +428,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             return Result<string>.Failure("Файл должен быть изображением");
 
         var chatResult = await FindEntityAsync<Model.Chat>(chatId);
-        if (chatResult.IsFailure)
-            return Result<string>.FromFailure(chatResult);
+        if (chatResult.IsFailure) return chatResult.As<string>();
 
         var chat = chatResult.Value!;
 
@@ -437,14 +436,12 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             return Result<string>.Failure("Нельзя установить аватар для диалога");
 
         var saveResult = await fileService.SaveImageAsync(file, "chats", chat.Avatar);
-        if (saveResult.IsFailure)
-            return Result<string>.FromFailure(saveResult);
+        if (saveResult.IsFailure) return saveResult.As<string>();
 
         chat.Avatar = saveResult.Value;
 
-        var dbSaveResult = await SaveChangesAsync();
-        if (dbSaveResult.IsFailure)
-            return Result<string>.FromFailure(dbSaveResult);
+        var dbSave = await SaveChangesAsync();
+        if (dbSave.IsFailure) return dbSave.As<string>();
 
         LogAvatarUploaded(chatId);
 

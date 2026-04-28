@@ -47,23 +47,16 @@ public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logg
     public async Task<ChatMember?> GetMembershipAsync(int userId, int chatId, Func<Task<ChatMember?>> factory)
     {
         var cacheKey = GetMembershipKey(userId, chatId);
-
         if (cache.TryGetValue(cacheKey, out ChatMember? cached))
-        {
-            LogMembershipHit(userId, chatId);
             return cached;
-        }
 
-        LogMembershipMiss(userId, chatId);
-
-
-        cache.Set(cacheKey, await factory(), new MemoryCacheEntryOptions
+        var member = await factory();
+        cache.Set(cacheKey, member, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = MembershipTtl,
             SlidingExpiration = TimeSpan.FromMinutes(3)
         });
-
-        return await factory();
+        return member;
     }
 
     #endregion

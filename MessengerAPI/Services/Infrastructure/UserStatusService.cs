@@ -1,57 +1,54 @@
 ﻿using MessengerAPI.Hubs;
-using MessengerAPI.Model;
 using MessengerShared.Dto.Online;
-using MessengerShared.Enum;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 
 namespace MessengerAPI.Services.Infrastructure;
 
 public interface IUserStatusService
 {
-    Task SetStatusAsync(int userId, UserStatusType status, TimeSpan? duration = null);
-    Task<UserStatusDto> GetStatusAsync(int userId);
+    Task<Result> SetStatusAsync(int userId, UserStatusType statusType, TimeSpan? duration);
+    Task<Result<UserStatusDto>> GetStatusAsync(int userId);
     Task CleanupExpiredStatusesAsync();
 }
 
-public class UserStatusService(
-    MessengerDbContext db,
-    IOnlineUserService onlineUserService,
-    IHubContext<ChatHub> hubContext,
+public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUserService onlineUserService, IHubContext<ChatHub> hubContext, TimeProvider timeProvider,
     ILogger<UserStatusService> logger) : IUserStatusService
 {
-    public async Task SetStatusAsync(int userId, UserStatusType status, TimeSpan? duration = null)
+    public async Task<Result> SetStatusAsync(int userId, UserStatusType status, TimeSpan? duration = null)
     {
         var user = await db.Users.FindAsync(userId);
-        if (user == null) return;
+        if (user is null)
+            return Result.NotFound($"Пользователь {userId} не найден");
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         user.StatusType = status;
-        user.StatusExpiresAt = duration.HasValue
-            ? DateTime.SpecifyKind(DateTime.UtcNow.Add(duration.Value), DateTimeKind.Unspecified)
-            : null;
+        user.StatusExpiresAt = duration.HasValue ? DateTime.SpecifyKind(now.Add(duration.Value), DateTimeKind.Unspecified) : null;
+
         await db.SaveChangesAsync();
 
-        var dto = await BuildDtoAsync(user);
+        var dto = BuildDto(user);
         await hubContext.Clients.All.SendAsync("UserStatusChanged", dto);
 
-        logger.LogInformation("User {UserId} set status {Status} for {Duration}", userId, status, duration);
+        LogStatusSet(userId, status, duration);
+
+        return Result.Success();
     }
 
-    public async Task<UserStatusDto> GetStatusAsync(int userId)
+    public async Task<Result<UserStatusDto>> GetStatusAsync(int userId)
     {
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-            return new UserStatusDto(userId, false, null);
 
-        return await BuildDtoAsync(user);
+        if (user is null)
+            return Result<UserStatusDto>.NotFound($"Пользователь {userId} не найден");
+
+        return Result<UserStatusDto>.Success(BuildDto(user));
     }
 
     public async Task CleanupExpiredStatusesAsync()
     {
-        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-        var expired = await db.Users
-            .Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
-            .ToListAsync();
+        var now = DateTime.SpecifyKind(timeProvider.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified);
+
+        var expired = await db.Users.Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now).ToListAsync();
 
         if (expired.Count == 0) return;
 
@@ -63,24 +60,28 @@ public class UserStatusService(
 
         await db.SaveChangesAsync();
 
-        foreach (var u in expired)
-        {
-            var dto = await BuildDtoAsync(u);
-            await hubContext.Clients.All.SendAsync("UserStatusChanged", dto);
-        }
+        var dtos = expired.ConvertAll(BuildDto);
+        await Task.WhenAll(dtos.Select(dto => hubContext.Clients.All.SendAsync("UserStatusChanged", dto)));
 
-        logger.LogInformation("Cleaned up {Count} expired statuses", expired.Count);
+        LogStatusesCleanedUp(expired.Count);
     }
 
-    private Task<UserStatusDto> BuildDtoAsync(Model.User user)
+    private UserStatusDto BuildDto(Model.User user)
     {
         var isOnline = onlineUserService.IsOnline(user.Id);
-        return Task.FromResult(new UserStatusDto(
-            user.Id,
-            isOnline,
-            user.LastOnline,
-            isOnline ? user.StatusType : UserStatusType.Online,
+
+        return new UserStatusDto(user.Id, isOnline, user.LastOnline, isOnline ? user.StatusType : UserStatusType.Online,
             user.StatusExpiresAt
-        ));
+        );
     }
+
+    #region Log
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} set status {Status} duration {Duration}")]
+    private partial void LogStatusSet(int userId, UserStatusType status, TimeSpan? duration);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Cleaned up {Count} expired statuses")]
+    private partial void LogStatusesCleanedUp(int count);
+
+    #endregion
 }

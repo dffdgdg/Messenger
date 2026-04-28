@@ -36,17 +36,17 @@ public sealed class TokenService : ITokenService
 
     public TokenPair GenerateTokenPair(int userId, UserRole? role = null)
     {
+        var jti = Guid.NewGuid().ToString();
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Jti, jti),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
         if (role.HasValue)
-        {
             claims.Add(new Claim(ClaimTypes.Role, role.Value.ToString()));
-        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -57,18 +57,14 @@ public sealed class TokenService : ITokenService
             SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256),
             NotBefore = DateTime.UtcNow
         };
-
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        var accessToken = tokenHandler.WriteToken(token);
-
-        var refreshToken = GenerateRefreshToken();
 
         return new TokenPair
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshToken,
-            JwtId = Guid.NewGuid().ToString()
+            AccessToken = tokenHandler.WriteToken(token),
+            RefreshToken = GenerateRefreshToken(),
+            JwtId = jti
         };
     }
 

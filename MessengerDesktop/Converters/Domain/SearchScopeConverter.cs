@@ -21,9 +21,9 @@ public sealed class SearchScopeToWatermarkConverter : ConverterBase<SearchScopeM
     {
         SearchScopeMode.Chats => "Поиск в чатах...",
         SearchScopeMode.Contacts => "Поиск в контактах...",
-            SearchScopeMode.CurrentChatMessages => "Поиск по сообщениям открытого чата...",
-            _ => "Поиск..."
-        };
+        SearchScopeMode.CurrentChatMessages => "Поиск по сообщениям открытого чата...",
+        _ => "Поиск..."
+    };
 }
 
 public sealed class SearchScopeToHintConverter : ConverterBase<SearchScopeMode, string>

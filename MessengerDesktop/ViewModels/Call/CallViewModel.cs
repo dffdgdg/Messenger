@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.Services.Call;
+﻿using MessengerDesktop.Services.Features.Call;
+using MessengerShared.Dto.Call;
 using MessengerShared.DTO.Call;
 using System;
 using System.Collections.Generic;
@@ -97,7 +98,7 @@ public partial class CallViewModel : BaseViewModel
     }
 
     public double ParticipantAvatarSize => Participants.Count switch
-        { 1 => 100, 2 => 80, <= 4 => 56, <= 9 => 40, _ => 32 };
+    { 1 => 100, 2 => 80, <= 4 => 56, <= 9 => 40, _ => 32 };
 
     partial void OnSidePanelModeChanged(CallSidePanelMode value)
     {

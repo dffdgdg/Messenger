@@ -1,4 +1,4 @@
-﻿namespace MessengerShared.DTO.Call;
+﻿namespace MessengerShared.Dto.Call;
 
 public class CallChatMessageDto
 {

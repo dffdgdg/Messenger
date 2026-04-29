@@ -5,8 +5,7 @@ namespace MessengerAPI.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = nameof(UserRole.Admin))]
-public class AdminController(IAdminService admin, ILogger<AdminController> logger)
-    : BaseController<AdminController>(logger)
+public class AdminController(IAdminService admin, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
 {
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers(CancellationToken ct)

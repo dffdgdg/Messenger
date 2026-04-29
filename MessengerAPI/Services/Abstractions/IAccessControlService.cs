@@ -1,0 +1,13 @@
+﻿namespace MessengerAPI.Services.Abstractions;
+
+public interface IAccessControlService
+{
+    Task<bool> IsMemberAsync(int userId, int chatId);
+    Task<bool> IsOwnerAsync(int userId, int chatId);
+    Task<bool> IsAdminAsync(int userId, int chatId);
+    Task<ChatRole?> GetRoleAsync(int userId, int chatId);
+    Task<List<int>> GetUserChatIdsAsync(int userId);
+    Task<List<int>> GetChatMemberIdsAsync(int chatId);
+    Task<ChatType> GetChatTypeAsync(int chatId);
+    Task<ChatMember?> GetChatMemberAsync(int userId, int chatId);
+}

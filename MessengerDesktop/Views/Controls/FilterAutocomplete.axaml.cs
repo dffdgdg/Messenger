@@ -11,15 +11,15 @@ namespace MessengerDesktop.Views.Controls;
 
 public partial class FilterAutocomplete : UserControl
 {
-    public static readonly StyledProperty<string> SearchTextProperty = AvaloniaProperty.Register<FilterAutocomplete, string>(nameof(SearchText),defaultBindingMode: BindingMode.TwoWay);
+    public static readonly StyledProperty<string> SearchTextProperty = AvaloniaProperty.Register<FilterAutocomplete, string>(nameof(SearchText), defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<string> PlaceholderProperty = AvaloniaProperty.Register<FilterAutocomplete, string>(nameof(Placeholder));
 
-    public static readonly StyledProperty<Geometry?> IconProperty =AvaloniaProperty.Register<FilterAutocomplete, Geometry?>(nameof(Icon));
+    public static readonly StyledProperty<Geometry?> IconProperty = AvaloniaProperty.Register<FilterAutocomplete, Geometry?>(nameof(Icon));
 
-    public static readonly StyledProperty<SearchFilterItem?> SelectedItemProperty =AvaloniaProperty.Register<FilterAutocomplete, SearchFilterItem?>(nameof(SelectedItem),defaultBindingMode: BindingMode.TwoWay);
+    public static readonly StyledProperty<SearchFilterItem?> SelectedItemProperty = AvaloniaProperty.Register<FilterAutocomplete, SearchFilterItem?>(nameof(SelectedItem), defaultBindingMode: BindingMode.TwoWay);
 
-    public static readonly StyledProperty<bool> IsDropdownOpenProperty = AvaloniaProperty.Register<FilterAutocomplete, bool>(nameof(IsDropdownOpen),defaultBindingMode: BindingMode.TwoWay);
+    public static readonly StyledProperty<bool> IsDropdownOpenProperty = AvaloniaProperty.Register<FilterAutocomplete, bool>(nameof(IsDropdownOpen), defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<IEnumerable<SearchFilterItem>> SuggestionsProperty = AvaloniaProperty.Register<FilterAutocomplete, IEnumerable<SearchFilterItem>>(nameof(Suggestions));
 

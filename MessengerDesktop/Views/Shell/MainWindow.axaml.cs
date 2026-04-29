@@ -1,8 +1,7 @@
 ﻿using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
-using MessengerDesktop.Services.Platform;
-using MessengerDesktop.Services.UI;
+using MessengerDesktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
@@ -20,6 +19,7 @@ public partial class MainWindow : Window
     private const int AnimationDurationMs = 250;
     private const int FrameDelayMs = 16;
     private const double MaximizedPadding = 7;
+    private const double CompactModeThreshold = 800;
     private const string OpenClass = "Open";
     private const string ClosingClass = "Closing";
 
@@ -27,6 +27,18 @@ public partial class MainWindow : Window
     private readonly Lock _animationLock = new();
 
     private bool _searchBoxSubscribed;
+
+    public static readonly DirectProperty<MainWindow, bool> IsCompactModeProperty =
+        AvaloniaProperty.RegisterDirect<MainWindow, bool>(
+            nameof(IsCompactMode),
+            o => o.IsCompactMode);
+
+    private bool _isCompactMode;
+    public bool IsCompactMode
+    {
+        get => _isCompactMode;
+        private set => SetAndRaise(IsCompactModeProperty, ref _isCompactMode, value);
+    }
 
     public MainWindow()
     {
@@ -44,6 +56,22 @@ public partial class MainWindow : Window
         _dialogService.OnDialogAnimationRequested += OnDialogAnimationRequested;
 
         UpdateWindowPadding();
+        UpdateCompactMode(); // Установить начальное значение
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty)
+            UpdateWindowPadding();
+
+        if (change.Property == BoundsProperty)
+            UpdateCompactMode();
+    }
+
+    private void UpdateCompactMode()
+    {
+        IsCompactMode = Bounds.Width <= CompactModeThreshold;
     }
 
     private void SubscribeSearchBox()
@@ -96,12 +124,6 @@ public partial class MainWindow : Window
 
         if (!inSearch && !inPopup)
             menu.CloseSearchCommand.Execute(null);
-    }
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-        if (change.Property == WindowStateProperty)
-            UpdateWindowPadding();
     }
 
     private void UpdateWindowPadding() =>

@@ -2,4 +2,4 @@
 
 namespace MessengerShared.Enum;
 
-public enum ChatType  { Chat, Department, Contact,[EnumMember(Value = "department_heads")]DepartmentHeads }
+public enum ChatType { Chat, Department, Contact, [EnumMember(Value = "department_heads")] DepartmentHeads }

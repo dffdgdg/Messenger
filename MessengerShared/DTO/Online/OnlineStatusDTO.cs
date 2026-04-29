@@ -2,7 +2,7 @@
 
 namespace MessengerShared.Dto.Online;
 
-public record UserStatusDto(int UserId,bool IsOnline,DateTime? LastOnline, UserStatusType StatusType = UserStatusType.Online,
+public record UserStatusDto(int UserId, bool IsOnline, DateTime? LastOnline, UserStatusType StatusType = UserStatusType.Online,
     DateTime? StatusExpiresAt = null
 );
 

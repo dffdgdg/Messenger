@@ -56,8 +56,8 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
     public Func<DepartmentHeadDialogViewModel, Task>? SaveAction { get; set; }
     public Func<DepartmentHeadDialogViewModel, Task>? DeleteAction { get; set; }
 
-    public DepartmentHeadDialogViewModel(List<DepartmentDto> departments,ObservableCollection<UserDto> users,
-        IDialogService dialogService,DepartmentDto? department = null, bool hasChildren = false)
+    public DepartmentHeadDialogViewModel(List<DepartmentDto> departments, ObservableCollection<UserDto> users,
+        IDialogService dialogService, DepartmentDto? department = null, bool hasChildren = false)
     {
         _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
         _allUsers = users ?? throw new ArgumentNullException(nameof(users));
@@ -163,7 +163,7 @@ public partial class DepartmentHeadDialogViewModel : DialogBaseViewModel
             return;
         }
 
-        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела", $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела", $"Вы уверены, что хотите удалить отдел «{Name}»?\n\nЭто действие нельзя отменить.", "Удалить", "Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
         var confirmed = await confirmDialog.Result;

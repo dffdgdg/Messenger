@@ -1,11 +1,8 @@
-﻿using MessengerAPI.Services.Auth;
-using MessengerShared.Dto.Auth;
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class AuthController(IAuthService auth, ILogger<AuthController> logger)
-    : BaseController<AuthController>(logger)
+public sealed class AuthController(IAuthService auth, ILogger<AuthController> logger) : BaseController<AuthController>(logger)
 {
     [AllowAnonymous]
     [EnableRateLimiting("login")]

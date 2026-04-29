@@ -2,6 +2,7 @@
 			 xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:messengerdesktop="using:MessengerDesktop"
+             xmlns:search="using:MessengerDesktop.ViewModels.ChatList.Search"
 			 x:Class="MessengerDesktop.Views.ChatsView"
 			 Background="{DynamicResource PrimaryBG}"
 			 x:DataType="vm:ChatsViewModel"
@@ -9,12 +10,8 @@
 			 xmlns:chat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:views="using:MessengerDesktop.Views"
-			 xmlns:dto="using:MessengerShared.Dto"
-			 xmlns:search="using:MessengerShared.Dto.Search"
 			 xmlns:shared="using:MessengerDesktop.Views.Controls.Shared"
-			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
 			 xmlns:conChat="using:MessengerDesktop.Views.Controls.Chat"
-			 xmlns:chatDTO="using:MessengerShared.Dto.Chat"
 			 xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats"
 			 xmlns:controls="using:MessengerDesktop.Views.Controls">
 
@@ -94,7 +91,7 @@
 		</DataTemplate>
 
 		<DataTemplate x:Key="MessageSearchResultTemplate"
-					  x:DataType="chat:SearchMessageResultViewModel">
+					  x:DataType="search:SearchMessageResultViewModel">
 			<Grid Height="{StaticResource ChatItemHeight}"
 				  ColumnDefinitions="Auto,*,50">
 
@@ -597,7 +594,7 @@
 									</Style>
 								</ListBox.Styles>
 								<ListBox.ItemTemplate>
-									<DataTemplate x:DataType="chat:SearchMessageResultViewModel">
+									<DataTemplate x:DataType="search:SearchMessageResultViewModel">
 										<Button Classes="ChatListItem"
 												Margin="0,1"
 												Command="{Binding $parent[UserControl].((vm:ChatsViewModel)DataContext).OpenSearchResultCommand}"

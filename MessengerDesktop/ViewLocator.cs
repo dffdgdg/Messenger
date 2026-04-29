@@ -1,4 +1,5 @@
 using Avalonia.Controls.Templates;
+using MessengerDesktop.ViewModels;
 using System;
 
 namespace MessengerDesktop;

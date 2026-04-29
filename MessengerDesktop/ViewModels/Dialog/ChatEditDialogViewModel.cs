@@ -1,6 +1,5 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using MessengerDesktop.Services.Platform;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -156,7 +155,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         var set = selectedIds.ToHashSet();
         SelectedAdminIds = new ObservableCollection<int>(SelectedAdminIds.Where(set.Contains));
         NotifySelectionChanged();
-    },"Изменить состав", "Участники не выбраны");
+    }, "Изменить состав", "Участники не выбраны");
 
     [RelayCommand]
     private Task ManageAdmins() => ShowUserListDialog("Администраторы", AvailableUsers.Where(x => x.IsSelected).Select(x => x.Clone(SelectedAdminIds.Contains(x.Id))).ToList(), CanManageAdmins,

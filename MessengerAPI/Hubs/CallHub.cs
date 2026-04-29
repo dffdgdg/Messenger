@@ -1,6 +1,4 @@
-﻿using MessengerAPI.Services.Call;
-using MessengerAPI.Services.Chat;
-using MessengerShared.DTO.Call;
+﻿using MessengerShared.DTO.Call;
 using System.Security.Claims;
 
 namespace MessengerAPI.Hubs;
@@ -435,7 +433,6 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         catch (OperationCanceledException) { /* Кто-то принял или звонок завершён */ }
     }
 
-    // Делегируем поиск сервису — он знает все сессии
     private IEnumerable<CallSession> FindSessionsForUser(int userId) => callSessions.GetAllSessionsForUser(userId);
 
 

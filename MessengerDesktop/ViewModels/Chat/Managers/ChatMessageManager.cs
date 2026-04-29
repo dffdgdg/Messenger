@@ -1,9 +1,9 @@
-﻿using MessengerDesktop.Data.Entities;
-using MessengerDesktop.Data.Repositories;
+﻿using MessengerDesktop.Data.Models.Sync;
+using MessengerDesktop.Data.Repositories.Abstractions;
 using MessengerDesktop.Infrastructure;
-using MessengerDesktop.Services.Audio;
-using MessengerDesktop.Services.UI;
-using MessengerDesktop.ViewModels.Factories;
+using MessengerDesktop.ViewModels.Chat.Commands;
+using MessengerDesktop.ViewModels.Chat.Context;
+using MessengerDesktop.ViewModels.ChatList.Factories;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

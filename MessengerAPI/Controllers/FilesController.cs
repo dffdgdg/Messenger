@@ -1,10 +1,8 @@
-﻿using MessengerAPI.Services.Messaging;
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class FilesController(IFileService fileService, IOptions<MessengerSettings> settings, ILogger<FilesController> logger)
-    : BaseController<FilesController>(logger)
+public sealed class FilesController(IFileService fileService, IOptions<MessengerSettings> settings, ILogger<FilesController> logger) : BaseController<FilesController>(logger)
 {
     [HttpPost("upload")]
     [EnableRateLimiting("upload")]

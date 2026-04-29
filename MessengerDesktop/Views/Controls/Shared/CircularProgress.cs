@@ -127,7 +127,7 @@ public class CircularProgress : Control
             _animationAngle = (_animationAngle + 6) % 360;
             InvalidateVisual();
             return true;
-        },TimeSpan.FromMilliseconds(16));
+        }, TimeSpan.FromMilliseconds(16));
     }
 
     private void StopAnimation()

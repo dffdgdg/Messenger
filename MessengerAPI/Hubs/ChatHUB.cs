@@ -1,4 +1,4 @@
-﻿using MessengerAPI.Services.ReadReceipt;
+﻿using MessengerAPI.Services.Infrastructure.Security;
 using System.Security.Claims;
 
 namespace MessengerAPI.Hubs;
@@ -8,39 +8,39 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
 {
     #region Connection Lifecycle
     public override async Task OnConnectedAsync()
-{
-    var userId = GetCurrentUserId();
-    if (!userId.HasValue)
     {
-        await base.OnConnectedAsync();
-        return;
-    }
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+        {
+            await base.OnConnectedAsync();
+            return;
+        }
 
-    onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
-    await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
+        onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
 
-    using var scope = scopeFactory.CreateScope();
-    var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
-    var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
+        using var scope = scopeFactory.CreateScope();
+        var accessControl = scope.ServiceProvider.GetRequiredService<IAccessControlService>();
+        var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
 
-    var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
+        var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
 
-    var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
-    await Task.WhenAll(joinTasks);
+        var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
+        await Task.WhenAll(joinTasks);
 
-    await Clients.Others.SendAsync("UserOnline", userId.Value);
+        await Clients.Others.SendAsync("UserOnline", userId.Value);
 
         var statusResult = await statusService.GetStatusAsync(userId.Value);
         if (statusResult.TryUnwrap(out var statusDto, logger))
             await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
 
         if (logger.IsEnabled(LogLevel.Information))
-    {
-        logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
-    }
+        {
+            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
+        }
 
-    await base.OnConnectedAsync();
-}
+        await base.OnConnectedAsync();
+    }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {

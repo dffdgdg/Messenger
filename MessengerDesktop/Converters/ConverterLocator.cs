@@ -1,12 +1,8 @@
 using Avalonia.Layout;
 using MessengerDesktop.Converters.Boolean;
-using MessengerDesktop.Converters.Comparison;
 using MessengerDesktop.Converters.DateTime;
 using MessengerDesktop.Converters.Domain;
-using MessengerDesktop.Converters.Enum;
 using MessengerDesktop.Converters.Generic;
-using MessengerDesktop.Converters.Hierarchy;
-using MessengerDesktop.Converters.Message;
 using System;
 using System.Collections.Generic;
 

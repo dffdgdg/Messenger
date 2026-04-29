@@ -46,25 +46,25 @@ public sealed class Result<T> : Result
 
     internal static Result<T> Success(T value) => new() { IsSuccess = true, Value = value };
 
-    internal new static Result<T> Failure(string error, ResultErrorType type = ResultErrorType.Validation)
+    internal static new Result<T> Failure(string error, ResultErrorType type = ResultErrorType.Validation)
         => new() { IsSuccess = false, Error = error, ErrorType = type };
 
-    internal new static Result<T> NotFound(string error)
+    internal static new Result<T> NotFound(string error)
         => new() { IsSuccess = false, Error = error, ErrorType = ResultErrorType.NotFound };
 
-    internal new static Result<T> Forbidden(string error)
+    internal static new Result<T> Forbidden(string error)
         => new() { IsSuccess = false, Error = error, ErrorType = ResultErrorType.Forbidden };
 
-    internal new static Result<T> Unauthorized(string error)
+    internal static new Result<T> Unauthorized(string error)
         => new() { IsSuccess = false, Error = error, ErrorType = ResultErrorType.Unauthorized };
 
-    internal new static Result<T> Conflict(string error)
+    internal static new Result<T> Conflict(string error)
         => new() { IsSuccess = false, Error = error, ErrorType = ResultErrorType.Conflict };
 
-    internal new static Result<T> Internal(string error)
+    internal static new Result<T> Internal(string error)
         => new() { IsSuccess = false, Error = error, ErrorType = ResultErrorType.Internal };
 
-    internal new static Result<T> FromFailure(Result result)
+    internal static new Result<T> FromFailure(Result result)
         => new() { IsSuccess = false, Error = result.Error, ErrorType = result.ErrorType };
 
     public void Deconstruct(out bool success, out T? data, out string? error)

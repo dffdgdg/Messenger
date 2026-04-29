@@ -1,4 +1,4 @@
-﻿using MessengerShared.DTO.Call;
+﻿using MessengerShared.Dto.Call;
 
 namespace MessengerDesktop.ViewModels.Call;
 

@@ -2,12 +2,6 @@
 
 namespace MessengerAPI.Services.Infrastructure;
 
-public interface IHubNotifier
-{
-    Task SendToChatAsync(int chatId, string method, params object?[] args);
-    Task SendToUserAsync(int userId, string method, params object?[] args);
-}
-
 public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> logger) : IHubNotifier
 {
     public async Task SendToChatAsync(int chatId, string method, params object?[] args)

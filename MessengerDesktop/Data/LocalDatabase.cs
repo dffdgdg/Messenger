@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.Data.Entities;
+﻿using MessengerDesktop.Data.Models.Cache;
+using MessengerDesktop.Data.Models.Sync;
 using SQLite;
 using System;
 using System.Diagnostics;

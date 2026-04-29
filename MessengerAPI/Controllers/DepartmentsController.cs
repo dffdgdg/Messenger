@@ -1,10 +1,6 @@
-using MessengerAPI.Services.Department;
-using MessengerShared.Dto.Department;
-
 namespace MessengerAPI.Controllers;
 
-public sealed class DepartmentsController(IDepartmentService department, ILogger<DepartmentsController> logger)
-    : BaseController<DepartmentsController>(logger)
+public sealed class DepartmentsController(IDepartmentService department, ILogger<DepartmentsController> logger) : BaseController<DepartmentsController>(logger)
 {
     [HttpGet]
     public async Task<IActionResult> GetDepartments(CancellationToken ct)

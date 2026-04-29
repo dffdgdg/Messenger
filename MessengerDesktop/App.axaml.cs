@@ -2,18 +2,18 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MessengerDesktop.Data;
-using MessengerDesktop.Infrastructure;
-using MessengerDesktop.Services.Cache;
-using MessengerDesktop.Services.Platform;
-using MessengerDesktop.Services.UI;
+using MessengerDesktop.Infrastructure.Extensions;
+using MessengerDesktop.Infrastructure.Media;
+using MessengerDesktop.Services.Infrastructure.UI;
+using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace MessengerDesktop;
 
@@ -22,7 +22,7 @@ public sealed class App : Application, IDisposable
     private bool _disposed;
     private INotificationService? _notificationService;
 
-    public new static App Current => (App)Application.Current!;
+    public static new App Current => (App)Application.Current!;
 
     public IServiceProvider Services { get; private set; } = null!;
 

@@ -1,6 +1,5 @@
-﻿using MessengerDesktop.Data.Repositories;
-using MessengerDesktop.Services.Audio;
-using MessengerDesktop.Services.UI;
+﻿using MessengerDesktop.Data.Repositories.Abstractions;
+using MessengerDesktop.ViewModels.Chat.Commands;
 using MessengerDesktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -164,7 +163,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #region Constructor
 
-    public MessageViewModel(MessageDto message,IFileDownloadService? downloadService = null,INotificationService? notificationService = null,
+    public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
         IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null)
     {
         _downloadService = downloadService;
@@ -186,7 +185,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         RecacheAllProperties();
         SubscribeToAudioPlayer();
 
-        Message.Files = null;
+        Message.Files = [];
     }
 
     private void MapFromDto(MessageDto message)
@@ -462,7 +461,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             await App.Current.Services.GetRequiredService<ILocalCacheService>().UpsertMessageAsync(Message);
         }
         catch { /* best-effort */ }
-        finally { Message.Files = null; }
+        finally { Message.Files = []; }
     }
 
     #endregion

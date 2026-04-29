@@ -1,9 +1,6 @@
-﻿using MessengerAPI.Services.Chat;
+﻿namespace MessengerAPI.Controllers;
 
-namespace MessengerAPI.Controllers;
-
-public sealed class NotificationsController(INotificationService notification, ILogger<NotificationsController> logger)
-    : BaseController<NotificationsController>(logger)
+public sealed class NotificationsController(INotificationService notification, ILogger<NotificationsController> logger) : BaseController<NotificationsController>(logger)
 {
     [HttpGet("chat/{chatId}/settings")]
     public async Task<IActionResult> GetChatSettings(int chatId)

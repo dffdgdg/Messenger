@@ -1,4 +1,5 @@
 ﻿namespace MessengerAPI.Middleware;
+
 public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {
     private static readonly PathString[] WatchedPrefixes = [new("/uploads"), new("/avatars")];

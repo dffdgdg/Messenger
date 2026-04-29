@@ -55,12 +55,12 @@
 
 	<ItemGroup>
 		<PackageReference Include="AsyncImageLoader.Avalonia" Version="3.8.0" />
-		<PackageReference Include="Avalonia" Version="12.0.1" />
-		<PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
+		<PackageReference Include="Avalonia" Version="12.0.2" />
+		<PackageReference Include="Avalonia.Desktop" Version="12.0.2" />
 		<PackageReference Include="Avalonia.Markup.Declarative" Version="12.0.1" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.1" />
-		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
-		<PackageReference Include="Avalonia.X11" Version="12.0.1" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.2" />
+		<PackageReference Include="Avalonia.X11" Version="12.0.2" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.7" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.7" />

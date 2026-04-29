@@ -44,7 +44,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Opacity" Value="0.6"/>
             <Setter Property="FocusAdorner" Value="{x:Null}"/>
-            <Setter Property="ZIndex" Value="100"/>  <!-- Добавлен ZIndex -->
+            <Setter Property="ZIndex" Value="100"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
@@ -83,7 +83,6 @@
         </Style>
     </UserControl.Styles>
 
-    <!-- Убран IsHitTestVisible="False" с ItemsControl -->
     <ItemsControl ItemsSource="{Binding ActiveNotifications}"
                   HorizontalAlignment="Right"
                   VerticalAlignment="Top"

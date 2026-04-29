@@ -1,4 +1,4 @@
-﻿using MessengerAPI.Services.Chat;
+﻿using MessengerAPI.Services.Features.Chat;
 
 namespace MessengerAPI.Mapping;
 

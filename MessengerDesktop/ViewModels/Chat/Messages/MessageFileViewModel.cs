@@ -1,5 +1,4 @@
-﻿using MessengerDesktop.Services.UI;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -7,9 +6,7 @@ using System.Threading.Tasks;
 
 namespace MessengerDesktop.ViewModels.Chat;
 
-public sealed partial class MessageFileViewModel(
-    MessageFileDto file,
-    IFileDownloadService? downloadService = null,
+public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null,
     INotificationService? notificationService = null) : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;

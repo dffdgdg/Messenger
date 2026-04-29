@@ -1,9 +1,6 @@
-﻿using MessengerAPI.Services.User;
+﻿namespace MessengerAPI.Controllers;
 
-namespace MessengerAPI.Controllers;
-
-public sealed class UsersController(IUserService user, ILogger<UsersController> logger)
-    : BaseController<UsersController>(logger)
+public sealed class UsersController(IUserService user, ILogger<UsersController> logger) : BaseController<UsersController>(logger)
 {
     [HttpGet]
     public async Task<IActionResult> GetAllUsers(CancellationToken ct)

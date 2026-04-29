@@ -2,11 +2,10 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:sys="using:System"
 			 xmlns:conv="using:MessengerDesktop.Converters"
+             xmlns:search="using:MessengerDesktop.ViewModels.ChatList.Search"
 			 xmlns:controls="using:MessengerDesktop.Views.Controls"
 			 xmlns:chat="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:chatItem="using:MessengerDesktop.ViewModels.Chats"
-			 xmlns:callVm="using:MessengerDesktop.ViewModels.Call"
-			 xmlns:callView="using:MessengerDesktop.Views.Call"
 			 x:Class="MessengerDesktop.Views.MainMenuView"
 			 x:Name="Root"
 			 x:DataType="vm:MainMenuViewModel"
@@ -508,7 +507,7 @@
 
 							<ItemsControl ItemsSource="{Binding SearchManager.MessageResults}">
 								<ItemsControl.ItemTemplate>
-									<DataTemplate x:DataType="chat:SearchMessageResultViewModel">
+									<DataTemplate x:DataType="search:SearchMessageResultViewModel">
 										<Button Classes="SearchResultItem"
 												Command="{Binding $parent[UserControl].((vm:MainMenuViewModel)DataContext).OpenSearchResultCommand}"
 												CommandParameter="{Binding Source}">

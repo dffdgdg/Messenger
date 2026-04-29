@@ -1,4 +1,4 @@
-﻿using MessengerDesktop.Services.Audio;
+﻿using MessengerDesktop.Services.Features.Media.Audio;
 using System;
 
 namespace MessengerDesktop.ViewModels.Chat;

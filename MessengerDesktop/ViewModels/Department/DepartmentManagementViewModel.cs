@@ -1,5 +1,4 @@
-﻿using MessengerDesktop.Services.UI;
-using MessengerShared.Dto.Department;
+﻿using MessengerShared.Dto.Department;
 using MessengerShared.Dto.Online;
 using System;
 using System.Collections.Generic;
@@ -23,7 +22,7 @@ public partial class DepartmentManagementViewModel : BaseViewModel
     public Func<DepartmentMemberViewModel, Task<bool>>? ShowRemoveConfirmAction { get; set; }
     public Func<ObservableCollection<UserDto>, Task<UserDto?>>? ShowSelectUserAction { get; set; }
 
-    public DepartmentManagementViewModel(IApiClientService apiClient,IAuthManager authManager,INotificationService notificationService)
+    public DepartmentManagementViewModel(IApiClientService apiClient, IAuthManager authManager, INotificationService notificationService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));

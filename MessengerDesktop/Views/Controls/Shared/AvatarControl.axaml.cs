@@ -12,7 +12,7 @@ public partial class AvatarControl : UserControl
 
     public static readonly StyledProperty<double> SizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(Size), 40);
 
-    public new static readonly StyledProperty<double> FontSizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(FontSize), 14);
+    public static new readonly StyledProperty<double> FontSizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(FontSize), 14);
 
     public static readonly StyledProperty<double> IconSizeProperty = AvaloniaProperty.Register<AvatarControl, double>(nameof(IconSize), 18);
 

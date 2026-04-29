@@ -1,9 +1,6 @@
-﻿using MessengerAPI.Services.Chat;
+﻿namespace MessengerAPI.Controllers;
 
-namespace MessengerAPI.Controllers;
-
-public sealed class ChatsController(IChatService chat, IChatMemberService member, ILogger<ChatsController> logger)
-    : BaseController<ChatsController>(logger)
+public sealed class ChatsController(IChatService chat, IChatMemberService member, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
 {
     [HttpGet("user/{userId}/dialogs")]
     public async Task<IActionResult> GetUserDialogs(int userId)

@@ -1,11 +1,9 @@
-﻿using MessengerAPI.Services.Messaging;
-using MessengerShared.DTO.Message;
+﻿using MessengerShared.DTO.Message;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace MessengerAPI.Controllers;
 
-public sealed class MessagesController(IMessageService message, ILogger<MessagesController> logger)
-    : BaseController<MessagesController>(logger)
+public sealed class MessagesController(IMessageService message, ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
     [EnableRateLimiting("messaging")]

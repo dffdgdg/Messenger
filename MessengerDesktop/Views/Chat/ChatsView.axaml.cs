@@ -1,5 +1,6 @@
 using Avalonia.Input;
 using Avalonia.Reactive;
+using MessengerDesktop.ViewModels;
 using MessengerDesktop.Views.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using System;

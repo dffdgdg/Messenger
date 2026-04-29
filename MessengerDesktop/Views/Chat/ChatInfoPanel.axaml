@@ -5,6 +5,7 @@
 			 xmlns:vm="using:MessengerDesktop.ViewModels.Chat"
 			 xmlns:conv="using:MessengerDesktop.Converters"
 			 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             xmlns:context="using:MessengerDesktop.ViewModels.Chat.Context"
 			 xmlns:userShared="using:MessengerShared.Dto"
 			 xmlns:user="using:MessengerShared.Dto.User"
 			 xmlns:views="using:MessengerDesktop.Views"
@@ -369,7 +370,7 @@
 											</ItemsPanelTemplate>
 										</ItemsControl.ItemsPanel>
 										<ItemsControl.ItemTemplate>
-											<DataTemplate x:DataType="vm:ChatInfoPanelMediaItem">
+											<DataTemplate x:DataType="context:ChatInfoPanelMediaItem">
 												<Button Classes="MediaThumb"
 														Width="88" Height="88"
 														Margin="2"
@@ -402,7 +403,7 @@
 								<StackPanel IsVisible="{Binding ShowFilesSection}">
 									<ItemsControl ItemsSource="{Binding FilesItems}">
 										<ItemsControl.ItemTemplate>
-											<DataTemplate x:DataType="vm:ChatInfoPanelFileItem">
+											<DataTemplate x:DataType="context:ChatInfoPanelFileItem">
 												<Button Classes="InfoRow"
 														Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
 														CommandParameter="{Binding Message}">
@@ -692,7 +693,7 @@
 											</ItemsPanelTemplate>
 										</ItemsControl.ItemsPanel>
 										<ItemsControl.ItemTemplate>
-											<DataTemplate x:DataType="vm:ChatInfoPanelMediaItem">
+											<DataTemplate x:DataType="context:ChatInfoPanelMediaItem">
 												<Button Classes="MediaThumb"
 														Width="88" Height="88"
 														Margin="2"
@@ -725,7 +726,7 @@
 								<StackPanel IsVisible="{Binding ShowFilesSection}">
 									<ItemsControl ItemsSource="{Binding FilesItems}">
 										<ItemsControl.ItemTemplate>
-											<DataTemplate x:DataType="vm:ChatInfoPanelFileItem">
+											<DataTemplate x:DataType="context:ChatInfoPanelFileItem">
 												<Button Classes="InfoRow"
 														Command="{Binding $parent[views:ChatInfoPanel].DataContext.OpenInfoSectionMessageCommand}"
 														CommandParameter="{Binding Message}">

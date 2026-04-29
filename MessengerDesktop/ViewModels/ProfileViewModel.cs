@@ -1,9 +1,7 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using MessengerDesktop.Infrastructure;
-using MessengerDesktop.Services.Realtime;
-using MessengerDesktop.Services.UI;
+using MessengerDesktop.Infrastructure.Helpers;
 using MessengerShared.Dto.Online;
 using System;
 using System.Linq;
@@ -372,7 +370,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         await SafeExecuteAsync(async () =>
         {
             await using var stream = await files[0].OpenReadAsync();
-            var result = await _api.UploadFileAsync<UserDto>(ApiEndpoints.Users.Avatar(User!.Id),stream,files[0].Name,"image/png");
+            var result = await _api.UploadFileAsync<UserDto>(ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
 
             if (!result.Success) return;
 
@@ -423,7 +421,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [RelayCommand]
     private static async Task Logout()
     {
-        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime {MainWindow.DataContext: MainWindowViewModel main})
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow.DataContext: MainWindowViewModel main })
             await main.Logout();
     }
 

@@ -173,6 +173,7 @@ public class RichMessageTextBlock : SelectableTextBlock
 
         return null;
     }
+
     private int GetCharacterIndexSafe(PointerEventArgs e)
     {
         var pos = e.GetPosition(this);

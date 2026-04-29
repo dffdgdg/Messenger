@@ -1,5 +1,3 @@
-using MessengerAPI.Services.Messaging;
-
 namespace MessengerAPI.Controllers;
 
 public sealed class PollsController(IPollService poll, ILogger<PollsController> logger) : BaseController<PollsController>(logger)

@@ -1,4 +1,4 @@
-using MessengerDesktop.Infrastructure;
+using MessengerDesktop.Infrastructure.Helpers;
 using MessengerShared.Dto.Department;
 using System;
 using System.Linq;

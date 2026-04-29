@@ -1,11 +1,11 @@
-﻿using MessengerDesktop.Services.Call;
-using MessengerDesktop.Services.Realtime;
+﻿using MessengerDesktop.Services.Features.Call;
 using MessengerDesktop.ViewModels.Call;
 using MessengerDesktop.ViewModels.Chat;
+using MessengerDesktop.ViewModels.Chat.Navigation;
+using MessengerDesktop.ViewModels.ChatList.Factories;
 using MessengerDesktop.ViewModels.Chats;
 using MessengerDesktop.ViewModels.Department;
 using MessengerDesktop.ViewModels.Dialog;
-using MessengerDesktop.ViewModels.Factories;
 using MessengerShared.Dto.Online;
 using MessengerShared.DTO.Call;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,8 +1,13 @@
 ﻿using MessengerAPI.Services.Auth;
 using MessengerAPI.Services.Call;
 using MessengerAPI.Services.Chat;
+using MessengerAPI.Services.Core.Auth;
 using MessengerAPI.Services.Department;
-using MessengerAPI.Services.Infrastructure.Postgres;
+using MessengerAPI.Services.Features.Chat;
+using MessengerAPI.Services.Infrastructure;
+using MessengerAPI.Services.Infrastructure.Database;
+using MessengerAPI.Services.Infrastructure.Network;
+using MessengerAPI.Services.Infrastructure.Status;
 using MessengerAPI.Services.Messaging;
 using MessengerAPI.Services.ReadReceipt;
 using MessengerAPI.Services.User;

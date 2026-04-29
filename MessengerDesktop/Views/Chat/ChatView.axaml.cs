@@ -2,7 +2,6 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
-using MessengerDesktop.Services.Storage;
 using MessengerDesktop.ViewModels.Chat;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -552,7 +551,6 @@ public partial class ChatView : UserControl
             }
         }
 
-        // ── Периодическая очистка _seenMessageIds ──
         if (_seenMessageIds.Count > SeenIdsCleanupThreshold)
         {
             var currentIds = new HashSet<int>(
@@ -609,17 +607,6 @@ public partial class ChatView : UserControl
         {
             timer.Stop();
             action();
-        };
-        timer.Start();
-    }
-
-    private static void ScheduleAction(Func<Task> action, int delayMs = 50)
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
-        timer.Tick += async (_, _) =>
-        {
-            timer.Stop();
-            await action();
         };
         timer.Start();
     }

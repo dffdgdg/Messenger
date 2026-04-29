@@ -1,6 +1,4 @@
 ﻿using Avalonia.Styling;
-using MessengerDesktop.Services.Cache;
-using MessengerDesktop.Services.Storage;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

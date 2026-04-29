@@ -1,12 +1,9 @@
-﻿using MessengerShared.Dto.Online;
-
-namespace MessengerAPI.Controllers;
+﻿namespace MessengerAPI.Controllers;
 
 [ApiController]
 [Route("api/status")]
 [Authorize]
-public sealed class StatusController(IUserStatusService status, ILogger<StatusController> logger)
-    : BaseController<StatusController>(logger)
+public sealed class StatusController(IUserStatusService status, ILogger<StatusController> logger) : BaseController<StatusController>(logger)
 {
     [HttpPost]
     public async Task<IActionResult> SetStatus([FromBody] SetStatusRequest request)

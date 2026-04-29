@@ -1,4 +1,5 @@
-﻿using MessengerDesktop.ViewModels.Admin;
+﻿using MessengerDesktop.Services.Core.Api;
+using MessengerDesktop.ViewModels.Admin;
 using MessengerDesktop.ViewModels.Dialog;
 using MessengerShared.Dto.Department;
 using System;

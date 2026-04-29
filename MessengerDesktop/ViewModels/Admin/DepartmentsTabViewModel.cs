@@ -42,7 +42,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Create()
     {
-        var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments],Users,_dialogService)
+        var departmentDialog = new DepartmentHeadDialogViewModel([.. Departments], Users, _dialogService)
         {
             SaveAction = async dialogVm =>
             {
@@ -131,7 +131,7 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
             return;
         }
 
-        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела",$"Вы уверены, что хотите удалить отдел «{item.Name}»?\n\nЭто действие нельзя отменить.","Удалить","Отмена");
+        var confirmDialog = new ConfirmDialogViewModel("Удаление отдела", $"Вы уверены, что хотите удалить отдел «{item.Name}»?\n\nЭто действие нельзя отменить.", "Удалить", "Отмена");
 
         await _dialogService.ShowAsync(confirmDialog);
         var confirmed = await confirmDialog.Result;

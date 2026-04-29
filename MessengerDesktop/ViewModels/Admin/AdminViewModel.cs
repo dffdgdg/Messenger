@@ -1,5 +1,4 @@
-﻿using MessengerDesktop.Services.UI;
-using MessengerDesktop.ViewModels.Admin;
+﻿using MessengerDesktop.ViewModels.Admin;
 using MessengerShared.Dto.Department;
 using System;
 using System.Collections.Generic;

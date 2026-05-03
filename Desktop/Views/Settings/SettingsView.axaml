@@ -1,0 +1,119 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:Desktop.Views.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Desktop.ViewModels"
+             x:Class="Desktop.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             Background="{DynamicResource PrimaryBG}">
+
+	<Border Classes="PageContainer">
+		<ScrollViewer VerticalScrollBarVisibility="Auto"
+					  HorizontalScrollBarVisibility="Disabled"
+					  Classes="ThinScrollbar">
+			<Border Padding="32,24,32,56">
+				<StackPanel Width="480"
+							HorizontalAlignment="Center"
+							Spacing="24">
+
+					<StackPanel Spacing="4">
+						<TextBlock Text="Настройки" Classes="PageTitle"/>
+						<TextBlock Text="Параметры внешнего вида и поведения приложения"
+								   Classes="SectionSubtitle"/>
+					</StackPanel>
+
+					<StackPanel Spacing="12">
+						<TextBlock Text="Внешний вид" Classes="SectionHeader Large"/>
+
+						<Border Classes="Section">
+							<StackPanel Spacing="16">
+								<StackPanel Spacing="2">
+									<TextBlock Text="Тема оформления"
+											   Classes="SectionItemTitle"/>
+									<TextBlock Text="Выберите предпочтительную цветовую схему"
+											   Classes="SectionItemDesc"/>
+								</StackPanel>
+
+								<controls:ThemeSelectorControl
+									SelectedTheme="{Binding SelectedTheme, Mode=TwoWay}"
+									Margin="0,8,0,0"/>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+
+					<StackPanel Spacing="12">
+						<TextBlock Text="Уведомления" Classes="SectionHeader Large"/>
+
+						<Border Classes="Section">
+							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+								<PathIcon Data="{DynamicResource NotificationsIcon}"
+										  Width="20" Height="20"/>
+
+								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+									<TextBlock Text="Push-уведомления"
+											   Classes="SectionItemTitle"/>
+									<TextBlock Text="Получать уведомления о новых сообщениях"
+											   Classes="SectionItemDesc"/>
+								</StackPanel>
+
+								<ToggleSwitch Grid.Column="2"
+											  IsChecked="{Binding NotificationsEnabled}"
+											  VerticalAlignment="Center"/>
+							</Grid>
+						</Border>
+					</StackPanel>
+
+					<StackPanel Spacing="12">
+						<TextBlock Text="Данные" Classes="SectionHeader Large"/>
+
+						<Border Classes="Section">
+							<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+								<PathIcon Data="{DynamicResource DeleteIcon}"
+										  Width="20" Height="20"/>
+
+								<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+									<TextBlock Text="Очистить кэш"
+											   Classes="SectionItemTitle"/>
+									<TextBlock Text="Удалить локальные данные и освободить место"
+											   Classes="SectionItemDesc"/>
+								</StackPanel>
+
+								<Button Grid.Column="2"
+										Content="Очистить"
+										Classes="DialogDanger"
+										VerticalAlignment="Center"
+										Command="{Binding ClearCacheCommand}"/>
+							</Grid>
+						</Border>
+					</StackPanel>
+
+					<StackPanel Spacing="12">
+						<TextBlock Text="О приложении" Classes="SectionHeader Large"/>
+
+						<Border Classes="Section">
+							<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+								<StackPanel Grid.Row="0" Spacing="4">
+									<TextBlock Text="ВнутрьСвязь"
+											   FontWeight="SemiBold"
+											   FontSize="16"/>
+									<TextBlock Text="Версия 1.0.0"
+											   Classes="TextSecondary"
+											   FontSize="13"/>
+								</StackPanel>
+
+								<Border Grid.Row="1"
+										Height="1"
+										Background="{DynamicResource BorderDefault}"/>
+
+								<TextBlock Grid.Row="2"
+										   Text="© 2026 Все права защищены"
+										   Classes="TextMuted"
+										   FontSize="12"/>
+							</Grid>
+						</Border>
+					</StackPanel>
+
+				</StackPanel>
+			</Border>
+		</ScrollViewer>
+	</Border>
+</UserControl>

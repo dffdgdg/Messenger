@@ -1,0 +1,191 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Desktop.ViewModels"
+             x:Class="Desktop.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.AlertSuccess, Border.MessageSuccess">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style Selector="CheckBox.RememberMe">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style Selector="Border.AlertError, Border.MessageError">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+    </UserControl.Styles>
+
+    <Grid>
+        <!-- Фон с декоративными элементами -->
+        <Panel>
+            <Border>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="{DynamicResource LoginBgStart}" Offset="0"/>
+                        <GradientStop Offset="0.5">
+                            <GradientStop.Color>
+                                <DynamicResource ResourceKey="LoginBgMiddle" />
+                            </GradientStop.Color>
+                        </GradientStop>
+                        <GradientStop Color="{DynamicResource LoginBgEnd}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Border IsHitTestVisible="False" Opacity="0.3">
+                <Border.OpacityMask>
+                    <RadialGradientBrush Center="0.5,0.5" RadiusX="0.7" RadiusY="0.7">
+                        <GradientStop Color="#FF000000" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="1"/>
+                    </RadialGradientBrush>
+                </Border.OpacityMask>
+                <Border.Background>
+                    <VisualBrush TileMode="Tile"
+                               SourceRect="0,0,80,80"
+                               DestinationRect="0,0,80,80">
+                        <VisualBrush.Visual>
+                            <Canvas Width="80" Height="80">
+                                <Line StartPoint="79,0" EndPoint="79,80"
+                                    Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1"/>
+                                <Line StartPoint="0,79" EndPoint="80,79"
+                                    Stroke="{DynamicResource LoginGridLine}" StrokeThickness="1"/>
+                            </Canvas>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </Border.Background>
+            </Border>
+
+            <Ellipse Width="600" Height="600"
+                   HorizontalAlignment="Left" VerticalAlignment="Top"
+                   Margin="-250,-200,0,0" IsHitTestVisible="False"
+                   Fill="{DynamicResource LoginGlowPrimary}"/>
+            <Ellipse Width="500" Height="500"
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Margin="0,0,-150,-150" IsHitTestVisible="False"
+                   Fill="{DynamicResource LoginGlowSecondary}"/>
+        </Panel>
+
+        <!-- Основная карточка логина -->
+        <Border Background="{DynamicResource LoginCardBg}"
+              BorderBrush="{DynamicResource LoginCardBorder}"
+              BorderThickness="1" CornerRadius="16" Padding="32,28"
+              MaxWidth="400" MinWidth="360"
+              HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="60" OffsetY="12" Opacity="0.4" Color="Black"/>
+            </Border.Effect>
+
+            <StackPanel Spacing="24">
+                <!-- Логотип и заголовок -->
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <Path Data="{StaticResource LogoIcon}"
+                        Fill="{DynamicResource Accent}"
+                        Width="48" Height="48"
+                        HorizontalAlignment="Center"
+                        Stretch="Uniform"/>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="ВнутрьСеть" FontSize="20" FontWeight="Bold"
+                                 HorizontalAlignment="Center"/>
+                        <TextBlock Text="Войдите в свой аккаунт" FontSize="13"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Сообщения об ошибках и успехе -->
+                <Border Classes="MessageError"
+                      IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding ErrorMessage}"
+                             Foreground="{DynamicResource ErrorBrush}"
+                             FontSize="13" TextWrapping="Wrap"
+                             HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Classes="MessageSuccess"
+                      IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding SuccessMessage}"
+                             Foreground="{DynamicResource SuccessBrush}"
+                             FontSize="13" TextWrapping="Wrap"
+                             HorizontalAlignment="Center"/>
+                </Border>
+
+                <!-- Поля ввода -->
+                <StackPanel Spacing="16" IsEnabled="{Binding !IsBusy}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Логин" Classes="FieldLabel"/>
+                        <TextBox Classes="Input"
+                               Text="{Binding Username}"
+                               PlaceholderText="Введите логин"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Пароль" Classes="FieldLabel"/>
+                        <TextBox Classes="Input"
+                               Text="{Binding Password}"
+                               PlaceholderText="Введите пароль"
+                               PasswordChar="•"
+                               x:Name="PasswordBox"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Запомнить меня -->
+                <CheckBox Classes="RememberMe"
+                        Content="Запомнить меня"
+                        IsChecked="{Binding RememberMe}"
+                        IsEnabled="{Binding !IsBusy}"/>
+
+                <!-- Кнопка входа -->
+                <Button Classes="Primary FullWidth"
+                      Command="{Binding LoginCommand}">
+                    <Panel>
+                        <TextBlock Text="Войти"
+                                 Foreground="White"
+                                 HorizontalAlignment="Center"
+                                 IsVisible="{Binding !IsBusy}"/>
+
+                        <StackPanel Orientation="Horizontal"
+                                  HorizontalAlignment="Center"
+                                  Spacing="8"
+                                  IsVisible="{Binding IsBusy}">
+                            <TextBlock Text="Вход..." VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Panel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Оверлей инициализации -->
+        <Border Background="#80000000"
+              IsVisible="{Binding IsInitializing}"
+              IsHitTestVisible="{Binding IsInitializing}">
+            <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="12">
+                <Border Width="32" Height="32">
+                    <ProgressBar IsIndeterminate="True"
+                               Width="32" Height="32"
+                               Foreground="{DynamicResource Accent}"
+                               Classes="Circular"/>
+                </Border>
+                <TextBlock Text="Подключение..."
+                         Foreground="White"
+                         FontSize="14"
+                         HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

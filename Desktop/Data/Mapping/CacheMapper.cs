@@ -1,0 +1,201 @@
+﻿using Desktop.Data.Mappers;
+using Desktop.Data.Models.Cache;
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+
+namespace Desktop.Data.Mapping;
+
+public static class CacheMapper
+{
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = CacheJsonContext.Default
+    };
+
+    #region MessageDto ↔ CachedMessage
+
+    public static CachedMessage ToEntity(this MessageDto dto) => new()
+    {
+        Id = dto.Id,
+        ChatId = dto.ChatId,
+        SenderId = dto.SenderId,
+        Content = dto.Content,
+        CreatedAtTicks = dto.CreatedAt.ToUniversalTime().Ticks,
+        EditedAtTicks = dto.EditedAt?.ToUniversalTime().Ticks,
+        IsDeleted = dto.IsDeleted,
+        ReplyToMessageId = dto.ReplyToMessageId,
+        ForwardedFromMessageId = dto.ForwardedFromMessageId,
+        IsOwn = dto.IsOwn,
+        IsVoiceMessage = dto.IsVoiceMessage,
+        VoiceDurationSeconds = dto.VoiceDurationSeconds,
+        VoiceWaveform = dto.VoiceWaveform,
+        VoiceFileUrl = dto.VoiceFileUrl,
+        VoiceFileName = dto.VoiceFileName,
+        VoiceContentType = dto.VoiceContentType,
+        VoiceFileSize = dto.VoiceFileSize,
+        IsSystemMessage = dto.IsSystemMessage,
+        SystemEventTypeInt = (int?)dto.SystemEventType,
+        TargetUserId = dto.TargetUserId,
+        TargetUserName = dto.TargetUserName,
+        SenderName = dto.SenderName,
+        SenderAvatarUrl = dto.SenderAvatarUrl,
+        ReplySenderName = dto.ReplyToMessage?.SenderName,
+        ReplyContentPreview = dto.ReplyToMessage?.Content,
+        ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
+        ReplySenderId = dto.ReplyToMessage?.SenderId,
+        ReplyChatId = dto.ReplyToMessage?.ChatId,
+        ForwardSenderName = dto.ForwardedFrom?.OriginalSenderName,
+        ForwardOriginalSenderId = dto.ForwardedFrom?.OriginalSenderId,
+        ForwardOriginalChatId = dto.ForwardedFrom?.OriginalChatId,
+        ForwardOriginalDateTicks = dto.ForwardedFrom?.OriginalCreatedAt.ToUniversalTime().Ticks,
+        PollJson = dto.Poll != null ? JsonSerializer.Serialize(dto.Poll, JsonOpts) : null,
+        FilesJson = dto.Files is { Count: > 0 } ? JsonSerializer.Serialize(dto.Files, JsonOpts) : null,
+        CachedAtTicks = DateTime.UtcNow.Ticks,
+        IsPinned = dto.IsPinned
+    };
+
+    public static MessageDto ToDto(this CachedMessage entity)
+    {
+        var dto = new MessageDto
+        {
+            Id = entity.Id,
+            ChatId = entity.ChatId,
+            SenderId = entity.SenderId,
+            Content = entity.Content,
+            CreatedAt = entity.CreatedAt,
+            EditedAt = entity.EditedAt,
+            IsEdited = entity.EditedAtTicks.HasValue,
+            IsDeleted = entity.IsDeleted,
+            ReplyToMessageId = entity.ReplyToMessageId,
+            ForwardedFromMessageId = entity.ForwardedFromMessageId,
+            IsOwn = entity.IsOwn,
+            SenderName = entity.SenderName,
+            SenderAvatarUrl = entity.SenderAvatarUrl,
+            IsVoiceMessage = entity.IsVoiceMessage,
+            VoiceDurationSeconds = entity.VoiceDurationSeconds,
+            VoiceWaveform = entity.VoiceWaveform,
+            VoiceFileUrl = entity.VoiceFileUrl,
+            VoiceFileName = entity.VoiceFileName,
+            VoiceContentType = entity.VoiceContentType,
+            VoiceFileSize = entity.VoiceFileSize,
+            IsSystemMessage = entity.IsSystemMessage,
+            SystemEventType = (SystemEventType?)entity.SystemEventTypeInt,
+            TargetUserId = entity.TargetUserId,
+            TargetUserName = entity.TargetUserName,
+            IsPinned = entity.IsPinned,
+        };
+
+        if (entity.ReplyToMessageId.HasValue && entity.ReplySenderName != null)
+        {
+            dto.ReplyToMessage = new MessageReplyPreviewDto
+            {
+                Id = entity.ReplyToMessageId.Value,
+                SenderId = entity.ReplySenderId ?? 0,
+                ChatId = entity.ReplyChatId ?? 0,
+                SenderName = entity.ReplySenderName,
+                Content = entity.ReplyContentPreview,
+                IsDeleted = entity.ReplyIsDeleted
+            };
+        }
+
+        if (entity.ForwardedFromMessageId.HasValue)
+        {
+            dto.ForwardedFrom = new MessageForwardInfoDto
+            {
+                OriginalMessageId = entity.ForwardedFromMessageId.Value,
+                OriginalSenderId = entity.ForwardOriginalSenderId ?? 0,
+                OriginalChatId = entity.ForwardOriginalChatId ?? 0,
+                OriginalSenderName = entity.ForwardSenderName,
+                OriginalCreatedAt = entity.ForwardOriginalDateTicks.HasValue
+                    ? new DateTime(entity.ForwardOriginalDateTicks.Value, DateTimeKind.Utc)
+                    : default
+            };
+        }
+
+        if (!string.IsNullOrEmpty(entity.PollJson))
+        {
+            try { dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts); }
+            catch { /* corrupted */ }
+        }
+
+        if (!string.IsNullOrEmpty(entity.FilesJson))
+        {
+            try { dto.Files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts) ?? []; }
+            catch { dto.Files = []; }
+        }
+
+        return dto;
+    }
+
+    #endregion
+
+    #region ChatDto ↔ CachedChat
+
+    public static CachedChat ToEntity(this ChatDto dto) => new()
+    {
+        Id = dto.Id,
+        Name = dto.Name,
+        Type = (int)dto.Type,
+        Avatar = dto.Avatar,
+        CreatedById = dto.CreatedById,
+        LastMessageDateTicks = dto.LastMessageDate?.ToUniversalTime().Ticks,
+        LastMessagePreview = dto.LastMessagePreview,
+        LastMessageSenderName = dto.LastMessageSenderName,
+        LastMessageSenderId = dto.LastMessageSenderId,
+        LastMessageIsSystem = dto.LastMessageIsSystem,
+        LastMessageIsPoll = dto.LastMessageIsPoll,
+        LastMessageIsVoice = dto.LastMessageIsVoice,
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers,
+        ContactUserId = dto.ContactUserId,
+        ContactIsOnline = dto.ContactIsOnline,
+        ContactStatusType = (int)dto.ContactStatusType,
+        ContactStatusExpiresAtTicks = dto.ContactStatusExpiresAt?.ToUniversalTime().Ticks,
+        CachedAtTicks = DateTime.UtcNow.Ticks
+    };
+
+    public static ChatDto ToDto(this CachedChat entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        Type = (ChatType)entity.Type,
+        Avatar = entity.Avatar,
+        CreatedById = entity.CreatedById,
+        LastMessageDate = entity.LastMessageDate,
+        LastMessagePreview = entity.LastMessagePreview,
+        LastMessageSenderName = entity.LastMessageSenderName,
+        LastMessageSenderId = entity.LastMessageSenderId,
+        LastMessageIsSystem = entity.LastMessageIsSystem,
+        LastMessageIsPoll = entity.LastMessageIsPoll,
+        LastMessageIsVoice = entity.LastMessageIsVoice,
+        ShowHistoryForNewMembers = entity.ShowHistoryForNewMembers,
+        ContactUserId = entity.ContactUserId,
+        ContactIsOnline = entity.ContactIsOnline,
+        ContactStatusType = (UserStatusType)entity.ContactStatusType,
+        ContactStatusExpiresAt = entity.ContactStatusExpiresAt
+    };
+
+    #endregion
+
+    #region UserDTO ↔ CachedUser
+
+    public static CachedUser ToEntity(this UserDto dto) => new()
+    {
+        Id = dto.Id,
+        Username = dto.Username,
+        DisplayName = dto.DisplayName,
+        Avatar = dto.Avatar,
+        CachedAtTicks = DateTime.UtcNow.Ticks
+    };
+
+    public static UserDto ToDto(this CachedUser entity) => new()
+    {
+        Id = entity.Id,
+        Username = entity.Username,
+        DisplayName = entity.DisplayName,
+        Avatar = entity.Avatar
+    };
+    #endregion
+}

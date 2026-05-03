@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:conv="using:Desktop.Converters"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Desktop.Views.Controls.Admin"
+             xmlns:vm="using:Desktop.ViewModels"
+             x:Class="Desktop.Views.Controls.Admin.DepartmentCardView"
+             x:DataType="vm:HierarchicalDepartmentViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="StackPanel.DepartmentActions">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.DepartmentCard:pointerover StackPanel.DepartmentActions">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="0,2">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ── Карточка отдела ── -->
+        <Border Classes="DepartmentCard"
+                Margin="{Binding Level, Converter={conv:Converter Name=LevelToMargin}}"
+                Cursor="Hand">
+
+            <Border.Styles>
+                <!-- Hover-эффект действий -->
+                <Style Selector="Border.DepartmentCard:pointerover StackPanel.DepartmentActions">
+                    <Setter Property="Opacity" Value="1"/>
+                </Style>
+            </Border.Styles>
+
+            <Grid>
+                <!-- Вертикальный соединитель (для дочерних) -->
+                <Canvas IsVisible="{Binding Level, Converter={conv:Converter Name=LevelToVisibility}}"
+                        Width="24" Height="1"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="-24,0,0,0">
+                    <Line StartPoint="0,0" EndPoint="20,0"
+                          Stroke="{DynamicResource HierarchyLineBrush}"
+                          StrokeThickness="1.5"
+                          StrokeLineCap="Round"/>
+                </Canvas>
+
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="6,4">
+
+                    <!-- Кнопка разворачивания -->
+                    <Button Grid.Column="0"
+                            Command="{Binding ToggleExpandCommand}"
+                            Width="32" Height="32"
+                            Classes="IconButton"
+                            IsVisible="{Binding HasChildren}"
+                            ToolTip.Tip="{Binding IsExpanded, Converter={x:Static BoolConverters.Not}, ConverterParameter=Развернуть}">
+                        <PathIcon Data="{StaticResource ChevronIcon}"
+                                  Width="10" Height="10"
+                                  Foreground="{DynamicResource TextMuted}"
+                                  RenderTransformOrigin="50%,50%">
+                            <PathIcon.RenderTransform>
+                                <RotateTransform Angle="{Binding ExpanderRotation}"/>
+                            </PathIcon.RenderTransform>
+                            <PathIcon.Styles>
+                                <Style Selector="PathIcon">
+                                    <Setter Property="Transitions">
+                                        <Transitions>
+                                            <TransformOperationsTransition Property="RenderTransform"
+                                                                           Duration="0:0:0.2"
+                                                                           Easing="CubicEaseOut"/>
+                                        </Transitions>
+                                    </Setter>
+                                </Style>
+                            </PathIcon.Styles>
+                        </PathIcon>
+                    </Button>
+
+                    <Border Grid.Column="0"
+                            Width="32" Height="32"
+                            IsVisible="{Binding !HasChildren}"/>
+
+                    <!-- Иконка + Название -->
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="Auto,*"
+                          Margin="6,8">
+
+                        <!-- Иконка отдела -->
+                        <Border Grid.Column="0"
+                                Background="{DynamicResource AccentMuted}"
+                                Width="34" Height="34"
+                                CornerRadius="9"
+                                Margin="0,0,10,0">
+                            <Panel>
+                                <PathIcon Data="{StaticResource OrganizationIcon}"
+                                          Width="15" Height="15"
+                                          Foreground="{DynamicResource Accent}"
+                                          IsVisible="{Binding IsRoot}"/>
+                                <PathIcon Data="{StaticResource FolderIcon}"
+                                          Width="15" Height="15"
+                                          Foreground="{DynamicResource TextSecondary}"
+                                          IsVisible="{Binding !IsRoot}"/>
+                            </Panel>
+                        </Border>
+
+                        <!-- Текст -->
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="2"
+                                    MinWidth="0">
+                            <TextBlock Text="{Binding Name}"
+                                       ToolTip.Tip="{Binding Name}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+
+                            <!-- Руководитель -->
+                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                        IsVisible="{Binding HasHead}">
+                                <PathIcon Data="{StaticResource PersonIcon}"
+                                          Width="9" Height="9"
+                                          Foreground="{DynamicResource TextMuted}"/>
+                                <TextBlock Text="{Binding HeadName}"
+                                           ToolTip.Tip="{Binding HeadName}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+
+                            <TextBlock Text="Нет руководителя"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMuted}"
+                                       FontStyle="Italic"
+                                       IsVisible="{Binding !HasHead}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Правая часть: бейджи + действия -->
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center">
+
+                        <!-- Счётчик сотрудников -->
+                        <Border Background="{DynamicResource AccentMuted}"
+                                CornerRadius="10"
+                                Padding="8,3"
+                                IsVisible="{Binding ShowUserCount}"
+                                ToolTip.Tip="{Binding UserCountText}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <PathIcon Data="{StaticResource PeopleIcon}"
+                                          Width="11" Height="11"
+                                          Foreground="{DynamicResource Accent}"/>
+                                <TextBlock Text="{Binding UserCount}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Accent}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Пустой отдел -->
+                        <Border CornerRadius="10"
+                                Padding="8,3"
+                                IsVisible="{Binding !ShowUserCount}"
+                                Background="{DynamicResource ThirdBG}">
+                            <TextBlock Text="Пусто"
+                                       FontSize="11"
+                                       FontWeight="Medium"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextMuted}"/>
+                        </Border>
+
+                        <!-- Действия (видны при hover) -->
+                        <StackPanel Classes="DepartmentActions"
+                                    Orientation="Horizontal"
+                                    Spacing="2">
+                            <Button Classes="IconButton Small"
+                                    Command="{Binding $parent[local:DepartmentCardView].EditCommand}"
+                                    CommandParameter="{Binding Department}"
+                                    ToolTip.Tip="Редактировать">
+                                <PathIcon Data="{StaticResource EditIcon}"
+                                          Width="14" Height="14"
+                                          Foreground="{DynamicResource TextSecondary}"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ── Дочерние элементы ── -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding IsExpanded}"
+                Margin="16,0,0,0">
+            <Grid>
+                <!-- Вертикальная линия иерархии -->
+                <Border Width="1.5"
+                        Background="{DynamicResource HierarchyLineBrush}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Stretch"
+                        Margin="11,0,0,8"
+                        CornerRadius="1"
+                        Opacity="0.6"
+                        IsVisible="{Binding HasChildren}"/>
+
+                <ItemsControl ItemsSource="{Binding Children}"
+                              Margin="16,2,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="0"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:HierarchicalDepartmentViewModel">
+                            <local:DepartmentCardView
+                                EditCommand="{Binding $parent[local:DepartmentCardView].EditCommand}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+             x:Class="Desktop.Views.Dialogs.ConfirmDialog"
+             x:DataType="vmDialog:ConfirmDialogViewModel">
+
+    <Border Classes="DialogContainer" Width="380">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        Margin="24,24,24,16">
+               
+                    <PathIcon Data="{StaticResource WarningIcon}"
+                              Width="20" Height="20" 
+                              Foreground="{DynamicResource WarningBrush}"/>
+                <TextBlock Text="{Binding Title}"
+                           FontSize="20" FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Border Grid.Row="1" Classes="DialogDivider"/>
+
+            <ScrollViewer Grid.Row="2"
+                          Classes="ThinScrollbar"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <TextBlock Text="{Binding Message}"
+                           FontSize="14"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextWrapping="Wrap"
+                           LineHeight="22"
+                           Margin="24,16,24,16"/>
+            </ScrollViewer>
+
+            <Border Grid.Row="3" Classes="DialogDivider"/>
+
+            <StackPanel Grid.Row="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="12"
+                        Margin="24,16,24,24">
+                <Button Content="Отмена"
+                        Classes="DialogOutline"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="100"/>
+                <Button Content="Подтвердить"
+                        Classes="DialogDanger"
+                        Command="{Binding ConfirmCommand}"
+                        MinWidth="100"/>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</UserControl>

@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:chat="using:Desktop.Views.Chat"
+             xmlns:parts="using:Desktop.Views.Chat.MessageParts.Shared"
+             xmlns:vmChat="using:Desktop.ViewModels.Chat"
+             x:Class="Desktop.Views.Chat.MessageParts.PollMessagePart"
+             x:DataType="vmChat:MessageViewModel">
+
+    <Border Classes="PollBubble"
+            Classes.Own="{Binding IsOwn}"
+            IsVisible="{Binding HasPoll}">
+        <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Content}"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       LineHeight="20"
+                       Margin="0,2,0,4"/>
+            <chat:PollView DataContext="{Binding Poll}"/>
+            <parts:MessageMetaBlock
+                HorizontalAlignment="Right"
+                Margin="0,2,0,0"
+                Opacity="0.7"/>
+        </StackPanel>
+    </Border>
+</UserControl>

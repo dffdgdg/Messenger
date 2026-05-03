@@ -20,9 +20,9 @@
 ## О проекте
 
 Система построена по архитектуре **клиент-сервер**:
-- **Backend (MessengerAPI):** ASP.NET Core 10 REST API + SignalR Hub. База данных — PostgreSQL 16. Серверная часть контейнеризирована (Docker).
-- **Frontend (MessengerDesktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальной базой SQLite и FTS5.
-- **Shared (MessengerShared):** Общие DTO и контракты данных.
+- **Backend (API):** ASP.NET Core 10 REST API + SignalR Hub. База данных — PostgreSQL 16. Серверная часть контейнеризирована (Docker).
+- **Frontend (Desktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальной базой SQLite и FTS5.
+- **Shared (Shared):** Общие DTO и контракты данных.
 
 ### Ключевые особенности
 - **Безопасность:** JWT ротация токенов (FamilyId), BCrypt паролей, Rate Limiting, разграничение уровней доступа.
@@ -84,7 +84,7 @@
 ```text
 📦 Messenger
 │
-├── 📂 MessengerShared/         # Общие компоненты (Class Library)
+├── 📂 Shared/         # Общие компоненты (Class Library)
 │   ├── 📂 DTO/                 # Объекты передачи данных
 │   │   ├── Auth/               # LoginRequest, TokenResponseDto
 │   │   ├── Chat/               # ChatDto, ChatMemberDto
@@ -94,7 +94,7 @@
 │   ├── 📂 Enum/                # ChatType, ChatRole, Theme, UserRoles, SystemEventTypes
 │   └── 📂 Response/            # ApiResponse<T>
 │
-├── 📂 MessengerAPI/            # Серверная часть (ASP.NET Core)
+├── 📂 API/            # Серверная часть (ASP.NET Core)
 │   ├── 📂 Controllers/         # REST API endpoints
 │   │   ├── BaseController      # ExecuteAsync (Result → HTTP)
 │   │   ├── AuthController      # Login, Refresh, Revoke
@@ -114,7 +114,7 @@
 │   ├── 📂 Configuration/       # DI, Swagger, JWT, RateLimit
 │   └── 📄 Dockerfile
 │
-├── 📂 MessengerDesktop/        # Клиент (Avalonia UI)
+├── 📂 Desktop/        # Клиент (Avalonia UI)
 │   ├── 📂 ViewModels/          # MVVM логика
 │   │   ├── Shell/              # MainWindowViewModel, MainMenuViewModel
 │   │   ├── Chat/               # ChatViewModel (Handler Composition)
@@ -171,7 +171,7 @@ docker compose logs -f messenger-api
 1. Скачайте архив из Releases (Windows / Linux).
 2. Распакуйте в удобную папку.
 3. Установите **[.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**.
-4. Запустите `MessengerDesktop.exe` (Windows) или бинарник (Linux).
+4. Запустите `Desktop.exe` (Windows) или бинарник (Linux).
 
 > Учётные данные шифруются средствами ОС при сохранении (Secure Storage).
 

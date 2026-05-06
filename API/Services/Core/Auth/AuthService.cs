@@ -1,5 +1,4 @@
 ﻿using API.Services.Base;
-using API.Services.Core.Auth;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -61,7 +60,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         {
             Id = user.Id,
             Username = user.Username,
-            DisplayName = user.FormatDisplayName(),
+            DisplayName = user.GetDisplayName(),
             Token = tokenPair.AccessToken,
             RefreshToken = tokenPair.RefreshToken,
             Role = role

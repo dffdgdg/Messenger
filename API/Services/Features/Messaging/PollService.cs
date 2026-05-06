@@ -8,8 +8,7 @@ public partial class PollService(MessengerDbContext context, IAccessControlServi
 {
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
-        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-            .Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
+        var poll = await _context.Polls.Include(p => p.PollOptions).ThenInclude(o => o.PollVotes).Include(p => p.Message).AsNoTracking().FirstOrDefaultAsync(p => p.Id == pollId);
 
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос с ID {pollId} не найден");
@@ -33,14 +32,14 @@ public partial class PollService(MessengerDbContext context, IAccessControlServi
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        var message = new Message
+        var message = new UserMessage
         {
             ChatId = dto.ChatId,
             SenderId = createdByUserId,
             Content = dto.Question.Trim()
         };
 
-        _context.Messages.Add(message);
+        _context.UserMessages.Add(message);
         await _context.SaveChangesAsync();
 
         var poll = new Poll
@@ -68,7 +67,7 @@ public partial class PollService(MessengerDbContext context, IAccessControlServi
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        var createdMessage = await _context.Messages.Include(m => m.Sender).Include(m => m.Polls).ThenInclude(p => p.PollOptions).FirstOrDefaultAsync(m => m.Id == message.Id);
+        var createdMessage = await _context.UserMessages.Include(m => m.Sender).Include(m => m.Poll).ThenInclude(p => p.PollOptions).FirstOrDefaultAsync(m => m.Id == message.Id);
 
         if (createdMessage is null)
             return Result<MessageDto>.Internal("Не удалось загрузить созданное сообщение");
@@ -130,7 +129,7 @@ public partial class PollService(MessengerDbContext context, IAccessControlServi
 
         if (poll.Message != null)
         {
-            var affectedChatIds = await _context.Messages.Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
+            var affectedChatIds = await _context.UserMessages.Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
                 .Select(m => m.ChatId).Distinct().ToListAsync();
 
             foreach (var chatId in affectedChatIds)
@@ -159,24 +158,20 @@ public partial class PollService(MessengerDbContext context, IAccessControlServi
             return Result<PollDto>.Failure("Связанное сообщение не найдено");
 
         bool isAuthor = message.SenderId == userId;
-        bool isAdminOrOwner = await accessControl.IsAdminAsync(userId, message.ChatId)
-                           || await accessControl.IsOwnerAsync(userId, message.ChatId);
+        bool isAdminOrOwner = await accessControl.IsAdminAsync(userId, message.ChatId) || await accessControl.IsOwnerAsync(userId, message.ChatId);
 
         if (!isAuthor && !isAdminOrOwner)
             return Result<PollDto>.Failure("Недостаточно прав для закрытия опроса");
 
-        poll.ClosesAt = DateTime.UtcNow;
+        poll.ClosesAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save.As<PollDto>();
 
         var updatedPollResult = await GetPollAsync(pollId, userId);
         if (updatedPollResult.IsFailure) return updatedPollResult;
 
-        var affectedChatIds = await _context.Messages
-            .Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
-            .Select(m => m.ChatId)
-            .Distinct()
-            .ToListAsync();
+        var affectedChatIds = await _context.UserMessages.Where(m => m.Id == poll.MessageId || m.ForwardedFromMessageId == poll.MessageId)
+            .Select(m => m.ChatId).Distinct().ToListAsync();
 
         foreach (var chatId in affectedChatIds)
         {

@@ -5,9 +5,17 @@ using System.Text.RegularExpressions;
 
 namespace API.Services.Messaging;
 
-public partial class MessageService(MessengerDbContext context, IAccessControlService accessControl, IHubNotifier hubNotifier,
-    INotificationService notificationService, IReadReceiptService readReceiptService, IUrlBuilder urlBuilder, IFileService fileService,
-    IOptions<MessengerSettings> settings, AppDateTime appDateTime, ILogger<MessageService> logger)
+public partial class MessageService(
+    MessengerDbContext context,
+    IAccessControlService accessControl,
+    IHubNotifier hubNotifier,
+    INotificationService notificationService,
+    IReadReceiptService readReceiptService,
+    IUrlBuilder urlBuilder,
+    IFileService fileService,
+    IOptions<MessengerSettings> settings,
+    AppDateTime appDateTime,
+    ILogger<MessageService> logger)
     : BaseService<MessageService>(context, logger), IMessageService
 {
     private readonly MessengerSettings _settings = settings.Value;
@@ -17,20 +25,77 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     #region Base Query & Helpers
 
-    private IQueryable<Message> MessagesWithIncludes() => _context.Messages.Include(m => m.Sender).Include(m => m.TargetUser)
-        .Include(m => m.VoiceMessage).Include(m => m.MessageFiles).Include(m => m.Polls).ThenInclude(p => p.PollOptions)
-        .ThenInclude(o => o.PollVotes).Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles).Include(m => m.ForwardedFromMessage)
-        .ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes);
+    private IQueryable<UserMessage> UserMessagesWithIncludes() =>
+        _context.UserMessages
+            .Include(m => m.Sender)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.Sender)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.VoiceMessage)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.MessageFiles)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.Poll)
+                .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
 
-    private IQueryable<Message> MessagesLight() => _context.Messages
-        .Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Polls).ThenInclude(p => p.PollOptions).ThenInclude(o => o.PollVotes)
-        .AsNoTracking();
+    private IQueryable<UserMessage> UserMessagesLight() =>
+        _context.UserMessages
+            .Include(m => m.Sender)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.Sender)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.VoiceMessage)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.MessageFiles)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => (f as UserMessage)!.Poll)
+            .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+            .AsNoTracking();
+
+    private async Task<List<Message>> LoadAllMessagesAsync(
+    int chatId,
+    int? beforeId = null,
+    int? afterId = null,
+    DateTime? cutoff = null,
+    int? take = null,
+    bool oldestFirst = false)
+    {
+        var userQ = _context.UserMessages.Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles)
+            .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+            .Include(m => m.ReplyToMessage)
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+            .AsNoTracking();
+
+        var sysQ = _context.SystemMessages.Include(m => m.Initiator).Include(m => m.TargetUser).Where(m => m.ChatId == chatId && m.IsDeleted != true).AsNoTracking();
+
+        if (beforeId.HasValue)
+        {
+            userQ = userQ.Where(m => m.Id <= beforeId.Value);
+            sysQ = sysQ.Where(m => m.Id <= beforeId.Value);
+        }
+
+        if (afterId.HasValue)
+        {
+            userQ = userQ.Where(m => m.Id > afterId.Value);
+            sysQ = sysQ.Where(m => m.Id > afterId.Value);
+        }
+
+        if (cutoff.HasValue)
+        {
+            userQ = userQ.Where(m => m.CreatedAt >= cutoff.Value);
+            sysQ = sysQ.Where(m => m.CreatedAt >= cutoff.Value);
+        }
+
+        var userMessages = await userQ.ToListAsync();
+        var sysMessages = await sysQ.ToListAsync();
+
+        var all = userMessages.Cast<Message>().Concat(sysMessages);
+
+        all = oldestFirst ? all.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id) : all.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id);
+
+        if (take.HasValue)
+            all = all.Take(take.Value);
+
+        return [.. all];
+    }
 
     private async Task<Result?> EnsureAccessAsync(int userId, int chatId)
         => await accessControl.EnsureMemberOfAsync(userId, chatId);
@@ -58,34 +123,31 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     private static string EscapeLikePattern(string pattern)
         => string.IsNullOrEmpty(pattern) ? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
-    private static IQueryable<Message> ApplyMessageSearchFilters(IQueryable<Message> query, int? senderId, DateTime? dateFrom, DateTime? dateTo,
+
+    private static IQueryable<UserMessage> ApplyMessageSearchFilters(
+        IQueryable<UserMessage> query, int? senderId,
+        DateTime? dateFrom, DateTime? dateTo,
         bool hasFiles, bool hasVoice, bool hasPoll, bool onlyText)
     {
         if (senderId.HasValue)
             query = query.Where(m => m.SenderId == senderId.Value);
-
         if (dateFrom.HasValue)
             query = query.Where(m => m.CreatedAt >= dateFrom.Value);
-
         if (dateTo.HasValue)
             query = query.Where(m => m.CreatedAt < dateTo.Value.AddDays(1));
-
         if (hasFiles)
             query = query.Where(m => m.MessageFiles.Any());
-
         if (hasVoice)
             query = query.Where(m => m.VoiceMessage != null);
-
         if (hasPoll)
-            query = query.Where(m => m.Polls.Any());
-
+            query = query.Where(m => m.Poll != null);
         if (onlyText)
-            query = query.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && !m.Polls.Any());
+            query = query.Where(m => !m.MessageFiles.Any() && m.VoiceMessage == null && m.Poll == null);
 
         return query;
     }
 
-    private static IQueryable<Message> ApplyMessageSorting(IQueryable<Message> query, bool oldestFirst)
+    private static IQueryable<T> ApplyMessageSorting<T>(IQueryable<T> query, bool oldestFirst) where T : Message
         => oldestFirst ? query.OrderBy(m => m.CreatedAt) : query.OrderByDescending(m => m.CreatedAt);
 
     #endregion
@@ -106,7 +168,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var refCheck = await ValidateReferencesAsync(request);
         if (refCheck.IsFailure) return refCheck.As<MessageDto>();
 
-        var message = new Message
+        var message = new UserMessage
         {
             ChatId = request.ChatId,
             SenderId = senderId,
@@ -115,7 +177,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             ReplyToMessageId = request.ReplyToMessageId,
             ForwardedFromMessageId = request.ForwardedFromMessageId
         };
-        _context.Messages.Add(message);
+
+        _context.UserMessages.Add(message);
 
         if (request.IsVoiceMessage)
         {
@@ -127,8 +190,6 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
                 DurationSeconds = request.VoiceDurationSeconds ?? 0,
                 Waveform = request.VoiceWaveform,
                 FilePath = StripBaseUrl(request.VoiceFileUrl),
-                FileName = request.VoiceFileName ?? "voice.wav",
-                ContentType = request.VoiceContentType ?? "audio/wav",
                 FileSize = request.VoiceFileSize ?? 0
             };
         }
@@ -151,7 +212,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save.As<MessageDto>();
 
-        var created = await MessagesWithIncludes().AsNoTracking().FirstAsync(m => m.Id == message.Id);
+        var created = await UserMessagesWithIncludes().AsNoTracking().FirstAsync(m => m.Id == message.Id);
         var senderDto = created.ToDto(senderId, urlBuilder);
 
         await BroadcastToMembersAsync(created, message.ChatId, "ReceiveMessageDto");
@@ -163,12 +224,16 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     private async Task<Result> ValidateReferencesAsync(CreateMessageRequest request)
     {
-        if (request.ReplyToMessageId.HasValue && !await _context.Messages.AnyAsync(m => m.Id == request.ReplyToMessageId.Value && m.ChatId == request.ChatId && m.IsDeleted != true))
+        if (request.ReplyToMessageId.HasValue &&
+            !await _context.UserMessages.AnyAsync(m => m.Id == request.ReplyToMessageId.Value
+                && m.ChatId == request.ChatId && m.IsDeleted != true))
         {
             return Result.NotFound("Сообщение для ответа не найдено в этом чате");
         }
 
-        if (request.ForwardedFromMessageId.HasValue && !await _context.Messages.AnyAsync(m => m.Id == request.ForwardedFromMessageId.Value && m.IsDeleted != true))
+        if (request.ForwardedFromMessageId.HasValue &&
+            !await _context.UserMessages.AnyAsync(m => m.Id == request.ForwardedFromMessageId.Value
+                && m.IsDeleted != true))
         {
             return Result.NotFound("Оригинальное сообщение для пересылки не найдено");
         }
@@ -186,20 +251,19 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (access!.IsFailure) return access.As<PagedMessagesDto>();
 
         var (np, nps) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
-
-        var query = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true).OrderByDescending(m => m.CreatedAt).AsNoTracking();
-
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-        if (cutoff.HasValue)
-            query = (IOrderedQueryable<Message>)query.Where(m => m.CreatedAt >= cutoff.Value);
 
-        var total = await query.CountAsync();
+        var totalQ = _context.Messages.Where(m => m.ChatId == chatId && m.IsDeleted != true);
+        if (cutoff.HasValue) totalQ = totalQ.Where(m => m.CreatedAt >= cutoff.Value);
+        var total = await totalQ.CountAsync();
+
         var skip = (np - 1) * nps;
-        var messages = await Paginate(query, np, nps).ToListAsync();
+        var messages = await LoadAllMessagesAsync(chatId, cutoff: cutoff, take: null, oldestFirst: false);
+        var paged = messages.Skip(skip).Take(nps).ToList();
 
         return Result<PagedMessagesDto>.Success(new PagedMessagesDto
         {
-            Messages = [.. messages.Select(m => m.ToDto(userId, urlBuilder)).Reverse()],
+            Messages = [.. paged.Select(m => m.ToDto(userId, urlBuilder)).Reverse()],
             CurrentPage = np,
             TotalCount = total,
             HasMoreMessages = total > skip + nps,
@@ -215,37 +279,26 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var half = count / 2;
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
-        var beforeQuery = MessagesWithIncludes()
-            .Where(m => m.ChatId == chatId && m.Id <= messageId && m.IsDeleted != true)
-            .AsNoTracking();
-        if (cutoff.HasValue)
-            beforeQuery = beforeQuery.Where(m => m.CreatedAt >= cutoff.Value);
-
-        var afterQuery = MessagesWithIncludes()
-            .Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true)
-            .AsNoTracking();
-        if (cutoff.HasValue)
-            afterQuery = afterQuery.Where(m => m.CreatedAt >= cutoff.Value);
-
-        var before = await beforeQuery.OrderByDescending(m => m.Id).Take(half + 1).ToListAsync();
-        var after = await afterQuery.OrderBy(m => m.Id).Take(half).ToListAsync();
+        var before = await LoadAllMessagesAsync(chatId, beforeId: messageId, cutoff: cutoff, take: half + 1, oldestFirst: false);
+        var after = await LoadAllMessagesAsync(chatId, afterId: messageId, cutoff: cutoff, take: half, oldestFirst: true);
 
         var msgs = before.OrderBy(m => m.Id).Concat(after).Select(m => m.ToDto(userId, urlBuilder)).ToList();
 
         var oldestId = before.Count > 0 ? before.Min(m => m.Id) : messageId;
         var newestId = after.Count > 0 ? after.Max(m => m.Id) : messageId;
 
-        var hasOlderQuery = _context.Messages.Where(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true);
-        if (cutoff.HasValue)
-            hasOlderQuery = hasOlderQuery.Where(m => m.CreatedAt >= cutoff.Value);
+        var hasOlderQ = _context.Messages.Where(m => m.ChatId == chatId && m.Id < oldestId && m.IsDeleted != true);
+        var hasNewerQ = _context.Messages.Where(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true);
 
-        var hasNewerQuery = _context.Messages.Where(m => m.ChatId == chatId && m.Id > newestId && m.IsDeleted != true);
         if (cutoff.HasValue)
-            hasNewerQuery = hasNewerQuery.Where(m => m.CreatedAt >= cutoff.Value);
+        {
+            hasOlderQ = hasOlderQ.Where(m => m.CreatedAt >= cutoff.Value);
+            hasNewerQ = hasNewerQ.Where(m => m.CreatedAt >= cutoff.Value);
+        }
 
         return Result<PagedMessagesDto>.Success(BuildPagedResult(msgs,
-            await hasOlderQuery.AnyAsync(),
-            await hasNewerQuery.AnyAsync()));
+            await hasOlderQ.AnyAsync(),
+            await hasNewerQ.AnyAsync()));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
@@ -254,7 +307,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (access!.IsFailure) return access.As<PagedMessagesDto>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-        var query = MessagesLight().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true);
+        var query = UserMessagesLight().Where(m => m.ChatId == chatId && m.Id < messageId && m.IsDeleted != true);
 
         if (cutoff.HasValue)
             query = query.Where(m => m.CreatedAt >= cutoff.Value);
@@ -266,8 +319,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             hasOlderQuery = hasOlderQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
-            await hasOlderQuery.AnyAsync(), hasNewer: true));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(
+            [.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, urlBuilder))],
+            await hasOlderQuery.AnyAsync(),
+            hasNewer: true));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
@@ -276,7 +331,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (access!.IsFailure) return access.As<PagedMessagesDto>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-        var query = MessagesLight().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true);
+        var query = UserMessagesLight().Where(m => m.ChatId == chatId && m.Id > messageId && m.IsDeleted != true);
 
         if (cutoff.HasValue)
             query = query.Where(m => m.CreatedAt >= cutoff.Value);
@@ -288,7 +343,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (cutoff.HasValue)
             hasNewerQuery = hasNewerQuery.Where(m => m.CreatedAt >= cutoff.Value);
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.Select(m => m.ToDto(userId, urlBuilder))], hasOlder: true,
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(
+            [.. messages.Select(m => m.ToDto(userId, urlBuilder))],
+            hasOlder: true,
             await hasNewerQuery.AnyAsync()));
     }
 
@@ -298,7 +355,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<MessageDto>> UpdateMessageAsync(int messageId, int userId, UpdateMessageDto dto)
     {
-        var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
+        var message = await UserMessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
 
         var access = await EnsureAccessAsync(userId, message.ChatId);
@@ -309,9 +366,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
         var error = message switch
         {
-            { IsSystemMessage: true } => "Системные сообщения нельзя редактировать",
             { IsDeleted: true } => "Сообщение уже удалено",
-            _ when message.Polls.Count != 0 => "Нельзя редактировать сообщение с опросом",
+            _ when message.Poll != null => "Нельзя редактировать сообщение с опросом",
             { IsVoiceMessage: true } => "Нельзя редактировать голосовое сообщение",
             { ForwardedFromMessageId: not null } => "Нельзя редактировать пересланное сообщение",
             _ when string.IsNullOrWhiteSpace(dto.Content) => "Содержимое сообщения не может быть пустым",
@@ -337,26 +393,22 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result> DeleteMessageAsync(int messageId, int userId)
     {
-        var message = await _context.Messages.Include(m => m.VoiceMessage).Include(m => m.MessageFiles).FirstOrDefaultAsync(m => m.Id == messageId);
+        var message = await _context.UserMessages
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
 
         if (message is null)
             return Result.NotFound($"Сообщение с ID {messageId} не найдено");
 
         var access = await EnsureAccessAsync(userId, message.ChatId);
-        if (access!.IsFailure)
-            return access;
+        if (access!.IsFailure) return access;
 
         if (message.SenderId != userId && !await accessControl.IsAdminAsync(userId, message.ChatId))
             return Result.Forbidden("Вы можете удалять только свои сообщения");
 
-        var error = message switch
-        {
-            { IsSystemMessage: true } => "Системные сообщения нельзя удалить",
-            { IsDeleted: true } => "Сообщение уже удалено",
-            _ => null
-        };
-        if (error != null)
-            return Result.Failure(error);
+        if (message.IsDeleted == true)
+            return Result.Failure("Сообщение уже удалено");
 
         message.IsDeleted = true;
         message.Content = null;
@@ -369,8 +421,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         }
 
         var save = await SaveChangesAsync();
-        if (save.IsFailure)
-            return save;
+        if (save.IsFailure) return save;
 
         await hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted",
             new { MessageId = messageId, message.ChatId });
@@ -385,7 +436,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<MessageDto>> PinMessageAsync(int messageId, int userId)
     {
-        var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
+        var message = await UserMessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
 
         var access = await EnsureAccessAsync(userId, message.ChatId);
@@ -394,7 +445,6 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (message.IsDeleted == true)
             return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
 
-        message.IsPinned = true;
         message.PinnedAt = appDateTime.UtcNow;
         message.PinnedByUserId = userId;
 
@@ -407,16 +457,15 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     public async Task<Result<MessageDto>> UnpinMessageAsync(int messageId, int userId)
     {
-        var message = await MessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
+        var message = await UserMessagesWithIncludes().FirstOrDefaultAsync(m => m.Id == messageId);
         if (message is null) return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
 
         var access = await EnsureAccessAsync(userId, message.ChatId);
         if (access!.IsFailure) return access.As<MessageDto>();
 
-        if (!message.IsPinned)
+        if (message.PinnedAt == null)
             return Result<MessageDto>.Failure("Сообщение уже не закреплено");
 
-        message.IsPinned = false;
         message.PinnedAt = null;
         message.PinnedByUserId = null;
 
@@ -433,12 +482,14 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         if (access!.IsFailure) return access.As<List<MessageDto>>();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
-        var query = MessagesLight().Where(m => m.ChatId == chatId && m.IsPinned && m.IsDeleted != true).AsNoTracking();
+
+        var query = UserMessagesLight()
+            .Where(m => m.ChatId == chatId && m.PinnedAt != null && m.IsDeleted != true);
 
         if (cutoff.HasValue)
             query = query.Where(m => m.CreatedAt >= cutoff.Value);
 
-        var pinned = await query.OrderByDescending(m => m.PinnedAt ?? m.CreatedAt).ToListAsync();
+        var pinned = await query.OrderByDescending(m => m.PinnedAt).ToListAsync();
         return Result<List<MessageDto>>.Success([.. pinned.Select(m => m.ToDto(userId, urlBuilder))]);
     }
 
@@ -455,8 +506,10 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         var hasQuery = !string.IsNullOrWhiteSpace(query.Query);
         var escaped = hasQuery ? EscapeLikePattern(query.Query) : string.Empty;
 
-        var q = MessagesWithIncludes().Where(m => m.ChatId == chatId && m.IsDeleted != true && !m.IsSystemMessage
-            && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escaped}%")))).AsNoTracking();
+        var q = UserMessagesWithIncludes()
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true
+                && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escaped}%"))))
+            .AsNoTracking();
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
         if (cutoff.HasValue)
@@ -465,7 +518,7 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo,
             query.HasFiles == true, query.HasVoice == true, query.HasPoll == true, query.OnlyText == true);
 
-        q = ApplyMessageSorting(q, query.OldestFirst);
+        q = (IQueryable<UserMessage>)ApplyMessageSorting(q, query.OldestFirst);
 
         var total = await q.CountAsync();
         var messages = await Paginate(q, np, nps).ToListAsync();
@@ -480,18 +533,24 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         });
     }
 
-    private async Task<(List<GlobalSearchMessageDto>, int Total, bool HasMore)> SearchMessagesGlobalAsync(List<int> chatIds, string escapedQuery, int userId, GlobalSearchQueryDto query,
+    private async Task<(List<GlobalSearchMessageDto>, int Total, bool HasMore)> SearchMessagesGlobalAsync(
+        List<int> chatIds, string escapedQuery, int userId, GlobalSearchQueryDto query,
         int page, int pageSize, bool hasQuery)
     {
-        var q = _context.Messages.Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true && !m.IsSystemMessage
-            && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escapedQuery}%")))).Include(m => m.Sender).Include(m => m.Chat)
-            .Include(m => m.MessageFiles).Include(m => m.VoiceMessage).Include(m => m.Polls).AsNoTracking();
+        var q = _context.UserMessages
+            .Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true
+                && (!hasQuery || (m.Content != null && EF.Functions.ILike(m.Content, $"%{escapedQuery}%"))))
+            .Include(m => m.Sender)
+            .Include(m => m.Chat)
+            .Include(m => m.MessageFiles)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.Poll)
+            .AsNoTracking();
 
-        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo, query.HasFiles == true, query.HasVoice == true,
-            query.HasPoll == true, query.OnlyText == true);
+        q = ApplyMessageSearchFilters(q, query.SenderId, query.DateFrom, query.DateTo,
+            query.HasFiles == true, query.HasVoice == true, query.HasPoll == true, query.OnlyText == true);
 
-        q = ApplyMessageSorting(q, query.OldestFirst);
-
+        q = (IQueryable<UserMessage>)ApplyMessageSorting(q, query.OldestFirst);
         q = await ApplyGlobalHistoryFilter(q, chatIds, userId);
 
         var total = await q.CountAsync();
@@ -506,21 +565,19 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     public async Task<Result<GlobalSearchResponseDto>> GlobalSearchAsync(int userId, GlobalSearchQueryDto query)
     {
         var (np, nps) = NormalizePagination(query.Page, query.PageSize, 50);
-
         var hasQuery = !string.IsNullOrWhiteSpace(query.Query);
         var escaped = hasQuery ? EscapeLikePattern(query.Query) : string.Empty;
 
         var chatIds = await _context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync();
-
         if (chatIds.Count == 0)
             return Result<GlobalSearchResponseDto>.Success(new() { Chats = [], Messages = [], CurrentPage = query.Page });
 
         if (query.FilterChatId.HasValue)
-        {
             chatIds = [.. chatIds.Where(id => id == query.FilterChatId.Value)];
-        }
 
-        var chats = (hasQuery && query.FilterChatId == null) ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery) : [];
+        var chats = (hasQuery && query.FilterChatId == null)
+            ? await SearchChatsAsync(chatIds, escaped, userId, hasQuery)
+            : [];
 
         var (msgs, total, hasMore) = await SearchMessagesGlobalAsync(chatIds, escaped, userId, query, np, nps, hasQuery);
 
@@ -540,15 +597,20 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         const int max = 5;
         var result = new List<ChatDto>();
 
-        var dialogs = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact).Include(c => c.ChatMembers).ThenInclude(cm => cm.User).AsNoTracking().ToListAsync();
+        var dialogs = await _context.Chats
+            .Where(c => chatIds.Contains(c.Id) && c.Type == ChatType.Contact)
+            .Include(c => c.ChatMembers).ThenInclude(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync();
 
         foreach (var chat in dialogs)
         {
             var partner = chat.ChatMembers.FirstOrDefault(cm => cm.UserId != userId)?.User;
             if (partner is null) continue;
 
-            var name = partner.FormatDisplayName();
-            if (!hasQuery || name.Contains(query, StringComparison.OrdinalIgnoreCase) || (partner.Username ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
+            var name = partner.GetDisplayName();
+            if (!hasQuery || name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (partner.Username ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
             {
                 result.Add(new ChatDto
                 {
@@ -561,7 +623,8 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             }
         }
 
-        var groups = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type != ChatType.Contact && (!hasQuery || EF.Functions.ILike(c.Name ?? "", $"%{query}%"))).Take(max).AsNoTracking().ToListAsync();
+        var groups = await _context.Chats.Where(c => chatIds.Contains(c.Id) && c.Type != ChatType.Contact
+            && (!hasQuery || EF.Functions.ILike(c.Name ?? "", $"%{query}%"))).Take(max).AsNoTracking().ToListAsync();
 
         result.AddRange(groups.Select(c => c.ToDto(urlBuilder)));
         return [.. result.Take(max)];
@@ -571,11 +634,16 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
     {
         if (chatIds.Count == 0) return [];
 
-        return (await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId).Include(cm => cm.User).AsNoTracking().ToListAsync())
-            .Where(p => p.User != null).ToDictionary(p => p.ChatId, p => (p.User!.FormatDisplayName(), urlBuilder.BuildUrl(p.User.Avatar)));
+        return (await _context.ChatMembers
+            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != userId)
+            .Include(cm => cm.User)
+            .AsNoTracking()
+            .ToListAsync())
+            .Where(p => p.User != null)
+            .ToDictionary(p => p.ChatId, p => (p.User!.GetDisplayName(), urlBuilder.BuildUrl(p.User.Avatar)));
     }
 
-    private GlobalSearchMessageDto BuildSearchDto(Message m, string term, Dictionary<int, (string Name, string? Avatar)> partners)
+    private GlobalSearchMessageDto BuildSearchDto(UserMessage m, string term, Dictionary<int, (string Name, string? Avatar)> partners)
     {
         var dto = new GlobalSearchMessageDto
         {
@@ -583,13 +651,13 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
             ChatId = m.ChatId,
             ChatType = m.Chat.Type,
             SenderId = m.SenderId,
-            SenderName = m.Sender?.FormatDisplayName(),
+            SenderName = m.Sender?.GetDisplayName(),
             Content = m.Content,
             CreatedAt = m.CreatedAt,
             HighlightedContent = Highlight(m.Content, term),
             HasFiles = m.MessageFiles?.Count > 0,
             HasVoice = m.VoiceMessage != null,
-            HasPoll = m.Polls?.Count > 0
+            HasPoll = m.Poll != null
         };
 
         if (m.Chat.Type == ChatType.Contact && partners.TryGetValue(m.ChatId, out var p))
@@ -618,13 +686,13 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
 
     private async Task BroadcastToMembersAsync(Message message, int chatId, string hubMethod)
     {
-        var memberIds = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Select(cm => cm.UserId).ToListAsync();
+        var memberIds = await _context.ChatMembers
+            .Where(cm => cm.ChatId == chatId)
+            .Select(cm => cm.UserId)
+            .ToListAsync();
 
         foreach (var memberId in memberIds)
-        {
-            var dto = message.ToDto(memberId, urlBuilder);
-            await hubNotifier.SendToUserAsync(memberId, hubMethod, dto);
-        }
+            await hubNotifier.SendToUserAsync(memberId, hubMethod, message.ToDto(memberId, urlBuilder));
     }
 
     private async Task MarkChatUpdatedAsync(int chatId)
@@ -635,22 +703,27 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         try
         {
             var mentionedUsernames = ExtractMentionedUsernames(message.Content);
-            var members = await _context.ChatMembers.Where(cm => cm.ChatId == message.ChatId && cm.UserId != message.SenderId).Select(cm => new
-            {
-                cm.UserId,
-                cm.User.Username,
-                cm.NotificationsEnabled,
-                GlobalEnabled = cm.User.UserSetting == null || cm.User.UserSetting.NotificationsEnabled
-            }).ToListAsync();
+            var members = await _context.ChatMembers
+                .Where(cm => cm.ChatId == message.ChatId && (!message.SenderId.HasValue || cm.UserId != message.SenderId.Value))
+                .Select(cm => new
+                {
+                    cm.UserId,
+                    cm.User.Username,
+                    cm.NotificationsEnabled,
+                    GlobalEnabled = cm.User.UserSetting == null || cm.User.UserSetting.NotificationsEnabled
+                })
+                .ToListAsync();
 
             foreach (var m in members)
             {
                 var unread = await readReceiptService.GetUnreadCountAsync(m.UserId, message.ChatId);
-                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated", message.ChatId, unread.IsSuccess ? unread.Value : 0);
+                await hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated",
+                    message.ChatId, unread.IsSuccess ? unread.Value : 0);
 
                 if (!m.GlobalEnabled) continue;
 
-                var isMentioned = !string.IsNullOrWhiteSpace(m.Username) && mentionedUsernames.Contains(m.Username!);
+                var isMentioned = !string.IsNullOrWhiteSpace(m.Username)
+                    && mentionedUsernames.Contains(m.Username!);
 
                 if (isMentioned)
                 {
@@ -680,13 +753,9 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         return result;
     }
 
-    /// <summary>
-    /// Возвращает минимальную дату, с которой пользователь видит сообщения в чате.
-    /// null — история не скрыта (показывать все).
-    /// </summary>
     private async Task<DateTime?> GetHistoryCutoffAsync(int chatId, int userId)
     {
-        var chat = await _context.Chats.AsNoTracking().Select(c => new { c.ShowHistoryForNewMembers }).FirstOrDefaultAsync(c => c.ShowHistoryForNewMembers);
+        var chat = await _context.Chats.AsNoTracking().Select(c => new { c.Id, c.ShowHistoryForNewMembers }).FirstOrDefaultAsync(c => c.Id == chatId);
 
         if (chat?.ShowHistoryForNewMembers != false)
             return null;
@@ -699,35 +768,25 @@ public partial class MessageService(MessengerDbContext context, IAccessControlSe
         return member?.JoinedAt ?? DateTime.MinValue;
     }
 
-    private async Task<IQueryable<Message>> ApplyGlobalHistoryFilter(IQueryable<Message> query, List<int> chatIds, int userId)
+    private async Task<IQueryable<UserMessage>> ApplyGlobalHistoryFilter(IQueryable<UserMessage> query, List<int> chatIds, int userId)
     {
-        var chats = await _context.Chats
-            .Where(c => chatIds.Contains(c.Id))
-            .Select(c => new { c.Id, c.ShowHistoryForNewMembers })
-            .ToListAsync();
+        var hiddenChats = await _context.Chats.Where(c => chatIds.Contains(c.Id) && !c.ShowHistoryForNewMembers).Select(c => c.Id).ToListAsync();
 
-        var hiddenChatIds = new List<int>();
-        var joinedDates = new Dictionary<int, DateTime>();
+        if (hiddenChats.Count == 0) return query;
 
-        foreach (var c in chats)
-        {
-            if (c.ShowHistoryForNewMembers) continue;
+        var memberJoinDates = await _context.ChatMembers.Where(cm => hiddenChats.Contains(cm.ChatId)
+            && cm.UserId == userId && cm.Role != ChatRole.Owner && cm.Role != ChatRole.Admin)
+            .Select(cm => new { cm.ChatId, cm.JoinedAt }).ToListAsync();
 
-            var role = await accessControl.GetRoleAsync(userId, c.Id);
-            if (role is ChatRole.Owner or ChatRole.Admin) continue;
+        if (memberJoinDates.Count == 0) return query;
 
-            var member = await accessControl.GetChatMemberAsync(userId, c.Id);
-            if (member != null)
-            {
-                hiddenChatIds.Add(c.Id);
-                joinedDates[c.Id] = member.JoinedAt;
-            }
-        }
+        var joinMap = memberJoinDates.ToDictionary(m => m.ChatId, m => m.JoinedAt);
+        var restrictedIds = joinMap.Keys.ToList();
 
-        if (hiddenChatIds.Count == 0) return query;
-
-        return query.Where(m => !hiddenChatIds.Contains(m.ChatId) || m.CreatedAt >= joinedDates[m.ChatId]);
+        return query.Where(m =>
+            !restrictedIds.Contains(m.ChatId) || m.CreatedAt >= joinMap[m.ChatId]);
     }
+
     #endregion
 
     #region Log

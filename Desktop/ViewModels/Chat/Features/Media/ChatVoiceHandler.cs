@@ -170,13 +170,10 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
                 VoiceDurationSeconds = recording.Duration.TotalSeconds,
                 VoiceWaveform = recording.Waveform,
                 VoiceFileUrl = uploadResult.Data.Url,
-                VoiceFileName = uploadResult.Data.FileName,
-                VoiceContentType = uploadResult.Data.ContentType,
                 VoiceFileSize = uploadResult.Data.FileSize
             };
 
-            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(
-                ApiEndpoints.Messages.Create, msg, ct);
+            var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
 
             if (sendResult.Success) cancelReply();
             else VoiceError = $"Ошибка отправки: {sendResult.Error}";

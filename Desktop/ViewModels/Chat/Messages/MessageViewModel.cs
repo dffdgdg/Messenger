@@ -5,6 +5,8 @@ using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,7 +22,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     public int Id { get; set; }
     public int ChatId { get; set; }
-    public int SenderId { get; set; }
+    public int? SenderId { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsOwn { get; set; }
     public bool IsSystemMessage { get; set; }
@@ -87,6 +89,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #region Cached Computed Properties
 
+    public bool ShowPollResultsButton { get; private set; }
     public string DisplayContent { get; private set; } = string.Empty;
     public bool HasTextContent { get; private set; }
     public bool ShowFilesOnlyMeta { get; private set; }
@@ -149,7 +152,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private static readonly string[] VoiceButtonProps = [nameof(ShowPlayButton), nameof(ShowPauseButton), nameof(ShowResumeButton)];
 
-    private static readonly string[] PollDerivedProps = [nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit)];
+    private static readonly string[] PollDerivedProps = [nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit), nameof(ShowPollResultsButton)];
 
     private static readonly string[] ForwardDerivedProps = [nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit)];
 
@@ -220,7 +223,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         if (message.Poll is not null)
         {
-            Poll = CreatePollViewModel(message.Poll);
+            Poll = CreatePollViewModel(message.Poll, message.SenderId);
             BindPollViewModel(Poll);
         }
 
@@ -276,7 +279,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         HasImages = Files.Any(f => f.PreviewType == "image");
     }
 
-    private void RecachePollGroup() => HasPoll = Poll is not null;
+    private void RecachePollGroup()
+    {
+        HasPoll = Poll is not null;
+        ShowPollResultsButton = Poll is { ShowResultsButton: true };
+    }
 
     private void RecacheReplyForwardGroup()
     {
@@ -437,22 +444,62 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private void BindPollViewModel(PollViewModel? pollViewModel)
     {
         if (ReferenceEquals(_boundPollVm, pollViewModel)) return;
-        _boundPollVm?.ServerStateApplied -= OnPollServerStateApplied;
+
+        if (_boundPollVm != null)
+        {
+            _boundPollVm.ServerStateApplied -= OnPollServerStateApplied;
+            _boundPollVm.PropertyChanged -= OnBoundPollPropertyChanged;
+            _boundPollVm.ShowResultsRequested -= OnShowResultsRequested; // добавить
+        }
 
         _boundPollVm = pollViewModel;
 
-        _boundPollVm?.ServerStateApplied += OnPollServerStateApplied;
+        if (_boundPollVm != null)
+        {
+            _boundPollVm.ServerStateApplied += OnPollServerStateApplied;
+            _boundPollVm.PropertyChanged += OnBoundPollPropertyChanged;
+            _boundPollVm.ShowResultsRequested += OnShowResultsRequested; // добавить
+        }
     }
 
-    private static PollViewModel? CreatePollViewModel(PollDto pollDto)
+    private void OnShowResultsRequested(PollViewModel vm)
+    {
+        Commands?.ShowPollResults?.Execute(vm);
+    }
+
+    private void OnBoundPollPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PollViewModel.ShowResultsButton))
+        {
+            ShowPollResultsButton = _boundPollVm is { ShowResultsButton: true };
+            OnPropertyChanged(nameof(ShowPollResultsButton));
+        }
+    }
+
+    private static PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
     {
         try
         {
             var sp = App.Current.Services;
-            var userId = sp.GetRequiredService<IAuthManager>().Session.UserId ?? 0;
-            return userId == 0 ? null : new PollViewModel(pollDto, userId, sp.GetRequiredService<IApiClientService>());
+            var authManager = sp.GetRequiredService<IAuthManager>();
+            var userId = authManager.Session.UserId ?? 0;
+
+            Debug.WriteLine($"[CreatePollVM] pollId={pollDto.Id}, userId={userId}, ownerId={ownerId}");
+
+            if (userId == 0)
+            {
+                Debug.WriteLine("[CreatePollVM] userId=0, returning null");
+                return null;
+            }
+
+            var apiClient = sp.GetRequiredService<IApiClientService>();
+            return new PollViewModel(pollDto, userId, apiClient, ownerId);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CreatePollVM] EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task PersistPollStateToCacheAsync()

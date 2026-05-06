@@ -20,7 +20,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             Name = d.Name,
             ParentDepartmentId = d.ParentDepartmentId,
             Head = d.HeadId,
-            HeadName = d.Head?.FormatDisplayName(),
+            HeadName = d.Head?.GetDisplayName(),
             UserCount = userCounts.GetValueOrDefault(d.Id, 0)
         });
 
@@ -42,7 +42,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             Name = department.Name,
             ParentDepartmentId = department.ParentDepartmentId,
             Head = department.HeadId,
-            HeadName = department.Head?.FormatDisplayName(),
+            HeadName = department.Head?.GetDisplayName(),
             UserCount = userCount
         });
     }
@@ -149,20 +149,21 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         if (!exists)
             return Result<List<UserDto>>.NotFound($"Отдел с ID {departmentId} не найден");
 
-        var users = await _context.Users.Where(u => u.DepartmentId == departmentId).Include(u => u.Department).AsNoTracking().ToListAsync(ct);
-
-        var result = users.ConvertAll(u => new UserDto
-        {
-            Id = u.Id,
-            Username = u.Username,
-            DisplayName = u.FormatDisplayName(),
-            Surname = u.Surname,
-            Name = u.Name,
-            Midname = u.Midname,
-            Avatar = u.Avatar,
-            DepartmentId = u.DepartmentId,
-            Department = u.Department?.Name
-        });
+        var result = await _context.Users.Where(u => u.DepartmentId == departmentId)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                DisplayName = (u.Surname + " " + u.Name + (u.Midname != null ? " " + u.Midname : "")).Trim(),
+                Surname = u.Surname,
+                Name = u.Name,
+                Midname = u.Midname,
+                Avatar = u.Avatar,
+                DepartmentId = u.DepartmentId,
+                Department = u.Department != null ? u.Department.Name : null
+            })
+            .AsNoTracking()
+            .ToListAsync(ct);
 
         return Result<List<UserDto>>.Success(result);
     }

@@ -9,7 +9,7 @@ public class GlobalSearchMessageDto
     public string? ChatName { get; set; }
     public string? ChatAvatar { get; set; }
     public ChatType ChatType { get; set; }
-    public int SenderId { get; set; }
+    public int? SenderId { get; set; }
     public string? SenderName { get; set; }
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }

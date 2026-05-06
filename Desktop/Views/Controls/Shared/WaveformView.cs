@@ -1,28 +1,23 @@
 ﻿using Avalonia.Input;
 using System;
+using System.Linq;
 using System.Windows.Input;
 
 namespace Desktop.Views.Controls.Shared;
 
 public class WaveformView : Control
 {
-    public static readonly StyledProperty<double> ProgressProperty =
-        AvaloniaProperty.Register<WaveformView, double>(nameof(Progress));
+    public static readonly StyledProperty<double> ProgressProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(Progress));
 
-    public static readonly StyledProperty<string?> WaveformProperty =
-        AvaloniaProperty.Register<WaveformView, string?>(nameof(Waveform));
+    public static readonly StyledProperty<string?> WaveformProperty = AvaloniaProperty.Register<WaveformView, string?>(nameof(Waveform));
 
-    public static readonly StyledProperty<ICommand?> SeekCommandProperty =
-        AvaloniaProperty.Register<WaveformView, ICommand?>(nameof(SeekCommand));
+    public static readonly StyledProperty<ICommand?> SeekCommandProperty = AvaloniaProperty.Register<WaveformView, ICommand?>(nameof(SeekCommand));
 
-    public static readonly StyledProperty<IBrush> PlayedBrushProperty =
-        AvaloniaProperty.Register<WaveformView, IBrush>(nameof(PlayedBrush), new SolidColorBrush(Colors.DodgerBlue));
+    public static readonly StyledProperty<IBrush> PlayedBrushProperty = AvaloniaProperty.Register<WaveformView, IBrush>(nameof(PlayedBrush), new SolidColorBrush(Colors.DodgerBlue));
 
-    public static readonly StyledProperty<IBrush> UnplayedBrushProperty =
-        AvaloniaProperty.Register<WaveformView, IBrush>(nameof(UnplayedBrush), new SolidColorBrush(Colors.LightGray));
+    public static readonly StyledProperty<IBrush> UnplayedBrushProperty = AvaloniaProperty.Register<WaveformView, IBrush>(nameof(UnplayedBrush), new SolidColorBrush(Colors.LightGray));
 
-    public static readonly StyledProperty<IBrush?> BackgroundProperty =
-        AvaloniaProperty.Register<WaveformView, IBrush?>(nameof(Background));
+    public static readonly StyledProperty<IBrush?> BackgroundProperty = AvaloniaProperty.Register<WaveformView, IBrush?>(nameof(Background));
 
     private byte[]? _peaks;
     private bool _isDragging;
@@ -96,11 +91,11 @@ public class WaveformView : Control
     {
         base.Render(context);
 
+        // Фон
         if (Background != null)
-        {
             context.FillRectangle(Background, new Rect(Bounds.Size));
-        }
 
+        // Нет данных — рисуем линию
         if (_peaks == null || _peaks.Length == 0)
         {
             var y = Bounds.Height / 2;
@@ -110,23 +105,59 @@ public class WaveformView : Control
 
         const double barWidth = 3.0;
         const double gap = 2.0;
-        const double totalBarSpace = barWidth + gap;
-        var barsCount = _peaks.Length;
-        var totalWidth = (barsCount * totalBarSpace) - gap;
-        var startX = (Bounds.Width - totalWidth) / 2;
+        const double totalBarSpace = barWidth + gap; // 5.0
 
-        var progressX = (Progress / 100.0) * Bounds.Width;
+        // Максимальное количество столбцов, которые поместятся в ширину
+        int maxBars = (int)((Bounds.Width + gap) / totalBarSpace);
+        if (maxBars <= 0) return;
 
-        for (var i = 0; i < barsCount; i++)
+        // Подгоняем массив пиков под maxBars
+        byte[] peaksToDraw = ResamplePeaks(_peaks, maxBars);
+
+        int barCount = peaksToDraw.Length;
+        double totalWidth = (barCount * totalBarSpace) - gap;
+        double startX = (Bounds.Width - totalWidth) / 2; // центрирование, всегда >=0
+
+        // Прогресс: позиция в координатах волны
+        double progressX = startX + ((Progress / 100.0) * totalWidth);
+
+        for (int i = 0; i < barCount; i++)
         {
             var x = startX + (i * totalBarSpace);
-            var normalizedPeak = 0.2 + (_peaks[i] / 255.0 * 0.8);
+            var normalizedPeak = 0.2 + (peaksToDraw[i] / 255.0 * 0.8);
             var barHeight = normalizedPeak * Bounds.Height;
             var y = (Bounds.Height - barHeight) / 2;
 
-            var brush = x < progressX ? PlayedBrush : UnplayedBrush;
+            // Сравниваем центр столбца
+            var barCenter = x + (barWidth / 2.0);
+            var brush = barCenter <= progressX ? PlayedBrush : UnplayedBrush;
             context.DrawRectangle(brush, null, new Rect(x, y, barWidth, barHeight), barWidth / 2, barWidth / 2);
         }
+    }
+
+    /// <summary>
+    /// Прореживает или усредняет массив байт до требуемой длины.
+    /// Если исходный массив меньше или равен maxLength — возвращает его копию.
+    /// </summary>
+    private static byte[] ResamplePeaks(byte[] source, int maxLength)
+    {
+        if (maxLength <= 0) return [];
+        if (source.Length <= maxLength) return [.. source];
+
+        var resampled = new byte[maxLength];
+        double step = (double)source.Length / maxLength;
+
+        for (int i = 0; i < maxLength; i++)
+        {
+            double srcIndex = i * step;
+            int idx1 = (int)srcIndex;
+            int idx2 = Math.Min(idx1 + 1, source.Length - 1);
+            double frac = srcIndex - idx1;
+
+            resampled[i] = (byte)((source[idx1] * (1 - frac)) + (source[idx2] * frac));
+        }
+
+        return resampled;
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -173,7 +204,6 @@ public class WaveformView : Control
             var point = e.GetPosition(this);
             UpdateProgressFromPoint(point);
 
-            // Освобождаем захват
             e.Pointer?.Capture(null);
             _isDragging = false;
             e.Handled = true;
@@ -188,19 +218,29 @@ public class WaveformView : Control
 
     private void UpdateProgressFromPoint(Point position)
     {
-        if (Bounds.Width <= 0)
-            return;
+        if (Bounds.Width <= 0) return;
 
-        var clampedX = Math.Clamp(position.X, 0, Bounds.Width);
-        var pct = (clampedX / Bounds.Width) * 100.0;
+        const double barWidth = 3.0, gap = 2.0, totalBarSpace = barWidth + gap;
+        int maxBars = (int)((Bounds.Width + gap) / totalBarSpace);
+        var peaks = _peaks?.Length > 0 ? ResamplePeaks(_peaks, maxBars) : null;
 
-        if (SeekCommand?.CanExecute(pct) == true)
+        double pct;
+        if (peaks?.Length > 0)
         {
-            SeekCommand.Execute(pct);
+            double totalWidth = (peaks.Length * totalBarSpace) - gap;
+            double startX = (Bounds.Width - totalWidth) / 2;
+
+            double relX = Math.Clamp(position.X - startX, 0, totalWidth);
+            pct = relX / totalWidth * 100.0;
         }
         else
         {
-            Progress = pct;
+            pct = Math.Clamp(position.X / Bounds.Width * 100.0, 0, 100);
         }
+
+        if (SeekCommand?.CanExecute(pct) == true)
+            SeekCommand.Execute(pct);
+        else
+            Progress = pct;
     }
 }

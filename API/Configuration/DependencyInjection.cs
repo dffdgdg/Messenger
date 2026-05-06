@@ -29,6 +29,7 @@ public static class DependencyInjection
                 npgsql.MapEnum<ChatRole>("chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator);
                 npgsql.MapEnum<ChatType>("chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator);
                 npgsql.MapEnum<SystemEventType>("system_event_type");
+                npgsql.MapEnum<UserStatusType>("user_status_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.UserStatusTypeNameTranslator);
             });
 
             if (environment.IsDevelopment())

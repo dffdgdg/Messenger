@@ -66,8 +66,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.UserStatusChanged += OnUserStatusChanged;
 
         InitializeSearchManager();
-        _ = LoadChats().ContinueWith(
-            t => Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}"),
+        _ = LoadChats().ContinueWith(t => Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}"),
             TaskContinuationOptions.OnlyOnFaulted);
     }
 
@@ -353,7 +352,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     partial void OnCurrentChatViewModelChanged(ChatViewModel? oldValue, ChatViewModel? newValue)
     {
         if (oldValue != null)
-            MemoryDiagnostics.Dump($"ChatVM disposing START: chatId={oldValue.Context?.ChatId}"); // <-- ДАМП
+            MemoryDiagnostics.Dump($"ChatVM disposing START: chatId={oldValue.Context?.ChatId}");
 
         if (_subscribedChatVm != null)
             _subscribedChatVm.PropertyChanged -= OnChatVmPropertyChanged;
@@ -367,7 +366,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         OnPropertyChanged(nameof(CombinedIsInfoPanelVisible));
 
         if (newValue != null)
-            MemoryDiagnostics.Dump($"ChatVM created: chatId={newValue.Context?.ChatId}"); // <-- ДАМП
+            MemoryDiagnostics.Dump($"ChatVM created: chatId={newValue.Context?.ChatId}");
 
         if (oldValue != null && !ReferenceEquals(oldValue, newValue))
         {

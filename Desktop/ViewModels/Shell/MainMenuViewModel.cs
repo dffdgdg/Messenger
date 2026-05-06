@@ -8,6 +8,7 @@ using Desktop.ViewModels.Chats;
 using Desktop.ViewModels.Department;
 using Desktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Dto.Call;
 using Shared.Dto.Online;
 using Shared.DTO.Call;
 using System;
@@ -118,14 +119,18 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     private async Task InitGlobalHubAsync()
     {
+        Debug.WriteLine("[MainMenu] InitGlobalHubAsync START");
         try
         {
+            Debug.WriteLine($"[MainMenu] GlobalHub state before disconnect: {_globalHub.IsConnected}");
             await _globalHub.DisconnectAsync();
+            Debug.WriteLine("[MainMenu] Calling ConnectAsync...");
             await _globalHub.ConnectAsync();
+            Debug.WriteLine($"[MainMenu] GlobalHub connected: {_globalHub.IsConnected}");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to connect global hub: {ex.Message}");
+            Debug.WriteLine($"[MainMenu] Failed to connect global hub: {ex.GetType().Name}: {ex.Message}");
         }
 
         try
@@ -626,12 +631,18 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         var usersTask = _api.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
         var chatsTask = _api.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(UserId));
-        await Task.WhenAll(usersTask, chatsTask);
+        var statusTask = _api.GetAsync<UserStatusDto>(ApiEndpoints.Users.Status(UserId));
+
+        await Task.WhenAll(usersTask, chatsTask, statusTask);
 
         if (await usersTask is { Success: true, Data: { } users })
             AllContacts = new ObservableCollection<UserDto>(users.Where(u => u.Id != UserId));
         if (await chatsTask is { Success: true, Data: { } chats })
             UserChats = new ObservableCollection<ChatDto>(chats);
+
+        var statusResult = await statusTask;
+        if (statusResult is { Success: true, Data: not null })
+            OnUserStatusChanged(statusResult.Data);
     });
 
     private async Task<bool> CreateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream, string? avatarName, Action<ChatDto>? onSuccess)

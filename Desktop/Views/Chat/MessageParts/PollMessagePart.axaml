@@ -16,7 +16,9 @@
                        TextWrapping="Wrap"
                        LineHeight="20"
                        Margin="0,2,0,4"/>
+
             <chat:PollView DataContext="{Binding Poll}"/>
+
             <parts:MessageMetaBlock
                 HorizontalAlignment="Right"
                 Margin="0,2,0,0"

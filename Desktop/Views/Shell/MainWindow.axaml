@@ -1,324 +1,317 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:call="using:Desktop.ViewModels.Call"
-        xmlns:callView="using:Desktop.Views.Call"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Desktop.ViewModels"
-        xmlns:vmChat="using:Desktop.ViewModels.Chat"
-        xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
-        xmlns:vmDepartment="using:Desktop.ViewModels.Department"
-        xmlns:views="using:Desktop.Views"
-        xmlns:dialogs="using:Desktop.Views.Dialogs"
-        xmlns:chat="using:Desktop.Views.Chat"
-        xmlns:controls="using:Desktop.Views.Controls"
-        xmlns:department="using:Desktop.Views.Department"
-        xmlns:dialog="using:Desktop.Views.Dialog"
-        xmlns:conv="using:Desktop.Converters"
-        x:Class="Desktop.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        x:Name="MainWindowRoot"
-        Icon="/Assets/logo-circle.ico"
-        Title="ВнутрьСеть"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1"
-        WindowDecorations="Full"
-        Background="{DynamicResource PrimaryBG}"
-        TransparencyLevelHint="AcrylicBlur"
-        CanResize="True"
-        MinWidth="700"
-        MinHeight="500">
+		xmlns:call="using:Desktop.ViewModels.Call"
+		xmlns:callView="using:Desktop.Views.Call"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="using:Desktop.ViewModels"
+		xmlns:vmChat="using:Desktop.ViewModels.Chat"
+		xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+		xmlns:vmDepartment="using:Desktop.ViewModels.Department"
+		xmlns:views="using:Desktop.Views"
+		xmlns:dialogs="using:Desktop.Views.Dialogs"
+		xmlns:chat="using:Desktop.Views.Chat"
+		xmlns:controls="using:Desktop.Views.Controls"
+		xmlns:department="using:Desktop.Views.Department"
+		xmlns:dialog="using:Desktop.Views.Dialog"
+		xmlns:conv="using:Desktop.Converters"
+		x:Class="Desktop.Views.MainWindow"
+		x:DataType="vm:MainWindowViewModel"
+		x:Name="MainWindowRoot"
+		Icon="/Assets/logo-circle.ico"
+		Title="ВнутрьСеть"
+		ExtendClientAreaToDecorationsHint="True"
+		ExtendClientAreaTitleBarHeightHint="-1"
+		WindowDecorations="Full"
+		Background="{DynamicResource PrimaryBG}"
+		TransparencyLevelHint="AcrylicBlur"
+		CanResize="True"
+		MinWidth="700"
+		MinHeight="500"
+	>
 
-    <Window.Styles>
-        <Style Selector="WindowDrawnDecorations /template/ Button#PART_FullScreenButton">
-            <Setter Property="IsVisible" Value="False"/>
-            <Setter Property="Width" Value="0"/>
-        </Style>
-        <Style Selector="WindowDrawnDecorations /template/ Panel#PART_TitleTextPanel > TextBlock">
-            <Setter Property="IsVisible" Value="False"/>
-        </Style>
-        <Style Selector="Border.DialogOverlay">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="IsHitTestVisible" Value="False"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.DialogOverlay.Open">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="IsHitTestVisible" Value="True"/>
-        </Style>
+	<Window.Styles>
+		<Style Selector="WindowDrawnDecorations /template/ Button#PART_FullScreenButton">
+  <Setter Property="IsVisible" Value="False" />
+  <Setter Property="Width" Value="0" />
+</Style>
+		<Style Selector="WindowDrawnDecorations /template/ Panel#PART_TitleTextPanel > TextBlock">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="Border.DialogOverlay">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="IsHitTestVisible" Value="False"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Border.DialogOverlay.Open">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="IsHitTestVisible" Value="True"/>
+		</Style>
 
-        <Style Selector="Border.DialogAnimWrapper">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-            <Setter Property="RenderTransform" Value="scale(0.9,0.9) translateY(30px)"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.DialogAnimWrapper.Open">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="RenderTransform" Value="scale(1,1) translateY(0px)"/>
-        </Style>
-        <Style Selector="Border.DialogAnimWrapper.Closing">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
-        </Style>
+		<Style Selector="Border.DialogAnimWrapper">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+			<Setter Property="RenderTransform" Value="scale(0.9,0.9) translateY(30px)"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Border.DialogAnimWrapper.Open">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="RenderTransform" Value="scale(1,1) translateY(0px)"/>
+		</Style>
+		<Style Selector="Border.DialogAnimWrapper.Closing">
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="RenderTransform" Value="scale(0.95,0.95) translateY(20px)"/>
+		</Style>
 
-        <Style Selector="Button.NavArrowButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Opacity" Value="0.55"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.NavArrowButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.NavArrowButton:pointerover">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
-        <Style Selector="Button.NavArrowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-        </Style>
-        <Style Selector="Button.NavArrowButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
-        </Style>
-        <Style Selector="Button.NavArrowButton:disabled">
-            <Setter Property="Opacity" Value="0.2"/>
-            <Setter Property="Cursor" Value="Arrow"/>
-        </Style>
-    </Window.Styles>
+		<Style Selector="Button.NavArrowButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Width" Value="36"/>
+			<Setter Property="Height" Value="36"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Opacity" Value="0.55"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Button.NavArrowButton /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="Button.NavArrowButton:pointerover">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+		<Style Selector="Button.NavArrowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		</Style>
+		<Style Selector="Button.NavArrowButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+		</Style>
+		<Style Selector="Button.NavArrowButton:disabled">
+			<Setter Property="Opacity" Value="0.2"/>
+			<Setter Property="Cursor" Value="Arrow"/>
+		</Style>
+	</Window.Styles>
 
-    <Panel>
+	<Panel>
 
-        <ContentControl Content="{Binding CurrentViewModel}"
-                        Margin="{Binding IsMainMenuActive,
-                                Converter={conv:Converter Name=BoolToThickness},
-                                ConverterParameter='0,48,0,0|0'}"
-                        ZIndex="0">
-            <ContentControl.DataTemplates>
-                <DataTemplate DataType="vm:LoginViewModel">
-                    <views:LoginView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:MainMenuViewModel">
-                    <views:MainMenuView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:ChatsViewModel">
-                    <views:ChatsView/>
-                </DataTemplate>
-                <DataTemplate DataType="vmChat:ChatViewModel">
-                    <chat:ChatView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:AdminViewModel">
-                    <views:AdminView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:ProfileViewModel">
-                    <views:ProfileView/>
-                </DataTemplate>
-                <DataTemplate DataType="vm:SettingsViewModel">
-                    <views:SettingsView/>
-                </DataTemplate>
-                <DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
-                    <department:DepartmentManagementView/>
-                </DataTemplate>
-            </ContentControl.DataTemplates>
-        </ContentControl>
+		<ContentControl Content="{Binding CurrentViewModel}"
+						Margin="{Binding IsMainMenuActive,
+								Converter={conv:Converter Name=BoolToThickness},
+								ConverterParameter='0,48,0,0|0'}"
+						ZIndex="0">
+			<ContentControl.DataTemplates>
+				<DataTemplate DataType="vm:LoginViewModel">
+					<views:LoginView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:MainMenuViewModel">
+					<views:MainMenuView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:ChatsViewModel">
+					<views:ChatsView/>
+				</DataTemplate>
+				<DataTemplate DataType="vmChat:ChatViewModel">
+					<chat:ChatView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:AdminViewModel">
+					<views:AdminView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:ProfileViewModel">
+					<views:ProfileView/>
+				</DataTemplate>
+				<DataTemplate DataType="vm:SettingsViewModel">
+					<views:SettingsView/>
+				</DataTemplate>
+				<DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
+					<department:DepartmentManagementView/>
+				</DataTemplate>
+			</ContentControl.DataTemplates>
+		</ContentControl>
 
-        <Grid Height="48"
-              VerticalAlignment="Top"
-              ZIndex="100"
-              ColumnDefinitions="*,Auto,*"
-              IsVisible="{Binding IsMainMenuActive}">
+		<Grid Height="48"
+			  VerticalAlignment="Top"
+			  ZIndex="100"
+			  ColumnDefinitions="*,Auto,*"
+			  IsVisible="{Binding IsMainMenuActive}">
 
-            <Panel Grid.Column="0"
-                   Background="Transparent"
-                   PointerPressed="OnTitleBarPointerPressed"/>
+			<Panel Grid.Column="0"
+				   Background="Transparent"
+				   PointerPressed="OnTitleBarPointerPressed"/>
 
-            <Panel Grid.Column="1"
-                   MinWidth="160"
-                   Width="360"
-                   MaxWidth="460"
-                   IsHitTestVisible="False"/>
+			<Panel Grid.Column="1"
+				   MinWidth="160"
+				   Width="360"
+				   MaxWidth="460"
+				   IsHitTestVisible="False"/>
 
-            <Panel Grid.Column="2"
-                   Background="Transparent"
-                   PointerPressed="OnTitleBarPointerPressed"/>
-        </Grid>
+			<Panel Grid.Column="2"
+				   Background="Transparent"
+				   PointerPressed="OnTitleBarPointerPressed"/>
+		</Grid>
 
-        <Grid Height="48"
-              VerticalAlignment="Top"
-              ZIndex="101"
-              ColumnDefinitions="*,Auto,*"
-              IsVisible="{Binding IsMainMenuActive}">
+		<Grid Height="48"
+			  VerticalAlignment="Top"
+			  ZIndex="101"
+			  ColumnDefinitions="*,Auto,*"
+			  IsVisible="{Binding IsMainMenuActive}">
 
-            <ContentControl Grid.Column="0"
-                            Content="{Binding MainMenu}"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom"
-                            Margin="0,0,4,0">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate DataType="vm:MainMenuViewModel">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="2">
-                            <Button Classes="NavArrowButton"
-                                    ToolTip.Tip="Назад"
-                                    Command="{Binding GoBackCommand}"
-                                    IsEnabled="{Binding CanGoBack}">
-                                <Path Data="{StaticResource ChevronLeftIcon}"
-                                      Fill="{DynamicResource TextPrimary}"
-                                      Width="9" Height="15" Stretch="Uniform"/>
-                            </Button>
-                            <Button Classes="NavArrowButton"
-                                    ToolTip.Tip="Вперёд"
-                                    Command="{Binding GoForwardCommand}"
-                                    IsEnabled="{Binding CanGoForward}">
-                                <Path Data="{StaticResource ChevronForwardIcon}"
-                                      Fill="{DynamicResource TextPrimary}"
-                                      Width="9" Height="15" Stretch="Uniform"/>
-                            </Button>
-                        </StackPanel>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
+			<StackPanel Grid.Column="0"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Bottom"
+						Spacing="2"
+						Margin="0,0,4,0">
+				<Button Classes="NavArrowButton"
+						ToolTip.Tip="Назад"
+						Command="{Binding MainMenu.GoBackCommand}"
+						IsEnabled="{Binding MainMenu.CanGoBack}">
+					<Path Data="{StaticResource ChevronLeftIcon}"
+						  Fill="{DynamicResource TextPrimary}"
+						  Width="9" Height="15" Stretch="Uniform"/>
+				</Button>
+				<Button Classes="NavArrowButton"
+						ToolTip.Tip="Вперёд"
+						Command="{Binding MainMenu.GoForwardCommand}"
+						IsEnabled="{Binding MainMenu.CanGoForward}">
+					<Path Data="{StaticResource ChevronForwardIcon}"
+						  Fill="{DynamicResource TextPrimary}"
+						  Width="9" Height="15" Stretch="Uniform"/>
+				</Button>
+			</StackPanel>
 
-            <ContentControl Grid.Column="1"
-                            Content="{Binding MainMenu}"
-                            MinWidth="160"
-                            Width="360"
-                            MaxWidth="460"
-                            VerticalAlignment="Bottom">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate DataType="vm:MainMenuViewModel">
-                        <controls:SearchBox x:Name="GlobalSearchBox"
-                                            SearchText="{Binding SearchText, Mode=TwoWay}"
-                                            Watermark="{Binding SearchManager.SelectedScope,
-                                                        Converter={conv:Converter Name=SearchScopeToWatermark}}"/>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
+			<controls:SearchBox Grid.Column="1"
+								x:Name="GlobalSearchBox"
+								MinWidth="160"
+								Width="360"
+								MaxWidth="460"
+								VerticalAlignment="Bottom"
+								SearchText="{Binding MainMenu.SearchText, Mode=TwoWay}"
+								Watermark="{Binding MainMenu.SearchManager.SelectedScope,
+								Converter={conv:Converter Name=SearchScopeToWatermark}}"/>
 
-            <Grid Grid.Column="2"
-                  IsHitTestVisible="False"
-                  Margin="0,0,138,0"/>
-        </Grid>
+			<Grid Grid.Column="2"
+				  IsHitTestVisible="False"
+				  Margin="0,0,138,0"/>
+		</Grid>
 
-        <Grid Height="48"
-              VerticalAlignment="Top"
-              ZIndex="99"
-              ColumnDefinitions="Auto,*,Auto">
+		<Grid Height="48"
+      VerticalAlignment="Top"
+      ZIndex="99"
+      ColumnDefinitions="Auto,*,Auto">
 
-            <TextBlock Grid.Column="0"
-                       Text="ВнутрьСеть"
-                       Foreground="{DynamicResource TextPrimary}"
-                       FontWeight="SemiBold"
-                       FontSize="14"
-                       VerticalAlignment="Center"
-                       Margin="16,0,16,0"
-                       IsVisible="{Binding #MainWindowRoot.IsCompactMode,
-                                 Converter={conv:Converter Name=Equality},
-                                 ConverterParameter=False}"
-                       PointerPressed="OnTitleBarPointerPressed"/>
+    <TextBlock Grid.Column="0"
+               Text="ВнутрьСеть"
+               Foreground="{DynamicResource TextPrimary}"
+               FontWeight="SemiBold"
+               FontSize="14"
+               VerticalAlignment="Center"
+               Margin="16,0,16,0"
+               IsVisible="{Binding #MainWindowRoot.IsCompactMode,
+                         Converter={conv:Converter Name=Equality},
+                         ConverterParameter=False}"
+               PointerPressed="OnTitleBarPointerPressed"/>
 
-            <Panel Grid.Column="1"
-                   Background="Transparent"
-                   PointerPressed="OnTitleBarPointerPressed"/>
+    <Panel Grid.Column="1"
+           Background="Transparent"
+           PointerPressed="OnTitleBarPointerPressed"/>
 
-            <Panel Grid.Column="2"
-                   Background="Transparent"
-                   PointerPressed="OnTitleBarPointerPressed"/>
-        </Grid>
+    <Panel Grid.Column="2"
+           Background="Transparent"
+           PointerPressed="OnTitleBarPointerPressed"/>
+</Grid>
 
-        <controls:NotificationOverlay ZIndex="9000"/>
+		<controls:NotificationOverlay ZIndex="9000"/>
 
-        <Border ZIndex="1001"
-                IsVisible="{Binding ActiveCallStore.IsCallUiOpen}"
-                Margin="82,56,9,9"
-                ClipToBounds="True">
-            <ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
-                <ContentControl.DataTemplates>
-                    <DataTemplate DataType="call:CallViewModel">
-                        <callView:CallView/>
-                    </DataTemplate>
-                </ContentControl.DataTemplates>
-            </ContentControl>
-        </Border>
+		<Border ZIndex="1001"
+				IsVisible="{Binding ActiveCallStore.IsCallUiOpen}"
+				Margin="82,56,9,9"
+				ClipToBounds="True">
+			<ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
+				<ContentControl.DataTemplates>
+					<DataTemplate DataType="call:CallViewModel">
+						<callView:CallView/>
+					</DataTemplate>
+				</ContentControl.DataTemplates>
+			</ContentControl>
+		</Border>
 
-        <Border x:Name="DialogOverlay"
-                Classes="DialogOverlay"
-                Background="#80000000"
-                ZIndex="10000"
-                IsVisible="{Binding IsDialogVisible}"
-                PointerPressed="OnDialogBackgroundPressed"/>
+		<Border x:Name="DialogOverlay"
+				Classes="DialogOverlay"
+				Background="#80000000"
+				ZIndex="10000"
+				IsVisible="{Binding IsDialogVisible}"
+				PointerPressed="OnDialogBackgroundPressed"/>
 
-        <Border x:Name="DialogAnimWrapper"
-                Classes="DialogAnimWrapper"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Margin="0,56,0,24"
-                ZIndex="10001"
-                IsVisible="{Binding IsDialogVisible}">
-            <ContentControl Content="{Binding CurrentDialog}">
-                <ContentControl.DataTemplates>
-                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
-                        <views:UserProfileDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:SearchFiltersDialogViewModel">
-                        <dialog:SearchFiltersDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
-                        <views:PollDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
-                        <views:ChatEditDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
-                        <views:UserEditDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
-                        <views:DepartmentDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
-                        <dialogs:ConfirmDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
-                        <views:DepartmentHeadDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserPickerDialogViewModel">
-                        <dialog:UserPickerDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserListDialogViewModel">
-                        <dialog:UserListDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatPickerDialogViewModel">
-                        <dialog:ChatPickerDialog/>
-                    </DataTemplate>
-                    <DataTemplate DataType="call:IncomingCallViewModel">
-                        <callView:IncomingCallDialog/>
-                    </DataTemplate>
-                </ContentControl.DataTemplates>
-            </ContentControl>
-        </Border>
-    </Panel>
+		<!-- Контейнер диалогов -->
+		<Border x:Name="DialogAnimWrapper"
+				Classes="DialogAnimWrapper"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				Margin="0,56,0,24"
+				ZIndex="10001"
+				IsVisible="{Binding IsDialogVisible}">
+			<ContentControl Content="{Binding CurrentDialog}">
+				<ContentControl.DataTemplates>
+					<DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
+						<views:UserProfileDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:SearchFiltersDialogViewModel">
+						<dialog:SearchFiltersDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:PollDialogViewModel">
+						<views:PollDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
+						<views:ChatEditDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:UserEditDialogViewModel">
+						<views:UserEditDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
+						<views:DepartmentDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
+						<dialogs:ConfirmDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
+						<views:DepartmentHeadDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:UserPickerDialogViewModel">
+						<dialog:UserPickerDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:UserListDialogViewModel">
+						<dialog:UserListDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmDialog:ChatPickerDialogViewModel">
+						<dialog:ChatPickerDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="call:IncomingCallViewModel">
+						<callView:IncomingCallDialog/>
+					</DataTemplate>
+					<DataTemplate DataType="vmChat:PollResultsDialogViewModel">
+						<dialog:PollResultsDialog/>
+					</DataTemplate>
+				</ContentControl.DataTemplates>
+			</ContentControl>
+		</Border>
+	</Panel>
 </Window>

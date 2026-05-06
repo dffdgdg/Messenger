@@ -118,6 +118,7 @@
 	  <Folder Include="Assets\Images\Icons\" />
 	  <Folder Include="Assets\Images\Avatars\" />
 	  <Folder Include="Assets\Images\Illustrations\" />
+	  <Folder Include="Views\Chat\Poll\" />
 	  <Folder Include="Views\Controls\Admin\" />
 	</ItemGroup>
 	

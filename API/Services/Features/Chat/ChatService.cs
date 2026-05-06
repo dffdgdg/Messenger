@@ -30,19 +30,14 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
     }
     private async Task<List<ChatWithLastMessage>> LoadChatsWithLastMessageAsync(List<int> chatIds)
     {
-        var chats = await _context.Chats
-            .Where(c => chatIds.Contains(c.Id))
-            .AsNoTracking()
-            .ToListAsync();
+        var chats = await _context.Chats.Where(c => chatIds.Contains(c.Id)).AsNoTracking().ToListAsync();
 
-        // Один запрос для получения последних сообщений всех чатов (решает N+1)
         var lastMessageIds = await _context.Messages
             .Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true)
             .GroupBy(m => m.ChatId)
             .Select(g => g.Max(m => m.Id))
             .ToListAsync();
 
-        // Один запрос для загрузки данных последних сообщений с явной проекцией (решает password_hash)
         var lastMessages = lastMessageIds.Count > 0
             ? await _context.Messages
                 .Where(m => lastMessageIds.Contains(m.Id))
@@ -50,21 +45,26 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
                 {
                     m.Id,
                     m.ChatId,
-                    m.Content,
                     m.CreatedAt,
-                    m.IsSystemMessage,
-                    m.SenderId,
-                    m.SystemEventType,
-                    m.TargetUserId,
-                    SenderName = m.Sender.Surname + " " + m.Sender.Name +
-                        (m.Sender.Midname != null ? " " + m.Sender.Midname : ""),
-                    TargetUserName = m.TargetUser != null
-                        ? m.TargetUser.Surname + " " + m.TargetUser.Name +
-                          (m.TargetUser.Midname != null ? " " + m.TargetUser.Midname : "")
+                    IsSystemMessage = m is SystemMessage,
+                    SenderId = m is UserMessage ? ((UserMessage)m).SenderId : ((SystemMessage)m).InitiatorId,
+                    Content = m is UserMessage ? ((UserMessage)m).Content : ((SystemMessage)m).Content,
+                    SystemEventType = m is SystemMessage ? (SystemEventType?)((SystemMessage)m).SystemEventType : null,
+                    TargetUserId = m is SystemMessage ? ((SystemMessage)m).TargetUserId : null,
+                    SenderName = m is UserMessage
+                        ? ((UserMessage)m).Sender.Surname + " " + ((UserMessage)m).Sender.Name +
+                          (((UserMessage)m).Sender.Midname != null ? " " + ((UserMessage)m).Sender.Midname : "")
+                        : ((SystemMessage)m).Initiator != null
+                            ? ((SystemMessage)m).Initiator!.Surname + " " + ((SystemMessage)m).Initiator!.Name +
+                              (((SystemMessage)m).Initiator!.Midname != null ? " " + ((SystemMessage)m).Initiator!.Midname : "")
+                            : null,
+                    TargetUserName = m is SystemMessage && ((SystemMessage)m).TargetUser != null
+                        ? ((SystemMessage)m).TargetUser!.Surname + " " + ((SystemMessage)m).TargetUser!.Name +
+                          (((SystemMessage)m).TargetUser!.Midname != null ? " " + ((SystemMessage)m).TargetUser!.Midname : "")
                         : null,
-                    IsVoiceMessage = _context.VoiceMessages.Any(v => v.MessageId == m.Id),
-                    HasPoll = _context.Polls.Any(p => p.MessageId == m.Id),
-                    HasFiles = _context.MessageFiles.Any(f => f.MessageId == m.Id)
+                    IsVoiceMessage = m is UserMessage && ((UserMessage)m).VoiceMessage != null,
+                    HasPoll = m is UserMessage && ((UserMessage)m).Poll != null,
+                    HasFiles = m is UserMessage && ((UserMessage)m).MessageFiles.Any()
                 })
                 .ToListAsync()
             : [];
@@ -84,11 +84,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
                     msg.HasPoll, msg.HasFiles);
             }
 
-            result.Add(new ChatWithLastMessage
-            {
-                Chat = chat,
-                LastMessage = lastMsg
-            });
+            result.Add(new ChatWithLastMessage { Chat = chat, LastMessage = lastMsg });
         }
 
         return result;
@@ -119,6 +115,7 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
             dto.Name = partner.DisplayName;
             dto.Avatar = partner.AvatarUrl;
             dto.ContactUserId = partner.UserId;
+            dto.ContactIsOnline = partner.IsOnline;
             dto.ContactStatusType = partner.StatusType;
             dto.ContactStatusExpiresAt = partner.StatusExpiresAt;
         }
@@ -271,7 +268,9 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
                     cm.User.Name,
                     cm.User.Midname,
                     cm.User.Avatar,
-                    cm.User.LastOnline
+                    cm.User.LastOnline,
+                    cm.User.StatusType,
+                    cm.User.StatusExpiresAt
                 }
             })
             .AsNoTracking()
@@ -284,20 +283,26 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         {
             Id = m.User.Id,
             Username = m.User.Username,
-            DisplayName = Data.User.FormatDisplayNameStatic(m.User.Surname, m.User.Name, m.User.Midname),
+            DisplayName = FormatName(m.User.Surname, m.User.Name, m.User.Midname),
             Surname = m.User.Surname,
             Name = m.User.Name,
             Midname = m.User.Midname,
             Avatar = urlBuilder.BuildUrl(m.User.Avatar),
             IsOnline = onlineIds.Contains(m.User.Id),
-            LastOnline = m.User.LastOnline
+            LastOnline = m.User.LastOnline,
+            StatusType = m.User.StatusType,
+            StatusExpiresAt = m.User.StatusExpiresAt
         });
 
         return Result<List<UserDto>>.Success(result);
     }
 
     #endregion
-
+    private static string FormatName(string? surname, string? name, string? midname)
+    {
+        var parts = new[] { surname, name, midname }.Where(s => !string.IsNullOrWhiteSpace(s));
+        return parts.Any() ? string.Join(" ", parts) : "Без имени";
+    }
     #region CRUD
 
     public async Task<Result<ChatDto>> CreateChatAsync(ChatDto dto, CancellationToken ct = default)
@@ -447,9 +452,12 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
 
         var memberIds = chat.ChatMembers.Select(cm => cm.UserId).ToList();
 
-        await _context.Messages.Where(m => m.ChatId == chatId).ExecuteDeleteAsync();
+        var voiceFilePaths = await _context.VoiceMessages.Where(v => _context.UserMessages.Any(m => m.Id == v.MessageId && m.ChatId == chatId))
+            .Select(v => v.FilePath).ToListAsync();
 
-        _context.ChatMembers.RemoveRange(chat.ChatMembers);
+        foreach (var path in voiceFilePaths)
+            fileService.DeleteFile(path);
+
         _context.Chats.Remove(chat);
 
         var save = await SaveChangesAsync();
@@ -462,7 +470,6 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         }
 
         LogChatDeleted(chatId, userId);
-
         return Result.Success();
     }
 
@@ -562,10 +569,11 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         return partners.ToDictionary(p => p.ChatId, p => new DialogPartnerInfo
         {
             UserId = p.UserId,
-            DisplayName = Data.User.FormatDisplayNameStatic(p.Surname, p.Name, p.Midname),
+            DisplayName = FormatName(p.Surname, p.Name, p.Midname),
             AvatarUrl = urlBuilder.BuildUrl(p.Avatar),
             StatusType = p.StatusType,
             StatusExpiresAt = p.StatusExpiresAt,
+            IsOnline = onlineIds.Contains(p.UserId)
         });
     }
 
@@ -613,5 +621,6 @@ public partial class ChatService(MessengerDbContext context, IAccessControlServi
         public string? AvatarUrl { get; init; }
         public UserStatusType StatusType { get; init; }
         public DateTime? StatusExpiresAt { get; init; }
+        public bool IsOnline { get; init; }
     }
 }

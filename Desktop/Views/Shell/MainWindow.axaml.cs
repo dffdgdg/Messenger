@@ -67,10 +67,7 @@ public partial class MainWindow : Window
             UpdateCompactMode();
     }
 
-    private void UpdateCompactMode()
-    {
-        IsCompactMode = Bounds.Width <= CompactModeThreshold;
-    }
+    private void UpdateCompactMode() => IsCompactMode = Bounds.Width <= CompactModeThreshold;
 
     private void SubscribeSearchBox()
     {

@@ -1,17 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace API.Data;
+﻿namespace API.Data;
 
 public partial class User
 {
     public int Id { get; set; }
     public string Username { get; set; } = null!;
     public string? Name { get; set; }
-
-    // ❌ Удалить:
-    // public string PasswordHash { get; set; } = null!;
-
-    // ✅ Новое свойство — owned-тип
     public UserPassword Password { get; set; } = null!;
 
     public DateTime? CreatedAt { get; set; }
@@ -28,7 +21,7 @@ public partial class User
     public virtual ICollection<Chat> Chats { get; set; } = [];
     public virtual Department? Department { get; set; }
     public virtual ICollection<Department> Departments { get; set; } = [];
-    public virtual ICollection<Message> Messages { get; set; } = [];
+    public virtual ICollection<UserMessage> SentMessages { get; set; } = [];
     public virtual ICollection<PollVote> PollVotes { get; set; } = [];
     public virtual UserSetting? UserSetting { get; set; }
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = [];

@@ -1,6 +1,5 @@
-﻿using Desktop.Services.Features.Call;
-using Desktop.ViewModels.Dialog;
-using Shared.DTO.Call;
+﻿using Desktop.ViewModels.Dialog;
+using Shared.Dto.Call;
 using System;
 using System.Threading.Tasks;
 

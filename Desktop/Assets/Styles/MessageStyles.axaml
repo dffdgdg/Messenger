@@ -1,660 +1,687 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
- <!--FileAttachment-->
-    <Style Selector="Border.FileAttachment">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="CornerRadius" Value="10"/>
-			<Setter Property="Padding" Value="6,6"/>
-			<Setter Property="Margin" Value="-6,-2"/>
-			<Setter Property="MinWidth" Value="200"/>
-			<Setter Property="MaxWidth" Value="320"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<!--FileAttachment-->
+	<Style Selector="Border.FileAttachment">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="CornerRadius" Value="10"/>
+		<Setter Property="Padding" Value="6,6"/>
+		<Setter Property="Margin" Value="-6,-2"/>
+		<Setter Property="MinWidth" Value="200"/>
+		<Setter Property="MaxWidth" Value="320"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Border.FileAttachment:pointerover">
-			<Setter Property="Background" Value="#0A000000"/>
-		</Style>
+	<Style Selector="Border.FileAttachment:pointerover">
+		<Setter Property="Background" Value="#0A000000"/>
+	</Style>
 
-		<Style Selector="Border.FileIcon">
-			<Setter Property="Width" Value="40"/>
-			<Setter Property="Height" Value="40"/>
-			<Setter Property="CornerRadius" Value="10"/>
-			<Setter Property="Background" Value="{DynamicResource Accent}"/>
-		</Style>
+	<Style Selector="Border.FileIcon">
+		<Setter Property="Width" Value="40"/>
+		<Setter Property="Height" Value="40"/>
+		<Setter Property="CornerRadius" Value="10"/>
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+	</Style>
 
-		<Style Selector="Border.ImageAttachment">
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="ClipToBounds" Value="True"/>
-			<Setter Property="MaxWidth" Value="320"/>
-			<Setter Property="MaxHeight" Value="320"/>
-		</Style>
+	<Style Selector="Border.ImageAttachment">
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="ClipToBounds" Value="True"/>
+		<Setter Property="MaxWidth" Value="320"/>
+		<Setter Property="MaxHeight" Value="320"/>
+	</Style>
 
-		<Style Selector="Border.ImagePlaceholder">
-			<Setter Property="Background" Value="#08000000"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="MinWidth" Value="160"/>
-			<Setter Property="MinHeight" Value="120"/>
-		</Style>
+	<Style Selector="Border.ImagePlaceholder">
+		<Setter Property="Background" Value="#08000000"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="MinWidth" Value="160"/>
+		<Setter Property="MinHeight" Value="120"/>
+	</Style>
 
-		<Style Selector="Border.ImageOverlay">
-			<Setter Property="Background" Value="#66000000"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Opacity" Value="0"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Border.ImageOverlay">
+		<Setter Property="Background" Value="#66000000"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="Opacity" Value="0"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Border.ImageAttachment:pointerover Border.ImageOverlay">
-			<Setter Property="Opacity" Value="1"/>
-		</Style>
+	<Style Selector="Border.ImageAttachment:pointerover Border.ImageOverlay">
+		<Setter Property="Opacity" Value="1"/>
+	</Style>
 
-		<Style Selector="Button.ImageOverlayButton">
-			<Setter Property="Background" Value="#55000000"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Width" Value="40"/>
-			<Setter Property="Height" Value="40"/>
-			<Setter Property="CornerRadius" Value="20"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Button.ImageOverlayButton">
+		<Setter Property="Background" Value="#55000000"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Width" Value="40"/>
+		<Setter Property="Height" Value="40"/>
+		<Setter Property="CornerRadius" Value="20"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Button.ImageOverlayButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#55000000"/>
-			<Setter Property="CornerRadius" Value="20"/>
-		</Style>
+	<Style Selector="Button.ImageOverlayButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#55000000"/>
+		<Setter Property="CornerRadius" Value="20"/>
+	</Style>
 
-		<Style Selector="Button.ImageOverlayButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#88000000"/>
-		</Style>
+	<Style Selector="Button.ImageOverlayButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#88000000"/>
+	</Style>
 
-		<Style Selector="Button.ImageOverlayButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#AA000000"/>
-		</Style>
+	<Style Selector="Button.ImageOverlayButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#AA000000"/>
+	</Style>
 
-		<Style Selector="Button.FileActionButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Width" Value="28"/>
-			<Setter Property="Height" Value="28"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
+	<Style Selector="Button.FileActionButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Width" Value="28"/>
+		<Setter Property="Height" Value="28"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="Cursor" Value="Hand"/>
+	</Style>
 
-		<Style Selector="Button.FileActionButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
+	<Style Selector="Button.FileActionButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-		<Style Selector="Button.FileActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#12000000"/>
-		</Style>
+	<Style Selector="Button.FileActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#12000000"/>
+	</Style>
 
-		<Style Selector="Button.FileActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#18000000"/>
-		</Style>
+	<Style Selector="Button.FileActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#18000000"/>
+	</Style>
 
-		<Style Selector="Border.FileError">
-			<Setter Property="Background" Value="#15FF4444"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="8,4"/>
-			<Setter Property="Margin" Value="0,4,0,0"/>
-		</Style>
+	<Style Selector="Border.FileError">
+		<Setter Property="Background" Value="#15FF4444"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="Padding" Value="8,4"/>
+		<Setter Property="Margin" Value="0,4,0,0"/>
+	</Style>
 
-		<Style Selector="TextBlock.FileErrorText">
-			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-			<Setter Property="FontSize" Value="11"/>
-			<Setter Property="TextWrapping" Value="Wrap"/>
-			<Setter Property="Opacity" Value="0.9"/>
-		</Style>
+	<Style Selector="TextBlock.FileErrorText">
+		<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+		<Setter Property="FontSize" Value="11"/>
+		<Setter Property="TextWrapping" Value="Wrap"/>
+		<Setter Property="Opacity" Value="0.9"/>
+	</Style>
 
-		<Style Selector="ProgressBar.FileDownloadProgress">
-			<Setter Property="Height" Value="2"/>
-			<Setter Property="Margin" Value="0,4,0,0"/>
-			<Setter Property="Minimum" Value="0"/>
-			<Setter Property="Maximum" Value="100"/>
-			<Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
-			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-			<Setter Property="CornerRadius" Value="1"/>
-		</Style>
+	<Style Selector="ProgressBar.FileDownloadProgress">
+		<Setter Property="Height" Value="2"/>
+		<Setter Property="Margin" Value="0,4,0,0"/>
+		<Setter Property="Minimum" Value="0"/>
+		<Setter Property="Maximum" Value="100"/>
+		<Setter Property="Background" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		<Setter Property="CornerRadius" Value="1"/>
+	</Style>
 	<!--Poll-->
-	        <Style Selector="Border.PollBubble">
-            <Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
-            <Setter Property="CornerRadius" Value="18"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="MaxWidth" Value="360"/>
-            <Setter Property="MinWidth" Value="280"/>
-        </Style>
-        <Style Selector="Border.PollBubble.Own">
-            <Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-        </Style>
+	<Style Selector="Button.PollCloseButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Padding" Value="12,5"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="Cursor" Value="Hand"/>
+	</Style>
+	<Style Selector="Button.PollCloseButton:pointerover">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+	</Style>
+
+	<Style Selector="Button.PollResultsButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Padding" Value="12,5"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="Cursor" Value="Hand"/>
+	</Style>
+	<Style Selector="Button.PollResultsButton:pointerover">
+		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+	</Style>
+	<Style Selector="Border.PollBubble">
+		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
+		<Setter Property="CornerRadius" Value="18"/>
+		<Setter Property="Padding" Value="14,10"/>
+		<Setter Property="MaxWidth" Value="360"/>
+		<Setter Property="MinWidth" Value="280"/>
+	</Style>
+	<Style Selector="Border.PollBubble.Own">
+		<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+	</Style>
 	<!--ReplyPreview-->
-	        <Style Selector="Button.ReplyPreviewButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
-            <Setter Property="Opacity" Value="0.75"/>
-        </Style>
+	<Style Selector="Button.ReplyPreviewButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+	</Style>
+	<Style Selector="Button.ReplyPreviewButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
+	<Style Selector="Button.ReplyPreviewButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
+	<Style Selector="Button.ReplyPreviewButton:pointerover Border.ReplyPreview">
+		<Setter Property="Opacity" Value="0.75"/>
+	</Style>
 	<!--SystemMessage-->
-	 <Style Selector="Button.SystemUserLink">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="Height" Value="NaN"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusAdorner" Value="{x:Null}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Margin" Value="0"/>
+		<Setter Property="MinWidth" Value="0"/>
+		<Setter Property="MinHeight" Value="0"/>
+		<Setter Property="Height" Value="NaN"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="FocusAdorner" Value="{x:Null}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+	</Style>
 
-        <Style Selector="Button.SystemUserLink /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Padding" Value="0"/>
+	</Style>
 
-        <Style Selector="Button.SystemUserLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-        <Style Selector="Button.SystemUserLink:pointerover TextBlock">
-            <Setter Property="TextDecorations" Value="Underline"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink:pointerover TextBlock">
+		<Setter Property="TextDecorations" Value="Underline"/>
+	</Style>
 
-        <Style Selector="Button.SystemUserLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-        <Style Selector="Button.SystemUserLink:focus /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+	<Style Selector="Button.SystemUserLink:focus /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
 	<!--VoiceMessage-->
-		<Style Selector="Button.VoicePlayBtn">
-			<Setter Property="Width" Value="36"/>
-			<Setter Property="Height" Value="36"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="CornerRadius" Value="164"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Background" Value="{DynamicResource Accent}"/>
-			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn">
+		<Setter Property="Width" Value="36"/>
+		<Setter Property="Height" Value="36"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="CornerRadius" Value="164"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Button.VoicePlayBtn /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource Accent}"/>
-			<Setter Property="CornerRadius" Value="18"/>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		<Setter Property="CornerRadius" Value="18"/>
+	</Style>
 
-		<Style Selector="Button.VoicePlayBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+	</Style>
 
-		<Style Selector="Button.VoicePlayBtn:pressed">
-			<Setter Property="RenderTransform" Value="scale(0.92)"/>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn:pressed">
+		<Setter Property="RenderTransform" Value="scale(0.92)"/>
+	</Style>
 
-		<Style Selector="Button.VoicePlayBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+	</Style>
 
-		<Style Selector="Button.VoicePlayBtn PathIcon">
-			<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-		</Style>
+	<Style Selector="Button.VoicePlayBtn PathIcon">
+		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+	</Style>
 
-		<Style Selector="Border.VoiceLoadingContainer">
-			<Setter Property="Width" Value="36"/>
-			<Setter Property="Height" Value="36"/>
-			<Setter Property="CornerRadius" Value="18"/>
-			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
-		</Style>
+	<Style Selector="Border.VoiceLoadingContainer">
+		<Setter Property="Width" Value="36"/>
+		<Setter Property="Height" Value="36"/>
+		<Setter Property="CornerRadius" Value="18"/>
+		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+	</Style>
 
-		<Style Selector="Border.VoiceTimeBadge">
-			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-			<Setter Property="CornerRadius" Value="10"/>
-			<Setter Property="Padding" Value="8,3"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-			<Setter Property="HorizontalAlignment" Value="Left"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.2"/>
-					<BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Border.VoiceTimeBadge">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+		<Setter Property="CornerRadius" Value="10"/>
+		<Setter Property="Padding" Value="8,3"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="HorizontalAlignment" Value="Left"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.2"/>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Border.VoicePlayerContainer">
-			<Setter Property="MinWidth" Value="280"/>
-			<Setter Property="MaxWidth" Value="400"/>
-		</Style>
+	<Style Selector="Border.VoicePlayerContainer">
+		<Setter Property="MinWidth" Value="280"/>
+		<Setter Property="MaxWidth" Value="400"/>
+	</Style>
 
-		<Style Selector="TextBlock.VoiceTime">
-			<Setter Property="FontSize" Value="11"/>
-			<Setter Property="FontWeight" Value="Medium"/>
-			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
+	<Style Selector="TextBlock.VoiceTime">
+		<Setter Property="FontSize" Value="11"/>
+		<Setter Property="FontWeight" Value="Medium"/>
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+	</Style>
 
-		<Style Selector="TextBlock.VoiceError">
-			<Setter Property="FontSize" Value="11"/>
-			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-			<Setter Property="TextWrapping" Value="Wrap"/>
-			<Setter Property="Margin" Value="0,4,0,0"/>
-		</Style>
+	<Style Selector="TextBlock.VoiceError">
+		<Setter Property="FontSize" Value="11"/>
+		<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+		<Setter Property="TextWrapping" Value="Wrap"/>
+		<Setter Property="Margin" Value="0,4,0,0"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider">
-			<Setter Property="MinHeight" Value="24"/>
-			<Setter Property="Height" Value="24"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Margin" Value="0"/>
-			<Setter Property="Minimum" Value="0"/>
-			<Setter Property="Maximum" Value="100"/>
-			<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider">
+		<Setter Property="MinHeight" Value="24"/>
+		<Setter Property="Height" Value="24"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Margin" Value="0"/>
+		<Setter Property="Minimum" Value="0"/>
+		<Setter Property="Maximum" Value="100"/>
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider /template/ Border#TrackBackground">
-			<Setter Property="Height" Value="4"/>
-			<Setter Property="CornerRadius" Value="2"/>
-			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider /template/ Border#TrackBackground">
+		<Setter Property="Height" Value="4"/>
+		<Setter Property="CornerRadius" Value="2"/>
+		<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider /template/ Thumb">
-			<Setter Property="Width" Value="14"/>
-			<Setter Property="Height" Value="14"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider /template/ Thumb">
+		<Setter Property="Width" Value="14"/>
+		<Setter Property="Height" Value="14"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider /template/ Thumb /template/ Border">
-			<Setter Property="Background" Value="{DynamicResource Accent}"/>
-			<Setter Property="CornerRadius" Value="7"/>
-			<Setter Property="Width" Value="14"/>
-			<Setter Property="Height" Value="14"/>
-			<Setter Property="BoxShadow" Value="0 1 4 #40000000"/>
-			<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
-					<BrushTransition Property="Background" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Slider.VoiceSlider /template/ Thumb /template/ Border">
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		<Setter Property="CornerRadius" Value="7"/>
+		<Setter Property="Width" Value="14"/>
+		<Setter Property="Height" Value="14"/>
+		<Setter Property="BoxShadow" Value="0 1 4 #40000000"/>
+		<Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider /template/ Thumb:pointerover /template/ Border">
-			<Setter Property="RenderTransform" Value="scale(1.25)"/>
-			<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider /template/ Thumb:pointerover /template/ Border">
+		<Setter Property="RenderTransform" Value="scale(1.25)"/>
+		<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider /template/ Thumb:pressed /template/ Border">
-			<Setter Property="RenderTransform" Value="scale(1.15)"/>
-			<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider /template/ Thumb:pressed /template/ Border">
+		<Setter Property="RenderTransform" Value="scale(1.15)"/>
+		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+	</Style>
 
-		<Style Selector="Slider.VoiceSlider:disabled">
-			<Setter Property="Opacity" Value="0.4"/>
-		</Style>
+	<Style Selector="Slider.VoiceSlider:disabled">
+		<Setter Property="Opacity" Value="0.4"/>
+	</Style>
 	<!--PollView-->
 	<Style Selector="Button.PollOptionButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="FocusAdorner" Value="{x:Null}"/>
-        </Style>
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="FocusAdorner" Value="{x:Null}"/>
+	</Style>
 
-        <Style Selector="Button.PollOptionButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
+	<Style Selector="Button.PollOptionButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-        <Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#0A000000"/>
-        </Style>
-        <Style Selector="Button.PollOptionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#12000000"/>
-        </Style>
+	<Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#0A000000"/>
+	</Style>
+	<Style Selector="Button.PollOptionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="#12000000"/>
+	</Style>
 
-        <Style Selector="Border.PollOptionBorder">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
+	<Style Selector="Border.PollOptionBorder">
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="BorderThickness" Value="1.5"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="Padding" Value="12,10"/>
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="Height" Value="44"/>
+		<Setter Property="ClipToBounds" Value="True"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-        <Style Selector="Border.PollOptionBorder.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="#08000000"/>
-        </Style>
+	<Style Selector="Border.PollOptionBorder.Selected">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="Background" Value="#08000000"/>
+	</Style>
 
-        <Style Selector="Border.PollRadioOuter">
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.PollRadioOuter.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-        </Style>
+	<Style Selector="Border.PollRadioOuter">
+		<Setter Property="Width" Value="20"/>
+		<Setter Property="Height" Value="20"/>
+		<Setter Property="CornerRadius" Value="10"/>
+		<Setter Property="BorderThickness" Value="2"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Border.PollRadioOuter.Selected">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+	</Style>
 
-        <Style Selector="Border.PollRadioInner">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.PollRadioOuter.Selected Border.PollRadioInner">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
+	<Style Selector="Border.PollRadioInner">
+		<Setter Property="Width" Value="8"/>
+		<Setter Property="Height" Value="8"/>
+		<Setter Property="CornerRadius" Value="4"/>
+		<Setter Property="Background" Value="White"/>
+		<Setter Property="HorizontalAlignment" Value="Center"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Opacity" Value="0"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Border.PollRadioOuter.Selected Border.PollRadioInner">
+		<Setter Property="Opacity" Value="1"/>
+	</Style>
 
-        <Style Selector="Border.PollCheckboxOuter">
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="CornerRadius" Value="5"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.PollCheckboxOuter.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-        </Style>
+	<Style Selector="Border.PollCheckboxOuter">
+		<Setter Property="Width" Value="20"/>
+		<Setter Property="Height" Value="20"/>
+		<Setter Property="CornerRadius" Value="5"/>
+		<Setter Property="BorderThickness" Value="2"/>
+		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Border.PollCheckboxOuter.Selected">
+		<Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+	</Style>
 
-        <Style Selector="Path.PollCheckboxTick">
-            <Setter Property="Data" Value="M4.5 12.75l6 6 9-13.5"/>
-            <Setter Property="Stroke" Value="White"/>
-            <Setter Property="StrokeThickness" Value="2"/>
-            <Setter Property="StrokeLineCap" Value="Round"/>
-            <Setter Property="StrokeJoin" Value="Round"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.PollCheckboxOuter.Selected Path.PollCheckboxTick">
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
+	<Style Selector="Path.PollCheckboxTick">
+		<Setter Property="Data" Value="M4.5 12.75l6 6 9-13.5"/>
+		<Setter Property="Stroke" Value="White"/>
+		<Setter Property="StrokeThickness" Value="2"/>
+		<Setter Property="StrokeLineCap" Value="Round"/>
+		<Setter Property="StrokeJoin" Value="Round"/>
+		<Setter Property="Stretch" Value="Uniform"/>
+		<Setter Property="Width" Value="12"/>
+		<Setter Property="Height" Value="12"/>
+		<Setter Property="HorizontalAlignment" Value="Center"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Opacity" Value="0"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Border.PollCheckboxOuter.Selected Path.PollCheckboxTick">
+		<Setter Property="Opacity" Value="1"/>
+	</Style>
 
-        <Style Selector="Border.PollResultContainer">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="Height" Value="44"/>
-        </Style>
+	<Style Selector="Border.PollResultContainer">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="ClipToBounds" Value="True"/>
+		<Setter Property="Height" Value="44"/>
+	</Style>
 
-        <Style Selector="Border.PollProgressBar">
-            <Setter Property="Background" Value="#15000000"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="RenderTransformOrigin" Value="0%,50%"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.5" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.PollProgressBar.Selected">
-            <Setter Property="Background" Value="#25000000"/>
-        </Style>
+	<Style Selector="Border.PollProgressBar">
+		<Setter Property="Background" Value="#15000000"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+		<Setter Property="RenderTransformOrigin" Value="0%,50%"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.3"/>
+				<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.5" Easing="CubicEaseOut"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Border.PollProgressBar.Selected">
+		<Setter Property="Background" Value="#25000000"/>
+	</Style>
 
-        <Style Selector="Path.PollResultCheck">
-            <Setter Property="Data" Value="M9.5 16.5L4.5 11.5L5.91 10.09L9.5 13.67L18.09 5.09L19.5 6.5L9.5 16.5Z"/>
-            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
+	<Style Selector="Path.PollResultCheck">
+		<Setter Property="Data" Value="M9.5 16.5L4.5 11.5L5.91 10.09L9.5 13.67L18.09 5.09L19.5 6.5L9.5 16.5Z"/>
+		<Setter Property="Fill" Value="{DynamicResource Accent}"/>
+		<Setter Property="Width" Value="16"/>
+		<Setter Property="Height" Value="16"/>
+		<Setter Property="Stretch" Value="Uniform"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+	</Style>
 
-        <Style Selector="TextBlock.PollOptionText, TextBlock.PollResultText">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="TextWrapping" Value="NoWrap"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-        </Style>
+	<Style Selector="TextBlock.PollOptionText, TextBlock.PollResultText">
+		<Setter Property="FontSize" Value="14"/>
+		<Setter Property="TextWrapping" Value="NoWrap"/>
+		<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+	</Style>
 
-        <Style Selector="TextBlock.PollPercentage">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-        </Style>
-        <Style Selector="TextBlock.PollPercentage.Selected">
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-        </Style>
+	<Style Selector="TextBlock.PollPercentage">
+		<Setter Property="FontSize" Value="14"/>
+		<Setter Property="FontWeight" Value="SemiBold"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+	</Style>
+	<Style Selector="TextBlock.PollPercentage.Selected">
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+	</Style>
 
-        <Style Selector="TextBlock.PollType">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Opacity" Value="0.85"/>
-        </Style>
-        <Style Selector="TextBlock.PollSubtype, TextBlock.PollFooter">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-        </Style>
+	<Style Selector="TextBlock.PollType">
+		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+		<Setter Property="FontWeight" Value="Medium"/>
+		<Setter Property="Opacity" Value="0.85"/>
+	</Style>
+	<Style Selector="TextBlock.PollSubtype, TextBlock.PollFooter">
+		<Setter Property="FontSize" Value="11"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+	</Style>
 
-        <Style Selector="Button.PollVoteButton">
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
-            <Setter Property="Padding" Value="16,6"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.PollVoteButton:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
-        </Style>
-        <Style Selector="Button.PollVoteButton:pressed">
-            <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
-        </Style>
-        <Style Selector="Button.PollVoteButton:disabled">
-            <Setter Property="Opacity" Value="0.4"/>
-        </Style>
-    <!--Message-->
-    <!-- ── Обёртка строки сообщения (hover-фон) ── -->
-		<Style Selector="Border.MessageWrapper">
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.1"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Button.PollVoteButton">
+		<Setter Property="Background" Value="{DynamicResource Accent}"/>
+		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+		<Setter Property="Padding" Value="16,6"/>
+		<Setter Property="CornerRadius" Value="8"/>
+		<Setter Property="FontSize" Value="13"/>
+		<Setter Property="FontWeight" Value="SemiBold"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.15"/>
+				<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
+	<Style Selector="Button.PollVoteButton:pointerover">
+		<Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+	</Style>
+	<Style Selector="Button.PollVoteButton:pressed">
+		<Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+	</Style>
+	<Style Selector="Button.PollVoteButton:disabled">
+		<Setter Property="Opacity" Value="0.4"/>
+	</Style>
+	<!--Message-->
+	<!-- ── Обёртка строки сообщения (hover-фон) ── -->
+	<Style Selector="Border.MessageWrapper">
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.1"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Border.MessageWrapper:pointerover">
-			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
-		</Style>
-		<!-- ── Подсветка найденного сообщения ── -->
-		<Style Selector="Border.MessageHighlight">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.4"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Border.MessageWrapper:pointerover">
+		<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+	</Style>
+	<!-- ── Подсветка найденного сообщения ── -->
+	<Style Selector="Border.MessageHighlight">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="CornerRadius" Value="12"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.4"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Border.MessageHighlight.Highlighted">
-			<Setter Property="Background" Value="{DynamicResource MessageHighlightBrush}"/>
-		</Style>
-		<!-- ── Avatar ── -->
-		<Style Selector="Button.AvatarButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="FocusAdorner" Value="{x:Null}"/>
-			<Setter Property="Opacity" Value="1"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-				</Transitions>
-			</Setter>
-		</Style>
+	<Style Selector="Border.MessageHighlight.Highlighted">
+		<Setter Property="Background" Value="{DynamicResource MessageHighlightBrush}"/>
+	</Style>
+	<!-- ── Avatar ── -->
+	<Style Selector="Button.AvatarButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="FocusAdorner" Value="{x:Null}"/>
+		<Setter Property="Opacity" Value="1"/>
+		<Setter Property="Transitions">
+			<Transitions>
+				<DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+			</Transitions>
+		</Setter>
+	</Style>
 
-		<Style Selector="Button.AvatarButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
+	<Style Selector="Button.AvatarButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-		<Style Selector="Button.AvatarButton:pointerover">
-			<Setter Property="Opacity" Value="0.85"/>
-		</Style>
+	<Style Selector="Button.AvatarButton:pointerover">
+		<Setter Property="Opacity" Value="0.85"/>
+	</Style>
 
-		<Style Selector="Button.AvatarButton:pressed">
-			<Setter Property="Opacity" Value="0.7"/>
-		</Style>
+	<Style Selector="Button.AvatarButton:pressed">
+		<Setter Property="Opacity" Value="0.7"/>
+	</Style>
 
-		<!-- ── Имя отправителя ── -->
-		<Style Selector="Button.SenderNameButton">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="14,0,14,4"/>
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="FocusAdorner" Value="{x:Null}"/>
-			<Setter Property="HorizontalAlignment" Value="Left"/>
-		</Style>
+	<!-- ── Имя отправителя ── -->
+	<Style Selector="Button.SenderNameButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="14,0,14,4"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="FocusAdorner" Value="{x:Null}"/>
+		<Setter Property="HorizontalAlignment" Value="Left"/>
+	</Style>
 
-		<Style Selector="Button.SenderNameButton /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
+	<Style Selector="Button.SenderNameButton /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-		<Style Selector="Button.SenderNameButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
+	<Style Selector="Button.SenderNameButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-		<Style Selector="Button.SenderNameButton:pointerover TextBlock">
-			<Setter Property="TextDecorations" Value="Underline"/>
-		</Style>
+	<Style Selector="Button.SenderNameButton:pointerover TextBlock">
+		<Setter Property="TextDecorations" Value="Underline"/>
+	</Style>
 
-		<Style Selector="Button.SenderNameButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
+	<Style Selector="Button.SenderNameButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
 
-		<Style Selector="Button.SenderNameButton:focus /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-		<!-- ── Базовый пузырь ── -->
-		<Style Selector="Border.MessageBubble">
-			<Setter Property="Padding" Value="12,8"/>
-			<Setter Property="MinWidth" Value="48"/>
-			<Setter Property="MaxWidth" Value="520"/>
-			<Setter Property="BoxShadow" Value="{DynamicResource MessageBubbleShadow}"/>
-		</Style>
-		<!-- ── Свои сообщения (Own) ── -->
-		<Style Selector="Border.MessageBubble.Own.Alone">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18"/>
-		</Style>
+	<Style Selector="Button.SenderNameButton:focus /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent"/>
+	</Style>
+	<!-- ── Базовый пузырь ── -->
+	<Style Selector="Border.MessageBubble">
+		<Setter Property="Padding" Value="12,8"/>
+		<Setter Property="MinWidth" Value="48"/>
+		<Setter Property="MaxWidth" Value="520"/>
+		<Setter Property="BoxShadow" Value="{DynamicResource MessageBubbleShadow}"/>
+	</Style>
+	<!-- ── Свои сообщения (Own) ── -->
+	<Style Selector="Border.MessageBubble.Own.Alone">
+		<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+		<Setter Property="CornerRadius" Value="18"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Own.First">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,18,4,18"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Own.First">
+		<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+		<Setter Property="CornerRadius" Value="18,18,4,18"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Own.Middle">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,4,4,18"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Own.Middle">
+		<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+		<Setter Property="CornerRadius" Value="18,4,4,18"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Own.Last">
-			<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
-			<Setter Property="CornerRadius" Value="18,4,18,18"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Own.Last">
+		<Setter Property="Background" Value="{DynamicResource MessageOwnBackground}"/>
+		<Setter Property="CornerRadius" Value="18,4,18,18"/>
+	</Style>
 
-		<!-- ── Чужие сообщения (Other) ── -->
-		<Style Selector="Border.MessageBubble.Other.Alone">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="18"/>
-		</Style>
+	<!-- ── Чужие сообщения (Other) ── -->
+	<Style Selector="Border.MessageBubble.Other.Alone">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Setter Property="CornerRadius" Value="18"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Other.First">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="18,18,18,4"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Other.First">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Setter Property="CornerRadius" Value="18,18,18,4"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Other.Middle">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="4,18,18,4"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Other.Middle">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Setter Property="CornerRadius" Value="4,18,18,4"/>
+	</Style>
 
-		<Style Selector="Border.MessageBubble.Other.Last">
-			<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
-			<Setter Property="CornerRadius" Value="4,18,18,18"/>
-		</Style>
+	<Style Selector="Border.MessageBubble.Other.Last">
+		<Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+		<Setter Property="CornerRadius" Value="4,18,18,18"/>
+	</Style>
 </Styles>

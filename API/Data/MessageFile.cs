@@ -7,5 +7,5 @@ public class MessageFile
     public string ContentType { get; set; } = null!;
     public int MessageId { get; set; }
     public string? Path { get; set; }
-    public virtual Message Message { get; set; } = null!;
+    public virtual UserMessage Message { get; set; } = null!;
 }

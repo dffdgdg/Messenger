@@ -2,12 +2,13 @@
 using Desktop.Infrastructure.Helpers;
 using Desktop.Services.UI;
 using Desktop.ViewModels;
-using Shared.Dto.Online;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Shared.Dto.Online;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -70,18 +71,37 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         try
         {
             UnsubscribeHubEvents();
-
-            _hub = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub",
-                o => o.AccessTokenProvider = () => Task.FromResult(_auth.Session.Token)).WithAutomaticReconnect().Build();
+            _hub = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", o => o.AccessTokenProvider = ()
+                => Task.FromResult(_auth.Session.Token)).WithAutomaticReconnect().Build();
 
             SubscribeHubEvents();
             _hub.Reconnecting += OnReconnecting;
             _hub.Reconnected += OnReconnected;
-            await _hub.StartAsync(ct);
-            Log("Connected");
-            await LoadUnreadCountsAsync();
+
+            const int maxRetries = 10;
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    await _hub.StartAsync(ct);
+                    Log("Connected");
+                    await LoadUnreadCountsAsync();
+                    return;
+                }
+                catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                {
+                    Log($"Server not ready (503), retry {i + 1}/{maxRetries}...");
+                    if (i == maxRetries - 1) throw;
+                    await Task.Delay(2000, ct);
+                }
+            }
         }
-        catch { Volatile.Write(ref _connectState, 0); throw; }
+        catch (Exception ex)
+        {
+            Log($"Connect failed after retries: {ex.Message}");
+            Volatile.Write(ref _connectState, 0);
+            throw;
+        }
     }
 
     public async Task DisconnectAsync()
@@ -243,15 +263,19 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
         _subs.Add(_hub.On<NotificationDto>("ReceiveNotification", OnNotificationReceived));
 
-        _subs.Add(_hub.On<int>("UserOnline", id =>
-            PostUI(() => UserStatusChanged?.Invoke(new UserStatusDto(id, true, null, UserStatusType.Online, null)))));
+        _subs.Add(_hub.On<int>("UserOnline", id => Log($"UserOnline: {id}")));
 
         _subs.Add(_hub.On<int>("UserOffline", id =>
-            PostUI(() => UserStatusChanged?.Invoke(new UserStatusDto(id, false, DateTime.UtcNow, UserStatusType.Online, null)))));
+        {
+            Log($"UserOffline: {id}");
+            PostUI(() => UserStatusChanged?.Invoke(
+                new UserStatusDto(id, false, DateTime.UtcNow, UserStatusType.Online, null)));
+        }));
 
         _subs.Add(_hub.On<UserStatusDto>("UserStatusChanged", dto =>
         {
-            Log($"UserStatusChanged received: userId={dto.UserId}, status={dto.StatusType}, expires={dto.StatusExpiresAt}");
+            Log($"UserStatusChanged: userId={dto.UserId}, isOnline={dto.IsOnline}, " +
+                $"status={dto.StatusType}, expires={dto.StatusExpiresAt}");
             PostUI(() => UserStatusChanged?.Invoke(dto));
         }));
 

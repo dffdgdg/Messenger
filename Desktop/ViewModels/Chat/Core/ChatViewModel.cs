@@ -1,7 +1,6 @@
 ﻿using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Helpers;
-using Desktop.Infrastructure.Media;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Core;
@@ -10,6 +9,7 @@ using Desktop.ViewModels.Chat.Managers;
 using Desktop.ViewModels.Chat.Navigation;
 using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Dialog;
+using Shared.Dto.Call;
 using Shared.DTO.Call;
 using System;
 using System.Collections.Generic;
@@ -260,7 +260,18 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         var chatCommands = new ChatCommands
         {
-            OpenProfile = OpenProfileCommand
+            OpenProfile = OpenProfileCommand,
+            ShowPollResults = new AsyncRelayCommand<PollViewModel>(async vm =>
+            {
+                if (vm?.CurrentPollDto == null) return;
+                var dialog = new PollResultsDialogViewModel(
+                    vm.CurrentPollDto,
+                    Context.Members,
+                    Context.CurrentUserId,
+                    Context.Api);
+                await Context.Dialogs.ShowAsync(dialog);
+                await dialog.TriggerInitializeAsync();
+            })
         };
 
         MessageManager = new ChatMessageManager(Context, dependencies.Media, chatCommands, OpenMentionProfileCommand);

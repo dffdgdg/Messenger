@@ -6,7 +6,7 @@ public static class UserMappings
     {
         Id = user.Id,
         Username = user.Username,
-        DisplayName = user.FormatDisplayName(),
+        DisplayName = user.GetDisplayName(),
         Name = user.Name,
         Surname = user.Surname,
         Midname = user.Midname,
@@ -16,17 +16,11 @@ public static class UserMappings
         Theme = user.UserSetting?.Theme,
         NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
         IsOnline = isOnline ?? false,
+        StatusType = user.StatusType,
+        StatusExpiresAt = user.StatusExpiresAt,
         LastOnline = user.LastOnline,
         IsBanned = user.IsBanned
     };
-
-    public static string FormatDisplayName(this User user)
-    {
-        var parts = new[] { user.Surname, user.Name, user.Midname }.Where(p => !string.IsNullOrWhiteSpace(p));
-
-        var formatted = string.Join(" ", parts);
-        return string.IsNullOrWhiteSpace(formatted) ? user.Username : formatted;
-    }
 
     public static void UpdateProfile(this User user, UserDto dto)
     {

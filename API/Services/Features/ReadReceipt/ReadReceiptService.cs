@@ -66,7 +66,7 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
 
         var lastReadId = member.LastReadMessageId ?? 0;
 
-        var unreadInfo = await context.Messages.Where(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId).GroupBy(_ => 1).Select(g => new
+        var unreadInfo = await context.UserMessages.Where(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId).GroupBy(_ => 1).Select(g => new
         {
             Count = g.Count(),
             FirstId = g.Min(m => m.Id)
@@ -98,11 +98,8 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
         var counts = await context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => new
         {
             cm.ChatId,
-            UnreadCount = context.Messages.Count(m =>
-            m.ChatId == cm.ChatId
-            && m.Id > (cm.LastReadMessageId ?? 0)
-            && m.IsDeleted != true
-            && m.SenderId != userId)
+            UnreadCount = context.UserMessages.Count(m =>
+            m.ChatId == cm.ChatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true && m.SenderId != userId)
         }).Where(x => x.UnreadCount > 0).AsNoTracking().ToListAsync();
 
         var result = counts.ConvertAll(x => new UnreadCountDto(x.ChatId, x.UnreadCount));
@@ -121,9 +118,9 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
         var counts = await context.ChatMembers.Where(cm => cm.UserId == userId && chatIdList.Contains(cm.ChatId)).Select(cm => new
         {
             cm.ChatId,
-            UnreadCount = context.Messages.Count(m => m.ChatId == cm.ChatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true && m.SenderId != userId)
-        })
-            .AsNoTracking().ToDictionaryAsync(x => x.ChatId, x => x.UnreadCount);
+            UnreadCount = context.UserMessages.Count(m => m.ChatId == cm.ChatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true
+            && m.SenderId != userId)
+        }).AsNoTracking().ToDictionaryAsync(x => x.ChatId, x => x.UnreadCount);
 
         foreach (var chatId in chatIdList)
             counts.TryAdd(chatId, 0);
@@ -140,7 +137,7 @@ public partial class ReadReceiptService(MessengerDbContext context, AppDateTime 
     #region Private
 
     private async Task<int> CountUnreadAsync(int userId, int chatId, int lastReadId)
-        => await context.Messages.CountAsync(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId);
+        => await context.UserMessages.CountAsync(m => m.ChatId == chatId && m.Id > lastReadId && m.IsDeleted != true && m.SenderId != userId);
 
     private async Task<Result<int>> DetermineTargetMessageIdAsync(MarkAsReadDto request)
     {

@@ -5,7 +5,10 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(5274));
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Listen(System.Net.IPAddress.Any, 5274);
+});
 
 builder.Services.Configure<MessengerSettings>(builder.Configuration.GetSection(MessengerSettings.SectionName));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
@@ -16,19 +19,18 @@ builder.Services.AddMessengerDatabase(builder.Configuration, builder.Environment
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: RateLimitKey.GetIpPartitionKey(context),
-            factory: _ => new SlidingWindowRateLimiterOptions
-            {
-                PermitLimit = 100,
-                Window = TimeSpan.FromSeconds(10),
-                SegmentsPerWindow = 5,
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 5
-            }));
+        RateLimitPartition.GetSlidingWindowLimiter(RateLimitKey.GetIpPartitionKey(context),
+        factory: _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromSeconds(10),
+            SegmentsPerWindow = 5,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 5
+        }));
 
     options.AddPolicy("login", context => RateLimitPartition.GetSlidingWindowLimiter(
-        partitionKey: RateLimitKey.GetIpPartitionKey(context),
+        RateLimitKey.GetIpPartitionKey(context),
         factory: _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 5,
@@ -39,7 +41,7 @@ builder.Services.AddRateLimiter(options =>
         }));
 
     options.AddPolicy("upload", context => RateLimitPartition.GetSlidingWindowLimiter(
-        partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
+        RateLimitKey.GetUserOrIpPartitionKey(context),
         factory: _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 10,
@@ -50,20 +52,19 @@ builder.Services.AddRateLimiter(options =>
         }));
 
     options.AddPolicy("search", context => RateLimitPartition.GetSlidingWindowLimiter(
-        partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
-            factory: _ => new SlidingWindowRateLimiterOptions
-            {
-                PermitLimit = 15,
-                Window = TimeSpan.FromMinutes(1),
-                SegmentsPerWindow = 3,
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 0
-            }));
+        RateLimitKey.GetUserOrIpPartitionKey(context),
+        factory: _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 15,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 3,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        }));
 
-    options.AddPolicy("messaging", context =>
-        RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: RateLimitKey.GetUserOrIpPartitionKey(context),
-            factory: _ => new SlidingWindowRateLimiterOptions
+    options.AddPolicy("messaging", context => RateLimitPartition.GetSlidingWindowLimiter(
+        RateLimitKey.GetUserOrIpPartitionKey(context),
+        factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1),
@@ -105,51 +106,6 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
     await dbContext.Database.MigrateAsync();
 }
-
-_ = Task.Run(async () =>
-{
-    try
-    {
-        await Task.Delay(1500); // ждём пока app.Run поднимется
-        await using var scope = app.Services.CreateAsyncScope();
-        var ctx = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
-
-        // Прогреваем самые частые запросы (chatId=-1 вернёт 0 строк, но SQL скомпилируется)
-        await ctx.Messages
-            .Where(m => m.ChatId == -1 && m.IsDeleted != true)
-            .OrderBy(m => m.Id).Take(50)
-            .Include(m => m.Sender)
-            .Include(m => m.VoiceMessage)
-            .Include(m => m.MessageFiles)
-            .AsNoTracking()
-            .ToListAsync();
-
-        await ctx.Messages
-            .Where(m => m.ChatId == -1 && m.IsPinned && m.IsDeleted != true)
-            .Include(m => m.Sender)
-            .Include(m => m.VoiceMessage)
-            .Include(m => m.MessageFiles)
-            .AsNoTracking()
-            .ToListAsync();
-
-        await ctx.ChatMembers
-            .Where(cm => cm.UserId == -1 && cm.ChatId == -1)
-            .AsNoTracking()
-            .FirstOrDefaultAsync();
-
-        await ctx.ChatMembers
-            .Where(cm => cm.ChatId == -1)
-            .Include(cm => cm.User)
-            .AsNoTracking()
-            .ToListAsync();
-
-        app.Logger.LogInformation("EF query cache warmed up");
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "EF warmup failed (non-critical)");
-    }
-});
 
 if (app.Environment.IsDevelopment())
 {

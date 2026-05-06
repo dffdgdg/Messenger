@@ -536,7 +536,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private MessageViewModel CreateMessageViewModel(MessageDto msg, Dictionary<int, UserDto>? lookup = null)
     {
         lookup ??= GetMembersLookup();
-        lookup.TryGetValue(msg.SenderId, out var sender);
+        lookup.TryGetValue(msg.SenderId ?? 0, out var sender);
 
         msg.IsOwn = msg.SenderId == _userId;
 

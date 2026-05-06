@@ -7,10 +7,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 {
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking()
-            .OrderBy(u => u.Surname).ThenBy(u => u.Name).ToListAsync(ct);
-
-        return Result<List<UserDto>>.Success(users.ConvertAll(u => u.ToDto()));
+        var users = await ProjectToDto(_context.Users).OrderBy(u => u.Surname).ThenBy(u => u.Name).AsNoTracking().ToListAsync(ct);
+        return Result<List<UserDto>>.Success(users);
     }
 
     public async Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default)
@@ -66,10 +64,9 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         LogUserCreated(username, user.Id);
 
-        var created = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting)
-            .AsNoTracking().FirstAsync(u => u.Id == user.Id, ct);
+        var created = await ProjectToDto(_context.Users.Where(u => u.Id == user.Id)).AsNoTracking().FirstAsync(ct);
 
-        return Result<UserDto>.Success(created.ToDto());
+        return Result<UserDto>.Success(created);
     }
 
     public async Task<Result<UserDto>> UpdateUserAsync(int userId, UserDto dto, CancellationToken ct = default)
@@ -89,7 +86,7 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        var user = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {userId} не найден");
@@ -116,9 +113,9 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         LogUserUpdated(userId);
 
-        var updated = await _context.Users.Include(u => u.Department).Include(u => u.UserSetting).AsNoTracking().FirstAsync(u => u.Id == userId, ct);
+        var updated = await ProjectToDto(_context.Users.Where(u => u.Id == userId)).AsNoTracking().FirstAsync(ct);
 
-        return Result<UserDto>.Success(updated.ToDto());
+        return Result<UserDto>.Success(updated);
     }
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
@@ -131,7 +128,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         if (user.IsBanned)
         {
-            await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+            await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
         }
 
         var save = await SaveChangesAsync(ct);
@@ -154,7 +152,8 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
 
         user.Password.SetPassword(newPassword);
 
-        await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+        await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
@@ -162,6 +161,23 @@ public partial class AdminService(MessengerDbContext context, AppDateTime appDat
         LogPasswordReset(userId);
         return Result.Success();
     }
+
+    private static IQueryable<UserDto> ProjectToDto(IQueryable<Data.User> query) => query.Select(u => new UserDto
+    {
+        Id = u.Id,
+        Username = u.Username,
+        DisplayName = (u.Surname + " " + u.Name + (u.Midname != null ? " " + u.Midname : "")).Trim(),
+        Surname = u.Surname,
+        Name = u.Name,
+        Midname = u.Midname,
+        Avatar = u.Avatar,
+        DepartmentId = u.DepartmentId,
+        Department = u.Department != null ? u.Department.Name : null,
+        IsBanned = u.IsBanned,
+        LastOnline = u.LastOnline,
+        Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
+        NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled
+    });
 
     #region Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Создан пользователь {Username} (ID={UserId})")]

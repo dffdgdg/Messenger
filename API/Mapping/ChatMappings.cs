@@ -19,7 +19,7 @@ public static class ChatMappings
 
         if (chat.Type == ChatType.Contact && dialogPartner != null)
         {
-            dto.Name = dialogPartner.FormatDisplayName();
+            dto.Name = dialogPartner.GetDisplayName();
             dto.Avatar = dialogPartner.Avatar.BuildFullUrl(urlBuilder);
             dto.ContactUserId = dialogPartner.Id;
             dto.ContactStatusType = dialogPartner.StatusType;

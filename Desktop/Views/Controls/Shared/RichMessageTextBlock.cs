@@ -48,15 +48,10 @@ public class RichMessageTextBlock : TextBlock
     private string? _lastBuiltText;
 
     static RichMessageTextBlock()
-    {
-        // OnRichTextCreated убран отсюда — статический конструктор вызывается 1 раз за всё время
-        RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>((ctrl, _) => ctrl.RebuildInlines());
-    }
+        => RawTextProperty.Changed.AddClassHandler<RichMessageTextBlock>((ctrl, _) => ctrl.RebuildInlines());
 
     public RichMessageTextBlock()
-    {
-        MemoryDiagnostics.OnRichTextCreated(); // ← перенесено в экземплярный конструктор
-    }
+        => MemoryDiagnostics.OnRichTextCreated();
 
     private void RebuildInlines()
     {

@@ -1,8 +1,9 @@
-﻿using Shared.Dto.Call;
-using Shared.DTO.Call;
-using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
+using Shared.Dto.Call;
+using Shared.DTO.Call;
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -160,15 +161,21 @@ public sealed partial class CallHubConnection : ICallHubConnection
     {
         if (_hub.State != HubConnectionState.Disconnected) return;
 
-        try
+        const int maxRetries = 10;
+        for (int i = 0; i < maxRetries; i++)
         {
-            await _hub.StartAsync(ct);
-            LogConnected();
-        }
-        catch (Exception ex)
-        {
-            LogConnectionError(ex);
-            throw;
+            try
+            {
+                await _hub.StartAsync(ct);
+                LogConnected();
+                return;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                LogServerNotReady(i + 1, maxRetries);
+                if (i == maxRetries - 1) throw;
+                await Task.Delay(2000, ct);
+            }
         }
     }
 
@@ -276,6 +283,8 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Ошибка вызова {Method}")]
     private partial void LogInvokeError(string method, Exception ex);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "CallHub: сервер не готов (503), попытка {Attempt}/{MaxRetries}...")]
+    private partial void LogServerNotReady(int attempt, int maxRetries);
 
     #endregion
 }

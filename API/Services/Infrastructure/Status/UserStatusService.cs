@@ -7,55 +7,55 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
 {
     public async Task<Result> SetStatusAsync(int userId, UserStatusType status, TimeSpan? duration = null)
     {
-        var user = await db.Users.FindAsync(userId);
-        if (user is null)
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var expiresAt = duration.HasValue ? DateTime.SpecifyKind(now.Add(duration.Value), DateTimeKind.Unspecified)
+            : (DateTime?)null;
+
+        var updated = await db.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.StatusType, status).SetProperty(u => u.StatusExpiresAt, expiresAt));
+
+        if (updated == 0)
             return Result.NotFound($"Пользователь {userId} не найден");
 
-        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var user = await db.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline, u.StatusType, u.StatusExpiresAt })
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
-        user.StatusType = status;
-        user.StatusExpiresAt = duration.HasValue ? DateTime.SpecifyKind(now.Add(duration.Value), DateTimeKind.Unspecified) : null;
-
-        await db.SaveChangesAsync();
-
-        var dto = BuildDto(user);
-        await hubContext.Clients.All.SendAsync("UserStatusChanged", dto);
+        if (user is not null)
+        {
+            var dto = new UserStatusDto(user.Id, onlineUserService.IsOnline(user.Id), user.LastOnline, status, expiresAt);
+            await hubContext.Clients.All.SendAsync("UserStatusChanged", dto);
+        }
 
         LogStatusSet(userId, status, duration);
-
         return Result.Success();
     }
 
     public async Task<Result<UserStatusDto>> GetStatusAsync(int userId)
     {
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        var user = await db.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline, u.StatusType, u.StatusExpiresAt })
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user is null)
             return Result<UserStatusDto>.NotFound($"Пользователь {userId} не найден");
 
-        return Result<UserStatusDto>.Success(BuildDto(user));
+        var isOnline = onlineUserService.IsOnline(user.Id);
+
+        return Result<UserStatusDto>.Success(new UserStatusDto(
+            user.Id, isOnline, user.LastOnline,
+            isOnline ? user.StatusType : UserStatusType.Online,
+            user.StatusExpiresAt
+        ));
     }
+
 
     public async Task CleanupExpiredStatusesAsync()
     {
         var now = DateTime.SpecifyKind(timeProvider.GetUtcNow().DateTime, DateTimeKind.Unspecified);
 
-        var expired = await db.Users
-            .Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
-            .Select(u => new { u.Id })
-            .ToListAsync();
+        var count = await db.Users.Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.StatusType, UserStatusType.Online).SetProperty(u => u.StatusExpiresAt, (DateTime?)null));
 
-        foreach (var user in expired)
-        {
-            var entity = await db.Users.FindAsync(user.Id);
-            if (entity != null)
-            {
-                entity.StatusType = UserStatusType.Online;
-                entity.StatusExpiresAt = null;
-            }
-        }
-
-        await db.SaveChangesAsync();
+        if (count > 0)
+            LogStatusesCleanedUp(count);
     }
 
     private UserStatusDto BuildDto(Data.User user)

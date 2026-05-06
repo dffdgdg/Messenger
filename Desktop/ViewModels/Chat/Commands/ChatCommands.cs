@@ -17,4 +17,5 @@ public sealed class ChatCommands
     public ICommand? Reply { get; set; }
     public ICommand? ScrollToReply { get; set; }
     public ICommand? Forward { get; set; }
+    public ICommand? ShowPollResults { get; set; }
 }

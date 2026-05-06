@@ -443,8 +443,7 @@ public partial class ChatView : UserControl
         }
     }
 
-    private void WaitForStableExtentAndRestore(double targetOffsetY)
-    {
+    private void WaitForStableExtentAndRestore(double targetOffsetY) =>
         Dispatcher.UIThread.Post(() =>
         {
             if (_scrollViewer is null) return;
@@ -455,11 +454,8 @@ public partial class ChatView : UserControl
             _suppressScrollEvents = true;
             _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, targetOffset);
 
-            Dispatcher.UIThread.Post(
-                () => _suppressScrollEvents = false,
-                DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() => _suppressScrollEvents = false, DispatcherPriority.Background);
         }, DispatcherPriority.Render);
-    }
 
     private void SaveScrollState()
     {
@@ -663,7 +659,7 @@ public partial class ChatView : UserControl
             if (!ct.IsCancellationRequested)
                 action();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Ожидаемо */ }
     }
 
     #endregion

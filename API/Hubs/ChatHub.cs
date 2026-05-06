@@ -4,7 +4,7 @@ using System.Security.Claims;
 namespace API.Hubs;
 
 [Authorize]
-public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService, AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
+public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserService onlineUserService, AppDateTime appDateTime, ILogger<ChatHub> logger) : Hub
 {
     #region Connection Lifecycle
     public override async Task OnConnectedAsync()
@@ -24,20 +24,21 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
         var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
 
         var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
-
         var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
         await Task.WhenAll(joinTasks);
 
-        await Clients.Others.SendAsync("UserOnline", userId.Value);
-
         var statusResult = await statusService.GetStatusAsync(userId.Value);
         if (statusResult.TryUnwrap(out var statusDto, logger))
-            await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
-
-        if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Пользователь {UserId} подключился, чатов: {ChatCount}", userId.Value, chatIds.Count);
+            await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
+            await Clients.Others.SendAsync("UserStatusChanged", statusDto);
         }
+        else
+        {
+            await Clients.Others.SendAsync("UserOnline", userId.Value);
+        }
+
+        LogUserConnected(userId.Value, chatIds.Count);
 
         await base.OnConnectedAsync();
     }
@@ -253,5 +254,10 @@ public sealed class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUserServic
     private int GetRequiredUserId()
         => GetCurrentUserId() ?? throw new HubException("Пользователь не аутентифицирован");
 
+    #endregion
+
+    #region Log
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} подключился, чатов: {ChatCount}")]
+    private partial void LogUserConnected(int userId, int chatCount);
     #endregion
 }

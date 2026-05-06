@@ -7,7 +7,7 @@ public class Poll
     public bool? IsAnonymous { get; set; }
     public bool? AllowsMultipleAnswers { get; set; }
     public DateTime? ClosesAt { get; set; }
-    public virtual Message Message { get; set; } = null!;
+    public virtual UserMessage? Message { get; set; }
     public virtual ICollection<PollOption> PollOptions { get; set; } = [];
     public virtual ICollection<PollVote> PollVotes { get; set; } = [];
 }

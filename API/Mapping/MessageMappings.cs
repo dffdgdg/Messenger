@@ -9,48 +9,70 @@ public static class MessageMappings
     public static MessageDto ToDto(this Message message, int? currentUserId = null, IUrlBuilder? urlBuilder = null)
     {
         var isDeleted = message.IsDeleted ?? false;
-        var isSystem = message.IsSystemMessage;
-        var isPinnedAndVisible = message.IsPinned && !isDeleted;
-        var senderName = message.Sender?.FormatDisplayName();
-        var targetUserName = isSystem ? message.TargetUser?.FormatDisplayName() : null;
-        var forwardedSource = message.ForwardedFromMessage;
-        var voice = message.VoiceMessage ?? forwardedSource?.VoiceMessage;
-        var resolvedFiles = message.MessageFiles?.Count > 0 ? message.MessageFiles : forwardedSource?.MessageFiles;
-        var resolvedPoll = message.Polls?.FirstOrDefault() ?? forwardedSource?.Polls?.FirstOrDefault();
-        var resolvedContent = !string.IsNullOrWhiteSpace(message.Content) ? message.Content : forwardedSource?.Content;
+        var isPinnedAndVisible = message.PinnedAt != null && !isDeleted;
+
+        if (message is SystemMessage sys)
+        {
+            var initiatorName = sys.Initiator?.GetDisplayName();
+            var targetName = sys.TargetUser?.GetDisplayName();
+
+            return new MessageDto
+            {
+                Id = sys.Id,
+                ChatId = sys.ChatId,
+                SenderId = sys.InitiatorId,
+                Content = SystemMessageFormatter.Format(sys.SystemEventType, initiatorName, targetName, sys.Content),
+                CreatedAt = sys.CreatedAt,
+                IsDeleted = isDeleted,
+                IsSystemMessage = true,
+                SystemEventType = sys.SystemEventType,
+                TargetUserId = sys.TargetUserId,
+                TargetUserName = targetName,
+                SenderName = initiatorName,
+                IsPinned = isPinnedAndVisible,
+                PinnedAt = isPinnedAndVisible ? sys.PinnedAt : null,
+                PinnedByUserId = isPinnedAndVisible ? sys.PinnedByUserId : null,
+                IsOwn = false,
+                Files = [],
+            };
+        }
+
+        var user = (UserMessage)message;
+        var senderName = user.Sender?.GetDisplayName();
+        var forwardedSource = user.ForwardedFromMessage;
+        var voice = user.VoiceMessage ?? forwardedSource?.VoiceMessage;
+        var resolvedFiles = user.MessageFiles?.Count > 0 ? user.MessageFiles : forwardedSource?.MessageFiles;
+        var resolvedPoll = user.Poll ?? forwardedSource?.Poll;
+        var resolvedContent = !string.IsNullOrWhiteSpace(user.Content) ? user.Content : forwardedSource?.Content;
 
         return new MessageDto
         {
-            Id = message.Id,
-            ChatId = message.ChatId,
-            SenderId = message.SenderId,
-            Content = ResolveContent(message, isDeleted, isSystem, senderName, targetUserName, resolvedContent),
-            CreatedAt = message.CreatedAt,
-            EditedAt = message.EditedAt,
-            IsEdited = message.EditedAt.HasValue && !isDeleted && !isSystem,
+            Id = user.Id,
+            ChatId = user.ChatId,
+            SenderId = user.SenderId,
+            Content = isDeleted ? DeletedMessagePlaceholder : resolvedContent ?? string.Empty,
+            CreatedAt = user.CreatedAt,
+            EditedAt = user.EditedAt,
+            IsEdited = user.EditedAt.HasValue && !isDeleted,
             IsDeleted = isDeleted,
+            IsSystemMessage = false,
             IsPinned = isPinnedAndVisible,
-            PinnedAt = isPinnedAndVisible ? message.PinnedAt : null,
-            PinnedByUserId = isPinnedAndVisible ? message.PinnedByUserId : null,
+            PinnedAt = isPinnedAndVisible ? user.PinnedAt : null,
+            PinnedByUserId = isPinnedAndVisible ? user.PinnedByUserId : null,
             SenderName = senderName,
-            SenderAvatarUrl = message.Sender?.Avatar.BuildFullUrl(urlBuilder),
-            IsOwn = !isSystem && currentUserId.HasValue && message.SenderId == currentUserId,
-            IsSystemMessage = isSystem,
-            SystemEventType = isSystem ? message.SystemEventType : null,
-            TargetUserId = isSystem ? message.TargetUserId : null,
-            TargetUserName = targetUserName,
+            SenderAvatarUrl = user.Sender?.Avatar.BuildFullUrl(urlBuilder),
+            IsOwn = currentUserId.HasValue && user.SenderId == currentUserId,
 
-            ReplyToMessageId = message.ReplyToMessageId,
-            ForwardedFromMessageId = message.ForwardedFromMessageId,
-            ReplyToMessage = message.ReplyToMessage?.ToReplyPreviewDto(),
-            ForwardedFrom = message.ForwardedFromMessage?.ToForwardInfoDto(),
+            ReplyToMessageId = user.ReplyToMessageId,
+            ForwardedFromMessageId = user.ForwardedFromMessageId,
+            ReplyToMessage = user.ReplyToMessage?.ToReplyPreviewDto(),
+            ForwardedFrom = user.ForwardedFromMessage?.ToForwardInfoDto(),
 
             IsVoiceMessage = voice != null,
             VoiceDurationSeconds = voice?.DurationSeconds,
             VoiceWaveform = voice?.Waveform,
             VoiceFileUrl = isDeleted ? null : voice?.FilePath.BuildFullUrl(urlBuilder),
-            VoiceFileName = voice?.FileName,
-            VoiceContentType = voice?.ContentType,
+            //VoiceFileName = voice?.FileName,
             VoiceFileSize = voice?.FileSize,
 
             Files = isDeleted ? [] : resolvedFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
@@ -62,31 +84,55 @@ public static class MessageMappings
     {
         var isDeleted = message.IsDeleted ?? false;
 
+        if (message is UserMessage user)
+        {
+            return new MessageReplyPreviewDto
+            {
+                Id = user.Id,
+                ChatId = user.ChatId,
+                SenderId = user.SenderId,
+                SenderName = user.Sender?.GetDisplayName(),
+                Content = isDeleted ? DeletedMessagePlaceholder : user.Content,
+                CreatedAt = user.CreatedAt,
+                IsDeleted = isDeleted
+            };
+        }
+
+        var sys = (SystemMessage)message;
         return new MessageReplyPreviewDto
         {
-            Id = message.Id,
-            ChatId = message.ChatId,
-            SenderId = message.SenderId,
-            SenderName = message.Sender?.FormatDisplayName(),
-            Content = isDeleted ? DeletedMessagePlaceholder : message.Content,
-            CreatedAt = message.CreatedAt,
+            Id = sys.Id,
+            ChatId = sys.ChatId,
+            SenderId = sys.InitiatorId,
+            SenderName = sys.Initiator?.GetDisplayName(),
+            Content = SystemMessageFormatter.Format(sys.SystemEventType, sys.Initiator?.GetDisplayName(), sys.TargetUser?.GetDisplayName(), sys.Content),
+            CreatedAt = sys.CreatedAt,
             IsDeleted = isDeleted
         };
     }
 
-    public static MessageForwardInfoDto ToForwardInfoDto(this Message message) => new()
+    public static MessageForwardInfoDto ToForwardInfoDto(this Message message)
     {
-        OriginalMessageId = message.Id,
-        OriginalChatId = message.ChatId,
-        OriginalSenderId = message.SenderId,
-        OriginalSenderName = message.Sender?.FormatDisplayName(),
-        OriginalCreatedAt = message.CreatedAt
-    };
+        if (message is UserMessage user)
+        {
+            return new MessageForwardInfoDto
+            {
+                OriginalMessageId = user.Id,
+                OriginalChatId = user.ChatId,
+                OriginalSenderId = user.SenderId,
+                OriginalSenderName = user.Sender?.GetDisplayName(),
+                OriginalCreatedAt = user.CreatedAt
+            };
+        }
 
-    private static string ResolveContent(Message message, bool isDeleted, bool isSystem, string? senderName, string? targetName, string? resolvedContent)
-    {
-        if (isDeleted) return DeletedMessagePlaceholder;
-        if (isSystem) return SystemMessageFormatter.Format(message.SystemEventType, senderName, targetName, message.Content);
-        return resolvedContent ?? string.Empty;
+        var sys = (SystemMessage)message;
+        return new MessageForwardInfoDto
+        {
+            OriginalMessageId = sys.Id,
+            OriginalChatId = sys.ChatId,
+            OriginalSenderId = sys.InitiatorId,
+            OriginalSenderName = sys.Initiator?.GetDisplayName(),
+            OriginalCreatedAt = sys.CreatedAt
+        };
     }
 }

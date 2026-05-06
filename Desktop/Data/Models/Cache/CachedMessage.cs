@@ -8,7 +8,7 @@ public class CachedMessage
 {
     [SQLite.PrimaryKey][SQLite.Column("id")] public int Id { get; set; }
     [SQLite.Indexed][SQLite.Column("chat_id")] public int ChatId { get; set; }
-    [SQLite.Indexed][SQLite.Column("sender_id")] public int SenderId { get; set; }
+    [SQLite.Indexed][SQLite.Column("sender_id")] public int? SenderId { get; set; }
     [SQLite.Column("content")] public string? Content { get; set; }
     [SQLite.Column("created_at")] public long CreatedAtTicks { get; set; }
     [SQLite.Column("edited_at")] public long? EditedAtTicks { get; set; }

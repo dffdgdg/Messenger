@@ -1,4 +1,3 @@
-using Shared.Dto.Poll;
 using System;
 
 namespace Desktop.ViewModels.Chat;
@@ -20,20 +19,33 @@ public partial class PollOptionViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(VotesFraction))]
     public partial double VotesPercentage { get; set; }
 
-    public double VotesFraction => TotalVotes == 0 ? 0 : (double)VotesCount / TotalVotes;
-    private int TotalVotes => _pollViewModel.TotalVotes;
+    [ObservableProperty]
+    public partial bool CanVote { get; set; }
+
+    public double VotesFraction => _pollViewModel.TotalVotes == 0 ? 0 : (double)VotesCount / _pollViewModel.TotalVotes;
+
     public bool AllowsMultipleAnswers => _pollViewModel.AllowsMultipleAnswers;
 
     public int Id => _option.Id;
     public string OptionText => _option.Text;
     public int Position => _option.Position;
-    public bool CanVote => _pollViewModel.CanVote;
 
     public void UpdateVotes(int newVotesCount)
     {
         VotesCount = newVotesCount;
-        VotesPercentage = TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / TotalVotes * 100.0, 1);
+        VotesPercentage = _pollViewModel.TotalVotes == 0
+            ? 0
+            : Math.Round((double)VotesCount / _pollViewModel.TotalVotes * 100.0, 1);
+        OnPropertyChanged(nameof(VotesFraction));
     }
+
+    public void NotifyTotalVotesChanged()
+    {
+        VotesPercentage = _pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / _pollViewModel.TotalVotes * 100.0, 1);
+        OnPropertyChanged(nameof(VotesFraction));
+    }
+
+    public void NotifyCanVoteChanged(bool canVote) => CanVote = canVote;
 
     [RelayCommand]
     private void ToggleSelection() => IsSelected = !IsSelected;
@@ -44,6 +56,9 @@ public partial class PollOptionViewModel : ObservableObject
         _pollViewModel = pollViewModel;
         VotesCount = option.VotesCount;
         IsSelected = false;
-        VotesPercentage = TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / TotalVotes * 100.0, 1);
+        CanVote = pollViewModel.CanVote;
+        VotesPercentage = pollViewModel.TotalVotes == 0
+            ? 0
+            : Math.Round((double)VotesCount / pollViewModel.TotalVotes * 100.0, 1);
     }
 }

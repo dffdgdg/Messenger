@@ -111,9 +111,13 @@ public partial class UserService(MessengerDbContext context, IFileService fileSe
 
     public async Task<Result<UserStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline }).FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline, u.StatusType, u.StatusExpiresAt })
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-        return Result<UserStatusDto>.Success(new UserStatusDto(userId, onlineService.IsOnline(userId), user?.LastOnline));
+        var isOnline = onlineService.IsOnline(userId);
+
+        return Result<UserStatusDto>.Success(new UserStatusDto(userId, isOnline, user?.LastOnline, isOnline ? user?.StatusType
+            ?? UserStatusType.Online : UserStatusType.Online, user?.StatusExpiresAt));
     }
 
     public async Task<Result<List<UserStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)

@@ -267,8 +267,8 @@ public partial class AvatarControl : UserControl
         SourceProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
         DisplayNameProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
         FallbackIconProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());
-        IsOnlineProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateOnlineStatus());
-        ShowOnlineIndicatorProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateOnlineStatus());
+        IsOnlineProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateStatusColor());
+        ShowOnlineIndicatorProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateStatusColor());
         SizeProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.OnSizeChanged());
         IsCircularProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateCornerRadius());
         ImageBitmapProperty.Changed.AddClassHandler<AvatarControl>((x, _) => x.UpdateComputedProperties());

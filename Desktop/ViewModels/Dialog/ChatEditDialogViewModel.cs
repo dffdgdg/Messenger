@@ -292,8 +292,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             if (SaveAction == null) { await RequestCloseAsync(); return; }
 
             _avatarStream?.Seek(0, SeekOrigin.Begin);
-            if (await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds],
-                    _avatarStream, _avatarFileName, _isAvatarRemoved))
+            if (await SaveAction(chatDto, GetSelectedUserIds(), [.. SelectedAdminIds], _avatarStream, _avatarFileName, _isAvatarRemoved))
             {
                 SuccessMessage = IsNewChat ? "Группа создана" : "Группа обновлена";
                 await RequestCloseAsync();

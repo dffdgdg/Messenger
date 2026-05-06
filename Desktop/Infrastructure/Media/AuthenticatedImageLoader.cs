@@ -20,16 +20,14 @@ public sealed class AuthenticatedImageLoader : IDisposable
     private readonly string _apiBaseUrl;
     private readonly string _cacheDirectory;
 
-    // Кэш сырых байтов (LRU)
     private readonly LinkedList<(string Key, byte[] Data)> _lruList = new();
     private readonly Dictionary<string, LinkedListNode<(string Key, byte[] Data)>> _lruMap = [];
     private readonly Lock _lruLock = new();
     private const int MaxRamCacheItems = 80;
     private long _ramCacheBytes;
     private const long MaxRamCacheBytes = 30L * 1024 * 1024; // 30 MB
-    private const long LohThresholdBytes = 85 * 1024; // 85 KB — порог LOH ←
+    private const long LohThresholdBytes = 85 * 1024; // 85 KB — порог LOH
 
-    // Кэш выполняющихся задач, чтобы не качать одно и то же
     private readonly Dictionary<string, Task<byte[]?>> _inflight = [];
 
     private static readonly HashSet<string> ImageExtensions
@@ -45,9 +43,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
             "Desktop", "ImageCache");
         Directory.CreateDirectory(_cacheDirectory);
 
-        // ← Регистрируем в диагностике
-        MemoryDiagnostics.RegisterImageLoader(
-            getStats: () => { lock (_lruLock) return (_lruMap.Count, _ramCacheBytes); },
+        MemoryDiagnostics.RegisterImageLoader(getStats: () => { lock (_lruLock) return (_lruMap.Count, _ramCacheBytes); },
             clearCache: ClearCache);
         MemoryDiagnostics.RegisterDiskCacheDir(_cacheDirectory);
     }
@@ -115,7 +111,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
             {
                 try
                 {
-                    MemoryDiagnostics.OnImageDiskHit(); // ← счётчик
+                    MemoryDiagnostics.OnImageDiskHit();
                     data = await File.ReadAllBytesAsync(diskPath, ct);
                     lock (_lruLock)
                         PutToRamCacheUnsafe(url, data);
@@ -149,7 +145,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
         return data;
     }
 
-    #region RAM Cache (только byte[])
+    #region RAM Cache
 
     private byte[]? GetFromRamCacheUnsafe(string url)
     {
@@ -161,7 +157,6 @@ public sealed class AuthenticatedImageLoader : IDisposable
 
     private void PutToRamCacheUnsafe(string url, byte[] data)
     {
-        // ← Не кэшируем большие массивы в RAM (LOH), только на диск
         if (data.Length >= LohThresholdBytes)
         {
             MemoryDiagnostics.OnImageLargeSkipped();
@@ -171,23 +166,20 @@ public sealed class AuthenticatedImageLoader : IDisposable
         if (_lruMap.TryGetValue(url, out var existing))
         {
             _ramCacheBytes -= existing.Value.Data.Length;
-            MemoryDiagnostics.OnImageRamCacheEvict(existing.Value.Data.Length); // ←
+            MemoryDiagnostics.OnImageRamCacheEvict(existing.Value.Data.Length);
             _lruList.Remove(existing);
             _lruMap.Remove(url);
         }
 
-        var node = _lruList.AddFirst((url, data));
-        _lruMap[url] = node;
+        _lruMap[url] = _lruList.AddFirst((url, data));
         _ramCacheBytes += data.Length;
-        MemoryDiagnostics.OnImageRamCachePut(data.Length); // ←
+        MemoryDiagnostics.OnImageRamCachePut(data.Length);
 
-        while ((_lruList.Count > MaxRamCacheItems ||
-                _ramCacheBytes > MaxRamCacheBytes)
-               && _lruList.Last != null)
+        while ((_lruList.Count > MaxRamCacheItems || _ramCacheBytes > MaxRamCacheBytes) && _lruList.Last != null)
         {
             var last = _lruList.Last!;
             _ramCacheBytes -= last.Value.Data.Length;
-            MemoryDiagnostics.OnImageRamCacheEvict(last.Value.Data.Length); // ←
+            MemoryDiagnostics.OnImageRamCacheEvict(last.Value.Data.Length);
             _lruMap.Remove(last.Value.Key);
             _lruList.RemoveLast();
         }
@@ -209,12 +201,10 @@ public sealed class AuthenticatedImageLoader : IDisposable
                     Debug.WriteLine($"[AuthImageLoader] No token for: {GetFileName(url)}");
                     return null;
                 }
-                request.Headers.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
 
-            using var response = await _httpClient
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -230,7 +220,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
                 return null;
             }
 
-            MemoryDiagnostics.OnImageNetworkFetch(); // ← счётчик
+            MemoryDiagnostics.OnImageNetworkFetch();
             return await response.Content.ReadAsByteArrayAsync(ct);
         }
         catch (OperationCanceledException) { return null; }
@@ -250,10 +240,8 @@ public sealed class AuthenticatedImageLoader : IDisposable
     {
         lock (_lruLock)
         {
-            MemoryDiagnostics.OnImageCacheCleared(_lruMap.Count, _ramCacheBytes); // ← до очистки
-            Debug.WriteLine(
-                $"[AuthImageLoader] Clear: bytes={_lruMap.Count}, " +
-                $"ram={_ramCacheBytes / 1024 / 1024}MB");
+            MemoryDiagnostics.OnImageCacheCleared(_lruMap.Count, _ramCacheBytes);
+            Debug.WriteLine($"[AuthImageLoader] Clear: bytes={_lruMap.Count}, ram={_ramCacheBytes / 1024 / 1024}MB");
 
             _lruList.Clear();
             _lruMap.Clear();
@@ -266,8 +254,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
 
     private string GetDiskCachePath(string url, string ext)
     {
-        var hash = Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(url)))[..16];
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url)))[..16];
         if (string.IsNullOrEmpty(ext)) ext = ".img";
         return Path.Combine(_cacheDirectory, $"{hash}{ext}");
     }

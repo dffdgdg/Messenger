@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace Desktop.ViewModels.Chat;
 
@@ -11,18 +12,31 @@ public partial class PollViewModel : BaseViewModel
     private readonly IApiClientService _apiClient;
 
     public event Action<PollDto>? ServerStateApplied;
+
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
-    [ObservableProperty] public partial bool CanVote { get; set; } = true;
-    [ObservableProperty] public partial bool IsAnonymous { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
+    public partial bool IsAnonymous { get; set; }
     [ObservableProperty] public partial int TotalVotes { get; set; }
     [ObservableProperty] public partial bool HasVoted { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
+    public partial bool CanVote { get; set; } = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
+    public partial bool IsClosed { get; set; }
+    public event Action<PollViewModel>? ShowResultsRequested;
+    [ObservableProperty]
+    public partial bool CanClose { get; set; }
 
     public int PollId { get; }
     public int UserId { get; }
     public bool HasSelection => Options.Any(o => o.IsSelected);
+    public bool ShowResultsButton => !IsAnonymous && (!CanVote || IsClosed);
+    public PollDto? CurrentPollDto { get; private set; }
 
-    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient)
+    public PollViewModel(PollDto poll, int userId, IApiClientService apiClient, int? pollOwnerId = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
 
@@ -30,40 +44,42 @@ public partial class PollViewModel : BaseViewModel
         UserId = userId;
         AllowsMultipleAnswers = poll.AllowsMultipleAnswers;
         IsAnonymous = poll.IsAnonymous;
+
+        CanVote = poll.CanVote;
+        HasVoted = !poll.CanVote;
         TotalVotes = poll.Options.Sum(o => o.VotesCount);
+
+        CurrentPollDto = poll;
+        IsClosed = ComputeIsClosed(poll.ClosesAt);
+        CanClose = !IsClosed && userId == pollOwnerId;
 
         Options = new ObservableCollection<PollOptionViewModel>(poll.Options.Select(o => new PollOptionViewModel(o, this)));
 
         foreach (var opt in Options)
-        {
             opt.PropertyChanged += OnOptionPropertyChanged;
-        }
 
         ApplySelectedOptions(poll.SelectedOptionIds);
-        CanVote = poll.CanVote;
-        HasVoted = !poll.CanVote;
     }
+
+    [RelayCommand]
+    private void ShowResults() => ShowResultsRequested?.Invoke(this);
+    private static bool ComputeIsClosed(DateTime? closesAt)
+        => closesAt <= DateTime.UtcNow;
 
     private void OnOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(PollOptionViewModel.IsSelected))
-        {
             return;
-        }
 
         OnPropertyChanged(nameof(HasSelection));
 
         if (sender is not PollOptionViewModel { IsSelected: true } changed)
-        {
             return;
-        }
 
         if (!AllowsMultipleAnswers)
         {
             foreach (PollOptionViewModel? opt in Options.Where(o => o != changed && o.IsSelected))
-            {
                 opt.IsSelected = false;
-            }
         }
     }
 
@@ -73,6 +89,31 @@ public partial class PollViewModel : BaseViewModel
         if (option == null || !CanVote)
             return;
         option.IsSelected = !option.IsSelected;
+    }
+
+    [RelayCommand]
+    private async Task ClosePoll()
+    {
+        await SafeExecuteAsync(async () =>
+        {
+            var result = await _apiClient.PostAsync<object, PollDto>(
+                ApiEndpoints.Polls.Close(PollId), new { });
+
+            if (result is { Success: true, Data: not null })
+            {
+                ApplyDto(result.Data);
+                ServerStateApplied?.Invoke(result.Data);
+            }
+            else
+            {
+                ErrorMessage = result?.Error ?? "Ошибка завершения опроса";
+            }
+        });
+    }
+    partial void OnCanVoteChanged(bool value)
+    {
+        System.Diagnostics.Debug.WriteLine(
+            $"[PollVM] pollId={PollId} CanVote={value} IsAnonymous={IsAnonymous} ShowResultsButton={ShowResultsButton}");
     }
 
     public void ApplyDto(PollDto dto)
@@ -85,13 +126,22 @@ public partial class PollViewModel : BaseViewModel
 
         CanVote = dto.CanVote;
         HasVoted = !dto.CanVote;
+
+        CurrentPollDto = dto;
+        IsClosed = ComputeIsClosed(dto.ClosesAt);
+
+        foreach (var opt in Options)
+        {
+            opt.NotifyTotalVotesChanged();
+            opt.NotifyCanVoteChanged(dto.CanVote);
+        }
     }
 
     private void UpdateOptions(List<PollOptionDto> optionDtos)
     {
-        foreach (PollOptionDto optDto in optionDtos)
+        foreach (var optDto in optionDtos)
         {
-            PollOptionViewModel? vm = Options.FirstOrDefault(o => o.Id == optDto.Id);
+            var vm = Options.FirstOrDefault(o => o.Id == optDto.Id);
             if (vm != null)
             {
                 vm.UpdateVotes(optDto.VotesCount);

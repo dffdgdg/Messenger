@@ -658,7 +658,8 @@
 														<controls:AvatarControl Classes="Medium"
 																				Source="{Binding Avatar}"
 																				DisplayName="{Binding DisplayName}"
-																				IsOnline="{Binding IsOnline}"/>
+																				IsOnline="{Binding IsOnline}"
+																				StatusType="{Binding StatusType}"/>
 														<StackPanel Grid.Column="1"
 																	VerticalAlignment="Center"
 																	Margin="10,0,0,0"
@@ -977,7 +978,8 @@
 														<controls:AvatarControl Classes="Medium"
 																				Source="{Binding Avatar}"
 																				DisplayName="{Binding DisplayName}"
-																				IsOnline="{Binding IsOnline}"/>
+																				IsOnline="{Binding IsOnline}"
+																				StatusType="{Binding StatusType}"/>
 														<StackPanel Grid.Column="1"
 																	VerticalAlignment="Center"
 																	Margin="10,0,0,0"

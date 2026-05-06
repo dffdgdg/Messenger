@@ -50,9 +50,6 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
         ApplyFilter();
     }
 
-    /// <summary>
-    /// Конструктор для single-select (замена SelectUserDialog)
-    /// </summary>
     public UserPickerDialogViewModel(string title, IEnumerable<UserDto> users, string? emptyMessage = null)
     {
         Title = title;

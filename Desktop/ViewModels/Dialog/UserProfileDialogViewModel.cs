@@ -12,7 +12,6 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
     [ObservableProperty] public partial UserDto User { get; set; }
 
     [ObservableProperty] public partial Bitmap? AvatarBitmap { get; set; }
-
     [ObservableProperty] public partial string Department { get; set; } = string.Empty;
 
     /// <summary>

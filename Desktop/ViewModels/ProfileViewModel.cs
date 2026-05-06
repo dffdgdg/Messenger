@@ -148,6 +148,9 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         User = r.Data;
         RefreshAvatarUrl();
         await LoadAvatarAsync();
+        var statusResult = await _api.GetAsync<UserStatusDto>(ApiEndpoints.Users.Status(UserId));
+        if (statusResult.Success && statusResult.Data is not null)
+            OnUserStatusChanged(statusResult.Data);
     });
 
     private async Task LoadAvatarAsync()
@@ -220,6 +223,7 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             }
         });
     }
+
     private void OnUserStatusChanged(UserStatusDto status)
     {
         if (status.UserId != UserId) return;
@@ -260,6 +264,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             "DnD2h" => (UserStatusType.DoNotDisturb, "2h"),
             _ => (UserStatusType.Online, (string?)null)
         };
+
+        OnUserStatusChanged(new UserStatusDto(UserId, true, null, status, null));
 
         await _globalHub.SetStatusAsync(status, duration);
     }

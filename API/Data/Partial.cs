@@ -14,6 +14,7 @@ public partial class Chat
 {
     public ChatType Type { get; set; }
 }
+
 public partial class User
 {
     [NotMapped]
@@ -26,12 +27,5 @@ public partial class User
         }
     }
 
-    public static string FormatDisplayNameStatic(string? surname, string? name, string? midname)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(surname)) parts.Add(surname);
-        if (!string.IsNullOrWhiteSpace(name)) parts.Add(name);
-        if (!string.IsNullOrWhiteSpace(midname)) parts.Add(midname);
-        return parts.Count > 0 ? string.Join(" ", parts) : "Без имени";
-    }
+    public string GetDisplayName() => DisplayName ?? Username ?? "Без имени";
 }

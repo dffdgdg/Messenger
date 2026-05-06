@@ -1,10 +1,13 @@
 ﻿using API.Services.Base;
+using API.Services.Infrastructure.Bundles;
 
 namespace API.Services.User;
 
-public partial class AdminService(MessengerDbContext context, AppDateTime appDateTime, ILogger<AdminService> logger)
+public partial class AdminService(MessengerDbContext context, TimeBundle time, ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
+    private readonly AppDateTime appDateTime = time.AppDateTime;
+
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
         var users = await ProjectToDto(_context.Users).OrderBy(u => u.Surname).ThenBy(u => u.Name).AsNoTracking().ToListAsync(ct);

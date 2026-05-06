@@ -449,7 +449,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         {
             _boundPollVm.ServerStateApplied -= OnPollServerStateApplied;
             _boundPollVm.PropertyChanged -= OnBoundPollPropertyChanged;
-            _boundPollVm.ShowResultsRequested -= OnShowResultsRequested; // добавить
+            _boundPollVm.ShowResultsRequested -= OnShowResultsRequested;
         }
 
         _boundPollVm = pollViewModel;
@@ -458,14 +458,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         {
             _boundPollVm.ServerStateApplied += OnPollServerStateApplied;
             _boundPollVm.PropertyChanged += OnBoundPollPropertyChanged;
-            _boundPollVm.ShowResultsRequested += OnShowResultsRequested; // добавить
+            _boundPollVm.ShowResultsRequested += OnShowResultsRequested;
         }
     }
 
-    private void OnShowResultsRequested(PollViewModel vm)
-    {
-        Commands?.ShowPollResults?.Execute(vm);
-    }
+    private void OnShowResultsRequested(PollViewModel vm) => Commands?.ShowPollResults?.Execute(vm);
 
     private void OnBoundPollPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {

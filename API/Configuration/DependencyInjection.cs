@@ -5,6 +5,7 @@ using API.Services.Core.Auth;
 using API.Services.Department;
 using API.Services.Features.Chat;
 using API.Services.Infrastructure;
+using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Database;
 using API.Services.Infrastructure.Network;
 using API.Services.Infrastructure.Status;
@@ -59,6 +60,23 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IHubNotifier, HubNotifier>();
         services.AddScoped<IUrlBuilder, HttpUrlBuilder>();
+        services.AddBundles();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Регистрация универсальных бандлов
+    /// </summary>
+    private static IServiceCollection AddBundles(this IServiceCollection services)
+    {
+        services.AddScoped<TimeBundle>();
+        services.AddScoped<UrlBundle>();
+        services.AddScoped<CacheBundle>();
+        services.AddScoped<NotificationBundle>();
+        services.AddScoped<MediaBundle>();
+        services.AddScoped<PresenceBundle>();
+        services.AddScoped<ChatBundle>();
 
         return services;
     }

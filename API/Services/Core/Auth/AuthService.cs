@@ -1,4 +1,5 @@
 ﻿using API.Services.Base;
+using API.Services.Infrastructure.Bundles;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -13,13 +14,13 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     private readonly string _dummyHash;
     private const int MaxActiveSessions = 5;
 
-    public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings, IOptions<JwtSettings> jwtSettings, AppDateTime appDateTime, ILogger<AuthService> logger)
-        : base(context, logger)
+    public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings,
+        IOptions<JwtSettings> jwtSettings, TimeBundle time, ILogger<AuthService> logger) : base(context, logger)
     {
         _tokenService = tokenService;
         _settings = settings.Value;
         _jwtSettings = jwtSettings;
-        _appDateTime = appDateTime;
+        _appDateTime = time.AppDateTime;
         _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
     }
 

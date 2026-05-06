@@ -1,7 +1,11 @@
-﻿namespace API.Services.ReadReceipt;
+﻿using API.Services.Infrastructure.Bundles;
 
-public partial class ReadReceiptService(MessengerDbContext context, AppDateTime appDateTime, ILogger<ReadReceiptService> logger) : IReadReceiptService
+namespace API.Services.ReadReceipt;
+
+public partial class ReadReceiptService(MessengerDbContext context, TimeBundle time, ILogger<ReadReceiptService> logger) : IReadReceiptService
 {
+    private readonly AppDateTime appDateTime = time.AppDateTime;
+
     public async Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(int userId, MarkAsReadDto request)
     {
         var member = await context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == request.ChatId && cm.UserId == userId);

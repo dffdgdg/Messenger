@@ -1,11 +1,17 @@
 ﻿using API.Services.Base;
+using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 
 namespace API.Services.Chat;
 
-public sealed partial class ChatMemberService(MessengerDbContext context, ICacheService cache, IAccessControlService accessControl, ISystemMessageService systemMessages,
-    AppDateTime appDateTime, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
+public sealed partial class ChatMemberService(MessengerDbContext context, ChatBundle chat, ILogger<ChatMemberService> logger)
+    : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
+    private readonly ICacheService cache = chat.Cache.CacheService;
+    private readonly IAccessControlService accessControl = chat.Cache.AccessControl;
+    private readonly ISystemMessageService systemMessages = chat.SystemMessages;
+    private readonly AppDateTime appDateTime = chat.Time.AppDateTime;
+
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
         var admin = await accessControl.EnsureMemberOfAsync(addedByUserId, chatId);

@@ -1,21 +1,24 @@
 ﻿using API.Services.Base;
+using API.Services.Infrastructure.Bundles;
 
 namespace API.Services.User;
 
-public partial class UserService(MessengerDbContext context, IFileService fileService, IOnlineUserService onlineService, IUrlBuilder urlBuilder, ILogger<UserService> logger)
+public partial class UserService(MessengerDbContext context, MediaBundle media, PresenceBundle presence, UrlBundle url, ILogger<UserService> logger)
     : BaseService<UserService>(context, logger), IUserService
 {
+    private readonly IFileService fileService = media.FileService;
+    private readonly IOnlineUserService onlineService = presence.OnlineService;
+    private readonly IUrlBuilder urlBuilder = url.UrlBuilder;
+
     public async Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default)
     {
         var users = await _context.Users.Select(u => new
-            {
-                User = u,
-                DepartmentName = u.Department != null ? u.Department.Name : null,
-                Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
-                NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled
-            })
-            .AsNoTracking()
-            .ToListAsync(ct);
+        {
+            User = u,
+            DepartmentName = u.Department != null ? u.Department.Name : null,
+            Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
+            NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled
+        }).AsNoTracking().ToListAsync(ct);
 
         var onlineIds = onlineService.GetOnlineUserIds();
 
@@ -32,16 +35,13 @@ public partial class UserService(MessengerDbContext context, IFileService fileSe
 
     public async Task<Result<UserDto>> GetUserAsync(int id, CancellationToken ct = default)
     {
-        var user = await _context.Users
-            .Select(u => new
-            {
-                User = u,
-                Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
-                NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled,
-                DepartmentName = u.Department != null ? u.Department.Name : null
-            })
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.User.Id == id, ct);
+        var user = await _context.Users.Select(u => new
+        {
+            User = u,
+            Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
+            NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled,
+            DepartmentName = u.Department != null ? u.Department.Name : null
+        }).AsNoTracking().FirstOrDefaultAsync(u => u.User.Id == id, ct);
 
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {id} не найден");

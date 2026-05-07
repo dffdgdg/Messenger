@@ -385,6 +385,29 @@ public partial class ChatView : UserControl
 
     #endregion
 
+    #region Composer Event Handlers
+
+    private void ComposerTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null) return;
+        if (_viewModel.HandleMentionNavigationKey(e.Key))
+            e.Handled = true;
+    }
+
+    private void ComposerTextBox_OnKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null || sender is not TextBox textBox) return;
+        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
+    }
+
+    private void ComposerTextBox_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_viewModel is null || sender is not TextBox textBox) return;
+        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
+    }
+
+    #endregion
+
     #region Scroll State Persistence
 
     private ChatScrollState? LoadScrollState()
@@ -678,7 +701,8 @@ public partial class ChatView : UserControl
     }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        DataContext = null;
+        if (DataContext is ChatViewModel)
+            DataContext = null;
 
         CleanupResources();
         _scrollViewer?.ScrollChanged -= OnScrollChanged;

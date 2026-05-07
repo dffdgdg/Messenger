@@ -1,5 +1,6 @@
 ﻿using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
+using System.Globalization;
 
 namespace API.Services.User;
 
@@ -139,7 +140,7 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (string.IsNullOrWhiteSpace(dto.NewUsername))
             return Result.Failure("Username не может быть пустым");
 
-        var username = dto.NewUsername.Trim().ToLower();
+        var username = dto.NewUsername.Trim().ToLower(new CultureInfo("en-US", false));
 
         var validation = ValidationHelper.ValidateUsername(dto.NewUsername);
         if (validation.IsFailure) return validation;

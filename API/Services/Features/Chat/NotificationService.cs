@@ -110,7 +110,20 @@ public sealed partial class NotificationService(MessengerDbContext context, IHub
     };
 
     private static string? TruncateText(string? content, int maxLength)
-        => string.IsNullOrEmpty(content) ? null : content.Length <= maxLength ? content : content[..maxLength] + "...";
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return null;
+        }
+        else if (content.Length <= maxLength)
+        {
+            return content;
+        }
+        else
+        {
+            return content[..maxLength] + "...";
+        }
+    }
 
     #region Logging
 

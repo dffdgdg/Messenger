@@ -604,10 +604,9 @@ public partial class MessageService(MessengerDbContext context, ChatBundle chat,
             HasPoll = m.Poll != null
         };
 
-        if (m.Chat.Type == ChatType.Contact && partners.TryGetValue(m.ChatId, out var p))
-            (dto.ChatName, dto.ChatAvatar) = p;
-        else
-            (dto.ChatName, dto.ChatAvatar) = (m.Chat.Name, urlBuilder.BuildUrl(m.Chat.Avatar));
+        (dto.ChatName, dto.ChatAvatar) = m.Chat.Type == ChatType.Contact && partners.TryGetValue(m.ChatId, out var p)
+            ? p
+            : (m.Chat.Name, urlBuilder.BuildUrl(m.Chat.Avatar));
 
         return dto;
     }

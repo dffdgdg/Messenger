@@ -111,7 +111,11 @@ public sealed class TokenService : ITokenService
 
             return Result<ClaimsPrincipal>.Success(principal);
         }
-        catch (Exception)
+        catch (SecurityTokenException)
+        {
+            return Result<ClaimsPrincipal>.Unauthorized("Недействительный access token");
+        }
+        catch (ArgumentException)
         {
             return Result<ClaimsPrincipal>.Unauthorized("Недействительный access token");
         }

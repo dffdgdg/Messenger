@@ -17,26 +17,12 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
     {
         string downloadsPath;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-        }
-        else
-        {
-            var xdgDownload = Environment.GetEnvironmentVariable("XDG_DOWNLOAD_DIR");
-            if (!string.IsNullOrEmpty(xdgDownload) && Directory.Exists(xdgDownload))
-            {
-                downloadsPath = xdgDownload;
-            }
-            else
-            {
-                downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            }
-        }
+        string? xdgDownload = Environment.GetEnvironmentVariable("XDG_DOWNLOAD_DIR");
+        downloadsPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
+            : (!string.IsNullOrEmpty(xdgDownload) && Directory.Exists(xdgDownload)
+            ? xdgDownload
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
 
         if (!Directory.Exists(downloadsPath))
             Directory.CreateDirectory(downloadsPath);

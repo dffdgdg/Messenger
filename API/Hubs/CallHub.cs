@@ -36,7 +36,21 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         return callSessions.ToStateDto(session, userId => _userCache?.TryGetValue(userId, out var v) == true ? v.Avatar : null, userId => _userCache?.TryGetValue(userId, out var v) == true ? v.Name : null);
     }
-    private int CurrentUserId => int.Parse(Context.User!.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    private int CurrentUserId
+    {
+        get
+        {
+            var raw = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(raw, out var userId))
+                return userId;
+
+            logger.LogError("[CallHub] Не удалось получить UserId из claims. ConnectionId={ConnectionId}, Value={Value}", Context.ConnectionId, raw);
+
+            throw new HubException("Невозможно идентифицировать пользователя.");
+        }
+    }
 
     public override async Task OnConnectedAsync()
     {

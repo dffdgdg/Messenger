@@ -4,6 +4,7 @@ using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Helpers;
 using Shared.Dto.Online;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -296,8 +297,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     {
         if (User == null || !CanSaveUsername) return;
 
-        var newUsername = TempUsername.Trim().ToLower();
-        if (newUsername == User.Username?.ToLower())
+        var newUsername = TempUsername.Trim().ToLower(new CultureInfo("en-US", false));
+        if (newUsername == User.Username?.ToLower(new CultureInfo("en-US", false)))
         {
             IsEditingUsername = false;
             return;

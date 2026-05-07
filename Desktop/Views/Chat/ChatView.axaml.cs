@@ -558,29 +558,34 @@ public partial class ChatView : UserControl
 
         foreach (var container in _messagesList.GetRealizedContainers())
         {
-            if (container is not ListBoxItem item) continue;
-            if (item.DataContext is not MessageViewModel msg) continue;
-
-            if (!_seenMessageIds.Add(msg.Id)) continue;
-
-            if (IsItemVisible(item, viewportHeight))
-                _ = _viewModel.OnMessageVisibleAsync(msg);
-            else
-                _seenMessageIds.Remove(msg.Id);
+            TryTrackVisibleMessage(container, viewportHeight);
         }
 
-        if (_seenMessageIds.Count > SeenIdsCleanupThreshold)
-        {
-            var currentIds = new HashSet<int>(
-                _messagesList.GetRealizedContainers()
-                    .OfType<ListBoxItem>()
-                    .Select(c => (c.DataContext as MessageViewModel)?.Id)
-                    .Where(id => id.HasValue)
-                    .Select(id => id!.Value));
-
-            _seenMessageIds.IntersectWith(currentIds);
-        }
+        TrimSeenIdsIfNeeded();
     }
+
+    private void TryTrackVisibleMessage(Avalonia.Controls.Control container, double viewportHeight)
+    {
+        if (container is not ListBoxItem item) return;
+        if (item.DataContext is not MessageViewModel msg) return;
+        if (!_seenMessageIds.Add(msg.Id)) return;
+
+        if (IsItemVisible(item, viewportHeight))
+            _ = _viewModel!.OnMessageVisibleAsync(msg);
+        else
+            _seenMessageIds.Remove(msg.Id);
+    }
+
+    private void TrimSeenIdsIfNeeded()
+    {
+        if (_seenMessageIds.Count <= SeenIdsCleanupThreshold) return;
+
+        var currentIds = BuildCurrentlyRealizedIdSet();
+        _seenMessageIds.IntersectWith(currentIds);
+    }
+
+    private HashSet<int> BuildCurrentlyRealizedIdSet() => [.. _messagesList!.GetRealizedContainers()
+        .OfType<ListBoxItem>().Select(c => (c.DataContext as MessageViewModel)?.Id).Where(id => id.HasValue).Select(id => id!.Value)];
 
     private bool IsItemVisible(ListBoxItem item, double viewportHeight)
     {
@@ -591,25 +596,6 @@ public partial class ChatView : UserControl
         var bottom = top + item.Bounds.Height;
 
         return bottom > 0 && top < viewportHeight;
-    }
-
-    private void ComposerTextBox_OnKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (_viewModel is null) return;
-        if (_viewModel.HandleMentionNavigationKey(e.Key))
-            e.Handled = true;
-    }
-
-    private void ComposerTextBox_OnKeyUp(object? sender, KeyEventArgs e)
-    {
-        if (_viewModel is null || sender is not TextBox textBox) return;
-        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
-    }
-
-    private void ComposerTextBox_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (_viewModel is null || sender is not TextBox textBox) return;
-        _viewModel.OnComposerSelectionChanged(textBox.CaretIndex);
     }
 
     #endregion
@@ -690,11 +676,9 @@ public partial class ChatView : UserControl
         _messagesList = null;
         base.OnUnloaded(e);
     }
-
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (DataContext is ChatViewModel)
-            DataContext = null;
+        DataContext = null;
 
         CleanupResources();
         _scrollViewer?.ScrollChanged -= OnScrollChanged;

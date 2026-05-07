@@ -161,7 +161,6 @@ public partial class MessengerDbContext : DbContext
             entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
             entity.Property(e => e.Waveform).HasColumnName("waveform");
             entity.Property(e => e.FilePath).HasColumnName("file_path");
-            //entity.Property(e => e.FileName).HasMaxLength(255).HasColumnName("file_name");
             entity.Property(e => e.FileSize).HasColumnName("file_size");
             entity.HasOne(d => d.Message).WithOne(p => p.VoiceMessage).HasForeignKey<VoiceMessage>(d => d.MessageId)
                 .OnDelete(DeleteBehavior.Cascade).HasConstraintName("VoiceMessages_MessageId_fkey");

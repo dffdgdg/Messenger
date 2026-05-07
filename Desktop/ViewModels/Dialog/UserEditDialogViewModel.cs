@@ -8,6 +8,9 @@ namespace Desktop.ViewModels.Dialog;
 
 public partial class UserEditDialogViewModel : DialogBaseViewModel
 {
+    private const int MinUsernameLength = 3;
+    private const int MinPasswordLength = 6;
+
     private readonly UserDto? _originalUser;
 
     [ObservableProperty]
@@ -45,9 +48,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
 
     public int PasswordStrength => PasswordHelper.CalculateStrength(Password);
     public string PasswordStrengthLabel => PasswordHelper.ToStrengthLabel(PasswordStrength);
-
-    public bool PasswordsMatch =>
-        !string.IsNullOrEmpty(Password) && Password == ConfirmPassword;
+    public bool PasswordsMatch => IsNonEmptyAndEqual(Password, ConfirmPassword);
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -75,7 +76,7 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
     public bool NewPasswordSegment3 => NewPasswordStrength >= 3;
     public bool NewPasswordSegment4 => NewPasswordStrength >= 4;
 
-    public bool NewPasswordsMatch => !string.IsNullOrEmpty(NewPassword) && NewPassword == NewConfirmPassword;
+    public bool NewPasswordsMatch => IsNonEmptyAndEqual(NewPassword, NewConfirmPassword);
 
     public bool IsNewUser => _originalUser is null;
 
@@ -127,62 +128,73 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         OnPropertyChanged(nameof(DisplayNamePreview));
     }
 
-    partial void OnMidnameChanged(string value) =>
-        OnPropertyChanged(nameof(DisplayNamePreview));
+    partial void OnMidnameChanged(string value) => OnPropertyChanged(nameof(DisplayNamePreview));
 
     private void ClearErrorIfValid()
     {
-        if (CanSaveExecute()) ErrorMessage = null;
+        if (CanSaveExecute())
+            ErrorMessage = null;
     }
 
-    private string? ValidatePasswordSection()
-    {
-        if (IsNewUser)
-        {
-            if (string.IsNullOrWhiteSpace(Password)) return "required";
-            if (Password.Length < 6) return "too_short";
-            if (Password != ConfirmPassword) return "mismatch";
-        }
-        else if (IsChangingPassword)
-        {
-            if (NewPassword.Length > 0 && NewPassword.Length < 6) return "too_short";
-            if (NewPassword != NewConfirmPassword) return "mismatch";
-        }
+    private bool CanSaveExecute() => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name) &&
+        ValidatePasswordSection() is null;
 
+    private string? ValidatePasswordSection() => IsNewUser ? ValidateNewUserPassword() : ValidatePasswordChange();
+
+    private string? ValidateNewUserPassword()
+    {
+        if (string.IsNullOrWhiteSpace(Password)) return "required";
+        if (Password.Length < MinPasswordLength) return "too_short";
+        if (Password != ConfirmPassword) return "mismatch";
         return null;
     }
 
-    private string? Validate()
+    private string? ValidatePasswordChange()
+    {
+        if (!IsChangingPassword) return null;
+        if (NewPassword.Length > 0 && NewPassword.Length < MinPasswordLength) return "too_short";
+        if (NewPassword != NewConfirmPassword) return "mismatch";
+        return null;
+    }
+
+    private string? Validate() => ValidateIdentityFields() ?? (IsNewUser ? ValidateNewUserPasswordFull() : ValidatePasswordChangeFull());
+
+    private string? ValidateIdentityFields()
     {
         if (string.IsNullOrWhiteSpace(Username))
             return "Введите логин";
-        if (Username.Trim().Length < 3)
+        if (Username.Trim().Length < MinUsernameLength)
             return "Логин должен содержать минимум 3 символа";
         if (string.IsNullOrWhiteSpace(Surname))
             return "Введите фамилию";
         if (string.IsNullOrWhiteSpace(Name))
             return "Введите имя";
 
-        if (IsNewUser)
-        {
-            if (string.IsNullOrWhiteSpace(Password))
-                return "Введите пароль";
-            if (Password.Length < 6)
-                return "Пароль должен содержать минимум 6 символов";
-            if (Password != ConfirmPassword)
-                return "Пароли не совпадают";
-        }
-        else if (IsChangingPassword)
-        {
-            if (NewPassword.Length < 6)
-                return "Пароль должен содержать минимум 6 символов";
-            if (NewPassword != NewConfirmPassword)
-                return "Пароли не совпадают";
-        }
+        return null;
+    }
+
+    private string? ValidateNewUserPasswordFull()
+    {
+        if (string.IsNullOrWhiteSpace(Password))
+            return "Введите пароль";
+        if (Password.Length < MinPasswordLength)
+            return "Пароль должен содержать минимум 6 символов";
+        if (Password != ConfirmPassword)
+            return "Пароли не совпадают";
 
         return null;
     }
-    private bool CanSaveExecute() => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Surname) && !string.IsNullOrWhiteSpace(Name) && ValidatePasswordSection() is null;
+
+    private string? ValidatePasswordChangeFull()
+    {
+        if (!IsChangingPassword) return null;
+        if (NewPassword.Length < MinPasswordLength)
+            return "Пароль должен содержать минимум 6 символов";
+        if (NewPassword != NewConfirmPassword)
+            return "Пароли не совпадают";
+
+        return null;
+    }
 
     private static string TrimLower(string value) => value.Trim().ToLowerInvariant();
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -220,18 +232,23 @@ public partial class UserEditDialogViewModel : DialogBaseViewModel
         await SafeExecuteAsync(async () =>
         {
             if (IsNewUser)
-            {
-                await (CreateAction?.Invoke(BuildCreateDto()) ?? Task.CompletedTask);
-            }
+                await CreateUserAsync();
             else
-            {
-                await (UpdateAction?.Invoke(BuildUpdateDto()) ?? Task.CompletedTask);
-
-                if (IsChangingPassword && !string.IsNullOrWhiteSpace(NewPassword))
-                    await (ChangePasswordAction?.Invoke(NewPassword) ?? Task.CompletedTask);
-            }
+                await UpdateUserAsync();
 
             await RequestCloseAsync();
         });
     }
+
+    private async Task CreateUserAsync() => await (CreateAction?.Invoke(BuildCreateDto()) ?? Task.CompletedTask);
+
+    private async Task UpdateUserAsync()
+    {
+        await (UpdateAction?.Invoke(BuildUpdateDto()) ?? Task.CompletedTask);
+
+        if (IsChangingPassword && !string.IsNullOrWhiteSpace(NewPassword))
+            await (ChangePasswordAction?.Invoke(NewPassword) ?? Task.CompletedTask);
+    }
+
+    private static bool IsNonEmptyAndEqual(string a, string b) => !string.IsNullOrEmpty(a) && a == b;
 }

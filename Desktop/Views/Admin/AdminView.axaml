@@ -20,7 +20,6 @@
 			<Setter Property="Padding" Value="0"/>
 		</Style>
 
-		<!-- Улучшенные NavMenu Items -->
 		<Style Selector="ListBox.NavMenu ListBoxItem">
 			<Setter Property="Padding" Value="10,11"/>
 			<Setter Property="Margin" Value="0,1"/>
@@ -63,7 +62,6 @@
 				<ColumnDefinition MinWidth="400"/>
 			</Grid.ColumnDefinitions>
 
-			<!-- SIDEBAR — растянут на col 0+1, правая рамка визуально на границе -->
 			<Border Grid.Column="0"
 					Grid.ColumnSpan="2"
 					Background="{DynamicResource SecondaryBG}"
@@ -156,7 +154,6 @@
 				</DockPanel>
 			</Border>
 
-			<!-- GridSplitter поверх правого края Border сайдбара -->
 			<GridSplitter x:Name="GridSplitter"
 						  Grid.Column="1"
 						  ZIndex="10"
@@ -167,7 +164,6 @@
 						  Background="Transparent"
 						  Cursor="SizeWestEast"/>
 
-			<!-- MAIN CONTENT -->
 			<Border Grid.Column="2" Background="{DynamicResource PrimaryBG}">
 				<DockPanel Margin="28,24,28,0">
 

@@ -65,7 +65,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         Debug.WriteLine($"[MessageManager] ReadInfo: lastRead={LastReadMessageId}, firstUnread={FirstUnreadMessageId}");
     }
 
-    /// <summary>Сбросить кеш участников (вызывать при обновлении members)</summary>
     public void InvalidateMembersCache() => _membersLookup = null;
 
     public Task<int?> LoadInitialMessagesAsync(CancellationToken ct = default)
@@ -224,7 +223,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
                 Debug.WriteLine($"[MessageManager] GapFill завершён: {totalAdded} сообщений за {batches} батчей");
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* ожидаемая отмена операции */ }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}"); }
         finally { EndLoading(); }
     }
@@ -305,7 +304,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
             await SafeUpdateSyncStateAsync();
         }
-        catch (OperationCanceledException) { /* Отмена */ }
+        catch (OperationCanceledException) { /* отмена ревалидации не критична */ }
         catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}"); }
     }
 
@@ -718,7 +717,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         var task = Task.Run(async () =>
         {
             try { token.ThrowIfCancellationRequested(); await action(); }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { /* задача отменена */ }
             catch (Exception ex) { Debug.WriteLine($"[MessageManager] Фоновая ошибка в {caller}: {ex.Message}"); }
         }, token);
 
@@ -736,7 +735,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         Task[] pending;
         lock (_bgLock) pending = [.. _backgroundTasks];
 
-        try { await Task.WhenAll(pending); } catch { }
+        try { await Task.WhenAll(pending); }
+        catch { /* исключения фоновых задач не должны мешать освобождению ресурсов */ }
 
         DisposeAllMessages();
         Messages.Clear();

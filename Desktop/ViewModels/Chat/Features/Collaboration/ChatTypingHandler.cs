@@ -70,11 +70,10 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
                     break;
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) {/* Ожидаемая отмена операции*/ }
         finally
         {
             _cleanupRunning = false;
-            // Диспозим CTS после завершения цикла
             var cts = _cleanupCts;
             _cleanupCts = null;
             cts?.Dispose();

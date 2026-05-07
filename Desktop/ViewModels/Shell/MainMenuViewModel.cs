@@ -527,7 +527,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         SetActiveMenu(menuIndex);
         await Task.Delay(50);
-        if (!vm.Chats.Any(c => c.Id == chat.Id))
+        if (vm.Chats.All(c => c.Id != chat.Id))
             vm.Chats.Insert(0, new ChatListItemViewModel(chat));
         vm.SelectedChat = vm.Chats.FirstOrDefault(c => c.Id == chat.Id);
         CurrentMenuViewModel = vm;

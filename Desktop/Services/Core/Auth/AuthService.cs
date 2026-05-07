@@ -73,7 +73,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 if (apiResponse != null)
                     return apiResponse;
             }
-            catch (JsonException) { }
+            catch (JsonException) { /* Ожидаемо */}
 
             return ApiResponseHelper.Error<AuthResponseDto>("Не удалось прочитать ответ сервера");
         }
@@ -109,7 +109,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 if (apiResponse != null)
                     return apiResponse;
             }
-            catch (JsonException) { }
+            catch (JsonException) { /* Ожидаемо */}
 
             return ApiResponseHelper.Error<TokenResponseDto>("Не удалось прочитать ответ сервера");
         }

@@ -24,7 +24,7 @@ public static class HttpResponseHelper
                 if (!string.IsNullOrWhiteSpace(errorResponse?.Error))
                     return errorResponse.Error;
             }
-            catch (JsonException) { }
+            catch (JsonException) { /* Ожидаемо */ }
         }
 
         return statusCode switch

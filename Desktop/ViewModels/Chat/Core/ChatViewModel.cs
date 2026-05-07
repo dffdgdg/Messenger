@@ -593,17 +593,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #region Helpers
 
-    /// <summary>
-    /// Заменяет содержимое коллекции без пересоздания объекта
-    /// (биндинги не рвутся).
-    /// </summary>
-    private static void ReplaceCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
-    {
-        target.Clear();
-        foreach (var item in source)
-            target.Add(item);
-    }
-
     private void ScheduleRefreshInfoPanelLists()
     {
         _refreshDebounce?.Cancel();
@@ -619,7 +608,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 if (!token.IsCancellationRequested)
                     RefreshInfoPanelLists();
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { /* Ожидаемая отмена */}
         });
     }
 
@@ -718,7 +707,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 RebuildPinnedMessages(data);
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* Ожидаемая отмена */ }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");

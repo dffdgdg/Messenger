@@ -58,15 +58,6 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
             LogStatusesCleanedUp(count);
     }
 
-    private UserStatusDto BuildDto(Data.User user)
-    {
-        var isOnline = onlineUserService.IsOnline(user.Id);
-
-        return new UserStatusDto(user.Id, isOnline, user.LastOnline, isOnline ? user.StatusType : UserStatusType.Online,
-            user.StatusExpiresAt
-        );
-    }
-
     #region Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} set status {Status} duration {Duration}")]

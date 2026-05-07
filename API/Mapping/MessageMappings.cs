@@ -72,7 +72,6 @@ public static class MessageMappings
             VoiceDurationSeconds = voice?.DurationSeconds,
             VoiceWaveform = voice?.Waveform,
             VoiceFileUrl = isDeleted ? null : voice?.FilePath.BuildFullUrl(urlBuilder),
-            //VoiceFileName = voice?.FileName,
             VoiceFileSize = voice?.FileSize,
 
             Files = isDeleted ? [] : resolvedFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],

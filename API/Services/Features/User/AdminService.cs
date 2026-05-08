@@ -1,12 +1,15 @@
-﻿using API.Services.Base;
+﻿using API.Repositories.Abstarctions;
+using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 
 namespace API.Services.User;
 
-public partial class AdminService(MessengerDbContext context, TimeBundle time, ILogger<AdminService> logger)
+public partial class AdminService(MessengerDbContext context, TimeBundle time, IUserRepository userRepo, IRefreshTokenRepository tokenRepo, ILogger<AdminService> logger)
     : BaseService<AdminService>(context, logger), IAdminService
 {
     private readonly AppDateTime appDateTime = time.AppDateTime;
+    private readonly IUserRepository _userRepo = userRepo;
+    private readonly IRefreshTokenRepository _tokenRepo = tokenRepo;
 
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
@@ -32,8 +35,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        var exists = await _context.Users.AnyAsync(u => u.Username == username, ct);
-        if (exists)
+        if (await _userRepo.UsernameExistsAsync(username, ct))
             return Result<UserDto>.Conflict("Пользователь с таким логином уже существует");
 
         if (dto.DepartmentId.HasValue)
@@ -60,7 +62,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
             },
         };
 
-        _context.Users.Add(user);
+        _userRepo.Add(user);
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save.As<UserDto>();
@@ -89,8 +91,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
-
+        var user = await _userRepo.FindByIdAsync(userId, ct);
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {userId} не найден");
 
@@ -123,16 +124,15 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
     {
-        var userResult = await FindEntityAsync<Data.User>(userId, ct);
-        if (userResult.IsFailure) return userResult;
+        var user = await _userRepo.FindByIdAsync(userId, ct);
+        if (user is null)
+            return Result.NotFound($"Пользователь с ID {userId} не найден");
 
-        var user = userResult.Value!;
         user.IsBanned = !user.IsBanned;
 
         if (user.IsBanned)
         {
-            await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+            await _tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
         }
 
         var save = await SaveChangesAsync(ct);
@@ -148,15 +148,13 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
         if (passwordValidation.IsFailure)
             return Result.Failure(passwordValidation.Error!);
 
-        var user = await _context.Users.Include(u => u.Password).FirstOrDefaultAsync(u => u.Id == userId, ct);
-
+        var user = await _userRepo.FindByIdWithPasswordAsync(userId, ct);
         if (user is null)
             return Result.NotFound($"Пользователь с ID {userId} не найден");
 
         user.Password.SetPassword(newPassword);
 
-        await _context.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, appDateTime.UtcNow), ct);
+        await _tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;

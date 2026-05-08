@@ -9,4 +9,7 @@ public class MessageReplyPreviewDto
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsVoiceMessage { get; set; }
+    public bool HasPoll { get; set; }
+    public int FilesCount { get; set; }
 }

@@ -1,5 +1,6 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure.Diagnostics;
+using Desktop.Infrastructure.Helpers;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
@@ -88,7 +89,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     #endregion
 
     #region Cached Computed Properties
-
+    public bool OriginalIsVoiceMessage { get; private set; }
+    public bool OriginalHasPoll { get; private set; }
     public bool ShowPollResultsButton { get; private set; }
     public string DisplayContent { get; private set; } = string.Empty;
     public bool HasTextContent { get; private set; }
@@ -124,7 +126,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool ShowResumeButton { get; private set; }
     public string VoiceDurationFormatted { get; private set; } = "0:00";
     public string BubbleClasses { get; private set; } = "MessageBubble Other Alone";
-
+    public string ContentPreview { get; private set; } = string.Empty;
     #endregion
 
     #region Private Fields
@@ -146,7 +148,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #region Notification Batches
 
-    private static readonly string[] ContentProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta)];
+    private static readonly string[] ContentProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ContentPreview)];
 
     private static readonly string[] EditedProps = [nameof(EditedLabel), nameof(EditedLabelFull)];
 
@@ -208,11 +210,14 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         (ReplyToMessageId, ForwardedFromMessageId) = (message.ReplyToMessageId, message.ForwardedFromMessageId);
 
+        OriginalIsVoiceMessage = message.IsVoiceMessage;
+        OriginalHasPoll = message.Poll is not null;
+
         if (message.ReplyToMessage is { } reply)
         {
             ReplyToSenderName = reply.SenderName;
-            ReplyToContent = reply.IsDeleted ? "[Сообщение удалено]" : reply.Content;
             ReplyToIsDeleted = reply.IsDeleted;
+            ReplyToContent = ChatPreviewFormatter.BuildReplyPreview(reply);
         }
 
         if (message.ForwardedFrom is not null)
@@ -298,8 +303,24 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         HasTextContent = !IsDeleted && !IsSystemMessage && !string.IsNullOrWhiteSpace(Content) && !HasPoll && !IsVoiceMessage;
         ShowFilesOnlyMeta = !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
         ShowNonVoiceFiles = HasFiles && !IsDeleted && !IsSystemMessage;
+        ContentPreview = BuildSelfPreview();
     }
 
+    private string BuildSelfPreview()
+    {
+        if (IsDeleted) return "Сообщение удалено";
+        if (IsVoiceMessage) return "Голосовое сообщение";
+        if (HasPoll) return "📊 " + ChatPreviewFormatter.BuildContentPreview(Content, "Опрос");
+
+        var filesCount = Files?.Count ?? 0;
+        if (filesCount > 0 && string.IsNullOrWhiteSpace(Content))
+            return filesCount == 1 ? "Вложение" : $"{filesCount} файл(ов)";
+
+        if (filesCount > 0 && !string.IsNullOrWhiteSpace(Content))
+            return $"{ChatPreviewFormatter.BuildContentPreview(Content)}";
+
+        return ChatPreviewFormatter.BuildContentPreview(Content, "Сообщение");
+    }
     private void RecacheEditGroup()
     {
         CanEdit = IsOwn && !IsDeleted && !IsSystemMessage && Poll is null && !IsVoiceMessage && !HasForward;
@@ -389,7 +410,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         IsDeleted = true;
         Content = null;
-        IsVoiceMessage = false;
         IsPinned = false;
         VoiceFileUrl = null;
         VoiceDurationSeconds = null;

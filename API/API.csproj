@@ -31,6 +31,7 @@
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+		<InternalsVisibleTo Include="API.Tests" />
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
 		<None Include="Dockerfile" />

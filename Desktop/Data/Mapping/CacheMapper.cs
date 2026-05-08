@@ -33,8 +33,6 @@ public static class CacheMapper
         VoiceDurationSeconds = dto.VoiceDurationSeconds,
         VoiceWaveform = dto.VoiceWaveform,
         VoiceFileUrl = dto.VoiceFileUrl,
-        //VoiceFileName = dto.VoiceFileName,
-        //VoiceContentType = dto.VoiceContentType,
         VoiceFileSize = dto.VoiceFileSize,
         IsSystemMessage = dto.IsSystemMessage,
         SystemEventTypeInt = (int?)dto.SystemEventType,
@@ -47,6 +45,9 @@ public static class CacheMapper
         ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
         ReplySenderId = dto.ReplyToMessage?.SenderId,
         ReplyChatId = dto.ReplyToMessage?.ChatId,
+        ReplyIsVoice = dto.ReplyToMessage?.IsVoiceMessage == true,
+        ReplyHasPoll = dto.ReplyToMessage?.HasPoll == true,
+        ReplyFilesCount = dto.ReplyToMessage?.FilesCount ?? 0,
         ForwardSenderName = dto.ForwardedFrom?.OriginalSenderName,
         ForwardOriginalSenderId = dto.ForwardedFrom?.OriginalSenderId,
         ForwardOriginalChatId = dto.ForwardedFrom?.OriginalChatId,
@@ -78,8 +79,6 @@ public static class CacheMapper
             VoiceDurationSeconds = entity.VoiceDurationSeconds,
             VoiceWaveform = entity.VoiceWaveform,
             VoiceFileUrl = entity.VoiceFileUrl,
-            //VoiceFileName = entity.VoiceFileName,
-            //VoiceContentType = entity.VoiceContentType,
             VoiceFileSize = entity.VoiceFileSize,
             IsSystemMessage = entity.IsSystemMessage,
             SystemEventType = (SystemEventType?)entity.SystemEventTypeInt,
@@ -97,7 +96,10 @@ public static class CacheMapper
                 ChatId = entity.ReplyChatId ?? 0,
                 SenderName = entity.ReplySenderName,
                 Content = entity.ReplyContentPreview,
-                IsDeleted = entity.ReplyIsDeleted
+                IsDeleted = entity.ReplyIsDeleted,
+                IsVoiceMessage = entity.ReplyIsVoice,
+                HasPoll = entity.ReplyHasPoll,
+                FilesCount = entity.ReplyFilesCount
             };
         }
 
@@ -109,8 +111,7 @@ public static class CacheMapper
                 OriginalSenderId = entity.ForwardOriginalSenderId ?? 0,
                 OriginalChatId = entity.ForwardOriginalChatId ?? 0,
                 OriginalSenderName = entity.ForwardSenderName,
-                OriginalCreatedAt = entity.ForwardOriginalDateTicks.HasValue
-                    ? new DateTime(entity.ForwardOriginalDateTicks.Value, DateTimeKind.Utc)
+                OriginalCreatedAt = entity.ForwardOriginalDateTicks.HasValue ? new DateTime(entity.ForwardOriginalDateTicks.Value, DateTimeKind.Utc)
                     : default
             };
         }

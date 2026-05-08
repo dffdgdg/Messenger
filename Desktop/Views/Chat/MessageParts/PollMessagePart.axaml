@@ -6,23 +6,36 @@
              x:Class="Desktop.Views.Chat.MessageParts.PollMessagePart"
              x:DataType="vmChat:MessageViewModel">
 
-    <Border Classes="PollBubble"
-            Classes.Own="{Binding IsOwn}"
-            IsVisible="{Binding HasPoll}">
-        <StackPanel Spacing="6">
-            <TextBlock Text="{Binding Content}"
-                       FontSize="15"
-                       FontWeight="SemiBold"
+    <StackPanel>
+        <StackPanel IsVisible="{Binding IsDeleted}">
+            <TextBlock Text="{Binding DisplayContent}"
+                       FontStyle="Italic"
+                       Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap"
-                       LineHeight="20"
-                       Margin="0,2,0,4"/>
-
-            <chat:PollView DataContext="{Binding Poll}"/>
-
+                       FontSize="15"
+                       LineHeight="22"/>
             <parts:MessageMetaBlock
                 HorizontalAlignment="Right"
-                Margin="0,2,0,0"
+                Margin="0,-2,0,0"
                 Opacity="0.7"/>
         </StackPanel>
-    </Border>
+
+        <Border Classes="PollBubble"
+                Classes.Own="{Binding IsOwn}"
+                IsVisible="{Binding !IsDeleted}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Content}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           LineHeight="20"
+                           Margin="0,2,0,4"/>
+                <chat:PollView DataContext="{Binding Poll}"/>
+                <parts:MessageMetaBlock
+                    HorizontalAlignment="Right"
+                    Margin="0,2,0,0"
+                    Opacity="0.7"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
 </UserControl>

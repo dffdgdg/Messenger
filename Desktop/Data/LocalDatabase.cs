@@ -10,7 +10,7 @@ namespace Desktop.Data;
 
 public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 {
-    private const int SchemaVersion = 7;
+    private const int SchemaVersion = 1;
 
     private readonly SQLiteAsyncConnection _db;
     private readonly SemaphoreSlim _initLock = new(1, 1);

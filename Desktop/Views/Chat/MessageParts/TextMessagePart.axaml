@@ -9,37 +9,51 @@
              x:Name="TextPartRoot">
 
     <StackPanel>
-        <StackPanel IsVisible="{Binding HasTextContent}">
-            <shared:RichMessageTextBlock
-                FontSize="15"
-                LineHeight="22"
-                TextWrapping="Wrap"
-                VerticalAlignment="Top"
-                RawText="{Binding DisplayContent}"
-                MentionClickCommand="{Binding MentionClickCommand}"/>
+        <StackPanel IsVisible="{Binding IsDeleted}">
+            <TextBlock Text="{Binding DisplayContent}"
+                       FontStyle="Italic"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       FontSize="15"
+                       LineHeight="22"/>
             <parts:MessageMetaBlock
                 HorizontalAlignment="Right"
                 Margin="0,-2,0,0"
                 Opacity="0.7"/>
         </StackPanel>
 
-        <ItemsControl ItemsSource="{Binding FileViewModels}"
-                      IsVisible="{Binding ShowNonVoiceFiles}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Spacing="6"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vmChat:MessageFileViewModel">
-                    <chat:FileAttachmentControl/>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <StackPanel IsVisible="{Binding !IsDeleted}">
+            <StackPanel IsVisible="{Binding HasTextContent}">
+                <shared:RichMessageTextBlock
+                    FontSize="15"
+                    LineHeight="22"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Top"
+                    RawText="{Binding DisplayContent}"
+                    MentionClickCommand="{Binding MentionClickCommand}"/>
+                <parts:MessageMetaBlock
+                    HorizontalAlignment="Right"
+                    Margin="0,-2,0,0"
+                    Opacity="0.7"/>
+            </StackPanel>
 
-        <parts:MessageMetaBlock HorizontalAlignment="Right"
-                                Margin="0,4,0,0" Opacity="0.7"
-                                IsVisible="{Binding ShowFilesOnlyMeta}"/>
+            <ItemsControl ItemsSource="{Binding FileViewModels}"
+                          IsVisible="{Binding ShowNonVoiceFiles}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmChat:MessageFileViewModel">
+                        <chat:FileAttachmentControl/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
+            <parts:MessageMetaBlock HorizontalAlignment="Right"
+                                    Margin="0,4,0,0" Opacity="0.7"
+                                    IsVisible="{Binding ShowFilesOnlyMeta}"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

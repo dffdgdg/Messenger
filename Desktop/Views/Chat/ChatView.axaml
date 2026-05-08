@@ -306,7 +306,7 @@
 					</Grid>
 				</Border>
 
-								<!-- Фоновый паттерн для сообщений -->
+				<!-- Фоновый паттерн для сообщений -->
 				<Panel Grid.Row="3" Grid.RowSpan="2">
 					<Border Opacity="0.4">
 						<Border.Background>
@@ -435,7 +435,9 @@
 												StringFormat='Ответ для {0}'}"
 												FontWeight="SemiBold" FontSize="12"
 												Foreground="{DynamicResource Accent}"/>
-												<TextBlock Text="{Binding Content}"
+												<!-- Было: ReplyToContent (превью ответа сообщения) -->
+												<!-- Стало: ContentPreview (превью самого сообщения) -->
+												<TextBlock Text="{Binding ContentPreview}"
 														   FontSize="13"
 														   Foreground="{DynamicResource TextSecondary}"
 														   TextTrimming="CharacterEllipsis"

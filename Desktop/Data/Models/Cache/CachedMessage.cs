@@ -38,6 +38,9 @@ public class CachedMessage
     [SQLite.Column("files_json")] public string? FilesJson { get; set; }
     [SQLite.Column("cached_at")] public long CachedAtTicks { get; set; }
     [SQLite.Column("is_pinned")] public bool IsPinned { get; set; }
+    [SQLite.Column("reply_is_voice")] public bool ReplyIsVoice { get; set; }
+    [SQLite.Column("reply_has_poll")] public bool ReplyHasPoll { get; set; }
+    [SQLite.Column("reply_files_count")] public int ReplyFilesCount { get; set; }
     public bool IsSystemMessage { get; set; }
     public int? SystemEventTypeInt { get; set; }
     public int? TargetUserId { get; set; }

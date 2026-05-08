@@ -83,30 +83,33 @@ public static class MessageMappings
     {
         var isDeleted = message.IsDeleted ?? false;
 
-        if (message is UserMessage user)
+        if (message is SystemMessage sys)
         {
             return new MessageReplyPreviewDto
             {
-                Id = user.Id,
-                ChatId = user.ChatId,
-                SenderId = user.SenderId,
-                SenderName = user.Sender?.GetDisplayName(),
-                Content = isDeleted ? DeletedMessagePlaceholder : user.Content,
-                CreatedAt = user.CreatedAt,
+                Id = sys.Id,
+                ChatId = sys.ChatId,
+                SenderId = sys.InitiatorId,
+                SenderName = sys.Initiator?.GetDisplayName(),
+                Content = SystemMessageFormatter.Format(sys.SystemEventType, sys.Initiator?.GetDisplayName(), sys.TargetUser?.GetDisplayName(), sys.Content),
+                CreatedAt = sys.CreatedAt,
                 IsDeleted = isDeleted
             };
         }
 
-        var sys = (SystemMessage)message;
+        var user = (UserMessage)message;
         return new MessageReplyPreviewDto
         {
-            Id = sys.Id,
-            ChatId = sys.ChatId,
-            SenderId = sys.InitiatorId,
-            SenderName = sys.Initiator?.GetDisplayName(),
-            Content = SystemMessageFormatter.Format(sys.SystemEventType, sys.Initiator?.GetDisplayName(), sys.TargetUser?.GetDisplayName(), sys.Content),
-            CreatedAt = sys.CreatedAt,
-            IsDeleted = isDeleted
+            Id = user.Id,
+            ChatId = user.ChatId,
+            SenderId = user.SenderId,
+            SenderName = user.Sender?.GetDisplayName(),
+            Content = isDeleted ? null : user.Content,
+            CreatedAt = user.CreatedAt,
+            IsDeleted = isDeleted,
+            IsVoiceMessage = user.VoiceMessage != null,
+            HasPoll = user.Poll != null,
+            FilesCount = user.MessageFiles?.Count ?? 0
         };
     }
 

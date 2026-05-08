@@ -1,4 +1,6 @@
-﻿using API.Services.Auth;
+﻿using API.Repositories.Abstarctions;
+using API.Repositories.Implementations;
+using API.Services.Auth;
 using API.Services.Call;
 using API.Services.Chat;
 using API.Services.Core.Auth;
@@ -43,9 +45,7 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>
-    /// Инфраструктурные сервисы
-    /// </summary>
+
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddMemoryCache();
@@ -60,6 +60,12 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IHubNotifier, HubNotifier>();
         services.AddScoped<IUrlBuilder, HttpUrlBuilder>();
+
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IChatRepository, ChatRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+
         services.AddBundles();
 
         return services;

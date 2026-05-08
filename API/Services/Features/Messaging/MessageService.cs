@@ -23,11 +23,11 @@ public partial class MessageService(MessengerDbContext context, ChatBundle chat,
 
     #region Base Query & Helpers
 
-    private IQueryable<UserMessage> UserMessagesWithIncludes() => _context.UserMessages.Include(m => m.Sender).Include(m => m.VoiceMessage)
-        .Include(m => m.MessageFiles).Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
-        .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
+    private IQueryable<UserMessage> UserMessagesWithIncludes() =>
+        _context.UserMessages.Include(m => m.Sender).Include(m => m.VoiceMessage).Include(m => m.MessageFiles).Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+        .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender).Include(m => m.ReplyToMessage).ThenInclude(r => r!.VoiceMessage).Include(m => m.ReplyToMessage).ThenInclude(r => r!.MessageFiles)
+        .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Poll).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
 
     private IQueryable<UserMessage> UserMessagesLight() => _context.UserMessages.Include(m => m.Sender).Include(m => m.VoiceMessage)
         .Include(m => m.MessageFiles).Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender).Include(m => m.ForwardedFromMessage)

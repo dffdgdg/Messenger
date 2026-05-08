@@ -1,15 +1,17 @@
-﻿using API.Services.Base;
+﻿using API.Repositories.Abstarctions;
+using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using System.Globalization;
 
 namespace API.Services.User;
 
-public partial class UserService(MessengerDbContext context, MediaBundle media, PresenceBundle presence, UrlBundle url, ILogger<UserService> logger)
+public partial class UserService(MessengerDbContext context, MediaBundle media, PresenceBundle presence, UrlBundle url, IUserRepository userRepo, ILogger<UserService> logger)
     : BaseService<UserService>(context, logger), IUserService
 {
     private readonly IFileService fileService = media.FileService;
     private readonly IOnlineUserService onlineService = presence.OnlineService;
     private readonly IUrlBuilder urlBuilder = url.UrlBuilder;
+    private readonly IUserRepository _userRepo = userRepo;
 
     public async Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default)
     {
@@ -79,10 +81,9 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (file is null || file.Length == 0)
             return Result<AvatarResponseDto>.Failure("Файл не предоставлен");
 
-        var userResult = await FindEntityAsync<Data.User>(id, ct);
-        if (userResult.IsFailure) return userResult.As<AvatarResponseDto>();
-
-        var user = userResult.Value!;
+        var user = await _userRepo.FindByIdAsync(id, ct);
+        if (user is null)
+            return Result<AvatarResponseDto>.NotFound($"Пользователь с ID {id} не найден");
 
         var saveResult = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
         if (saveResult.IsFailure) return saveResult.As<AvatarResponseDto>();
@@ -135,24 +136,27 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         return Result<List<UserStatusDto>>.Success(result);
     }
 
-    public async Task<Result> ChangeUsernameAsync(int id, ChangeUsernameDto dto, CancellationToken ct = default)
+    public async Task<Result> ChangeUsernameAsync(
+       int id, ChangeUsernameDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.NewUsername))
             return Result.Failure("Username не может быть пустым");
 
         var username = dto.NewUsername.Trim().ToLower(new CultureInfo("en-US", false));
-
         var validation = ValidationHelper.ValidateUsername(dto.NewUsername);
         if (validation.IsFailure) return validation;
 
-        var exists = await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
+        var exists = await _userRepo.UsernameExistsAsync(username, ct) &&
+                     await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
+
         if (exists)
             return Result.Conflict("Этот username уже занят");
 
-        var userResult = await FindEntityAsync<Data.User>(id, ct);
-        if (userResult.IsFailure) return userResult;
+        var user = await _userRepo.FindByIdAsync(id, ct);
+        if (user is null)
+            return Result.NotFound($"Пользователь с ID {id} не найден");
 
-        userResult.Value!.Username = username;
+        user.Username = username;
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
@@ -172,8 +176,7 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (dto.NewPassword.Length < 6)
             return Result.Failure("Пароль должен содержать минимум 6 символов");
 
-        var user = await _context.Users.Include(u => u.Password).FirstOrDefaultAsync(u => u.Id == id, ct);
-
+        var user = await _userRepo.FindByIdWithPasswordAsync(id, ct);
         if (user is null)
             return Result.NotFound($"Пользователь с ID {id} не найден");
 

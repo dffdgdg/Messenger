@@ -572,6 +572,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
+        Debug.WriteLine($"[VM] IsScrolledToBottom={value} → ShowScrollToBottom={!value}");
         OnPropertyChanged(nameof(ShowScrollToBottom));
         if (!value) return;
 

@@ -29,7 +29,6 @@ public partial class MessageControl : UserControl
         }
         else
         {
-            // DataContext сброшен — убираем старые классы
             ApplyBubbleClasses(null);
         }
     }
@@ -38,7 +37,6 @@ public partial class MessageControl : UserControl
     {
         if (sender is not MessageViewModel vm) return;
 
-        // Если VM уже dispose-нута — отписываемся немедленно
         if (vm.IsDisposed)
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -56,7 +54,6 @@ public partial class MessageControl : UserControl
         _bubbleBorder ??= this.FindControl<Border>("BubbleBorder");
         if (_bubbleBorder is null) return;
 
-        // Удаляем предыдущие динамические классы
         if (!string.IsNullOrEmpty(_lastBubbleClasses))
         {
             foreach (var cls in _lastBubbleClasses.Split(' ',
@@ -68,7 +65,6 @@ public partial class MessageControl : UserControl
 
         _lastBubbleClasses = newClasses;
 
-        // Добавляем новые
         if (!string.IsNullOrEmpty(newClasses))
         {
             _bubbleBorder.Classes.AddRange(newClasses.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));

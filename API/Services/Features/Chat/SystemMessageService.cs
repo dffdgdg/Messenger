@@ -7,7 +7,7 @@ public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier
     ILogger<SystemMessageService> logger)
     : BaseService<SystemMessageService>(context, logger), ISystemMessageService
 {
-    public async Task CreateAsync(int chatId, int initiatorId, SystemEventType eventType, int? targetUserId = null, string? content = null)
+    public async Task CreateAsync(int chatId, int senderId, SystemEventType eventType, int? targetUserId = null, string? content = null)
     {
         try
         {
@@ -18,7 +18,7 @@ public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier
             var message = new SystemMessage
             {
                 ChatId = chatId,
-                InitiatorId = initiatorId,
+                InitiatorId = senderId,
                 SystemEventType = eventType,
                 TargetUserId = targetUserId,
                 Content = content,

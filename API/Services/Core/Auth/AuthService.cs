@@ -1,4 +1,5 @@
-﻿using API.Services.Base;
+﻿using API.Repositories.Abstarctions;
+using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -11,16 +12,21 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     private readonly MessengerSettings _settings;
     private readonly AppDateTime _appDateTime;
     private readonly IOptions<JwtSettings> _jwtSettings;
+    private readonly IUserRepository _userRepo;
+    private readonly IRefreshTokenRepository _tokenRepo;
     private readonly string _dummyHash;
     private const int MaxActiveSessions = 5;
 
     public AuthService(MessengerDbContext context, ITokenService tokenService, IOptions<MessengerSettings> settings,
-        IOptions<JwtSettings> jwtSettings, TimeBundle time, ILogger<AuthService> logger) : base(context, logger)
+        IOptions<JwtSettings> jwtSettings, TimeBundle time, IUserRepository userRepo, IRefreshTokenRepository tokenRepo,
+        ILogger<AuthService> logger) : base(context, logger)
     {
         _tokenService = tokenService;
         _settings = settings.Value;
         _jwtSettings = jwtSettings;
         _appDateTime = time.AppDateTime;
+        _userRepo = userRepo;
+        _tokenRepo = tokenRepo;
         _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
     }
 
@@ -29,8 +35,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             return Result<AuthResponseDto>.Unauthorized("Неверное имя пользователя или пароль");
 
-        var user = await _context.Users.Include(u => u.Password).AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username == username.Trim(), ct);
+        var user = await _userRepo.FindByUsernameAsync(username, ct);
 
         if (user is null)
         {
@@ -100,8 +105,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
         {
             LogTokenReuse(userId, storedToken.FamilyId);
-            await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
-            return Result<TokenResponseDto>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
+            await _tokenRepo.RevokeByFamilyIdAsync(storedToken.FamilyId, _appDateTime.UtcNow, ct);
+            return Result<TokenResponseDto>.Unauthorized( "Refresh token уже использован. Авторизуйтесь заново.");
         }
 
         if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
@@ -150,11 +155,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     public async Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
     {
-        var revokedCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
-
+        var revokedCount = await _tokenRepo.RevokeAllForUserAsync(userId, _appDateTime.UtcNow, ct);
         LogTokensRevoked(revokedCount, userId);
-
         return Result.Success();
     }
 
@@ -189,8 +191,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
     {
         var now = _appDateTime.UtcNow;
 
-        var activeFamilies = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
-            .GroupBy(rt => rt.FamilyId).Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) }).OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
+        var activeFamilies = await _tokenRepo.GetActiveFamiliesAsync(userId, now, ct);
 
         if (activeFamilies.Count >= MaxActiveSessions)
         {
@@ -213,7 +214,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     private async Task CleanupExpiredTokensAsync(int userId, CancellationToken ct)
     {
-        var expiredCount = await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiresAt < _appDateTime.UtcNow.AddDays(-60)).ExecuteDeleteAsync(ct);
+        var expiredCount = await _tokenRepo.DeleteExpiredAsync(userId, _appDateTime.UtcNow.AddDays(-60), ct);
 
         if (expiredCount > 0)
         {

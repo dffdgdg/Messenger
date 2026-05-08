@@ -18,6 +18,39 @@ public static class ChatPreviewFormatter
         return parts[^1];
     }
 
+    /// <summary>
+    /// Строит текст превью для панели ответа и пузыря цитаты.
+    /// Аналог BuildPreview, но для MessageReplyPreviewDto.
+    /// </summary>
+    public static string BuildReplyPreview(MessageReplyPreviewDto reply)
+    {
+        if (reply.IsDeleted)
+            return "Сообщение удалено";
+
+        if (reply.IsVoiceMessage)
+            return "Голосовое сообщение";
+
+        if (reply.HasPoll)
+            return "📊 " + BuildContentPreview(reply.Content, "Опрос");
+
+        if (reply.FilesCount > 0 && string.IsNullOrWhiteSpace(reply.Content))
+        {
+            return reply.FilesCount == 1 ? "Вложение" : $"{reply.FilesCount} {Pluralize(reply.FilesCount, "файл", "файла", "файлов")}";
+        }
+
+        if (reply.FilesCount > 0 && !string.IsNullOrWhiteSpace(reply.Content))
+            return $"{BuildContentPreview(reply.Content)}";
+
+        return BuildContentPreview(reply.Content, "Сообщение");
+    }
+
+    private static string Pluralize(int n, string one, string few, string many)
+    {
+        var mod10 = n % 10;
+        var mod100 = n % 100;
+        if (mod100 is >= 11 and <= 19) return many;
+        return mod10 switch { 1 => one, 2 or 3 or 4 => few, _ => many };
+    }
     public static (string Preview, bool HidePrefix) BuildPreviewWithMeta(MessageDto message, int? currentUserId = null, bool isDialog = false)
     {
         if (message.IsDeleted)

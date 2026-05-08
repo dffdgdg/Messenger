@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IReadReceiptRepository, ReadReceiptRepository>();
+        services.AddScoped<IPollRepository, PollRepository>();
 
         services.AddBundles();
 

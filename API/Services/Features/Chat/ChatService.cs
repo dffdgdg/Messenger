@@ -1,12 +1,15 @@
-﻿using API.Services.Base;
+﻿using API.Repositories.Abstarctions;
+using API.Repositories.Projections;
+using API.Services.Base;
 using API.Services.Features.Chat;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 
 namespace API.Services.Chat;
 
-public partial class ChatService(MessengerDbContext context, ChatBundle chatBundle, MediaBundle media, PresenceBundle presence,
-    UrlBundle url, IReadReceiptService readReceiptService, ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
+public partial class ChatService(MessengerDbContext context, IChatRepository chatRepository, IUserRepository userRepository,
+    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url, IReadReceiptService readReceiptService,
+    ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     private readonly IAccessControlService _accessControl = chatBundle.Cache.AccessControl;
     private readonly IFileService _fileService = media.FileService;
@@ -28,19 +31,21 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         var chatsData = await LoadChatsWithLastMessageAsync(chatIds);
         var unreadCounts = await readReceiptService.GetUnreadCountsForChatsAsync(userId, chatIds);
 
-        var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact)
-                                     .Select(c => c.Chat.Id).ToList();
+        var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact).Select(c => c.Chat.Id).ToList();
+
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
 
-        var result = chatsData.ConvertAll(item => BuildChatDto(item, unreadCounts, dialogPartners));
+        var result = chatsData.ConvertAll(item =>
+            BuildChatDto(item, unreadCounts, dialogPartners));
 
         return Result<List<ChatDto>>.Success([.. result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate)]);
     }
 
     private async Task<List<ChatWithLastMessage>> LoadChatsWithLastMessageAsync(List<int> chatIds)
     {
-        var chats = await LoadChatsAsync(chatIds);
-        var lastMessages = await LoadLastMessagesAsync(chatIds);
+        var chats = await chatRepository.GetByIdsLightAsync(chatIds);
+
+        var lastMessages = await chatRepository.GetLastMessagesAsync(chatIds);
         var lastMsgMap = lastMessages.ToDictionary(m => m.ChatId);
 
         return chats.ConvertAll(chatEntity =>
@@ -51,62 +56,11 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         });
     }
 
-    private Task<List<Data.Chat>> LoadChatsAsync(List<int> chatIds)
-        => _context.Chats.Where(c => chatIds.Contains(c.Id)).AsNoTracking().ToListAsync();
-
-    private async Task<List<RawLastMessage>> LoadLastMessagesAsync(List<int> chatIds)
-    {
-        var lastMessageIds = await _context.Messages.Where(m => chatIds.Contains(m.ChatId) && m.IsDeleted != true)
-            .GroupBy(m => m.ChatId).Select(g => g.Max(m => m.Id)).ToListAsync();
-
-        if (lastMessageIds.Count == 0)
-            return [];
-
-        return await _context.Messages.Where(m => lastMessageIds.Contains(m.Id)).Select(m => new RawLastMessage
-        {
-            Id = m.Id,
-            ChatId = m.ChatId,
-            CreatedAt = m.CreatedAt,
-            IsSystemMessage = m is SystemMessage,
-            SenderId = m is UserMessage ? ((UserMessage)m).SenderId : ((SystemMessage)m).InitiatorId,
-            Content = m is UserMessage ? ((UserMessage)m).Content : ((SystemMessage)m).Content,
-            SystemEventType = m is SystemMessage ? ((SystemMessage)m).SystemEventType : null,
-            TargetUserId = m is SystemMessage ? ((SystemMessage)m).TargetUserId : null,
-            SenderName = BuildSenderName(m),
-            TargetUserName = BuildTargetUserName(m),
-            IsVoiceMessage = m is UserMessage && ((UserMessage)m).VoiceMessage != null,
-            HasPoll = m is UserMessage && ((UserMessage)m).Poll != null,
-            HasFiles = m is UserMessage && ((UserMessage)m).MessageFiles.Any()
-        }).ToListAsync();
-    }
-
-    private static string? BuildSenderName(Message m)
-    {
-        if (m is UserMessage um)
-            return FormatName(um.Sender?.Surname, um.Sender?.Name, um.Sender?.Midname);
-
-        if (m is SystemMessage sm && sm.Initiator is not null)
-            return FormatName(sm.Initiator.Surname, sm.Initiator.Name, sm.Initiator.Midname);
-
-        return null;
-    }
-
-    private static string? BuildTargetUserName(Message m)
-    {
-        if (m is not SystemMessage sm || sm.TargetUser is null)
-            return null;
-
-        return FormatName(sm.TargetUser.Surname, sm.TargetUser.Name, sm.TargetUser.Midname);
-    }
-
-    private static string FormatName(string? surname, string? name, string? midname)
-    {
-        var parts = new[] { surname, name, midname }.Where(s => !string.IsNullOrWhiteSpace(s));
-        return parts.Any() ? string.Join(" ", parts) : "Без имени";
-    }
-
-    private static LastMessageInfo MapToLastMessageInfo(RawLastMessage msg) => new(msg.Id, msg.Content, msg.CreatedAt, msg.IsSystemMessage,
-        msg.SenderId, msg.IsVoiceMessage, msg.SystemEventType, msg.TargetUserId, msg.SenderName, msg.TargetUserName, msg.HasPoll, msg.HasFiles);
+    private static LastMessageInfo MapToLastMessageInfo(LastMessageProjection msg) =>
+        new(msg.Id, msg.Content, msg.CreatedAt, msg.IsSystemMessage,
+            msg.SenderId, msg.IsVoiceMessage, msg.SystemEventType,
+            msg.TargetUserId, msg.SenderName, msg.TargetUserName,
+            msg.HasPoll, msg.HasFiles);
 
     private ChatDto BuildChatDto(ChatWithLastMessage item, Dictionary<int, int> unreadCounts, Dictionary<int, DialogPartnerInfo> dialogPartners)
     {
@@ -139,7 +93,8 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
     private void ApplyChatIdentity(ChatDto dto, ChatWithLastMessage item, Dictionary<int, DialogPartnerInfo> dialogPartners)
     {
-        if (item.Chat.Type == ChatType.Contact && dialogPartners.TryGetValue(item.Chat.Id, out var partner))
+        if (item.Chat.Type == ChatType.Contact &&
+            dialogPartners.TryGetValue(item.Chat.Id, out var partner))
         {
             dto.Name = partner.DisplayName;
             dto.Avatar = partner.AvatarUrl;
@@ -166,7 +121,6 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
         var preview = BuildContentPreview(msg);
         var firstName = ExtractFirstName(msg.SenderName);
-
         return (preview, firstName, false);
     }
 
@@ -186,9 +140,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
     private static string? ExtractFirstName(string? fullName)
     {
-        if (string.IsNullOrWhiteSpace(fullName))
-            return null;
-
+        if (string.IsNullOrWhiteSpace(fullName)) return null;
         var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return parts[^1];
     }
@@ -198,8 +150,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         var access = await _accessControl.EnsureMemberOfAsync(userId, chatId);
         if (access.IsFailure) return access.As<ChatDto>();
 
-        var chatEntity = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
-
+        var chatEntity = await chatRepository.FindByIdAsync(chatId);
         if (chatEntity is null)
             return Result<ChatDto>.NotFound($"Чат с ID {chatId} не найден");
 
@@ -236,6 +187,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         if (allChatsResult.IsFailure) return allChatsResult;
 
         var dialogs = allChatsResult.Value!.Where(c => c.Type == ChatType.Contact).ToList();
+
         return Result<List<ChatDto>>.Success(dialogs);
     }
 
@@ -245,13 +197,13 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         if (allChatsResult.IsFailure) return allChatsResult;
 
         var groups = allChatsResult.Value!.Where(c => c.Type != ChatType.Contact).ToList();
+
         return Result<List<ChatDto>>.Success(groups);
     }
 
     public async Task<Result<ChatDto>> GetContactChatAsync(int userId, int contactUserId)
     {
-        var chatEntity = await _context.Chats.Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact)
-            .Where(c => c.ChatMembers.Any(cm => cm.UserId == userId)).Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
+        var chatEntity = await chatRepository.FindContactChatAsync(userId, contactUserId);
 
         if (chatEntity is null)
             return Result<ChatDto>.NotFound("Диалог не найден");
@@ -277,40 +229,24 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         var access = await _accessControl.EnsureMemberOfAsync(userId, chatId);
         if (access.IsFailure) return access.As<List<UserDto>>();
 
-        var members = await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Select(cm => new
-        {
-            cm.UserId,
-            cm.Role,
-            User = new
-            {
-                cm.User.Id,
-                cm.User.Username,
-                cm.User.Surname,
-                cm.User.Name,
-                cm.User.Midname,
-                cm.User.Avatar,
-                cm.User.LastOnline,
-                cm.User.StatusType,
-                cm.User.StatusExpiresAt
-            }
-        }).AsNoTracking().ToListAsync();
+        var members = await chatRepository.GetMembersWithUsersAsync(chatId);
 
         var memberIds = members.ConvertAll(m => m.UserId);
         var onlineIds = _onlineService.FilterOnline(memberIds);
 
         var result = members.ConvertAll(m => new UserDto
         {
-            Id = m.User.Id,
-            Username = m.User.Username,
-            DisplayName = FormatName(m.User.Surname, m.User.Name, m.User.Midname),
-            Surname = m.User.Surname,
-            Name = m.User.Name,
-            Midname = m.User.Midname,
-            Avatar = _urlBuilder.BuildUrl(m.User.Avatar),
-            IsOnline = onlineIds.Contains(m.User.Id),
-            LastOnline = m.User.LastOnline,
-            StatusType = m.User.StatusType,
-            StatusExpiresAt = m.User.StatusExpiresAt
+            Id = m.UserId,
+            Username = m.Username,
+            DisplayName = FormatName(m.Surname, m.Name, m.Midname),
+            Surname = m.Surname,
+            Name = m.Name,
+            Midname = m.Midname,
+            Avatar = _urlBuilder.BuildUrl(m.Avatar),
+            IsOnline = onlineIds.Contains(m.UserId),
+            LastOnline = m.LastOnline,
+            StatusType = m.StatusType,
+            StatusExpiresAt = m.StatusExpiresAt
         });
 
         return Result<List<UserDto>>.Success(result);
@@ -369,11 +305,11 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         if (!int.TryParse(dto.Name?.Trim(), out var parsedId))
             return Result<int?>.Success(null);
 
-        var contactExists = await _context.Users.AnyAsync(u => u.Id == parsedId, ct);
+        var contactExists = await userRepository.ExistsAsync(parsedId, ct);
         if (!contactExists)
             return Result<int?>.NotFound("Указанный собеседник не найден");
 
-        var existing = await FindExistingContactChatAsync(dto.CreatedById, parsedId);
+        var existing = await chatRepository.FindContactChatAsync(dto.CreatedById, parsedId, ct);
         if (existing is not null)
             return Result<int?>.Conflict("Диалог с этим пользователем уже существует");
 
@@ -391,7 +327,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
             ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers
         };
 
-        _context.Chats.Add(newChat);
+        chatRepository.Add(newChat);
         await _context.SaveChangesAsync(ct);
 
         AddChatMembers(newChat.Id, dto.CreatedById, contactUserId);
@@ -402,7 +338,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
     private void AddChatMembers(int chatId, int creatorId, int? contactUserId)
     {
-        _context.ChatMembers.Add(new ChatMember
+        chatRepository.AddMember(new ChatMember
         {
             ChatId = chatId,
             UserId = creatorId,
@@ -412,7 +348,7 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
         if (contactUserId.HasValue && contactUserId.Value != creatorId)
         {
-            _context.ChatMembers.Add(new ChatMember
+            chatRepository.AddMember(new ChatMember
             {
                 ChatId = chatId,
                 UserId = contactUserId.Value,
@@ -434,14 +370,15 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         var admin = await _accessControl.EnsureAdminOfAsync(userId, chatId);
         if (admin.IsFailure) return admin.As<ChatDto>();
 
-        var chatEntity = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId);
+        var chatEntity = await chatRepository.FindByIdAsync(chatId);
         if (chatEntity is null)
             return Result<ChatDto>.NotFound($"Чат с ID {chatId} не найден");
 
         if (chatEntity.Type == ChatType.Contact)
             return Result<ChatDto>.Failure("Нельзя редактировать диалог");
 
-        await ApplyChatUpdatesAsync(chatEntity, dto, userId, chatId);
+        var applyResult = await ApplyChatUpdatesAsync(chatEntity, dto, userId, chatId);
+        if (applyResult.IsFailure) return applyResult.As<ChatDto>();
 
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save.As<ChatDto>();
@@ -487,16 +424,17 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         var owner = await _accessControl.EnsureOwnerOfAsync(userId, chatId);
         if (owner.IsFailure) return owner;
 
-        var chatEntity = await _context.Chats.Include(c => c.ChatMembers).FirstOrDefaultAsync(c => c.Id == chatId);
-
+        var chatEntity = await chatRepository.FindByIdWithMembersAsync(chatId);
         if (chatEntity is null)
             return Result.NotFound($"Чат с ID {chatId} не найден");
 
         var memberIds = chatEntity.ChatMembers.Select(cm => cm.UserId).ToList();
 
-        await DeleteVoiceFilesAsync(chatId);
+        var voicePaths = await chatRepository.GetVoiceFilePathsAsync(chatId);
+        foreach (var path in voicePaths)
+            _fileService.DeleteFile(path);
 
-        _context.Chats.Remove(chatEntity);
+        chatRepository.Remove(chatEntity);
 
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save;
@@ -511,24 +449,14 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         return Result.Success();
     }
 
-    private async Task DeleteVoiceFilesAsync(int chatId)
-    {
-        var voiceFilePaths = await _context.VoiceMessages.Where(v => _context.UserMessages.Any(m => m.Id == v.MessageId && m.ChatId == chatId))
-            .Select(v => v.FilePath).ToListAsync();
-
-        foreach (var path in voiceFilePaths)
-            _fileService.DeleteFile(path);
-    }
-
     public async Task<Result> RemoveChatAvatarAsync(int chatId, int userId)
     {
         var admin = await _accessControl.EnsureAdminOfAsync(userId, chatId);
         if (admin.IsFailure) return admin;
 
-        var chatResult = await FindEntityAsync<Data.Chat>(chatId);
-        if (chatResult.IsFailure) return chatResult;
-
-        var chatEntity = chatResult.Value!;
+        var chatEntity = await chatRepository.FindByIdAsync(chatId);
+        if (chatEntity is null)
+            return Result.NotFound($"Чат с ID {chatId} не найден");
 
         if (chatEntity.Type == ChatType.Contact)
             return Result.Failure("Нельзя удалить аватар у диалога");
@@ -538,8 +466,8 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
         chatEntity.Avatar = null;
 
-        var dbSave = await SaveChangesAsync();
-        if (dbSave.IsFailure) return dbSave;
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save;
 
         LogAvatarRemoved(chatId);
         return Result.Success();
@@ -556,10 +484,9 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         if (!file.ContentType.StartsWith("image/"))
             return Result<string>.Failure("Файл должен быть изображением");
 
-        var chatResult = await FindEntityAsync<Data.Chat>(chatId);
-        if (chatResult.IsFailure) return chatResult.As<string>();
-
-        var chatEntity = chatResult.Value!;
+        var chatEntity = await chatRepository.FindByIdAsync(chatId);
+        if (chatEntity is null)
+            return Result<string>.NotFound($"Чат с ID {chatId} не найден");
 
         if (chatEntity.Type == ChatType.Contact)
             return Result<string>.Failure("Нельзя установить аватар для диалога");
@@ -569,8 +496,8 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
         chatEntity.Avatar = saveResult.Value;
 
-        var dbSave = await SaveChangesAsync();
-        if (dbSave.IsFailure) return dbSave.As<string>();
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<string>();
 
         LogAvatarUploaded(chatId);
         return Result<string>.Success(_urlBuilder.BuildUrl(saveResult.Value)!);
@@ -580,30 +507,14 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
     #region Private Helpers
 
-    private async Task<Data.Chat?> FindExistingContactChatAsync(int userId, int contactUserId) => await _context.Chats
-        .Include(c => c.ChatMembers).Where(c => c.Type == ChatType.Contact).Where(c => c.ChatMembers.Any(cm => cm.UserId == userId))
-        .Where(c => c.ChatMembers.Any(cm => cm.UserId == contactUserId)).FirstOrDefaultAsync();
-
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
         => (await GetDialogPartnersAsync([chatId], currentUserId)).GetValueOrDefault(chatId);
 
     private async Task<Dictionary<int, DialogPartnerInfo>> GetDialogPartnersAsync(List<int> chatIds, int currentUserId)
     {
-        if (chatIds.Count == 0)
-            return [];
+        if (chatIds.Count == 0) return [];
 
-        var partners = await _context.ChatMembers.Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId != currentUserId)
-            .Select(cm => new
-            {
-                cm.ChatId,
-                UserId = cm.User.Id,
-                cm.User.Surname,
-                cm.User.Name,
-                cm.User.Midname,
-                cm.User.Avatar,
-                cm.User.StatusType,
-                cm.User.StatusExpiresAt
-            }).AsNoTracking().ToListAsync();
+        var partners = await chatRepository.GetDialogPartnersAsync(chatIds, currentUserId);
 
         var partnerUserIds = partners.ConvertAll(p => p.UserId);
         var onlineIds = _onlineService.FilterOnline(partnerUserIds);
@@ -617,6 +528,12 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
             StatusExpiresAt = p.StatusExpiresAt,
             IsOnline = onlineIds.Contains(p.UserId)
         });
+    }
+
+    private static string FormatName(string? surname, string? name, string? midname)
+    {
+        var parts = new[] { surname, name, midname }.Where(s => !string.IsNullOrWhiteSpace(s));
+        return parts.Any() ? string.Join(" ", parts) : "Без имени";
     }
 
     private static string? Truncate(string? text, int maxLength)
@@ -646,26 +563,12 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
 
     #endregion
 
-    private sealed class RawLastMessage
-    {
-        public int Id { get; init; }
-        public int ChatId { get; init; }
-        public DateTime CreatedAt { get; init; }
-        public bool IsSystemMessage { get; init; }
-        public int? SenderId { get; init; }
-        public string? Content { get; init; }
-        public SystemEventType? SystemEventType { get; init; }
-        public int? TargetUserId { get; init; }
-        public string? SenderName { get; init; }
-        public string? TargetUserName { get; init; }
-        public bool IsVoiceMessage { get; init; }
-        public bool HasPoll { get; init; }
-        public bool HasFiles { get; init; }
-    }
+    #region Inner Types
 
     private sealed record LastMessageInfo(int Id, string? Content, DateTime CreatedAt, bool IsSystemMessage,
-        int? SenderId, bool IsVoiceMessage, SystemEventType? SystemEventType, int? TargetUserId,
-        string? SenderName, string? TargetUserName, bool HasPoll, bool HasFiles);
+        int? SenderId, bool IsVoiceMessage, SystemEventType? SystemEventType,
+        int? TargetUserId, string? SenderName, string? TargetUserName,
+        bool HasPoll, bool HasFiles);
 
     private sealed record ChatWithLastMessage
     {
@@ -682,4 +585,6 @@ public partial class ChatService(MessengerDbContext context, ChatBundle chatBund
         public DateTime? StatusExpiresAt { get; init; }
         public bool IsOnline { get; init; }
     }
+
+    #endregion
 }

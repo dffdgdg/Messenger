@@ -1,4 +1,5 @@
 ﻿using API.Services.Base;
+using Shared.Hubs;
 
 namespace API.Services.Chat;
 
@@ -63,7 +64,7 @@ public sealed partial class NotificationService(MessengerDbContext context, IHub
         try
         {
             var notification = await BuildNotificationAsync(message, type);
-            await _hubNotifier.SendToUserAsync(userId, "ReceiveNotification", notification);
+            await _hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ReceiveNotification, notification);
         }
         catch (Exception ex)
         {

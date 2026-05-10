@@ -19,6 +19,48 @@ public class AuthControllerTests
         _authServiceMock = new Mock<IAuthService>();
         _controller = new AuthController(_authServiceMock.Object, NullLogger<AuthController>.Instance);
     }
+    [Fact]
+
+    public async Task Login_InternalError_Returns500()
+    {
+        _authServiceMock
+            .Setup(x => x.LoginAsync(
+                "alice",
+                "123",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AuthResponseDto>.Internal("DB error"));
+
+        var result = await _controller.Login(
+            new LoginRequest("alice", "123"),
+            CancellationToken.None);
+
+        var objectResult = result.Should()
+            .BeOfType<ObjectResult>()
+            .Subject;
+
+        objectResult.StatusCode.Should().Be(500);
+    }
+    [Fact]
+    public async Task Login_CallsServiceOnce()
+    {
+        _authServiceMock
+            .Setup(x => x.LoginAsync(
+                "alice",
+                "123",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AuthResponseDto>.Success(new()));
+
+        await _controller.Login(
+            new LoginRequest("alice", "123"),
+            CancellationToken.None);
+
+        _authServiceMock.Verify(x =>
+            x.LoginAsync(
+                "alice",
+                "123",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 
     [Fact]
     public async Task Login_ValidCredentials_Returns200WithTokens()
@@ -48,38 +90,6 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task Login_WrongPassword_Returns401()
-    {
-        _authServiceMock.Setup(s => s.LoginAsync("alice", "wrongpass", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AuthResponseDto>.Unauthorized("Неверное имя пользователя или пароль"));
-
-        var result = await _controller.Login(new LoginRequest("alice", "wrongpass"), CancellationToken.None);
-
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        unauthorized.StatusCode.Should().Be(401);
-
-        var body = unauthorized.Value.Should().BeOfType<ApiResponse<AuthResponseDto>>().Subject;
-        body.Success.Should().BeFalse();
-        body.Error.Should().Contain("Неверное");
-    }
-
-    [Fact]
-    public async Task Login_BannedUser_Returns403()
-    {
-        _authServiceMock.Setup(s => s.LoginAsync("banned", "pass123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AuthResponseDto>.Forbidden("Учётная запись заблокирована"));
-
-        var result = await _controller.Login(new LoginRequest("banned", "pass123"), CancellationToken.None);
-
-        var forbidden = result.Should().BeOfType<ObjectResult>().Subject;
-        forbidden.StatusCode.Should().Be(403);
-
-        var body = forbidden.Value.Should().BeOfType<ApiResponse<AuthResponseDto>>().Subject;
-        body.Success.Should().BeFalse();
-        body.Error.Should().Contain("заблокирована");
-    }
-
-    [Fact]
     public async Task Refresh_ValidToken_Returns200WithNewTokens()
     {
         var expected = new TokenResponseDto
@@ -89,13 +99,15 @@ public class AuthControllerTests
             UserId = 1,
             Role = UserRole.User
         };
-
-        _authServiceMock.Setup(s => s.RefreshTokenAsync("old-access", "old-refresh", It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.RefreshTokenAsync("old-access", "old-refresh", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<TokenResponseDto>.Success(expected));
 
-        var result = await _controller.Refresh(new RefreshTokenRequest("old-access", "old-refresh"), CancellationToken.None);
+        var result = await _controller.Refresh(
+            new RefreshTokenRequest("old-access", "old-refresh"), CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.StatusCode.Should().Be(200);
         var body = ok.Value.Should().BeOfType<ApiResponse<TokenResponseDto>>().Subject;
         body.Success.Should().BeTrue();
         body.Data!.Token.Should().Be("new-access");

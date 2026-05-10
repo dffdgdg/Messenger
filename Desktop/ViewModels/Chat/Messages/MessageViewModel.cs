@@ -143,6 +143,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private bool _subscribedToPlayer;
     private bool _subscribedToPlaybackEvents;
     private PollViewModel? _boundPollVm;
+    private readonly int _currentUserId;
 
     #endregion
 
@@ -172,11 +173,12 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     #region Constructor
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
-        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null)
+        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, int currentUserId = 0)
     {
         _downloadService = downloadService;
         _notificationService = notificationService;
         _audioPlayer = audioPlayer;
+        _currentUserId = currentUserId;
         _apiClient = apiClient;
         Message = message;
         MemoryDiagnostics.OnMessageVmCreated();
@@ -224,16 +226,14 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             ForwardedFromSenderName = message.ForwardedFrom.OriginalSenderName;
     }
 
-    private void InitChildViewModels(MessageDto message)
+    private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
     {
-        if (message.Poll is not null)
+        if (_currentUserId == 0 || _apiClient == null)
         {
-            Poll = CreatePollViewModel(message.Poll, message.SenderId);
-            BindPollViewModel(Poll);
+            return null;
         }
 
-        if (Files.Count > 0)
-            FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, _downloadService, _notificationService)));
+        return new PollViewModel(pollDto, _currentUserId, _apiClient, ownerId);
     }
 
     private static string BuildSystemActionPrefix(SystemEventType? eventType) => eventType switch
@@ -246,6 +246,18 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         MsgShared.Enum.SystemEventType.CallStarted => " начал(а) звонок",
         _ => string.Empty
     };
+
+    private void InitChildViewModels(MessageDto message)
+    {
+        if (message.Poll is not null)
+        {
+            Poll = CreatePollViewModel(message.Poll, message.SenderId);
+            BindPollViewModel(Poll);
+        }
+
+        if (Files.Count > 0)
+            FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, _downloadService, _notificationService)));
+    }
 
     private static string BuildSystemActionSuffix(SystemEventType? eventType) => eventType switch
     {
@@ -490,32 +502,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         {
             ShowPollResultsButton = _boundPollVm is { ShowResultsButton: true };
             OnPropertyChanged(nameof(ShowPollResultsButton));
-        }
-    }
-
-    private static PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
-    {
-        try
-        {
-            var sp = App.Current.Services;
-            var authManager = sp.GetRequiredService<IAuthManager>();
-            var userId = authManager.Session.UserId ?? 0;
-
-            Debug.WriteLine($"[CreatePollVM] pollId={pollDto.Id}, userId={userId}, ownerId={ownerId}");
-
-            if (userId == 0)
-            {
-                Debug.WriteLine("[CreatePollVM] userId=0, returning null");
-                return null;
-            }
-
-            var apiClient = sp.GetRequiredService<IApiClientService>();
-            return new PollViewModel(pollDto, userId, apiClient, ownerId);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[CreatePollVM] EXCEPTION: {ex.GetType().Name}: {ex.Message}");
-            return null;
         }
     }
 

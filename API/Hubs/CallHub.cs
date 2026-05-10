@@ -1,40 +1,44 @@
 ﻿using Shared.DTO.Call;
+using Shared.Hubs;
 using System.Security.Claims;
 
 namespace API.Hubs;
 
 [Authorize]
-public partial class CallHub(ICallSessionService callSessions, IAccessControlService accessControl, ISystemMessageService systemMessages, MessengerDbContext db, ILogger<CallHub> logger) : Hub
+public partial class CallHub(ICallSessionService callSessions, IAccessControlService accessControl, ISystemMessageService systemMessages,
+    MessengerDbContext db, ILogger<CallHub> logger) : Hub
 {
     private const int MaxParticipants = 12;
     private const int RingingTimeoutSeconds = 60;
-    private Dictionary<int, (string? Name, string? Avatar)>? _userCache;
 
-    private async Task<(string? Name, string? Avatar)> GetUserInfoAsync(int userId)
+    private readonly ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>> _userCache = new();
+
+    private Task<(string? Name, string? Avatar)> GetUserInfoAsync(int userId)
+        => _userCache.GetOrAdd(userId, FetchUserInfoAsync);
+
+    private async Task<(string? Name, string? Avatar)> FetchUserInfoAsync(int userId)
     {
-        _userCache ??= [];
+        var user = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.DisplayName, u.Avatar })
+            .FirstOrDefaultAsync();
 
-        if (_userCache.TryGetValue(userId, out var cached))
-            return cached;
-
-        var user = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => new { u.Id, u.Avatar, u.DisplayName }).FirstOrDefaultAsync();
-
-        var result = user != null ? (user.DisplayName, user.Avatar) : (null, null);
-
-        _userCache[userId] = result;
-        return result;
+        return user != null ? (user.DisplayName, user.Avatar) : (null, null);
     }
 
-    private async Task<string> GetChatNameAsync(int chatId) => await db.Chats.AsNoTracking().Where(c => c.Id == chatId).Select(c => c.Name).FirstOrDefaultAsync() ?? string.Empty;
+    private async Task<string> GetChatNameAsync(int chatId)
+        => await db.Chats.AsNoTracking().Where(c => c.Id == chatId).Select(c => c.Name).FirstOrDefaultAsync() ?? string.Empty;
 
     private async Task<CallStateDto> ToStateDtoAsync(CallSession session)
     {
-        foreach (var userId in session.ActiveParticipants.Keys)
-            await GetUserInfoAsync(userId);
+        var userIds = session.ActiveParticipants.Keys.Append(session.InitiatorId).Distinct();
 
-        await GetUserInfoAsync(session.InitiatorId);
+        await Task.WhenAll(userIds.Select(GetUserInfoAsync));
 
-        return callSessions.ToStateDto(session, userId => _userCache?.TryGetValue(userId, out var v) == true ? v.Avatar : null, userId => _userCache?.TryGetValue(userId, out var v) == true ? v.Name : null);
+        return callSessions.ToStateDto(session,
+            userId => _userCache.TryGetValue(userId, out var t) && t.IsCompletedSuccessfully ? t.Result.Avatar : null,
+            userId => _userCache.TryGetValue(userId, out var t) && t.IsCompletedSuccessfully ? t.Result.Name : null);
     }
 
     private int CurrentUserId
@@ -65,23 +69,19 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         await base.OnConnectedAsync();
     }
 
-    /// <summary>
-    /// Инициировать звонок в чате.
-    /// Рассылает IncomingCall всем участникам чата кроме инициатора.
-    /// </summary>
     public async Task InitiateCall(int chatId)
     {
         var userId = CurrentUserId;
 
         if (!await accessControl.IsMemberAsync(userId, chatId))
         {
-            await Clients.Caller.SendAsync("CallError", "Нет доступа к чату");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Нет доступа к чату");
             return;
         }
 
         if (callSessions.GetActiveCallInChat(chatId) != null)
         {
-            await Clients.Caller.SendAsync("CallError", "В этом чате уже идёт звонок");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "В этом чате уже идёт звонок");
             return;
         }
 
@@ -92,13 +92,12 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         if (session == null)
         {
-            await Clients.Caller.SendAsync("CallError", "Не удалось создать звонок");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Не удалось создать звонок");
             return;
         }
 
         var memberIds = await accessControl.GetChatMemberIdsAsync(chatId);
-
-        var (Name, Avatar) = await GetUserInfoAsync(userId);
+        var (name, avatar) = await GetUserInfoAsync(userId);
 
         var invite = new CallInviteDto
         {
@@ -106,8 +105,8 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
             ChatId = chatId,
             ChatName = await GetChatNameAsync(chatId),
             InitiatorId = userId,
-            InitiatorName = Name ?? $"User {userId}",
-            InitiatorAvatar = Avatar,
+            InitiatorName = name ?? $"User {userId}",
+            InitiatorAvatar = avatar,
             ActiveParticipantsCount = 1,
             IsGroupCall = isGroup
         };
@@ -116,18 +115,15 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         {
             if (!isGroup)
             {
-                session.PendingParticipants[memberId] = new CallParticipant
-                {
-                    UserId = memberId
-                };
+                session.PendingParticipants[memberId] = new CallParticipant { UserId = memberId };
             }
 
-            await Clients.Group($"user_{memberId}").SendAsync("IncomingCall", invite);
+            await Clients.Group($"user_{memberId}").SendAsync(HubMethods.Call.IncomingCall, invite);
         }
 
         var stateDto = await ToStateDtoAsync(session);
-        await Clients.Caller.SendAsync("CallStateUpdated", stateDto);
-        await Clients.Group($"chat_{chatId}").SendAsync("ActiveCallStarted", stateDto);
+        await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
+        await Clients.Group($"chat_{chatId}").SendAsync(HubMethods.Call.ActiveCallStarted, stateDto);
 
         await systemMessages.CreateCallStartedMessageAsync(chatId, userId);
 
@@ -137,9 +133,6 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         }
     }
 
-    /// <summary>
-    /// Принять входящий звонок / присоединиться к активному.
-    /// </summary>
     public async Task JoinCall(string callId)
     {
         var userId = CurrentUserId;
@@ -147,49 +140,46 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         if (session == null)
         {
-            await Clients.Caller.SendAsync("CallEnded", callId, CallEndReason.Ended);
+            await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
             return;
         }
 
         if (session.ActiveParticipants.Count >= MaxParticipants)
         {
-            await Clients.Caller.SendAsync("CallError", $"Максимум {MaxParticipants} участников");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, $"Максимум {MaxParticipants} участников");
             return;
         }
 
         if (!await accessControl.IsMemberAsync(userId, session.ChatId))
         {
-            await Clients.Caller.SendAsync("CallError", "Нет доступа к чату");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Нет доступа к чату");
             return;
         }
 
         var joined = callSessions.JoinCall(callId, userId, Context.ConnectionId);
         if (!joined)
         {
-            await Clients.Caller.SendAsync("CallEnded", callId, CallEndReason.Ended);
+            await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
             return;
         }
 
         var stateDto = await ToStateDtoAsync(session);
-        await Clients.Caller.SendAsync("CallStateUpdated", stateDto);
+        await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
 
-        var (Name, Avatar) = await GetUserInfoAsync(userId);
+        var (name, avatar) = await GetUserInfoAsync(userId);
         var notification = new CallParticipantDto
         {
             UserId = userId,
-            DisplayName = Name ?? $"User {userId}",
-            AvatarUrl = Avatar
+            DisplayName = name ?? $"User {userId}",
+            AvatarUrl = avatar
         };
+
         foreach (var participant in session.ActiveParticipants.Values.Where(p => p.UserId != userId))
         {
-            await Clients.Client(participant.ConnectionId).SendAsync("CallParticipantJoined", callId, notification);
+            await Clients.Client(participant.ConnectionId).SendAsync(HubMethods.Call.CallParticipantJoined, callId, notification);
         }
     }
 
-    /// <summary>
-    /// Покинуть звонок (не завершить для всех).
-    /// Если последний — звонок завершается автоматически.
-    /// </summary>
     public async Task LeaveCall(string callId)
     {
         var userId = CurrentUserId;
@@ -203,7 +193,7 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         foreach (var p in session.ActiveParticipants.Values)
         {
-            await Clients.Client(p.ConnectionId).SendAsync("CallParticipantLeft", callId, userId);
+            await Clients.Client(p.ConnectionId).SendAsync(HubMethods.Call.CallParticipantLeft, callId, userId);
         }
 
         if (shouldEnd)
@@ -212,14 +202,10 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         }
         else if (isGroup)
         {
-            await Clients.Group($"chat_{chatId}").SendAsync("ActiveCallUpdated", await ToStateDtoAsync(session));
+            await Clients.Group($"chat_{chatId}").SendAsync(HubMethods.Call.ActiveCallUpdated, await ToStateDtoAsync(session));
         }
     }
 
-    /// <summary>
-    /// Отклонить входящий звонок.
-    /// Только для конкретного пользователя — остальные продолжают.
-    /// </summary>
     public async Task DeclineCall(string callId)
     {
         var userId = CurrentUserId;
@@ -227,14 +213,11 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         if (session == null)
         {
-            await Clients.Caller.SendAsync("CallEnded", callId, CallEndReason.Ended);
+            await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
             return;
         }
 
-        if (session.IsGroupCall)
-        {
-            return;
-        }
+        if (session.IsGroupCall) return;
 
         session.PendingParticipants.TryRemove(userId, out _);
 
@@ -244,13 +227,9 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
             return;
         }
 
-        await Clients.Caller.SendAsync("CallEnded", callId, CallEndReason.Declined);
+        await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Declined);
     }
 
-    /// <summary>
-    /// Инициатор отменяет звонок до того как кто-то принял.
-    /// Рассылает CallEnded(Cancelled) всем pending участникам.
-    /// </summary>
     public async Task CancelCall(string callId)
     {
         var userId = CurrentUserId;
@@ -259,17 +238,11 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         if (session.InitiatorId != userId)
         {
-            await Clients.Caller.SendAsync("CallError", "Только инициатор может отменить звонок");
+            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Только инициатор может отменить звонок");
             return;
         }
 
-        if (session.IsGroupCall)
-        {
-            await LeaveCall(callId);
-            return;
-        }
-
-        if (session.Status != CallStatus.Ringing)
+        if (session.IsGroupCall || session.Status != CallStatus.Ringing)
         {
             await LeaveCall(callId);
             return;
@@ -278,9 +251,6 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         await TerminateCallAsync(callId, session.ChatId, CallEndReason.Cancelled);
     }
 
-    /// <summary>
-    /// Пересылка WebRTC сигнала (offer/answer/ice-candidate) конкретному участнику.
-    /// </summary>
     public async Task SendSignal(WebRtcSignalDto signal)
     {
         var session = callSessions.GetCall(signal.CallId);
@@ -291,12 +261,9 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         if (!session.ActiveParticipants.TryGetValue(signal.TargetUserId, out var target))
             return;
 
-        await Clients.Client(target.ConnectionId).SendAsync("ReceiveSignal", signal);
+        await Clients.Client(target.ConnectionId).SendAsync(HubMethods.Call.ReceiveSignal, signal);
     }
 
-    /// <summary>
-    /// Обновить статус микрофона.
-    /// </summary>
     public async Task ToggleMute(string callId, bool isMuted)
     {
         var userId = CurrentUserId;
@@ -307,13 +274,10 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         foreach (var p in session.ActiveParticipants.Values.Where(p => p.UserId != userId))
         {
-            await Clients.Client(p.ConnectionId).SendAsync("ParticipantMuteChanged", callId, userId, isMuted);
+            await Clients.Client(p.ConnectionId).SendAsync(HubMethods.Call.ParticipantMuteChanged, callId, userId, isMuted);
         }
     }
 
-    /// <summary>
-    /// Обновить VAD-статус (говорит / молчит).
-    /// </summary>
     public async Task ToggleSpeaking(string callId, bool isSpeaking)
     {
         var userId = CurrentUserId;
@@ -324,20 +288,13 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
         callSessions.SetSpeaking(callId, userId, isSpeaking);
 
-        var others = session.ActiveParticipants.Values
-            .Where(p => p.UserId != userId)
-            .Select(p => p.ConnectionId)
-            .Where(c => !string.IsNullOrEmpty(c))
-            .ToList();
+        var others = session.ActiveParticipants.Values.Where(p => p.UserId != userId).Select(p => p.ConnectionId).Where(c => !string.IsNullOrEmpty(c)).ToList();
 
         if (others.Count == 0) return;
 
-        await Clients.Clients(others).SendAsync("ParticipantSpeakingChanged", callId, userId, isSpeaking);
+        await Clients.Clients(others).SendAsync(HubMethods.Call.ParticipantSpeakingChanged, callId, userId, isSpeaking);
     }
 
-    /// <summary>
-    /// Получить состояние активного звонка в чате (для реконнекта или позднего входа).
-    /// </summary>
     public async Task<CallStateDto?> GetCallState(int chatId)
     {
         var session = callSessions.GetActiveCallInChat(chatId);
@@ -353,14 +310,17 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
     {
         var userId = CurrentUserId;
 
-
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
 
         foreach (var session in FindSessionsForUser(userId))
         {
             callSessions.LeaveCall(session.CallId, userId, out var shouldEnd);
+
             foreach (var p in session.ActiveParticipants.Values)
-                await Clients.Client(p.ConnectionId).SendAsync("CallParticipantLeft", session.CallId, userId);
+            {
+                await Clients.Client(p.ConnectionId)
+                    .SendAsync(HubMethods.Call.CallParticipantLeft, session.CallId, userId);
+            }
 
             if (shouldEnd)
                 await TerminateCallAsync(session.CallId, session.ChatId, CallEndReason.Ended);
@@ -372,35 +332,30 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
     private async Task TerminateCallAsync(string callId, int chatId, CallEndReason reason)
     {
         var session = callSessions.GetCall(callId);
+        if (session == null) return;
 
-        if (session != null)
+        var initiatorId = session.InitiatorId;
+
+        foreach (var pending in session.PendingParticipants.Values)
         {
-            var initiatorId = session.InitiatorId;
+            await Clients.Group($"user_{pending.UserId}").SendAsync(HubMethods.Call.CallEnded, callId, reason);
+        }
 
-            foreach (var pending in session.PendingParticipants.Values)
-            {
-                await Clients.Group($"user_{pending.UserId}").SendAsync("CallEnded", callId, reason);
-            }
+        foreach (var active in session.ActiveParticipants.Values)
+        {
+            await Clients.Client(active.ConnectionId).SendAsync(HubMethods.Call.CallEnded, callId, reason);
+        }
 
-            foreach (var active in session.ActiveParticipants.Values)
-            {
-                await Clients.Client(active.ConnectionId).SendAsync("CallEnded", callId, reason);
-            }
+        await Clients.Group($"chat_{chatId}").SendAsync(HubMethods.Call.ActiveCallEnded, callId);
 
-            await Clients.Group($"chat_{chatId}").SendAsync("ActiveCallEnded", callId);
+        var duration = await callSessions.EndCallAsync(callId);
 
-            var duration = await callSessions.EndCallAsync(callId);
-
-            if (reason != CallEndReason.Cancelled && reason != CallEndReason.Declined && duration > TimeSpan.FromSeconds(1))
-            {
-                await systemMessages.CreateCallEndedMessageAsync(chatId, initiatorId, duration);
-            }
+        if (reason != CallEndReason.Cancelled && reason != CallEndReason.Declined && duration > TimeSpan.FromSeconds(1))
+        {
+            await systemMessages.CreateCallEndedMessageAsync(chatId, initiatorId, duration);
         }
     }
 
-    /// <summary>
-    /// Отправить сообщение в чат звонка (ephemeral, не сохраняется).
-    /// </summary>
     public async Task SendCallMessage(string callId, string text)
     {
         var userId = CurrentUserId;
@@ -408,7 +363,6 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         if (session == null) return;
 
         if (!session.ActiveParticipants.ContainsKey(userId)) return;
-
         if (string.IsNullOrWhiteSpace(text) || text.Length > 2000) return;
 
         var (name, avatar) = await GetUserInfoAsync(userId);
@@ -423,10 +377,9 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
             SentAt = DateTime.UtcNow
         };
 
-        // Рассылаем всем активным участникам включая отправителя
         var connectionIds = session.ActiveParticipants.Values.Select(p => p.ConnectionId).Where(c => !string.IsNullOrEmpty(c)).ToList();
 
-        await Clients.Clients(connectionIds).SendAsync("CallMessageReceived", message);
+        await Clients.Clients(connectionIds).SendAsync(HubMethods.Call.CallMessageReceived, message);
     }
 
     private async Task StartRingingTimeoutAsync(string callId, int chatId, int timeoutSeconds)
@@ -447,8 +400,8 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
         catch (OperationCanceledException) { /* Кто-то принял или звонок завершён */ }
     }
 
-    private IEnumerable<CallSession> FindSessionsForUser(int userId) => callSessions.GetAllSessionsForUser(userId);
-
+    private IEnumerable<CallSession> FindSessionsForUser(int userId)
+        => callSessions.GetAllSessionsForUser(userId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Звонок {CallId} в чате {ChatId} завершён по таймауту")]
     private partial void LogCallTimedOut(string callId, int chatId);

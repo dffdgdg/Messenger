@@ -24,7 +24,20 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
             return Ok(ApiResponse<TResult>.Ok(result.Value));
 
         _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
-        return MapFailureToObjectResult(result);
+        return MapFailureToObjectResult<TResult>(result);
+    }
+    protected ObjectResult MapFailureToObjectResult<T>(Result result)
+    {
+        var response = ApiResponse<T>.Fail(result.Error!);
+        return result.ErrorType switch
+        {
+            ResultErrorType.Unauthorized => Unauthorized(response),
+            ResultErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, response),
+            ResultErrorType.NotFound => NotFound(response),
+            ResultErrorType.Conflict => Conflict(response),
+            ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
+            _ => BadRequest(response)
+        };
     }
 
     protected IActionResult Map(Result result)

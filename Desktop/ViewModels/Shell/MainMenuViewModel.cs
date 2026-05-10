@@ -122,9 +122,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         Debug.WriteLine("[MainMenu] InitGlobalHubAsync START");
         try
         {
-            Debug.WriteLine($"[MainMenu] GlobalHub state before disconnect: {_globalHub.IsConnected}");
             await _globalHub.DisconnectAsync();
-            Debug.WriteLine("[MainMenu] Calling ConnectAsync...");
             await _globalHub.ConnectAsync();
             Debug.WriteLine($"[MainMenu] GlobalHub connected: {_globalHub.IsConnected}");
         }
@@ -135,8 +133,14 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         try
         {
+            _callHub.IncomingCall -= OnIncomingCall;
+            _callHub.CallStateUpdated -= OnCallStateUpdated;
+
             await _callHub.DisconnectAsync();
             await _callHub.ConnectAsync();
+
+            _callHub.IncomingCall += OnIncomingCall;
+            _callHub.CallStateUpdated += OnCallStateUpdated;
         }
         catch (Exception ex)
         {
@@ -148,9 +152,25 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         try
         {
+            // Проверяем подключение с небольшим ожиданием
             if (!_callHub.IsConnected)
             {
-                Debug.WriteLine("[MainMenuViewModel] IncomingCall: CallHub не подключён, пропуск");
+                Debug.WriteLine("[MainMenuViewModel] IncomingCall: CallHub не подключён, ожидание...");
+                var deadline = DateTime.UtcNow.AddSeconds(3);
+                while (!_callHub.IsConnected && DateTime.UtcNow < deadline)
+                    await Task.Delay(100);
+
+                if (!_callHub.IsConnected)
+                {
+                    Debug.WriteLine("[MainMenuViewModel] IncomingCall: CallHub так и не подключился, пропуск");
+                    return;
+                }
+            }
+
+            // Если уже в звонке — показываем баннер вместо диалога
+            if (_activeCallStore.IsInCall)
+            {
+                Debug.WriteLine("[MainMenuViewModel] IncomingCall: уже в звонке, пропуск диалога");
                 return;
             }
 
@@ -170,22 +190,36 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         try
         {
             var callService = _sp.GetRequiredService<ICallService>();
+
+            // Сначала присоединяемся к звонку
             await callService.JoinCallAsync(invite.CallId, invite.ChatId);
 
-            await Task.Delay(300);
-
+            // Получаем состояние (JoinCallAsync уже выполнен, состояние актуальное)
             var state = await _callHub.GetCallStateAsync(invite.ChatId);
             if (state == null)
             {
                 Debug.WriteLine("[MainMenuViewModel] OnCallAccepted: GetCallState вернул null");
-                return;
+                // Создаём минимальное состояние из invite как fallback
+                state = new CallStateDto
+                {
+                    CallId = invite.CallId,
+                    ChatId = invite.ChatId,
+                    InitiatorId = invite.InitiatorId,
+                    IsGroupCall = invite.IsGroupCall,
+                    StartedAt = DateTime.UtcNow,
+                    Participants = []
+                };
             }
 
             var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name
                            ?? invite.ChatName;
 
-            _ = OpenCallChatAsync(invite);
-            Dispatcher.UIThread.Post(() => _ = ShowCallViewAsync(state, chatName, invite.IsGroupCall));
+            // Открываем чат и UI звонка параллельно
+            var openChatTask = OpenCallChatAsync(invite);
+
+            Dispatcher.UIThread.Post(() => ShowCallViewSync(state, chatName, invite.IsGroupCall));
+
+            await openChatTask;
         }
         catch (Exception ex)
         {
@@ -193,12 +227,13 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    private Task ShowCallViewAsync(CallStateDto state, string chatName, bool isGroupCall)
+    // Синхронная версия без async void проблем
+    private void ShowCallViewSync(CallStateDto state, string chatName, bool isGroupCall)
     {
         if (_activeCallStore.ActiveCall != null)
         {
             _activeCallStore.OpenCallUi();
-            return Task.CompletedTask;
+            return;
         }
 
         var callService = _sp.GetRequiredService<ICallService>();
@@ -208,23 +243,24 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         _activeCallStore.ActiveCall = callVm;
         _activeCallStore.OpenCallUi();
-
-        return Task.CompletedTask;
     }
 
     private void OnCallStateUpdated(CallStateDto state)
     {
+        // Только для инициатора, когда UI ещё не открыт
         if (_activeCallStore.IsInCall) return;
 
-        var callService = _sp.GetRequiredService<ICallService>();
         var myUserId = _auth.Session.UserId ?? 0;
-
-        // Только инициатор — принимающая сторона обрабатывает в OnCallAcceptedAsync
         if (state.InitiatorId != myUserId) return;
+
+        var callService = _sp.GetRequiredService<ICallService>();
+
+        // Проверяем что мы инициируем именно этот чат
         if (callService.ActiveChatId != state.ChatId) return;
 
         var chatName = UserChats.FirstOrDefault(c => c.Id == state.ChatId)?.Name ?? string.Empty;
-        Dispatcher.UIThread.Post(() => _ = ShowCallViewAsync(state, chatName, state.IsGroupCall));
+
+        Dispatcher.UIThread.Post(() => ShowCallViewSync(state, chatName, state.IsGroupCall));
     }
 
     private void OnUserStatusChanged(UserStatusDto status)

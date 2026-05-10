@@ -92,7 +92,7 @@
 						<Border Classes="Section">
 							<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
 								<StackPanel Grid.Row="0" Spacing="4">
-									<TextBlock Text="ВнутрьСвязь"
+									<TextBlock Text="ВнутрьСеть"
 											   FontWeight="SemiBold"
 											   FontSize="16"/>
 									<TextBlock Text="Версия 1.0.0"
@@ -111,7 +111,6 @@
 							</Grid>
 						</Border>
 					</StackPanel>
-
 				</StackPanel>
 			</Border>
 		</ScrollViewer>

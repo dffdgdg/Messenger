@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Shared.Dto.Call;
 using Shared.DTO.Call;
+using Shared.Hubs;
 using System;
 using System.Net.Http;
 using System.Threading;
@@ -40,65 +41,65 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     private void SubscribeEvents()
     {
-        _hub.On<CallInviteDto>("IncomingCall", dto =>
+        _hub.On<CallInviteDto>(HubMethods.Call.IncomingCall, dto =>
         {
             LogIncomingCall(dto.CallId, dto.ChatId);
             IncomingCall?.Invoke(dto);
         });
 
-        _hub.On<string, CallParticipantDto>("CallParticipantJoined", (callId, participant) =>
+        _hub.On<string, CallParticipantDto>(HubMethods.Call.CallParticipantJoined, (callId, participant) =>
         {
             LogParticipantJoined(participant.UserId, callId);
             CallParticipantJoined?.Invoke(callId, participant);
         });
 
-        _hub.On<string, int>("CallParticipantLeft", (callId, userId) =>
+        _hub.On<string, int>(HubMethods.Call.CallParticipantLeft, (callId, userId) =>
         {
             LogParticipantLeft(userId, callId);
             CallParticipantLeft?.Invoke(callId, userId);
         });
 
-        _hub.On<string, CallEndReason>("CallEnded", (callId, reason) =>
+        _hub.On<string, CallEndReason>(HubMethods.Call.CallEnded, (callId, reason) =>
         {
             LogCallEnded(callId, reason);
             CallEnded?.Invoke(callId, reason);
         });
 
-        _hub.On<WebRtcSignalDto>("ReceiveSignal", signal =>
+        _hub.On<WebRtcSignalDto>(HubMethods.Call.ReceiveSignal, signal =>
         {
             LogSignalReceived(signal.Type, signal.FromUserId, signal.TargetUserId);
             SignalReceived?.Invoke(signal);
         });
-        _hub.On<CallChatMessageDto>("CallMessageReceived", dto => CallMessageReceived?.Invoke(dto));
+        _hub.On<CallChatMessageDto>(HubMethods.Call.CallMessageReceived, dto => CallMessageReceived?.Invoke(dto));
 
-        _hub.On<string, int, bool>("ParticipantMuteChanged", (callId, userId, isMuted) =>
+        _hub.On<string, int, bool>(HubMethods.Call.ParticipantMuteChanged, (callId, userId, isMuted) =>
             ParticipantMuteChanged?.Invoke(callId, userId, isMuted));
 
-        _hub.On<string, int, bool>("ParticipantSpeakingChanged", (callId, userId, isSpeaking) =>
+        _hub.On<string, int, bool>(HubMethods.Call.ParticipantSpeakingChanged, (callId, userId, isSpeaking) =>
             ParticipantSpeakingChanged?.Invoke(callId, userId, isSpeaking));
 
-        _hub.On<CallStateDto>("CallStateUpdated", dto =>
+        _hub.On<CallStateDto>(HubMethods.Call.CallStateUpdated, dto =>
         {
             LogCallStateUpdated(dto.CallId);
             CallStateUpdated?.Invoke(dto);
         });
 
-        _hub.On<CallStateDto>("ActiveCallStarted", dto =>
+        _hub.On<CallStateDto>(HubMethods.Call.ActiveCallStarted, dto =>
         {
             LogActiveCallStarted(dto.CallId, dto.ChatId);
             ActiveCallStarted?.Invoke(dto);
         });
 
-        _hub.On<CallStateDto>("ActiveCallUpdated", dto =>
+        _hub.On<CallStateDto>(HubMethods.Call.ActiveCallUpdated, dto =>
             ActiveCallUpdated?.Invoke(dto));
 
-        _hub.On<string>("ActiveCallEnded", callId =>
+        _hub.On<string>(HubMethods.Call.ActiveCallEnded, callId =>
         {
             LogActiveCallEnded(callId);
             ActiveCallEnded?.Invoke(callId);
         });
 
-        _hub.On<string>("CallError", message =>
+        _hub.On<string>(HubMethods.Call.CallError, message =>
         {
             LogCallError(message);
             CallError?.Invoke(message);
@@ -118,48 +119,52 @@ public sealed partial class CallHubConnection : ICallHubConnection
     }
 
     public Task InitiateCallAsync(int chatId)
-        => SafeInvokeAsync("InitiateCall", chatId);
+    => SafeInvokeAsync(HubMethods.CallInvoke.InitiateCall, chatId);
 
     public Task JoinCallAsync(string callId)
-        => SafeInvokeAsync("JoinCall", callId);
+        => SafeInvokeAsync(HubMethods.CallInvoke.JoinCall, callId);
 
     public Task LeaveCallAsync(string callId)
-        => SafeInvokeAsync("LeaveCall", callId);
+        => SafeInvokeAsync(HubMethods.CallInvoke.LeaveCall, callId);
 
     public Task DeclineCallAsync(string callId)
-        => SafeInvokeAsync("DeclineCall", callId);
+        => SafeInvokeAsync(HubMethods.CallInvoke.DeclineCall, callId);
 
     public Task CancelCallAsync(string callId)
-        => SafeInvokeAsync("CancelCall", callId);
+        => SafeInvokeAsync(HubMethods.CallInvoke.CancelCall, callId);
 
     public Task SendSignalAsync(WebRtcSignalDto signal)
-        => SafeInvokeAsync("SendSignal", signal);
+        => SafeInvokeAsync(HubMethods.CallInvoke.SendSignal, signal);
+
     public Task SendCallMessageAsync(string callId, string text)
-        => SafeInvokeAsync("SendCallMessage", callId, text);
+        => SafeInvokeAsync(HubMethods.CallInvoke.SendCallMessage, callId, text);
 
     public Task ToggleMuteAsync(string callId, bool isMuted)
-        => SafeInvokeAsync("ToggleMute", callId, isMuted);
-    public async Task ToggleSpeakingAsync(string callId, bool isSpeaking)
-        => await SafeInvokeAsync("ToggleSpeaking", callId, isSpeaking);
+        => SafeInvokeAsync(HubMethods.CallInvoke.ToggleMute, callId, isMuted);
+
+    public Task ToggleSpeakingAsync(string callId, bool isSpeaking)
+        => SafeInvokeAsync(HubMethods.CallInvoke.ToggleSpeaking, callId, isSpeaking);
 
     public async Task<CallStateDto?> GetCallStateAsync(int chatId)
     {
         if (!IsConnected) return null;
-
-        try
-        {
-            return await _hub.InvokeAsync<CallStateDto?>("GetCallState", chatId);
-        }
-        catch (Exception ex)
-        {
-            LogGetCallStateFailed(chatId, ex);
-            return null;
-        }
+        try { return await _hub.InvokeAsync<CallStateDto?>(HubMethods.CallInvoke.GetCallState, chatId); }
+        catch (Exception ex) { LogGetCallStateFailed(chatId, ex); return null; }
     }
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        if (_hub.State != HubConnectionState.Disconnected) return;
+        // Если уже подключён — ничего не делаем
+        if (_hub.State == HubConnectionState.Connected) return;
+
+        // Если идёт подключение — ждём
+        if (_hub.State == HubConnectionState.Connecting)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (_hub.State == HubConnectionState.Connecting && DateTime.UtcNow < deadline)
+                await Task.Delay(100, ct);
+            return;
+        }
 
         const int maxRetries = 10;
         for (int i = 0; i < maxRetries; i++)
@@ -181,19 +186,19 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     public async Task DisconnectAsync()
     {
-        IncomingCall = null;
-        CallParticipantJoined = null;
-        CallParticipantLeft = null;
-        CallEnded = null;
-        SignalReceived = null;
-        CallMessageReceived = null;
-        ParticipantMuteChanged = null;
-        ParticipantSpeakingChanged = null;
-        CallStateUpdated = null;
-        ActiveCallStarted = null;
-        ActiveCallUpdated = null;
-        ActiveCallEnded = null;
-        CallError = null;
+        //IncomingCall = null;
+        //CallParticipantJoined = null;
+        //CallParticipantLeft = null;
+        //CallEnded = null;
+        //SignalReceived = null;
+        //CallMessageReceived = null;
+        //ParticipantMuteChanged = null;
+        //ParticipantSpeakingChanged = null;
+        //CallStateUpdated = null;
+        //ActiveCallStarted = null;
+        //ActiveCallUpdated = null;
+        //ActiveCallEnded = null;
+        //CallError = null;
 
         try
         {

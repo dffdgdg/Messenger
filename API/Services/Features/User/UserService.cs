@@ -1,58 +1,35 @@
 ﻿using API.Repositories.Abstarctions;
+using API.Repositories.Projections;
 using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using System.Globalization;
 
 namespace API.Services.User;
 
-public partial class UserService(MessengerDbContext context, MediaBundle media, PresenceBundle presence, UrlBundle url, IUserRepository userRepo, ILogger<UserService> logger)
-    : BaseService<UserService>(context, logger), IUserService
+public partial class UserService(MessengerDbContext context, MediaBundle media, PresenceBundle presence,
+    UrlBundle url, IUserRepository userRepo, ILogger<UserService> logger) : BaseService<UserService>(context, logger), IUserService
 {
-    private readonly IFileService fileService = media.FileService;
-    private readonly IOnlineUserService onlineService = presence.OnlineService;
-    private readonly IUrlBuilder urlBuilder = url.UrlBuilder;
+    private readonly IFileService _fileService = media.FileService;
+    private readonly IOnlineUserService _onlineService = presence.OnlineService;
+    private readonly IUrlBuilder _urlBuilder = url.UrlBuilder;
     private readonly IUserRepository _userRepo = userRepo;
 
     public async Task<Result<List<UserDto>>> GetAllUsersAsync(CancellationToken ct = default)
     {
-        var users = await _context.Users.Select(u => new
-        {
-            User = u,
-            DepartmentName = u.Department != null ? u.Department.Name : null,
-            Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
-            NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled
-        }).AsNoTracking().ToListAsync(ct);
+        var users = await _userRepo.GetAllWithSettingsAsync(ct);
+        var onlineIds = _onlineService.GetOnlineUserIds();
 
-        var onlineIds = onlineService.GetOnlineUserIds();
-
-        var result = users.ConvertAll(u =>
-        {
-            var dto = u.User.ToDto(urlBuilder, onlineIds.Contains(u.User.Id));
-            dto.Theme = u.Theme;
-            dto.NotificationsEnabled = u.NotificationsEnabled;
-            return dto;
-        });
-
+        var result = users.ConvertAll(u => MapProjectionToDto(u, onlineIds.Contains(u.Id)));
         return Result<List<UserDto>>.Success(result);
     }
 
     public async Task<Result<UserDto>> GetUserAsync(int id, CancellationToken ct = default)
     {
-        var user = await _context.Users.Select(u => new
-        {
-            User = u,
-            Theme = u.UserSetting != null ? u.UserSetting.Theme : null,
-            NotificationsEnabled = u.UserSetting == null || u.UserSetting.NotificationsEnabled,
-            DepartmentName = u.Department != null ? u.Department.Name : null
-        }).AsNoTracking().FirstOrDefaultAsync(u => u.User.Id == id, ct);
-
+        var user = await _userRepo.GetWithSettingsAsync(id, ct);
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {id} не найден");
 
-        var dto = user.User.ToDto(urlBuilder, onlineService.IsOnline(id));
-        dto.Theme = user.Theme;
-        dto.NotificationsEnabled = user.NotificationsEnabled;
-
+        var dto = MapProjectionToDto(user, _onlineService.IsOnline(id));
         return Result<UserDto>.Success(dto);
     }
 
@@ -61,7 +38,9 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (id != dto.Id)
             return Result.Failure("Несоответствие ID");
 
-        var user = await _context.Users.Include(u => u.UserSetting).FirstOrDefaultAsync(u => u.Id == id, ct);
+        var user = await _context.Users
+            .Include(u => u.UserSetting)
+            .FirstOrDefaultAsync(u => u.Id == id, ct);
 
         if (user is null)
             return Result.NotFound($"Пользователь с ID {id} не найден");
@@ -69,8 +48,7 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         user.UpdateProfile(dto);
 
         var saveResult = await SaveChangesAsync(ct);
-        if (saveResult.IsFailure)
-            return saveResult;
+        if (saveResult.IsFailure) return saveResult;
 
         LogUserUpdated(id);
         return Result.Success();
@@ -85,7 +63,7 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (user is null)
             return Result<AvatarResponseDto>.NotFound($"Пользователь с ID {id} не найден");
 
-        var saveResult = await fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
+        var saveResult = await _fileService.SaveImageAsync(file, "avatars/users", user.Avatar);
         if (saveResult.IsFailure) return saveResult.As<AvatarResponseDto>();
 
         user.Avatar = saveResult.Value;
@@ -97,29 +75,36 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
 
         return Result<AvatarResponseDto>.Success(new AvatarResponseDto
         {
-            AvatarUrl = urlBuilder.BuildUrl(saveResult.Value)!
+            AvatarUrl = _urlBuilder.BuildUrl(saveResult.Value)!
         });
     }
 
     public Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default)
     {
-        var onlineIds = onlineService.GetOnlineUserIds();
-        return Task.FromResult(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto
-        {
-            OnlineUserIds = [.. onlineIds],
-            TotalOnline = onlineIds.Count
-        }));
+        var onlineIds = _onlineService.GetOnlineUserIds();
+        return Task.FromResult(Result<OnlineUsersResponseDto>.Success(
+            new OnlineUsersResponseDto
+            {
+                OnlineUserIds = [.. onlineIds],
+                TotalOnline = onlineIds.Count
+            }));
     }
 
     public async Task<Result<UserStatusDto>> GetOnlineStatusAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _context.Users.AsNoTracking().Select(u => new { u.Id, u.LastOnline, u.StatusType, u.StatusExpiresAt })
+        var user = await _context.Users
+            .AsNoTracking()
+            .Select(u => new { u.Id, u.LastOnline, u.StatusType, u.StatusExpiresAt })
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-        var isOnline = onlineService.IsOnline(userId);
+        var isOnline = _onlineService.IsOnline(userId);
 
-        return Result<UserStatusDto>.Success(new UserStatusDto(userId, isOnline, user?.LastOnline, isOnline ? user?.StatusType
-            ?? UserStatusType.Online : UserStatusType.Online, user?.StatusExpiresAt));
+        return Result<UserStatusDto>.Success(new UserStatusDto(
+            userId,
+            isOnline,
+            user?.LastOnline,
+            isOnline ? user?.StatusType ?? UserStatusType.Online : UserStatusType.Online,
+            user?.StatusExpiresAt));
     }
 
     public async Task<Result<List<UserStatusDto>>> GetOnlineStatusesAsync(List<int> userIds, CancellationToken ct = default)
@@ -127,29 +112,32 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         if (userIds is null || userIds.Count == 0)
             return Result<List<UserStatusDto>>.Failure("Список ID пользователей не может быть пустым");
 
-        var users = await _context.Users.Where(u => userIds.Contains(u.Id)).AsNoTracking().Select(u => new { u.Id, u.LastOnline }).ToListAsync(ct);
+        var users = await _context.Users
+            .Where(u => userIds.Contains(u.Id))
+            .AsNoTracking()
+            .Select(u => new { u.Id, u.LastOnline })
+            .ToListAsync(ct);
 
-        var onlineIds = onlineService.FilterOnline(userIds);
-
-        var result = users.ConvertAll(u => new UserStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
+        var onlineIds = _onlineService.FilterOnline(userIds);
+        var result = users.ConvertAll(u =>
+            new UserStatusDto(u.Id, onlineIds.Contains(u.Id), u.LastOnline));
 
         return Result<List<UserStatusDto>>.Success(result);
     }
 
     public async Task<Result> ChangeUsernameAsync(
-       int id, ChangeUsernameDto dto, CancellationToken ct = default)
+        int id, ChangeUsernameDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.NewUsername))
             return Result.Failure("Username не может быть пустым");
 
         var username = dto.NewUsername.Trim().ToLower(new CultureInfo("en-US", false));
-        var validation = ValidationHelper.ValidateUsername(dto.NewUsername);
+
+        var validation = ValidationHelper.ValidateUsername(username);
         if (validation.IsFailure) return validation;
 
-        var exists = await _userRepo.UsernameExistsAsync(username, ct) &&
-                     await _context.Users.AnyAsync(u => u.Username == username && u.Id != id, ct);
-
-        if (exists)
+        var taken = await _userRepo.UsernameExistsByOtherUserAsync(username, id, ct);
+        if (taken)
             return Result.Conflict("Этот username уже занят");
 
         var user = await _userRepo.FindByIdAsync(id, ct);
@@ -165,7 +153,8 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         return Result.Success();
     }
 
-    public async Task<Result> ChangePasswordAsync(int id, ChangePasswordDto dto, CancellationToken ct = default)
+    public async Task<Result> ChangePasswordAsync(
+        int id, ChangePasswordDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.CurrentPassword))
             return Result.Failure("Введите текущий пароль");
@@ -192,18 +181,50 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         return Result.Success();
     }
 
-    #region Log messages
+    private UserDto MapProjectionToDto(UserWithSettingsProjection u, bool isOnline)
+        => new()
+        {
+            Id = u.Id,
+            Username = u.Username,
+            DisplayName = FormatDisplayName(u.Surname, u.Name, u.Midname),
+            Surname = u.Surname,
+            Name = u.Name,
+            Midname = u.Midname,
+            Avatar = _urlBuilder.BuildUrl(u.Avatar),
+            DepartmentId = u.DepartmentId,
+            Department = u.DepartmentName,
+            IsBanned = u.IsBanned,
+            LastOnline = u.LastOnline,
+            Theme = u.Theme,
+            NotificationsEnabled = u.NotificationsEnabled,
+            IsOnline = isOnline,
+            StatusType = isOnline ? u.StatusType : UserStatusType.Online,
+            StatusExpiresAt = u.StatusExpiresAt
+        };
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} обновлён")]
+    private static string? FormatDisplayName(string? surname, string? name, string? midname)
+    {
+        var parts = new[] { surname, name, midname }
+            .Where(s => !string.IsNullOrWhiteSpace(s));
+        return parts.Any() ? string.Join(" ", parts) : null;
+    }
+
+    #region Log
+
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Пользователь {UserId} обновлён")]
     private partial void LogUserUpdated(int userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Аватар обновлён для пользователя {UserId}")]
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Аватар обновлён для пользователя {UserId}")]
     private partial void LogAvatarUpdated(int userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Username изменён для пользователя {UserId}")]
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Username изменён для пользователя {UserId}")]
     private partial void LogUsernameChanged(int userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Пароль изменён для пользователя {UserId}")]
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Пароль изменён для пользователя {UserId}")]
     private partial void LogPasswordChanged(int userId);
 
     #endregion

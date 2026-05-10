@@ -1,13 +1,17 @@
 ﻿using API.Repositories.Abstarctions;
 using API.Services.Base;
+using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
+using Shared.Hubs;
 
 namespace API.Services.Messaging;
 
 public partial class PollService(MessengerDbContext context, IPollRepository pollRepository, IMessageRepository messageRepository,
-    IAccessControlService accessControl, IHubNotifier hubNotifier, IUrlBuilder urlBuilder, ILogger<PollService> logger)
+    IAccessControlService accessControl, IHubNotifier hubNotifier, IUrlBuilder urlBuilder, TimeBundle time, ILogger<PollService> logger)
     : BaseService<PollService>(context, logger), IPollService
 {
+    private readonly AppDateTime _appDateTime = time.AppDateTime;
+
     public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
     {
         var poll = await pollRepository.FindByIdWithDetailsAsync(pollId);
@@ -34,53 +38,62 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        var message = new UserMessage
+        try
         {
-            ChatId = dto.ChatId,
-            SenderId = createdByUserId,
-            Content = dto.Question.Trim()
-        };
-
-        messageRepository.Add(message);
-        await _context.SaveChangesAsync();
-
-        var poll = new Poll
-        {
-            MessageId = message.Id,
-            IsAnonymous = dto.IsAnonymous,
-            AllowsMultipleAnswers = dto.AllowsMultipleAnswers,
-            ClosesAt = dto.ClosesAt
-        };
-
-        pollRepository.Add(poll);
-        await _context.SaveChangesAsync();
-
-        for (var i = 0; i < dto.Options.Count; i++)
-        {
-            var opt = dto.Options[i];
-            pollRepository.AddOption(new PollOption
+            var message = new UserMessage
             {
-                PollId = poll.Id,
-                OptionText = opt.Text.Trim(),
-                Position = opt.Position > 0 ? opt.Position : i
-            });
+                ChatId = dto.ChatId,
+                SenderId = createdByUserId,
+                Content = dto.Question.Trim()
+            };
+
+            messageRepository.Add(message);
+            await _context.SaveChangesAsync();
+
+            var poll = new Poll
+            {
+                MessageId = message.Id,
+                IsAnonymous = dto.IsAnonymous,
+                AllowsMultipleAnswers = dto.AllowsMultipleAnswers,
+                ClosesAt = dto.ClosesAt
+            };
+
+            pollRepository.Add(poll);
+            await _context.SaveChangesAsync();
+
+            for (var i = 0; i < dto.Options.Count; i++)
+            {
+                var opt = dto.Options[i];
+                pollRepository.AddOption(new PollOption
+                {
+                    PollId = poll.Id,
+                    OptionText = opt.Text.Trim(),
+                    Position = opt.Position > 0 ? opt.Position : i
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var createdMessage = await messageRepository.FindUserMessageWithIncludesAsync(message.Id);
+
+            if (createdMessage is null)
+                return Result<MessageDto>.Internal("Не удалось загрузить созданное сообщение");
+
+            var messageDto = createdMessage.ToDto(createdByUserId, urlBuilder);
+
+            await hubNotifier.SendToChatAsync(dto.ChatId, HubMethods.Chat.ReceiveMessage, messageDto);
+
+            LogPollCreated(dto.ChatId);
+
+            return Result<MessageDto>.Success(messageDto);
         }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании опроса в чате {ChatId}", dto.ChatId);
 
-        await _context.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        var createdMessage = await messageRepository.FindUserMessageWithIncludesAsync(message.Id);
-
-        if (createdMessage is null)
-            return Result<MessageDto>.Internal("Не удалось загрузить созданное сообщение");
-
-        var messageDto = createdMessage.ToDto(createdByUserId, urlBuilder);
-
-        await hubNotifier.SendToChatAsync(dto.ChatId, "ReceiveMessageDto", messageDto);
-
-        LogPollCreated(dto.ChatId);
-
-        return Result<MessageDto>.Success(messageDto);
+            return Result<MessageDto>.Internal("Не удалось создать опрос");
+        }
     }
 
     public async Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto)
@@ -93,7 +106,7 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
         var access = await accessControl.EnsureMemberOfAsync(voteDto.UserId, poll.Message!.ChatId);
         if (access.IsFailure) return access.As<PollDto>();
 
-        if (poll.ClosesAt < DateTime.UtcNow)
+        if (poll.ClosesAt.HasValue && poll.ClosesAt < _appDateTime.UtcNow)
             return Result<PollDto>.Failure("Опрос уже закрыт.");
 
         var optionIds = ResolveOptionIds(voteDto);
@@ -136,7 +149,7 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
         if (poll is null)
             return Result<PollDto>.NotFound($"Опрос {pollId} не найден");
 
-        if (poll.ClosesAt < DateTime.UtcNow)
+        if (poll.ClosesAt.HasValue && poll.ClosesAt < _appDateTime.UtcNow)
             return Result<PollDto>.Failure("Опрос уже закрыт");
 
         var message = poll.Message;
@@ -150,8 +163,7 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
         if (!isAuthor && !isAdminOrOwner)
             return Result<PollDto>.Failure("Недостаточно прав для закрытия опроса");
 
-        var closedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-        await pollRepository.CloseAsync(pollId, closedAt);
+        await pollRepository.CloseAsync(pollId, _appDateTime.UtcNow, ct: default);
 
         var updatedPollResult = await GetPollAsync(pollId, userId);
         if (updatedPollResult.IsFailure) return updatedPollResult;
@@ -181,7 +193,7 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
         var affectedChatIds = await messageRepository.GetForwardedToChatIdsAsync(messageId);
 
         foreach (var chatId in affectedChatIds)
-            await hubNotifier.SendToChatAsync(chatId, "ReceivePollUpdate", updatedPoll);
+            await hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.PollUpdated, updatedPoll);
     }
 
     #endregion

@@ -539,7 +539,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
         msg.IsOwn = msg.SenderId == _userId;
 
-        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient)
+        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient, _userId)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,

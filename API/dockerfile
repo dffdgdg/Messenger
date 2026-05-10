@@ -1,26 +1,21 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 5274
+EXPOSE 5275/udp
+
+RUN mkdir -p /app/wwwroot/uploads /app/wwwroot/avatars
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["API/API.csproj", "API/"]
 COPY ["Shared/Shared.csproj", "Shared/"]
-RUN ["dotnet", "restore", "API/API.csproj"]
+RUN dotnet restore "API/API.csproj"
 
-COPY ["API/", "API/"]
-COPY ["Shared/", "Shared/"]
-RUN ["dotnet", "publish", "API/API.csproj", "-c", "Release", "-o", "/app/publish", "/p:UseAppHost=false"]
+COPY . .
+RUN dotnet publish "API/API.csproj" -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM base AS final
 WORKDIR /app
-
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-RUN addgroup --system appgroup \
-    && adduser --system --ingroup appgroup appuser
-
 COPY --from=build /app/publish .
-
-USER appuser
-
 ENTRYPOINT ["dotnet", "API.dll"]

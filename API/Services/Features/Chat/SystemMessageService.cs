@@ -1,11 +1,10 @@
 ﻿using API.Services.Base;
+using Shared.Hubs;
 
 namespace API.Services.Features.Chat;
 
 public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier hubNotifier,IUrlBuilder urlBuilder,
-    AppDateTime appDateTime,
-    ILogger<SystemMessageService> logger)
-    : BaseService<SystemMessageService>(context, logger), ISystemMessageService
+    AppDateTime appDateTime, ILogger<SystemMessageService> logger) : BaseService<SystemMessageService>(context, logger), ISystemMessageService
 {
     public async Task CreateAsync(int chatId, int senderId, SystemEventType eventType, int? targetUserId = null, string? content = null)
     {
@@ -30,13 +29,10 @@ public sealed class SystemMessageService(MessengerDbContext context,IHubNotifier
             chat.LastMessageTime = appDateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            var loaded = await _context.SystemMessages
-                .Include(m => m.Initiator)
-                .Include(m => m.TargetUser)
-                .AsNoTracking()
+            var loaded = await _context.SystemMessages.Include(m => m.Initiator).Include(m => m.TargetUser).AsNoTracking()
                 .FirstAsync(m => m.Id == message.Id);
 
-            await hubNotifier.SendToChatAsync(chatId, "ReceiveMessageDto", loaded.ToDto(urlBuilder: urlBuilder));
+            await hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ReceiveMessage, loaded.ToDto(urlBuilder: urlBuilder));
         }
         catch (Exception ex)
         {

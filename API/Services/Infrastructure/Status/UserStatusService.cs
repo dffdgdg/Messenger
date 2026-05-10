@@ -1,4 +1,5 @@
 ﻿using API.Hubs;
+using Shared.Hubs;
 
 namespace API.Services.Infrastructure;
 
@@ -22,7 +23,7 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
         if (user is not null)
         {
             var dto = new UserStatusDto(user.Id, onlineUserService.IsOnline(user.Id), user.LastOnline, status, expiresAt);
-            await hubContext.Clients.All.SendAsync("UserStatusChanged", dto);
+            await hubContext.Clients.All.SendAsync(HubMethods.Chat.UserStatusChanged, dto);
         }
 
         LogStatusSet(userId, status, duration);

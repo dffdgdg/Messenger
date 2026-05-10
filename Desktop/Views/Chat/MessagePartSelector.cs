@@ -1,5 +1,4 @@
-﻿using Avalonia.Controls;
-using Avalonia.Controls.Templates;
+﻿using Avalonia.Controls.Templates;
 using Desktop.ViewModels.Chat;
 
 namespace Desktop.Views.Chat;
@@ -13,7 +12,6 @@ public class MessagePartSelector : IDataTemplate
     public Control? Build(object? param)
     {
         if (param is not MessageViewModel vm) return null;
-
         if (vm.OriginalHasPoll) return PollTemplate.Build(param);
         if (vm.OriginalIsVoiceMessage) return VoiceTemplate.Build(param);
         return TextTemplate.Build(param);

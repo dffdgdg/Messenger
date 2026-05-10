@@ -77,10 +77,10 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         return Result<AuthResponseDto>.Success(response);
     }
 
-    public async Task<Result<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default)
+    public async Task<Result<TokenResponseDto>> RefreshTokenAsync(
+    string accessToken, string refreshToken, CancellationToken ct = default)
     {
         var principalResult = _tokenService.GetPrincipalFromExpiredToken(accessToken);
-
         if (principalResult.IsFailure)
             return principalResult.As<TokenResponseDto>();
 
@@ -93,8 +93,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
 
-        var storedToken = await _context.RefreshTokens.Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.TokenHash == refreshTokenHash && rt.UserId == userId, ct);
+        var storedToken = await _tokenRepo.FindByHashAsync(refreshTokenHash, userId, ct);
 
         if (storedToken is null)
         {
@@ -106,7 +105,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         {
             LogTokenReuse(userId, storedToken.FamilyId);
             await _tokenRepo.RevokeByFamilyIdAsync(storedToken.FamilyId, _appDateTime.UtcNow, ct);
-            return Result<TokenResponseDto>.Unauthorized( "Refresh token уже использован. Авторизуйтесь заново.");
+            return Result<TokenResponseDto>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
         }
 
         if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
@@ -117,7 +116,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         if (storedToken.User.IsBanned)
         {
-            await RevokeTokenFamilyAsync(storedToken.FamilyId, ct);
+            await _tokenRepo.RevokeByFamilyIdAsync(storedToken.FamilyId, _appDateTime.UtcNow, ct);
             return Result<TokenResponseDto>.Forbidden("Учётная запись заблокирована");
         }
 
@@ -137,7 +136,6 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         };
 
         storedToken.ReplacedByToken = newRefreshToken;
-
         _context.RefreshTokens.Add(newRefreshToken);
 
         await _context.SaveChangesAsync(ct);
@@ -199,7 +197,8 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
             if (familiesToRevoke.Count > 0)
             {
-                var revokedCount = await _context.RefreshTokens.Where(rt => familiesToRevoke.Contains(rt.FamilyId) && rt.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, now), ct);
+                var revokedCount = await _tokenRepo.RevokeByFamilyIdsAsync(familiesToRevoke, now, ct);
+
                 LogSessionLimitExceeded(userId, revokedCount, familiesToRevoke.Count, MaxActiveSessions);
             }
         }
@@ -207,7 +206,7 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     private async Task RevokeTokenFamilyAsync(string familyId, CancellationToken ct)
     {
-        var revokedCount = await _context.RefreshTokens.Where(rt => rt.FamilyId == familyId && rt.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(rt => rt.RevokedAt, _appDateTime.UtcNow), ct);
+        var revokedCount = await _tokenRepo.RevokeByFamilyIdAsync(familyId, _appDateTime.UtcNow, ct);
 
         LogFamilyRevoked(revokedCount, familyId);
     }

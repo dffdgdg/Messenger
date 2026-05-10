@@ -1,4 +1,5 @@
 ﻿using API.Services.Infrastructure.Security;
+using Shared.Hubs;
 using System.Security.Claims;
 
 namespace API.Hubs;
@@ -24,22 +25,20 @@ public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUs
         var statusService = scope.ServiceProvider.GetRequiredService<IUserStatusService>();
 
         var chatIds = await accessControl.GetUserChatIdsAsync(userId.Value);
-        var joinTasks = chatIds.Select(chatId => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{chatId}"));
-        await Task.WhenAll(joinTasks);
+        await Task.WhenAll(chatIds.Select(id => Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{id}")));
 
         var statusResult = await statusService.GetStatusAsync(userId.Value);
         if (statusResult.TryUnwrap(out var statusDto, logger))
         {
-            await Clients.Caller.SendAsync("UserStatusChanged", statusDto);
-            await Clients.Others.SendAsync("UserStatusChanged", statusDto);
+            await Clients.Caller.SendAsync(HubMethods.Chat.UserStatusChanged, statusDto);
+            await Clients.Others.SendAsync(HubMethods.Chat.UserStatusChanged, statusDto);
         }
         else
         {
-            await Clients.Others.SendAsync("UserOnline", userId.Value);
+            await Clients.Others.SendAsync(HubMethods.Chat.UserOnline, userId.Value);
         }
 
         LogUserConnected(userId.Value, chatIds.Count);
-
         await base.OnConnectedAsync();
     }
 
@@ -58,11 +57,9 @@ public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUs
                     using var scope = scopeFactory.CreateScope();
                     var context = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-                    await context.Users
-                        .Where(u => u.Id == userId.Value)
-                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.LastOnline, appDateTime.UtcNow));
+                    await context.Users.Where(u => u.Id == userId.Value).ExecuteUpdateAsync(s => s.SetProperty(u => u.LastOnline, appDateTime.UtcNow));
 
-                    await Clients.Others.SendAsync("UserOffline", userId.Value);
+                    await Clients.Others.SendAsync(HubMethods.Chat.UserOffline, userId.Value);
                 }
                 catch (Exception ex)
                 {
@@ -142,9 +139,9 @@ public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUs
         if (!result.TryUnwrap(out var receipt, logger))
             return;
 
-        await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
-
-        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
+        await Clients.Caller.SendAsync(HubMethods.Chat.UnreadCountUpdated, chatId, receipt.UnreadCount);
+        await Clients.OthersInGroup($"chat_{chatId}")
+            .SendAsync(HubMethods.Chat.MessageRead, chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
@@ -165,9 +162,9 @@ public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUs
         if (!result.TryUnwrap(out var receipt, logger))
             return;
 
-        await Clients.Caller.SendAsync("UnreadCountUpdated", chatId, receipt.UnreadCount);
-
-        await Clients.OthersInGroup($"chat_{chatId}").SendAsync("MessageRead", chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
+        await Clients.Caller.SendAsync(HubMethods.Chat.UnreadCountUpdated, chatId, receipt.UnreadCount);
+        await Clients.OthersInGroup($"chat_{chatId}")
+            .SendAsync(HubMethods.Chat.MessageRead, chatId, userId.Value, receipt.LastReadMessageId, receipt.LastReadAt);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
@@ -199,7 +196,7 @@ public sealed partial class ChatHub(IServiceScopeFactory scopeFactory, IOnlineUs
         var userId = GetCurrentUserId();
         if (userId.HasValue)
         {
-            await Clients.OthersInGroup($"chat_{chatId}").SendAsync("UserTyping", chatId, userId.Value);
+            await Clients.OthersInGroup($"chat_{chatId}").SendAsync(HubMethods.Chat.UserTyping, chatId, userId.Value);
         }
     }
 

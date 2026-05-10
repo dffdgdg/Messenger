@@ -3,6 +3,7 @@ using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 using Shared.DTO.Message;
+using Shared.Hubs;
 using System.Text.RegularExpressions;
 
 namespace API.Services.Messaging;
@@ -180,7 +181,7 @@ public partial class MessageService(
 
         var senderDto = created.ToDto(senderId, _urlBuilder);
 
-        await BroadcastToMembersAsync(created, message.ChatId, "ReceiveMessageDto");
+        await BroadcastToMembersAsync(created, message.ChatId, HubMethods.Chat.ReceiveMessage);
         await NotifyAndUpdateUnreadAsync(senderDto);
 
         LogMessageCreated(message.Id, message.ChatId);
@@ -316,7 +317,7 @@ public partial class MessageService(
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save.As<MessageDto>();
 
-        await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
+        await BroadcastToMembersAsync(message, message.ChatId, HubMethods.Chat.MessageUpdated);
         LogMessageUpdated(messageId);
 
         return Result<MessageDto>.Success(message.ToDto(userId, _urlBuilder));
@@ -341,20 +342,16 @@ public partial class MessageService(
         if (message.IsDeleted == true)
             return Result.Failure("Сообщение уже удалено");
 
-        message.IsDeleted = true;
-        message.Content = null;
-        message.EditedAt = _appDateTime.UtcNow;
-
         if (message.VoiceMessage != null)
         {
             _fileService.DeleteFile(message.VoiceMessage.FilePath);
             messageRepository.RemoveVoiceMessage(message.VoiceMessage);
+            await SaveChangesAsync();
         }
 
-        var save = await SaveChangesAsync();
-        if (save.IsFailure) return save;
+        await messageRepository.SoftDeleteAsync(messageId, _appDateTime.UtcNow);
 
-        await _hubNotifier.SendToChatAsync(message.ChatId, "MessageDeleted", new { MessageId = messageId, message.ChatId });
+        await _hubNotifier.SendToChatAsync(message.ChatId, HubMethods.Chat.MessageDeleted, new { MessageId = messageId, message.ChatId });
 
         LogMessageDeleted(messageId);
         return Result.Success();
@@ -366,7 +363,7 @@ public partial class MessageService(
 
     public async Task<Result<MessageDto>> PinMessageAsync(int messageId, int userId)
     {
-        var message = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        var message = await messageRepository.FindUserMessageByIdAsync(messageId);
         if (message is null)
             return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
 
@@ -376,19 +373,19 @@ public partial class MessageService(
         if (message.IsDeleted == true)
             return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
 
-        message.PinnedAt = _appDateTime.UtcNow;
-        message.PinnedByUserId = userId;
+        await messageRepository.PinAsync(messageId, userId, _appDateTime.UtcNow);
 
-        var save = await SaveChangesAsync();
-        if (save.IsFailure) return save.As<MessageDto>();
+        var updated = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        if (updated is null)
+            return Result<MessageDto>.Internal("Не удалось загрузить сообщение после закрепления");
 
-        await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
-        return Result<MessageDto>.Success(message.ToDto(userId, _urlBuilder));
+        await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.ReceiveMessage);
+        return Result<MessageDto>.Success(updated.ToDto(userId, _urlBuilder));
     }
 
     public async Task<Result<MessageDto>> UnpinMessageAsync(int messageId, int userId)
     {
-        var message = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        var message = await messageRepository.FindUserMessageByIdAsync(messageId);
         if (message is null)
             return Result<MessageDto>.NotFound($"Сообщение {messageId} не найдено");
 
@@ -398,14 +395,14 @@ public partial class MessageService(
         if (message.PinnedAt is null)
             return Result<MessageDto>.Failure("Сообщение уже не закреплено");
 
-        message.PinnedAt = null;
-        message.PinnedByUserId = null;
+        await messageRepository.UnpinAsync(messageId);
 
-        var save = await SaveChangesAsync();
-        if (save.IsFailure) return save.As<MessageDto>();
+        var updated = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        if (updated is null)
+            return Result<MessageDto>.Internal("Не удалось загрузить сообщение после открепления");
 
-        await BroadcastToMembersAsync(message, message.ChatId, "MessageUpdated");
-        return Result<MessageDto>.Success(message.ToDto(userId, _urlBuilder));
+        await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.ReceiveMessage);
+        return Result<MessageDto>.Success(updated.ToDto(userId, _urlBuilder));
     }
 
     public async Task<Result<List<MessageDto>>> GetPinnedMessagesAsync(int chatId, int userId)
@@ -596,10 +593,10 @@ public partial class MessageService(
 
     private async Task BroadcastToMembersAsync(Message message, int chatId, string hubMethod)
     {
-        var memberIds = await chatRepository.GetMemberIdsAsync(chatId);
+        var senderId = message is UserMessage um ? um.SenderId ?? 0 : 0;
+        var dto = message.ToDto(senderId, _urlBuilder);
 
-        foreach (var memberId in memberIds)
-            await _hubNotifier.SendToUserAsync(memberId, hubMethod, message.ToDto(memberId, _urlBuilder));
+        await _hubNotifier.SendToChatAsync(chatId, hubMethod, dto);
     }
 
     private async Task NotifyAndUpdateUnreadAsync(MessageDto message)
@@ -610,15 +607,19 @@ public partial class MessageService(
 
             var members = await chatRepository.GetMembersForNotificationAsync(message.ChatId, message.SenderId);
 
+            var memberIds = members.ConvertAll(m => m.UserId);
+            var unreadCounts = await readReceiptService.GetUnreadCountsForUsersInChatAsync(message.ChatId, memberIds);
+
             foreach (var m in members)
             {
-                var unread = await readReceiptService.GetUnreadCountAsync(m.UserId, message.ChatId);
+                var unread = unreadCounts.GetValueOrDefault(m.UserId, 0);
 
-                await _hubNotifier.SendToUserAsync(m.UserId, "UnreadCountUpdated", message.ChatId, unread.IsSuccess ? unread.Value : 0);
+                await _hubNotifier.SendToUserAsync(m.UserId, HubMethods.Chat.UnreadCountUpdated, message.ChatId, unread);
 
                 if (!m.GlobalNotificationsEnabled) continue;
 
-                var isMentioned = !string.IsNullOrWhiteSpace(m.Username) && mentionedUsernames.Contains(m.Username);
+                var isMentioned = !string.IsNullOrWhiteSpace(m.Username)
+                    && mentionedUsernames.Contains(m.Username);
 
                 if (isMentioned)
                 {

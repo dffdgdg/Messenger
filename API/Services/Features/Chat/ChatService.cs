@@ -4,11 +4,12 @@ using API.Services.Base;
 using API.Services.Features.Chat;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
+using Shared.Hubs;
 
 namespace API.Services.Chat;
 
 public partial class ChatService(MessengerDbContext context, IChatRepository chatRepository, IUserRepository userRepository,
-    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url, IReadReceiptService readReceiptService,
+    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url,IReadReceiptService readReceiptService,
     ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     private readonly IAccessControlService _accessControl = chatBundle.Cache.AccessControl;
@@ -396,7 +397,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
             ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
         };
 
-        await _hubNotifier.SendToChatAsync(chatId, "ChatUpdated", updatedDto);
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
         return Result<ChatDto>.Success(updatedDto);
     }
 

@@ -1,16 +1,18 @@
 ﻿using API.Repositories.Abstarctions;
+using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 
 namespace API.Services.ReadReceipt;
 
-public partial class ReadReceiptService(IReadReceiptRepository readReceiptRepository, TimeBundle time, ILogger<ReadReceiptService> logger) : IReadReceiptService
+public partial class ReadReceiptService(IReadReceiptRepository readReceiptRepository, MessengerDbContext context, TimeBundle time,
+    ILogger<ReadReceiptService> logger) : BaseService<ReadReceiptService>(context, logger), IReadReceiptService
 {
     private readonly AppDateTime _appDateTime = time.AppDateTime;
 
-    public async Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(int userId, MarkAsReadDto request)
+    public async Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(
+        int userId, MarkAsReadDto request)
     {
         var member = await readReceiptRepository.FindMemberAsync(request.ChatId, userId);
-
         if (member is null)
             return Result<ReadReceiptResponseDto>.Failure($"Пользователь {userId} не является участником чата {request.ChatId}");
 
@@ -19,16 +21,19 @@ public partial class ReadReceiptService(IReadReceiptRepository readReceiptReposi
 
         var targetMessageId = targetResult.Value;
 
-        if (targetMessageId > 0 &&
-            (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
+        if (targetMessageId > 0 && (!member.LastReadMessageId.HasValue || targetMessageId > member.LastReadMessageId.Value))
         {
-            await readReceiptRepository.UpdateReadPointerAsync(member, targetMessageId, _appDateTime.UtcNow);
+            member.LastReadMessageId = targetMessageId;
+            member.LastReadAt = _appDateTime.UtcNow;
+
+            var save = await SaveChangesAsync();
+            if (save.IsFailure) return save.As<ReadReceiptResponseDto>();
+
             LogReadReceipt(userId, targetMessageId, request.ChatId);
         }
 
         var lastReadId = member.LastReadMessageId ?? 0;
-        var unreadCount = await readReceiptRepository.CountUnreadAsync(
-            request.ChatId, userId, lastReadId);
+        var unreadCount = await readReceiptRepository.CountUnreadAsync(request.ChatId, userId, lastReadId);
 
         return Result<ReadReceiptResponseDto>.Success(CreateResponse(member, unreadCount));
     }
@@ -36,17 +41,20 @@ public partial class ReadReceiptService(IReadReceiptRepository readReceiptReposi
     public async Task<Result<ReadReceiptResponseDto>> MarkMessageAsReadAsync(int userId, int chatId, int messageId)
     {
         var member = await readReceiptRepository.FindMemberAsync(chatId, userId);
-
         if (member is null)
             return Result<ReadReceiptResponseDto>.Success(new ReadReceiptResponseDto { ChatId = chatId, UnreadCount = 0 });
 
         if (!member.LastReadMessageId.HasValue || messageId > member.LastReadMessageId.Value)
         {
             var messageExists = await readReceiptRepository.MessageExistsAsync(messageId, chatId);
-
             if (messageExists)
             {
-                await readReceiptRepository.UpdateReadPointerAsync(member, messageId, _appDateTime.UtcNow);
+                member.LastReadMessageId = messageId;
+                member.LastReadAt = _appDateTime.UtcNow;
+
+                var save = await SaveChangesAsync();
+                if (save.IsFailure) return save.As<ReadReceiptResponseDto>();
+
                 LogReadReceipt(userId, messageId, chatId);
             }
         }
@@ -138,6 +146,8 @@ public partial class ReadReceiptService(IReadReceiptRepository readReceiptReposi
         UnreadCount = unreadCount
     };
 
+    public async Task<Dictionary<int, int>> GetUnreadCountsForUsersInChatAsync(int chatId, IEnumerable<int> userIds)
+        => await readReceiptRepository.GetUnreadCountsForUsersAsync(chatId, userIds);
     #endregion
 
     #region Log

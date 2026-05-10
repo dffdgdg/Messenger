@@ -23,8 +23,9 @@ public sealed class RefreshTokenRepository(MessengerDbContext context) : Reposit
         => await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiresAt < olderThan).ExecuteDeleteAsync(ct);
 
     public async Task<List<ActiveFamily>> GetActiveFamiliesAsync(int userId, DateTime now, CancellationToken ct = default)
-        => await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now).GroupBy(rt => rt.FamilyId)
-                                       .Select(g => new ActiveFamily(g.Key, g.Max(rt => rt.CreatedAt))).OrderByDescending(f => f.LatestCreatedAt).ToListAsync(ct);
+        => await _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.UsedAt == null && rt.ExpiresAt > now)
+        .GroupBy(rt => rt.FamilyId).Select(g => new { FamilyId = g.Key, LatestCreatedAt = g.Max(rt => rt.CreatedAt) }).OrderByDescending(g => g.LatestCreatedAt)
+        .Select(g => new ActiveFamily(g.FamilyId, g.LatestCreatedAt)).ToListAsync(ct);
 
     public async Task<int> RevokeByFamilyIdsAsync(IEnumerable<string> familyIds, DateTime revokedAt, CancellationToken ct = default)
     {

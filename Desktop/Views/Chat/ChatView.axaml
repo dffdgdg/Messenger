@@ -331,7 +331,7 @@
 							 SelectionMode="Single,Toggle">
 						<ListBox.ItemsPanel>
 							<ItemsPanelTemplate>
-								<VirtualizingStackPanel CacheLength="0"/>
+								<VirtualizingStackPanel CacheLength="1"/>
 							</ItemsPanelTemplate>
 						</ListBox.ItemsPanel>
 						<ListBox.ItemTemplate>

@@ -47,10 +47,15 @@ public sealed class ServerDiscoveryService(ILogger<ServerDiscoveryService> logge
                 if (!message.StartsWith(ResponsePrefix, StringComparison.Ordinal))
                     continue;
 
-                var port = message[ResponsePrefix.Length..];
-                var ip = result.RemoteEndPoint.Address.ToString();
-                var url = $"http://{ip}:{port}/";
+                var payload = message[ResponsePrefix.Length..];
+                var parts = payload.Split(':', 2);
+                var port = parts[0];
 
+                var ip = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
+                    ? parts[1]
+                    : result.RemoteEndPoint.Address.ToString();
+
+                var url = $"http://{ip}:{port}/";
                 logger.LogInformation("[Discovery] Сервер найден: {Url}", url);
                 return url;
             }

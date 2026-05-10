@@ -5,6 +5,7 @@ using Desktop.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Shared.Dto.Online;
+using Shared.Hubs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -192,10 +193,10 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     #region Chat-level RPC
 
     public Task<ChatReadInfoDto?> GetReadInfoAsync(int chatId)
-        => SafeInvokeAsync<ChatReadInfoDto?>("GetReadInfo", chatId);
+        => SafeInvokeAsync<ChatReadInfoDto?>(HubMethods.ChatInvoke.GetReadInfo, chatId);
 
     public Task<AllUnreadCountsDto?> GetUnreadCountsAsync()
-        => SafeInvokeAsync<AllUnreadCountsDto?>("GetUnreadCounts");
+        => SafeInvokeAsync<AllUnreadCountsDto?>(HubMethods.ChatInvoke.GetUnreadCounts);
 
     public async Task MarkMessageAsReadAsync(int chatId, int messageId)
     {
@@ -204,7 +205,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         if ((now - _lastReadTime).TotalMilliseconds < AppConstants.MarkAsReadDebounceMs) return;
         _lastSentReadMsgId = messageId;
         _lastReadTime = now;
-        await SafeInvokeAsync("MarkMessageAsRead", chatId, (object)messageId);
+        await SafeInvokeAsync(HubMethods.ChatInvoke.MarkMessageAsRead, chatId, messageId);
     }
 
     public async Task SendTypingAsync(int chatId)
@@ -212,7 +213,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         var now = DateTime.UtcNow;
         if ((now - _lastTypingTime).TotalMilliseconds < AppConstants.TypingSendDebounceMs) return;
         _lastTypingTime = now;
-        await SafeInvokeAsync("SendTyping", chatId);
+        await SafeInvokeAsync(HubMethods.ChatInvoke.SendTyping, chatId);
     }
 
     public async Task MarkChatAsReadAsync(int chatId)
@@ -221,10 +222,11 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         try
         {
             UpdateUnread(chatId, 0);
-            await _hub.InvokeAsync("MarkAsRead", chatId, (object?)null);
+            await _hub.InvokeAsync(HubMethods.ChatInvoke.MarkAsRead, chatId, null);
             await SafeCacheAsync(() => _cache.UpdateReadPointerAsync(chatId, null, 0), "read pointer");
         }
         catch (Exception ex) { Log($"MarkChatAsRead error: {ex.Message}"); }
+        await _hub.InvokeAsync(HubMethods.ChatInvoke.MarkAsRead, chatId, null);
     }
 
     public async Task SetStatusAsync(UserStatusType status, string? duration = null)
@@ -239,7 +241,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
         try
         {
-            await _hub.InvokeAsync("SetStatus", (int)status, duration);
+            await _hub.InvokeAsync(HubMethods.ChatInvoke.SetStatus, (int)status, duration);
             Log("[SetStatus] Success");
         }
         catch (HubException hex)
@@ -261,35 +263,29 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     {
         if (_hub is null) return;
 
-        _subs.Add(_hub.On<NotificationDto>("ReceiveNotification", OnNotificationReceived));
-
-        _subs.Add(_hub.On<int>("UserOnline", id => Log($"UserOnline: {id}")));
-
-        _subs.Add(_hub.On<int>("UserOffline", id =>
+        _subs.Add(_hub.On<NotificationDto>(HubMethods.Chat.ReceiveNotification, OnNotificationReceived));
+        _subs.Add(_hub.On<int>(HubMethods.Chat.UserOnline, id => Log($"UserOnline: {id}")));
+        _subs.Add(_hub.On<int>(HubMethods.Chat.UserOffline, id =>
         {
             Log($"UserOffline: {id}");
-            PostUI(() => UserStatusChanged?.Invoke(
-                new UserStatusDto(id, false, DateTime.UtcNow, UserStatusType.Online, null)));
+            PostUI(() => UserStatusChanged?.Invoke(new UserStatusDto(id, false, DateTime.UtcNow, UserStatusType.Online, null)));
         }));
-
-        _subs.Add(_hub.On<UserStatusDto>("UserStatusChanged", dto =>
+        _subs.Add(_hub.On<UserStatusDto>(HubMethods.Chat.UserStatusChanged, dto =>
         {
-            Log($"UserStatusChanged: userId={dto.UserId}, isOnline={dto.IsOnline}, " +
-                $"status={dto.StatusType}, expires={dto.StatusExpiresAt}");
+            Log($"UserStatusChanged: userId={dto.UserId}");
             PostUI(() => UserStatusChanged?.Invoke(dto));
         }));
-
-        _subs.Add(_hub.On<UserDto>("UserProfileUpdated", u => PostUI(() => UserProfileUpdated?.Invoke(u))));
-        _subs.Add(_hub.On<int, int>("UnreadCountUpdated", (cid, cnt) => UpdateUnread(cid, cnt)));
-        _subs.Add(_hub.On<MessageDto>("ReceiveMessageDto", OnNewMessageReceived));
-        _subs.Add(_hub.On<MessageDto>("MessageUpdated", OnMessageUpdated));
-        _subs.Add(_hub.On<PollDto>("ReceivePollUpdate", OnPollUpdated));
-        _subs.Add(_hub.On<MessageDeletedEvent>("MessageDeleted", OnMessageDeleted));
-        _subs.Add(_hub.On<int, int>("UserTyping", (c, u) => PostUI(() => UserTyping?.Invoke(c, u))));
-        _subs.Add(_hub.On<int, int, int?, DateTime?>("MessageRead", (c, u, m, t) => PostUI(() => MessageRead?.Invoke(c, u, m, t))));
-        _subs.Add(_hub.On<int, UserDto>("MemberJoined", (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
-        _subs.Add(_hub.On<int, int>("MemberLeft", (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
-        _subs.Add(_hub.On<ChatDto>("ChatUpdated", OnChatUpdated));
+        _subs.Add(_hub.On<UserDto>(HubMethods.Chat.UserProfileUpdated, u => PostUI(() => UserProfileUpdated?.Invoke(u))));
+        _subs.Add(_hub.On<int, int>(HubMethods.Chat.UnreadCountUpdated, (cid, cnt) => UpdateUnread(cid, cnt)));
+        _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.ReceiveMessage, OnNewMessageReceived));
+        _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.MessageUpdated, OnMessageUpdated));
+        _subs.Add(_hub.On<PollDto>(HubMethods.Chat.PollUpdated, OnPollUpdated));
+        _subs.Add(_hub.On<MessageDeletedEvent>(HubMethods.Chat.MessageDeleted, OnMessageDeleted));
+        _subs.Add(_hub.On<int, int>(HubMethods.Chat.UserTyping, (c, u) => PostUI(() => UserTyping?.Invoke(c, u))));
+        _subs.Add(_hub.On<int, int, int?, DateTime?>(HubMethods.Chat.MessageRead, (c, u, m, t) => PostUI(() => MessageRead?.Invoke(c, u, m, t))));
+        _subs.Add(_hub.On<int, UserDto>(HubMethods.Chat.MemberJoined, (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
+        _subs.Add(_hub.On<int, int>(HubMethods.Chat.MemberLeft, (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
+        _subs.Add(_hub.On<ChatDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
     }
 
     private void OnChatUpdated(ChatDto chat)
@@ -338,16 +334,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         {
             try
             {
-                _notify.Show(
-                    n.ChatName ?? "Новое сообщение",
-                    n.Type == NotificationTypePoll
-                        ? n.Preview ?? "Новый опрос"
-                        : $"{n.SenderName}: {n.Preview}",
-                    DesktopNotificationType.Information,
-                    5000,
-                    () => _nav.CurrentViewModel is MainMenuViewModel vm
-                        ? vm.OpenNotificationAsync(n)
-                        : Task.CompletedTask);
+                _notify.Show(n.ChatName ?? "Новое сообщение", n.Type == NotificationTypePoll ? n.Preview ?? "Новый опрос" : $"{n.SenderName}: {n.Preview}",
+                    DesktopNotificationType.Information, 5000, () => _nav.CurrentViewModel is MainMenuViewModel vm ? vm.OpenNotificationAsync(n) : Task.CompletedTask);
 
                 NotificationReceived?.Invoke(n);
             }

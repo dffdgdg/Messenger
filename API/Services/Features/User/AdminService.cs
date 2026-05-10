@@ -13,8 +13,28 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await ProjectToDto(_context.Users).OrderBy(u => u.Surname).ThenBy(u => u.Name).AsNoTracking().ToListAsync(ct);
-        return Result<List<UserDto>>.Success(users);
+        var users = await _userRepo.GetAllWithSettingsAsync(ct);
+
+        var result = users.ConvertAll(u => new UserDto
+        {
+            Id = u.Id,
+            Username = u.Username,
+            DisplayName = string.IsNullOrWhiteSpace(u.Surname)
+                ? u.Username
+                : $"{u.Surname} {u.Name} {u.Midname}".Trim(),
+            Surname = u.Surname,
+            Name = u.Name,
+            Midname = u.Midname,
+            Avatar = u.Avatar,
+            DepartmentId = u.DepartmentId,
+            Department = u.DepartmentName,
+            IsBanned = u.IsBanned,
+            LastOnline = u.LastOnline,
+            Theme = u.Theme,
+            NotificationsEnabled = u.NotificationsEnabled
+        });
+
+        return Result<List<UserDto>>.Success(result);
     }
 
     public async Task<Result<UserDto>> CreateUserAsync(CreateUserDto dto, CancellationToken ct = default)

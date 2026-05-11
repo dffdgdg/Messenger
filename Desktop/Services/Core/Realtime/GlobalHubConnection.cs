@@ -1,11 +1,14 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure.Helpers;
+using Desktop.Infrastructure.Media;
 using Desktop.Services.UI;
 using Desktop.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
 using Shared.Hubs;
+using SIPSorcery.Net.SharpSRTP.SRTP.Encryption;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -226,7 +229,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
             await SafeCacheAsync(() => _cache.UpdateReadPointerAsync(chatId, null, 0), "read pointer");
         }
         catch (Exception ex) { Log($"MarkChatAsRead error: {ex.Message}"); }
-        await _hub.InvokeAsync(HubMethods.ChatInvoke.MarkAsRead, chatId, null);
     }
 
     public async Task SetStatusAsync(UserStatusType status, string? duration = null)
@@ -278,7 +280,11 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<UserDto>(HubMethods.Chat.UserProfileUpdated, u => PostUI(() => UserProfileUpdated?.Invoke(u))));
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.UnreadCountUpdated, (cid, cnt) => UpdateUnread(cid, cnt)));
         _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.ReceiveMessage, OnNewMessageReceived));
-        _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.MessageUpdated, OnMessageUpdated));
+        _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.MessageUpdated, msg =>
+        {
+            Debug.WriteLine($"[GlobalHub] ← MessageUpdated received: id={msg.Id} chatId={msg.ChatId} IsPinned={msg.IsPinned}");
+            OnMessageUpdated(msg);
+        }));
         _subs.Add(_hub.On<PollDto>(HubMethods.Chat.PollUpdated, OnPollUpdated));
         _subs.Add(_hub.On<MessageDeletedEvent>(HubMethods.Chat.MessageDeleted, OnMessageDeleted));
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.UserTyping, (c, u) => PostUI(() => UserTyping?.Invoke(c, u))));
@@ -286,6 +292,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, UserDto>(HubMethods.Chat.MemberJoined, (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.MemberLeft, (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
         _subs.Add(_hub.On<ChatDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
+
     }
 
     private void OnChatUpdated(ChatDto chat)
@@ -353,6 +360,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
     private void OnMessageUpdated(MessageDto msg)
     {
+        Debug.WriteLine($"[GlobalHub] OnMessageUpdated processing: id={msg.Id} chatId={msg.ChatId} IsPinned={msg.IsPinned}");
         _ = SafeCacheAsync(() => _cache.UpsertMessageAsync(msg), "update");
         PostUI(() => MessageUpdatedGlobally?.Invoke(msg));
     }

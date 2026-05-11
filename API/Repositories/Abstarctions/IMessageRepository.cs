@@ -7,7 +7,7 @@ public interface IMessageRepository : IRepository<Message>
     Task<UserMessage?> FindUserMessageByIdAsync(int messageId, CancellationToken ct = default);
     Task<UserMessage?> FindUserMessageWithIncludesAsync(int messageId, CancellationToken ct = default);
     Task<UserMessage?> FindUserMessageForDeleteAsync(int messageId, CancellationToken ct = default);
-
+    Task<UserMessage?> FindUserMessageWithIncludesNoTrackingAsync(int messageId, CancellationToken ct = default);
     Task<List<UserMessage>> GetBeforeAsync(int chatId, int beforeId, int take,
         DateTime? cutoff = null, CancellationToken ct = default);
     Task<List<UserMessage>> GetAfterAsync(int chatId, int afterId, int take,

@@ -205,6 +205,8 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
+    public Task<UserMessage?> FindUserMessageWithIncludesNoTrackingAsync(int messageId, CancellationToken ct = default)
+        => WithFullIncludes().AsNoTracking().FirstOrDefaultAsync(m => m.Id == messageId, ct);
 
     private IQueryable<UserMessage> LightQuery()
         => _context.UserMessages

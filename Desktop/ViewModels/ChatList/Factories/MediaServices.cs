@@ -1,12 +1,19 @@
-﻿namespace Desktop.ViewModels.ChatList.Factories;
+﻿using Desktop.Services.Abstractions;
+using Desktop.Services.Features.Media.Files;
+using Desktop.Services.Platform.OS;
 
-/// <summary>
-/// Сервисы чата для файлов и воспроизведения медиа.
-/// </summary>
-public sealed class MediaServices(IFileDownloadService fileDownloadService, IPlatformService platformService, IAudioPlayerService audioPlayer, IAudioRecorderService audioRecorder)
+namespace Desktop.ViewModels.ChatList.Factories;
+
+public sealed class MediaServices(
+    IFileDownloadService fileDownloadService,
+    IFileDownloadStateService fileDownloadStateService,
+    IAudioPlayerService audioPlayer,
+    IAudioRecorderService audioRecorder,
+    IPlatformService platformService)
 {
     public IFileDownloadService FileDownloadService { get; } = fileDownloadService;
-    public IPlatformService PlatformService { get; } = platformService;
+    public IFileDownloadStateService FileDownloadStateService { get; } = fileDownloadStateService;
     public IAudioPlayerService AudioPlayer { get; } = audioPlayer;
     public IAudioRecorderService AudioRecorder { get; } = audioRecorder;
+    public IPlatformService PlatformService { get; } = platformService;
 }

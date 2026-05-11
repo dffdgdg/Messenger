@@ -249,6 +249,95 @@ public sealed class AuthenticatedImageLoader : IDisposable
             _inflight.Clear();
         }
     }
+    /// <summary>
+    /// Удаляет конкретный URL из RAM и дискового кэша,
+    /// чтобы следующая загрузка пошла на сервер.
+    /// </summary>
+    public void InvalidateUrl(string url)
+    {
+        lock (_lruLock)
+        {
+            if (_lruMap.TryGetValue(url, out var node))
+            {
+                _ramCacheBytes -= node.Value.Data.Length;
+                _lruList.Remove(node);
+                _lruMap.Remove(url);
+            }
+        }
+
+        // Удаляем с диска все варианты (с разными query-параметрами тот же путь)
+        try
+        {
+            // Нормализуем: убираем query-string для поиска дискового файла
+            var urlWithoutQuery = url.Contains('?') ? url[..url.IndexOf('?')] : url;
+            var ext = GetExtension(urlWithoutQuery);
+            var diskPath = GetDiskCachePath(urlWithoutQuery, ext);
+            if (File.Exists(diskPath))
+                File.Delete(diskPath);
+
+            // Также инвалидируем исходный url (с query если был)
+            var diskPathFull = GetDiskCachePath(url, GetExtension(url));
+            if (File.Exists(diskPathFull))
+                File.Delete(diskPathFull);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[AuthImageLoader] InvalidateUrl disk delete failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Инвалидирует все URL, путь которых содержит данный сегмент.
+    /// Используется для инвалидации аватара пользователя/чата по относительному пути.
+    /// </summary>
+    public void InvalidateByRelativePath(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return;
+
+        var normalized = relativePath.TrimStart('/').ToLowerInvariant();
+        Debug.WriteLine($"[AuthImageLoader] InvalidateByRelativePath: '{normalized}'");
+        Debug.WriteLine($"[AuthImageLoader] Cache keys count: {_lruMap.Count}");
+
+        List<string> toRemove;
+        lock (_lruLock)
+        {
+            toRemove = [];
+            foreach (var key in _lruMap.Keys)
+            {
+                Debug.WriteLine($"[AuthImageLoader] Cache key: '{key}'");
+                if (key.Contains(normalized, StringComparison.OrdinalIgnoreCase))
+                    toRemove.Add(key);
+            }
+
+            foreach (var key in toRemove)
+            {
+                if (_lruMap.TryGetValue(key, out var node))
+                {
+                    _ramCacheBytes -= node.Value.Data.Length;
+                    _lruList.Remove(node);
+                    _lruMap.Remove(key);
+                }
+            }
+        }
+
+        // Чистим диск
+        foreach (var key in toRemove)
+        {
+            try
+            {
+                var ext = GetExtension(key);
+                var diskPath = GetDiskCachePath(key, ext);
+                if (File.Exists(diskPath))
+                    File.Delete(diskPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AuthImageLoader] Disk delete failed for {key}: {ex.Message}");
+            }
+        }
+
+        Debug.WriteLine($"[AuthImageLoader] Invalidated {toRemove.Count} entries for '{relativePath}'");
+    }
 
     #region Helpers
 
@@ -285,6 +374,30 @@ public sealed class AuthenticatedImageLoader : IDisposable
     }
 
     #endregion
+    /// <summary>
+    /// Проверяет, есть ли URL в RAM-кэше (не инвалидирован).
+    /// Используется RemoteImage для проверки перед повторной загрузкой.
+    /// </summary>
+    public bool IsCached(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+
+        // Убираем query-параметры, потому что в кэше ключи без них
+        var normalized = url.Contains('?') ? url[..url.IndexOf('?')] : url;
+
+        lock (_lruLock)
+        {
+            // Проверяем точное совпадение
+            if (_lruMap.ContainsKey(normalized))
+                return true;
+
+            // Проверяем наличие с query-параметрами (на случай если кэшировали с ними)
+            if (_lruMap.ContainsKey(url))
+                return true;
+
+            return false;
+        }
+    }
 
     public void Dispose() => ClearCache();
 }

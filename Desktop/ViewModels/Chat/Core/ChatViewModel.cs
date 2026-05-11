@@ -1,6 +1,8 @@
 ﻿using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Helpers;
+using Desktop.Infrastructure.Media;
+using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Core;
@@ -9,6 +11,7 @@ using Desktop.ViewModels.Chat.Managers;
 using Desktop.ViewModels.Chat.Navigation;
 using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Dialog;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Call;
 using Shared.DTO.Call;
 using System;
@@ -47,6 +50,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #region Зависимости и хэндлеры
 
     private readonly IFileDownloadService _fileDownloadService;
+    private readonly IFileDownloadStateService? _fileDownloadStateService;
     private readonly INotificationService _notificationService;
     private readonly IAudioPlayerService _audioPlayerService;
 
@@ -178,6 +182,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPinnedBannerVisible))]
+    [NotifyPropertyChangedFor(nameof(PinnedBannerPreviewText))]
     public partial MessageViewModel? PinnedBannerMessage { get; set; }
 
     public bool IsPinnedBannerVisible => PinnedBannerMessage != null;
@@ -220,7 +225,35 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public event Action? ScrollToBottomRequested;
 
     #endregion
+    partial void OnPinnedBannerMessageChanged(MessageViewModel? oldValue, MessageViewModel? newValue)
+    {
+        if (oldValue != null)
+            oldValue.PropertyChanged -= OnPinnedBannerMessagePropertyChanged;
 
+        if (newValue != null)
+            newValue.PropertyChanged += OnPinnedBannerMessagePropertyChanged;
+    }
+
+    private void OnPinnedBannerMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MessageViewModel.ContentPreview)
+            or nameof(MessageViewModel.SenderName)
+            or nameof(MessageViewModel.Content))
+        {
+            OnPropertyChanged(nameof(PinnedBannerPreviewText));
+        }
+    }
+    public string PinnedBannerPreviewText
+    {
+        get
+        {
+            var msg = PinnedBannerMessage;
+            if (msg == null) return string.Empty;
+            if (string.IsNullOrWhiteSpace(msg.SenderName))
+                return msg.ContentPreview;
+            return $"{msg.SenderName}: {msg.ContentPreview}";
+        }
+    }
     #region Init
 
     public ChatViewModel(ChatDto initialChat, ChatsViewModel parent, IChatNavigator navigator, ChatViewModelDependencies dependencies,
@@ -233,6 +266,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(initialChat);
 
         _fileDownloadService = dependencies.FileDownloadService;
+        _fileDownloadStateService = dependencies.FileDownloadStateService;
         _notificationService = dependencies.NotificationService;
         _audioPlayerService = dependencies.AudioPlayer;
         _audioRecorderService = dependencies.AudioRecorder;
@@ -245,7 +279,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         Context = new ChatContext(chatId, currentUserId, dependencies.Core, dependencies.Media, dependencies.Cache)
         {
-            Chat = initialChat
+            Chat = initialChat,
+            Navigator = navigator
         };
 
         _contextScrollToMessage = (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
@@ -321,25 +356,58 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var chatTask = Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
             var readInfoTask = Context.Hub.GetReadInfoAsync(Context.ChatId);
             var notificationTask = Notification.LoadSettingsAsync(Context.LifetimeToken);
-            var callStateTask = _callHub.GetCallStateAsync(Context.ChatId);
 
-            await Task.WhenAll(chatTask, readInfoTask, notificationTask, callStateTask);
+            await Task.WhenAll(chatTask, readInfoTask, notificationTask);
 
             var chatResult = chatTask.Result;
             if (chatResult is { Success: true, Data: not null })
             {
-                if (!string.IsNullOrEmpty(chatResult.Data.Avatar))
-                    chatResult.Data.Avatar = AvatarHelper.GetUrlWithCacheBuster(chatResult.Data.Avatar);
-                Context.Chat = chatResult.Data;
+                if (!_chatMetaUpdatedExternally)
+                {
+                    Context.Chat = chatResult.Data;
+                }
+                else
+                {
+                    var serverData = chatResult.Data;
+                    serverData.Avatar = Context.Chat?.Avatar ?? serverData.Avatar;
+                    Context.Chat = serverData;
+                    Debug.WriteLine($"[ChatVM] Merged server data with external avatar: '{serverData.Avatar}'");
+                }
             }
             else
             {
                 throw new HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
 
-            var callState = callStateTask.Result;
+            CallStateDto? callState = null;
+            try
+            {
+                if (_callHub.IsConnected)
+                {
+                    callState = await _callHub.GetCallStateAsync(Context.ChatId);
+                }
+                else
+                {
+                    try
+                    {
+                        var deadline = DateTime.UtcNow.AddSeconds(3);
+                        while (!_callHub.IsConnected && DateTime.UtcNow < deadline)
+                            await Task.Delay(100, Context.LifetimeToken);
+
+                        if (_callHub.IsConnected)
+                            callState = await _callHub.GetCallStateAsync(Context.ChatId);
+                    }
+                    catch (OperationCanceledException) { /* отменено */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatVM] GetCallState failed ({ex.GetType().Name}): {ex.Message}");
+            }
+
             if (callState != null)
             {
+                _chatActiveCallId = callState.CallId;
                 HasActiveCall = true;
                 ActiveCallParticipantsCount = callState.Participants.Count;
                 IsInActiveCall = _callService.ActiveChatId == Context.ChatId;
@@ -388,7 +456,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ChatVM] Ошибка инициализации: {ex.Message}");
+            Debug.WriteLine($"[ChatVM] Ошибка инициализации: {ex.GetType().Name}: {ex.Message}");
+            Debug.WriteLine($"[ChatVM] StackTrace: {ex.StackTrace}");
             ErrorMessage = $"Не удалось открыть чат: {ex.Message}";
             DisposeCore();
             _initTcs.TrySetException(ex);
@@ -473,6 +542,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         InfoPanel.FilteredPolls.CollectionChanged += _filteredPollsCollectionHandler;
 
         MessageManager.MessagePinStateChanged += OnMessagePinStateChanged;
+        Context.MessagePinStateChanged += OnMessagePinStateChanged;
     }
 
     private void UnsubscribePropertyForwarding()
@@ -500,6 +570,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
 
         MessageManager.MessagePinStateChanged -= OnMessagePinStateChanged;
+        Context.MessagePinStateChanged -= OnMessagePinStateChanged;
     }
     private void SubscribeCallEvents()
     {
@@ -522,12 +593,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _callService.CallStarted -= OnCallStarted;
         _callService.CallEnded -= OnCallEnded;
     }
+    private string? _chatActiveCallId;
 
     private void OnActiveCallStarted(CallStateDto state)
     {
         if (state.ChatId != Context.ChatId) return;
         Dispatcher.UIThread.Post(() =>
         {
+            _chatActiveCallId = state.CallId;
             HasActiveCall = true;
             ActiveCallParticipantsCount = state.Participants.Count;
         });
@@ -541,6 +614,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void OnActiveCallEnded(string callId) => Dispatcher.UIThread.Post(() =>
     {
+        if (_chatActiveCallId != null && _chatActiveCallId != callId) return;
+        _chatActiveCallId = null;
         HasActiveCall = false;
         ActiveCallParticipantsCount = 0;
         IsInActiveCall = false;
@@ -551,6 +626,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (invite.ChatId != Context.ChatId) return;
         Dispatcher.UIThread.Post(() =>
         {
+            _chatActiveCallId = invite.CallId;
             HasActiveCall = true;
             ActiveCallParticipantsCount = invite.ActiveParticipantsCount;
         });
@@ -671,7 +747,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         await SafeExecuteAsync(async _ =>
         {
             if (_callService.IsInCall && _callService.ActiveChatId == Context.ChatId)
+            {
+                Parent.OpenCallUi();
                 return;
+            }
 
             if (_callService.IsInCall)
                 await _callService.LeaveCallAsync();
@@ -679,8 +758,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (HasActiveCall)
             {
                 var state = await _callHub.GetCallStateAsync(Context.ChatId);
-                if (state != null)
-                    await _callService.JoinCallAsync(state.CallId, Context.ChatId);
+                if (state == null) return;
+
+                await _callService.JoinCallAsync(state.CallId, Context.ChatId);
+
+                var chatName = Context.Chat?.Name ?? string.Empty;
+                Parent.ShowCallView(state, chatName, state.IsGroupCall);
             }
             else
             {
@@ -688,6 +771,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
         });
     }
+
     #region Messages
 
     private async Task LoadPinnedAsync(CancellationToken ct)
@@ -736,7 +820,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
 
     private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
-        => new(dto, _fileDownloadService, _notificationService, _audioPlayerService, Context.Api);
+    => new(dto, _fileDownloadService, _notificationService, _audioPlayerService, Context.Api,
+           currentUserId: UserId, stateService: Context.FileDownloadState);
 
     [RelayCommand]
     private async Task CopyUsername()
@@ -1042,6 +1127,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         await _navigator.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
         {
+            if (_chatMetaUpdatedExternally)
+            {
+                updatedChat.Avatar = Context.Chat?.Avatar ?? updatedChat.Avatar;
+                _chatMetaUpdatedExternally = false;
+            }
+
             Context.Chat = updatedChat;
             Parent.UpdateChatInList(updatedChat);
             _ = InfoPanel.ReloadMembersAfterEditAsync();
@@ -1077,18 +1168,25 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
     });
 
-    private void OnMessagePinStateChanged(MessageDto dto) => Dispatcher.UIThread.Post(() => HandlePinStateChanged(dto));
+    private void OnMessagePinStateChanged(MessageDto dto)
+    {
+        Debug.WriteLine($"[ChatVM] OnMessagePinStateChanged: id={dto.Id} IsPinned={dto.IsPinned}");
+        Dispatcher.UIThread.Post(() => HandlePinStateChanged(dto));
+    }
 
     private void HandlePinStateChanged(MessageDto dto)
     {
+        Debug.WriteLine($"[ChatVM] HandlePinStateChanged: id={dto.Id} IsPinned={dto.IsPinned} disposed={Context.IsDisposed}");
         if (Context.IsDisposed) return;
 
         if (!dto.IsPinned)
         {
+            Debug.WriteLine($"[ChatVM] RemovePinnedMessage: id={dto.Id}");
             RemovePinnedMessage(dto.Id);
             return;
         }
 
+        Debug.WriteLine($"[ChatVM] AddOrUpdatePinnedMessage: id={dto.Id}");
         AddOrUpdatePinnedMessage(dto);
     }
 
@@ -1132,6 +1230,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     #endregion
 
     #region Reading and Scrolling
+    public void RequestScrollToBottom() => Context.RequestScrollToBottom();
 
     public async Task OnMessageVisibleAsync(MessageViewModel message)
     {
@@ -1304,22 +1403,37 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         FilesItems.Clear();
         MembersPreview.Clear();
     }
-
+    private volatile bool _chatMetaUpdatedExternally;
     private async void OnChatUpdated(ChatDto chat)
     {
-        if (chat.Id != Context.ChatId || Context.IsDisposed)
+        if (chat.Id != Context.ChatId || Context.IsDisposed) return;
+
+        var oldAvatar = Context.Chat?.Avatar;
+
+        // Если аватар не изменился — просто обновляем Chat
+        if (oldAvatar == chat.Avatar)
+        {
+            _chatMetaUpdatedExternally = true;
+            Context.Chat = chat;
             return;
+        }
 
+        if (!string.IsNullOrEmpty(oldAvatar))
+        {
+            try
+            {
+                App.Current.Services
+                    .GetRequiredService<AuthenticatedImageLoader>()
+                    .InvalidateByRelativePath(oldAvatar);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatVM] Avatar invalidate error: {ex.Message}");
+            }
+        }
+
+        _chatMetaUpdatedExternally = true;
         Context.Chat = chat;
-
-        try
-        {
-            await MessageManager.ResetToLatestAsync(Context.LifetimeToken);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] Ошибка при обновлении после ChatUpdated: {ex.Message}");
-        }
     }
     #endregion
 }

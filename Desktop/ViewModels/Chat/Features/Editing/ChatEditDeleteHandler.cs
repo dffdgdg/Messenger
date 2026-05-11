@@ -3,6 +3,7 @@ using Avalonia.Input.Platform;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Shared;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Chat;
@@ -104,7 +105,9 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
 
         var endpoint = ApiEndpoints.Messages.Pin(message.Id);
 
-        var result = wasPinned ? await Ctx.Api.DeleteAsync<MessageDto>(endpoint) : await Ctx.Api.PostAsync<object, MessageDto>(endpoint, new { });
+        var result = wasPinned
+            ? await Ctx.Api.DeleteAsync<MessageDto>(endpoint)
+            : await Ctx.Api.PostAsync<object, MessageDto>(endpoint, new { });
 
         if (!result.Success || result.Data == null)
         {
@@ -113,6 +116,8 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
         }
 
         message.ApplyUpdate(result.Data);
+
+        Ctx.RaisePinStateChanged(result.Data);
         await Ctx.Notifications.ShowSuccessAsync(wasPinned ? "Сообщение откреплено" : "Сообщение закреплено");
     }
 

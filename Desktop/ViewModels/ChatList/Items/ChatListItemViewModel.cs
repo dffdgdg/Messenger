@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Desktop.ViewModels.Chats;
 
@@ -24,7 +25,8 @@ public partial class ChatListItemViewModel : ObservableObject
         ContactStatusType = dto.ContactStatusType;
         ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
     }
-
+    partial void OnAvatarChanged(string? value) =>
+        Debug.WriteLine($"[ChatListItem id={Id}] Avatar = '{value}'");
     public int Id { get; }
     public ChatType Type { get; }
     public int CreatedById { get; }
@@ -66,6 +68,31 @@ public partial class ChatListItemViewModel : ObservableObject
         LastMessageSenderName = dto.LastMessageSenderName;
         UnreadCount = dto.UnreadCount;
         HideSenderPrefix = dto.HideSenderPrefix;
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+    }
+
+    /// <summary>
+    /// Применяет обновление из ChatUpdated, НЕ трогая Avatar.
+    /// LastMessage* не затираются, если в DTO они пустые.
+    /// </summary>
+    public void ApplyExceptAvatar(ChatDto dto)
+    {
+        Name = dto.Name;
+
+        if (dto.LastMessageDate.HasValue)
+        {
+            LastMessageDate = dto.LastMessageDate;
+            LastMessagePreview = dto.LastMessagePreview;
+            LastMessageSenderName = dto.LastMessageSenderName;
+            HideSenderPrefix = dto.HideSenderPrefix;
+        }
+
+        if (dto.UnreadCount > 0)
+            UnreadCount = dto.UnreadCount;
+
         ContactUserId = dto.ContactUserId;
         ContactIsOnline = dto.ContactIsOnline;
         ContactStatusType = dto.ContactStatusType;

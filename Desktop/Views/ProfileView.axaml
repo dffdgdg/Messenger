@@ -8,6 +8,7 @@
 			 x:DataType="vm:ProfileViewModel"
 			 Background="{DynamicResource PrimaryBG}">
 	<UserControl.Styles>
+
 		<!-- ── Значение поля ── -->
 		<Style Selector="TextBlock.FieldValue">
 			<Setter Property="FontSize" Value="14"/>
@@ -54,7 +55,7 @@
 					<Border Classes="Section">
 						<Grid ColumnDefinitions="Auto,*">
 							<Panel Classes="AvatarEditContainer"
-								   Width="96" Height="96"
+								   Width="80" Height="80"
 								   Margin="0,0,4,0">
 
 								<controls:AvatarControl Classes="XLarge"
@@ -64,13 +65,13 @@
 														ShowOnlineIndicator="False"/>
 
 								<Button Classes="AvatarEditOverlay"
-										Width="88" Height="88"
-										CornerRadius="44"
+										Width="80" Height="80"
+										CornerRadius="40"
 										Command="{Binding UploadAvatarCommand}"
 										ToolTip.Tip="Изменить аватар">
 									<Border Classes="AvatarOverlay"
-											Width="88" Height="88"
-											CornerRadius="44"
+											Width="80" Height="80"
+											CornerRadius="40"
 											Background="#66000000">
 										<PathIcon Data="{StaticResource CameraIcon}"
 												  Width="24" Height="24"

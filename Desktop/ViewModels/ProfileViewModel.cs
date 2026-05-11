@@ -2,8 +2,11 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Helpers;
+using Desktop.Infrastructure.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -169,10 +172,15 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         catch { /* avatar load failed silently */ }
     }
 
-    partial void OnUserChanged(UserDto? value) => RefreshAvatarUrl();
+    private void RefreshAvatarUrl(bool forceCacheBuster = false)
+    {
+        var url = forceCacheBuster && !string.IsNullOrEmpty(User?.Avatar)
+            ? AvatarHelper.WithFreshCacheBuster(User.Avatar)
+            : GetAbsoluteUrl(User?.Avatar);
 
-    private void RefreshAvatarUrl(bool forceCacheBuster = false) =>
-        AvatarUrl = forceCacheBuster ? AvatarHelper.GetUrlWithCacheBuster(User?.Avatar) : GetAbsoluteUrl(User?.Avatar);
+        Debug.WriteLine($"[ProfileVM] RefreshAvatarUrl: forceBuster={forceCacheBuster}, avatar={User?.Avatar}, result={url}");
+        AvatarUrl = url;
+    }
 
     #region Profile editing
 
@@ -365,7 +373,8 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
     [RelayCommand]
     private async Task UploadAvatar()
     {
-        var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.StorageProvider;
+        var storage = (App.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow?.StorageProvider;
         if (storage == null) return;
 
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -377,16 +386,61 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
         await SafeExecuteAsync(async () =>
         {
             await using var stream = await files[0].OpenReadAsync();
-            var result = await _api.UploadFileAsync<UserDto>(ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
+
+            // Правильный тип — AvatarResponseDto, не UserDto
+            var result = await _api.UploadFileAsync<AvatarResponseDto>(
+                ApiEndpoints.Users.Avatar(User!.Id), stream, files[0].Name, "image/png");
+
+            Debug.WriteLine($"[ProfileVM] UploadAvatar: Success={result.Success}, AvatarUrl='{result.Data?.AvatarUrl}'");
 
             if (!result.Success) return;
 
-            User.Avatar = result.Data!.Avatar;
-            RefreshAvatarUrl(forceCacheBuster: true);
-            OnPropertyChanged(nameof(HasAvatar));
-            await LoadAvatarAsync();
+            var newAvatarUrl = result.Data!.AvatarUrl; // абсолютный URL с сервера
+
+            var oldAvatar = User!.Avatar;
+            if (!string.IsNullOrEmpty(oldAvatar))
+                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>()
+                   .InvalidateByRelativePath(oldAvatar);
+
+            if (!string.IsNullOrEmpty(newAvatarUrl))
+                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>()
+                   .InvalidateByRelativePath(newAvatarUrl);
+
+            // Подавляем OnUserChanged чтобы не перезаписал AvatarUrl без buster
+            _suppressAvatarRefresh = true;
+            try
+            {
+                User!.Avatar = newAvatarUrl;
+                OnPropertyChanged(nameof(HasAvatar));
+            }
+            finally
+            {
+                _suppressAvatarRefresh = false;
+            }
+
+            // AvatarUrl с timestamp buster для форсированной перезагрузки
+            AvatarUrl = AvatarHelper.WithFreshCacheBuster(newAvatarUrl);
+
+            // AvatarBitmap грузим через тот же URL с buster
+            AvatarBitmap?.Dispose();
+            AvatarBitmap = null;
+            try
+            {
+                await using var imgStream = await _api.GetStreamAsync(AvatarUrl);
+                if (imgStream != null) AvatarBitmap = new Bitmap(imgStream);
+            }
+            catch { /* silent */ }
+
             await _notificationService.ShowSuccessAsync("Аватар обновлён");
         });
+    }
+
+    private bool _suppressAvatarRefresh;
+
+    partial void OnUserChanged(UserDto? value)
+    {
+        if (_suppressAvatarRefresh) return;
+        RefreshAvatarUrl();
     }
 
     [RelayCommand]
@@ -399,6 +453,9 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
             var result = await _api.DeleteAsync(ApiEndpoints.Users.Avatar(User.Id));
             if (result.Success)
             {
+                if (!string.IsNullOrEmpty(User.Avatar))
+                    App.Current.Services.GetRequiredService<AuthenticatedImageLoader>().InvalidateByRelativePath(User.Avatar);
+
                 User.Avatar = null;
                 AvatarBitmap?.Dispose();
                 AvatarBitmap = null;

@@ -46,7 +46,10 @@ public sealed partial class ChatForwardHandler : ChatFeatureHandler
             return;
         }
 
-        var availableChats = chatsResult.Data.Where(c => c.Id != Ctx.ChatId).OrderByDescending(c => c.LastMessageDate).ToList();
+        var availableChats = chatsResult.Data
+            .Where(c => c.Id != Ctx.ChatId)
+            .OrderByDescending(c => c.LastMessageDate)
+            .ToList();
 
         if (availableChats.Count == 0)
         {
@@ -77,11 +80,25 @@ public sealed partial class ChatForwardHandler : ChatFeatureHandler
         var sendResult = await Ctx.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, payload);
 
         if (sendResult.Success)
-            await Ctx.Notifications.ShowSuccessAsync($"Сообщение переслано в чат «{targetChat.Name}»");
-        else
-            await Ctx.Notifications.ShowErrorAsync(sendResult.Error ?? "Не удалось переслать сообщение");
+        {
+            CancelForward();
 
-        CancelForward();
+            // Навигация к целевому чату
+            if (Ctx.Navigator != null)
+            {
+                await Ctx.Navigator.NavigateToForwardedChatAsync(targetChat);
+            }
+            else
+            {
+                // Fallback — просто уведомление если навигатор не доступен
+                await Ctx.Notifications.ShowSuccessAsync($"Сообщение переслано в чат «{targetChat.Name}»");
+            }
+        }
+        else
+        {
+            await Ctx.Notifications.ShowErrorAsync(sendResult.Error ?? "Не удалось переслать сообщение");
+            CancelForward();
+        }
     }
 
     [RelayCommand]

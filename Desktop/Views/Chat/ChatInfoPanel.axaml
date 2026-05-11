@@ -704,29 +704,29 @@
 
 								<StackPanel IsVisible="{Binding ShowPhotosSection}"
 											Tag="{Binding LoadMorePhotosCommand}">
-											<ItemsControl ItemsSource="{Binding PhotosItems}"
-														  Tag="{Binding OpenInfoSectionMessageCommand}">
-												<ItemsControl.ItemsPanel>
-													<ItemsPanelTemplate>
-														<WrapPanel Orientation="Horizontal"/>
-													</ItemsPanelTemplate>
-												</ItemsControl.ItemsPanel>
-												<ItemsControl.ItemTemplate>
-													<DataTemplate x:DataType="context:ChatInfoPanelMediaItem">
-														<Button Classes="MediaThumb"
-																Width="88" Height="88"
-																Margin="2"
-																Command="{Binding $parent[ItemsControl].Tag}"
-																CommandParameter="{Binding Message}">
-															<Panel>
-																<Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8"/>
-																<Image Stretch="UniformToFill"
-																	   media:RemoteImage.Source="{Binding PreviewUrl}"/>
-															</Panel>
-														</Button>
-													</DataTemplate>
-												</ItemsControl.ItemTemplate>
-											</ItemsControl>
+									<ItemsControl ItemsSource="{Binding PhotosItems}"
+												  Tag="{Binding OpenInfoSectionMessageCommand}">
+										<ItemsControl.ItemsPanel>
+											<ItemsPanelTemplate>
+												<WrapPanel Orientation="Horizontal"/>
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate x:DataType="context:ChatInfoPanelMediaItem">
+												<Button Classes="MediaThumb"
+														Width="88" Height="88"
+														Margin="2"
+														Command="{Binding $parent[ItemsControl].Tag}"
+														CommandParameter="{Binding Message}">
+													<Panel>
+														<Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8"/>
+														<Image Stretch="UniformToFill"
+															   media:RemoteImage.Source="{Binding PreviewUrl}"/>
+													</Panel>
+												</Button>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
 
 									<!-- Кнопка "Показать ещё" исправлена -->
 									<Button Classes="InfoRow"
@@ -926,16 +926,11 @@
 																	   FontSize="13"
 																	   FontWeight="Medium"
 																	   TextTrimming="CharacterEllipsis"/>
-															<TextBlock FontSize="12"
+															<TextBlock Text="{Binding ContentPreview}"
+																	   FontSize="12"
 																	   Foreground="{DynamicResource TextSecondary}"
 																	   TextTrimming="CharacterEllipsis"
-																	   MaxLines="1">
-																<TextBlock.Text>
-																	<MultiBinding FallbackValue="">
-																		<Binding Path="DisplayContent"/>
-																	</MultiBinding>
-																</TextBlock.Text>
-															</TextBlock>
+																	   MaxLines="1"/>
 															<TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
 																	   FontSize="11"
 																	   Foreground="{DynamicResource TextMuted}"/>

@@ -3,7 +3,7 @@
 $Root = Split-Path $PSScriptRoot -Parent
 Set-Location $Root
 
-Write-Host "=== Messenger Server ===" -ForegroundColor Cyan
+Write-Host "=== ВнутрьСеть Server ===" -ForegroundColor Cyan
 
 # Проверяем .env
 if (-not (Test-Path ".env")) {
@@ -34,7 +34,11 @@ $envContent | Set-Content ".env"
 
 # Запускаем
 Write-Host "Запускаем контейнеры..." -ForegroundColor Yellow
+
+$previousErrorAction = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 docker compose up -d --build
+$ErrorActionPreference = $previousErrorAction
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Ошибка запуска Docker"

@@ -20,6 +20,9 @@ public static class SystemMessageFormatter
             SystemEventType.RoleChanged => $"{actor} изменил(а) роль {target}",
             SystemEventType.CallStarted => $"{actor} начал(а) звонок",
             SystemEventType.CallEnded => fallback ?? "Звонок завершён",
+            SystemEventType.MessagePinned => $"{actor} закрепил(а) сообщение"
+                + (string.IsNullOrWhiteSpace(fallback) ? "" : $": «{fallback}»"),
+            SystemEventType.MessageUnpinned => $"{actor} открепил(а) сообщение",
             _ => fallback ?? DefaultSystemMessage
         };
     }

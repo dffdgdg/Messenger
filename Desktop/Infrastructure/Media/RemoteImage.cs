@@ -17,7 +17,7 @@ public static class RemoteImage
     private static readonly AttachedProperty<CancellationTokenSource?> CtsProperty =
         AvaloniaProperty.RegisterAttached<Image, CancellationTokenSource?>("LoadCts", typeof(RemoteImage));
 
-    private static readonly AttachedProperty<string?> CurrentUrlProperty =
+    public static readonly AttachedProperty<string?> CurrentUrlProperty =
         AvaloniaProperty.RegisterAttached<Image, string?>("CurrentUrl", typeof(RemoteImage));
 
     static RemoteImage() => SourceProperty.Changed.AddClassHandler<Image>(OnSourceChanged);
@@ -31,14 +31,28 @@ public static class RemoteImage
         var currentUrl = image.GetValue(CurrentUrlProperty);
 
         if (!string.IsNullOrWhiteSpace(newUrl) && newUrl == currentUrl && image.Source != null)
-            return;
+        {
+            var loader = App.Current?.Services?.GetService<AuthenticatedImageLoader>();
+            if (loader?.IsCached(newUrl) != false)
+                return;
+            image.SetValue(CurrentUrlProperty, null);
+        }
 
         CancelCurrent(image);
 
         if (string.IsNullOrWhiteSpace(newUrl))
         {
-            if (string.IsNullOrWhiteSpace(currentUrl))
+            if (image.Source is Bitmap old)
+            {
                 image.Source = null;
+                old.Dispose();
+                MemoryDiagnostics.OnBitmapDisposed();
+            }
+            else
+            {
+                image.Source = null;
+            }
+            image.SetValue(CurrentUrlProperty, null);
             return;
         }
 
@@ -50,7 +64,6 @@ public static class RemoteImage
         image.DetachedFromVisualTree += OnDetachedFromVisualTree;
 
         MemoryDiagnostics.OnRemoteImageStarted();
-
         _ = LoadAsync(image, newUrl, cts.Token);
     }
 

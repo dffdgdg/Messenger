@@ -227,7 +227,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
     }
 
-    // Синхронная версия без async void проблем
     private void ShowCallViewSync(CallStateDto state, string chatName, bool isGroupCall)
     {
         if (_activeCallStore.ActiveCall != null)
@@ -247,7 +246,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     private void OnCallStateUpdated(CallStateDto state)
     {
-        // Только для инициатора, когда UI ещё не открыт
         if (_activeCallStore.IsInCall) return;
 
         var myUserId = _auth.Session.UserId ?? 0;
@@ -255,7 +253,6 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         var callService = _sp.GetRequiredService<ICallService>();
 
-        // Проверяем что мы инициируем именно этот чат
         if (callService.ActiveChatId != state.ChatId) return;
 
         var chatName = UserChats.FirstOrDefault(c => c.Id == state.ChatId)?.Name ?? string.Empty;
@@ -525,6 +522,29 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     #endregion
 
     #region Chat open
+    public async Task NavigateToForwardedChatAsync(ChatDto targetChat)
+    {
+        bool isGroup = targetChat.Type is ChatType.Chat or ChatType.Department;
+        SetActiveMenu(isGroup ? 1 : 5);
+        await Task.Delay(50);
+
+        var vm = isGroup
+            ? (_chatsVm ??= _chatsFactory.Create(this, true))
+            : (_contactsVm ??= _chatsFactory.Create(this, false));
+
+        CurrentMenuViewModel = vm;
+
+        if (vm.Chats.All(c => c.Id != targetChat.Id))
+            vm.Chats.Insert(0, new ChatListItemViewModel(targetChat));
+
+        vm.SelectedChat = vm.Chats.FirstOrDefault(c => c.Id == targetChat.Id);
+
+        if (vm.CurrentChatViewModel != null)
+        {
+            await vm.CurrentChatViewModel.WaitForInitializationAsync();
+            vm.CurrentChatViewModel.RequestScrollToBottom();
+        }
+    }
 
     public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
@@ -796,6 +816,12 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
         await _globalHub.SetStatusAsync(status, duration);
     }
+
+    public void OpenCallUi() => _activeCallStore.OpenCallUi();
+
+    public void ShowCallView(CallStateDto state, string chatName, bool isGroupCall)
+        => Dispatcher.UIThread.Post(() => ShowCallViewSync(state, chatName, isGroupCall));
+
     #region Dispose
 
     protected override void Dispose(bool disposing)

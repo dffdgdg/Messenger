@@ -471,6 +471,21 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         if (save.IsFailure) return save;
 
         LogAvatarRemoved(chatId);
+
+        // Уведомляем всех участников
+        var updatedDto = new ChatDto
+        {
+            Id = chatEntity.Id,
+            Name = chatEntity.Name,
+            Type = chatEntity.Type,
+            CreatedById = chatEntity.CreatedById ?? 0,
+            LastMessageDate = chatEntity.LastMessageTime,
+            Avatar = null,
+            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+        };
+
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
+
         return Result.Success();
     }
 
@@ -501,7 +516,24 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         if (save.IsFailure) return save.As<string>();
 
         LogAvatarUploaded(chatId);
-        return Result<string>.Success(_urlBuilder.BuildUrl(saveResult.Value)!);
+
+        var avatarUrl = _urlBuilder.BuildUrl(saveResult.Value)!;
+
+        // Отправляем ChatUpdated всем участникам чата
+        var updatedDto = new ChatDto
+        {
+            Id = chatEntity.Id,
+            Name = chatEntity.Name,
+            Type = chatEntity.Type,
+            CreatedById = chatEntity.CreatedById ?? 0,
+            LastMessageDate = chatEntity.LastMessageTime,
+            Avatar = avatarUrl,
+            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+        };
+
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
+
+        return Result<string>.Success(avatarUrl);
     }
 
     #endregion

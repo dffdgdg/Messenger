@@ -11,5 +11,7 @@ public enum SystemEventType
     [EnumMember(Value = "member_left")] MemberLeft,
     [EnumMember(Value = "role_changed")] RoleChanged,
     [EnumMember(Value = "call_started")] CallStarted,
-    [EnumMember(Value = "call_ended")] CallEnded
+    [EnumMember(Value = "call_ended")] CallEnded,
+    [EnumMember(Value = "message_pinned")] MessagePinned,
+    [EnumMember(Value = "message_unpinned")] MessageUnpinned,
 }

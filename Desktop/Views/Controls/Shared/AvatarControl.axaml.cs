@@ -1,8 +1,11 @@
 ﻿using Avalonia.Media.Imaging;
 using Desktop.Infrastructure.Diagnostics;
+using Desktop.Infrastructure.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Enum;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Desktop.Views.Controls;
 
@@ -277,6 +280,8 @@ public partial class AvatarControl : UserControl
 
     private void UpdateComputedProperties()
     {
+        Debug.WriteLine($"[AvatarControl] Source='{Source}', ImageSource='{_imageSource}'");
+
         var hasBitmap = ImageBitmap != null;
         HasBitmapImage = hasBitmap;
 
@@ -289,6 +294,12 @@ public partial class AvatarControl : UserControl
 
         if (newImageSource != _imageSource)
         {
+            // Сбрасываем CurrentUrlProperty у RemoteImage
+            if (_imageSource != null)
+            {
+                AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
+            }
+
             ImageSource = newImageSource;
 
             if (!HasImage && AvatarImage.Source is Bitmap old)
@@ -296,6 +307,17 @@ public partial class AvatarControl : UserControl
                 AvatarImage.Source = null;
                 old.Dispose();
                 MemoryDiagnostics.OnBitmapDisposed();
+            }
+        }
+        else if (newImageSource != null && !string.IsNullOrEmpty(source))
+        {
+            // URL тот же, но кэш мог быть инвалидирован — принудительно перезагружаем
+            var loader = App.Current?.Services?.GetService<AuthenticatedImageLoader>();
+            if (loader != null && !loader.IsCached(newImageSource))
+            {
+                AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
+                ImageSource = null;
+                ImageSource = newImageSource;
             }
         }
 

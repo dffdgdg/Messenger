@@ -115,13 +115,12 @@
 								VerticalAlignment="Center"
 								Spacing="2">
 						<Button Classes="FileActionButton"
-								Command="{Binding DownloadCommand}"
+								Command="{Binding ExecuteActionCommand}"
 								IsVisible="{Binding !IsDownloading}"
-								ToolTip.Tip="{Binding IsDownloaded,
-								Converter={x:Static StringConverters.IsNotNullOrEmpty},
-								FallbackValue='Скачать'}"
-								AutomationProperties.Name="Скачать файл">
+								ToolTip.Tip="{Binding ActionLabel}"
+								AutomationProperties.Name="{Binding ActionLabel}">
 							<Panel>
+								<!-- Не скачан / Missing -->
 								<Path Data="{StaticResource DownloadIcon}"
 									  Fill="{DynamicResource TextSecondary}"
 									  Width="16" Height="16"
@@ -129,6 +128,7 @@
 									  HorizontalAlignment="Center"
 									  VerticalAlignment="Center"
 									  IsVisible="{Binding !IsDownloaded}"/>
+								<!-- Скачан и актуален -->
 								<Path Data="{StaticResource CheckIcon}"
 									  Fill="{DynamicResource SuccessBrush}"
 									  Width="16" Height="16"
@@ -136,6 +136,14 @@
 									  HorizontalAlignment="Center"
 									  VerticalAlignment="Center"
 									  IsVisible="{Binding IsDownloaded}"/>
+								<!-- Изменён на сервере -->
+								<Path Data="{StaticResource RefreshIcon}"
+									  Fill="Orange"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding IsChanged}"/>
 							</Panel>
 						</Button>
 

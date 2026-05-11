@@ -1,5 +1,6 @@
 ﻿using API.Repositories.Abstarctions;
 using API.Services.Base;
+using API.Services.Features.Chat;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 using Shared.DTO.Message;
@@ -16,6 +17,7 @@ public partial class MessageService(
     MediaBundle media,
     UrlBundle url,
     IReadReceiptService readReceiptService,
+    ISystemMessageService systemMessageService,
     IOptions<MessengerSettings> settings,
     ILogger<MessageService> logger) : BaseService<MessageService>(context, logger), IMessageService
 {
@@ -26,6 +28,7 @@ public partial class MessageService(
     private readonly IFileService _fileService = media.FileService;
     private readonly MessengerSettings _settings = settings.Value;
     private readonly AppDateTime _appDateTime = chat.Time.AppDateTime;
+    private readonly ISystemMessageService _systemMessageService = systemMessageService;
 
     [GeneratedRegex(@"(?<![a-z0-9_])@([a-z0-9_]{3,30})", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex MentionRegex();
@@ -373,13 +376,20 @@ public partial class MessageService(
         if (message.IsDeleted == true)
             return Result<MessageDto>.Failure("Нельзя закрепить удаленное сообщение");
 
+        if (message.PinnedAt != null)
+            return Result<MessageDto>.Failure("Сообщение уже закреплено");
+
         await messageRepository.PinAsync(messageId, userId, _appDateTime.UtcNow);
 
-        var updated = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        var updated = await messageRepository.FindUserMessageWithIncludesNoTrackingAsync(messageId);
         if (updated is null)
             return Result<MessageDto>.Internal("Не удалось загрузить сообщение после закрепления");
 
-        await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.ReceiveMessage);
+        await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.MessageUpdated);
+
+        await _systemMessageService.CreateAsync(updated.ChatId, userId, SystemEventType.MessagePinned,
+            content: updated.Content?.Length > 50 ? updated.Content[..50] + "..." : updated.Content);
+
         return Result<MessageDto>.Success(updated.ToDto(userId, _urlBuilder));
     }
 
@@ -397,11 +407,14 @@ public partial class MessageService(
 
         await messageRepository.UnpinAsync(messageId);
 
-        var updated = await messageRepository.FindUserMessageWithIncludesAsync(messageId);
+        var updated = await messageRepository.FindUserMessageWithIncludesNoTrackingAsync(messageId);
         if (updated is null)
             return Result<MessageDto>.Internal("Не удалось загрузить сообщение после открепления");
 
-        await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.ReceiveMessage);
+         await BroadcastToMembersAsync(updated, updated.ChatId, HubMethods.Chat.MessageUpdated);
+
+        await _systemMessageService.CreateAsync(updated.ChatId, userId, SystemEventType.MessageUnpinned);
+
         return Result<MessageDto>.Success(updated.ToDto(userId, _urlBuilder));
     }
 

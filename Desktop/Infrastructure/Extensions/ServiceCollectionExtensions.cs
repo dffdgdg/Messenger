@@ -106,6 +106,8 @@ public static class ServiceCollectionExtensions
             var httpClient = sp.GetRequiredService<HttpClient>();
             return new FileDownloadService(httpClient);
         });
+        services.AddSingleton<IDownloadedFileRepository, DownloadedFileRepository>();
+        services.AddSingleton<IFileDownloadStateService, FileDownloadStateService>();
         services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         services.AddSingleton<ChatCoreServices>();
         services.AddSingleton<MediaServices>();

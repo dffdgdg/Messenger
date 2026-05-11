@@ -1,6 +1,7 @@
 ﻿using Desktop.Data.Models.Sync;
 using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure;
+using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.ChatList.Factories;
@@ -21,6 +22,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private readonly IApiClientService _apiClient = context.Api;
     private readonly Func<ObservableCollection<UserDto>> _getMembersFunc = () => context.Members;
     private readonly IFileDownloadService? _downloadService = context.FileDownload;
+    private readonly IFileDownloadStateService? _stateService = context.FileDownloadState;
     private readonly INotificationService? _notificationService = context.Notifications;
     private readonly ILocalCacheService? _cacheService = context.Cache;
     private readonly IAudioPlayerService? _audioPlayer = (media ?? throw new ArgumentNullException(nameof(media))).AudioPlayer;
@@ -347,11 +349,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     public void HandleMessageUpdated(MessageDto dto)
     {
+        Debug.WriteLine($"[MsgManager] HandleMessageUpdated: id={dto.Id} IsPinned={dto.IsPinned} inIndex={_messageIndex.ContainsKey(dto.Id)}");
         if (_disposeCts.IsCancellationRequested) return;
 
         var existing = FindMessage(dto.Id);
-
-        var pinChanged = existing == null ? dto.IsPinned : existing.IsPinned != dto.IsPinned;
+        var pinChanged = existing == null || existing.IsPinned != dto.IsPinned;
+        Debug.WriteLine($"[MsgManager] existing={existing?.Id} existingIsPinned={existing?.IsPinned} pinChanged={pinChanged}");
 
         existing?.ApplyUpdate(dto);
 
@@ -539,7 +542,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
         msg.IsOwn = msg.SenderId == _userId;
 
-        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient, _userId)
+        var vm = new MessageViewModel(msg, _downloadService, _notificationService, _audioPlayer, _apiClient, _userId, _stateService)
         {
             SenderName = sender?.DisplayName ?? sender?.Username ?? msg.SenderName ?? "Unknown",
             SenderAvatar = sender?.Avatar ?? msg.SenderAvatarUrl,

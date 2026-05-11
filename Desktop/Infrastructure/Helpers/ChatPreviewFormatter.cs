@@ -44,7 +44,7 @@ public static class ChatPreviewFormatter
         return BuildContentPreview(reply.Content, "Сообщение");
     }
 
-    private static string Pluralize(int n, string one, string few, string many)
+    public static string Pluralize(int n, string one, string few, string many)
     {
         var mod10 = n % 10;
         var mod100 = n % 100;

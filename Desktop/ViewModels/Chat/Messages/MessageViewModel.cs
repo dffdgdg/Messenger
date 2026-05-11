@@ -1,6 +1,7 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure.Diagnostics;
 using Desktop.Infrastructure.Helpers;
+using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
@@ -133,6 +134,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private readonly IFileDownloadService? _downloadService;
     private readonly INotificationService? _notificationService;
+    private readonly IFileDownloadStateService? _stateService;
     private readonly IApiClientService? _apiClient;
     private readonly IAudioPlayerService? _audioPlayer;
 
@@ -173,10 +175,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     #region Constructor
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
-        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, int currentUserId = 0)
+        IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, int currentUserId = 0, IFileDownloadStateService? stateService = null)
     {
         _downloadService = downloadService;
         _notificationService = notificationService;
+        _stateService = stateService;
         _audioPlayer = audioPlayer;
         _currentUserId = currentUserId;
         _apiClient = apiClient;
@@ -244,6 +247,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         MsgShared.Enum.SystemEventType.MemberLeft => " покинул(а) группу",
         MsgShared.Enum.SystemEventType.RoleChanged => " изменил(а) роль участника ",
         MsgShared.Enum.SystemEventType.CallStarted => " начал(а) звонок",
+        MsgShared.Enum.SystemEventType.MessagePinned => " закрепил(а) сообщение",
+        MsgShared.Enum.SystemEventType.MessageUnpinned => " открепил(а) сообщение",
         _ => string.Empty
     };
 
@@ -256,9 +261,24 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
 
         if (Files.Count > 0)
-            FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, _downloadService, _notificationService)));
+        {
+            FileViewModels = new(Files.Select(f => new MessageFileViewModel(
+                f,
+                _downloadService,
+                _notificationService,
+                _stateService)));
+
+            _ = InitFileStatesAsync();
+        }
     }
 
+    private async Task InitFileStatesAsync()
+    {
+        foreach (var fileVm in FileViewModels)
+        {
+            await fileVm.InitializeAsync();
+        }
+    }
     private static string BuildSystemActionSuffix(SystemEventType? eventType) => eventType switch
     {
         MsgShared.Enum.SystemEventType.MemberAdded => " в группу",

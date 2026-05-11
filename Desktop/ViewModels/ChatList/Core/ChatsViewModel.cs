@@ -1,11 +1,14 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure.Diagnostics;
 using Desktop.Infrastructure.Helpers;
+using Desktop.Infrastructure.Media;
 using Desktop.ViewModels.Chat;
 using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Chats;
 using Desktop.ViewModels.Dialog;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
+using Shared.DTO.Call;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -64,6 +67,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.UnreadCountChanged += OnUnreadCountChanged;
         _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
         _globalHub.UserStatusChanged += OnUserStatusChanged;
+        _globalHub.ChatUpdated += OnGlobalChatUpdated;
 
         InitializeSearchManager();
         _ = LoadChats().ContinueWith(t => Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}"),
@@ -219,6 +223,14 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
                 chat.ContactStatusExpiresAt = status.StatusExpiresAt;
             }
         }
+    }
+
+    private void OnGlobalChatUpdated(ChatDto updatedChat)
+    {
+        if (!IsChatMatchingCurrentTab(updatedChat.Type))
+            return;
+
+        UpdateChatInList(updatedChat);
     }
 
     [RelayCommand]
@@ -533,18 +545,46 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     public void UpdateChatInList(ChatDto updatedChat)
     {
+        ChatListItemViewModel? target = null;
+
         for (var i = 0; i < Chats.Count; i++)
         {
-            if (Chats[i].Id != updatedChat.Id) continue;
-
-            Chats[i].Apply(updatedChat);
-            break;
+            if (Chats[i].Id == updatedChat.Id)
+            {
+                target = Chats[i];
+                break;
+            }
         }
 
-        if (SelectedChat?.Id == updatedChat.Id)
+        if (target == null) return;
+
+        var oldAvatar = target.Avatar;
+        var newAvatar = updatedChat.Avatar;
+
+        // Если аватары одинаковые — просто обновляем метаданные
+        if (oldAvatar == newAvatar)
         {
-            SelectedChat?.Apply(updatedChat);
+            target.ApplyExceptAvatar(updatedChat);
+            return;
         }
+
+        if (!string.IsNullOrEmpty(oldAvatar))
+        {
+            try
+            {
+                App.Current.Services
+                    .GetRequiredService<AuthenticatedImageLoader>()
+                    .InvalidateUrl(oldAvatar);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ChatsVM] Avatar invalidate error: {ex.Message}");
+            }
+        }
+
+        target.Avatar = null;
+        target.Avatar = newAvatar;
+        target.ApplyExceptAvatar(updatedChat);
     }
 
     private ChatListItemViewModel? FindChat(int chatId) => Chats.FirstOrDefault(c => c.Id == chatId);
@@ -633,6 +673,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.UnreadCountChanged -= OnUnreadCountChanged;
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
             _globalHub.UserStatusChanged -= OnUserStatusChanged;
+            _globalHub.ChatUpdated -= OnGlobalChatUpdated;
 
             if (SearchManager != null)
             {
@@ -658,6 +699,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _disposed = true;
         base.Dispose(disposing);
     }
+
+    public void OpenCallUi() => Parent.OpenCallUi();
+
+    public void ShowCallView(CallStateDto state, string chatName, bool isGroupCall)
+        => Parent.ShowCallView(state, chatName, isGroupCall);
 }
 
 file static class ObjectExtensions

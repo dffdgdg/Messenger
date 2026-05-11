@@ -69,6 +69,7 @@ public sealed partial class CallService : ICallService
         }
 
         await _hub.InitiateCallAsync(chatId);
+        CallStarted?.Invoke();
     }
 
     public async Task JoinCallAsync(string callId, int chatId)

@@ -1,6 +1,9 @@
-﻿using Desktop.ViewModels.Chat.Context;
+﻿using Desktop.Infrastructure.Helpers;
+using Desktop.Infrastructure.Media;
+using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Managers;
 using Desktop.ViewModels.Chat.Shared;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
 using System;
 using System.Collections.Generic;
@@ -409,6 +412,23 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     {
         if (!IsContactChat || ContactUser?.Id != updated.Id) return;
 
+        var oldAvatar = ContactUser?.Avatar;
+        var avatarChanged = oldAvatar != updated.Avatar;
+
+        if (avatarChanged)
+        {
+            if (!string.IsNullOrEmpty(oldAvatar))
+                InvalidateAvatarCache(oldAvatar);
+            if (!string.IsNullOrEmpty(updated.Avatar))
+                InvalidateAvatarCache(updated.Avatar);
+
+            ContactUser = null;
+            InvalidateAll();
+        }
+
+        if (avatarChanged && !string.IsNullOrEmpty(updated.Avatar))
+            updated.Avatar = AvatarHelper.WithFreshCacheBuster(updated.Avatar);
+
         ContactUser = updated;
         IsContactOnline = updated.IsOnline;
         ContactLastSeen = FormatLastSeen(updated);
@@ -420,9 +440,27 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     {
         if (Ctx.Chat == null) return;
 
+        var oldChatAvatar = Ctx.Chat.Avatar;
         Ctx.Chat.Name = contact.DisplayName ?? contact.Username ?? Ctx.Chat.Name;
+
         if (!string.IsNullOrEmpty(contact.Avatar))
             Ctx.Chat.Avatar = contact.Avatar;
+
+        if (oldChatAvatar != Ctx.Chat.Avatar)
+            InvalidateAvatarCache(oldChatAvatar);
+    }
+
+    private static void InvalidateAvatarCache(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return;
+        try
+        {
+            App.Current.Services.GetRequiredService<AuthenticatedImageLoader>().InvalidateByRelativePath(relativePath);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InfoPanel] InvalidateAvatarCache error: {ex.Message}");
+        }
     }
 
     private void ReplaceMemberInList(UserDto updated)

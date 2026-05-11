@@ -64,6 +64,29 @@ public static class AvatarHelper
         };
         return builder.Uri;
     }
+    /// <summary>
+    /// Добавляет уникальный cache buster основанный на текущем времени (не хеше пути).
+    /// Используется при принудительном обновлении аватара.
+    /// </summary>
+    public static string WithFreshCacheBuster(string? avatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl)) return string.Empty;
+
+        Uri resolved;
+        if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var abs) && abs.Scheme is "http" or "https")
+        {
+            resolved = abs;
+        }
+        else
+        {
+            var baseUri = new Uri(App.ApiUrl, UriKind.Absolute);
+            resolved = new Uri(baseUri, avatarUrl.TrimStart('/'));
+        }
+
+        var path = resolved.GetLeftPart(UriPartial.Path);
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return $"{path}?v={ts}";
+    }
 
     public static string GetUrlWithCacheBuster(string? avatarUrl) => GetUriWithCacheBuster(avatarUrl)?.AbsoluteUri ?? string.Empty;
 }

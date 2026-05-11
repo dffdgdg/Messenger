@@ -10,7 +10,7 @@ namespace Desktop.Data;
 
 public sealed class LocalDatabase : IAsyncDisposable, IDisposable
 {
-    private const int SchemaVersion = 1;
+    private const int SchemaVersion = 2;
 
     private readonly SQLiteAsyncConnection _db;
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -62,6 +62,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             await _db.CreateTableAsync<CachedUser>();
             await _db.CreateTableAsync<CachedReadPointer>();
             await _db.CreateTableAsync<ChatSyncState>();
+            await _db.CreateTableAsync<CachedDownloadedFile>();
 
             Debug.WriteLine("[LocalDB] Tables created");
 
@@ -117,6 +118,35 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             }
         }
 
+        // НОВЫЙ БЛОК ↓
+        if (currentVersion < 2)
+        {
+            Debug.WriteLine("[LocalDB] Migrating to schema v2: adding downloaded_files table");
+            try
+            {
+                await _db.ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS downloaded_files (
+                    file_id       INTEGER PRIMARY KEY,
+                    message_id    INTEGER NOT NULL,
+                    local_path    TEXT    NOT NULL,
+                    file_name     TEXT    NOT NULL,
+                    file_size     INTEGER NOT NULL DEFAULT 0,
+                    downloaded_at INTEGER NOT NULL,
+                    content_type  TEXT    NOT NULL DEFAULT ''
+                )
+                """);
+
+                await _db.ExecuteAsync(
+                    "CREATE INDEX IF NOT EXISTS idx_downloaded_files_message ON downloaded_files(message_id)");
+
+                Debug.WriteLine("[LocalDB] downloaded_files table created");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDB] Migration v2 failed (non-critical): {ex.Message}");
+            }
+        }
+
         await _db.ExecuteAsync($"PRAGMA user_version = {SchemaVersion}");
         Debug.WriteLine($"[LocalDB] Schema updated to v{SchemaVersion}");
     }
@@ -129,6 +159,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         conn.Execute("DROP TABLE IF EXISTS read_pointers");
         conn.Execute("DROP TABLE IF EXISTS chat_sync_state");
         conn.Execute("DROP TABLE IF EXISTS messages_fts");
+        conn.Execute("DROP TABLE IF EXISTS downloaded_files");
     });
 
     private async Task CreateIndexesAsync() => await _db.RunInTransactionAsync(conn =>
@@ -197,6 +228,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             conn.Execute("DELETE FROM users");
             conn.Execute("DELETE FROM read_pointers");
             conn.Execute("DELETE FROM chat_sync_state");
+            conn.Execute("DELETE FROM downloaded_files");
         });
         Debug.WriteLine("[LocalDB] All data cleared");
     }

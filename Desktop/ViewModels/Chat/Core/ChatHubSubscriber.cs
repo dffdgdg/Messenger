@@ -38,6 +38,7 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
 
     private void OnMessageUpdated(MessageDto msg)
     {
+        Debug.WriteLine($"[HubSub] OnMessageUpdated: id={msg.Id} chatId={msg.ChatId} myChat={ctx.ChatId} match={msg.ChatId == ctx.ChatId} IsPinned={msg.IsPinned}");
         if (ctx.IsDisposed || msg.ChatId != ctx.ChatId) return;
         Dispatcher.UIThread.Post(() => messageManager.HandleMessageUpdated(msg));
     }

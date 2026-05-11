@@ -228,7 +228,7 @@ PK = FK → UserMessage (столбец `message_id`)
 | `CallId` | `string` (GUID) |
 | `ChatId` | `int` |
 | `InitiatorId` | `int` |
-| `StartedAt` | `DateTime` |
+| `StartedAt` | `DateTimeOffset` |
 | `Status` | `CallStatus` |
 | `IsGroupCall` | `bool` |
 | `PendingParticipants` | `ConcurrentDictionary<int, CallParticipant>` |
@@ -301,7 +301,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - PostgreSQL Enum: `theme`, `chat_role`, `chat_type`, `system_event_type`, `user_status_type`
 - TPH: дискриминатор `message_type` (false/true) для UserMessage/SystemMessage
 - `User.Password` → Owned Entity (колонка `password_hash`)
-- Все timestamp: `timestamp without time zone`
+- Все timestamp: `timestamp without time zone` (кроме `CallSession.StartedAt` – не persist, в памяти как `DateTimeOffset`)
 - Каскады: Chat→Messages, User→RefreshTokens, UserMessage→Poll; SetNull для остальных FK
 - `PinnedAt` индекс с фильтром `WHERE Pinned_At IS NOT NULL`
 - `UserMessage.ReplyToMessage` и `ForwardedFromMessage` – самореференс с SetNull
@@ -355,7 +355,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallChatMessageDto` | `CallId`, `SenderId`, `SenderName`, `SenderAvatar`, `Text`, `SentAt` | Сообщение в чате звонка |
 | `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall` | Входящий звонок |
 | `CallParticipantDto` | `UserId`, `DisplayName`, `AvatarUrl`, `IsMuted`, `IsSpeaking` | Участник |
-| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt`, `IsGroupCall`, `Participants` | Полное состояние |
+| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (**теперь `DateTimeOffset`**), `IsGroupCall`, `Participants` | Полное состояние |
 | `WebRtcSignalDto` | `CallId`, `FromUserId`, `TargetUserId` (-1=broadcast), `Type` (offer/answer/candidate/hangup), `Payload` (JSON) | SDP/ICE сигнал |
 
 ---
@@ -379,7 +379,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CreateMessageRequest` | `ChatId` [Required], `Content` [MaxLength 4000], `ReplyToMessageId?`, `ForwardedFromMessageId?`, `IsVoiceMessage`, `Voice*` (3 поля: DurationSeconds, Waveform, FileSize, FileUrl), `Files?` |
 | `MessageDto` | 39 полей: полное представление. `IsSystemMessage` – логический признак. `SenderId` теперь nullable. `VoiceFileName`, `VoiceContentType` удалены. `IsPinned` вычисляется по `PinnedAt != null`. |
 | `MessageFileDto` | `Id`, `MessageId`, `FileName`, `ContentType`, `Url`, `PreviewType` (file/image/video), `FileSize` |
-| `MessageForwardInfoDto` | `OriginalMessageId`, `OriginalChatId`, `OriginalSenderId?`, `OriginalSenderName?`, `OriginalCreatedAt` |
+| `MessageForwardInfoDto` | `OriginalMessageId`, `OriginalChatId`, **`OriginalSenderId?`** (теперь заполняется), `OriginalSenderName?`, `OriginalCreatedAt` |
 | `MessageReplyPreviewDto` | `Id`, `ChatId`, `SenderId?`, `SenderName?`, `Content?`, `CreatedAt`, `IsDeleted`, **`IsVoiceMessage`**, **`HasPoll`**, **`FilesCount`** |
 | `PagedMessagesDto` | `Messages`, `TotalCount`, `HasMoreMessages`, `HasNewerMessages`, `CurrentPage` |
 | `UpdateMessageDto` | `Id`, `Content?` |
@@ -473,7 +473,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - `_userCache` теперь `ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>>` (потокобезопасность).
 - Метод `GetUserInfoAsync` теперь не асинхронный, а возвращает `Task` из `ConcurrentDictionary.GetOrAdd`.
 - Логика `CancelCall` для групповых звонков сразу вызывает `LeaveCall`.
-- `ToStateDtoAsync` загружает информацию о пользователях параллельно через `Task.WhenAll`.
+- `ToStateDtoAsync` загружает информацию о пользователях параллельно через `Task.WhenAll`. **Добавлена обработка ошибок**: если задача получения инфы о пользователе завершилась с ошибкой, пишется предупреждение в лог.
+- **`JoinCall`** теперь обёрнут в `try-catch` с детальным логированием и отсылкой `CallError` при исключении. Добавлены дополнительные проверки: логгирование отсутствия сессии, прав доступа, неудачного присоединения.
+- **`GetCallState`** также обёрнут в `try-catch`, при ошибке возвращает `null` и логирует.
 - Все строковые литералы заменены на константы `HubMethods.Call` и `HubMethods.CallInvoke`.
 
 ---
@@ -493,7 +495,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|
 | `ChatMappings` | `.ToDto(IUrlBuilder?)`, `.ToDto(User? contact, IUrlBuilder?)` |
 | `FileMappings` | `.ToDto()`, `DeterminePreviewType(contentType)` → file/image/video/audio |
-| `MessageMappings` | `.ToDto(currentUserId, urlBuilder)` — теперь проверяет тип сообщения (UserMessage/SystemMessage) и строит DTO соответственно. Для системных сообщений формирует контент через `SystemMessageFormatter`, для пользовательских учитывает `UserMessage.Poll` вместо коллекции. `ToReplyPreviewDto` сначала проверяет SystemMessage, потом UserMessage; в превью теперь добавляются `IsVoiceMessage`, `HasPoll`, `FilesCount` (для превью ответа). |
+| `MessageMappings` | `.ToDto(currentUserId, urlBuilder)` — теперь использует **рекурсивный обход цепочки пересылки** для получения содержимого, голосового, файлов, опроса. Добавлены методы `ResolveInForwardChain<T>` и `ResolveContentInForwardChain`. В `MessageForwardInfoDto` теперь заполняется `OriginalSenderId`. |
 | `PollMappings` | `Poll.ToDto(currentUserId?)` (заполняет SelectedOptionIds, CanVote), `PollOption.ToDto(isAnonymous)` (скрывает Votes для анонимных) |
 | `UserMappings` | `.ToDto(urlBuilder, isOnline?)` – теперь добавляет `StatusType` и `StatusExpiresAt`. `GetDisplayName()` – instance method на User. |
 
@@ -514,6 +516,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `StatusExtensions` | `Parse(string?)` → TimeSpan: "15m", "30m", "1h", "2h", "4h", "8h", "24h" |
 | `UrlHelpers` | `BuildFullUrl(string?, IUrlBuilder?)` |
 | `HubMethods` | **Новый класс.** Статические константы для имён хаб-методов. Вложенные классы: `Chat`, `Call`, `ChatInvoke`, `CallInvoke`. |
+| **`SystemEventMeta`** | **Новый класс в `Shared.Helpers`**. Форматирует системные сообщения и предоставляет префиксы/суффиксы для UI. Используется вместо switch в `SystemMessageFormatter` и на клиенте. |
 
 ---
 
@@ -550,7 +553,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|---|
 | `IUserRepository` | `UserRepository` | **Обновлён.** Инкапсулирует запросы к `Users`: `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `Add`. **Добавлены:** `GetAllWithSettingsAsync`, `GetWithSettingsAsync`, `UsernameExistsByOtherUserAsync`. **Удалён:** `GetAllAsync`. |
 | `IRefreshTokenRepository` | `RefreshTokenRepository` | Управление токенами: отзыв семейства, отзыв всех для пользователя, удаление истёкших, активные семьи. **Удалён:** `GetActiveByUserIdAsync`. |
-| `IChatRepository` | `ChatRepository` | **Существенно расширен и очищен.** Удалены методы: `GetByIdsAsync`, `GetMemberAsync`, `GetChatTypeAsync`. Запрос последних сообщений теперь использует отдельные запросы к `UserMessages` и `SystemMessages`. Форматирование имён вынесено в `UserWithSettingsProjection`. |
+| `IChatRepository` | `ChatRepository` | **Существенно расширен и очищен.** Удалены методы: `GetByIdsAsync`, `GetMemberAsync`, `GetChatTypeAsync`. **`GetLastMessagesAsync`** теперь разрешает превью содержимого, голосового, файлов и опроса по цепочке пересылки (если исходное сообщение не имеет контента, проверяется `ForwardedFromMessage`). |
 | `IMessageRepository` | `MessageRepository` | **Кардинально переработан.** **Удалены методы:** `FindForBroadcastAsync`, `GetPagedAsync`, `GetWithIncludesAsync`, `GetAroundAsync`. **Упрощены сигнатуры:** `GetBeforeAsync`, `GetAfterAsync` и др. с параметром `cutoff`. **Добавлены:** `PinAsync`, `UnpinAsync`. `GetUserMessagesForMixedAsync` теперь использует строгое `<` вместо `<=` для правильной пагинации. **Добавлен метод** `FindUserMessageWithIncludesNoTrackingAsync` для загрузки сообщения без отслеживания изменений. |
 | **`IReadReceiptRepository`** | **`ReadReceiptRepository`** | **Новый.** Все операции с отметками о прочтении. **Добавлен:** `GetUnreadCountsForUsersAsync`. Метод `UpdateReadPointerAsync` больше не вызывает `SaveChangesAsync` (контекст управляется сервисом). |
 | **`IPollRepository`** | **`PollRepository`** | **Новый.** Управление опросами и голосами. Методы упорядочены. |
@@ -597,19 +600,19 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Сервис | Строк | Ключевое поведение |
 |---|---|---|
-| `CallSessionService` | 141 | Singleton. `ConcurrentDictionary`. Не масштабируется |
-| `ChatService` | ~440 | Переведён на `IChatRepository` и `IUserRepository`. Загрузка последних сообщений через `GetLastMessagesAsync`, диалогов — через `GetDialogPartnersAsync`. Участники загружаются проекцией `GetMembersWithUsersAsync`. Удаление чата использует `GetVoiceFilePathsAsync`. Внутренний класс `RawLastMessage` удалён. **Изменения:** Отправка `ChatUpdated` теперь использует `HubMethods.Chat.ChatUpdated`. **При удалении или загрузке аватара** теперь рассылается уведомление `ChatUpdated` всем участникам чата с обновлённым DTO. |
+| `CallSessionService` | 141 | Singleton. `ConcurrentDictionary`. Не масштабируется. Длительность звонка вычисляется как `DateTimeOffset.UtcNow - session.StartedAt`. |
+| `ChatService` | ~440 | Переведён на `IChatRepository` и `IUserRepository`. Загрузка последних сообщений через `GetLastMessagesAsync`, диалогов — через `GetDialogPartnersAsync`. Участники загружаются проекцией `GetMembersWithUsersAsync`. Удаление чата использует `GetVoiceFilePathsAsync`. Внутренний класс `RawLastMessage` удалён. **Изменения:** Отправка `ChatUpdated` теперь использует `HubMethods.Chat.ChatUpdated`. **При загрузке аватара** создаётся системное сообщение `ChatAvatarUpdated` и рассылается уведомление `ChatUpdated` всем участникам. |
 | `ChatMemberService` | 100 | Инвалидация кэша после операций |
 | `DepartmentService` | 218 | BFS для проверки циклов в иерархии. Использует проекцию для списка пользователей. |
 | `FileService` | 112 | Изображения → WebP (JPEG/PNG/GIF/WebP/BMP). Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
-| `MessageService` | ~590 | **Значительно изменён.** Все вызовы хаба теперь используют `HubMethods.Chat.*`. `BroadcastToMembersAsync` теперь отправляет одно сообщение в чат (`SendToChatAsync`) вместо индивидуальной рассылки. `NotifyAndUpdateUnreadAsync` использует пакетное получение unread-счётчиков через `GetUnreadCountsForUsersInChatAsync`. **`PinMessageAsync`** теперь проверяет, не закреплено ли уже сообщение; после закрепления использует `FindUserMessageWithIncludesNoTrackingAsync`, отправляет `MessageUpdated` (а не `ReceiveMessage`) и создаёт системное сообщение `MessagePinned`. **`UnpinMessageAsync`** аналогично отправляет `MessageUpdated` и создаёт `MessageUnpinned` системное сообщение. |
+| `MessageService` | ~590 | **Значительно изменён.** Все вызовы хаба теперь используют `HubMethods.Chat.*`. `BroadcastToMembersAsync` теперь отправляет одно сообщение в чат (`SendToChatAsync`) вместо индивидуальной рассылки. `NotifyAndUpdateUnreadAsync` использует пакетное получение unread-счётчиков через `GetUnreadCountsForUsersInChatAsync`. **`CreateMessageAsync`** теперь разрешает корневое пересланное сообщение через `ResolveRootForwardedMessageIdAsync` и автоматически подставляет его контент, если текущее сообщение отправлено без текста. **`PinMessageAsync`** теперь проверяет, не закреплено ли уже сообщение; после закрепления использует `FindUserMessageWithIncludesNoTrackingAsync`, отправляет `MessageUpdated` и создаёт системное сообщение `MessagePinned`. **`UnpinMessageAsync`** аналогично отправляет `MessageUpdated` и создаёт `MessageUnpinned`. |
 | `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. Отправка через `HubMethods.Chat.ReceiveNotification`. |
 | `PollService` | ~150 | **Изменения:** Внедрён `TimeBundle` для консистентности `DateTime`. Проверка `ClosesAt` теперь `HasValue && ClosesAt < now`. Операции закрытия используют `_appDateTime.UtcNow`. Работа с транзакцией улучшена: блок `try-catch`. Отправка событий через `HubMethods.Chat.ReceiveMessage` и `HubMethods.Chat.PollUpdated`. |
 | `ReadReceiptService` | ~90 | Полный переход на `IReadReceiptRepository`. `MarkAsReadAsync` и `MarkMessageAsReadAsync` теперь управляют сохранением контекста (`SaveChangesAsync`) явно, вместо делегирования этого репозиторию. **Добавлен метод** `GetUnreadCountsForUsersInChatAsync`. Баг с двойным вызовом хаба исправлен. |
 | `AdminService` | 149 | Использует репозитории `IUserRepository`, `IRefreshTokenRepository` для операций с пользователями и токенами. `GetUsersAsync` использует `GetAllWithSettingsAsync` и маппит `UserWithSettingsProjection` в `UserDto`. |
 | `UserService` | 180 | **Существенно изменён.** `GetAllUsersAsync` и `GetUserAsync` используют `GetAllWithSettingsAsync`/`GetWithSettingsAsync` и новый метод `MapProjectionToDto`. `ChangeUsernameAsync` использует `UsernameExistsByOtherUserAsync`. Весь маппинг проекций централизован. Логирование обновлено. |
 | `SystemMessageService` | 49 | Создаёт экземпляры `SystemMessage`, использует поле `InitiatorId`. Отправка через `HubMethods.Chat.ReceiveMessage`. |
-| `SystemMessageFormatter` | 23 | Статический. Fallback: "Пользователь"/"пользователя". **Добавлены форматы для `MessagePinned` и `MessageUnpinned`:** `"{actor} закрепил(а) сообщение: «{fallback}»"` и `"{actor} открепил(а) сообщение"`. |
+| `SystemMessageFormatter` | 23 | Делегирует форматирование классу `SystemEventMeta` из `Shared.Helpers`. Fallback: "Пользователь"/"пользователя". Поддерживает все типы событий, включая `ChatAvatarUpdated`. |
 
 ---
 
@@ -654,7 +657,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallStatus` | Ringing, Active, Ended | |
 | `ChatRole` | Member, Admin, Owner | |
 | `ChatType` | Chat, Department, Contact, DepartmentHeads | DepartmentHeads → `"department_heads"` (EnumMember) |
-| `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged, CallStarted, CallEnded, **MessagePinned**, **MessageUnpinned** | `[JsonStringEnumConverter]` |
+| `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged, CallStarted, CallEnded, MessagePinned, MessageUnpinned, **ChatAvatarUpdated** | `[JsonStringEnumConverter]` |
 | `Theme` | light, dark, system | `[JsonStringEnumConverter]` |
 | `UserRole` | User, Head, Admin | |
 | `UserStatusType` | Online=0, Away=1, Busy=2, DoNotDisturb=3 | |
@@ -751,7 +754,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|
 | `AvatarHelper` | `GetSafeUri`, `GetUriWithCacheBuster` (хэш → query param), **добавлен метод `WithFreshCacheBuster(avatarUrl)`** — добавляет `?v=timestamp` для принудительного обновления. |
 | `MimeTypeHelper` | `GetMimeType(extension)` — словарь |
-| `ChatPreviewFormatter` | `BuildPreview`, `BuildPreviewWithMeta`, `BuildReplyPreview` (для `MessageReplyPreviewDto` — учитывает голосовые, опросы, файлы, использует склонение), **метод `Pluralize` сделан публичным**. |
+| `ChatPreviewFormatter` | `BuildPreview`, `BuildPreviewWithMeta`, `BuildReplyPreview` (для `MessageReplyPreviewDto` — учитывает голосовые, опросы, файлы, использует склонение), **метод `Pluralize` сделан публичным**. **Форматирование системных сообщений теперь делегируется `SystemEventMeta.Format`**. |
 | `HttpResponseHelper` | `TryExtractErrorMessage` — десериализация `ApiResponse.Error` |
 | `PasswordHelper` | `CalculateStrength(0–4)`, `ToStrengthLabel` |
 | `RangeObservableCollection<T>` | `AddRange`, `InsertRange`, `RemoveRange` — одно Reset-событие |
@@ -784,7 +787,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|---|
 | `ApiClientService` | 376 | HTTP + авто-рефреш 401 |
 | `GlobalHubConnection` | ~460 | SignalR `/chatHub`, 15+ событий. **Добавлен retry при 503 ServiceUnavailable.** Все строковые литералы заменены на `HubMethods`. `UserOnline` только логируется. Исправлена двойная отправка `MarkAsRead` (удалён лишний вызов `MarkAsRead` при обновлении указателя). Добавлены логи для `MessageUpdated`. |
-| `CallHubConnection` | ~260 | SignalR `/callHub`, 12 событий. **Добавлен retry при 503.** Все строковые литералы заменены на `HubMethods`. Улучшена обработка состояния подключения при `Connecting`. Отписка от событий в `DisconnectAsync` закомментирована. |
+| `CallHubConnection` | ~260 | SignalR `/callHub`, 12 событий. **Добавлен retry при 503.** Все строковые литералы заменены на `HubMethods`. **Метод `JoinCallAsync` теперь проверяет состояние подключения** и ловит ошибки, логируя их. Улучшена обработка состояния подключения при `Connecting`. **Отписка от событий в `DisconnectAsync` убрана** (комментарии удалены). |
 
 ## Call
 
@@ -957,6 +960,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | **`OriginalHasPoll`** | `bool` | Запоминает наличие опроса |
 | **`ContentPreview`** | `string` | Превью для отображения самого сообщения (в баббле) и для панели ответа; генерируется методом `BuildSelfPreview()` |
 | **`ShowVoiceMessage`** | `bool` | Теперь управляется `OriginalIsVoiceMessage`, не сбрасывается при удалении |
+| **`ForwardedFromSenderId`** | `int?` | ID отправителя пересланного сообщения |
+| **`CanOpenForwardSenderProfile`** | `bool` | Можно открыть профиль переславшего (если есть ID) |
+| `SystemActionPrefixText` / `SystemActionSuffixText` | `string` | Теперь заполняются через `SystemEventMeta.GetPrefix/GetSuffix` |
 
 **Конструктор:** теперь принимает `IFileDownloadStateService? stateService`. При наличии файлов после создания `FileViewModels` вызывает асинхронную инициализацию состояний загрузки.
 
@@ -990,7 +996,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 **Изменения:**
 - **Управление жизненным циклом CallHub:** При инициализации и реконнектах корректно отписывается от событий `IncomingCall`, `CallStateUpdated` перед отключением и подписывается заново после.
 - **Обработка `OnIncomingCall`:** Попытка переподключения к CallHub, если не в сети; защита от повторного входа в звонок.
-- **Обработка `OnCallAcceptedAsync`:** Добавлен вызов `JoinCallAsync`, fallback для создания `CallStateDto` из `CallInviteDto` при сбое `GetCallStateAsync`. UI-операции (`ShowCallViewSync`, `OpenCallChatAsync`) вызываются без ожидания для улучшения отзывчивости.
+- **Обработка `OnCallAcceptedAsync`:** Добавлена подписка на `CallError` для перехвата ошибок присоединения, задержка 200 мс перед получением `CallState`, fallback-состояние из `CallInviteDto` при неудаче. UI-операции вызываются без ожидания.
 - **`ShowCallViewAsync` → `ShowCallViewSync`:** Стал синхронным методом.
 - **Добавлены методы `NavigateToForwardedChatAsync`** (открывает чат после пересылки), **`OpenCallUi`**, **`ShowCallView`**.
 
@@ -1020,7 +1026,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 ### ChatInfoPanelHandler
 
-**Строк:** 409. Секции: Медиа (пагинация 30/страница), Документы, Опросы (поиск), Участники (поиск).
+**Строк:** 409. Секции: Медиа (пагинация 30/страница), Документы, Опросы (поиск), Участники (поиск). **Участники теперь сортируются: сначала онлайн (IsOnline), затем по алфавиту.**
 
 Для Contact: загрузка полного профиля, LastSeen формат: <1мин/"X мин. назад"/"X ч. назад"/"вчера"/"X дн. назад"/DD.MM.YYYY
 
@@ -1567,10 +1573,10 @@ DragCompleted → проверка пороговых значений:
 
 **Назначение:** Основной шаблон элемента списка сообщений.  
 **Изменения:**
-- Удалён отдельный `Parts:PollMessagePart` за пределами `BubbleBorder`; теперь используется `MessagePartSelector` с шаблонами `VoiceTemplate`, `TextTemplate`, `PollTemplate`.
 - В `Border.ContextFlyout` убран дублирующийся `DeletedTemplate`.
 - `ReplyPreviewBlock` теперь использует `ContentPreview` вместо `Content` для отображения превью.
-- Добавлено удалённое состояние для опросов, голосовых и текстовых сообщений (показывается `DisplayContent` курсивом).
+- Добавлено удалённое состояние для опросов, голосовых и текстовых сообщений.
+- **Заголовок пересылки** вынесен в отдельный `ForwardHeaderBlock` с кнопкой для открытия профиля отправителя.
 
 ---
 
@@ -1596,7 +1602,14 @@ DragCompleted → проверка пороговых значений:
 
 ---
 
-## 20.11 FilterAutocomplete.axaml.cs — Автодополнение фильтров
+## 20.11 ForwardHeaderBlock.axaml — Блок пересылки
+
+**Путь:** `Desktop/Views/Chat/MessageParts/Shared/ForwardHeaderBlock.axaml`  
+**Полностью переработан.** Теперь отображает текст «Переслано от» и имя отправителя. Если известен `ForwardedFromSenderId` и `CanOpenForwardSenderProfile == true`, имя отправителя становится кнопкой, открывающей профиль. В противном случае имя отображается простым текстом.
+
+---
+
+## 20.12 FilterAutocomplete.axaml.cs — Автодополнение фильтров
 
 **Путь:** `Desktop/Views/Controls/FilterAutocomplete.axaml.cs` (118 строк)
 
@@ -1659,13 +1672,17 @@ OnGlobalPointerPressed:
 
 | # | Баг |
 |---|---|
-| 1 | Утечка памяти в чатах, возможно аватарки |
-| 2 | Таймер звонка уходит в отрицательное значение у пользователя присоедившегося |
-| 3 | Баги подключения к звонку |
-| 4 | При изменении аватара обнуляет последнее сообщение в списке чатов, требуется создать system message с событием |
-| 5 | При пересылке сообщения дважды теряется Content |
-| 6 | Требуется в LoginView добавить кнопку с диалогом ввода IP, на случай если UDP не работает предлогать его ввести, если введен IP, то UDP не ищет сервер, а подключается по IP |
-| 7 | При быстром скроле ломаются варианты ответа у опроса |
-| 8 | Безопасность звонков |
-| 9 | Добавь сид данные для первичного запуска через докер |
-| 10 | Баги в полях фильтров поиска |
+| 1 | Баги подключения к звонку |
+| 2 | Таймер звонка уходит в отрицательное значение у пользователя присоединившегося |
+| 3 | Баги в полях фильтров поиска |
+| 4 | Требуется в LoginView добавить кнопку с диалогом ввода IP, на случай если UDP не работает предлогать его ввести, если введен IP, то UDP не ищет сервер, а подключается по IP |
+| 5 | При быстром скроле ломаются варианты ответа у опроса |
+| 6 | Безопасность звонков |
+| 7 | Добавь сид данные для первичного запуска через докер |
+| 8 | Утечка памяти в чатах, возможно аватарки |
+
+## Не обязательно, но я бы закрыл
+
+| # | Пожелание |
+|---|---|
+| 1 | При пересылке Last Message пишется не от имени чье сообщение мы переслали, а от нашего |

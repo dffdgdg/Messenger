@@ -121,9 +121,6 @@ public sealed partial class CallHubConnection : ICallHubConnection
     public Task InitiateCallAsync(int chatId)
     => SafeInvokeAsync(HubMethods.CallInvoke.InitiateCall, chatId);
 
-    public Task JoinCallAsync(string callId)
-        => SafeInvokeAsync(HubMethods.CallInvoke.JoinCall, callId);
-
     public Task LeaveCallAsync(string callId)
         => SafeInvokeAsync(HubMethods.CallInvoke.LeaveCall, callId);
 
@@ -151,13 +148,27 @@ public sealed partial class CallHubConnection : ICallHubConnection
         try { return await _hub.InvokeAsync<CallStateDto?>(HubMethods.CallInvoke.GetCallState, chatId); }
         catch (Exception ex) { LogGetCallStateFailed(chatId, ex); return null; }
     }
+    public async Task JoinCallAsync(string callId)
+    {
+        if (!IsConnected)
+        {
+            LogHubNotConnected(HubMethods.CallInvoke.JoinCall);
+            return;
+        }
+        try
+        {
+            await _hub.InvokeAsync(HubMethods.CallInvoke.JoinCall, callId);
+        }
+        catch (Exception ex)
+        {
+            LogInvokeError(HubMethods.CallInvoke.JoinCall, ex);
+        }
+    }
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        // Если уже подключён — ничего не делаем
         if (_hub.State == HubConnectionState.Connected) return;
 
-        // Если идёт подключение — ждём
         if (_hub.State == HubConnectionState.Connecting)
         {
             var deadline = DateTime.UtcNow.AddSeconds(10);
@@ -186,20 +197,6 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     public async Task DisconnectAsync()
     {
-        //IncomingCall = null;
-        //CallParticipantJoined = null;
-        //CallParticipantLeft = null;
-        //CallEnded = null;
-        //SignalReceived = null;
-        //CallMessageReceived = null;
-        //ParticipantMuteChanged = null;
-        //ParticipantSpeakingChanged = null;
-        //CallStateUpdated = null;
-        //ActiveCallStarted = null;
-        //ActiveCallUpdated = null;
-        //ActiveCallEnded = null;
-        //CallError = null;
-
         try
         {
             await _hub.StopAsync();

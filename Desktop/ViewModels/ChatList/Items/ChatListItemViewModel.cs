@@ -19,7 +19,6 @@ public partial class ChatListItemViewModel : ObservableObject
         LastMessageSenderName = dto.LastMessageSenderName;
         UnreadCount = dto.UnreadCount;
 
-        // Для контактных чатов — ID собеседника
         ContactUserId = dto.ContactUserId;
         ContactIsOnline = dto.ContactIsOnline;
         ContactStatusType = dto.ContactStatusType;
@@ -83,8 +82,10 @@ public partial class ChatListItemViewModel : ObservableObject
         Name = dto.Name;
 
         if (dto.LastMessageDate.HasValue)
-        {
             LastMessageDate = dto.LastMessageDate;
+        if (dto.LastMessagePreview is not null)
+        {
+
             LastMessagePreview = dto.LastMessagePreview;
             LastMessageSenderName = dto.LastMessageSenderName;
             HideSenderPrefix = dto.HideSenderPrefix;

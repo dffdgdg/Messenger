@@ -5,7 +5,7 @@ public class CallSession
     public string CallId { get; init; } = Guid.NewGuid().ToString();
     public int ChatId { get; init; }
     public int InitiatorId { get; init; }
-    public DateTime StartedAt { get; init; }
+    public DateTimeOffset StartedAt { get; init; }
     public CallStatus Status { get; set; } = CallStatus.Ringing;
 
     /// <summary>

@@ -8,26 +8,19 @@
 			 x:DataType="vm:ProfileViewModel"
 			 Background="{DynamicResource PrimaryBG}">
 	<UserControl.Styles>
-
-		<!-- ── Значение поля ── -->
 		<Style Selector="TextBlock.FieldValue">
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
 		</Style>
-		<!-- ── Валидация: ошибка ── -->
 		<Style Selector="TextBlock.ValidationError">
 			<Setter Property="FontSize" Value="11"/>
 			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
 		</Style>
-
-		<!-- ── Баннер превью (отображается как) ── -->
 		<Style Selector="Border.PreviewBanner">
 			<Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="12,10"/>
 		</Style>
-
-		<!-- ── Префикс поля ввода (@) ── -->
 		<Style Selector="Border.InputPrefix">
 			<Setter Property="Background" Value="{DynamicResource ControlBg}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>

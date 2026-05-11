@@ -134,14 +134,26 @@ public partial class MessageService(
         var refCheck = await ValidateReferencesAsync(request);
         if (refCheck.IsFailure) return refCheck.As<MessageDto>();
 
+        var normalizedForwardedFromMessageId = request.ForwardedFromMessageId;
+        if (request.ForwardedFromMessageId.HasValue)
+            normalizedForwardedFromMessageId = await ResolveRootForwardedMessageIdAsync(request.ForwardedFromMessageId.Value);
+
+        var content = request.IsVoiceMessage ? null : request.Content;
+        if (normalizedForwardedFromMessageId.HasValue && string.IsNullOrWhiteSpace(content))
+        {
+            var forwarded = await messageRepository.FindUserMessageByIdAsync(normalizedForwardedFromMessageId.Value);
+            if (forwarded is not null && !string.IsNullOrWhiteSpace(forwarded.Content))
+                content = forwarded.Content;
+        }
+
         var message = new UserMessage
         {
             ChatId = request.ChatId,
             SenderId = senderId,
-            Content = request.IsVoiceMessage ? null : request.Content,
+            Content = content,
             IsDeleted = false,
             ReplyToMessageId = request.ReplyToMessageId,
-            ForwardedFromMessageId = request.ForwardedFromMessageId
+            ForwardedFromMessageId = normalizedForwardedFromMessageId
         };
 
         messageRepository.Add(message);
@@ -208,6 +220,22 @@ public partial class MessageService(
     }
 
     #endregion
+    private async Task<int?> ResolveRootForwardedMessageIdAsync(int forwardedFromMessageId)
+    {
+        var visited = new HashSet<int>();
+        int? currentId = forwardedFromMessageId;
+
+        while (currentId.HasValue && visited.Add(currentId.Value))
+        {
+            var current = await messageRepository.FindUserMessageByIdAsync(currentId.Value);
+            if (current is null || !current.ForwardedFromMessageId.HasValue)
+                return current?.Id ?? forwardedFromMessageId;
+
+            currentId = current.ForwardedFromMessageId.Value;
+        }
+
+        return forwardedFromMessageId;
+    }
 
     #region Get Messages
 

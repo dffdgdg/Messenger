@@ -14,4 +14,5 @@ public enum SystemEventType
     [EnumMember(Value = "call_ended")] CallEnded,
     [EnumMember(Value = "message_pinned")] MessagePinned,
     [EnumMember(Value = "message_unpinned")] MessageUnpinned,
+    [EnumMember(Value = "chat_avatar_updated")] ChatAvatarUpdated,
 }

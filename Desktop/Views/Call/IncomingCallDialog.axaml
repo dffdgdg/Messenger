@@ -44,7 +44,7 @@
                 </Border>
 
                 <controls:AvatarControl
-                    Width="88" Height="88"
+                    Classes="XLarge"
                     Source="{Binding CallerAvatar}"
                     DisplayName="{Binding CallerName}"
                     ShowOnlineIndicator="False"

@@ -294,7 +294,6 @@ public partial class AvatarControl : UserControl
 
         if (newImageSource != _imageSource)
         {
-            // Сбрасываем CurrentUrlProperty у RemoteImage
             if (_imageSource != null)
             {
                 AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
@@ -311,7 +310,6 @@ public partial class AvatarControl : UserControl
         }
         else if (newImageSource != null && !string.IsNullOrEmpty(source))
         {
-            // URL тот же, но кэш мог быть инвалидирован — принудительно перезагружаем
             var loader = App.Current?.Services?.GetService<AuthenticatedImageLoader>();
             if (loader != null && !loader.IsCached(newImageSource))
             {
@@ -340,18 +338,15 @@ public partial class AvatarControl : UserControl
         if (source.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || source.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        // Относительный путь – проверяем расширение, но если его нет,
-        // всё равно пробуем загрузить (может оказаться изображением)
         var extension = GetExtension(source);
         if (string.IsNullOrEmpty(extension))
-            return true;  // нет расширения – не фильтруем, пробуем загрузить
+            return true;
 
         return ImageExtensions.Contains(extension);
     }
 
     private static string? GetExtension(string path)
     {
-        // Отрезаем query-параметры
         var queryIndex = path.IndexOf('?');
         if (queryIndex >= 0)
             path = path[..queryIndex];

@@ -50,7 +50,7 @@ public partial class CallViewModel : BaseViewModel
     { 1 => 1, 2 => 1, <= 4 => 2, <= 6 => 2, <= 9 => 3, _ => 3 };
 
     private readonly DispatcherTimer _durationTimer;
-    private DateTime _callStartedAt;
+    private DateTimeOffset _callStartedAt;
     private readonly CallAudioService _audioService;
 
     public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store, CallAudioService audioService)
@@ -87,7 +87,7 @@ public partial class CallViewModel : BaseViewModel
         ChatId = state.ChatId;
         ChatName = chatName;
         IsGroupCall = isGroupCall;
-        _callStartedAt = state.StartedAt;
+        _callStartedAt = state.StartedAt.ToUniversalTime();
 
         Participants.Clear();
         foreach (var p in state.Participants)
@@ -302,7 +302,7 @@ public partial class CallViewModel : BaseViewModel
 
     private void OnDurationTick(object? sender, EventArgs e)
     {
-        var elapsed = DateTime.UtcNow - _callStartedAt;
+        var elapsed = DateTimeOffset.UtcNow - _callStartedAt;
         DurationText = elapsed.TotalHours >= 1 ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}" : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
     }
 

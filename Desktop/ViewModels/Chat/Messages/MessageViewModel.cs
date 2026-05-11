@@ -5,6 +5,7 @@ using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Helpers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -50,6 +51,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial MessageGroupPosition GroupPosition { get; set; } = MessageGroupPosition.Alone;
     [ObservableProperty] public partial int? ForwardedFromMessageId { get; set; }
     [ObservableProperty] public partial string? ForwardedFromSenderName { get; set; }
+    [ObservableProperty] public partial int? ForwardedFromSenderId { get; set; }
     [ObservableProperty] public partial PollViewModel? Poll { get; set; }
     [ObservableProperty] public partial string? SenderAvatar { get; set; }
     [ObservableProperty] public partial string? SenderName { get; set; }
@@ -103,6 +105,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool HasReply { get; private set; }
     public bool HasForward { get; private set; }
     public string ForwardedFromHeader { get; private set; } = string.Empty;
+    public bool CanOpenForwardSenderProfile { get; private set; }
     public bool ShowSenderName { get; private set; }
     public bool CanOpenSenderProfile { get; private set; }
     public string? SenderAvatarUrl { get => SenderAvatar; set => SenderAvatar = value; }
@@ -159,7 +162,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private static readonly string[] PollDerivedProps = [nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit), nameof(ShowPollResultsButton)];
 
-    private static readonly string[] ForwardDerivedProps = [nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit)];
+    private static readonly string[] ForwardDerivedProps = [nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit), nameof(CanOpenForwardSenderProfile)];
 
     private static readonly string[] PinProps = [nameof(ShowPinAction), nameof(ShowUnpinAction)];
 
@@ -193,8 +196,8 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         SystemTargetDisplayName = string.IsNullOrWhiteSpace(message.TargetUserName) ? "пользователя" : message.TargetUserName;
 
-        SystemActionPrefixText = BuildSystemActionPrefix(message.SystemEventType);
-        SystemActionSuffixText = BuildSystemActionSuffix(message.SystemEventType);
+        SystemActionPrefixText = SystemEventMeta.GetPrefix(message.SystemEventType);
+        SystemActionSuffixText = SystemEventMeta.GetSuffix(message.SystemEventType);
 
         RecacheAllProperties();
         SubscribeToAudioPlayer();
@@ -226,7 +229,10 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
 
         if (message.ForwardedFrom is not null)
+        {
             ForwardedFromSenderName = message.ForwardedFrom.OriginalSenderName;
+            ForwardedFromSenderId = message.ForwardedFrom.OriginalSenderId;
+        }
     }
 
     private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
@@ -238,19 +244,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
         return new PollViewModel(pollDto, _currentUserId, _apiClient, ownerId);
     }
-
-    private static string BuildSystemActionPrefix(SystemEventType? eventType) => eventType switch
-    {
-        MsgShared.Enum.SystemEventType.ChatCreated => " создал(а) группу",
-        MsgShared.Enum.SystemEventType.MemberAdded => " добавил(а) ",
-        MsgShared.Enum.SystemEventType.MemberRemoved => " удалил(а) ",
-        MsgShared.Enum.SystemEventType.MemberLeft => " покинул(а) группу",
-        MsgShared.Enum.SystemEventType.RoleChanged => " изменил(а) роль участника ",
-        MsgShared.Enum.SystemEventType.CallStarted => " начал(а) звонок",
-        MsgShared.Enum.SystemEventType.MessagePinned => " закрепил(а) сообщение",
-        MsgShared.Enum.SystemEventType.MessageUnpinned => " открепил(а) сообщение",
-        _ => string.Empty
-    };
 
     private void InitChildViewModels(MessageDto message)
     {
@@ -327,6 +320,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         HasReply = ReplyToMessageId.HasValue;
         HasForward = ForwardedFromMessageId.HasValue;
         ForwardedFromHeader = HasForward ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}" : string.Empty;
+        CanOpenForwardSenderProfile = HasForward && ForwardedFromSenderId > 0;
     }
 
     private void RecacheContentGroup()
@@ -889,6 +883,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         ForwardedFromHeader = HasForward ? $"Переслано от {value ?? "неизвестного пользователя"}" : string.Empty;
         OnPropertyChanged(nameof(ForwardedFromHeader));
+    }
+    partial void OnForwardedFromSenderIdChanged(int? value)
+    {
+        CanOpenForwardSenderProfile = HasForward && value > 0;
+        OnPropertyChanged(nameof(CanOpenForwardSenderProfile));
     }
 
     partial void OnIsPinnedChanged(bool value)

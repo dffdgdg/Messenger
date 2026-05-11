@@ -10,12 +10,9 @@ public class CallStateDto
 {
     public string CallId { get; set; } = string.Empty;
     public int ChatId { get; set; }
-
     public CallStatus Status { get; set; }
-
     public int InitiatorId { get; set; }
-    public DateTime StartedAt { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
     public bool IsGroupCall { get; set; }
-
     public List<CallParticipantDto> Participants { get; set; } = [];
 }

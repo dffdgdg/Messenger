@@ -39,11 +39,10 @@ public static class MessageMappings
 
         var user = (UserMessage)message;
         var senderName = user.Sender?.GetDisplayName();
-        var forwardedSource = user.ForwardedFromMessage;
-        var voice = user.VoiceMessage ?? forwardedSource?.VoiceMessage;
-        var resolvedFiles = user.MessageFiles?.Count > 0 ? user.MessageFiles : forwardedSource?.MessageFiles;
-        var resolvedPoll = user.Poll ?? forwardedSource?.Poll;
-        var resolvedContent = !string.IsNullOrWhiteSpace(user.Content) ? user.Content : forwardedSource?.Content;
+        var voice = ResolveInForwardChain(user, m => m.VoiceMessage);
+        var resolvedFiles = ResolveInForwardChain(user, m => m.MessageFiles?.Count > 0 ? m.MessageFiles : null);
+        var resolvedPoll = ResolveInForwardChain(user, m => m.Poll);
+        var resolvedContent = ResolveContentInForwardChain(user);
 
         return new MessageDto
         {
@@ -111,6 +110,35 @@ public static class MessageMappings
             HasPoll = user.Poll != null,
             FilesCount = user.MessageFiles?.Count ?? 0
         };
+    }
+    private static string? ResolveContentInForwardChain(UserMessage message)
+    {
+        UserMessage? current = message;
+        while (current is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Content))
+                return current.Content;
+
+            current = current.ForwardedFromMessage;
+        }
+
+        return null;
+    }
+
+    private static T? ResolveInForwardChain<T>(UserMessage message, Func<UserMessage, T?> selector)
+        where T : class
+    {
+        UserMessage? current = message;
+        while (current is not null)
+        {
+            var value = selector(current);
+            if (value is not null)
+                return value;
+
+            current = current.ForwardedFromMessage;
+        }
+
+        return null;
     }
 
     public static MessageForwardInfoDto ToForwardInfoDto(this Message message)

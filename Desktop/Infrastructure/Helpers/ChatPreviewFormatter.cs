@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Shared.Helpers;
+using System;
 
 namespace Desktop.Infrastructure.Helpers;
 
@@ -6,7 +7,6 @@ public static class ChatPreviewFormatter
 {
     private const int ContentPreviewMaxLength = 100;
     private const string PreviewEllipsis = "...";
-
     public static string? FormatSenderName(string? senderName, int? senderId, int? currentUserId)
     {
         if (senderId.HasValue && currentUserId.HasValue && senderId.Value == currentUserId.Value)
@@ -91,17 +91,7 @@ public static class ChatPreviewFormatter
         var actorName = FormatParticipantName(message.SenderName, message.SenderId, currentUserId, "Пользователь");
         var targetName = FormatParticipantName(message.TargetUserName, message.TargetUserId, currentUserId, "пользователя");
 
-        return message.SystemEventType switch
-        {
-            SystemEventType.ChatCreated => $"{actorName} создал(а) группу",
-            SystemEventType.MemberAdded => $"{actorName} добавил(а) {targetName}",
-            SystemEventType.MemberRemoved => $"{actorName} удалил(а) {targetName}",
-            SystemEventType.MemberLeft => $"{actorName} покинул(а) группу",
-            SystemEventType.RoleChanged => $"{actorName} изменил(а) роль {targetName}",
-            SystemEventType.CallStarted => $"{actorName} начал(а) звонок",
-            SystemEventType.CallEnded => BuildContentPreview(message.Content, "Звонок завершён"),
-            _ => BuildContentPreview(message.Content)
-        };
+        return SystemEventMeta.Format(message.SystemEventType, actorName, targetName);
     }
 
     private static string FormatParticipantName(string? name, int? id, int? currentUserId, string fallback)

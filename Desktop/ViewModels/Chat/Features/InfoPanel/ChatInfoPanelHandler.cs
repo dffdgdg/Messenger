@@ -142,7 +142,9 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         FilteredMembers.Clear();
 
         var query = MemberSearchQuery?.Trim() ?? string.Empty;
-        var source = Ctx.Members;
+        var source = Ctx.Members
+            .OrderByDescending(m => m.IsOnline)
+            .ThenBy(m => m.DisplayName ?? m.Username ?? string.Empty, StringComparer.OrdinalIgnoreCase);
 
         if (string.IsNullOrEmpty(query))
         {

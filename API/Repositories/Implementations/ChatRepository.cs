@@ -44,13 +44,14 @@ public sealed class ChatRepository(MessengerDbContext context) : RepositoryBase<
             return [];
 
         var userMessages = await _context.UserMessages.Where(m => lastMessageIds.Contains(m.Id)).Select(m => new LastMessageProjection(m.Id, m.ChatId, m.CreatedAt,
-            false, m.SenderId, m.Content, null, null, m.Sender == null ? null : ((m.Sender.Surname != null ? m.Sender.Surname + " " : "") + (m.Sender.Name != null ? m.Sender.Name + " " : "") +
-                    (m.Sender.Midname ?? "")
-                ).Trim(),
+            false, m.SenderId,
+            !string.IsNullOrWhiteSpace(m.Content) ? m.Content : m.ForwardedFromMessage != null ? m.ForwardedFromMessage.Content : null,
+            null, null, m.Sender == null ? null : ((m.Sender.Surname != null ? m.Sender.Surname + " " : "") + (m.Sender.Name != null ? m.Sender.Name + " " : "") +
+                (m.Sender.Midname ?? "")).Trim(),
                 null,
-                m.VoiceMessage != null,
-                m.Poll != null,
-                m.MessageFiles.Any()
+                m.VoiceMessage != null || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.VoiceMessage != null),
+                m.Poll != null || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.Poll != null),
+                m.MessageFiles.Any() || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.MessageFiles.Any())
             ))
             .AsNoTracking()
             .ToListAsync(ct);

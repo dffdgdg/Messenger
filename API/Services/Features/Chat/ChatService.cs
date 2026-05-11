@@ -515,11 +515,12 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         var save = await SaveChangesAsync();
         if (save.IsFailure) return save.As<string>();
 
+        await _systemMessages.CreateAsync(chatId, userId, SystemEventType.ChatAvatarUpdated);
+
         LogAvatarUploaded(chatId);
 
         var avatarUrl = _urlBuilder.BuildUrl(saveResult.Value)!;
 
-        // Отправляем ChatUpdated всем участникам чата
         var updatedDto = new ChatDto
         {
             Id = chatEntity.Id,

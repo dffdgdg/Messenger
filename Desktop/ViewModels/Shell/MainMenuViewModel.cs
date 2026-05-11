@@ -191,34 +191,40 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         {
             var callService = _sp.GetRequiredService<ICallService>();
 
-            // Сначала присоединяемся к звонку
+            string? joinError = null;
+            void OnError(string msg) => joinError = msg;
+            _callHub.CallError += OnError;
+
             await callService.JoinCallAsync(invite.CallId, invite.ChatId);
 
-            // Получаем состояние (JoinCallAsync уже выполнен, состояние актуальное)
+            _callHub.CallError -= OnError;
+
+            if (joinError != null)
+            {
+                Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {joinError}");
+                return;
+            }
+
+            await Task.Delay(200);
+
             var state = await _callHub.GetCallStateAsync(invite.ChatId);
             if (state == null)
             {
-                Debug.WriteLine("[MainMenuViewModel] OnCallAccepted: GetCallState вернул null");
-                // Создаём минимальное состояние из invite как fallback
                 state = new CallStateDto
                 {
                     CallId = invite.CallId,
                     ChatId = invite.ChatId,
                     InitiatorId = invite.InitiatorId,
                     IsGroupCall = invite.IsGroupCall,
-                    StartedAt = DateTime.UtcNow,
+                    StartedAt = DateTimeOffset.UtcNow,
                     Participants = []
                 };
             }
 
-            var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name
-                           ?? invite.ChatName;
+            var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name ?? invite.ChatName;
 
-            // Открываем чат и UI звонка параллельно
             var openChatTask = OpenCallChatAsync(invite);
-
             Dispatcher.UIThread.Post(() => ShowCallViewSync(state, chatName, invite.IsGroupCall));
-
             await openChatTask;
         }
         catch (Exception ex)

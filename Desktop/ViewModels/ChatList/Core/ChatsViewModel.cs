@@ -561,7 +561,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         var oldAvatar = target.Avatar;
         var newAvatar = updatedChat.Avatar;
 
-        // Если аватары одинаковые — просто обновляем метаданные
         if (oldAvatar == newAvatar)
         {
             target.ApplyExceptAvatar(updatedChat);

@@ -32,9 +32,15 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
     private async Task<CallStateDto> ToStateDtoAsync(CallSession session)
     {
-        var userIds = session.ActiveParticipants.Keys.Append(session.InitiatorId).Distinct();
+        var userIds = session.ActiveParticipants.Keys.Append(session.InitiatorId).Distinct().ToList();
 
-        await Task.WhenAll(userIds.Select(GetUserInfoAsync));
+        var tasks = userIds.Select(id => GetUserInfoAsync(id).ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                logger.LogWarning(t.Exception?.GetBaseException(),"[CallHub] Не удалось загрузить инфо о пользователе {UserId}", id);
+        }, TaskScheduler.Default));
+
+        await Task.WhenAll(tasks);
 
         return callSessions.ToStateDto(session,
             userId => _userCache.TryGetValue(userId, out var t) && t.IsCompletedSuccessfully ? t.Result.Avatar : null,
@@ -136,47 +142,64 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
     public async Task JoinCall(string callId)
     {
         var userId = CurrentUserId;
-        var session = callSessions.GetCall(callId);
 
-        if (session == null)
+        try
         {
-            await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
-            return;
+            var session = callSessions.GetCall(callId);
+
+            if (session == null)
+            {
+                logger.LogWarning("[CallHub] JoinCall: сессия {CallId} не найдена", callId);
+                await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
+                return;
+            }
+
+            if (session.ActiveParticipants.Count >= MaxParticipants)
+            {
+                await Clients.Caller.SendAsync(HubMethods.Call.CallError, $"Максимум {MaxParticipants} участников");
+                return;
+            }
+
+            if (!await accessControl.IsMemberAsync(userId, session.ChatId))
+            {
+                logger.LogWarning("[CallHub] JoinCall: userId={UserId} не участник чата {ChatId}", userId, session.ChatId);
+                await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Нет доступа к чату");
+                return;
+            }
+
+            var joined = callSessions.JoinCall(callId, userId, Context.ConnectionId);
+            if (!joined)
+            {
+                logger.LogWarning("[CallHub] JoinCall: JoinCall вернул false для {CallId}, userId={UserId}", callId, userId);
+                await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
+                return;
+            }
+
+            var stateDto = await ToStateDtoAsync(session);
+            await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
+
+            var (name, avatar) = await GetUserInfoAsync(userId);
+            var notification = new CallParticipantDto
+            {
+                UserId = userId,
+                DisplayName = name ?? $"User {userId}",
+                AvatarUrl = avatar
+            };
+
+            foreach (var participant in session.ActiveParticipants.Values.Where(p => p.UserId != userId))
+            {
+                await Clients.Client(participant.ConnectionId)
+                    .SendAsync(HubMethods.Call.CallParticipantJoined, callId, notification);
+            }
         }
-
-        if (session.ActiveParticipants.Count >= MaxParticipants)
+        catch (Exception ex)
         {
-            await Clients.Caller.SendAsync(HubMethods.Call.CallError, $"Максимум {MaxParticipants} участников");
-            return;
-        }
-
-        if (!await accessControl.IsMemberAsync(userId, session.ChatId))
-        {
-            await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Нет доступа к чату");
-            return;
-        }
-
-        var joined = callSessions.JoinCall(callId, userId, Context.ConnectionId);
-        if (!joined)
-        {
-            await Clients.Caller.SendAsync(HubMethods.Call.CallEnded, callId, CallEndReason.Ended);
-            return;
-        }
-
-        var stateDto = await ToStateDtoAsync(session);
-        await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
-
-        var (name, avatar) = await GetUserInfoAsync(userId);
-        var notification = new CallParticipantDto
-        {
-            UserId = userId,
-            DisplayName = name ?? $"User {userId}",
-            AvatarUrl = avatar
-        };
-
-        foreach (var participant in session.ActiveParticipants.Values.Where(p => p.UserId != userId))
-        {
-            await Clients.Client(participant.ConnectionId).SendAsync(HubMethods.Call.CallParticipantJoined, callId, notification);
+            logger.LogError(ex, "[CallHub] JoinCall FAILED: callId={CallId}, userId={UserId}", callId, userId);
+            try
+            {
+                await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Ошибка подключения к звонку");
+            }
+            catch { /* игнорируем */ }
         }
     }
 
@@ -297,13 +320,21 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
     public async Task<CallStateDto?> GetCallState(int chatId)
     {
-        var session = callSessions.GetActiveCallInChat(chatId);
-        if (session == null) return null;
+        try
+        {
+            var session = callSessions.GetActiveCallInChat(chatId);
+            if (session == null) return null;
 
-        if (!await accessControl.IsMemberAsync(CurrentUserId, chatId))
+            if (!await accessControl.IsMemberAsync(CurrentUserId, chatId))
+                return null;
+
+            return await ToStateDtoAsync(session);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[CallHub] GetCallState failed для chatId={ChatId}", chatId);
             return null;
-
-        return await ToStateDtoAsync(session);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

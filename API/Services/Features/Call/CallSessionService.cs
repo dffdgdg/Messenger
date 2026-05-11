@@ -148,7 +148,7 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         session.TimeoutCts.Cancel();
         session.Status = CallStatus.Ended;
 
-        var duration = DateTime.UtcNow - session.StartedAt;
+        var duration = DateTimeOffset.UtcNow - session.StartedAt;
 
         LogCallEnded(callId, duration);
 

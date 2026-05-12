@@ -216,7 +216,7 @@
                             Background="{DynamicResource ThirdBG}"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource DangerBorderBrush}"
-                            IsVisible="{Binding !IsNewChat}">
+                            IsVisible="{Binding ShowDeleteGroupOption}">
                         <Button Classes="MemberItem" Padding="12,10">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <PathIcon Data="{StaticResource DeleteIcon}"

@@ -77,6 +77,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private readonly ICallService _callService;
     private readonly ICallHubConnection _callHub;
     private readonly IAudioRecorderService _audioRecorderService;
+    private readonly bool _isSystemAdmin;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
@@ -134,6 +135,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public bool IsDepartmentChat => Chat?.Type == ChatType.Department;
     public bool IsDepartmentHeadsChat => Chat?.Type == ChatType.DepartmentHeads;
     public bool IsDepartmentScopedChat => IsDepartmentChat || IsDepartmentHeadsChat;
+    public bool CanEditGroupChat { get; private set; }
+    public bool CanLeaveChat { get; private set; } = true;
     public bool IsContactChat => InfoPanel.IsContactChat;
     public bool HasMultiplePinned => PinnedMessages.Count > 1;
     public string TypingText => Typing.TypingText;
@@ -273,6 +276,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _notificationService = dependencies.NotificationService;
         _audioPlayerService = dependencies.AudioPlayer;
         _audioRecorderService = dependencies.AudioRecorder;
+        _isSystemAdmin = dependencies.AuthManager.Session.IsAdmin;
 
         var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
 
@@ -424,6 +428,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             await Task.WhenAll(membersTask, pinnedTask);
 
             Context.Members = membersTask.Result;
+            await RefreshChatPermissionsAsync();
 
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
@@ -1126,7 +1131,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [RelayCommand]
     private async Task OpenEditChat()
     {
-        if (!InfoPanel.IsGroupChat || Context.Chat == null) return;
+        if (!InfoPanel.IsGroupChat || Context.Chat == null || !CanEditGroupChat) return;
 
         await _navigator.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
         {
@@ -1137,6 +1142,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
 
             Context.Chat = updatedChat;
+            _ = RefreshChatPermissionsAsync();
             Parent.UpdateChatInList(updatedChat);
             _ = InfoPanel.ReloadMembersAfterEditAsync();
         });
@@ -1163,6 +1169,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [RelayCommand]
     private async Task LeaveChat() => await SafeExecuteAsync(async ct =>
     {
+        if (!CanLeaveChat)
+        {
+            ErrorMessage = "Владелец чата не может покинуть чат";
+            return;
+        }
+
         var result = await Context.Api.PostAsync(ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
 
         if (result.Success)
@@ -1170,6 +1182,44 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         else
             ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
     });
+
+    private async Task RefreshChatPermissionsAsync()
+    {
+        if (Context.Chat == null)
+        {
+            CanLeaveChat = false;
+            CanEditGroupChat = false;
+            OnPropertyChanged(nameof(CanLeaveChat));
+            OnPropertyChanged(nameof(CanEditGroupChat));
+            return;
+        }
+
+        CanLeaveChat = !IsDepartmentScopedChat && (!InfoPanel.IsGroupChat || Context.Chat.CreatedById != Context.CurrentUserId);
+        OnPropertyChanged(nameof(CanLeaveChat));
+
+        if (!InfoPanel.IsGroupChat)
+        {
+            CanEditGroupChat = false;
+            OnPropertyChanged(nameof(CanEditGroupChat));
+            return;
+        }
+
+        var canEdit = _isSystemAdmin || Context.Chat.CreatedById == Context.CurrentUserId;
+
+        if (!canEdit)
+        {
+            var membersResult = await Context.Api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(Context.ChatId), Context.LifetimeToken);
+            if (membersResult is { Success: true, Data: not null })
+            {
+                var currentMember = membersResult.Data.FirstOrDefault(x => x.UserId == Context.CurrentUserId);
+                canEdit = currentMember?.Role is ChatRole.Admin or ChatRole.Owner;
+            }
+        }
+
+        CanEditGroupChat = canEdit;
+        OnPropertyChanged(nameof(CanEditGroupChat));
+    }
+
 
     private void OnMessagePinStateChanged(MessageDto dto)
     {
@@ -1291,7 +1341,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var chatResult = await Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), ct);
 
             if (chatResult is { Success: true, Data: not null })
+            {
                 Context.Chat = chatResult.Data;
+                await RefreshChatPermissionsAsync();
+            }
+
 
             await InfoPanel.ReloadMembersAfterEditAsync();
             RefreshInfoPanelLists();
@@ -1413,11 +1467,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         var oldAvatar = Context.Chat?.Avatar;
 
-        // Если аватар не изменился — просто обновляем Chat
         if (oldAvatar == chat.Avatar)
         {
             _chatMetaUpdatedExternally = true;
             Context.Chat = chat;
+            await RefreshChatPermissionsAsync();
             return;
         }
 
@@ -1437,6 +1491,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         _chatMetaUpdatedExternally = true;
         Context.Chat = chat;
+        await RefreshChatPermissionsAsync();
     }
     #endregion
 }

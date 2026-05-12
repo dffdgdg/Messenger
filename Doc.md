@@ -136,7 +136,7 @@
 | `Id` | `int` | PK |
 | `Name` | `string` | |
 | `ParentDepartmentId` | `int?` | Self-referencing FK |
-| `ChatId` | `int?` | FK → Chat (1:1, auto-created) |
+| `ChatId` | `int?` | FK → Chat (1:1, auto-created при создании отдела) |
 | `HeadId` | `int?` | FK → User (уникальный индекс) |
 
 ---
@@ -452,7 +452,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 `JoinChat(int)`, `LeaveChat(int)`, `MarkAsRead(int, int?)`, `MarkMessageAsRead(int, int)`, `SendTyping(int)`, `GetOnlineUsersInChat(int)`, `SetStatus(int, string?)`, `GetUnreadCounts()`, `GetReadInfo(int)`
 
 **Серверные события (рассылает сервер):**
-`HubMethods.Chat.UserStatusChanged`, `HubMethods.Chat.UserOnline`, `HubMethods.Chat.UserOffline`, `HubMethods.Chat.UserTyping`, `HubMethods.Chat.MessageRead`, `HubMethods.Chat.UnreadCountUpdated`, `HubMethods.Chat.ChatUpdated`, `HubMethods.Chat.ReceiveMessage`, `HubMethods.Chat.MessageUpdated`, `HubMethods.Chat.MessageDeleted`, `HubMethods.Chat.PollUpdated`, `HubMethods.Chat.ReceiveNotification`
+`HubMethods.Chat.UserStatusChanged`, `HubMethods.Chat.UserOnline`, `HubMethods.Chat.UserOffline`, `HubMethods.Chat.UserTyping`, `HubMethods.Chat.MessageRead`, `HubMethods.Chat.UnreadCountUpdated`, `HubMethods.Chat.ChatUpdated`, `HubMethods.Chat.ChatRemoved`, `HubMethods.Chat.ReceiveMessage`, `HubMethods.Chat.MessageUpdated`, `HubMethods.Chat.MessageDeleted`, `HubMethods.Chat.PollUpdated`, `HubMethods.Chat.ReceiveNotification`
 
 **Изменения:** Теперь используется частичный класс с source-generated логгированием (`LogUserConnected`, `LogUserDisconnected`). Все строковые литералы заменены на константы из `Shared.Hubs.HubMethods`.
 
@@ -540,7 +540,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `UserStatusService` | Статусы теперь обновляются через `ExecuteUpdateAsync` (без загрузки сущности). `GetStatusAsync` использует проекцию. `CleanupExpiredStatusesAsync` также через `ExecuteUpdateAsync`. |
 | `StatusCleanupHostedService` | Фоновый: очистка истёкших статусов каждую минуту |
 | `CacheService` | MemoryCache: чаты (TTL 5м, sliding 2м), членство (TTL 10м, sliding 3м) |
-| `HubNotifier` | `SendToChatAsync`, `SendToUserAsync`. Глотает исключения |
+| `HubNotifier` | `SendToChatAsync`, `SendToUserAsync`. Глотает исключения. Используется для отправки `ChatRemoved`. |
 | `HttpUrlBuilder` | Абсолютный URL через `IHttpContextAccessor` |
 | `UdpDiscoveryService` | **Обновлён.** UDP порт 5275. Запрос: `MESSENGER_DISCOVER`, ответ: `MESSENGER_HERE:PORT` или `MESSENGER_HERE:PORT:IP`. IP определяется через `Discovery:ExternalIp` или автоматически по подсети запроса. |
 | `EnumNameTranslator` | CLR → PostgreSQL snake_case для enum. Добавлен транслятор `UserStatusTypeNameTranslator`. |
@@ -602,8 +602,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|---|
 | `CallSessionService` | 141 | Singleton. `ConcurrentDictionary`. Не масштабируется. Длительность звонка вычисляется как `DateTimeOffset.UtcNow - session.StartedAt`. |
 | `ChatService` | ~440 | Переведён на `IChatRepository` и `IUserRepository`. Загрузка последних сообщений через `GetLastMessagesAsync`, диалогов — через `GetDialogPartnersAsync`. Участники загружаются проекцией `GetMembersWithUsersAsync`. Удаление чата использует `GetVoiceFilePathsAsync`. Внутренний класс `RawLastMessage` удалён. **Изменения:** Отправка `ChatUpdated` теперь использует `HubMethods.Chat.ChatUpdated`. **При загрузке аватара** создаётся системное сообщение `ChatAvatarUpdated` и рассылается уведомление `ChatUpdated` всем участникам. |
-| `ChatMemberService` | 100 | Инвалидация кэша после операций |
-| `DepartmentService` | 218 | BFS для проверки циклов в иерархии. Использует проекцию для списка пользователей. |
+| `ChatMemberService` | 100 | Инвалидация кэша после операций. **При удалении участника из чата (или выходе) отправляется персональное событие `HubMethods.Chat.ChatRemoved` удаляемому пользователю через `IHubNotifier`.** |
+| `DepartmentService` | 218+ | **Существенно изменён.** При создании отдела автоматически создаётся чат типа `Department`. При изменении названия отдела обновляется имя связанного чата. При удалении отдела удаляется связанный чат. При перемещении пользователя между отделами (`MoveUserToDepartment`, `RemoveUserFromDepartment`) автоматически добавляет/удаляет пользователя из чатов соответствующих отделов. При смене руководителя отдела происходит перестроение членства в чате руководителей (если настроен в `SystemSettings` ключ `heads_chat_id`). BFS для проверки циклов в иерархии. Использует проекцию для списка пользователей. |
 | `FileService` | 112 | Изображения → WebP (JPEG/PNG/GIF/WebP/BMP). Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
 | `MessageService` | ~590 | **Значительно изменён.** Все вызовы хаба теперь используют `HubMethods.Chat.*`. `BroadcastToMembersAsync` теперь отправляет одно сообщение в чат (`SendToChatAsync`) вместо индивидуальной рассылки. `NotifyAndUpdateUnreadAsync` использует пакетное получение unread-счётчиков через `GetUnreadCountsForUsersInChatAsync`. **`CreateMessageAsync`** теперь разрешает корневое пересланное сообщение через `ResolveRootForwardedMessageIdAsync` и автоматически подставляет его контент, если текущее сообщение отправлено без текста. **`PinMessageAsync`** теперь проверяет, не закреплено ли уже сообщение; после закрепления использует `FindUserMessageWithIncludesNoTrackingAsync`, отправляет `MessageUpdated` и создаёт системное сообщение `MessagePinned`. **`UnpinMessageAsync`** аналогично отправляет `MessageUpdated` и создаёт `MessageUnpinned`. |
 | `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. Отправка через `HubMethods.Chat.ReceiveNotification`. |
@@ -786,7 +786,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Сервис | Строк | Назначение |
 |---|---|---|
 | `ApiClientService` | 376 | HTTP + авто-рефреш 401 |
-| `GlobalHubConnection` | ~460 | SignalR `/chatHub`, 15+ событий. **Добавлен retry при 503 ServiceUnavailable.** Все строковые литералы заменены на `HubMethods`. `UserOnline` только логируется. Исправлена двойная отправка `MarkAsRead` (удалён лишний вызов `MarkAsRead` при обновлении указателя). Добавлены логи для `MessageUpdated`. |
+| `GlobalHubConnection` | ~460 | SignalR `/chatHub`, 15+ событий. **Добавлен retry при 503 ServiceUnavailable.** Все строковые литералы заменены на `HubMethods`. `UserOnline` только логируется. Исправлена двойная отправка `MarkAsRead` (удалён лишний вызов `MarkAsRead` при обновлении указателя). Добавлены логи для `MessageUpdated`. **Добавлено событие `ChatRemoved`.** |
 | `CallHubConnection` | ~260 | SignalR `/callHub`, 12 событий. **Добавлен retry при 503.** Все строковые литералы заменены на `HubMethods`. **Метод `JoinCallAsync` теперь проверяет состояние подключения** и ловит ошибки, логируя их. Улучшена обработка состояния подключения при `Connecting`. **Отписка от событий в `DisconnectAsync` убрана** (комментарии удалены). |
 
 ## Call
@@ -845,7 +845,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `IDialogService` | `ShowAsync<T>`, `CloseAsync`, `CloseAllAsync` |
 | `IFileDownloadService` | `DownloadFileAsync(progress?)`, `OpenFileAsync`, `OpenFolderAsync` |
 | **`IFileDownloadStateService`** | `GetStateAsync(MessageFileDto)`, `RegisterDownloadAsync`, `ResetAsync` |
-| `IGlobalHubConnection` | `ConnectAsync`, `DisconnectAsync`, 15+ событий |
+| `IGlobalHubConnection` | `ConnectAsync`, `DisconnectAsync`, 15+ событий, включая **`ChatRemoved`** |
 | `INavigationService` | `NavigateToLogin`, `NavigateToMainMenu`, `NavigateTo<T>`, `GoBack` |
 | `ISecureStorageService` | `SaveAsync<T>`, `GetAsync<T>`, `RemoveAsync` |
 | `ISessionStore` | Token, RefreshToken, UserId, UserRole, `HasRole(UserRole)`, события |
@@ -878,8 +878,15 @@ Key-Value: `Key: string (PK)`, `Value: string`
 ### ChatViewModel
 
 **Путь:** `Desktop/ViewModels/Chat/Core/ChatViewModel.cs`  
-**Строк:** 1067 (самый большой)  
+**Строк:** 1067+ (самый большой)  
 **Имплементирует:** `IAsyncDisposable`
+
+**Новые свойства и логика прав:**  
+- `CanEditGroupChat` – можно ли редактировать группу (системный администратор, создатель или роль Admin/Owner).  
+- `CanLeaveChat` – можно ли покинуть чат (не отделовский чат и не являешься создателем группового чата).  
+- `_isSystemAdmin` – флаг, определяемый по роли `Admin` в сессии.  
+- При инициализации и при каждом получении обновлённого чата вызывается `RefreshChatPermissionsAsync`, вычисляющая оба свойства.  
+- Команды `OpenEditChat` и `LeaveChat` теперь проверяют соответствующие разрешения перед выполнением.
 
 **Handler'ы:**
 
@@ -911,6 +918,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 7. Сообщения (кэш → API)
 8. Контакт-пользователь (для Contact)
 9. Обновление инфопанели
+10. **Вызов `RefreshChatPermissionsAsync`**
 
 **Новые возможности:**
 - **PinnedBannerPreviewText**: формирует превью "Имя: содержимое" для баннера закреплённого сообщения, обновляется при изменении ContentPreview/SenderName.
@@ -1104,6 +1112,17 @@ ApiClientService получает 401
     → Ротация: UsedAt=now, новый токен с FamilyId
   → SessionStore.Token/RefreshToken обновляются
   → Повтор оригинального запроса с новым токеном
+```
+
+## Удаление из чата
+
+```
+ChatMemberService.RemoveMemberAsync()
+  → HubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatRemoved, chatId)
+  → ChatHub отправляет "ChatRemoved" конкретному пользователю
+  → GlobalHubConnection.ChatRemoved событие
+  → ChatsViewModel.OnGlobalChatRemoved(chatId)
+  → Чат удаляется из списка, сбрасывается SelectedChat
 ```
 
 ---
@@ -1646,6 +1665,39 @@ OnGlobalPointerPressed:
 ```
 
 **Потеря фокуса** (`OnInputLostFocus`): пост на Background-приоритет → проверка `IsPointerOver` и popup → `IsDropdownOpen = false`.
+
+---
+
+## 20.13 ChatEditDialogView.axaml — Редактирование группы
+
+**Изменение:** Видимость опции «Удалить группу» теперь управляется свойством `ShowDeleteGroupOption` вместо `IsNewChat`.
+
+---
+
+## 20.14 ChatInfoPanel.axaml — Панель информации
+
+**Изменения:**
+- Кнопка редактирования чата (`OpenEditChatCommand`) видна только при `CanEditGroupChat`.
+- Кнопка выхода из чата (`LeaveChatCommand`) видна только при `CanLeaveChat`.
+- Убран условный `IsVisible` у секций «Медиа» и «Файлы» (теперь отображаются всегда, даже если счётчик равен нулю).
+
+---
+
+## 20.15 ChatView.axaml — Основной вид чата
+
+**Изменение контекстного меню чата:**
+- «Редактировать чат»: `IsVisible` теперь привязан напрямую к `CanEditGroupChat`.
+- «Создать опрос»: `IsVisible` теперь привязан напрямую к `CanEditGroupChat`.
+- «Выйти из чата»: `IsVisible` теперь привязан напрямую к `CanLeaveChat`.
+
+---
+
+## 20.16 Shared/Hubs/HubMethods.cs
+
+Добавлена константа:
+```csharp
+public const string ChatRemoved = "ChatRemoved";
+```
 
 ---
 

@@ -22,6 +22,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, int>? MemberLeft;
     event Action? Reconnected;
     event Action<ChatDto>? ChatUpdated;
+    event Action<int>? ChatRemoved;
 
     bool IsConnected { get; }
     Task ConnectAsync(CancellationToken ct = default);

@@ -317,8 +317,7 @@
 									<TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPhotosSectionCommand}"
-											IsVisible="{Binding PhotosCount}">
+											Command="{Binding OpenPhotosSectionCommand}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource ImageIcon}"
 													  Width="18" Height="18"
@@ -337,8 +336,7 @@
 									</Button>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenFilesSectionCommand}"
-											IsVisible="{Binding FilesCount}">
+											Command="{Binding OpenFilesSectionCommand}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource DocumentIcon}"
 													  Width="18" Height="18"
@@ -508,7 +506,8 @@
 												Command="{Binding OpenEditChatCommand}"
 												Classes="IconButton Small"
 												ToolTip.Tip="Редактировать"
-												VerticalAlignment="Top">
+												VerticalAlignment="Top"
+												IsVisible="{Binding CanEditGroupChat}">
 											<PathIcon Data="{StaticResource EditIcon}"
 													  Width="14" Height="14"/>
 										</Button>
@@ -546,8 +545,7 @@
 									<TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPhotosSectionCommand}"
-											IsVisible="{Binding PhotosCount}">
+											Command="{Binding OpenPhotosSectionCommand}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource ImageIcon}"
 													  Width="18" Height="18"
@@ -566,8 +564,7 @@
 									</Button>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenFilesSectionCommand}"
-											IsVisible="{Binding FilesCount}">
+											Command="{Binding OpenFilesSectionCommand}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource DocumentIcon}"
 													  Width="18" Height="18"
@@ -685,12 +682,12 @@
 								</StackPanel>
 
 								<Border Classes="Divider" Margin="16,12"
-										IsVisible="{Binding !IsDepartmentScopedChat}"/>
+										IsVisible="{Binding CanLeaveChat}"/>
 
 								<StackPanel Margin="16,0,16,0">
 									<Button Command="{Binding LeaveChatCommand}"
 											Classes="DangerAction"
-											IsVisible="{Binding !IsDepartmentScopedChat}">
+											IsVisible="{Binding CanLeaveChat}">
 										<StackPanel Orientation="Horizontal" Spacing="12">
 											<PathIcon Data="{StaticResource SignOutIcon}"
 													  Width="18" Height="18"

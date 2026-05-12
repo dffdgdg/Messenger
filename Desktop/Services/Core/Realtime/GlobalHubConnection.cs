@@ -56,7 +56,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action<int, int>? MemberLeft;
     public event Action? Reconnected;
     public event Action<ChatDto>? ChatUpdated;
-
+    public event Action<int>? ChatRemoved;
     #endregion
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;
@@ -292,7 +292,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, UserDto>(HubMethods.Chat.MemberJoined, (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.MemberLeft, (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
         _subs.Add(_hub.On<ChatDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
-
+        _subs.Add(_hub.On<int>(HubMethods.Chat.ChatRemoved, chatId => PostUI(() => ChatRemoved?.Invoke(chatId))));
     }
 
     private void OnChatUpdated(ChatDto chat)

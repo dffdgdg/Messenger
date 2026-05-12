@@ -1,6 +1,7 @@
 ﻿using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
+using Shared.Hubs;
 
 namespace API.Services.Chat;
 
@@ -11,6 +12,7 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
     private readonly IAccessControlService accessControl = chat.Cache.AccessControl;
     private readonly ISystemMessageService systemMessages = chat.SystemMessages;
     private readonly AppDateTime appDateTime = chat.Time.AppDateTime;
+    private readonly IHubNotifier hubNotifier = chat.Notifications.HubNotifier;
 
     public async Task<Result<ChatMemberDto>> AddMemberAsync(int chatId, int userId, int addedByUserId, ChatRole role = ChatRole.Member)
     {
@@ -72,6 +74,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
         cache.InvalidateMembership(userId, chatId);
 
         LogMemberRemoved(userId, chatId, removedByUserId);
+
+        await hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatRemoved, chatId);
 
         if (userId == removedByUserId)
             await systemMessages.CreateAsync(chatId, userId, SystemEventType.MemberLeft);

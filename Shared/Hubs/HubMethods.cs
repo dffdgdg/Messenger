@@ -18,6 +18,7 @@ public static class HubMethods
         public const string UserTyping = "UserTyping";
 
         public const string ChatUpdated = "ChatUpdated";
+        public const string ChatRemoved = "ChatRemoved";
         public const string MemberJoined = "MemberJoined";
         public const string MemberLeft = "MemberLeft";
 

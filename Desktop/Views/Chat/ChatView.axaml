@@ -184,29 +184,17 @@
 											<MenuItem Header="Редактировать чат"
 													  Command="{Binding OpenEditChatCommand}">
 												<MenuItem.IsVisible>
-													<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-														<Binding Path="InfoPanel.IsGroupChat"/>
-														<Binding Path=""
-																 Converter="{conv:Converter Name=HasRole}"
-																 ConverterParameter="Admin"/>
-													</MultiBinding>
+													<Binding Path="CanEditGroupChat"/>
 												</MenuItem.IsVisible>
 											</MenuItem>
 											<MenuItem Header="Создать опрос"
-													  Command="{Binding OpenCreatePollCommand}">
-												<MenuItem.IsVisible>
-													<MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-														<Binding Path="InfoPanel.IsGroupChat"/>
-														<Binding Path=""
-																 Converter="{conv:Converter Name=HasRole}"
-																 ConverterParameter="Admin"/>
-													</MultiBinding>
-												</MenuItem.IsVisible>
+													  Command="{Binding OpenCreatePollCommand}"
+													  IsVisible="{Binding CanEditGroupChat}">
 											</MenuItem>
 											<MenuItem Header="Выйти из чата"
 													  Command="{Binding LeaveChatCommand}"
 													  Foreground="{DynamicResource DangerBrush}"
-													  IsVisible="{Binding !IsDepartmentScopedChat}"/>
+													  IsVisible="{Binding CanLeaveChat}"/>
 										</MenuFlyout>
 									</Button.Flyout>
 									<Path Margin="10,0,0,0"

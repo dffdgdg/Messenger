@@ -68,6 +68,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         _globalHub.MessageReceivedGlobally += OnMessageReceivedGlobally;
         _globalHub.UserStatusChanged += OnUserStatusChanged;
         _globalHub.ChatUpdated += OnGlobalChatUpdated;
+        _globalHub.ChatRemoved += OnGlobalChatRemoved;
 
         InitializeSearchManager();
         _ = LoadChats().ContinueWith(t => Debug.WriteLine($"[ChatsVM] Initial load failed: {t.Exception}"),
@@ -233,6 +234,18 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         UpdateChatInList(updatedChat);
     }
 
+    private void OnGlobalChatRemoved(int chatId)
+    {
+        var chat = FindChat(chatId);
+        if (chat == null) return;
+
+        if (SelectedChat?.Id == chatId)
+            SelectedChat = null;
+
+        Chats.Remove(chat);
+    }
+
+
     [RelayCommand]
     private void OpenChat(ChatListItemViewModel? chat)
     {
@@ -349,7 +362,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         SyncSearchScopeWithChatViewMode();
         SetSearchChatContext(value);
 
-        if (value == null) return;
+        if (value == null)
+        {
+            CurrentChatViewModel = null;
+            return;
+        }
 
         if (value.UnreadCount > 0)
         {
@@ -673,6 +690,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             _globalHub.MessageReceivedGlobally -= OnMessageReceivedGlobally;
             _globalHub.UserStatusChanged -= OnUserStatusChanged;
             _globalHub.ChatUpdated -= OnGlobalChatUpdated;
+            _globalHub.ChatRemoved -= OnGlobalChatRemoved;
 
             if (SearchManager != null)
             {

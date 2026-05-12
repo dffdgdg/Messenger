@@ -54,6 +54,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public Func<ChatDto, List<int>, List<int>, Stream?, string?, bool, Task<bool>>? SaveAction { get; set; }
     public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
+    public Func<int, Task<bool>>? DeleteAction { get; set; }
 
     public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId, ChatDto? chat = null, List<ChatMemberDto>? existingMembers = null, bool isSystemAdmin = false)
     {
@@ -277,6 +278,38 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         AvatarPreview?.Dispose();
         AvatarPreview = bitmap;
+    }
+    [RelayCommand]
+    private async Task DeleteGroup()
+    {
+        if (IsNewChat || _originalChat == null || DeleteAction == null || ShowDialogAction == null)
+            return;
+
+        var name = _originalChat.Name ?? Name;
+        var confirmDialog = new ConfirmDialogViewModel(
+            "Удаление группы",
+            $"Вы уверены, что хотите удалить группу «{name}»? Это действие нельзя отменить.",
+            "Удалить",
+            "Отмена")
+        {
+            ConfirmationPrompt = "Для удаления введите название группы точно как указано:",
+            ConfirmationTargetText = name
+        };
+
+        await ShowDialogAction(confirmDialog);
+        var confirmed = await confirmDialog.Result;
+
+        if (!confirmed)
+            return;
+
+        IsBusy = true;
+        ErrorMessage = null;
+
+        var deleted = await DeleteAction(_originalChat.Id);
+        IsBusy = false;
+
+        if (deleted)
+            RequestClose();
     }
 
     partial void OnNameChanged(string value)

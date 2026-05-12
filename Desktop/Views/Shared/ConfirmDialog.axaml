@@ -26,12 +26,24 @@
                           Classes="ThinScrollbar"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-                <TextBlock Text="{Binding Message}"
-                           FontSize="14"
-                           Foreground="{DynamicResource TextSecondary}"
-                           TextWrapping="Wrap"
-                           LineHeight="22"
-                           Margin="24,16,24,16"/>
+                <StackPanel Margin="24,16,24,16" Spacing="12">
+                    <TextBlock Text="{Binding Message}"
+                               FontSize="14"
+                               Foreground="{DynamicResource TextSecondary}"
+                               TextWrapping="Wrap"
+                               LineHeight="22"/>
+
+                    <StackPanel Spacing="4"
+                                IsVisible="{Binding RequireTextConfirmation}">
+                        <TextBlock Text="{Binding ConfirmationPrompt}"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding ConfirmationInput}"
+                                 Classes="Input"
+                                 PlaceholderText="Введите название"/>
+                    </StackPanel>
+                </StackPanel>
             </ScrollViewer>
 
             <Border Grid.Row="3" Classes="DialogDivider"/>

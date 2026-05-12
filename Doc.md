@@ -454,8 +454,6 @@ Key-Value: `Key: string (PK)`, `Value: string`
 **Серверные события (рассылает сервер):**
 `HubMethods.Chat.UserStatusChanged`, `HubMethods.Chat.UserOnline`, `HubMethods.Chat.UserOffline`, `HubMethods.Chat.UserTyping`, `HubMethods.Chat.MessageRead`, `HubMethods.Chat.UnreadCountUpdated`, `HubMethods.Chat.ChatUpdated`, `HubMethods.Chat.ChatRemoved`, `HubMethods.Chat.ReceiveMessage`, `HubMethods.Chat.MessageUpdated`, `HubMethods.Chat.MessageDeleted`, `HubMethods.Chat.PollUpdated`, `HubMethods.Chat.ReceiveNotification`
 
-**Изменения:** Теперь используется частичный класс с source-generated логгированием (`LogUserConnected`, `LogUserDisconnected`). Все строковые литералы заменены на константы из `Shared.Hubs.HubMethods`.
-
 ---
 
 ## CallHub
@@ -536,11 +534,11 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Класс | Назначение |
 |---|---|
 | `AccessControlService` | Проверка прав с двойным кэшем (MemoryCache + per-request). Добавлен `IsSystemAdmin()` – если HttpContext пользователь в роли "Admin", все проверки ролей обходятся (bypass). |
-| `OnlineUserService` | Singleton. `ConcurrentDictionary<userId, ConcurrentDictionary<connectionId, byte>>`. Очистка каждые 5 мин |
+| `OnlineUserService` | Singleton. `ConcurrentDictionary<userId, ConcurrentDictionary<connectionId, byte>>`. Очистка каждые 5 мин. |
 | `UserStatusService` | Статусы теперь обновляются через `ExecuteUpdateAsync` (без загрузки сущности). `GetStatusAsync` использует проекцию. `CleanupExpiredStatusesAsync` также через `ExecuteUpdateAsync`. |
 | `StatusCleanupHostedService` | Фоновый: очистка истёкших статусов каждую минуту |
 | `CacheService` | MemoryCache: чаты (TTL 5м, sliding 2м), членство (TTL 10м, sliding 3м) |
-| `HubNotifier` | `SendToChatAsync`, `SendToUserAsync`. Глотает исключения. Используется для отправки `ChatRemoved`. |
+| `HubNotifier` | `SendToChatAsync`, `SendToUserAsync`. Глотает исключения. |
 | `HttpUrlBuilder` | Абсолютный URL через `IHttpContextAccessor` |
 | `UdpDiscoveryService` | **Обновлён.** UDP порт 5275. Запрос: `MESSENGER_DISCOVER`, ответ: `MESSENGER_HERE:PORT` или `MESSENGER_HERE:PORT:IP`. IP определяется через `Discovery:ExternalIp` или автоматически по подсети запроса. |
 | `EnumNameTranslator` | CLR → PostgreSQL snake_case для enum. Добавлен транслятор `UserStatusTypeNameTranslator`. |

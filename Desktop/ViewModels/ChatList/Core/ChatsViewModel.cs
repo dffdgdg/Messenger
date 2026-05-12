@@ -573,7 +573,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             }
         }
 
-        if (target == null) return;
+        if (target == null)
+        {
+            updatedChat.UnreadCount = _globalHub.GetUnreadCount(updatedChat.Id);
+            target = InsertAndReturn(new ChatListItemViewModel(updatedChat));
+            return;
+        }
 
         var oldAvatar = target.Avatar;
         var newAvatar = updatedChat.Avatar;
@@ -581,6 +586,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (oldAvatar == newAvatar)
         {
             target.ApplyExceptAvatar(updatedChat);
+            MoveChatToTop(target);
             return;
         }
 
@@ -601,6 +607,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         target.Avatar = null;
         target.Avatar = newAvatar;
         target.ApplyExceptAvatar(updatedChat);
+        MoveChatToTop(target);
     }
 
     private ChatListItemViewModel? FindChat(int chatId) => Chats.FirstOrDefault(c => c.Id == chatId);

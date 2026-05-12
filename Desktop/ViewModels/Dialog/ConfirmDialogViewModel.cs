@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Dialog;
 
@@ -9,6 +10,9 @@ public partial class ConfirmDialogViewModel : DialogBaseViewModel
     [ObservableProperty] public partial string Message { get; set; }
     [ObservableProperty] public partial string ConfirmText { get; set; } = "Да";
     [ObservableProperty] public partial string CancelText { get; set; } = "Отмена";
+    [ObservableProperty] public partial string? ConfirmationPrompt { get; set; }
+    [ObservableProperty] public partial string? ConfirmationTargetText { get; set; }
+    [ObservableProperty] public partial string ConfirmationInput { get; set; } = string.Empty;
 
     public Task<bool> Result => _resultTcs.Task;
 
@@ -25,7 +29,16 @@ public partial class ConfirmDialogViewModel : DialogBaseViewModel
         CancelText = cancelText;
     }
 
-    [RelayCommand]
+    public bool RequireTextConfirmation => !string.IsNullOrWhiteSpace(ConfirmationTargetText);
+
+    public bool CanConfirm => !RequireTextConfirmation
+        || string.Equals(ConfirmationInput.Trim(), ConfirmationTargetText?.Trim(), StringComparison.Ordinal);
+
+    partial void OnConfirmationInputChanged(string value) => ConfirmCommand.NotifyCanExecuteChanged();
+    partial void OnConfirmationTargetTextChanged(string? value) => ConfirmCommand.NotifyCanExecuteChanged();
+
+    [RelayCommand(CanExecute = nameof(CanConfirm))]
+
     private void Confirm()
     {
         _resultTcs.TrySetResult(true);

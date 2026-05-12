@@ -687,6 +687,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId, chat, members, _auth.Session.IsAdmin)
             {
                 SaveAction = async (dto, mIds, aIds, s, n, rem) => await UpdateGroupChatAsync(dto, mIds, aIds, s, n, rem, onUpdated),
+                DeleteAction = DeleteGroupChatAsync,
                 ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
             });
         }
@@ -765,6 +766,26 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             return true;
         }
         catch (Exception ex) { ErrorMessage = $"Ошибка: {ex.Message}"; return false; }
+    }
+    private async Task<bool> DeleteGroupChatAsync(int chatId)
+    {
+        try
+        {
+            var result = await _api.DeleteAsync(ApiEndpoints.Chats.ById(chatId));
+            if (!result.Success)
+            {
+                ErrorMessage = $"Ошибка удаления группы: {result.Error}";
+                return false;
+            }
+
+            SuccessMessage = "Группа удалена";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка удаления группы: {ex.Message}";
+            return false;
+        }
     }
 
     private async Task<bool> UpdateGroupChatAsync(ChatDto chatDto, List<int> memberIds, List<int> adminIds, Stream? avatarStream,

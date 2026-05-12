@@ -377,7 +377,6 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         }
 
         await messageRepository.SoftDeleteAsync(messageId, _appDateTime.UtcNow);
-
         await _hubNotifier.SendToChatAsync(message.ChatId, HubMethods.Chat.MessageDeleted, new { MessageId = messageId, message.ChatId });
 
         LogMessageDeleted(messageId);

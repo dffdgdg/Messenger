@@ -1167,21 +1167,33 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
 
     [RelayCommand]
-    private async Task LeaveChat() => await SafeExecuteAsync(async ct =>
+    private async Task LeaveChat()
     {
         if (!CanLeaveChat)
         {
             ErrorMessage = "Владелец чата не может покинуть чат";
             return;
         }
+        var confirmDialog = new ConfirmDialogViewModel(
+            "Покинуть группу",
+            "Вы уверены, что хотите покинуть группу?",
+            "Покинуть",
+            "Отмена");
+        await Parent.Parent.ShowDialogAsync(confirmDialog);
 
-        var result = await Context.Api.PostAsync(ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
+        if (!await confirmDialog.Result)
+            return;
 
-        if (result.Success)
-            SuccessMessage = "Вы покинули чат";
-        else
-            ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
-    });
+        await SafeExecuteAsync(async ct =>
+        {
+            var result = await Context.Api.PostAsync(ApiEndpoints.Chats.Leave(Context.ChatId, UserId), null, ct);
+
+            if (result.Success)
+                SuccessMessage = "Вы покинули чат";
+            else
+                ErrorMessage = $"Не удалось выйти из чата: {result.Error}";
+        });
+    }
 
     private async Task RefreshChatPermissionsAsync()
     {

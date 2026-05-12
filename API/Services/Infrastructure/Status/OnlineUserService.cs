@@ -24,6 +24,8 @@ public sealed class OnlineUserService : IOnlineUserService
     public HashSet<int> GetOnlineUserIds() => [.. _connections.Where(kv => !kv.Value.IsEmpty).Select(kv => kv.Key)];
 
     public HashSet<int> FilterOnline(IEnumerable<int> userIds) => [.. userIds.Where(IsOnline)];
+    public IReadOnlyCollection<string> GetConnectionIds(int userId) => _connections.TryGetValue(userId, out var c) ? [.. c.Keys] : [];
+
 
     public int OnlineCount => _connections.Count(kv => !kv.Value.IsEmpty);
 

@@ -1,4 +1,5 @@
-﻿using API.Repositories.Abstarctions;
+﻿using API.Hubs;
+using API.Repositories.Abstarctions;
 using API.Repositories.Projections;
 using API.Services.Base;
 using API.Services.Features.Chat;
@@ -9,7 +10,7 @@ using Shared.Hubs;
 namespace API.Services.Chat;
 
 public partial class ChatService(MessengerDbContext context, IChatRepository chatRepository, IUserRepository userRepository,
-    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url,IReadReceiptService readReceiptService,
+    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url, IReadReceiptService readReceiptService, IHubContext<ChatHub> hubContext,
     ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     private readonly IAccessControlService _accessControl = chatBundle.Cache.AccessControl;
@@ -281,15 +282,31 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
             if (newChat.Type != ChatType.Contact)
                 await _systemMessages.CreateAsync(newChat.Id, dto.CreatedById, SystemEventType.ChatCreated);
 
-            LogChatCreated(newChat.Id, dto.CreatedById);
-
-            return Result<ChatDto>.Success(new ChatDto
+            var createdChatDto = new ChatDto
             {
                 Id = newChat.Id,
                 Name = newChat.Name,
                 Type = newChat.Type,
-                CreatedById = dto.CreatedById
-            });
+                CreatedById = dto.CreatedById,
+                ShowHistoryForNewMembers = newChat.ShowHistoryForNewMembers
+            };
+
+            var memberIds = await _context.ChatMembers
+                .Where(cm => cm.ChatId == newChat.Id)
+                .Select(cm => cm.UserId)
+                .ToListAsync(ct);
+
+            foreach (var memberId in memberIds)
+            {
+                await _hubNotifier.SendToUserAsync(memberId, HubMethods.Chat.ChatUpdated, createdChatDto);
+                var connectionIds = _onlineService.GetConnectionIds(memberId);
+                foreach (var connectionId in connectionIds)
+                    await hubContext.Groups.AddToGroupAsync(connectionId, $"chat_{newChat.Id}", ct);
+            }
+
+            LogChatCreated(newChat.Id, dto.CreatedById);
+
+            return Result<ChatDto>.Success(createdChatDto);
         }
         catch
         {
@@ -444,6 +461,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         {
             _cacheService.InvalidateUserChats(memberId);
             _cacheService.InvalidateMembership(memberId, chatId);
+            await _hubNotifier.SendToUserAsync(memberId, HubMethods.Chat.ChatRemoved, chatId);
         }
 
         LogChatDeleted(chatId, userId);

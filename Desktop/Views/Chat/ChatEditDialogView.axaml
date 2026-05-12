@@ -217,7 +217,7 @@
                             BorderThickness="1"
                             BorderBrush="{DynamicResource DangerBorderBrush}"
                             IsVisible="{Binding ShowDeleteGroupOption}">
-                        <Button Classes="MemberItem" Padding="12,10">
+                        <Button Classes="MemberItem" Padding="12,10" Command="{Binding DeleteGroupCommand}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <PathIcon Data="{StaticResource DeleteIcon}"
                                           Width="20" Height="20"

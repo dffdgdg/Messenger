@@ -138,8 +138,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         if (entity.ChatId.HasValue && !string.Equals(oldName, entity.Name, StringComparison.Ordinal))
         {
             var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == entity.ChatId.Value, ct);
-            if (chat is not null)
-                chat.Name = $"Отдел {entity.Name}";
+            chat?.Name = $"Отдел {entity.Name}";
         }
 
         await SyncHeadsChatMembershipAsync(oldHeadId, entity.HeadId, ct, excludeDepartmentId: entity.Id);

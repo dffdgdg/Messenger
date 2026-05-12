@@ -1,12 +1,13 @@
-﻿using API.Services.Base;
+﻿using API.Hubs;
+using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 using Shared.Hubs;
 
 namespace API.Services.Chat;
 
-public sealed partial class ChatMemberService(MessengerDbContext context, ChatBundle chat, ILogger<ChatMemberService> logger)
-    : BaseService<ChatMemberService>(context, logger), IChatMemberService
+public sealed partial class ChatMemberService(MessengerDbContext context, ChatBundle chat, IOnlineUserService onlineUserService,
+    IHubContext<ChatHub> hubContext, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     private readonly ICacheService cache = chat.Cache.CacheService;
     private readonly IAccessControlService accessControl = chat.Cache.AccessControl;
@@ -41,6 +42,25 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
         cache.InvalidateUserChats(userId);
         cache.InvalidateMembership(userId, chatId);
 
+        var chatEntity = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
+        if (chatEntity is not null)
+        {
+            var chatDto = new ChatDto
+            {
+                Id = chatEntity.Id,
+                Name = chatEntity.Name,
+                Type = chatEntity.Type,
+                CreatedById = chatEntity.CreatedById ?? 0,
+                LastMessageDate = chatEntity.LastMessageTime,
+                Avatar = chatEntity.Avatar,
+                ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+            };
+
+            await hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatUpdated, chatDto);
+        }
+
+        foreach (var connectionId in onlineUserService.GetConnectionIds(userId))
+            await hubContext.Groups.AddToGroupAsync(connectionId, $"chat_{chatId}");
         LogMemberAdded(userId, chatId, addedByUserId);
 
         await systemMessages.CreateAsync(chatId, addedByUserId, SystemEventType.MemberAdded, userId);

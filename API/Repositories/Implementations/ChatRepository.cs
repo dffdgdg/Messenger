@@ -104,7 +104,7 @@ public sealed class ChatRepository(MessengerDbContext context) : RepositoryBase<
     }
 
     public async Task UpdateLastMessageTimeAsync(int chatId, DateTime time, CancellationToken ct = default)
-        => await _context.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(s => s.SetProperty(c => c.LastMessageTime, time), ct);
+         => await _context.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(s => s.SetProperty(c => c.LastMessageTime, time), ct);
 
     public async Task<List<ChatMemberProjection>> GetMembersWithUsersAsync(int chatId, CancellationToken ct = default)
         => await _context.ChatMembers.Where(cm => cm.ChatId == chatId).Select(cm => new ChatMemberProjection(

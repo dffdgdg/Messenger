@@ -375,8 +375,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private void RecacheSystemGroup()
     {
-        HasStructuredSystemMessage = IsSystemMessage && SystemEventType.HasValue && SystemEventType != MsgShared.Enum.SystemEventType.CallEnded
-            && SystemEventType != MsgShared.Enum.SystemEventType.CallStarted;
+        HasStructuredSystemMessage = IsSystemMessage && SystemEventType.HasValue;
         HasSystemTargetUser = TargetUserId > 0;
         SystemTargetUserId = TargetUserId ?? 0;
     }

@@ -173,7 +173,7 @@
                                     Background="{DynamicResource AccentMuted}"
                                     CornerRadius="6"
                                     Padding="10,3">
-                                <TextBlock Text="{Binding CurrentUserRole, Converter={conv:Converter Name=RoleToDisplay}}"
+                                <TextBlock Text="{Binding CurrentUserRoleDisplay}"
                                            FontSize="12"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource Accent}"/>
@@ -183,7 +183,7 @@
 
                     <!-- Настройки -->
                     <StackPanel Spacing="12"
-                                IsVisible="{Binding !IsNewChat}">
+                                IsVisible="{Binding ShowDeleteGroupOption}">
                         <TextBlock Text="НАСТРОЙКИ"
                                    Classes="CategoryHeader"
                                    Margin="0,8,0,0"/>

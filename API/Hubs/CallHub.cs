@@ -13,18 +13,55 @@ public partial class CallHub(ICallSessionService callSessions, IAccessControlSer
 
     private readonly ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>> _userCache = new();
 
-    private Task<(string? Name, string? Avatar)> GetUserInfoAsync(int userId)
-        => _userCache.GetOrAdd(userId, FetchUserInfoAsync);
-
     private async Task<(string? Name, string? Avatar)> FetchUserInfoAsync(int userId)
     {
-        var user = await db.Users
-            .AsNoTracking()
-            .Where(u => u.Id == userId)
-            .Select(u => new { u.DisplayName, u.Avatar })
-            .FirstOrDefaultAsync();
+        try
+        {
+            var user = await db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => new {
+                    u.Surname,
+                    u.Name,
+                    u.Midname,
+                    u.Username,
+                    u.Avatar
+                })
+                .FirstOrDefaultAsync();
 
-        return user != null ? (user.DisplayName, user.Avatar) : (null, null);
+            if (user == null) return (null, null);
+
+            string? displayName = null;
+            if (!string.IsNullOrWhiteSpace(user.Surname) || !string.IsNullOrWhiteSpace(user.Name))
+            {
+                displayName = string.Join(" ",
+                    new[] { user.Surname, user.Name, user.Midname }
+                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+            }
+            displayName ??= user.Username;
+
+            return (displayName, user.Avatar);
+        }
+        catch
+        {
+            _userCache.TryRemove(userId, out _);
+            throw;
+        }
+    }
+
+    private async Task<(string? Name, string? Avatar)> GetUserInfoAsync(int userId)
+    {
+        var task = _userCache.GetOrAdd(userId, FetchUserInfoAsync);
+
+        try
+        {
+            return await task;
+        }
+        catch
+        {
+            _userCache.TryRemove(KeyValuePair.Create(userId, task));
+            return await _userCache.GetOrAdd(userId, FetchUserInfoAsync);
+        }
     }
 
     private async Task<string> GetChatNameAsync(int chatId)

@@ -205,7 +205,8 @@
 											</MenuItem>
 											<MenuItem Header="Выйти из чата"
 													  Command="{Binding LeaveChatCommand}"
-													  Foreground="{DynamicResource DangerBrush}"/>
+													  Foreground="{DynamicResource DangerBrush}"
+													  IsVisible="{Binding !IsDepartmentScopedChat}"/>
 										</MenuFlyout>
 									</Button.Flyout>
 									<Path Margin="10,0,0,0"

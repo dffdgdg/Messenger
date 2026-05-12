@@ -317,7 +317,8 @@
 									<TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPhotosSectionCommand}">
+											Command="{Binding OpenPhotosSectionCommand}"
+											IsVisible="{Binding PhotosCount}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource ImageIcon}"
 													  Width="18" Height="18"
@@ -336,7 +337,8 @@
 									</Button>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenFilesSectionCommand}">
+											Command="{Binding OpenFilesSectionCommand}"
+											IsVisible="{Binding FilesCount}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource DocumentIcon}"
 													  Width="18" Height="18"
@@ -544,7 +546,8 @@
 									<TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPhotosSectionCommand}">
+											Command="{Binding OpenPhotosSectionCommand}"
+											IsVisible="{Binding PhotosCount}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource ImageIcon}"
 													  Width="18" Height="18"
@@ -563,7 +566,8 @@
 									</Button>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenFilesSectionCommand}">
+											Command="{Binding OpenFilesSectionCommand}"
+											IsVisible="{Binding FilesCount}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource DocumentIcon}"
 													  Width="18" Height="18"
@@ -680,11 +684,13 @@
 									</ItemsControl>
 								</StackPanel>
 
-								<Border Classes="Divider" Margin="16,12"/>
+								<Border Classes="Divider" Margin="16,12"
+										IsVisible="{Binding !IsDepartmentScopedChat}"/>
 
 								<StackPanel Margin="16,0,16,0">
 									<Button Command="{Binding LeaveChatCommand}"
-											Classes="DangerAction">
+											Classes="DangerAction"
+											IsVisible="{Binding !IsDepartmentScopedChat}">
 										<StackPanel Orientation="Horizontal" Spacing="12">
 											<PathIcon Data="{StaticResource SignOutIcon}"
 													  Width="18" Height="18"

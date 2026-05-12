@@ -6,7 +6,7 @@ public static class EnumTypeMappings
     { [nameof(ChatRole.Member)] = "member", [nameof(ChatRole.Admin)] = "admin", [nameof(ChatRole.Owner)] = "owner" });
 
     public static EnumNameTranslator ChatTypeNameTranslator { get; } = new(new Dictionary<string, string>(StringComparer.Ordinal)
-    { [nameof(ChatType.Chat)] = "Chat", [nameof(ChatType.Department)] = "Department", [nameof(ChatType.Contact)] = "Contact", [nameof(ChatType.DepartmentHeads)] = "department_heads" });
+    { [nameof(ChatType.Chat)] = "chat", [nameof(ChatType.Department)] = "department", [nameof(ChatType.Contact)] = "contact", [nameof(ChatType.DepartmentHeads)] = "department_heads" });
     public static EnumNameTranslator UserStatusTypeNameTranslator { get; } = new(new Dictionary<string, string>(StringComparer.Ordinal)
     {
         [nameof(UserStatusType.Online)] = "online",

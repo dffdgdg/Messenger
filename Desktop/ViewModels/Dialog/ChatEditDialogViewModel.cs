@@ -19,6 +19,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     private readonly int _currentUserId;
     private readonly ChatDto? _originalChat;
     private readonly List<ChatMemberDto>? _existingMembers;
+    private readonly bool _isSystemAdmin;
 
     private MemoryStream? _avatarStream;
     private string? _avatarFileName;
@@ -34,22 +35,33 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     [ObservableProperty] public partial bool ShowHistoryForNewMembers { get; set; }
 
     public bool IsNewChat => _originalChat == null;
+    public bool IsDepartmentScopedChat => _originalChat?.Type is ChatType.Department or ChatType.DepartmentHeads;
+    public bool ShowDeleteGroupOption => !IsNewChat && !IsDepartmentScopedChat;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
     public int ParticipantsCount => SelectedUsersCount;
     public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
     public bool CanManageParticipants => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
     public bool CanManageAdmins => IsNewChat || CurrentUserRole == ChatRole.Owner;
+    public string CurrentUserRoleDisplay => CurrentUserRole switch
+    {
+        ChatRole.Owner => "Владелец",
+        _ when _isSystemAdmin => "Тех.админ",
+        ChatRole.Admin => "Администратор",
+        _ => "Участник"
+    };
+
     public bool CanSave => !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
 
     public Func<ChatDto, List<int>, List<int>, Stream?, string?, bool, Task<bool>>? SaveAction { get; set; }
     public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
 
-    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId, ChatDto? chat = null, List<ChatMemberDto>? existingMembers = null)
+    public ChatEditDialogViewModel(IApiClientService apiClient, int currentUserId, ChatDto? chat = null, List<ChatMemberDto>? existingMembers = null, bool isSystemAdmin = false)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _currentUserId = currentUserId;
         _originalChat = chat;
         _existingMembers = existingMembers;
+        _isSystemAdmin = isSystemAdmin;
 
         Title = chat == null ? "Создать группу" : "Редактировать группу";
         Name = chat?.Name ?? string.Empty;
@@ -82,6 +94,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
         SelectedAdminIds = new ObservableCollection<int>(adminIds);
         CurrentUserRole = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId)?.Role ?? ChatRole.Owner;
+        OnPropertyChanged(nameof(CurrentUserRoleDisplay));
 
         var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username).Select(u => new UserListItemViewModel(u, memberIds.Contains(u.Id))).ToList();
 
@@ -135,6 +148,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     }
 
     partial void OnSearchUserQueryChanged(string value) => ApplyUserFilter();
+
+    partial void OnCurrentUserRoleChanged(ChatRole value) => OnPropertyChanged(nameof(CurrentUserRoleDisplay));
 
     private void ApplyUserFilter()
     {

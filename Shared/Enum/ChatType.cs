@@ -2,4 +2,17 @@
 
 namespace Shared.Enum;
 
-public enum ChatType { Chat, Department, Contact, [EnumMember(Value = "department_heads")] DepartmentHeads }
+public enum ChatType
+{
+    [EnumMember(Value = "chat")]
+    Chat,
+
+    [EnumMember(Value = "department")]
+    Department,
+
+    [EnumMember(Value = "contact")]
+    Contact,
+
+    [EnumMember(Value = "department_heads")]
+    DepartmentHeads
+}

@@ -195,33 +195,64 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             void OnError(string msg) => joinError = msg;
             _callHub.CallError += OnError;
 
+            CallStateDto? receivedState = null;
+            var stateTcs = new TaskCompletionSource<CallStateDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            void OnStateUpdated(CallStateDto s)
+            {
+                if (s.CallId == invite.CallId)
+                    stateTcs.TrySetResult(s);
+            }
+
+            _callHub.CallStateUpdated += OnStateUpdated;
+
             await callService.JoinCallAsync(invite.CallId, invite.ChatId);
 
             _callHub.CallError -= OnError;
 
             if (joinError != null)
             {
+                _callHub.CallStateUpdated -= OnStateUpdated;
                 Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {joinError}");
                 return;
             }
 
-            await Task.Delay(200);
-
-            var state = await _callHub.GetCallStateAsync(invite.ChatId);
-            if (state == null)
+            var cts = new CancellationTokenSource(3000);
+            try
             {
-                state = new CallStateDto
-                {
-                    CallId = invite.CallId,
-                    ChatId = invite.ChatId,
-                    InitiatorId = invite.InitiatorId,
-                    IsGroupCall = invite.IsGroupCall,
-                    StartedAt = DateTimeOffset.UtcNow,
-                    Participants = []
-                };
+                receivedState = await stateTcs.Task.WaitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                receivedState = await _callHub.GetCallStateAsync(invite.ChatId);
+            }
+            finally
+            {
+                _callHub.CallStateUpdated -= OnStateUpdated;
             }
 
-            var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name ?? invite.ChatName;
+            var state = receivedState ?? new CallStateDto
+            {
+                CallId = invite.CallId,
+                ChatId = invite.ChatId,
+                InitiatorId = invite.InitiatorId,
+                IsGroupCall = invite.IsGroupCall,
+                StartedAt = DateTimeOffset.UtcNow,
+                Participants = []
+            };
+
+            var myUserId = _auth.Session.UserId ?? 0;
+            if (myUserId > 0 && state.Participants.All(p => p.UserId != myUserId))
+            {
+                state.Participants.Add(new CallParticipantDto
+                {
+                    UserId = myUserId,
+                    DisplayName = "Вы"
+                });
+            }
+
+            var chatName = UserChats.FirstOrDefault(c => c.Id == invite.ChatId)?.Name
+                           ?? invite.ChatName;
 
             var openChatTask = OpenCallChatAsync(invite);
             Dispatcher.UIThread.Post(() => ShowCallViewSync(state, chatName, invite.IsGroupCall));
@@ -653,7 +684,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         try
         {
             var members = (await _api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chat.Id))).Data;
-            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId, chat, members)
+            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId, chat, members, _auth.Session.IsAdmin)
             {
                 SaveAction = async (dto, mIds, aIds, s, n, rem) => await UpdateGroupChatAsync(dto, mIds, aIds, s, n, rem, onUpdated),
                 ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
@@ -666,7 +697,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         try
         {
-            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId)
+            await _mainWindowVm.ShowDialogAsync(new ChatEditDialogViewModel(_api, UserId, isSystemAdmin: _auth.Session.IsAdmin)
             {
                 SaveAction = async (dto, mIds, aIds, s, n, _) => await CreateGroupChatAsync(dto, mIds, aIds, s, n, onCreated),
                 ShowDialogAction = vm => _mainWindowVm.ShowDialogAsync(vm)
@@ -808,16 +839,16 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         Debug.WriteLine($"[MainMenu] SetStatus called with param: {param}");
         var (status, duration) = param switch
         {
-            "Online" => (UserStatusType.Online, (string?)null),
-            "Away" => (UserStatusType.Away, (string?)null),
-            "Busy" => (UserStatusType.Busy, (string?)null),
-            "DnD" => (UserStatusType.DoNotDisturb, (string?)null),
+            "Online" => (UserStatusType.Online, null),
+            "Away" => (UserStatusType.Away, null),
+            "Busy" => (UserStatusType.Busy, null),
+            "DnD" => (UserStatusType.DoNotDisturb, null),
             "Busy15m" => (UserStatusType.Busy, "15m"),
             "Busy30m" => (UserStatusType.Busy, "30m"),
             "Busy1h" => (UserStatusType.Busy, "1h"),
             "DnD1h" => (UserStatusType.DoNotDisturb, "1h"),
             "DnD2h" => (UserStatusType.DoNotDisturb, "2h"),
-            _ => (UserStatusType.Online, (string?)null)
+            _ => (UserStatusType.Online, null)
         };
 
         await _globalHub.SetStatusAsync(status, duration);

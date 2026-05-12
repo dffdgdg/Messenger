@@ -131,6 +131,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public string? ContactLastSeen => InfoPanel.ContactLastSeen;
     public bool IsContactOnline => InfoPanel.IsContactOnline;
     public bool IsGroupChat => InfoPanel.IsGroupChat;
+    public bool IsDepartmentChat => Chat?.Type == ChatType.Department;
+    public bool IsDepartmentHeadsChat => Chat?.Type == ChatType.DepartmentHeads;
+    public bool IsDepartmentScopedChat => IsDepartmentChat || IsDepartmentHeadsChat;
     public bool IsContactChat => InfoPanel.IsContactChat;
     public bool HasMultiplePinned => PinnedMessages.Count > 1;
     public string TypingText => Typing.TypingText;

@@ -1,8 +1,9 @@
 ﻿using Desktop.Services.Features.Call;
-using Shared.DTO.Call;
 using Microsoft.Extensions.Logging;
+using Shared.DTO.Call;
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -47,7 +48,6 @@ public sealed partial class CallService : ICallService
         _logger = logger;
 
         _audio.OnEncodedFrame += SendAudioToAllPeers;
-        _audio.SpeakingStateChanged += OnSpeakingStateChanged;
         SubscribeHubEvents();
     }
 
@@ -58,18 +58,12 @@ public sealed partial class CallService : ICallService
 
         _activeChatId = chatId;
         InitUdp();
+        SubscribeAudioEvents();
 
-        try
-        {
-            _audio.Start();
-        }
-        catch (Exception ex)
-        {
-            LogAudioUnavailable(ex);
-        }
+        try { _audio.Start(); }
+        catch (Exception ex) { LogAudioUnavailable(ex); }
 
         await _hub.InitiateCallAsync(chatId);
-        CallStarted?.Invoke();
     }
 
     public async Task JoinCallAsync(string callId, int chatId)
@@ -95,6 +89,7 @@ public sealed partial class CallService : ICallService
         _activeChatId = chatId;
 
         InitUdp();
+        SubscribeAudioEvents();
 
         try
         {
@@ -107,6 +102,11 @@ public sealed partial class CallService : ICallService
 
         await _hub.JoinCallAsync(callId);
         CallStarted?.Invoke();
+    }
+    private void SubscribeAudioEvents()
+    {
+        _audio.SpeakingStateChanged -= OnSpeakingStateChanged;
+        _audio.SpeakingStateChanged += OnSpeakingStateChanged;
     }
 
     public async Task LeaveCallAsync()
@@ -146,19 +146,26 @@ public sealed partial class CallService : ICallService
 
         MuteChanged?.Invoke(_audio.IsMuted);
     }
-
+    private List<string> _localIps = [];
     private void InitUdp()
     {
-        _localIp = GetLocalIpAddress();
+        _localIps = GetAllLocalIpAddresses();
         _udpClient = new UdpClient(0);
         _localUdpPort = ((IPEndPoint)_udpClient.Client.LocalEndPoint!).Port;
 
-        LogUdpEndpoint(_localIp, _localUdpPort);
+        LogUdpEndpoint(string.Join(", ", _localIps), _localUdpPort);
 
         _receiveCts = new CancellationTokenSource();
         _ = ReceiveLoopAsync(_receiveCts.Token);
     }
-
+    private static List<string> GetAllLocalIpAddresses()
+    {
+        return [.. Dns.GetHostEntry(Dns.GetHostName())
+            .AddressList
+            .Where(a => a.AddressFamily == AddressFamily.InterNetwork
+                        && !IPAddress.IsLoopback(a))
+            .Select(a => a.ToString())];
+    }
     private async Task ReceiveLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested && _udpClient != null)
@@ -192,7 +199,12 @@ public sealed partial class CallService : ICallService
     private void SendAudioToAllPeers(byte[] opusData, int opusLength)
     {
         if (!IsInCall || _udpClient == null) return;
-        if (_session.UserId is not int userId) return;
+
+        if (_session.UserId is not int userId || userId <= 0)
+        {
+            LogNoPeers();
+            return;
+        }
 
         if (_peerEndpoints.IsEmpty)
         {
@@ -222,73 +234,100 @@ public sealed partial class CallService : ICallService
 
     private async Task AnnounceUdpEndpointAsync(int targetUserId)
     {
-        if (_activeCallId == null || _localIp == null)
+        if (_activeCallId == null || _localIps.Count == 0)
         {
-            LogAnnouncementSkipped(_activeCallId, _localIp);
+            LogAnnouncementSkipped(_activeCallId, string.Join(",", _localIps));
             return;
         }
+
+        // Отправляем один сигнал со всеми IP через запятую
+        var payload = string.Join(",", _localIps.Select(ip => $"{ip}:{_localUdpPort}"));
 
         await _hub.SendSignalAsync(new WebRtcSignalDto
         {
             CallId = _activeCallId,
             TargetUserId = targetUserId,
             Type = "udp-endpoint",
-            Payload = $"{_localIp}:{_localUdpPort}"
+            Payload = payload
         });
 
-        LogEndpointAnnounced(_localIp, _localUdpPort, targetUserId);
+        LogEndpointAnnounced(payload, _localUdpPort, targetUserId);
     }
 
     private void HandleUdpEndpointSignal(WebRtcSignalDto signal)
     {
         LogEndpointReceived(signal.FromUserId, signal.Payload);
 
-        var parts = signal.Payload.Split(':');
-        if (parts.Length != 2) return;
-        if (!IPAddress.TryParse(parts[0], out var ip)) return;
-        if (!int.TryParse(parts[1], out var port)) return;
+        // Парсим один или несколько endpoint через запятую
+        var candidates = signal.Payload.Split(',');
 
-        var endpoint = new IPEndPoint(ip, port);
-        _peerEndpoints[signal.FromUserId] = endpoint;
+        IPEndPoint? bestEndpoint = null;
+
+        foreach (var candidate in candidates)
+        {
+            var parts = candidate.Trim().Split(':');
+            if (parts.Length != 2) continue;
+            if (!IPAddress.TryParse(parts[0], out var ip)) continue;
+            if (!int.TryParse(parts[1], out var port)) continue;
+
+            var endpoint = new IPEndPoint(ip, port);
+
+            // Выбираем endpoint из той же подсети что и наш локальный IP
+            if (IsInSameSubnet(ip))
+            {
+                bestEndpoint = endpoint;
+                break; // нашли подходящий — берём первый совпавший
+            }
+
+            // Запоминаем как кандидат если лучшего нет
+            bestEndpoint ??= endpoint;
+        }
+
+        if (bestEndpoint == null) return;
+
+        _peerEndpoints[signal.FromUserId] = bestEndpoint;
         _audio.AddParticipant(signal.FromUserId);
 
-        LogPeerEndpointRegistered(signal.FromUserId, endpoint);
+        LogPeerEndpointRegistered(signal.FromUserId, bestEndpoint);
 
         if (_endpointAnnounced.TryAdd(signal.FromUserId, true))
             _ = AnnounceUdpEndpointAsync(signal.FromUserId);
     }
 
-    private static string GetLocalIpAddress()
+    private bool IsInSameSubnet(IPAddress remoteIp)
     {
-        var host = Dns.GetHostEntry(Dns.GetHostName());
+        var remoteBytes = remoteIp.GetAddressBytes();
 
-        foreach (var addr in host.AddressList)
+        foreach (var localIpStr in _localIps)
         {
-            if (addr.AddressFamily == AddressFamily.InterNetwork)
-                Debug.WriteLine($"[CallService] Найден IP: {addr}");
-        }
+            if (!IPAddress.TryParse(localIpStr, out var localIp)) continue;
+            var localBytes = localIp.GetAddressBytes();
 
-        try
-        {
-            var serverHost = new Uri(App.ApiUrl).Host;
-            using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            socket.Connect(serverHost, 65530);
-            var ip = ((IPEndPoint)socket.LocalEndPoint!).Address.ToString();
-            Debug.WriteLine($"[CallService] Выбран IP через маршрут к серверу: {ip}");
-            return ip;
-        }
-        catch
-        {
-            foreach (var addr in host.AddressList)
+            if (remoteBytes[0] == localBytes[0] && remoteBytes[1] == localBytes[1] && remoteBytes[2] == localBytes[2])
             {
-                if (addr.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(addr))
-                {
-                    Debug.WriteLine($"[CallService] Fallback IP: {addr}");
-                    return addr.ToString();
-                }
+                return true;
             }
-            return "127.0.0.1";
         }
+
+        return false;
+    }
+
+    private static string? GetFirstNonLoopbackIpv4()
+    {
+        var candidates = Dns.GetHostEntry(Dns.GetHostName()).AddressList
+            .Where(a => a.AddressFamily == AddressFamily.InterNetwork
+                        && !IPAddress.IsLoopback(a))
+            .ToList();
+
+        var preferred = candidates.FirstOrDefault(a =>
+        {
+            var bytes = a.GetAddressBytes();
+            return (bytes[0] == 192 && bytes[1] == 168) ||
+                   bytes[0] == 10 ||
+                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31);
+        });
+
+        return (preferred ?? candidates.FirstOrDefault())?.ToString();
     }
 
     private void SubscribeHubEvents()
@@ -321,11 +360,11 @@ public sealed partial class CallService : ICallService
 
     private void OnCallStateUpdated(CallStateDto state)
     {
-        if (_activeCallId == null)
-        {
-            _activeCallId = state.CallId;
+        bool wasInCall = _activeCallId != null;
+        _activeCallId = state.CallId;
+
+        if (!wasInCall)
             CallStarted?.Invoke();
-        }
 
         var myUserId = _session.UserId ?? 0;
         foreach (var p in state.Participants)
@@ -395,7 +434,8 @@ public sealed partial class CallService : ICallService
 
         _peerEndpoints.Clear();
         _endpointAnnounced.Clear();
-        _localIp = null;
+        _localIps.Clear();
+
         _audio.SpeakingStateChanged -= OnSpeakingStateChanged;
 
         _audio.Stop();
@@ -407,7 +447,9 @@ public sealed partial class CallService : ICallService
         _disposed = true;
 
         UnsubscribeHubEvents();
+
         _audio.OnEncodedFrame -= SendAudioToAllPeers;
+        _audio.SpeakingStateChanged -= OnSpeakingStateChanged;
 
         if (IsInCall) await LeaveCallAsync();
         else Cleanup();

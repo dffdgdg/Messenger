@@ -31,12 +31,7 @@ public static class RemoteImage
         var currentUrl = image.GetValue(CurrentUrlProperty);
 
         if (!string.IsNullOrWhiteSpace(newUrl) && newUrl == currentUrl && image.Source != null)
-        {
-            var loader = App.Current?.Services?.GetService<AuthenticatedImageLoader>();
-            if (loader?.IsCached(newUrl) != false)
-                return;
-            image.SetValue(CurrentUrlProperty, null);
-        }
+            return;
 
         CancelCurrent(image);
 

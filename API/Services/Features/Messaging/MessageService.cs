@@ -1,6 +1,5 @@
 ﻿using API.Repositories.Abstarctions;
 using API.Services.Base;
-using API.Services.Features.Chat;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
 using Shared.DTO.Message;
@@ -9,9 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace API.Services.Messaging;
 
-public partial class MessageService(
-    MessengerDbContext context,
-    IChatRepository chatRepository,
+public partial class MessageService(MessengerDbContext context, IChatRepository chatRepository,
     IMessageRepository messageRepository,
     ChatBundle chat,
     MediaBundle media,
@@ -228,7 +225,7 @@ public partial class MessageService(
         while (currentId.HasValue && visited.Add(currentId.Value))
         {
             var current = await messageRepository.FindUserMessageByIdAsync(currentId.Value);
-            if (current is null || !current.ForwardedFromMessageId.HasValue)
+            if (current?.ForwardedFromMessageId.HasValue != true)
                 return current?.Id ?? forwardedFromMessageId;
 
             currentId = current.ForwardedFromMessageId.Value;
@@ -311,8 +308,7 @@ public partial class MessageService(
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
         var hasNewer = await messageRepository.HasNewerAsync(chatId, newestId, cutoff);
 
-        return Result<PagedMessagesDto>.Success
-            (BuildPagedResult([.. messages.Select(m => m.ToDto(userId, _urlBuilder))], true, hasNewer));
+        return Result<PagedMessagesDto>.Success (BuildPagedResult([.. messages.Select(m => m.ToDto(userId, _urlBuilder))], true, hasNewer));
     }
 
     #endregion

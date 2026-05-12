@@ -471,7 +471,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 **Критические изменения:**
 - `_userCache` теперь `ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>>` (потокобезопасность).
-- Метод `GetUserInfoAsync` теперь не асинхронный, а возвращает `Task` из `ConcurrentDictionary.GetOrAdd`.
+- **Метод `GetUserInfoAsync`** теперь обёрнут в try-catch: при ошибке задача удаляется из кэша и запрос повторяется. `FetchUserInfoAsync` вручную вычисляет `DisplayName` из `Surname`, `Name`, `Midname`, `Username` вместо использования предвычисленного поля.
 - Логика `CancelCall` для групповых звонков сразу вызывает `LeaveCall`.
 - `ToStateDtoAsync` загружает информацию о пользователях параллельно через `Task.WhenAll`. **Добавлена обработка ошибок**: если задача получения инфы о пользователе завершилась с ошибкой, пишется предупреждение в лог.
 - **`JoinCall`** теперь обёрнут в `try-catch` с детальным логированием и отсылкой `CallError` при исключении. Добавлены дополнительные проверки: логгирование отсутствия сессии, прав доступа, неудачного присоединения.
@@ -656,7 +656,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallEndReason` | Ended, Cancelled, Timeout, Declined | |
 | `CallStatus` | Ringing, Active, Ended | |
 | `ChatRole` | Member, Admin, Owner | |
-| `ChatType` | Chat, Department, Contact, DepartmentHeads | DepartmentHeads → `"department_heads"` (EnumMember) |
+| `ChatType` | Chat, Department, Contact, DepartmentHeads | Все значения имеют `EnumMember`: `"chat"`, `"department"`, `"contact"`, `"department_heads"` (ранее только DepartmentHeads) |
 | `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged, CallStarted, CallEnded, MessagePinned, MessageUnpinned, **ChatAvatarUpdated** | `[JsonStringEnumConverter]` |
 | `Theme` | light, dark, system | `[JsonStringEnumConverter]` |
 | `UserRole` | User, Head, Admin | |
@@ -763,8 +763,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Класс | Назначение |
 |---|---|
-| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита >85KB, дедупликация, дисковый кэш, Bearer-токен. **Добавлены методы:** `InvalidateUrl(string)` — удаляет конкретный URL из RAM и дискового кэша; `InvalidateByRelativePath(string)` — удаляет все записи, содержащие заданный относительный путь; `IsCached(string)` — проверяет наличие в RAM. |
-| `RemoteImage` | Attached Property для Avalonia Image. **Свойство `CurrentUrlProperty` стало публичным.** При изменении источника теперь проверяется, находится ли URL в кэше через `IsCached`; если нет — принудительно перезагружается. Добавлена очистка старого Bitmap при сбросе источника. |
+| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита >85KB, дедупликация, дисковый кэш, Bearer-токен. **Добавлены методы:** `InvalidateUrl(string)` — удаляет конкретный URL из RAM и дискового кэша; `InvalidateByRelativePath(string)` — удаляет все записи, содержащие заданный относительный путь; `IsCached(string)` — проверяет наличие в RAM (гибкое сравнение с query-параметрами). |
+| `RemoteImage` | Attached Property для Avalonia Image. **Свойство `CurrentUrlProperty` стало публичным.** При изменении источника на тот же URL перезагрузка не производится (оптимизация, больше не проверяет `IsCached`). Добавлена очистка старого Bitmap при сбросе источника. |
 | `ImageCacheService` | ⚠️ Дублирует `AuthenticatedImageLoader` (deprecated) |
 | `MemoryDiagnostics` | Счётчики ChatVM/MessageVM/Bitmap/RemoteImage, LOH, дамп GC. **Диагностика памяти полностью активирована** (ранее была закомментирована). Включены методы `Dump`, `DumpDetailed`, ForceFullGc, LOH-эксперимент. |
 
@@ -794,7 +794,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Сервис | Строк | Назначение |
 |---|---|---|
 | `CallHubConnection` | 260 | SignalR `/callHub`, 12 событий |
-| `CallService` | 368 | Оркестратор. **Теперь вызывает событие `CallStarted` после успешного `InitiateCallAsync`.** UDP-аудио: `[userId:4][seq:4][opus:N]`. Endpoint discovery через SignalR |
+| `CallService` | 368 | Оркестратор. **Изменения:** `CallStarted` теперь вызывается при получении первого `CallStateUpdated`, а не сразу после `InitiateCallAsync`. Поддерживает несколько сетевых интерфейсов: при отправке UDP-endpoint передаются все локальные IPv4-адреса, при получении выбирается endpoint в той же подсети, что и один из наших IP. События `SpeakingStateChanged` подписываются через `SubscribeAudioEvents` для предотвращения дублирования. |
 | `CallAudioService` | 271 | PortAudio. 48kHz/моно/20ms. Opus 32kbps. VAD адаптивный (noiseFloor*2.5) |
 | `NoiseReducer` | 322 | Спектральное шумоподавление: FFT→Wiener Filter→Gate. Decision-Directed SNR α=0.96 |
 | `ActiveCallStore` | 34 | ObservableObject: `ActiveCall`, `IsCallUiOpen`, `IsInCall` |
@@ -917,6 +917,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - **Аватар чата**: при `ChatUpdated` инвалидирует кэш изображений при смене аватара и не сбрасывает всю историю сообщений.
 - **Звонки**: `_chatActiveCallId` отслеживает ID текущего активного звонка для фильтрации событий. `JoinActiveCallAsync` открывает UI звонка, если пользователь уже в активном звонке этого чата.
 - Публичный метод `RequestScrollToBottom`.
+- **Свойства** `IsDepartmentChat`, `IsDepartmentHeadsChat`, `IsDepartmentScopedChat` – определяют принадлежность чата к отделу.
 
 **Dispose:** `Interlocked`-защита от двойного, `DisposeAsync` + `DisposeCommonResources`
 
@@ -996,9 +997,10 @@ Key-Value: `Key: string (PK)`, `Value: string`
 **Изменения:**
 - **Управление жизненным циклом CallHub:** При инициализации и реконнектах корректно отписывается от событий `IncomingCall`, `CallStateUpdated` перед отключением и подписывается заново после.
 - **Обработка `OnIncomingCall`:** Попытка переподключения к CallHub, если не в сети; защита от повторного входа в звонок.
-- **Обработка `OnCallAcceptedAsync`:** Добавлена подписка на `CallError` для перехвата ошибок присоединения, задержка 200 мс перед получением `CallState`, fallback-состояние из `CallInviteDto` при неудаче. UI-операции вызываются без ожидания.
+- **Обработка `OnCallAcceptedAsync`:** Теперь ожидает первое событие `CallStateUpdated` через `TaskCompletionSource` с таймаутом 3 с. При неудаче использует `GetCallStateAsync`; если участник отсутствует в списке, добавляет его вручную. Подписка на `CallError` для перехвата ошибок присоединения.
 - **`ShowCallViewAsync` → `ShowCallViewSync`:** Стал синхронным методом.
 - **Добавлены методы `NavigateToForwardedChatAsync`** (открывает чат после пересылки), **`OpenCallUi`**, **`ShowCallView`**.
+- **Редактирование/создание групп** передаёт флаг `IsAdmin` для отображения роли "Тех.админ" в диалоге.
 
 **Цвета статусов:** Online=#43A047, Away=#FFA000, Busy=#E53935, DND=#9C27B0, Offline=#9E9E9E
 
@@ -1026,7 +1028,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 ### ChatInfoPanelHandler
 
-**Строк:** 409. Секции: Медиа (пагинация 30/страница), Документы, Опросы (поиск), Участники (поиск). **Участники теперь сортируются: сначала онлайн (IsOnline), затем по алфавиту.**
+**Строк:** 409. Секции: Медиа (пагинация 30/страница), Документы, Опросы (поиск), Участники (поиск). **Участники теперь сортируются: сначала онлайн (IsOnline), затем по алфавиту.** **Секции "Фото" и "Файлы" скрываются, если их счётчик равен нулю.** **Для чатов отделов (`IsDepartmentScopedChat`) скрыты кнопка "Выйти" и опция "Удалить группу".**
 
 Для Contact: загрузка полного профиля, LastSeen формат: <1мин/"X мин. назад"/"X ч. назад"/"вчера"/"X дн. назад"/DD.MM.YYYY
 
@@ -1085,8 +1087,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
   → CallHub.JoinCall()
   → CallSession.Status = Active
   → CallStateUpdated → все участники
-  → UDP endpoint обмен через SignalR (udp-endpoint сигнал)
-  → Прямой UDP аудио между участниками
+  → UDP endpoint обмен через SignalR (udp-endpoint сигнал, теперь все локальные IP)
+  → Прямой UDP аудио между участниками (выбор endpoint по общей подсети)
 ```
 
 ## Обновление токенов
@@ -1342,7 +1344,7 @@ OnDetachedFromVisualTree → Cleanup
 4. Иначе → ShowIcon (PersonIcon или FallbackIcon)
 ```
 
-**Новое:** если `Source` тот же, но кэш `AuthenticatedImageLoader` не содержит изображение, контрол принудительно перезагружает его через `RemoteImage`.
+**Изменение:** При изменении Source контрол всегда принудительно обновляет `RemoteImage.CurrentUrlProperty`, больше не проверяет `IsCached` перед перезагрузкой.
 
 ### Вычисление инициалов (`ExtractInitials`)
 
@@ -1382,7 +1384,7 @@ null/"" → "?"
 
 ### Dispose
 
-При `OnDetachedFromVisualTree`: освобождает `Bitmap`, вызывает `MemoryDiagnostics.OnBitmapDisposed()`
+При `OnDetachedFromVisualTree`: освобождает `Bitmap`, сбрасывает `RemoteImage`, вызывает `MemoryDiagnostics.OnBitmapDisposed()`
 
 ---
 
@@ -1672,14 +1674,12 @@ OnGlobalPointerPressed:
 
 | # | Баг |
 |---|---|
-| 1 | Баги подключения к звонку |
-| 2 | Таймер звонка уходит в отрицательное значение у пользователя присоединившегося |
-| 3 | Баги в полях фильтров поиска |
-| 4 | Требуется в LoginView добавить кнопку с диалогом ввода IP, на случай если UDP не работает предлогать его ввести, если введен IP, то UDP не ищет сервер, а подключается по IP |
-| 5 | При быстром скроле ломаются варианты ответа у опроса |
-| 6 | Безопасность звонков |
-| 7 | Добавь сид данные для первичного запуска через докер |
-| 8 | Утечка памяти в чатах, возможно аватарки |
+| 1 | Баги в полях фильтров поиска |
+| 2 | Требуется в LoginView добавить кнопку с диалогом ввода IP, на случай если UDP не работает предлогать его ввести, если введен IP, то UDP не ищет сервер, а подключается по IP |
+| 3 | При быстром скроле ломаются варианты ответа у опроса |
+| 4 | Безопасность звонков |
+| 5 | Добавь сид данные для первичного запуска через докер |
+| 6 | Утечка памяти в чатах, возможно аватарки |
 
 ## Не обязательно, но я бы закрыл
 

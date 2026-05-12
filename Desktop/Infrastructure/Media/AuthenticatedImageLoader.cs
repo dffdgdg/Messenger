@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -25,8 +26,8 @@ public sealed class AuthenticatedImageLoader : IDisposable
     private readonly Lock _lruLock = new();
     private const int MaxRamCacheItems = 80;
     private long _ramCacheBytes;
-    private const long MaxRamCacheBytes = 30L * 1024 * 1024; // 30 MB
-    private const long LohThresholdBytes = 85 * 1024; // 85 KB — порог LOH
+    private const long MaxRamCacheBytes = 30L * 1024 * 1024;
+    private const long LohThresholdBytes = 85 * 1024;
 
     private readonly Dictionary<string, Task<byte[]?>> _inflight = [];
 
@@ -249,10 +250,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
             _inflight.Clear();
         }
     }
-    /// <summary>
-    /// Удаляет конкретный URL из RAM и дискового кэша,
-    /// чтобы следующая загрузка пошла на сервер.
-    /// </summary>
+
     public void InvalidateUrl(string url)
     {
         lock (_lruLock)
@@ -265,17 +263,14 @@ public sealed class AuthenticatedImageLoader : IDisposable
             }
         }
 
-        // Удаляем с диска все варианты (с разными query-параметрами тот же путь)
         try
         {
-            // Нормализуем: убираем query-string для поиска дискового файла
             var urlWithoutQuery = url.Contains('?') ? url[..url.IndexOf('?')] : url;
             var ext = GetExtension(urlWithoutQuery);
             var diskPath = GetDiskCachePath(urlWithoutQuery, ext);
             if (File.Exists(diskPath))
                 File.Delete(diskPath);
 
-            // Также инвалидируем исходный url (с query если был)
             var diskPathFull = GetDiskCachePath(url, GetExtension(url));
             if (File.Exists(diskPathFull))
                 File.Delete(diskPathFull);
@@ -286,10 +281,6 @@ public sealed class AuthenticatedImageLoader : IDisposable
         }
     }
 
-    /// <summary>
-    /// Инвалидирует все URL, путь которых содержит данный сегмент.
-    /// Используется для инвалидации аватара пользователя/чата по относительному пути.
-    /// </summary>
     public void InvalidateByRelativePath(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath)) return;
@@ -320,7 +311,6 @@ public sealed class AuthenticatedImageLoader : IDisposable
             }
         }
 
-        // Чистим диск
         foreach (var key in toRemove)
         {
             try
@@ -374,28 +364,16 @@ public sealed class AuthenticatedImageLoader : IDisposable
     }
 
     #endregion
-    /// <summary>
-    /// Проверяет, есть ли URL в RAM-кэше (не инвалидирован).
-    /// Используется RemoteImage для проверки перед повторной загрузкой.
-    /// </summary>
+
     public bool IsCached(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
-
-        // Убираем query-параметры, потому что в кэше ключи без них
-        var normalized = url.Contains('?') ? url[..url.IndexOf('?')] : url;
-
         lock (_lruLock)
         {
-            // Проверяем точное совпадение
-            if (_lruMap.ContainsKey(normalized))
-                return true;
-
-            // Проверяем наличие с query-параметрами (на случай если кэшировали с ними)
-            if (_lruMap.ContainsKey(url))
-                return true;
-
-            return false;
+            return _lruMap.ContainsKey(url) ||
+                   (url.Contains('?') && _lruMap.ContainsKey(url[..url.IndexOf('?')])) ||
+                   (!url.Contains('?') && _lruMap.Keys.Any(k =>
+                       k.StartsWith(url + "?", StringComparison.OrdinalIgnoreCase)));
         }
     }
 

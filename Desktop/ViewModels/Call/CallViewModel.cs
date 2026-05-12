@@ -208,7 +208,8 @@ public partial class CallViewModel : BaseViewModel
 
     private void OnParticipantJoined(string callId, CallParticipantDto dto)
     {
-        if (callId != CallId) return;
+        if (callId != CallId && !string.IsNullOrEmpty(CallId)) return;
+
         Dispatcher.UIThread.Post(() =>
         {
             if (Participants.Any(p => p.UserId == dto.UserId)) return;
@@ -303,7 +304,12 @@ public partial class CallViewModel : BaseViewModel
     private void OnDurationTick(object? sender, EventArgs e)
     {
         var elapsed = DateTimeOffset.UtcNow - _callStartedAt;
-        DurationText = elapsed.TotalHours >= 1 ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}" : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
+
+        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+
+        DurationText = elapsed.TotalHours >= 1
+            ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}"
+            : $"{elapsed.Minutes}:{elapsed.Seconds:D2}";
     }
 
     private void Cleanup()

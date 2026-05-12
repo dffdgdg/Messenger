@@ -280,25 +280,18 @@ public partial class AvatarControl : UserControl
 
     private void UpdateComputedProperties()
     {
-        Debug.WriteLine($"[AvatarControl] Source='{Source}', ImageSource='{_imageSource}'");
-
         var hasBitmap = ImageBitmap != null;
         HasBitmapImage = hasBitmap;
 
         var source = Source;
         var isValidImage = IsValidImageSource(source);
-
         HasImage = isValidImage && !hasBitmap;
 
         var newImageSource = HasImage ? ToAbsoluteUrl(source!) : null;
 
         if (newImageSource != _imageSource)
         {
-            if (_imageSource != null)
-            {
-                AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
-            }
-
+            AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
             ImageSource = newImageSource;
 
             if (!HasImage && AvatarImage.Source is Bitmap old)
@@ -306,16 +299,6 @@ public partial class AvatarControl : UserControl
                 AvatarImage.Source = null;
                 old.Dispose();
                 MemoryDiagnostics.OnBitmapDisposed();
-            }
-        }
-        else if (newImageSource != null && !string.IsNullOrEmpty(source))
-        {
-            var loader = App.Current?.Services?.GetService<AuthenticatedImageLoader>();
-            if (loader != null && !loader.IsCached(newImageSource))
-            {
-                AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
-                ImageSource = null;
-                ImageSource = newImageSource;
             }
         }
 
@@ -445,6 +428,10 @@ public partial class AvatarControl : UserControl
             old.Dispose();
             MemoryDiagnostics.OnBitmapDisposed();
         }
+
+        AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
+        _imageSource = null;
+
         base.OnDetachedFromVisualTree(e);
     }
 

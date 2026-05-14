@@ -12,6 +12,7 @@ using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Call;
+using Shared.DTO.Message;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -379,22 +380,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var chatResult = chatTask.Result;
             if (chatResult is { Success: true, Data: not null })
             {
-                if (!_chatMetaUpdatedExternally)
-                {
-                    Context.Chat = chatResult.Data;
-                }
-                else
-                {
-                    var serverData = chatResult.Data;
-                    serverData.Avatar = Context.Chat?.Avatar ?? serverData.Avatar;
-                    Context.Chat = serverData;
-                    Debug.WriteLine($"[ChatVM] Merged server data with external avatar: '{serverData.Avatar}'");
-                }
+                Context.Chat = chatResult.Data;
+                Context.CurrentUserRole = chatResult.Data.CurrentUserRole;
             }
             else
             {
                 throw new HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
+
 
             CallStateDto? callState = null;
             try
@@ -451,7 +444,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
 
             Context.Members = membersTask.Result;
-            await RefreshChatPermissionsAsync();
+            RefreshChatPermissions();
 
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
@@ -830,8 +823,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         if (dto.IsDeleted || dto.IsSystemMessage) return;
 
-        var imageFiles = dto.Files.Count(IsInfoPanelPhoto);
-        var otherFiles = dto.Files.Count(f => !IsInfoPanelPhoto(f));
+        var files = dto.Files ?? [];
+        var imageFiles = files.Count(IsInfoPanelPhoto);
+        var otherFiles = files.Count(f => !IsInfoPanelPhoto(f));
 
         PhotosCount += imageFiles;
         FilesCount += otherFiles;
@@ -1011,20 +1005,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (hasForward && string.IsNullOrWhiteSpace(content))
                 content = forwarding!.Content;
 
-            var msg = new MessageDto
+            List<MessageFileDto>? forwardFiles = null;
+            if (hasForward && files.Count == 0 && forwarding!.Files is { Count: > 0 })
+                forwardFiles = forwarding.Files;
+
+            var request = new CreateMessageRequest
             {
                 ChatId = Context.ChatId,
                 Content = content,
-                SenderId = Context.CurrentUserId,
-                Files = files,
                 ReplyToMessageId = Reply.ReplyingToMessage?.Id,
-                ForwardedFromMessageId = forwarding?.Id
+                ForwardedFromMessageId = forwarding?.Id,
+                Files = files.Count > 0 ? files : forwardFiles
             };
 
-            if (hasForward && files.Count == 0 && forwarding!.Files.Count > 0)
-                msg.Files = forwarding.Files;
-
-            var result = await Context.Api.PostAsync<MessageDto, MessageDto>(ApiEndpoints.Messages.Create, msg, ct);
+            var result = await Context.Api.PostAsync<CreateMessageRequest, MessageDto>(ApiEndpoints.Messages.Create, request, ct);
 
             if (result.Success && result.Data != null)
             {
@@ -1292,14 +1286,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         await _navigator.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
         {
-            if (_chatMetaUpdatedExternally)
-            {
-                updatedChat.Avatar = Context.Chat?.Avatar ?? updatedChat.Avatar;
-                _chatMetaUpdatedExternally = false;
-            }
-
             Context.Chat = updatedChat;
-            _ = RefreshChatPermissionsAsync();
+            RefreshChatPermissions();
             Parent.UpdateChatInList(updatedChat);
             _ = InfoPanel.ReloadMembersAfterEditAsync();
         });
@@ -1358,7 +1346,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         });
     }
 
-    private async Task RefreshChatPermissionsAsync()
+    private void RefreshChatPermissions()
     {
         if (Context.Chat == null)
         {
@@ -1369,29 +1357,22 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             return;
         }
 
-        CanLeaveChat = !IsDepartmentScopedChat && (!InfoPanel.IsGroupChat || Context.Chat.CreatedById != Context.CurrentUserId);
-        OnPropertyChanged(nameof(CanLeaveChat));
+        CanLeaveChat = !IsDepartmentScopedChat
+            && (!InfoPanel.IsGroupChat || Context.Chat.CreatedById != Context.CurrentUserId);
 
         if (!InfoPanel.IsGroupChat)
         {
             CanEditGroupChat = false;
+            OnPropertyChanged(nameof(CanLeaveChat));
             OnPropertyChanged(nameof(CanEditGroupChat));
             return;
         }
 
-        var canEdit = _isSystemAdmin || Context.Chat.CreatedById == Context.CurrentUserId;
+        CanEditGroupChat = _isSystemAdmin
+            || Context.Chat.CreatedById == Context.CurrentUserId
+            || Context.CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
 
-        if (!canEdit)
-        {
-            var membersResult = await Context.Api.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(Context.ChatId), Context.LifetimeToken);
-            if (membersResult is { Success: true, Data: not null })
-            {
-                var currentMember = membersResult.Data.FirstOrDefault(x => x.UserId == Context.CurrentUserId);
-                canEdit = currentMember?.Role is ChatRole.Admin or ChatRole.Owner;
-            }
-        }
-
-        CanEditGroupChat = canEdit;
+        OnPropertyChanged(nameof(CanLeaveChat));
         OnPropertyChanged(nameof(CanEditGroupChat));
     }
 
@@ -1516,7 +1497,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (chatResult is { Success: true, Data: not null })
             {
                 Context.Chat = chatResult.Data;
-                await RefreshChatPermissionsAsync();
+                RefreshChatPermissions();
             }
 
 
@@ -1633,36 +1614,47 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         FilesItems.Clear();
         MembersPreview.Clear();
     }
-    private volatile bool _chatMetaUpdatedExternally;
-    private async void OnChatUpdated(ChatDto chat)
+
+    private void OnChatUpdated(ChatUpdateEventDto update)
     {
-        if (chat.Id != Context.ChatId || Context.IsDisposed) return;
+        if (update.Id != Context.ChatId || Context.IsDisposed) return;
 
-        var oldAvatar = Context.Chat?.Avatar;
-
-        if (oldAvatar == chat.Avatar)
+        Dispatcher.UIThread.Post(() =>
         {
-            _chatMetaUpdatedExternally = true;
-            Context.Chat = chat;
-            await RefreshChatPermissionsAsync();
-            return;
-        }
+            if (Context.IsDisposed) return;
 
-        if (!string.IsNullOrEmpty(oldAvatar))
-        {
-            try
-            {
-                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>().InvalidateByRelativePath(oldAvatar);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatVM] Avatar invalidate error: {ex.Message}");
-            }
-        }
+            var oldAvatar = Context.Chat?.Avatar;
 
-        _chatMetaUpdatedExternally = true;
-        Context.Chat = chat;
-        await RefreshChatPermissionsAsync();
+            if (Context.Chat != null)
+            {
+                Context.Chat.Name = update.Name;
+                Context.Chat.ShowHistoryForNewMembers = update.ShowHistoryForNewMembers;
+                Context.Chat.Type = update.Type;
+            }
+
+            if (oldAvatar != update.Avatar)
+            {
+                if (!string.IsNullOrEmpty(oldAvatar))
+                {
+                    try
+                    {
+                        App.Current.Services
+                            .GetRequiredService<AuthenticatedImageLoader>()
+                            .InvalidateByRelativePath(oldAvatar);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ChatVM] Avatar invalidate error: {ex.Message}");
+                    }
+                }
+
+                Context.Chat?.Avatar = update.Avatar;
+            }
+
+            OnPropertyChanged(nameof(Chat));
+
+            RefreshChatPermissions();
+        });
     }
     #endregion
 }

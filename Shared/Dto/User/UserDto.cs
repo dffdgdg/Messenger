@@ -18,8 +18,6 @@ public class UserDto
     public DateTime? LastOnline { get; set; }
     public Theme? Theme { get; set; }
     public bool? NotificationsEnabled { get; set; }
-    public bool? SoundsEnabled { get; set; }
-
     public UserStatusType StatusType { get; set; } = UserStatusType.Online;
     public DateTime? StatusExpiresAt { get; set; }
 }

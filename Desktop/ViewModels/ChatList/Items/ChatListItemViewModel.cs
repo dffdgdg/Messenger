@@ -22,6 +22,7 @@ public partial class ChatListItemViewModel : ObservableObject
         ContactIsOnline = dto.ContactIsOnline;
         ContactStatusType = dto.ContactStatusType;
         ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers;
     }
     partial void OnAvatarChanged(string? value) =>
         Debug.WriteLine($"[ChatListItem id={Id}] Avatar = '{value}'");
@@ -40,6 +41,7 @@ public partial class ChatListItemViewModel : ObservableObject
     [ObservableProperty] public partial bool ContactIsOnline { get; set; }
     [ObservableProperty] public partial UserStatusType ContactStatusType { get; set; } = UserStatusType.Online;
     [ObservableProperty] public partial DateTime? ContactStatusExpiresAt { get; set; }
+    [ObservableProperty] public partial bool ShowHistoryForNewMembers { get; set; }
 
     public bool ShowStatusIndicator => Type == ChatType.Contact;
 
@@ -70,6 +72,7 @@ public partial class ChatListItemViewModel : ObservableObject
         ContactIsOnline = dto.ContactIsOnline;
         ContactStatusType = dto.ContactStatusType;
         ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers;
     }
 
     /// <summary>

@@ -122,8 +122,13 @@ public static class CacheMapper
 
         if (!string.IsNullOrEmpty(entity.FilesJson))
         {
-            try { dto.Files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts) ?? []; }
-            catch { dto.Files = []; }
+            try
+            {
+                var files = JsonSerializer.Deserialize<List<MessageFileDto>>(entity.FilesJson, JsonOpts);
+                if (files is { Count: > 0 })
+                    dto.Files = files;
+            }
+            catch { /* corrupted */ }
         }
 
         return dto;

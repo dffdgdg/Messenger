@@ -34,6 +34,7 @@ public interface ILocalCacheService
     Task UpsertMessagesAsync(IEnumerable<MessageDto> messages);
     Task UpdatePollThreadAsync(PollDto poll);
     Task MarkMessageDeletedAsync(int messageId);
+    Task PatchChatMetaAsync(ChatUpdateEventDto update);
     /// <summary>
     /// Используется при gap fill overflow (слишком большой разрыв после reconnect).
     /// </summary>

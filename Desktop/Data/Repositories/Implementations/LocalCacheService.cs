@@ -170,6 +170,21 @@ public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository me
         };
         await _localDb.Connection.InsertOrReplaceAsync(pointer);
     }
+    public async Task PatchChatMetaAsync(ChatUpdateEventDto update)
+    {
+        await _localDb.Connection.ExecuteAsync(
+            """
+        UPDATE chats
+        SET name = ?,
+            avatar = ?,
+            show_history_for_new_members = ?
+        WHERE id = ?
+        """,
+            update.Name,
+            update.Avatar,
+            update.ShowHistoryForNewMembers ? 1 : 0,
+            update.Id);
+    }
 
     public async Task<CachedReadPointer?> GetReadPointerAsync(int chatId)
         => await _localDb.Connection.FindAsync<CachedReadPointer>(chatId);

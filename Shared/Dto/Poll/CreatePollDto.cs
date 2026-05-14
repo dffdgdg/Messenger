@@ -6,6 +6,5 @@ public class CreatePollDto
     public string Question { get; set; } = string.Empty;
     public bool IsAnonymous { get; set; }
     public bool AllowsMultipleAnswers { get; set; }
-    public DateTime? ClosesAt { get; set; }
     public List<CreatePollOptionDto> Options { get; set; } = [];
 }

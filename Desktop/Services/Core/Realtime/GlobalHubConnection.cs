@@ -47,7 +47,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action<int, UserDto>? MemberJoined;
     public event Action<int, int>? MemberLeft;
     public event Action? Reconnected;
-    public event Action<ChatDto>? ChatUpdated;
+    public event Action<ChatUpdateEventDto>? ChatUpdated;
     public event Action<int>? ChatRemoved;
     #endregion
 
@@ -283,14 +283,14 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, int, int?, DateTime?>(HubMethods.Chat.MessageRead, (c, u, m, t) => PostUI(() => MessageRead?.Invoke(c, u, m, t))));
         _subs.Add(_hub.On<int, UserDto>(HubMethods.Chat.MemberJoined, (c, u) => PostUI(() => MemberJoined?.Invoke(c, u))));
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.MemberLeft, (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
-        _subs.Add(_hub.On<ChatDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
+        _subs.Add(_hub.On<ChatUpdateEventDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
         _subs.Add(_hub.On<int>(HubMethods.Chat.ChatRemoved, chatId => PostUI(() => ChatRemoved?.Invoke(chatId))));
     }
 
-    private void OnChatUpdated(ChatDto chat)
+    private void OnChatUpdated(ChatUpdateEventDto update)
     {
-        _ = SafeCacheAsync(() => _cache.UpsertChatsAsync([chat]), "chat update");
-        PostUI(() => ChatUpdated?.Invoke(chat));
+        _ = SafeCacheAsync(() => _cache.PatchChatMetaAsync(update), "chat meta update");
+        PostUI(() => ChatUpdated?.Invoke(update));
     }
 
     private void UnsubscribeHubEvents()

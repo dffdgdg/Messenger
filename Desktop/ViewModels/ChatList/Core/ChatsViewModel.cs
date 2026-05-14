@@ -227,12 +227,12 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
-    private void OnGlobalChatUpdated(ChatDto updatedChat)
+    private void OnGlobalChatUpdated(ChatUpdateEventDto update)
     {
-        if (!IsChatMatchingCurrentTab(updatedChat.Type))
+        if (!IsChatMatchingCurrentTab(update.Type))
             return;
 
-        UpdateChatInList(updatedChat);
+        UpdateChatMeta(update);
     }
 
     private void OnGlobalChatRemoved(int chatId)
@@ -573,34 +573,18 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
     }
 
-    public void UpdateChatInList(ChatDto updatedChat)
+    public void UpdateChatMeta(ChatUpdateEventDto update)
     {
-        ChatListItemViewModel? target = null;
-
-        for (var i = 0; i < Chats.Count; i++)
-        {
-            if (Chats[i].Id == updatedChat.Id)
-            {
-                target = Chats[i];
-                break;
-            }
-        }
-
-        if (target == null)
-        {
-            updatedChat.UnreadCount = _globalHub.GetUnreadCount(updatedChat.Id);
-            return;
-        }
+        var target = FindChat(update.Id);
+        if (target == null) return;
 
         var oldAvatar = target.Avatar;
-        var newAvatar = updatedChat.Avatar;
+        var newAvatar = update.Avatar;
 
-        if (oldAvatar == newAvatar)
-        {
-            target.ApplyExceptAvatar(updatedChat);
-            MoveChatToTop(target);
-            return;
-        }
+        target.Name = update.Name;
+        target.ShowHistoryForNewMembers = update.ShowHistoryForNewMembers;
+
+        if (oldAvatar == newAvatar) return;
 
         if (!string.IsNullOrEmpty(oldAvatar))
         {
@@ -618,8 +602,14 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         target.Avatar = null;
         target.Avatar = newAvatar;
-        target.ApplyExceptAvatar(updatedChat);
-        MoveChatToTop(target);
+    }
+
+    public void UpdateChatInList(ChatDto updatedChat)
+    {
+        var target = FindChat(updatedChat.Id);
+        if (target == null) return;
+
+        target.Apply(updatedChat);
     }
 
     private ChatListItemViewModel? FindChat(int chatId) => Chats.FirstOrDefault(c => c.Id == chatId);

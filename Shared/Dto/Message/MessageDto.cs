@@ -12,43 +12,27 @@ public class MessageDto
     public string? SenderAvatarUrl { get; set; }
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
-    public PollDto? Poll { get; set; }
     public bool IsOwn { get; set; }
     public bool IsPrevSameSender { get; set; }
-    public DateTime? EditedAt { get; set; }
     public bool IsEdited { get; set; }
     public bool IsDeleted { get; set; }
     public bool IsPinned { get; set; }
     public bool IsSystemMessage { get; set; }
-    public DateTime? PinnedAt { get; set; }
-    public int? PinnedByUserId { get; set; }
-    public int? ReplyToMessageId { get; set; }
-    public MessageReplyPreviewDto? ReplyToMessage { get; set; }
-    public int? ForwardedFromMessageId { get; set; }
-    public MessageForwardInfoDto? ForwardedFrom { get; set; }
-    public MessageDto? PreviousMessage { get; set; }
-
-    public bool ShowSenderName
-    {
-        get
-        {
-            if (PreviousMessage == null)
-                return true;
-            if (SenderId != PreviousMessage.SenderId)
-                return true;
-            var timeDiff = CreatedAt - PreviousMessage.CreatedAt;
-            return timeDiff.TotalMinutes > 5;
-        }
-    }
-
-    public SystemEventType? SystemEventType { get; set; }
-    public int? TargetUserId { get; set; }
-    public string? TargetUserName { get; set; }
-
     public bool IsVoiceMessage { get; set; }
-    public double? VoiceDurationSeconds { get; set; }
-    public string? VoiceWaveform { get; set; }
-    public string? VoiceFileUrl { get; set; }
-    public long? VoiceFileSize { get; set; }
-    public List<MessageFileDto> Files { get; set; } = [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? EditedAt { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? PinnedAt { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? PinnedByUserId { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? ReplyToMessageId { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public MessageReplyPreviewDto? ReplyToMessage { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? ForwardedFromMessageId { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public MessageForwardInfoDto? ForwardedFrom { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SystemEventType? SystemEventType { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? TargetUserId { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? TargetUserName { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public double? VoiceDurationSeconds { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? VoiceWaveform { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? VoiceFileUrl { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public long? VoiceFileSize { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public PollDto? Poll { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<MessageFileDto>? Files { get; set; }
 }

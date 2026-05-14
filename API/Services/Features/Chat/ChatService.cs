@@ -36,9 +36,8 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         var dialogChatIds = chatsData.Where(c => c.Chat.Type == ChatType.Contact).Select(c => c.Chat.Id).ToList();
 
         var dialogPartners = await GetDialogPartnersAsync(dialogChatIds, userId);
-
-        var result = chatsData.ConvertAll(item =>
-            BuildChatDto(item, unreadCounts, dialogPartners));
+        var userRoles = await LoadCurrentUserRolesAsync(chatIds, userId);
+        var result = chatsData.ConvertAll(item => BuildChatDto(item, unreadCounts, dialogPartners, userRoles));
 
         return Result<List<ChatDto>>.Success([.. result.OrderByDescending(c => c.UnreadCount > 0).ThenByDescending(c => c.LastMessageDate)]);
     }
@@ -58,13 +57,23 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         });
     }
 
+    private async Task<Dictionary<int, ChatRole>> LoadCurrentUserRolesAsync(List<int> chatIds, int userId)
+    {
+        return await _context.ChatMembers
+            .Where(cm => chatIds.Contains(cm.ChatId) && cm.UserId == userId)
+            .ToDictionaryAsync(cm => cm.ChatId, cm => cm.Role);
+    }
+
     private static LastMessageInfo MapToLastMessageInfo(LastMessageProjection msg) =>
         new(msg.Id, msg.Content, msg.CreatedAt, msg.IsSystemMessage,
             msg.SenderId, msg.IsVoiceMessage, msg.SystemEventType,
             msg.TargetUserId, msg.SenderName, msg.TargetUserName,
             msg.HasPoll, msg.HasFiles);
 
-    private ChatDto BuildChatDto(ChatWithLastMessage item, Dictionary<int, int> unreadCounts, Dictionary<int, DialogPartnerInfo> dialogPartners)
+    private ChatDto BuildChatDto(ChatWithLastMessage item,
+        Dictionary<int, int> unreadCounts,
+        Dictionary<int, DialogPartnerInfo> dialogPartners,
+        Dictionary<int, ChatRole> userRoles)
     {
         var msg = item.LastMessage;
         var (preview, senderName, isSystem) =
@@ -88,6 +97,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         };
 
         ApplyChatIdentity(dto, item, dialogPartners);
+        dto.CurrentUserRole = userRoles.GetValueOrDefault(item.Chat.Id);
         dto.ShowHistoryForNewMembers = item.Chat.ShowHistoryForNewMembers;
 
         return dto;
@@ -156,13 +166,17 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
         if (chatEntity is null)
             return Result<ChatDto>.NotFound($"Чат с ID {chatId} не найден");
 
+        var member = await _context.ChatMembers.Where(cm => cm.ChatId == chatId && cm.UserId == userId)
+            .Select(cm => cm.Role).FirstOrDefaultAsync();
+
         var dto = new ChatDto
         {
             Id = chatEntity.Id,
             Type = chatEntity.Type,
             CreatedById = chatEntity.CreatedById ?? 0,
             LastMessageDate = chatEntity.LastMessageTime,
-            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers,
+            CurrentUserRole = member
         };
 
         if (chatEntity.Type == ChatType.Contact)
@@ -282,7 +296,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
             if (newChat.Type != ChatType.Contact)
                 await _systemMessages.CreateAsync(newChat.Id, dto.CreatedById, SystemEventType.ChatCreated);
 
-            var createdChatDto = new ChatDto
+            var createdEvent = new ChatUpdateEventDto
             {
                 Id = newChat.Id,
                 Name = newChat.Name,
@@ -298,15 +312,21 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
             foreach (var memberId in memberIds)
             {
-                await _hubNotifier.SendToUserAsync(memberId, HubMethods.Chat.ChatUpdated, createdChatDto);
-                var connectionIds = _onlineService.GetConnectionIds(memberId);
-                foreach (var connectionId in connectionIds)
+                await _hubNotifier.SendToUserAsync(memberId, HubMethods.Chat.ChatUpdated, createdEvent);
+                foreach (var connectionId in _onlineService.GetConnectionIds(memberId))
                     await hubContext.Groups.AddToGroupAsync(connectionId, $"chat_{newChat.Id}", ct);
             }
 
             LogChatCreated(newChat.Id, dto.CreatedById);
 
-            return Result<ChatDto>.Success(createdChatDto);
+            return Result<ChatDto>.Success(new ChatDto
+            {
+                Id = newChat.Id,
+                Name = newChat.Name,
+                Type = newChat.Type,
+                CreatedById = dto.CreatedById,
+                ShowHistoryForNewMembers = newChat.ShowHistoryForNewMembers
+            });
         }
         catch
         {
@@ -403,7 +423,10 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
         LogChatUpdated(chatId, userId);
 
-        var updatedDto = new ChatDto
+        var updateEvent = BuildUpdateEvent(chatEntity);
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updateEvent);
+
+        return Result<ChatDto>.Success(new ChatDto
         {
             Id = chatEntity.Id,
             Name = chatEntity.Name,
@@ -412,10 +435,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
             LastMessageDate = chatEntity.LastMessageTime,
             Avatar = _urlBuilder.BuildUrl(chatEntity.Avatar),
             ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
-        };
-
-        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
-        return Result<ChatDto>.Success(updatedDto);
+        });
     }
 
     private async Task<Result> ApplyChatUpdatesAsync(Data.Chat chatEntity, UpdateChatDto dto, int userId, int chatId)
@@ -490,18 +510,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
         LogAvatarRemoved(chatId);
 
-        var updatedDto = new ChatDto
-        {
-            Id = chatEntity.Id,
-            Name = chatEntity.Name,
-            Type = chatEntity.Type,
-            CreatedById = chatEntity.CreatedById ?? 0,
-            LastMessageDate = chatEntity.LastMessageTime,
-            Avatar = null,
-            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
-        };
-
-        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, BuildUpdateEvent(chatEntity));
 
         return Result.Success();
     }
@@ -538,18 +547,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
         var avatarUrl = _urlBuilder.BuildUrl(saveResult.Value)!;
 
-        var updatedDto = new ChatDto
-        {
-            Id = chatEntity.Id,
-            Name = chatEntity.Name,
-            Type = chatEntity.Type,
-            CreatedById = chatEntity.CreatedById ?? 0,
-            LastMessageDate = chatEntity.LastMessageTime,
-            Avatar = avatarUrl,
-            ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
-        };
-
-        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, updatedDto);
+        await _hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.ChatUpdated, BuildUpdateEvent(chatEntity));
 
         return Result<string>.Success(avatarUrl);
     }
@@ -557,6 +555,16 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
     #endregion
 
     #region Private Helpers
+
+    private ChatUpdateEventDto BuildUpdateEvent(Data.Chat chatEntity) => new()
+    {
+        Id = chatEntity.Id,
+        Name = chatEntity.Name,
+        Type = chatEntity.Type,
+        CreatedById = chatEntity.CreatedById ?? 0,
+        Avatar = _urlBuilder.BuildUrl(chatEntity.Avatar),
+        ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+    };
 
     private async Task<DialogPartnerInfo?> GetDialogPartnerAsync(int chatId, int currentUserId)
         => (await GetDialogPartnersAsync([chatId], currentUserId)).GetValueOrDefault(chatId);

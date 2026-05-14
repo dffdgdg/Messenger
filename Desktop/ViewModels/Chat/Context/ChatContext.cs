@@ -11,6 +11,7 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public event Action<ObservableCollection<UserDto>, ObservableCollection<UserDto>>? MembersReplaced;
     public event Action<MessageDto>? MessagePinStateChanged;
     private ObservableCollection<UserDto> _members = [];
+    public ChatRole? CurrentUserRole { get; set; }
     public IChatNavigator? Navigator { get; init; }
     public Action<MessageDto>? RequestIncrementCounters { get; set; }
     public ObservableCollection<UserDto> Members

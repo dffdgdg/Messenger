@@ -19,9 +19,8 @@ public class ChatDto
     public bool LastMessageIsPoll { get; set; }
     public bool LastMessageIsVoice { get; set; }
     public bool LastMessageHasFilesOnly { get; set; }
-
-    [JsonIgnore]
-    public bool HideSenderPrefix { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public ChatRole? CurrentUserRole { get; set; }
+    [JsonIgnore] public bool HideSenderPrefix { get; set; }
     public bool ShowHistoryForNewMembers { get; set; } = true;
     public int? ContactUserId { get; set; }
     public bool ContactIsOnline { get; set; }

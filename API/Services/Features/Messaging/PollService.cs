@@ -54,8 +54,7 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
             {
                 MessageId = message.Id,
                 IsAnonymous = dto.IsAnonymous,
-                AllowsMultipleAnswers = dto.AllowsMultipleAnswers,
-                ClosesAt = dto.ClosesAt
+                AllowsMultipleAnswers = dto.AllowsMultipleAnswers
             };
 
             pollRepository.Add(poll);

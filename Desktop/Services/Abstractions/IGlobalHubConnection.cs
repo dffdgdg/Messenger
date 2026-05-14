@@ -18,7 +18,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<int, UserDto>? MemberJoined;
     event Action<int, int>? MemberLeft;
     event Action? Reconnected;
-    event Action<ChatDto>? ChatUpdated;
+    event Action<ChatUpdateEventDto>? ChatUpdated;
     event Action<int>? ChatRemoved;
 
     bool IsConnected { get; }

@@ -51,30 +51,11 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
     {
         Messages = messages,
         HasMoreMessages = hasOlder,
-        HasNewerMessages = hasNewer,
-        TotalCount = messages.Count,
-        CurrentPage = 1
+        HasNewerMessages = hasNewer
     };
 
     private static string EscapeLikePattern(string pattern)
         => string.IsNullOrEmpty(pattern)? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
-
-    private async Task<List<Message>> LoadAllMessagesAsync(int chatId, int? beforeId = null, int? afterId = null,
-        DateTime? cutoff = null, int? take = null, bool oldestFirst = false)
-    {
-        var userMessages = await messageRepository.GetUserMessagesForMixedAsync(chatId, beforeId, afterId, cutoff);
-
-        var sysMessages = await messageRepository.GetSystemMessagesAsync(chatId, beforeId, afterId, cutoff);
-
-        IEnumerable<Message> all = userMessages.Cast<Message>().Concat(sysMessages);
-
-        all = oldestFirst ? all.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id) : all.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id);
-
-        if (take.HasValue)
-            all = all.Take(take.Value);
-
-        return [.. all];
-    }
 
     private async Task<DateTime?> GetHistoryCutoffAsync(int chatId, int userId)
     {

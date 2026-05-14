@@ -767,7 +767,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     #region Grouping
 
-    private static readonly long GroupingThresholdTicks = TimeSpan.FromMinutes(2).Ticks;
+    private static readonly long GroupingThresholdTicks = TimeSpan.FromMinutes(5).Ticks;
 
     private void UpdateGroupPosition() => GroupPosition = (IsContinuation, HasNextFromSame) switch
     {

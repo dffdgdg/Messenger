@@ -1,5 +1,4 @@
 using Desktop.ViewModels.Chat;
-using System;
 using System.ComponentModel;
 
 namespace Desktop.Views.Chat;

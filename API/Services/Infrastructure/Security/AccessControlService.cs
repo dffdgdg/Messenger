@@ -8,8 +8,7 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
     private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _requestCache = [];
 
     public async Task<List<int>> GetUserChatIdsAsync(int userId)
-        => await cache.GetUserChatIdsAsync(userId, () =>
-            context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
+        => await cache.GetUserChatIdsAsync(userId, () => context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
 
     public async Task<bool> IsMemberAsync(int userId, int chatId)
         => await GetMembershipAsync(userId, chatId) is not null;

@@ -23,43 +23,23 @@ public class AuthControllerTests
 
     public async Task Login_InternalError_Returns500()
     {
-        _authServiceMock
-            .Setup(x => x.LoginAsync(
-                "alice",
-                "123",
-                It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.LoginAsync("alice", "123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthResponseDto>.Internal("DB error"));
 
-        var result = await _controller.Login(
-            new LoginRequest("alice", "123"),
-            CancellationToken.None);
+        var result = await _controller.Login(new LoginRequest("alice", "123"), CancellationToken.None);
 
-        var objectResult = result.Should()
-            .BeOfType<ObjectResult>()
-            .Subject;
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
 
         objectResult.StatusCode.Should().Be(500);
     }
     [Fact]
     public async Task Login_CallsServiceOnce()
     {
-        _authServiceMock
-            .Setup(x => x.LoginAsync(
-                "alice",
-                "123",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AuthResponseDto>.Success(new()));
+        _authServiceMock.Setup(x => x.LoginAsync("alice", "123", It.IsAny<CancellationToken>())).ReturnsAsync(Result<AuthResponseDto>.Success(new()));
 
-        await _controller.Login(
-            new LoginRequest("alice", "123"),
-            CancellationToken.None);
+        await _controller.Login(new LoginRequest("alice", "123"), CancellationToken.None);
 
-        _authServiceMock.Verify(x =>
-            x.LoginAsync(
-                "alice",
-                "123",
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        _authServiceMock.Verify(x => x.LoginAsync( "alice","123", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -99,8 +79,7 @@ public class AuthControllerTests
             UserId = 1,
             Role = UserRole.User
         };
-        _authServiceMock
-            .Setup(s => s.RefreshTokenAsync("old-access", "old-refresh", It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(s => s.RefreshTokenAsync("old-access", "old-refresh", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<TokenResponseDto>.Success(expected));
 
         var result = await _controller.Refresh(

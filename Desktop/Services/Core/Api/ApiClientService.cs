@@ -1,16 +1,11 @@
 ﻿using Desktop.Infrastructure.Helpers;
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Core.Api;
 

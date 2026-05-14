@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Desktop.Services.Abstractions;
+﻿namespace Desktop.Services.Abstractions;
 
 /// <summary>
 /// Обслуживание локального кэша.

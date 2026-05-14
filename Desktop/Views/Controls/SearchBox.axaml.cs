@@ -1,7 +1,6 @@
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Interactivity;
-using System;
 
 namespace Desktop.Views.Controls;
 

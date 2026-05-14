@@ -1,8 +1,4 @@
 ﻿using Shared.Dto.Call;
-using Shared.DTO.Call;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Abstractions;
 

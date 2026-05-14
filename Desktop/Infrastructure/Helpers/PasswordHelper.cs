@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace Desktop.Infrastructure.Helpers;
+﻿namespace Desktop.Infrastructure.Helpers;
 
 public static class PasswordHelper
 {

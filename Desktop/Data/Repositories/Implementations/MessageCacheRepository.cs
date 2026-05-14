@@ -1,10 +1,7 @@
 ﻿using Desktop.Data.Models.Cache;
 using Desktop.Data.Repositories.Abstractions;
 using SQLite;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Desktop.Data.Repositories.Implementations;
 
@@ -34,7 +31,33 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     }
 
     public async Task MarkDeletedAsync(int messageId) =>
-        await Db.ExecuteAsync("UPDATE messages SET is_deleted = 1, content = NULL, poll_json = NULL, files_json = NULL WHERE id = ?", messageId);
+        await Db.ExecuteAsync("""
+            UPDATE messages
+            SET is_deleted = 1,
+                content = NULL,
+                poll_json = NULL,
+                files_json = NULL,
+                reply_to_message_id = NULL,
+                reply_sender_name = NULL,
+                reply_content_preview = NULL,
+                reply_is_deleted = 0,
+                reply_sender_id = NULL,
+                reply_chat_id = NULL,
+                reply_is_voice = 0,
+                reply_has_poll = 0,
+                reply_files_count = 0,
+                forwarded_from_message_id = NULL,
+                forward_sender_name = NULL,
+                forward_original_sender_id = NULL,
+                forward_original_chat_id = NULL,
+                forward_original_date = NULL
+            WHERE id = ?;
+
+            UPDATE messages
+            SET reply_is_deleted = 1,
+                reply_content_preview = NULL
+            WHERE reply_to_message_id = ?
+            """, messageId, messageId);
 
     public async Task UpdatePollThreadAsync(int originalMessageId, string pollJson)
         => await Db.ExecuteAsync("UPDATE messages SET poll_json = ? WHERE is_deleted = 0 AND (id = ? OR forwarded_from_message_id = ?)",

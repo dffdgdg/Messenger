@@ -5,7 +5,7 @@ namespace API.Repositories.Implementations;
 public sealed class PollRepository(MessengerDbContext context) : IPollRepository
 {
     public void Add(Poll poll) => context.Polls.Add(poll);
-    public void AddOption(PollOption o) => context.PollOptions.Add(o);
+    public void AddOption(PollOption option) => context.PollOptions.Add(option);
     public void AddVote(PollVote vote) => context.PollVotes.Add(vote);
     public void RemoveVotes(IEnumerable<PollVote> votes) => context.PollVotes.RemoveRange(votes);
     public Task<Poll?> FindByIdWithDetailsAsync(int pollId, CancellationToken ct = default)

@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Desktop.Services.Abstractions;
+﻿namespace Desktop.Services.Abstractions;
 
 public interface IApiClientService : IDisposable
 {

@@ -1,7 +1,5 @@
 ﻿using Desktop.ViewModels.Dialog;
 using Shared.Dto.Call;
-using System;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Call;
 

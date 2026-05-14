@@ -17,6 +17,11 @@
 		</StackPanel>
 
 		<ItemsControl ItemsSource="{Binding Options}">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<StackPanel/>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate x:DataType="vmChat:PollOptionViewModel">
 					<Panel Margin="0,3">

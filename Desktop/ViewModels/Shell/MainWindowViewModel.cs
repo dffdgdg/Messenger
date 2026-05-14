@@ -2,8 +2,6 @@
 using Desktop.Services.Features.Call;
 using Desktop.Services.UI;
 using Desktop.ViewModels.Dialog;
-using System;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels;
 

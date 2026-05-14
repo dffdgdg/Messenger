@@ -5,12 +5,9 @@ using Desktop.Infrastructure.Helpers;
 using Desktop.Infrastructure.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
-using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels;
 
@@ -399,12 +396,14 @@ public partial class ProfileViewModel : BaseViewModel, IRefreshable
 
             var oldAvatar = User!.Avatar;
             if (!string.IsNullOrEmpty(oldAvatar))
-                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>()
-                   .InvalidateByRelativePath(oldAvatar);
+            {
+                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>().InvalidateByRelativePath(oldAvatar);
+            }
 
             if (!string.IsNullOrEmpty(newAvatarUrl))
-                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>()
-                   .InvalidateByRelativePath(newAvatarUrl);
+            {
+                App.Current.Services.GetRequiredService<AuthenticatedImageLoader>().InvalidateByRelativePath(newAvatarUrl);
+            }
 
             // Подавляем OnUserChanged чтобы не перезаписал AvatarUrl без buster
             _suppressAvatarRefresh = true;

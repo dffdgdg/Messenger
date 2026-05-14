@@ -1,9 +1,8 @@
 ﻿using SQLite;
-using System;
 
 namespace Desktop.Data.Models.Cache;
 
-[SQLite.Table("downloaded_files")]
+[Table("downloaded_files")]
 public class CachedDownloadedFile
 {
     [PrimaryKey]

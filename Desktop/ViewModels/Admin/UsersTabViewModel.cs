@@ -1,11 +1,6 @@
-﻿using Desktop.Services.Core.Api;
-using Desktop.ViewModels.Admin;
+﻿using Desktop.ViewModels.Admin;
 using Desktop.ViewModels.Dialog;
 using Shared.Dto.Department;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels;
 

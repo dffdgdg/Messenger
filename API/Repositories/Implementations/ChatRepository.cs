@@ -31,9 +31,6 @@ public sealed class ChatRepository(MessengerDbContext context) : RepositoryBase<
     public void RemoveMember(ChatMember member)
         => _context.ChatMembers.Remove(member);
 
-    public async Task<List<Chat>> GetByIdsLightAsync(IEnumerable<int> chatIds, CancellationToken ct = default)
-        => await _context.Chats.Where(c => chatIds.Contains(c.Id)).AsNoTracking().ToListAsync(ct);
-
     public async Task<List<LastMessageProjection>> GetLastMessagesAsync(IEnumerable<int> chatIds, CancellationToken ct = default)
     {
         var ids = chatIds.ToList();

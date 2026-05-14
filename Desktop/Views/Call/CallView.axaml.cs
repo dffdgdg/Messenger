@@ -1,6 +1,5 @@
 using Avalonia.Reactive;
 using Desktop.ViewModels.Call;
-using System;
 
 namespace Desktop.Views.Call;
 

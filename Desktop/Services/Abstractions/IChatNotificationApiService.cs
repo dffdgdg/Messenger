@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Desktop.Services.Abstractions;
+﻿namespace Desktop.Services.Abstractions;
 
 public interface IChatNotificationApiService
 {

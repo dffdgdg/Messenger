@@ -1,8 +1,6 @@
 ﻿using Desktop.Data;
 using Desktop.Data.Repositories.Abstractions;
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Platform.Cache;
 

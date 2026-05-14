@@ -1,5 +1,4 @@
-﻿using Avalonia.Controls;
-using Avalonia.Controls.Templates;
+﻿using Avalonia.Controls.Templates;
 using Desktop.ViewModels.Chat;
 
 namespace Desktop.Views.Chat;

@@ -1,5 +1,3 @@
-using System;
-
 namespace Desktop.ViewModels.Chat;
 
 public partial class PollOptionViewModel : ObservableObject

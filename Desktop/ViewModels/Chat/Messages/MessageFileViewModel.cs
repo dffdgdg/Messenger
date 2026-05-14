@@ -1,15 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Desktop.Services.Abstractions;
-using Desktop.Services.Features.Media.Files;
-using Desktop.Services.UI;
-using Shared.Dto.Message;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Avalonia.Threading;
+﻿using Desktop.Services.Features.Media.Files;
 
 namespace Desktop.ViewModels.Chat;
 

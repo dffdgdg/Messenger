@@ -92,6 +92,7 @@
                     Padding="24,16">
                 <Button HorizontalAlignment="Stretch"
                         Command="{Binding SendMessageCommand}"
+                        IsVisible="{Binding CanSendMessage}"
                         HorizontalContentAlignment="Center"
                         Classes="Primary FullWidth">
                     <TextBlock Text="Отправить сообщение"

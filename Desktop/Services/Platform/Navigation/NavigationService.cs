@@ -1,7 +1,5 @@
 ﻿using Desktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 
 namespace Desktop.Services.Platform.Navigation;
 

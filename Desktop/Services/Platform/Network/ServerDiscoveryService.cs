@@ -1,14 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Platform.Network;
 
-public sealed class ServerDiscoveryService(ILogger<ServerDiscoveryService> logger) : IServerDiscoveryService
+public sealed partial class ServerDiscoveryService(ILogger<ServerDiscoveryService> logger)
+    : IServerDiscoveryService
 {
     private const int DiscoveryPort = 5275;
     private const string RequestMagic = "MESSENGER_DISCOVER";
@@ -26,11 +24,12 @@ public sealed class ServerDiscoveryService(ILogger<ServerDiscoveryService> logge
         {
             await udp.SendAsync(request, request.Length,
                 new IPEndPoint(IPAddress.Broadcast, DiscoveryPort));
-            logger.LogInformation("[Discovery] Broadcast отправлен");
+
+            LogBroadcastSent();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "[Discovery] Не удалось отправить broadcast");
+            LogBroadcastFailed(ex);
             return null;
         }
 
@@ -56,15 +55,32 @@ public sealed class ServerDiscoveryService(ILogger<ServerDiscoveryService> logge
                     : result.RemoteEndPoint.Address.ToString();
 
                 var url = $"http://{ip}:{port}/";
-                logger.LogInformation("[Discovery] Сервер найден: {Url}", url);
+
+                LogServerFound(url);
                 return url;
             }
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("[Discovery] Таймаут — сервер не найден");
+            LogDiscoveryTimeout();
         }
 
         return null;
     }
+
+    #region Log
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[Discovery] Broadcast отправлен")]
+    private partial void LogBroadcastSent();
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[Discovery] Не удалось отправить broadcast")]
+    private partial void LogBroadcastFailed(Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[Discovery] Сервер найден: {Url}")]
+    private partial void LogServerFound(string url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[Discovery] Таймаут — сервер не найден")]
+    private partial void LogDiscoveryTimeout();
+
+    #endregion
 }

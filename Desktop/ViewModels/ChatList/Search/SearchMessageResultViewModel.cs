@@ -1,5 +1,4 @@
 ﻿using Desktop.Infrastructure.Helpers;
-using System;
 
 namespace Desktop.ViewModels.ChatList.Search;
 

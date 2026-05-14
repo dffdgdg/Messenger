@@ -6,8 +6,4 @@ public sealed record CacheBundle(IAccessControlService AccessControl, ICacheServ
 public sealed record NotificationBundle(IHubNotifier HubNotifier, INotificationService NotificationService);
 public sealed record MediaBundle(IFileService FileService);
 public sealed record PresenceBundle(IOnlineUserService OnlineService);
-
-/// <summary>
-/// Композитный бандл для сервисов, работающих с чатами, сообщениями, участниками.
-/// </summary>
 public sealed record ChatBundle(ISystemMessageService SystemMessages, CacheBundle Cache, NotificationBundle Notifications, TimeBundle Time);

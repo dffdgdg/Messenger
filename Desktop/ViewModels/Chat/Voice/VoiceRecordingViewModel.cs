@@ -1,5 +1,4 @@
 ﻿using Desktop.Services.Features.Media.Audio;
-using System;
 
 namespace Desktop.ViewModels.Chat;
 

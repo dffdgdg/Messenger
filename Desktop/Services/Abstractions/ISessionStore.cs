@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Desktop.Services.Abstractions;
+﻿namespace Desktop.Services.Abstractions;
 
 public interface ISessionStore
 {

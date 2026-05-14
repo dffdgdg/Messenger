@@ -21,7 +21,7 @@ public static class MessageMappings
                 Id = sys.Id,
                 ChatId = sys.ChatId,
                 SenderId = sys.InitiatorId,
-                Content = SystemMessageFormatter.Format(sys.SystemEventType, initiatorName, targetName, sys.Content),
+                Content = SystemMessageFormatter.Format(sys.SystemEventType, initiatorName, targetName),
                 CreatedAt = sys.CreatedAt,
                 IsDeleted = isDeleted,
                 IsSystemMessage = true,
@@ -90,7 +90,7 @@ public static class MessageMappings
                 ChatId = sys.ChatId,
                 SenderId = sys.InitiatorId,
                 SenderName = sys.Initiator?.GetDisplayName(),
-                Content = SystemMessageFormatter.Format(sys.SystemEventType, sys.Initiator?.GetDisplayName(), sys.TargetUser?.GetDisplayName(), sys.Content),
+                Content = SystemMessageFormatter.Format(sys.SystemEventType, sys.Initiator?.GetDisplayName(), sys.TargetUser?.GetDisplayName()),
                 CreatedAt = sys.CreatedAt,
                 IsDeleted = isDeleted
             };

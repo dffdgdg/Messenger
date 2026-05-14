@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Desktop.Views.Controls.Shared;
+﻿namespace Desktop.Views.Controls.Shared;
 
 public class CircularProgress : Control
 {

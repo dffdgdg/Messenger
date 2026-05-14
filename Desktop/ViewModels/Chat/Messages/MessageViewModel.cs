@@ -6,14 +6,6 @@ using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.Helpers;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using MsgShared = Shared;
 
@@ -438,6 +430,19 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         IsPinned = false;
         VoiceFileUrl = null;
         VoiceDurationSeconds = null;
+
+        ReplyToMessageId = null;
+        ReplyToSenderName = null;
+        ReplyToContent = null;
+        ReplyToIsDeleted = false;
+
+        ForwardedFromMessageId = null;
+        ForwardedFromSenderName = null;
+        ForwardedFromSenderId = null;
+
+        ForwardedFromMessageId = null;
+        ForwardedFromSenderName = null;
+        ForwardedFromSenderId = null;
 
         ResetPlayerState();
         _cachedAudioBytes = null;
@@ -945,7 +950,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         UnsubscribeFromAudioPlayer();
         _cachedAudioBytes = null;
 
-        MemoryDiagnostics.OnMessageVmFinalized();
+        MemoryDiagnostics.OnMessageVmDisposed();
         GC.SuppressFinalize(this);
     }
 }

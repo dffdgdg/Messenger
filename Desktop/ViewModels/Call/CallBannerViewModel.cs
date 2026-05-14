@@ -1,6 +1,4 @@
 ﻿using Desktop.Services.Features.Call;
-using System;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Call;
 

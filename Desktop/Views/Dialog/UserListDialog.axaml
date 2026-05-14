@@ -3,10 +3,11 @@
              xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
              xmlns:controls="using:Desktop.Views.Controls"
              xmlns:conv="clr-namespace:Desktop.Converters;assembly=Desktop"
+             xmlns:converters="using:Desktop.Converters"
              x:Class="Desktop.Views.Dialog.UserListDialog"
              x:DataType="vmDialog:UserListDialogViewModel">
 
-    <Border Classes="DialogContainer">
+    <Border Classes="DialogContainer" MinHeight="500">
         <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
 
             <!-- Шапка -->
@@ -155,7 +156,7 @@
 
                 <Button Grid.Column="2"
                         Content="{Binding IsEditMode,
-                            Converter={conv:Converter Name=BoolToString},
+                            Converter={converters:Converter Name=BoolToString},
                             ConverterParameter='Назад|Отмена'}"
                         Classes="DialogOutline"
                         Command="{Binding CancelCommand}"

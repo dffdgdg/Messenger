@@ -3,10 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Desktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Views;
 

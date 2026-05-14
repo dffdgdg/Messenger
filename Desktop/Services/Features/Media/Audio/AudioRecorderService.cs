@@ -1,14 +1,11 @@
 ﻿using PortAudioSharp;
-using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using IOBinaryWriter = System.IO.BinaryWriter;
 using IOMemoryStream = System.IO.MemoryStream;
 using IOStream = System.IO.Stream;
+using Stream = PortAudioSharp.Stream;
 
 namespace Desktop.Services.Features.Media.Audio;
 

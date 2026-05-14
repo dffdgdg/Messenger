@@ -6,13 +6,14 @@ namespace API.Services.Infrastructure;
 public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUserService onlineUserService, IHubContext<ChatHub> hubContext, TimeProvider timeProvider,
     ILogger<UserStatusService> logger) : IUserStatusService
 {
-    public async Task<Result> SetStatusAsync(int userId, UserStatusType status, TimeSpan? duration = null)
+    public async Task<Result> SetStatusAsync(int userId, UserStatusType statusType, TimeSpan? duration)
     {
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var expiresAt = duration.HasValue ? DateTime.SpecifyKind(now.Add(duration.Value), DateTimeKind.Unspecified)
             : (DateTime?)null;
 
-        var updated = await db.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.StatusType, status).SetProperty(u => u.StatusExpiresAt, expiresAt));
+        var updated = await db.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.StatusType, statusType)
+            .SetProperty(u => u.StatusExpiresAt, expiresAt));
 
         if (updated == 0)
             return Result.NotFound($"Пользователь {userId} не найден");
@@ -22,11 +23,11 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
 
         if (user is not null)
         {
-            var dto = new UserStatusDto(user.Id, onlineUserService.IsOnline(user.Id), user.LastOnline, status, expiresAt);
+            var dto = new UserStatusDto(user.Id, onlineUserService.IsOnline(user.Id), user.LastOnline, statusType, expiresAt);
             await hubContext.Clients.All.SendAsync(HubMethods.Chat.UserStatusChanged, dto);
         }
 
-        LogStatusSet(userId, status, duration);
+        LogStatusSet(userId, statusType, duration);
         return Result.Success();
     }
 
@@ -40,11 +41,8 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
 
         var isOnline = onlineUserService.IsOnline(user.Id);
 
-        return Result<UserStatusDto>.Success(new UserStatusDto(
-            user.Id, isOnline, user.LastOnline,
-            isOnline ? user.StatusType : UserStatusType.Online,
-            user.StatusExpiresAt
-        ));
+        return Result<UserStatusDto>.Success(new UserStatusDto(user.Id, isOnline, user.LastOnline, isOnline ? user.StatusType
+            : UserStatusType.Online, user.StatusExpiresAt));
     }
 
 

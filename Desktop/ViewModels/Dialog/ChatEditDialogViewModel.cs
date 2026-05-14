@@ -1,12 +1,7 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Dialog;
 
@@ -286,11 +281,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             return;
 
         var name = _originalChat.Name ?? Name;
-        var confirmDialog = new ConfirmDialogViewModel(
-            "Удаление группы",
-            $"Вы уверены, что хотите удалить группу «{name}»? Это действие нельзя отменить.",
-            "Удалить",
-            "Отмена")
+        var confirmDialog = new ConfirmDialogViewModel("Удаление группы",
+            $"Вы уверены, что хотите удалить группу «{name}»? Это действие нельзя отменить.", "Удалить", "Отмена")
         {
             ConfirmationPrompt = "Для удаления введите название группы точно как указано:",
             ConfirmationTargetText = name
@@ -309,7 +301,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         IsBusy = false;
 
         if (deleted)
-            RequestClose();
+            await RequestCloseAsync();
     }
 
     partial void OnNameChanged(string value)

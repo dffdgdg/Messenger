@@ -1,12 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Shared.Dto.Call;
-using Shared.DTO.Call;
 using Shared.Hubs;
-using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Call;
 

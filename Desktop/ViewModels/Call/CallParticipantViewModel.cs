@@ -1,4 +1,4 @@
-﻿using Shared.DTO.Call;
+﻿using Shared.Dto.Call;
 
 namespace Desktop.ViewModels.Call;
 

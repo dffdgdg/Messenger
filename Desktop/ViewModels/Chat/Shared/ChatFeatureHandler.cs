@@ -1,5 +1,4 @@
 ﻿using Desktop.ViewModels.Chat.Context;
-using System;
 
 namespace Desktop.ViewModels.Chat.Shared;
 

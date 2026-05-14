@@ -1,10 +1,5 @@
 ﻿using Desktop.ViewModels.ChatList.Search;
 using Desktop.ViewModels.Chats;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Chat;
 
@@ -186,16 +181,35 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     {
         try
         {
-            var result = await apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chatId));
+            var membersTask = apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chatId));
+            var sendersTask = apiClient.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
+                ApiEndpoints.Messages.ChatSearch(chatId),
+                new SearchMessagesQueryDto { Query = string.Empty, Page = 1, PageSize = 100 });
 
-            if (result.Success && result.Data != null)
+            await Task.WhenAll(membersTask, sendersTask);
+
+            var membersResult = await membersTask;
+            var sendersResult = await sendersTask;
+
+            if (!membersResult.Success || membersResult.Data == null || !sendersResult.Success || sendersResult.Data == null)
             {
-                _cachedChatMembers = result.Data.ConvertAll(m => new SearchFilterItem(m.UserId, m.DisplayName ?? m.Username ?? string.Empty, m.Avatar));
+                _cachedChatMembers = [];
+                return;
             }
+            var senderIds = sendersResult.Data.Messages
+                .Where(m => m.SenderId.HasValue)
+                .Select(m => m.SenderId!.Value)
+                .Distinct()
+                .ToHashSet();
+
+            _cachedChatMembers = [.. membersResult.Data
+                .Where(m => senderIds.Contains(m.UserId))
+                .Select(m => new SearchFilterItem(m.UserId, m.DisplayName ?? m.Username ?? string.Empty, m.Avatar))
+                .OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase)];
         }
         catch
         {
-            _cachedChatMembers = null;
+            _cachedChatMembers = [];
         }
     }
 

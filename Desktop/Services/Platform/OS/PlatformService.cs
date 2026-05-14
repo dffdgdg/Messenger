@@ -1,8 +1,6 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Platform.OS;
 

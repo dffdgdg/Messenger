@@ -1,10 +1,5 @@
 ﻿using Shared.Dto.Department;
 using Shared.Dto.Online;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Department;
 

@@ -1,7 +1,7 @@
 ﻿namespace API.Services.Infrastructure.Status;
 
-public class StatusCleanupHostedService(IServiceScopeFactory scopeFactory, ILogger<StatusCleanupHostedService> logger)
-    : BackgroundService
+public class StatusCleanupHostedService(IServiceScopeFactory scopeFactory,
+    ILogger<StatusCleanupHostedService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

@@ -2,10 +2,11 @@
 
 namespace API.Services.Department;
 
-public sealed partial class DepartmentService(MessengerDbContext context, IOptions<MessengerSettings> settings, ILogger<DepartmentService> logger)
-    : BaseService<DepartmentService>(context, logger), IDepartmentService
+public sealed partial class DepartmentService(MessengerDbContext context, IOptions<MessengerSettings> settings, AppDateTime appDateTime,
+    ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
 {
     private readonly MessengerSettings _settings = settings.Value;
+    private readonly AppDateTime _appDateTime = appDateTime;
 
     public async Task<Result<List<DepartmentDto>>> GetDepartmentsAsync(CancellationToken ct = default)
     {
@@ -78,7 +79,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             Name = $"Отдел {entity.Name}",
             Type = ChatType.Department,
             CreatedById = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _appDateTime.UtcNow
         };
 
         _context.Chats.Add(departmentChat);
@@ -304,7 +305,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
                 {
                     ChatId = headsChatId,
                     UserId = newHeadId.Value,
-                    JoinedAt = DateTime.UtcNow,
+                    JoinedAt = _appDateTime.UtcNow,
                     NotificationsEnabled = true
                 });
             }
@@ -350,7 +351,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
                 {
                     ChatId = newChatId,
                     UserId = userId,
-                    JoinedAt = DateTime.UtcNow,
+                    JoinedAt = _appDateTime.UtcNow,
                     NotificationsEnabled = true
                 });
             }

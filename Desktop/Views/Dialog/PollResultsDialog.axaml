@@ -55,7 +55,7 @@
                                                 HorizontalAlignment="Left">
                                             <Border.Width>
                                                 <MultiBinding Converter="{conv:MultiConverter Name=PercentToWidth}">
-                                                    <Binding Path="VotesFraction"/>
+                                                    <Binding Path="VotesPercentage"/>
                                                     <Binding Path="$parent[Border].Bounds.Width"/>
                                                 </MultiBinding>
                                             </Border.Width>

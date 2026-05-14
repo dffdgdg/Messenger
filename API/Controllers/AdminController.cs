@@ -1,5 +1,3 @@
-using API.Services.User;
-
 namespace API.Controllers;
 
 [ApiController]

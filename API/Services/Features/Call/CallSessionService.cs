@@ -1,6 +1,4 @@
-﻿using Shared.DTO.Call;
-
-namespace API.Services.Call;
+﻿namespace API.Services.Call;
 
 public partial class CallSessionService(ILogger<CallSessionService> logger) : ICallSessionService
 {

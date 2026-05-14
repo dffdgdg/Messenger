@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Desktop.Services.Auth;
+﻿namespace Desktop.Services.Auth;
 
 public partial class SessionStore : ObservableObject, ISessionStore
 {

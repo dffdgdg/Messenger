@@ -34,9 +34,9 @@ public sealed class MessagesController(IMessageService message, ILogger<Messages
     public async Task<IActionResult> GetPinnedMessages(int chatId)
         => Map(await message.GetPinnedMessagesAsync(chatId, GetCurrentUserId()));
 
-    [HttpGet("chat/{chatId}")]
-    public async Task<IActionResult> GetChatMessages(int chatId, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
-        => Map(await message.GetChatMessagesAsync(chatId, GetCurrentUserId(), page, pageSize));
+    [HttpGet("chat/{chatId}/latest")]
+    public async Task<IActionResult> GetLatestMessages(int chatId, [FromQuery] int take = 50)
+        => Map(await message.GetLatestMessagesAsync(chatId, GetCurrentUserId(), take));
 
     [HttpGet("chat/{chatId}/around/{messageId}")]
     public async Task<IActionResult> GetMessagesAround(int chatId, int messageId, [FromQuery] int count = 50)
@@ -54,6 +54,10 @@ public sealed class MessagesController(IMessageService message, ILogger<Messages
     [EnableRateLimiting("search")]
     public async Task<IActionResult> SearchMessages(int chatId, [FromBody] SearchMessagesQueryDto query)
         => Map(await message.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
+
+    [HttpGet("chat/{chatId}/counts")]
+    public async Task<IActionResult> GetChatCounts(int chatId)
+        => Map(await message.GetChatCountsAsync(chatId, GetCurrentUserId()));
 
     [HttpPost("user/{userId}/search")]
     [EnableRateLimiting("search")]

@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Desktop.Services.Abstractions;
+﻿namespace Desktop.Services.Abstractions;
 
 public interface IAudioPlayerService : IDisposable
 {

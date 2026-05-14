@@ -4,8 +4,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Desktop.ViewModels.Chat;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Desktop.Views.Controls;
 

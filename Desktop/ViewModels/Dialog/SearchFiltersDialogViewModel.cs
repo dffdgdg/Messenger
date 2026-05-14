@@ -1,6 +1,4 @@
 ﻿using Desktop.ViewModels.Chat;
-using System;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Dialog;
 

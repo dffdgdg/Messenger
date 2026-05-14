@@ -378,7 +378,7 @@
 											 Classes="Input"
 											 PasswordChar="•"
 											 PlaceholderText="Введите текущий пароль"
-											 MaxWidth="320"
+											 Width="210"
 											 HorizontalAlignment="Left"/>
 								</StackPanel>
 

@@ -14,6 +14,11 @@
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
 		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<AssemblyName>ВнутрьСеть</AssemblyName>
+		<AssemblyTitle></AssemblyTitle>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<PlatformTarget>x64</PlatformTarget>
+		<GenerateDocumentationFile>False</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<ItemGroup>

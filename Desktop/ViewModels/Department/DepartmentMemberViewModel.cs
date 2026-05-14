@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Desktop.ViewModels.Department;
+﻿namespace Desktop.ViewModels.Department;
 
 public partial class DepartmentMemberViewModel : ObservableObject
 {

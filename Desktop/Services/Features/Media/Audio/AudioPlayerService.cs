@@ -1,7 +1,5 @@
 ﻿using PortAudioSharp;
-using System;
 using System.Diagnostics;
-using System.Threading;
 using IOStream = System.IO.Stream;
 
 namespace Desktop.Services.Features.Media.Audio;
@@ -9,7 +7,7 @@ namespace Desktop.Services.Features.Media.Audio;
 public sealed class AudioPlayerService : IAudioPlayerService
 {
     private readonly PortAudioLifetime _portAudio;
-    private Stream? _paStream;
+    private PortAudioSharp.Stream? _paStream;
     private WavData? _wavData;
     private Timer? _positionTimer;
     private readonly Lock _lock = new();
@@ -87,7 +85,7 @@ public sealed class AudioPlayerService : IAudioPlayerService
                     hostApiSpecificStreamInfo = IntPtr.Zero
                 };
 
-                _paStream = new Stream(inParams: null, outParams: outputParams, sampleRate: _wavData.SampleRate, framesPerBuffer: 512, streamFlags: StreamFlags.ClipOff,
+                _paStream = new PortAudioSharp.Stream(inParams: null, outParams: outputParams, sampleRate: _wavData.SampleRate, framesPerBuffer: 512, streamFlags: StreamFlags.ClipOff,
                     callback: (_, output, frameCount, ref _, _, _) => AudioCallback(output, (long)frameCount),
                     userData: IntPtr.Zero);
 

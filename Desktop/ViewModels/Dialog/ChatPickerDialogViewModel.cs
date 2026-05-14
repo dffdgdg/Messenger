@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Desktop.ViewModels.Dialog;
+﻿namespace Desktop.ViewModels.Dialog;
 
 public partial class ChatPickerDialogViewModel : DialogBaseViewModel
 {

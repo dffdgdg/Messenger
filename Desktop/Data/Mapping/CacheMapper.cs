@@ -1,7 +1,5 @@
 ﻿using Desktop.Data.Mappers;
 using Desktop.Data.Models.Cache;
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 
 namespace Desktop.Data.Mapping;

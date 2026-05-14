@@ -26,19 +26,6 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
         return MapFailureToObjectResult<TResult>(result);
     }
-    protected ObjectResult MapFailureToObjectResult<T>(Result result)
-    {
-        var response = ApiResponse<T>.Fail(result.Error!);
-        return result.ErrorType switch
-        {
-            ResultErrorType.Unauthorized => Unauthorized(response),
-            ResultErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, response),
-            ResultErrorType.NotFound => NotFound(response),
-            ResultErrorType.Conflict => Conflict(response),
-            ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
-            _ => BadRequest(response)
-        };
-    }
 
     protected IActionResult Map(Result result)
     {
@@ -55,12 +42,15 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
     protected IActionResult Forbidden<TData>(string error = "Доступ запрещён")
         => StatusCode(StatusCodes.Status403Forbidden, ApiResponse<TData>.Fail(error));
 
-    protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<Result<TResult>>> action, string? successMessage = null)
+    protected async Task<ActionResult<ApiResponse<TResult>>> ExecuteAsync<TResult>(Func<Task<Result<TResult>>> action,
+        string? successMessage = null)
     {
         var result = await action();
         if (result.IsSuccess)
             return Ok(ApiResponse<TResult>.Ok(result.Value!, successMessage));
-        return MapFailure<TResult>(result);
+
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+        return MapFailureToObjectResult<TResult>(result);
     }
 
     protected async Task<IActionResult> ExecuteAsync(Func<Task<Result>> action, string? successMessage = null)
@@ -68,12 +58,13 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
         var result = await action();
         if (result.IsSuccess)
             return Ok(ApiResponse<object>.Ok(null, successMessage));
-        return MapFailure(result);
+
+        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
+        return MapFailureToObjectResult(result);
     }
 
-    private ActionResult<ApiResponse<TData>> MapFailure<TData>(Result result)
+    private ObjectResult MapFailureToObjectResult<TData>(Result result)
     {
-        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
         var response = ApiResponse<TData>.Fail(result.Error!);
         return result.ErrorType switch
         {
@@ -84,12 +75,6 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase wher
             ResultErrorType.Internal => StatusCode(StatusCodes.Status500InternalServerError, response),
             _ => BadRequest(response)
         };
-    }
-
-    private ObjectResult MapFailure(Result result)
-    {
-        _logger.LogWarning("Бизнес-ошибка [{ErrorType}]: {Error}", result.ErrorType, result.Error);
-        return MapFailureToObjectResult(result);
     }
 
     private ObjectResult MapFailureToObjectResult(Result result)

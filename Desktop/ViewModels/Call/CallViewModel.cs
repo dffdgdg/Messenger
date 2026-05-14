@@ -1,10 +1,5 @@
 ﻿using Desktop.Services.Features.Call;
 using Shared.Dto.Call;
-using Shared.DTO.Call;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Call;
 

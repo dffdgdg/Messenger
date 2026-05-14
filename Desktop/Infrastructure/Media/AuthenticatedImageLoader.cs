@@ -1,16 +1,8 @@
-﻿using Avalonia.Media.Imaging;
-using Desktop.Infrastructure.Diagnostics;
-using System;
-using System.Collections.Generic;
+﻿using Desktop.Infrastructure.Diagnostics;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Infrastructure.Media;
 
@@ -29,7 +21,7 @@ public sealed class AuthenticatedImageLoader : IDisposable
     private const long MaxRamCacheBytes = 30L * 1024 * 1024;
     private const long LohThresholdBytes = 85 * 1024;
 
-    private readonly Dictionary<string, Task<byte[]?>> _inflight = [];
+    private readonly Dictionary<string, (Task<byte[]?> Task, CancellationTokenSource Cts)> _inflight = [];
 
     private static readonly HashSet<string> ImageExtensions
         = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico", ".avif" };
@@ -71,30 +63,57 @@ public sealed class AuthenticatedImageLoader : IDisposable
 
         lock (_lruLock)
         {
-            if (_inflight.TryGetValue(url, out var existingTask))
+            if (_inflight.TryGetValue(url, out var existing))
             {
-                loadTask = existingTask;
+                loadTask = existing.Task;
                 isOwner = false;
             }
             else
             {
-                loadTask = LoadBytesAsync(url, ext, ct);
-                _inflight[url] = loadTask;
+                var cts = new CancellationTokenSource();
+                loadTask = LoadBytesWithCtsAsync(url, ext, cts);
+                _inflight[url] = (loadTask, cts);
                 isOwner = true;
             }
         }
 
         try
         {
-            return await loadTask;
+            // Ожидаем с CancellationToken вызывающего через WaitAsync
+            // Если вызывающий отменился — только он получит OperationCanceledException,
+            // остальные продолжат ждать оригинальный Task
+            return await loadTask.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Отмена только для текущего вызывающего — не влияет на других
+            return null;
         }
         finally
         {
+            // Только владелец чистит _inflight и диспозит CTS
             if (isOwner)
             {
                 lock (_lruLock)
-                    _inflight.Remove(url);
+                {
+                    if (_inflight.TryGetValue(url, out var entry) && entry.Task == loadTask)
+                    {
+                        _inflight.Remove(url);
+                    }
+                }
             }
+        }
+    }
+
+    private async Task<byte[]?> LoadBytesWithCtsAsync(string url, string ext, CancellationTokenSource cts)
+    {
+        try
+        {
+            return await LoadBytesAsync(url, ext, cts.Token);
+        }
+        finally
+        {
+            cts.Dispose();
         }
     }
 
@@ -242,11 +261,22 @@ public sealed class AuthenticatedImageLoader : IDisposable
         lock (_lruLock)
         {
             MemoryDiagnostics.OnImageCacheCleared(_lruMap.Count, _ramCacheBytes);
-            Debug.WriteLine($"[AuthImageLoader] Clear: bytes={_lruMap.Count}, ram={_ramCacheBytes / 1024 / 1024}MB");
+            Debug.WriteLine($"[AuthImageLoader] Clear: count={_lruMap.Count}, ram={_ramCacheBytes / 1024 / 1024}MB");
 
             _lruList.Clear();
             _lruMap.Clear();
             _ramCacheBytes = 0;
+
+            foreach (var (_, (task, cts)) in _inflight)
+            {
+                try
+                {
+                    if (!task.IsCompleted)
+                        cts.Cancel();
+                    // Не диспожим — LoadBytesWithCtsAsync сделает это в finally
+                }
+                catch { }
+            }
             _inflight.Clear();
         }
     }
@@ -370,10 +400,8 @@ public sealed class AuthenticatedImageLoader : IDisposable
         if (string.IsNullOrWhiteSpace(url)) return false;
         lock (_lruLock)
         {
-            return _lruMap.ContainsKey(url) ||
-                   (url.Contains('?') && _lruMap.ContainsKey(url[..url.IndexOf('?')])) ||
-                   (!url.Contains('?') && _lruMap.Keys.Any(k =>
-                       k.StartsWith(url + "?", StringComparison.OrdinalIgnoreCase)));
+            return _lruMap.ContainsKey(url) || (url.Contains('?') && _lruMap.ContainsKey(url[..url.IndexOf('?')]))
+                || (!url.Contains('?') && _lruMap.Keys.Any(k => k.StartsWith(url + "?", StringComparison.OrdinalIgnoreCase)));
         }
     }
 

@@ -5,16 +5,7 @@
              x:Class="Desktop.Views.Dialog.UserPickerDialog"
              x:DataType="vmDialog:UserPickerDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="450">
-        <!--
-            RowDefinitions:
-              Auto  — шапка
-              Auto  — разделитель
-              Auto  — поиск
-              *     — список (занимает всё доступное, ограничено MaxHeight диалога)
-              Auto  — разделитель
-              Auto  — футер
-        -->
+    <Border Classes="DialogContainer" Width="450" MinHeight="500">
         <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
 
             <!-- Шапка -->

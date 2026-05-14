@@ -1,6 +1,4 @@
 ﻿using Avalonia.Input;
-using System;
-using System.Linq;
 using System.Windows.Input;
 
 namespace Desktop.Views.Controls.Shared;

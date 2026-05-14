@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Desktop.ViewModels.Chat.Managers;
+﻿namespace Desktop.ViewModels.Chat.Managers;
 
 public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService apiClient)
 {

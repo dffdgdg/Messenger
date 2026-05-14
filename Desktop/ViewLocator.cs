@@ -1,6 +1,5 @@
 using Avalonia.Controls.Templates;
 using Desktop.ViewModels;
-using System;
 
 namespace Desktop;
 

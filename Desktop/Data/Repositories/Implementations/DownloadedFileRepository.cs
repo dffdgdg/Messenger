@@ -1,10 +1,6 @@
 ﻿using Desktop.Data.Models.Cache;
 using Desktop.Data.Repositories.Abstractions;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.Data.Repositories.Implementations;
 

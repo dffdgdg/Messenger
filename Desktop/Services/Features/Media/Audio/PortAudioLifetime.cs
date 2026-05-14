@@ -1,7 +1,5 @@
 ﻿using PortAudioSharp;
-using System;
 using System.Diagnostics;
-using System.Threading;
 
 namespace Desktop.Services.Features.Media.Audio;
 

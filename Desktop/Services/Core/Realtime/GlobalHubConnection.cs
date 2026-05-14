@@ -1,20 +1,12 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure.Helpers;
-using Desktop.Infrastructure.Media;
 using Desktop.Services.UI;
 using Desktop.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Online;
 using Shared.Hubs;
-using SIPSorcery.Net.SharpSRTP.SRTP.Encryption;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Core.Realtime;
 

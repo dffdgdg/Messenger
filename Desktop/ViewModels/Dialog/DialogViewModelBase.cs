@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace Desktop.ViewModels.Dialog;
+﻿namespace Desktop.ViewModels.Dialog;
 
 public abstract partial class DialogBaseViewModel : BaseViewModel
 {

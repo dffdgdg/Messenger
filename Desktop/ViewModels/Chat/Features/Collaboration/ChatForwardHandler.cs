@@ -1,9 +1,6 @@
 ﻿using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Shared;
 using Desktop.ViewModels.Dialog;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Chat;
 

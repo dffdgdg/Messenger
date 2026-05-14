@@ -10,14 +10,7 @@ using Desktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.Dto.Call;
 using Shared.Dto.Online;
-using Shared.DTO.Call;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels;
 

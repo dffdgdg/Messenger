@@ -2,13 +2,7 @@
 using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Helpers;
 using Desktop.ViewModels.Chat.Managers;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Chat.Features.Media;
 

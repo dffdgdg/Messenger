@@ -1,4 +1,4 @@
-﻿namespace Shared.DTO.Call;
+﻿namespace Shared.Dto.Call;
 
 public class CallParticipantDto
 {

@@ -1,6 +1,4 @@
 ﻿using Shared.Dto.Auth;
-using System;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Abstractions;
 

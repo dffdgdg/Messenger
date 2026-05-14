@@ -1,11 +1,7 @@
 ﻿using Avalonia.Media.Imaging;
 using Desktop.Infrastructure.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Infrastructure.Media;
 
@@ -97,7 +93,10 @@ public static class RemoteImage
                 return new Bitmap(ms);
             }, ct);
 
-            MemoryDiagnostics.OnBitmapCreated();
+            if (bitmap != null)
+            {
+                MemoryDiagnostics.OnBitmapCreated();
+            }
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {

@@ -1,15 +1,9 @@
-﻿using Desktop.Services.Abstractions;
-using Desktop.Services.Features.Media.Files;
-using Desktop.Services.Platform.OS;
+﻿using Desktop.Services.Features.Media.Files;
 
 namespace Desktop.ViewModels.ChatList.Factories;
 
-public sealed class MediaServices(
-    IFileDownloadService fileDownloadService,
-    IFileDownloadStateService fileDownloadStateService,
-    IAudioPlayerService audioPlayer,
-    IAudioRecorderService audioRecorder,
-    IPlatformService platformService)
+public sealed class MediaServices(IFileDownloadService fileDownloadService, IFileDownloadStateService fileDownloadStateService,
+    IAudioPlayerService audioPlayer, IAudioRecorderService audioRecorder, IPlatformService platformService)
 {
     public IFileDownloadService FileDownloadService { get; } = fileDownloadService;
     public IFileDownloadStateService FileDownloadStateService { get; } = fileDownloadStateService;

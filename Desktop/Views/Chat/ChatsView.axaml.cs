@@ -3,7 +3,6 @@ using Avalonia.Reactive;
 using Desktop.ViewModels;
 using Desktop.Views.Controls;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace Desktop.Views;
 

@@ -1,10 +1,5 @@
 ﻿using Shared.Dto.Auth;
-using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Core.Auth;
 

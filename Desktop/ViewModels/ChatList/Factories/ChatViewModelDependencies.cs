@@ -1,6 +1,5 @@
 ﻿using Desktop.Data.Repositories.Abstractions;
 using Desktop.Services.Features.Media.Files;
-using Desktop.ViewModels.Chat;
 
 namespace Desktop.ViewModels.ChatList.Factories;
 

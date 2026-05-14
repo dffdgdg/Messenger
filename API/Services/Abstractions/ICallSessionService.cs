@@ -1,6 +1,4 @@
-﻿using Shared.DTO.Call;
-
-namespace API.Services.Abstractions;
+﻿namespace API.Services.Abstractions;
 
 public interface ICallSessionService
 {

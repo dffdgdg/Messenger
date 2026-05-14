@@ -1,14 +1,9 @@
 ﻿using Desktop.Infrastructure.Helpers;
 using Shared.Dto.Auth;
-using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Core.Auth;
 

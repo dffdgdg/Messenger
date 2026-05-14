@@ -1,6 +1,6 @@
 ﻿using Shared.Enum;
 
-namespace Shared.DTO.Call;
+namespace Shared.Dto.Call;
 
 /// <summary>
 /// Полное состояние звонка — отправляется при реконнекте

@@ -1,10 +1,6 @@
 ﻿using Desktop.Data.Models.Cache;
 using Desktop.Data.Repositories.Abstractions;
-using Shared.Dto.Message;
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Features.Media.Files;
 

@@ -5,13 +5,8 @@ using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.ChatList.Factories;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace Desktop.ViewModels.Chat.Managers;
@@ -57,7 +52,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private bool TryBeginLoading() => Interlocked.CompareExchange(ref _isLoading, 1, 0) == 0;
     private void EndLoading() => Interlocked.Exchange(ref _isLoading, 0);
-    public event Action<MessageDto>? MessagePinStateChanged;
 
     public void SetReadInfo(ChatReadInfoDto? info)
     {
@@ -98,7 +92,9 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
         var cached = await Task.Run(() => _cacheService.GetMessagesAsync(_chatId, DefaultPage));
 
-        if (cached is not { Messages.Count: > 0 }) return null;
+        // Минимум 5 сообщений чтобы считать кэш валидным
+        // Иначе идём на сервер за полной загрузкой
+        if (cached is not { Messages.Count: >= 5 }) return null;
 
         RenderMessages(cached.Messages);
         _hasMoreOlder = cached.HasMoreOlder;
@@ -111,12 +107,23 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private async Task<int?> LoadInitialFromServerAsync(CancellationToken ct)
     {
-        var data = await FetchAsync(ApiEndpoints.Messages.ForChat(_chatId, _userId, 1, DefaultPage), ct);
+        Debug.WriteLine($"[MessageManager] LoadInitialFromServer: chatId={_chatId} take={DefaultPage}");
+
+        var url = ApiEndpoints.Messages.Latest(_chatId, DefaultPage);
+        Debug.WriteLine($"[MessageManager] Fetching URL: {url}");
+
+        var data = await FetchAsync(url, ct);
+
+        Debug.WriteLine($"[MessageManager] FetchAsync result: {(data == null ? "NULL" : $"{data.Messages.Count} messages, hasOlder={data.HasMoreMessages}")}");
+
         if (data == null) return null;
 
         RenderMessages(data.Messages);
         SetBounds(data.HasMoreMessages, false);
-        await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, false);
+
+        if (!ct.IsCancellationRequested)
+            await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, false);
+
         return LastIndexOrNull();
     }
 
@@ -270,7 +277,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
             await Dispatcher.UIThread.InvokeAsync(ClearAllState);
 
-            var data = await FetchAsync(ApiEndpoints.Messages.ForChat(_chatId, _userId, 1, DefaultPage), ct);
+            var data = await FetchAsync(ApiEndpoints.Messages.Latest(_chatId, DefaultPage), ct);
             if (data == null) return;
 
             var d = data;
@@ -339,10 +346,19 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         if (_disposeCts.IsCancellationRequested) return;
 
         var msg = FindMessage(messageId);
-        if (msg == null) return;
+        if (msg != null)
+        {
+            msg.MarkAsDeleted();
+            MessageViewModel.UpdateGroupingAround(Messages, Messages.IndexOf(msg));
+        }
 
-        msg.MarkAsDeleted();
-        MessageViewModel.UpdateGroupingAround(Messages, Messages.IndexOf(msg));
+        foreach (var reply in Messages.Where(m => m.ReplyToMessageId == messageId))
+        {
+            reply.ReplyToIsDeleted = true;
+            reply.ReplyToContent = null;
+        }
+
+        MessageViewModel.UpdateGroupingAround(Messages, Messages.IndexOf(msg!));
 
         RunInBackground(() => SafeCacheIfAvailable(() => _cacheService!.MarkMessageDeletedAsync(messageId)));
     }
@@ -353,13 +369,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         if (_disposeCts.IsCancellationRequested) return;
 
         var existing = FindMessage(dto.Id);
-        var pinChanged = existing == null || existing.IsPinned != dto.IsPinned;
-        Debug.WriteLine($"[MsgManager] existing={existing?.Id} existingIsPinned={existing?.IsPinned} pinChanged={pinChanged}");
-
         existing?.ApplyUpdate(dto);
 
-        if (pinChanged)
-            MessagePinStateChanged?.Invoke(dto);
+        // Pin-событие НЕ поднимаем здесь.
+        // Оно придёт через Context.MessagePinStateChanged из TogglePin
+        // или через хаб MessageUpdated → ChatHubSubscriber → Context напрямую.
+        // Двойной вызов устранён.
     }
 
     public void HandlePollUpdated(PollDto pollDto)
@@ -385,8 +400,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     public IEnumerable<MessageViewModel> GetUnreadMessages()
         => Messages.Where(m => m.IsUnread && m.SenderId != _userId);
-
-    public int GetPollsCount() => Messages.Count(m => m.Poll != null);
 
     private void AppendNewMessages(List<MessageDto> dtos) => MutateMessages(dtos, append: true);
     private void PrependNewMessages(List<MessageDto> dtos) => MutateMessages(dtos, append: false);
@@ -575,6 +588,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private async Task<PagedMessagesDto?> FetchAsync(string url, CancellationToken ct)
     {
         var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+
+        Debug.WriteLine($"[MessageManager] FetchAsync: url={url} " +
+            $"success={result?.Success} " +
+            $"error={result?.Error} " +
+            $"count={result?.Data?.Messages?.Count ?? -1}");
+
         return result is { Success: true, Data: not null } ? result.Data : null;
     }
 

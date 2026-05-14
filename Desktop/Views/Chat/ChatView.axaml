@@ -13,7 +13,6 @@
 			 Background="Transparent">
 
 	<UserControl.Styles>
-		<!-- Сброс фона Flat-кнопки внутри пиннед-баннера -->
 		<Style Selector="Border.PinnedBanner Button.Flat /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
@@ -24,7 +23,6 @@
 			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
 		</Style>
 
-		<!-- ── ListBox MessagesList (дубликаты удалены) ── -->
 		<Style Selector="ListBox.MessagesList">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
@@ -53,33 +51,27 @@
 			<Setter Property="FocusAdorner" Value="{x:Null}"/>
 			<Setter Property="MinHeight" Value="52"/>
 		</Style>
-
 		<Style Selector="Button.MentionItem /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
-
 		<Style Selector="Button.MentionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
 		</Style>
-
 		<Style Selector="Button.MentionItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource BorderHover}"/>
 		</Style>
 
-		<!-- ── Превью вложения ── -->
 		<Style Selector="Border.AttachmentPreview">
 			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
 			<Setter Property="CornerRadius" Value="10"/>
 			<Setter Property="Padding" Value="10"/>
 		</Style>
-		<!-- ── Панель режима редактирования ── -->
 		<Style Selector="Border.EditModePanel">
 			<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
 			<Setter Property="CornerRadius" Value="12"/>
 			<Setter Property="Padding" Value="12,10"/>
 			<Setter Property="Margin" Value="0,0,0,8"/>
 		</Style>
-		<!-- ── Иконка-бейдж в заголовке диалога ── -->
 		<Style Selector="Border.HeaderIconBadge">
 			<Setter Property="Background" Value="{DynamicResource Accent}"/>
 			<Setter Property="Width" Value="44"/>
@@ -119,9 +111,16 @@
 		<Border Grid.Column="0"
 				CornerRadius="16"
 				Background="{DynamicResource SecondaryBG}">
-			<Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
 
-				<!-- Шапка чата -->
+			<!--
+				Grid теперь имеет 3 строки: Auto (шапка), Auto (баннеры), * (сообщения), Auto (ввод).
+				Баннеры вынесены в StackPanel в Row=1.
+				StackPanel сама схлопывается когда оба баннера скрыты —
+				при этом Row=2 (ListBox) не пересчитывается, скачка нет.
+			-->
+			<Grid RowDefinitions="Auto,Auto,*,Auto">
+
+				<!-- ── Шапка чата ── -->
 				<Border Grid.Row="0"
 						BorderBrush="{DynamicResource BorderDefault}"
 						BorderThickness="0,0,0,1"
@@ -182,15 +181,11 @@
 									<Button.Flyout>
 										<MenuFlyout Placement="BottomEdgeAlignedRight">
 											<MenuItem Header="Редактировать чат"
-													  Command="{Binding OpenEditChatCommand}">
-												<MenuItem.IsVisible>
-													<Binding Path="CanEditGroupChat"/>
-												</MenuItem.IsVisible>
-											</MenuItem>
+													  Command="{Binding OpenEditChatCommand}"
+													  IsVisible="{Binding CanEditGroupChat}"/>
 											<MenuItem Header="Создать опрос"
 													  Command="{Binding OpenCreatePollCommand}"
-													  IsVisible="{Binding CanEditGroupChat}">
-											</MenuItem>
+													  IsVisible="{Binding CanEditGroupChat}"/>
 											<MenuItem Header="Выйти из чата"
 													  Command="{Binding LeaveChatCommand}"
 													  Foreground="{DynamicResource DangerBrush}"
@@ -208,102 +203,113 @@
 					</Grid>
 				</Border>
 
-				<!-- Баннер закреплённого сообщения -->
-				<Border Grid.Row="1"
-						Classes="PinnedBanner"
-						IsVisible="{Binding IsPinnedBannerVisible}"
-						BorderBrush="{DynamicResource BorderDefault}"
-						BorderThickness="0,0,0,1"
-						Background="{DynamicResource InfoBgBrush}"
-						ZIndex="155">
-					<Button Classes="Flat"
-							HorizontalAlignment="Stretch"
-							HorizontalContentAlignment="Stretch"
-							Padding="0"
-							Command="{Binding OpenPinnedSectionCommand}"
-							ToolTip.Tip="Показать все закреплённые сообщения">
+				<!--
+					── Баннеры (Row=1) ──
+					StackPanel вертикальная: каждый баннер управляет своей видимостью через IsVisible.
+					Когда оба скрыты — StackPanel имеет высоту 0, Row=1 схлопывается в 0.
+					Row=2 (ListBox со строкой *) при этом не меняет своё положение в дереве layout —
+					он просто занимает оставшееся пространство, без пересчёта и скачка.
+				-->
+				<StackPanel Grid.Row="1" Orientation="Vertical">
+
+					<!-- Баннер закреплённого сообщения -->
+					<Border Classes="PinnedBanner"
+							IsVisible="{Binding IsPinnedBannerVisible}"
+							BorderBrush="{DynamicResource BorderDefault}"
+							BorderThickness="0,0,0,1"
+							Background="{DynamicResource InfoBgBrush}">
+						<Button Classes="Flat"
+								HorizontalAlignment="Stretch"
+								HorizontalContentAlignment="Stretch"
+								Padding="0"
+								Command="{Binding OpenPinnedSectionCommand}"
+								ToolTip.Tip="Показать все закреплённые сообщения">
+							<Grid ColumnDefinitions="Auto,*,Auto"
+								  Margin="16,6">
+								<Path Grid.Column="0"
+									  Data="{StaticResource PinIcon}"
+									  Width="14" Height="14"
+									  Stretch="Uniform"
+									  Fill="{DynamicResource Accent}"
+									  VerticalAlignment="Center"
+									  Margin="0,0,10,0"/>
+								<StackPanel Grid.Column="1" Spacing="1">
+									<TextBlock Text="Закреплённое сообщение"
+											   FontSize="11"
+											   FontWeight="SemiBold"
+											   Foreground="{DynamicResource Accent}"/>
+									<TextBlock Text="{Binding PinnedBannerPreviewText}"
+											   FontSize="12"
+											   Foreground="{DynamicResource TextSecondary}"
+											   TextTrimming="CharacterEllipsis"
+											   MaxLines="1"/>
+								</StackPanel>
+								<Border Grid.Column="2"
+										Classes="CountBadge"
+										Margin="8,0,0,0"
+										IsVisible="{Binding HasMultiplePinned}">
+									<TextBlock Text="{Binding PinnedCount}"
+											   FontSize="12"
+											   VerticalAlignment="Center"
+											   HorizontalAlignment="Center"
+											   Foreground="{DynamicResource TextMuted}"/>
+								</Border>
+							</Grid>
+						</Button>
+					</Border>
+
+					<!-- Баннер активного звонка -->
+					<Border IsVisible="{Binding HasActiveCall}"
+							Background="{DynamicResource AccentMuted}"
+							BorderBrush="{DynamicResource BorderDefault}"
+							BorderThickness="0,0,0,1">
 						<Grid ColumnDefinitions="Auto,*,Auto"
-							  Margin="16,6">
-							<Path Grid.Column="0"
-								  Data="{StaticResource PinIcon}"
-								  Width="14" Height="14"
-								  Stretch="Uniform"
-								  Fill="{DynamicResource Accent}"
-								  VerticalAlignment="Center"
-								  Margin="0,0,10,0"/>
-							<StackPanel Grid.Column="1" Spacing="1">
-								<TextBlock Text="Закреплённое сообщение"
-										   FontSize="11"
+							  Margin="16,8">
+							<StackPanel Grid.Column="1"
+										VerticalAlignment="Center"
+										Spacing="1">
+								<TextBlock Text="{Binding ActiveCallBannerText}"
+										   FontSize="13"
 										   FontWeight="SemiBold"
 										   Foreground="{DynamicResource Accent}"/>
-								<TextBlock Text="{Binding PinnedBannerPreviewText}"
-										   FontSize="12"
-										   Foreground="{DynamicResource TextSecondary}"
-										   TextTrimming="CharacterEllipsis"
-										   MaxLines="1"/>
-							</StackPanel>
-							<Border Grid.Column="2"
-									Classes="CountBadge"
-									Margin="8,0,0,0"
-									IsVisible="{Binding HasMultiplePinned}">
-								<TextBlock Text="{Binding PinnedCount}"
-										   FontSize="12"
-										   VerticalAlignment="Center"
-										   HorizontalAlignment="Center"
-										   Foreground="{DynamicResource TextMuted}"/>
-							</Border>
-						</Grid>
-					</Button>
-				</Border>
-
-				<!-- Баннер активного звонка -->
-				<Border Grid.Row="2"
-						IsVisible="{Binding HasActiveCall}"
-						Background="{DynamicResource AccentMuted}"
-						BorderBrush="{DynamicResource BorderDefault}"
-						BorderThickness="0,0,0,1"
-						ZIndex="5">
-					<Grid ColumnDefinitions="Auto,*,Auto"
-						  Margin="16,8">
-						<StackPanel Grid.Column="1"
-									VerticalAlignment="Center"
-									Spacing="1">
-							<TextBlock Text="{Binding ActiveCallBannerText}"
-									   FontSize="13"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource Accent}"/>
-							<TextBlock Text="{Binding IsInActiveCall,
-							Converter={conv:Converter Name=BoolToString},
-							ConverterParameter='Вы участвуете · нажмите чтобы вернуться|Нажмите чтобы войти'}"
-							FontSize="11"
-							Foreground="{DynamicResource TextSecondary}"/>
-						</StackPanel>
-						<Button Grid.Column="2"
-								Classes="DialogAccent"
-								Padding="12,6"
-								FontSize="12"
-								Command="{Binding StartOrJoinCallCommand}"
-								Content="{Binding IsInActiveCall,
+								<TextBlock Text="{Binding IsInActiveCall,
 								Converter={conv:Converter Name=BoolToString},
-								ConverterParameter='Открыть|Войти'}"/>
-					</Grid>
-				</Border>
-
-				<!-- Фоновый паттерн для сообщений -->
-				<Panel Grid.Row="3" Grid.RowSpan="2">
-					<Border Opacity="0.4">
-						<Border.Background>
-							<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-								<GradientStop Color="{DynamicResource TopBg}" Offset="0"/>
-								<GradientStop Color="{DynamicResource BaseBg}" Offset="1"/>
-							</LinearGradientBrush>
-						</Border.Background>
+								ConverterParameter='Вы участвуете · нажмите чтобы вернуться|Нажмите чтобы войти'}"
+								FontSize="11"
+								Foreground="{DynamicResource TextSecondary}"/>
+							</StackPanel>
+							<Button Grid.Column="2"
+									Classes="DialogAccent"
+									Padding="12,6"
+									FontSize="12"
+									Command="{Binding StartOrJoinCallCommand}"
+									Content="{Binding IsInActiveCall,
+									Converter={conv:Converter Name=BoolToString},
+									ConverterParameter='Открыть|Войти'}"/>
+						</Grid>
 					</Border>
-				</Panel>
 
-				<Panel Grid.Row="3">
+				</StackPanel>
+
+				<!-- ── Область сообщений (Row=2) ── -->
+				<Panel Grid.Row="2">
+
+					<!-- Фоновый паттерн -->
+					<Panel>
+						<Border Opacity="0.4">
+							<Border.Background>
+								<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+									<GradientStop Color="{DynamicResource TopBg}" Offset="0"/>
+									<GradientStop Color="{DynamicResource BaseBg}" Offset="1"/>
+								</LinearGradientBrush>
+							</Border.Background>
+						</Border>
+					</Panel>
+
+					<!-- Skeleton загрузки -->
 					<skeleton:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}"/>
 
+					<!-- Список сообщений -->
 					<ListBox x:Name="MessagesList"
 							 Classes="MessagesList"
 							 ItemsSource="{Binding Messages}"
@@ -324,6 +330,7 @@
 						</ListBox.ItemTemplate>
 					</ListBox>
 
+					<!-- Кнопка ScrollToBottom -->
 					<Button Classes="ScrollToBottomBtn"
 							HorizontalAlignment="Right"
 							VerticalAlignment="Bottom"
@@ -356,8 +363,8 @@
 					</Button>
 				</Panel>
 
-				<!-- Панель ввода -->
-				<Border Grid.Row="4" VerticalAlignment="Bottom" Padding="16,0,16,20">
+				<!-- ── Панель ввода (Row=3) ── -->
+				<Border Grid.Row="3" VerticalAlignment="Bottom" Padding="16,0,16,20">
 					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
 
 						<!-- Режим редактирования -->
@@ -418,8 +425,6 @@
 												StringFormat='Ответ для {0}'}"
 												FontWeight="SemiBold" FontSize="12"
 												Foreground="{DynamicResource Accent}"/>
-												<!-- Было: ReplyToContent (превью ответа сообщения) -->
-												<!-- Стало: ContentPreview (превью самого сообщения) -->
 												<TextBlock Text="{Binding ContentPreview}"
 														   FontSize="13"
 														   Foreground="{DynamicResource TextSecondary}"
@@ -511,23 +516,15 @@
 									<Ellipse.Styles>
 										<Style Selector="Ellipse">
 											<Style.Animations>
-												<Animation Duration="0:0:1"
-														   IterationCount="INFINITE">
-													<KeyFrame Cue="0%">
-														<Setter Property="Opacity" Value="1"/>
-													</KeyFrame>
-													<KeyFrame Cue="50%">
-														<Setter Property="Opacity" Value="0.3"/>
-													</KeyFrame>
-													<KeyFrame Cue="100%">
-														<Setter Property="Opacity" Value="1"/>
-													</KeyFrame>
+												<Animation Duration="0:0:1" IterationCount="INFINITE">
+													<KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+													<KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
+													<KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
 												</Animation>
 											</Style.Animations>
 										</Style>
 									</Ellipse.Styles>
 								</Ellipse>
-
 								<ContentControl Grid.Column="1"
 												Content="{Binding Voice.VoiceRecording}"
 												Padding="0" MinHeight="0" BorderThickness="0"
@@ -581,7 +578,7 @@
 							</StackPanel>
 						</Border>
 
-						<!-- Ошибка голосового сообщения -->
+						<!-- Ошибка голосового -->
 						<Border Grid.Row="4"
 								Background="#33FF4444"
 								CornerRadius="10"
@@ -648,13 +645,9 @@
 													ShowMode="TransientWithDismissOnPointerMoveAway"
 													FlyoutPresenterClasses="EmojiPickerFlyout">
 												<StackPanel Spacing="6" Width="300">
-
-													<!-- Заголовок -->
 													<TextBlock Text="ЭМОДЗИ"
 															   Classes="CategoryHeader"
 															   Margin="4,0,0,2"/>
-
-													<!-- Сетка эмодзи -->
 													<ItemsControl ItemsSource="{Binding PopularEmojis}">
 														<ItemsControl.ItemsPanel>
 															<ItemsPanelTemplate>
@@ -670,11 +663,9 @@
 															</DataTemplate>
 														</ItemsControl.ItemTemplate>
 													</ItemsControl>
-
 												</StackPanel>
 											</Flyout>
 										</Button.Flyout>
-
 										<Path Data="{StaticResource EmojiIcon}"
 											  Fill="{DynamicResource TextSecondary}"
 											  Width="20" Height="20"
@@ -709,8 +700,6 @@
 											  Fill="White" Width="18" Height="18"
 											  Stretch="Uniform"/>
 									</Button>
-
-									<!-- Кнопка отправки/сохранения — только в режиме редактирования -->
 									<Button Grid.Column="4"
 											Classes="Primary"
 											Margin="4"

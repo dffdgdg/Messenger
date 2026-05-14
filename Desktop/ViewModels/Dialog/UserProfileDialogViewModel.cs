@@ -1,7 +1,4 @@
 using Avalonia.Media.Imaging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Dialog;
 
@@ -45,6 +42,9 @@ public partial class UserProfileDialogViewModel : DialogBaseViewModel
     [RelayCommand]
     private async Task SendMessage()
     {
+        if (!CanSendMessage)
+            return;
+
         if (OpenChatWithUserAction == null)
         {
             ErrorMessage = "Действие не настроено";

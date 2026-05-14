@@ -2,8 +2,8 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
-             xmlns:conv="clr-namespace:Desktop.Converters;assembly=Desktop"
              xmlns:controls="using:Desktop.Views.Controls"
+             xmlns:converters="using:Desktop.Converters"
              x:Class="Desktop.Views.ChatEditDialog"
              x:DataType="vmDialog:ChatEditDialogViewModel">
 
@@ -276,7 +276,7 @@
                 <Button Grid.Column="2"
                         Classes="DialogAccent"
                         Content="{Binding IsNewChat,
-                            Converter={conv:Converter Name=BoolToString},
+                            Converter={converters:Converter Name=BoolToString},
                             ConverterParameter='Создать|Сохранить'}"
                         Command="{Binding SaveCommand}"
                         IsEnabled="{Binding CanSave}"

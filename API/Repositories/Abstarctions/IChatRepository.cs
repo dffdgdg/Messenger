@@ -11,7 +11,7 @@ public interface IChatRepository : IRepository<Chat>
     Task<bool> IsMemberAsync(int chatId, int userId, CancellationToken ct = default);
     void AddMember(ChatMember member);
     void RemoveMember(ChatMember member);
-    Task<List<Chat>> GetByIdsLightAsync(IEnumerable<int> chatIds, CancellationToken ct = default);
+    Task<List<Chat>> GetByIdsAsync(IEnumerable<int> chatIds, CancellationToken ct = default);
     Task<List<LastMessageProjection>> GetLastMessagesAsync(IEnumerable<int> chatIds, CancellationToken ct = default);
     Task<List<DialogPartnerProjection>> GetDialogPartnersAsync(IEnumerable<int> chatIds, int currentUserId, CancellationToken ct = default);
     Task UpdateLastMessageTimeAsync(int chatId, DateTime time, CancellationToken ct = default);

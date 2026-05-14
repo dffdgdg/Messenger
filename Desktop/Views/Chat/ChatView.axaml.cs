@@ -4,13 +4,8 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Desktop.ViewModels.Chat;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Views.Chat;
 
@@ -46,6 +41,7 @@ public partial class ChatView : UserControl
     private CancellationTokenSource? _findCts;
     private CancellationTokenSource? _restoreCts;
     private CancellationTokenSource? _scrollCts;
+    private CancellationTokenSource? _fallbackVisibilityCts;
 
     private DispatcherTimer? _visibilityTimer;
     private DispatcherTimer? _saveScrollStateTimer;
@@ -58,6 +54,36 @@ public partial class ChatView : UserControl
         _settingsService = App.Current.Services.GetService<ISettingsService>();
         DataContextChanged += OnDataContextChanged;
     }
+
+    private void SetMessagesVisible(bool visible)
+    {
+        if (_messagesList is null) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_messagesList is null) return;
+            _messagesList.Opacity = visible ? 1.0 : 0.0;
+        }, DispatcherPriority.Background);
+    }
+
+    private void ScheduleFallbackVisibility()
+    {
+        _fallbackVisibilityCts?.Cancel();
+        _fallbackVisibilityCts?.Dispose();
+        _fallbackVisibilityCts = new CancellationTokenSource();
+        var token = _fallbackVisibilityCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1500, token);
+                if (!token.IsCancellationRequested)
+                    SetMessagesVisible(true);
+            }
+            catch (OperationCanceledException) { }
+        }, token);
+    }
+
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
@@ -82,6 +108,8 @@ public partial class ChatView : UserControl
         _isScrollViewerInitialized = false;
         _scrollStateRestored = false;
         _isRestoringScrollState = false;
+
+        SetMessagesVisible(false);
 
         Interlocked.Exchange(ref _loadingOlderMessages, 0);
         Interlocked.Exchange(ref _loadingNewerMessages, 0);
@@ -134,6 +162,8 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToIndexRequested += OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
         _viewModel.Messages?.CollectionChanged += OnMessagesCollectionChanged;
+
+        ScheduleFallbackVisibility();
     }
 
     private void DetachFromViewModel()
@@ -255,9 +285,7 @@ public partial class ChatView : UserControl
         if (vm is null) return;
 
         if (_scrollViewer is null)
-        {
             EnsureScrollViewer();
-        }
 
         Dispatcher.UIThread.Post(() => PerformScrollToBottom(vm, _scrollViewer), DispatcherPriority.Render);
     }
@@ -311,11 +339,18 @@ public partial class ChatView : UserControl
         vm.IsScrolledToBottom = true;
         vm.HasNewMessages = false;
         vm.UnreadCount = 0;
+
+        _fallbackVisibilityCts?.Cancel();
+        SetMessagesVisible(true);
     }
+
 
     private void CompleteInitialScroll(bool atBottom)
     {
         _isInitialScrollDone = true;
+
+        _fallbackVisibilityCts?.Cancel();
+        SetMessagesVisible(true);
 
         if (_viewModel is null) return;
 
@@ -497,13 +532,16 @@ public partial class ChatView : UserControl
     {
         if (_viewModel is null || _messagesList is null) return;
 
-        var message = _viewModel.Messages.FirstOrDefault(m => m.Id == anchorMessageId) ?? _viewModel.Messages.Where(m => m.Id <= anchorMessageId)
-            .OrderByDescending(m => m.Id).FirstOrDefault() ?? _viewModel.Messages.FirstOrDefault();
+        var message = _viewModel.Messages.FirstOrDefault(m => m.Id == anchorMessageId)
+            ?? _viewModel.Messages.Where(m => m.Id <= anchorMessageId).OrderByDescending(m => m.Id).FirstOrDefault()
+            ?? _viewModel.Messages.FirstOrDefault();
 
         if (message is null)
         {
             _isInitialScrollDone = true;
             _suppressScrollEvents = false;
+            _fallbackVisibilityCts?.Cancel();
+            SetMessagesVisible(true);
             return;
         }
 
@@ -538,6 +576,8 @@ public partial class ChatView : UserControl
             _isInitialScrollDone = true;
             _suppressScrollEvents = false;
             UpdateIsScrolledToBottomFromOffset();
+            _fallbackVisibilityCts?.Cancel();
+            SetMessagesVisible(true);
             return;
         }
 
@@ -553,6 +593,8 @@ public partial class ChatView : UserControl
             _isInitialScrollDone = true;
             _suppressScrollEvents = false;
             UpdateIsScrolledToBottomFromOffset();
+            _fallbackVisibilityCts?.Cancel();
+            SetMessagesVisible(true);
         }, DispatcherPriority.Background);
     }
 
@@ -633,8 +675,12 @@ public partial class ChatView : UserControl
     {
         if (_seenMessageIds.Count <= SeenIdsCleanupThreshold) return;
 
-        var current = _messagesList!.GetRealizedContainers().OfType<ListBoxItem>().Select(c => (c.DataContext as MessageViewModel)?.Id)
-            .Where(id => id.HasValue).Select(id => id!.Value).ToHashSet();
+        var current = _messagesList!.GetRealizedContainers()
+            .OfType<ListBoxItem>()
+            .Select(c => (c.DataContext as MessageViewModel)?.Id)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToHashSet();
 
         _seenMessageIds.IntersectWith(current);
     }
@@ -680,7 +726,6 @@ public partial class ChatView : UserControl
     {
         _suppressScrollEvents = true;
         _scrollCts?.Cancel();
-        _scrollCts?.Dispose();
         _scrollCts = new CancellationTokenSource();
         var token = _scrollCts.Token;
         _ = RunDelayedAsync(() =>
@@ -713,6 +758,10 @@ public partial class ChatView : UserControl
         _scrollCts?.Cancel();
         _scrollCts?.Dispose();
         _scrollCts = null;
+
+        _fallbackVisibilityCts?.Cancel();
+        _fallbackVisibilityCts?.Dispose();
+        _fallbackVisibilityCts = null;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)

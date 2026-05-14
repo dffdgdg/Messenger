@@ -1,11 +1,4 @@
-﻿using Avalonia.Media.Imaging;
-using Desktop.Infrastructure.Diagnostics;
-using Desktop.Infrastructure.Media;
-using Microsoft.Extensions.DependencyInjection;
-using Shared.Enum;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using Desktop.Infrastructure.Media;
 
 namespace Desktop.Views.Controls;
 
@@ -293,13 +286,6 @@ public partial class AvatarControl : UserControl
         {
             AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
             ImageSource = newImageSource;
-
-            if (!HasImage && AvatarImage.Source is Bitmap old)
-            {
-                AvatarImage.Source = null;
-                old.Dispose();
-                MemoryDiagnostics.OnBitmapDisposed();
-            }
         }
 
         Initials = ExtractInitials(DisplayName);
@@ -422,16 +408,8 @@ public partial class AvatarControl : UserControl
     }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (AvatarImage.Source is Bitmap old)
-        {
-            AvatarImage.Source = null;
-            old.Dispose();
-            MemoryDiagnostics.OnBitmapDisposed();
-        }
-
         AvatarImage.SetValue(RemoteImage.CurrentUrlProperty, null);
         _imageSource = null;
-
         base.OnDetachedFromVisualTree(e);
     }
 

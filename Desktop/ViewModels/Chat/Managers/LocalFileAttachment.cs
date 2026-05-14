@@ -1,6 +1,4 @@
 using Avalonia.Media.Imaging;
-using System;
-using System.IO;
 
 namespace Desktop.ViewModels.Chat.Managers;
 

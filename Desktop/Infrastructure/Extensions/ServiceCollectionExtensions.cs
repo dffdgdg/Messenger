@@ -24,9 +24,6 @@ using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Department;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Net.Http;
 
 namespace Desktop.Infrastructure.Extensions;
 

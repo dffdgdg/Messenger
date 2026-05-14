@@ -1,13 +1,8 @@
 ﻿using Desktop.Services.Features.Call;
 using Microsoft.Extensions.Logging;
-using Shared.DTO.Call;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Shared.Dto.Call;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Services.Call;
 
@@ -25,7 +20,6 @@ public sealed partial class CallService : ICallService
 
     private UdpClient? _udpClient;
     private int _localUdpPort;
-    private string? _localIp;
     private CancellationTokenSource? _receiveCts;
 
     private readonly ConcurrentDictionary<int, IPEndPoint> _peerEndpoints = new();
@@ -158,14 +152,11 @@ public sealed partial class CallService : ICallService
         _receiveCts = new CancellationTokenSource();
         _ = ReceiveLoopAsync(_receiveCts.Token);
     }
+
     private static List<string> GetAllLocalIpAddresses()
-    {
-        return [.. Dns.GetHostEntry(Dns.GetHostName())
-            .AddressList
-            .Where(a => a.AddressFamily == AddressFamily.InterNetwork
-                        && !IPAddress.IsLoopback(a))
-            .Select(a => a.ToString())];
-    }
+        => [.. Dns.GetHostEntry(Dns.GetHostName()).AddressList.Where(a => a.AddressFamily == AddressFamily.InterNetwork
+            && !IPAddress.IsLoopback(a)).Select(a => a.ToString())];
+
     private async Task ReceiveLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested && _udpClient != null)
@@ -240,7 +231,6 @@ public sealed partial class CallService : ICallService
             return;
         }
 
-        // Отправляем один сигнал со всеми IP через запятую
         var payload = string.Join(",", _localIps.Select(ip => $"{ip}:{_localUdpPort}"));
 
         await _hub.SendSignalAsync(new WebRtcSignalDto
@@ -258,7 +248,6 @@ public sealed partial class CallService : ICallService
     {
         LogEndpointReceived(signal.FromUserId, signal.Payload);
 
-        // Парсим один или несколько endpoint через запятую
         var candidates = signal.Payload.Split(',');
 
         IPEndPoint? bestEndpoint = null;
@@ -272,14 +261,12 @@ public sealed partial class CallService : ICallService
 
             var endpoint = new IPEndPoint(ip, port);
 
-            // Выбираем endpoint из той же подсети что и наш локальный IP
             if (IsInSameSubnet(ip))
             {
                 bestEndpoint = endpoint;
-                break; // нашли подходящий — берём первый совпавший
+                break;
             }
 
-            // Запоминаем как кандидат если лучшего нет
             bestEndpoint ??= endpoint;
         }
 
@@ -310,24 +297,6 @@ public sealed partial class CallService : ICallService
         }
 
         return false;
-    }
-
-    private static string? GetFirstNonLoopbackIpv4()
-    {
-        var candidates = Dns.GetHostEntry(Dns.GetHostName()).AddressList
-            .Where(a => a.AddressFamily == AddressFamily.InterNetwork
-                        && !IPAddress.IsLoopback(a))
-            .ToList();
-
-        var preferred = candidates.FirstOrDefault(a =>
-        {
-            var bytes = a.GetAddressBytes();
-            return (bytes[0] == 192 && bytes[1] == 168) ||
-                   bytes[0] == 10 ||
-                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31);
-        });
-
-        return (preferred ?? candidates.FirstOrDefault())?.ToString();
     }
 
     private void SubscribeHubEvents()
@@ -456,6 +425,7 @@ public sealed partial class CallService : ICallService
     }
 
     #region Log
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Аудио недоступно, продолжаем без микрофона")]
     private partial void LogAudioUnavailable(Exception ex);
 
@@ -493,5 +463,6 @@ public sealed partial class CallService : ICallService
     private partial void LogPeerEndpointRegistered(int userId, IPEndPoint endpoint);
     [LoggerMessage(Level = LogLevel.Warning, Message = "ToggleSpeaking SignalR error")]
     private partial void LogSpeakingToggleFailed(Exception? ex);
+
     #endregion
 }

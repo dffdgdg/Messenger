@@ -45,7 +45,7 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
     private async Task<List<ChatWithLastMessage>> LoadChatsWithLastMessageAsync(List<int> chatIds)
     {
-        var chats = await chatRepository.GetByIdsLightAsync(chatIds);
+        var chats = await chatRepository.GetByIdsAsync(chatIds);
 
         var lastMessages = await chatRepository.GetLastMessagesAsync(chatIds);
         var lastMsgMap = lastMessages.ToDictionary(m => m.ChatId);
@@ -490,7 +490,6 @@ public partial class ChatService(MessengerDbContext context, IChatRepository cha
 
         LogAvatarRemoved(chatId);
 
-        // Уведомляем всех участников
         var updatedDto = new ChatDto
         {
             Id = chatEntity.Id,

@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace Desktop.ViewModels.Admin;
+﻿namespace Desktop.ViewModels.Admin;
 
 public class DepartmentGroup(string departmentName, int? departmentId, ObservableCollection<UserDto> users)
 {

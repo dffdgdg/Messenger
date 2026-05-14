@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Desktop.Infrastructure.Helpers;
+﻿namespace Desktop.Infrastructure.Helpers;
 
 public static class AvatarHelper
 {
@@ -57,7 +54,6 @@ public static class AvatarHelper
         }
 
         var stableVersion = Math.Abs(resolved.AbsolutePath.GetHashCode()) % 10000;
-        var separator = resolved.Query.Length > 0 ? "&" : "?";
         var builder = new UriBuilder(resolved)
         {
             Query = resolved.Query.TrimStart('?') + (string.IsNullOrEmpty(resolved.Query) ? "" : "&") + $"v={stableVersion}"

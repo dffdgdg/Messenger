@@ -1,7 +1,7 @@
 ﻿namespace API.Repositories.Base;
 
-public abstract class RepositoryBase<TEntity>(MessengerDbContext context) : IRepository<TEntity>
-    where TEntity : class
+public abstract class RepositoryBase<TEntity>(MessengerDbContext context)
+    : IRepository<TEntity> where TEntity : class
 {
     protected readonly MessengerDbContext _context = context;
 

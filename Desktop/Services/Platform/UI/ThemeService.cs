@@ -1,5 +1,4 @@
 ﻿using Avalonia.Styling;
-using System;
 using System.Diagnostics;
 using AppTheme = Shared.Enum.Theme;
 

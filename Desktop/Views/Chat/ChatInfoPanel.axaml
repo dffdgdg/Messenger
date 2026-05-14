@@ -545,7 +545,8 @@
 									<TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ"/>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPhotosSectionCommand}">
+											Command="{Binding OpenPhotosSectionCommand}"
+											IsVisible="{Binding PhotosCount, Converter={conv:Converter Name=GreaterThanZero}}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource ImageIcon}"
 													  Width="18" Height="18"
@@ -603,8 +604,8 @@
 									</Button>
 
 									<Button Classes="InfoRow"
-											Command="{Binding OpenPollsSectionCommand}"
-											IsVisible="{Binding PollsCount}">
+											IsVisible="{Binding PollsCount}"
+											Command="{Binding OpenPollsSectionCommand}">
 										<Grid ColumnDefinitions="Auto,*,Auto">
 											<PathIcon Data="{StaticResource PollIcon}"
 													  Width="18" Height="18"
@@ -846,7 +847,6 @@
 																	Margin="10,0,0,0"
 																	Spacing="3">
 
-															<!-- Content — это и есть вопрос опроса -->
 															<TextBlock Text="{Binding Content}"
 																	   FontSize="13"
 																	   FontWeight="Medium"
@@ -960,7 +960,6 @@
 
 								<StackPanel IsVisible="{Binding ShowMembersSection}" Spacing="8">
 
-									<!-- SearchBox вместо кастомного поля -->
 									<controls:SearchBox SearchText="{Binding MemberSearchQuery, Mode=TwoWay}"
 														Watermark="Поиск участников..."
 														Margin="0,0,0,4"/>

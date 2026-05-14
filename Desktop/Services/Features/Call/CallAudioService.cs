@@ -2,10 +2,9 @@
 using Concentus.Enums;
 using Desktop.Services.Features.Media.Audio;
 using PortAudioSharp;
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
+using Stream = PortAudioSharp.Stream;
 
 namespace Desktop.Services.Features.Call;
 

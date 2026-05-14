@@ -1,7 +1,5 @@
 ﻿namespace API.Repositories.Abstarctions;
 
-// IReadReceiptRepository.cs — метод называется GetUnreadCountsForUsersAsync
-
 public interface IReadReceiptRepository
 {
     Task<ChatMember?> FindMemberAsync(int chatId, int userId,CancellationToken ct = default);

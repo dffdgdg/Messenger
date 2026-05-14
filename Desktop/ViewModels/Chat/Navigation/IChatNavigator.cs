@@ -1,6 +1,4 @@
-﻿using Shared.DTO.Call;
-using System;
-using System.Threading.Tasks;
+﻿using Shared.Dto.Call;
 
 namespace Desktop.ViewModels.Chat.Navigation;
 

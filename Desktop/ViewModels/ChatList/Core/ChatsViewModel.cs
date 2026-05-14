@@ -7,14 +7,10 @@ using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Chats;
 using Desktop.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Dto.Call;
 using Shared.Dto.Online;
-using Shared.DTO.Call;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels;
 
@@ -29,6 +25,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     private ChatViewModel? _subscribedChatVm;
     private bool _isFirstLoad = true;
     private bool _disposed;
+    private bool _isRestoringSelection;
 
     IAsyncRelayCommand IRefreshable.RefreshCommand => LoadChatsCommand;
 
@@ -98,7 +95,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         var result = await _apiClient.GetAsync<List<ChatDto>>(ApiEndpoints.Chats.UserChats(userId));
         if (!result.Success || result.Data == null) return [];
 
-        return result.Data.ConvertAll(c => new SearchFilterItem(c.Id, c.Name ?? string.Empty, c.Avatar));
+        var filtered = result.Data.Where(c => IsGroupMode
+            ? c.Type is ChatType.Chat or ChatType.Department
+            : c.Type == ChatType.Contact);
+
+        return [.. filtered.Select(c => new SearchFilterItem(c.Id, c.Name ?? string.Empty, c.Avatar))];
     }
 
     private void OnSearchManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -359,6 +360,18 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
     {
         MemoryDiagnostics.Dump($"ChatSelected: {value?.Name ?? "null"}");
 
+        if (value == null && !_isRestoringSelection && CurrentChatViewModel?.Chat?.Id is int currentChatId)
+        {
+            var restored = FindChat(currentChatId);
+            if (restored != null)
+            {
+                _isRestoringSelection = true;
+                SelectedChat = restored;
+                _isRestoringSelection = false;
+                return;
+            }
+        }
+
         SyncSearchScopeWithChatViewMode();
         SetSearchChatContext(value);
 
@@ -576,7 +589,6 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (target == null)
         {
             updatedChat.UnreadCount = _globalHub.GetUnreadCount(updatedChat.Id);
-            target = InsertAndReturn(new ChatListItemViewModel(updatedChat));
             return;
         }
 

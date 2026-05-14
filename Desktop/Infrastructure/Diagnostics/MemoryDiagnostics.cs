@@ -1,10 +1,6 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Runtime;
 using System.Text;
-using System.Threading;
 
 namespace Desktop.Infrastructure.Diagnostics;
 
@@ -91,7 +87,11 @@ public static class MemoryDiagnostics
         Interlocked.Decrement(ref _imgRamCount);
         Interlocked.Add(ref _imgRamBytes, -bytes);
     }
-
+    public static void OnMessageVmDisposed()
+    {
+        Interlocked.Decrement(ref _messageVmAlive);
+        Interlocked.Increment(ref _messageVmFinalized);
+    }
     public static void OnImageLargeSkipped() => Interlocked.Increment(ref _imgLargeSkipped);
     public static void OnImageDiskHit() => Interlocked.Increment(ref _imgDiskHits);
     public static void OnImageNetworkFetch() => Interlocked.Increment(ref _imgNetworkFetches);

@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Desktop.ViewModels.Chat.Context;
+﻿namespace Desktop.ViewModels.Chat.Context;
 
 public sealed class ChatInfoPanelMediaItem(MessageViewModel message, MessageFileDto file)
 {

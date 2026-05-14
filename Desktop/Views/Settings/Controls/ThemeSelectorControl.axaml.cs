@@ -1,5 +1,4 @@
 using Avalonia.Styling;
-using System;
 using AppTheme = Shared.Enum.Theme;
 
 namespace Desktop.Views.Controls;

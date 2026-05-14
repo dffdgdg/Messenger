@@ -1,7 +1,4 @@
-﻿using Shared.Dto.Message;
-using System.Threading.Tasks;
-
-namespace Desktop.Services.Features.Media.Files;
+﻿namespace Desktop.Services.Features.Media.Files;
 
 public enum FileDownloadStatus
 {

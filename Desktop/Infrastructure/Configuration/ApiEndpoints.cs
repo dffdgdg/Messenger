@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 
 namespace Desktop.Infrastructure.Configuration;
 
@@ -43,7 +42,7 @@ public static class ApiEndpoints
         public static string RemoveMember(int chatId, int userId) => $"{Base}/{chatId}/members/{userId}";
         public static string MembersDetailed(int chatId) => $"{Base}/{chatId}/members/detailed";
         public static string MemberRole(int chatId, int userId, ChatRole role) => $"{Base}/{chatId}/members/{userId}/role?role={role}";
-        public static string Leave(int chatId, int userId) => $"{Base}/{chatId}/leave?userId={userId}";
+        public static string Leave(int chatId, int userId) => RemoveMember(chatId, userId);
         public static string Avatar(int chatId) => $"{Base}/{chatId}/avatar";
         public static string UserChats(int userId) => $"{Base}/user/{userId}";
         public static string UserDialogs(int userId) => $"{Base}/user/{userId}/dialogs";
@@ -60,9 +59,10 @@ public static class ApiEndpoints
         public static string ById(int id) => $"{Base}/{id}";
         public static string Pin(int id) => $"{Base}/{id}/pin";
         public static string PinnedForChat(int chatId) => $"{Base}/chat/{chatId}/pinned";
+        public static string Counts(int chatId) => $"{Base}/chat/{chatId}/counts";
 
-        public static string ForChat(int chatId, int userId, int page, int pageSize)
-            => $"{Base}/chat/{chatId}?userId={userId}&page={page}&pageSize={pageSize}";
+        public static string Latest(int chatId, int take)
+            => $"{Base}/chat/{chatId}/latest?take={take}";
 
         public static string Around(int chatId, int messageId, int userId, int count)
             => $"{Base}/chat/{chatId}/around/{messageId}?userId={userId}&count={count}";

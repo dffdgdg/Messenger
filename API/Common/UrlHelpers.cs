@@ -1,6 +1,4 @@
-﻿using API.Services.Infrastructure.Network;
-
-namespace API.Common;
+﻿namespace API.Common;
 
 public static class UrlHelpers
 {

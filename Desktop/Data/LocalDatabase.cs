@@ -1,10 +1,7 @@
 ﻿using Desktop.Data.Models.Cache;
 using Desktop.Data.Models.Sync;
 using SQLite;
-using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Desktop.Data;
 
@@ -118,7 +115,6 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             }
         }
 
-        // НОВЫЙ БЛОК ↓
         if (currentVersion < 2)
         {
             Debug.WriteLine("[LocalDB] Migrating to schema v2: adding downloaded_files table");

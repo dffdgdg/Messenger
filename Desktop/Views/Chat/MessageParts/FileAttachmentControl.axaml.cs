@@ -13,7 +13,7 @@ public partial class FileAttachmentControl : UserControl
         imageControl?.PropertyChanged += OnImagePropertyChanged;
     }
 
-    private void OnImagePropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
+    private void OnImagePropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == Image.SourceProperty && e.NewValue is Bitmap && DataContext is MessageFileViewModel vm && !vm.IsImageLoaded)
         {

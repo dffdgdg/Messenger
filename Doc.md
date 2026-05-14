@@ -1,4 +1,4 @@
-# ДОКУМЕНТАЦИЯ ПРОЕКТА ВнутрьСеть
+# Документация проекта ВнутрьСеть (актуализирована по diff)
 
 > **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite  
 > **Архитектура:** Слоёная (Entities → Services → Controllers / Hubs), Event-Driven через SignalR  
@@ -358,6 +358,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (**теперь `DateTimeOffset`**), `IsGroupCall`, `Participants` | Полное состояние |
 | `WebRtcSignalDto` | `CallId`, `FromUserId`, `TargetUserId` (-1=broadcast), `Type` (offer/answer/candidate/hangup), `Payload` (JSON) | SDP/ICE сигнал |
 
+**Изменение:** пространство имён заменено с `Shared.DTO.Call` на `Shared.Dto.Call`.
+
 ---
 
 ## 2.3 Chat
@@ -383,6 +385,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `MessageReplyPreviewDto` | `Id`, `ChatId`, `SenderId?`, `SenderName?`, `Content?`, `CreatedAt`, `IsDeleted`, **`IsVoiceMessage`**, **`HasPoll`**, **`FilesCount`** |
 | `PagedMessagesDto` | `Messages`, `TotalCount`, `HasMoreMessages`, `HasNewerMessages`, `CurrentPage` |
 | `UpdateMessageDto` | `Id`, `Content?` |
+| **`ChatCountsDto`** | `MediaCount`, `FilesCount`, `PollsCount`, `PinnedCount` | Статистика по чату |
 
 ---
 
@@ -411,9 +414,11 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `GetCurrentUserId()` | Из JWT claim `sub` |
 | `IsCurrentUser(int)` | Сравнение с текущим |
 | `Map(Result<T>)` | Успех → 200+ApiResponse, ошибка → вызов `MapFailureToObjectResult<T>` |
-| `MapFailureToObjectResult<T>(Result result)` | **Новый метод.** Создаёт `ApiResponse<T>` и возвращает HTTP-статус по `ResultErrorType` |
+| `MapFailureToObjectResult<T>(Result result)` | Создаёт `ApiResponse<T>` и возвращает HTTP-статус по `ResultErrorType` |
 | `Forbidden(...)` | 403 |
-| `ExecuteAsync(...)` | Обёртка с try-catch |
+| `ExecuteAsync(...)` | Обёртка с try-catch, **теперь логирует ошибку перед возвратом** |
+
+**Изменения:** удалён старый `MapFailureToObjectResult` (без типа) и `MapFailure(Result)`. Логирование бизнес-ошибок теперь выполняется внутри `ExecuteAsync`, а не в `MapFailureToObjectResult`.
 
 **Маппинг:** Unauthorized→401, Forbidden→403, NotFound→404, Conflict→409, Internal→500, default→400
 
@@ -424,9 +429,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Контроллер | Эндпоинты | Авторизация | Rate Limit |
 |---|---|---|---|
 | `AuthController` | POST login, refresh, revoke | login/refresh — AllowAnonymous | `login` |
-| `UsersController` | GET/PUT users, avatar, username, password, online-статусы | IsCurrentUser для изменений | — |
+| `UsersController` | GET/PUT users, avatar, username, password, online-статусы, **DELETE avatar** | IsCurrentUser для изменений | — |
 | `ChatsController` | CRUD, участники, роли, аватар | IsMember/Admin/Owner | — |
-| `MessagesController` | CRUD, pin/unpin, пагинация (before/after/around), поиск | IsMember | `messaging`, `search` |
+| `MessagesController` | CRUD, pin/unpin, **GET /chat/{chatId}/latest**, **GET /chat/{chatId}/counts**, before/after/around, поиск | IsMember | `messaging`, `search` |
 | `FilesController` | POST upload | IsMember | `upload` |
 | `DepartmentsController` | CRUD, участники | Admin или Head | — |
 | `PollsController` | Create/vote/close/get | IsMember | — |
@@ -513,7 +518,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `ValidationHelper` | `ValidateUsername` (regex `^[a-z0-9_]{3,30}$`), `ValidatePassword` (≥6 символов) |
 | `StatusExtensions` | `Parse(string?)` → TimeSpan: "15m", "30m", "1h", "2h", "4h", "8h", "24h" |
 | `UrlHelpers` | `BuildFullUrl(string?, IUrlBuilder?)` |
-| `HubMethods` | **Новый класс.** Статические константы для имён хаб-методов. Вложенные классы: `Chat`, `Call`, `ChatInvoke`, `CallInvoke`. |
+| `HubMethods` | **Новый класс.** Статические константы для имён хаб-методов. Вложенные классы: `Chat`, `Call`, `ChatInvoke`, `CallInvoke.` |
 | **`SystemEventMeta`** | **Новый класс в `Shared.Helpers`**. Форматирует системные сообщения и предоставляет префиксы/суффиксы для UI. Используется вместо switch в `SystemMessageFormatter` и на клиенте. |
 
 ---
@@ -552,7 +557,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `IUserRepository` | `UserRepository` | **Обновлён.** Инкапсулирует запросы к `Users`: `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `Add`. **Добавлены:** `GetAllWithSettingsAsync`, `GetWithSettingsAsync`, `UsernameExistsByOtherUserAsync`. **Удалён:** `GetAllAsync`. |
 | `IRefreshTokenRepository` | `RefreshTokenRepository` | Управление токенами: отзыв семейства, отзыв всех для пользователя, удаление истёкших, активные семьи. **Удалён:** `GetActiveByUserIdAsync`. |
 | `IChatRepository` | `ChatRepository` | **Существенно расширен и очищен.** Удалены методы: `GetByIdsAsync`, `GetMemberAsync`, `GetChatTypeAsync`. **`GetLastMessagesAsync`** теперь разрешает превью содержимого, голосового, файлов и опроса по цепочке пересылки (если исходное сообщение не имеет контента, проверяется `ForwardedFromMessage`). |
-| `IMessageRepository` | `MessageRepository` | **Кардинально переработан.** **Удалены методы:** `FindForBroadcastAsync`, `GetPagedAsync`, `GetWithIncludesAsync`, `GetAroundAsync`. **Упрощены сигнатуры:** `GetBeforeAsync`, `GetAfterAsync` и др. с параметром `cutoff`. **Добавлены:** `PinAsync`, `UnpinAsync`. `GetUserMessagesForMixedAsync` теперь использует строгое `<` вместо `<=` для правильной пагинации. **Добавлен метод** `FindUserMessageWithIncludesNoTrackingAsync` для загрузки сообщения без отслеживания изменений. |
+| `IMessageRepository` | `MessageRepository` | **Кардинально переработан.** **Удалены методы:** `FindForBroadcastAsync`, `GetPagedAsync`, `GetWithIncludesAsync`, `GetAroundAsync`. **Упрощены сигнатуры:** `GetBeforeAsync`, `GetAfterAsync` и др. с параметром `cutoff`. **Добавлены:** `PinAsync`, `UnpinAsync`. `GetUserMessagesForMixedAsync` теперь использует строгое `<` вместо `<=` для правильной пагинации. **Добавлен метод** `FindUserMessageWithIncludesNoTrackingAsync` для загрузки сообщения без отслеживания изменений. **Добавлены** `GetLatestAsync`, `GetChatCountsAsync`. |
 | **`IReadReceiptRepository`** | **`ReadReceiptRepository`** | **Новый.** Все операции с отметками о прочтении. **Добавлен:** `GetUnreadCountsForUsersAsync`. Метод `UpdateReadPointerAsync` больше не вызывает `SaveChangesAsync` (контекст управляется сервисом). |
 | **`IPollRepository`** | **`PollRepository`** | **Новый.** Управление опросами и голосами. Методы упорядочены. |
 
@@ -594,6 +599,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 ---
 
+
 ## Бизнес-сервисы
 
 | Сервис | Строк | Ключевое поведение |
@@ -601,14 +607,14 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallSessionService` | 141 | Singleton. `ConcurrentDictionary`. Не масштабируется. Длительность звонка вычисляется как `DateTimeOffset.UtcNow - session.StartedAt`. |
 | `ChatService` | ~440 | Переведён на `IChatRepository` и `IUserRepository`. Загрузка последних сообщений через `GetLastMessagesAsync`, диалогов — через `GetDialogPartnersAsync`. Участники загружаются проекцией `GetMembersWithUsersAsync`. Удаление чата использует `GetVoiceFilePathsAsync`. Внутренний класс `RawLastMessage` удалён. **Изменения:** Отправка `ChatUpdated` теперь использует `HubMethods.Chat.ChatUpdated`. **При загрузке аватара** создаётся системное сообщение `ChatAvatarUpdated` и рассылается уведомление `ChatUpdated` всем участникам. |
 | `ChatMemberService` | 100 | Инвалидация кэша после операций. **При удалении участника из чата (или выходе) отправляется персональное событие `HubMethods.Chat.ChatRemoved` удаляемому пользователю через `IHubNotifier`.** |
-| `DepartmentService` | 218+ | **Существенно изменён.** При создании отдела автоматически создаётся чат типа `Department`. При изменении названия отдела обновляется имя связанного чата. При удалении отдела удаляется связанный чат. При перемещении пользователя между отделами (`MoveUserToDepartment`, `RemoveUserFromDepartment`) автоматически добавляет/удаляет пользователя из чатов соответствующих отделов. При смене руководителя отдела происходит перестроение членства в чате руководителей (если настроен в `SystemSettings` ключ `heads_chat_id`). BFS для проверки циклов в иерархии. Использует проекцию для списка пользователей. |
+| `DepartmentService` | 218+ | **Существенно изменён.** При создании отдела автоматически создаётся чат типа `Department`. При изменении названия отдела обновляется имя связанного чата. При удалении отдела удаляется связанный чат. При перемещении пользователя между отделами (`MoveUserToDepartment`, `RemoveUserFromDepartment`) автоматически добавляет/удаляет пользователя из чатов соответствующих отделов. При смене руководителя отдела происходит перестроение членства в чате руководителей (если настроен в `SystemSettings` ключ `heads_chat_id`). BFS для проверки циклов в иерархии. Использует проекцию для списка пользователей. **Добавлено использование `AppDateTime`** для консистентных временных меток. |
 | `FileService` | 112 | Изображения → WebP (JPEG/PNG/GIF/WebP/BMP). Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
-| `MessageService` | ~590 | **Значительно изменён.** Все вызовы хаба теперь используют `HubMethods.Chat.*`. `BroadcastToMembersAsync` теперь отправляет одно сообщение в чат (`SendToChatAsync`) вместо индивидуальной рассылки. `NotifyAndUpdateUnreadAsync` использует пакетное получение unread-счётчиков через `GetUnreadCountsForUsersInChatAsync`. **`CreateMessageAsync`** теперь разрешает корневое пересланное сообщение через `ResolveRootForwardedMessageIdAsync` и автоматически подставляет его контент, если текущее сообщение отправлено без текста. **`PinMessageAsync`** теперь проверяет, не закреплено ли уже сообщение; после закрепления использует `FindUserMessageWithIncludesNoTrackingAsync`, отправляет `MessageUpdated` и создаёт системное сообщение `MessagePinned`. **`UnpinMessageAsync`** аналогично отправляет `MessageUpdated` и создаёт `MessageUnpinned`. |
+| `MessageService` | ~590 | **Значительно изменён.** Все вызовы хаба теперь используют `HubMethods.Chat.*`. `BroadcastToMembersAsync` теперь отправляет одно сообщение в чат (`SendToChatAsync`) вместо индивидуальной рассылки. `NotifyAndUpdateUnreadAsync` использует пакетное получение unread-счётчиков через `GetUnreadCountsForUsersInChatAsync`. **`CreateMessageAsync`** теперь разрешает корневое пересланное сообщение через `ResolveRootForwardedMessageIdAsync` и автоматически подставляет его контент, если текущее сообщение отправлено без текста. **`PinMessageAsync`** теперь проверяет, не закреплено ли уже сообщение; после закрепления использует `FindUserMessageWithIncludesNoTrackingAsync`, отправляет `MessageUpdated` и создаёт системное сообщение `MessagePinned`. **`UnpinMessageAsync`** аналогично отправляет `MessageUpdated` и создаёт `MessageUnpinned`. **Метод `GetChatMessagesAsync` заменён на `GetLatestMessagesAsync`** (пагинация убрана, используется take). **Добавлен `GetChatCountsAsync`**. |
 | `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. Отправка через `HubMethods.Chat.ReceiveNotification`. |
 | `PollService` | ~150 | **Изменения:** Внедрён `TimeBundle` для консистентности `DateTime`. Проверка `ClosesAt` теперь `HasValue && ClosesAt < now`. Операции закрытия используют `_appDateTime.UtcNow`. Работа с транзакцией улучшена: блок `try-catch`. Отправка событий через `HubMethods.Chat.ReceiveMessage` и `HubMethods.Chat.PollUpdated`. |
 | `ReadReceiptService` | ~90 | Полный переход на `IReadReceiptRepository`. `MarkAsReadAsync` и `MarkMessageAsReadAsync` теперь управляют сохранением контекста (`SaveChangesAsync`) явно, вместо делегирования этого репозиторию. **Добавлен метод** `GetUnreadCountsForUsersInChatAsync`. Баг с двойным вызовом хаба исправлен. |
 | `AdminService` | 149 | Использует репозитории `IUserRepository`, `IRefreshTokenRepository` для операций с пользователями и токенами. `GetUsersAsync` использует `GetAllWithSettingsAsync` и маппит `UserWithSettingsProjection` в `UserDto`. |
-| `UserService` | 180 | **Существенно изменён.** `GetAllUsersAsync` и `GetUserAsync` используют `GetAllWithSettingsAsync`/`GetWithSettingsAsync` и новый метод `MapProjectionToDto`. `ChangeUsernameAsync` использует `UsernameExistsByOtherUserAsync`. Весь маппинг проекций централизован. Логирование обновлено. |
+| `UserService` | 180 | **Существенно изменён.** `GetAllUsersAsync` и `GetUserAsync` используют `GetAllWithSettingsAsync`/`GetWithSettingsAsync` и новый метод `MapProjectionToDto`. `ChangeUsernameAsync` использует `UsernameExistsByOtherUserAsync`. Весь маппинг проекций централизован. Логирование обновлено. **Добавлен `RemoveAvatarAsync`.** |
 | `SystemMessageService` | 49 | Создаёт экземпляры `SystemMessage`, использует поле `InitiatorId`. Отправка через `HubMethods.Chat.ReceiveMessage`. |
 | `SystemMessageFormatter` | 23 | Делегирует форматирование классу `SystemEventMeta` из `Shared.Helpers`. Fallback: "Пользователь"/"пользователя". Поддерживает все типы событий, включая `ChatAvatarUpdated`. |
 
@@ -623,12 +629,12 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `ICallSessionService` | `CreateCallAsync`, `JoinCall`, `LeaveCall`, `EndCallAsync`, `ToStateDto` |
 | `IChatService` | `GetUserChatsAsync`, `GetContactChatAsync`, `CreateChatAsync`, `UpdateChatAsync`, `DeleteChatAsync` |
 | `IChatMemberService` | `AddMemberAsync`, `RemoveMemberAsync`, `UpdateRoleAsync`, `GetMembersAsync` |
-| `IMessageService` | `CreateMessageAsync`, `GetChatMessagesAsync`, `GetMessagesAroundAsync`, `SearchMessagesAsync`, `GlobalSearchAsync`, `PinMessageAsync` |
+| `IMessageService` | `CreateMessageAsync`, **`GetLatestMessagesAsync`**, `GetMessagesAroundAsync`, `SearchMessagesAsync`, `GlobalSearchAsync`, `PinMessageAsync`, **`GetChatCountsAsync`** |
 | `IPollService` | `CreatePollAsync`, `VoteAsync`, `ClosePollAsync`, `GetPollAsync` |
 | `IReadReceiptService` | `MarkAsReadAsync`, `GetUnreadCountAsync`, `GetAllUnreadCountsAsync`, `GetChatReadInfoAsync` |
 | `IDepartmentService` | `GetDepartmentsAsync`, `CreateDepartmentAsync`, `UpdateDepartmentAsync`, `DeleteDepartmentAsync` |
 | `IFileService` | `SaveImageAsync`, `SaveMessageFileAsync`, `DeleteFile`, `IsValidImage` |
-| `IUserService` | `GetAllUsersAsync`, `GetUserAsync`, `UpdateUserAsync`, `UploadAvatarAsync`, `ChangeUsernameAsync`, `ChangePasswordAsync` |
+| `IUserService` | `GetAllUsersAsync`, `GetUserAsync`, `UpdateUserAsync`, `UploadAvatarAsync`, **`RemoveAvatarAsync`**, `ChangeUsernameAsync`, `ChangePasswordAsync` |
 | `IAdminService` | `GetUsersAsync`, `CreateUserAsync`, `UpdateUserAsync`, `ToggleBanAsync`, `ResetPasswordAsync` |
 | `INotificationService` | `SendNotificationAsync`, `SendMentionNotificationAsync`, `SetChatMuteAsync` |
 | `ISystemMessageService` | `CreateAsync`, `CreateCallStartedMessageAsync`, `CreateCallEndedMessageAsync` |
@@ -641,7 +647,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | **`IUserRepository`** | `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `UsernameExistsAsync`, `Add` |
 | **`IRefreshTokenRepository`** | `RevokeByFamilyIdAsync`, `RevokeAllForUserAsync`, `DeleteExpiredAsync`, `GetActiveFamiliesAsync` |
 | **`IChatRepository`** | `FindByIdAsync`, `FindByIdWithMembersAsync`, `IsMemberAsync`, `GetByIdsLightAsync`, `GetLastMessagesAsync`, `GetDialogPartnersAsync`, `UpdateLastMessageTimeAsync`, `GetMembersWithUsersAsync`, `GetVoiceFilePathsAsync`, `GetChatTypeAsync`, `GetShowHistoryForNewMembersAsync`, `GetContactChatsWithMembersAsync`, `SearchGroupChatsAsync`, `GetMembersForNotificationAsync`, `GetHistoryRestrictionsAsync`, `Add`, `AddMember`, `RemoveMember` |
-| **`IMessageRepository`** | `FindUserMessageByIdAsync`, `FindUserMessageWithIncludesAsync`, `FindUserMessageForDeleteAsync`, `FindForBroadcastAsync`, `GetWithIncludesAsync`, `GetBeforeAsync`, `GetAfterAsync`, `GetUserMessagesForMixedAsync`, `GetSystemMessagesAsync`, `GetPinnedAsync`, `CountAsync`, `HasOlderAsync`, `HasNewerAsync`, `ExistsInChatAsync`, `ExistsAsync`, `SearchInChatAsync`, `SearchGlobalAsync`, `GetForwardedToChatIdsAsync`, `SoftDeleteAsync`, `PinAsync`, `UnpinAsync`, `Add`, `RemoveVoiceMessage`, **`FindUserMessageWithIncludesNoTrackingAsync`** |
+| **`IMessageRepository`** | `FindUserMessageByIdAsync`, `FindUserMessageWithIncludesAsync`, `FindUserMessageForDeleteAsync`, `FindForBroadcastAsync`, `GetWithIncludesAsync`, `GetBeforeAsync`, `GetAfterAsync`, `GetUserMessagesForMixedAsync`, `GetSystemMessagesAsync`, `GetPinnedAsync`, `CountAsync`, `HasOlderAsync`, `HasNewerAsync`, `ExistsInChatAsync`, `ExistsAsync`, `SearchInChatAsync`, `SearchGlobalAsync`, `GetForwardedToChatIdsAsync`, `SoftDeleteAsync`, `PinAsync`, `UnpinAsync`, `Add`, `RemoveVoiceMessage`, **`FindUserMessageWithIncludesNoTrackingAsync`**, **`GetLatestAsync`**, **`GetChatCountsAsync`** |
 | **`IReadReceiptRepository`** | `FindMemberAsync`, `FindMemberReadonlyAsync`, `UpdateReadPointerAsync`, `CountUnreadAsync`, `GetUnreadInfoAsync`, `GetAllUnreadCountsAsync`, `GetUnreadCountsAsync`, `MessageExistsAsync`, `GetLastMessageIdAsync` |
 | **`IPollRepository`** | `FindByIdWithDetailsAsync`, `Add(Poll)`, `AddOption(PollOption)`, `AddVote(PollVote)`, `GetUserVotesAsync`, `RemoveVotes(IEnumerable<PollVote>)`, `CloseAsync` |
 
@@ -728,9 +734,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Класс | Назначение |
 |---|---|
-| `MessageCacheRepository` | CRUD, FTS5→LIKE fallback, `TrimOldMessages(keepPerChat=200)` |
+| `MessageCacheRepository` | CRUD, FTS5→LIKE fallback, `TrimOldMessages(keepPerChat=200)`. **MarkDeletedAsync теперь очищает поля reply и forward.** |
 | `ChatCacheRepository` | Upsert, `UpdateLastMessageAsync` |
-| `LocalCacheService` | API: пакеты, SyncState, ReadPointer, поиск |
+| `LocalCacheService` | API: пакеты, SyncState, ReadPointer, поиск. **Методы `GetMessagesBeforeAsync`, `GetMessagesAfterAsync`, `GetMessagesAroundAsync` переписаны как expression-bodied.** |
 | `CacheMapper` | `MessageDto↔CachedMessage`, `ChatDto↔CachedChat`. Source Generated JSON (`CacheJsonContext`). Добавлены поля для превью ответа: `ReplyIsVoice`, `ReplyHasPoll`, `ReplyFilesCount`. Удалены устаревшие поля `VoiceFileName`, `VoiceContentType`. |
 | **`DownloadedFileRepository`** | **Новый.** Управление записями о скачанных файлах в локальной БД. |
 
@@ -742,7 +748,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Класс | Назначение |
 |---|---|
-| `ApiEndpoints` | Статический билдер URL всех эндпоинтов |
+| `ApiEndpoints` | Статический билдер URL всех эндпоинтов. **Добавлены** `Messages.Latest`, `Messages.Counts`. **Исправлен** `Chats.Leave` (теперь использует `RemoveMember`). |
 | `AppConstants` | `MaxFileSizeBytes=20MB`, `DefaultPageSize=50`, `LoadMorePageSize=30`, `SearchPageSize=20`, `TypingIndicatorDurationMs=3500` |
 | `ServiceCollectionExtensions` | `AddMessengerCoreServices(apiBaseUrl)`, `AddMessengerViewModels()`. **Добавлены регистрации** `IDownloadedFileRepository`, `IFileDownloadStateService`. |
 
@@ -761,10 +767,10 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Класс | Назначение |
 |---|---|
-| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита >85KB, дедупликация, дисковый кэш, Bearer-токен. **Добавлены методы:** `InvalidateUrl(string)` — удаляет конкретный URL из RAM и дискового кэша; `InvalidateByRelativePath(string)` — удаляет все записи, содержащие заданный относительный путь; `IsCached(string)` — проверяет наличие в RAM (гибкое сравнение с query-параметрами). |
-| `RemoteImage` | Attached Property для Avalonia Image. **Свойство `CurrentUrlProperty` стало публичным.** При изменении источника на тот же URL перезагрузка не производится (оптимизация, больше не проверяет `IsCached`). Добавлена очистка старого Bitmap при сбросе источника. |
+| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита >85KB, дедупликация, дисковый кэш, Bearer-токен. **Добавлены методы:** `InvalidateUrl(string)` — удаляет конкретный URL из RAM и дискового кэша; `InvalidateByRelativePath(string)` — удаляет все записи, содержащие заданный относительный путь; `IsCached(string)` — проверяет наличие в RAM (гибкое сравнение с query-параметрами). **Улучшена отмена загрузок:** теперь поддерживается `CancellationToken`, в `_inflight` хранится пара (Task, CancellationTokenSource). При очистке кэша все ин-флайт задачи отменяются. |
+| `RemoteImage` | Attached Property для Avalonia Image. **Свойство `CurrentUrlProperty` стало публичным.** При изменении источника на тот же URL перезагрузка не производится (оптимизация). Добавлена очистка старого Bitmap при сбросе источника. **Вызов `MemoryDiagnostics.OnBitmapCreated` теперь условный (при успешной загрузке).** |
 | `ImageCacheService` | ⚠️ Дублирует `AuthenticatedImageLoader` (deprecated) |
-| `MemoryDiagnostics` | Счётчики ChatVM/MessageVM/Bitmap/RemoteImage, LOH, дамп GC. **Диагностика памяти полностью активирована** (ранее была закомментирована). Включены методы `Dump`, `DumpDetailed`, ForceFullGc, LOH-эксперимент. |
+| `MemoryDiagnostics` | Счётчики ChatVM/MessageVM/Bitmap/RemoteImage, LOH, дамп GC. **Диагностика памяти полностью активирована** (ранее была закомментирована). Включены методы `Dump`, `DumpDetailed`, ForceFullGc, LOH-эксперимент. **Добавлен `OnMessageVmDisposed`.** |
 
 ---
 
@@ -785,7 +791,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|---|
 | `ApiClientService` | 376 | HTTP + авто-рефреш 401 |
 | `GlobalHubConnection` | ~460 | SignalR `/chatHub`, 15+ событий. **Добавлен retry при 503 ServiceUnavailable.** Все строковые литералы заменены на `HubMethods`. `UserOnline` только логируется. Исправлена двойная отправка `MarkAsRead` (удалён лишний вызов `MarkAsRead` при обновлении указателя). Добавлены логи для `MessageUpdated`. **Добавлено событие `ChatRemoved`.** |
-| `CallHubConnection` | ~260 | SignalR `/callHub`, 12 событий. **Добавлен retry при 503.** Все строковые литералы заменены на `HubMethods`. **Метод `JoinCallAsync` теперь проверяет состояние подключения** и ловит ошибки, логируя их. Улучшена обработка состояния подключения при `Connecting`. **Отписка от событий в `DisconnectAsync` убрана** (комментарии удалены). |
+| `CallHubConnection` | ~260 | SignalR `/callHub`, 12 событий. **Добавлен retry при 503.** Все строковые литералы заменены на `HubMethods`. **Метод `JoinCallAsync` теперь проверяет состояние подключения** и ловит ошибки, логируя их. Улучшена обработка состояния подключения при `Connecting`. Отписка от событий в `DisconnectAsync` убрана. |
 
 ## Call
 
@@ -821,7 +827,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `SettingsService` | JSON в AppData |
 | `ThemeService` | `Application.RequestedThemeVariant` |
 | `NavigationService` | Стек истории, проверка авторизации |
-| `ServerDiscoveryService` | **Обновлён.** Парсит ответы в формате `MESSENGER_HERE:PORT:IP` |
+| `ServerDiscoveryService` | **Обновлён.** Парсит ответы в формате `MESSENGER_HERE:PORT:IP`. Логирование переведено на `LoggerMessage`. |
 | `NotificationService` | Стек ≤3, анимация прогресс-бара |
 | `DialogService` | Стек диалогов, `Channel<CloseRequest>`, анимация (таймаут 1с) |
 | `CacheMaintenanceService` | Trim, VACUUM, очистка |
@@ -886,6 +892,22 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - При инициализации и при каждом получении обновлённого чата вызывается `RefreshChatPermissionsAsync`, вычисляющая оба свойства.  
 - Команды `OpenEditChat` и `LeaveChat` теперь проверяют соответствующие разрешения перед выполнением.
 
+**Новые свойства для счётчиков:** `PhotosCount`, `FilesCount`, `PollsCount`. Загружаются через `ApiEndpoints.Messages.Counts`.
+
+**Логика `CanSendMessageNow`:** `!string.IsNullOrWhiteSpace(NewMessage) || LocalAttachments.Count > 0 || Forward.ForwardingMessage != null`. Обновляется при изменении `NewMessage` и при изменении коллекции `LocalAttachments`.
+
+**Инфопанель:** Теперь при открытии панели информации подгружаются актуальные счётчики через `GetChatCountsAsync`. При поступлении новых сообщений (`IncrementCountersForMessage`) счётчики увеличиваются инкрементально.
+
+**Метод `RefreshInfoPanelLists`** переписан: загружает только активную секцию (фото/файлы/опросы), а не все сразу. Добавлено отслеживание изменений сообщений для корректного обновления списков.
+
+**Управление коллекциями:** Добавлены обработчики `CollectionChanged` для `MessageManager.Messages` и `LocalAttachments`. При удалении сообщения отслеживается, чтобы обновить инфопанель.
+
+**Обработка `LeaveChat`:** после успешного выхода из чата сбрасывается `SelectedChat` и вызывается `LoadChats`.
+
+**Свойство `IsInfoPanelOpen`** теперь при закрытии сбрасывает `CurrentInfoSection` и очищает коллекции.
+
+**При `LoadInitialAsync`** загружаются счётчики параллельно с участниками и закреплёнными сообщениями.
+
 **Handler'ы:**
 
 | Handler | Строк | Назначение |
@@ -913,10 +935,11 @@ Key-Value: `Key: string (PK)`, `Value: string`
 4. Настройки уведомлений
 5. Участники
 6. Закреплённые сообщения
-7. Сообщения (кэш → API)
-8. Контакт-пользователь (для Contact)
-9. Обновление инфопанели
-10. **Вызов `RefreshChatPermissionsAsync`**
+7. **Счётчики (медиа, файлы, опросы)**
+8. Сообщения (кэш → API)
+9. Контакт-пользователь (для Contact)
+10. Обновление инфопанели
+11. **Вызов `RefreshChatPermissionsAsync`**
 
 **Новые возможности:**
 - **PinnedBannerPreviewText**: формирует превью "Имя: содержимое" для баннера закреплённого сообщения, обновляется при изменении ContentPreview/SenderName.
@@ -925,7 +948,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - Публичный метод `RequestScrollToBottom`.
 - **Свойства** `IsDepartmentChat`, `IsDepartmentHeadsChat`, `IsDepartmentScopedChat` – определяют принадлежность чата к отделу.
 
-**Dispose:** `Interlocked`-защита от двойного, `DisposeAsync` + `DisposeCommonResources`
+**Dispose:** `Interlocked`-защита от двойного, `DisposeAsync` + `DisposeCommonResources`. Отписка от `Messages.CollectionChanged` и `LocalAttachments.CollectionChanged`.
 
 ---
 
@@ -945,7 +968,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `ResetToLatestAsync` | Полная перезагрузка |
 
 **Стратегия:** кэш → мгновенный показ → фоновое обновление из API. Синхронизация `ChatSyncState`.  
-**Изменение:** При создании `MessageViewModel` теперь передаёт `_userId` и `IFileDownloadStateService`.
+**Изменение:** При создании `MessageViewModel` теперь передаёт `_userId` и `IFileDownloadStateService`. **В `HandleMessageDeleted`** теперь также очищает `ReplyToMessageId` и `ForwardedFromMessageId` у сообщений, ссылающихся на удалённое.
+
+**Пин-события:** `HandleMessageUpdated` больше не вызывает `MessagePinStateChanged` — это событие теперь поднимается только через `Context.MessagePinStateChanged` из `TogglePin`.
 
 ---
 
@@ -973,11 +998,17 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 **Конструктор:** теперь принимает `IFileDownloadStateService? stateService`. При наличии файлов после создания `FileViewModels` вызывает асинхронную инициализацию состояний загрузки.
 
+**`MarkAsDeleted`** теперь очищает также `ReplyToMessageId`, `ForwardedFromMessageId`, сбрасывает реплии и форварды.
+
+**Dispose:** вызывает `MemoryDiagnostics.OnMessageVmDisposed()` (вместо `OnMessageVmFinalized`). Отписывается от аудиоплеера.
+
 ---
 
 ### ChatHubSubscriber
 
 **Строк:** 81. Фильтрация по `chatId`. Диспетчеризация через `Dispatcher.UIThread.Post`. Подписки: `MessageReceivedGlobally`, `MessageUpdatedGlobally`, `MessageDeletedGlobally`, `PollUpdatedGlobally`, `MessageRead`, `UnreadCountChanged`, `Reconnected`
+
+**Изменение:** `OnMessageReceived` теперь вызывает `ctx.RequestIncrementCounters?.Invoke(msg)`, чтобы обновить счётчики в `ChatViewModel`.
 
 ---
 
@@ -1009,6 +1040,22 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - **Редактирование/создание групп** передаёт флаг `IsAdmin` для отображения роли "Тех.админ" в диалоге.
 
 **Цвета статусов:** Online=#43A047, Away=#FFA000, Busy=#E53935, DND=#9C27B0, Offline=#9E9E9E
+
+---
+
+### ChatsViewModel
+
+**Путь:** `Desktop/ViewModels/ChatList/Core/ChatsViewModel.cs`
+
+**Изменение:** Добавлена логика восстановления выбранного чата при сбросе `SelectedChat` в `null`. Если `value == null` и `CurrentChatViewModel?.Chat?.Id` известен, пытается найти чат с таким ID в списке и восстановить выделение (с защитой от рекурсии через `_isRestoringSelection`).
+
+---
+
+### GlobalSearchManager
+
+**Путь:** `Desktop/ViewModels/ChatList/Search/GlobalSearchManager.cs`
+
+**Изменение:** При загрузке участников чата (`LoadChatMembersIfNeeded`) теперь также загружает список отправителей в сообщениях (через поиск с пустым запросом) и фильтрует членов чата только по тем, кто действительно отправлял сообщения. Это уменьшает количество бесполезных подсказок.
 
 ---
 
@@ -1079,6 +1126,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
   → MessageViewModel создаётся
   → ObservableCollection обновляется
   → UI рендерит новое сообщение
+  → При необходимости обновляются счётчики в ChatViewModel (IncrementCountersForMessage)
 ```
 
 ## Звонок (WebRTC)
@@ -1127,83 +1175,15 @@ ChatMemberService.RemoveMemberAsync()
 
 # 20. DESKTOP — VIEWS (Слой представлений)
 
-## 20.1 App.axaml.cs — Точка входа
+## 20.1 App.axaml — Ресурсы
 
-**Путь:** `Desktop/App.axaml.cs` (255 строк)
+**Путь:** `Desktop/App.axaml`
 
-**Назначение:** Корневой класс приложения Avalonia. Управляет DI-контейнером, обнаружением сервера, инициализацией БД и жизненным циклом.
-
-### Последовательность запуска
-
-```
-Initialize()
-  1. BuildConfiguration()       — appsettings.json + env-переменные MESSENGER_*
-  2. ResolveApiUrl()            — определение URL сервера
-  3. AvaloniaXamlLoader.Load()  — загрузка XAML-ресурсов
-  4. ConfigureServices()        — сборка DI-контейнера
-
-OnFrameworkInitializationCompleted()
-  5. Создание MainWindow
-  6. ConfigureImageLoader()     — AuthenticatedImageLoader
-  7. InitializeLocalDatabaseAsync() — SQLite + обслуживание
-  8. ThemeService.LoadFromSettings()
-  9. MainWindowViewModel → DataContext
-```
-
-### Стратегия определения URL сервера (`ResolveApiUrl`)
-
-```
-1. TryLoadSavedServerUrl()     — читает settings.json в AppData
-2. HealthCheck(savedUrl)       — GET /api/health (таймаут 2с)
-   → Жив → использовать
-   → Мёртв → шаг 3
-3. DiscoverServerBlocking()    — UDP-обнаружение (3000ms таймаут)
-   → Найден → SaveServerUrlToSettings() → использовать
-   → Не найден → шаг 4
-4. configuration["ApiUrl"]     — из appsettings.json
-   → Fallback: "http://localhost:5274/"
-```
-
-**⚠️ В Debug-режиме:** `Thread.Sleep(5000)` в начале `ResolveApiUrl` — пауза, чтобы API успел подняться при одновременном старте проектов.
-
-### Конфигурация (`BuildConfiguration`)
-
-| Источник | Условие |
-|---|---|
-| `appsettings.json` | Всегда (optional) |
-| `appsettings.{env}.json` | Если `MESSENGER_ENV` задан |
-| Environment variables | Префикс `MESSENGER_` |
-
-### DI-контейнер (`ConfigureServices`)
-
-```csharp
-services.AddLogging(Debug + Console)
-services.AddMessengerCoreServices(ApiUrl)   // все сервисы кроме Theme
-services.AddMessengerViewModels()           // все ViewModel
-services.AddSingleton<IThemeService>()
-// ValidateScopes=true, ValidateOnBuild=true
-```
-
-### Порядок Dispose при выходе
-
-1. `INotificationService.Dispose()`
-2. `IPlatformService.Cleanup()`
-3. `MainWindowViewModel.Dispose()`
-4. `IApiClientService.Dispose()`
-5. `IAuthManager.Dispose()`
-6. `ISessionStore.Dispose()`
-7. `IDialogService.Dispose()`
-8. `INavigationService.Dispose()`
-9. `AuthenticatedImageLoader.Dispose()`
-10. `LocalDatabase.Dispose()`
-11. `ServiceProvider.Dispose()`
-
-### Хранение URL сервера
-
-**Файл:** `%APPDATA%/Desktop/settings.json`
-```json
-{ "server_url": "http://192.168.1.100:5274/" }
-```
+**Изменение:** пути к ресурсам исправлены (убраны `avares://`):
+- `ResourceInclude Source="Assets/Icons.axaml"`
+- `StyleInclude Source="Assets/Styles/Base/Animations.axaml"`
+- `StyleInclude Source="Assets/Styles/Base/MainStyle.axaml"`
+- `StyleInclude Source="Assets/Styles/MessageStyles.axaml"`
 
 ---
 
@@ -1267,6 +1247,8 @@ services.AddSingleton<IThemeService>()
 **Назначение:** Code-behind для главного экрана чата. Управляет скроллом с якорной привязкой, пагинацией, видимостью сообщений и сохранением позиции.  
 **Большая переработка:** таймеры теперь создаются динамически и останавливаются при очистке, удалён старый `_scheduleCts`, добавлены `_findCts`/`_restoreCts`. Сохранение позиции скролла переведено на **якорную модель** (`ChatScrollState` теперь содержит `AnchorMessageId` и `AnchorOffset`), восстановление идёт через `ScrollIntoView` + корректировку смещения.
 
+**Добавлена логика установки видимости сообщений:** при смене DataContext (открытии чата) `SetMessagesVisible(false)`, а после завершения начального скролла или через фолбэк-таймер (1500 мс) — `SetMessagesVisible(true)`. Это предотвращает мерцание неподготовленного списка.
+
 ### Константы
 
 | Константа | Значение | Назначение |
@@ -1315,373 +1297,26 @@ OnDetachedFromVisualTree → Cleanup
 
 ---
 
-## 20.4 AvatarControl.axaml.cs — Контрол аватара
+## 20.4 MainStyle.axaml — Стили
 
-**Путь:** `Desktop/Views/Controls/Shared/AvatarControl.axaml.cs` (338 строк)
+**Путь:** `Desktop/Assets/Styles/Base/MainStyle.axaml`
 
-**Назначение:** Универсальный контрол отображения аватара пользователя или чата с индикатором онлайн-статуса, учитывающим тип статуса.
-
-### Styled Properties (входные параметры)
-
-| Свойство | Тип | Default | Назначение |
-|---|---|---|---|
-| `Source` | `string?` | null | URL или путь к изображению |
-| `DisplayName` | `string?` | null | Имя для инициалов |
-| `Size` | `double` | 40 | Размер контрола |
-| `FontSize` | `double` | 14 | Размер шрифта инициалов |
-| `IconSize` | `double` | 18 | Размер fallback-иконки |
-| `IsOnline` | `bool` | false | Онлайн? |
-| `ShowOnlineIndicator` | `bool` | true | Показывать индикатор? |
-| `StatusType` | `UserStatusType` | Online | Тип статуса (влияет на цвет индикатора) |
-| `FallbackIcon` | `Geometry?` | null | Иконка вместо инициалов |
-| `PlaceholderBackground` | `IBrush?` | AccentLight | Фон плейсхолдера |
-| `IsCircular` | `bool` | true | Круглый или скруглённый |
-| `ImageBitmap` | `IImage?` | null | Готовый bitmap (приоритет над Source) |
-
-### Direct Properties (вычисляемые, readonly)
-
-| Свойство | Назначение |
-|---|---|
-| `HasImage` | `Source` валиден и нет `ImageBitmap` |
-| `HasBitmapImage` | `ImageBitmap != null` |
-| `ShowInitials` | Нет изображения, есть имя, нет FallbackIcon |
-| `ShowIcon` | Нет изображения (нет имени или есть FallbackIcon) |
-| `Initials` | Вычисляется из `DisplayName` |
-| `ShowOnlineStatus` | `IsOnline && ShowOnlineIndicator` |
-| `OnlineIndicatorBackground` | Цвет по `StatusType` |
-| `OnlineIndicatorSize` | Зависит от `Size` |
-| `StatusTooltip` | "В сети" / "Отошёл" / "Занят" / "Не беспокоить" |
-
-### Логика отображения (приоритет)
-
-```
-1. ImageBitmap != null → показать bitmap напрямую
-2. Source валиден → RemoteImage (AuthenticatedImageLoader)
-3. DisplayName не пусто, нет FallbackIcon → ShowInitials (инициалы)
-4. Иначе → ShowIcon (PersonIcon или FallbackIcon)
-```
-
-**Изменение:** При изменении Source контрол всегда принудительно обновляет `RemoteImage.CurrentUrlProperty`, больше не проверяет `IsCached` перед перезагрузкой.
-
-### Вычисление инициалов (`ExtractInitials`)
-
-```
-"Иван Петров" → "ИП"
-"Иван" → "ИВ" (первые 2 буквы)
-"И" → "И"
-null/"" → "?"
-```
-
-### Цвета статусов
-
-| StatusType | Цвет |
-|---|---|
-| Online | `#43A047` |
-| Away | `#FFA000` |
-| Busy | `#E53935` |
-| DoNotDisturb | `#9C27B0` |
-
-### Размер индикатора онлайн
-
-| Size | Индикатор |
-|---|---|
-| ≤32 | 8px |
-| ≤48 | 10px |
-| ≤64 | 12px |
-| ≤80 | 14px |
-| >80 | 16px |
-
-### Валидация Source (`IsValidImageSource`)
-
-- `avares://` → всегда валидно
-- `http://` / `https://` → всегда валидно
-- Расширение в словаре ImageExtensions (jpg/jpeg/png/gif/webp/bmp/ico/avif) → валидно
-- Нет расширения → пробуем загрузить (валидно)
-- Другое расширение → не валидно
-
-### Dispose
-
-При `OnDetachedFromVisualTree`: освобождает `Bitmap`, сбрасывает `RemoteImage`, вызывает `MemoryDiagnostics.OnBitmapDisposed()`
+**Изменение:** добавлены стили для `ToggleButton.SwitchSmall:checked TextBlock` и `ToggleButton.SwitchSmall:checked PathIcon`, меняющие цвет текста и иконки на `TextOnAccent`.
 
 ---
 
-## 20.5 RichMessageTextBlock.cs — Текстовый блок с разметкой
-
-**Путь:** `Desktop/Views/Controls/Shared/RichMessageTextBlock.cs` (181 строка)
-**Наследует:** `TextBlock`
-
-**Назначение:** Кастомный TextBlock с поддержкой кликабельных URL и @упоминаний.
-
-### Свойства
-
-| Свойство | Тип | Назначение |
-|---|---|---|
-| `RawText` | `string?` | Исходный текст (при изменении → `RebuildInlines`) |
-| `MentionClickCommand` | `ICommand?` | Команда при клике на @упоминание |
-
-### Regex-паттерны
-
-| Паттерн | Выражение | Назначение |
-|---|---|---|
-| URL | `(https?://[^\s<>"')\]]+)` | Ссылки http/https |
-| Mention | `(?<![A-Za-z0-9_])@[A-Za-z0-9_]{3,30}` | @упоминания (отрицательный lookbehind) |
-
-Оба с `Compiled` и таймаутом 1 секунда (защита от ReDoS).
-
-### Алгоритм построения Inlines (`RebuildInlines`)
-
-```
-1. Если text == _lastBuiltText → return (кэш)
-2. CollectMatches(text) → сортировка по позиции
-3. Если нет совпадений → Text = text (простой режим)
-4. Иначе:
-   Text = null, строим Inlines:
-   - Промежуток до совпадения → Run(plainText)
-   - URL → Run(url) { Foreground=#4A9EEA, Underline }
-   - Mention → Run(@mention) { Foreground=#8F7DFF, SemiBold }
-5. Трекинг позиций в _linkRanges / _mentionRanges
-```
-
-### Интерактивность
-
-**Клик (`OnPointerPressed`):**
-1. `GetCharIndex(e)` через `TextLayout.HitTestPoint`
-2. `FindUrl(charIndex)` → `Process.Start(url, UseShellExecute=true)`
-3. `FindMention(charIndex)` → `MentionClickCommand.Execute(@mention)`
-
-**Курсор (`OnPointerMoved`):** `StandardCursorType.Hand` над ссылками/упоминаниями.
-
-### Цвета
-
-| Тип | Цвет |
-|---|---|
-| URL | `#4A9EEA` (синий) |
-| Mention | `#8F7DFF` (фиолетовый) |
-
-### Память
-
-- Конструктор: `MemoryDiagnostics.OnRichTextCreated()`
-- `OnDetachedFromVisualTree`: `Inlines.Clear()`, `Text = null`, очистка кэшей, `OnRichTextDestroyed()`
-
----
-
-## 20.6 WaveformView.cs — Визуализация аудиоволны
-
-**Путь:** `Desktop/Views/Controls/Shared/WaveformView.cs` (197 строк)
-**Наследует:** `Control`
-
-**Назначение:** Кастомный контрол для отображения и перемотки голосовых сообщений. Добавлен адаптивный ресэмплинг пиков для корректного отображения на любой ширине.
-
-### Свойства
-
-| Свойство | Тип | Default | Назначение |
-|---|---|---|---|
-| `Progress` | `double` | 0 | Прогресс воспроизведения (0–100) |
-| `Waveform` | `string?` | null | Base64-массив байт (100 баров) |
-| `SeekCommand` | `ICommand?` | null | Команда перемотки (параметр: процент) |
-| `PlayedBrush` | `IBrush` | DodgerBlue | Цвет воспроизведённой части |
-| `UnplayedBrush` | `IBrush` | LightGray | Цвет невоспроизведённой части |
-| `Background` | `IBrush?` | null | Фон |
-
-### Алгоритм рендеринга (`Render`)
-
-```
-Если нет данных (_peaks == null) → нарисовать горизонтальную линию
-Параметры бара: width=3px, gap=2px, totalBarSpace=5px
-maxBars = (контейнер.Width + gap) / totalBarSpace
-peaksToDraw = ResamplePeaks(_peaks, maxBars)  — линейная интерполяция
-totalWidth = barCount * 5 - 2
-startX = (containerWidth - totalWidth) / 2    — центрирование
-progressX = startX + (Progress/100) * totalWidth
-
-Для каждого бара:
-  normalizedPeak = 0.2 + (peak/255 * 0.8)  — минимум 20% высоты
-  barHeight = normalizedPeak * containerHeight
-  brush = barCenter <= progressX ? PlayedBrush : UnplayedBrush
-  DrawRectangle(rounded, barWidth/2 radius)
-```
-
-### Ресэмплинг (`ResamplePeaks`)
-
-Линейная интерполяция: если данных больше maxBars — усредняет соседние. Если меньше — возвращает копию.
-
-### Интерактивность (перемотка)
-
-**Drag-поведение:**
-- `OnPointerPressed` → захват указателя, `_isDragging = true`, `UpdateProgressFromPoint`
-- `OnPointerMoved` → если `_isDragging` и смещение >2px → `UpdateProgressFromPoint`
-- `OnPointerReleased` → `UpdateProgressFromPoint`, освобождение захвата
-- `OnPointerCaptureLost` → `_isDragging = false`
-
-**`UpdateProgressFromPoint`:**
-```
-pct = (position.X - startX) / totalWidth * 100
-Clamp(pct, 0, 100)
-SeekCommand.Execute(pct) или Progress = pct
-```
-
----
-
-## 20.7 ChatsView.axaml.cs — Список чатов
-
-**Путь:** `Desktop/Views/Chat/ChatsView.axaml.cs` (207 строк)
-
-**Назначение:** Адаптивный layout с изменяемой шириной панели чатов, компактным режимом и управлением панелью информации.
-
-### Пороги адаптивного layout
-
-| Константа | Значение | Назначение |
-|---|---|---|
-| `COMPACT_WIDTH` | 72 | Ширина в компактном режиме |
-| `ENTER_COMPACT_THRESHOLD` | 120 | Порог входа в компактный (при drag) |
-| `EXIT_COMPACT_THRESHOLD` | 160 | Порог выхода из компактного (при drag) |
-| `NORMAL_DEFAULT_WIDTH` | 280 | Ширина при восстановлении |
-| `MIN_WIDTH` / `MAX_WIDTH` | 72 / 400 | Ограничения ColumnDefinition |
-| `FORCE_COMPACT_ENTER_WIDTH` | 1020 | Авто-компактный при ширине окна ≤1020 |
-| `FORCE_COMPACT_EXIT_WIDTH` | 1100 | Выход из авто-компактного при ≥1100 |
-| `HIDE_INFO_PANEL_ENTER_WIDTH` | 820 | Скрыть InfoPanel при ≤820 |
-| `HIDE_INFO_PANEL_EXIT_WIDTH` | 900 | Показать InfoPanel при ≥900 |
-
-### Адаптивность (`EvaluateResponsiveLayout`)
-
-**Гистерезис** для предотвращения мерцания:
-- Вход в состояние при одном пороге, выход при другом (±80px)
-
-**Авто-компактный режим** (`_forceCompactMode`):
-- При `_forceCompactMode && !IsCompactMode` → Column.Width = 72, IsCompactMode = true
-- При `!_forceCompactMode && _compactModeWasForced` → Column.Width = 280, IsCompactMode = false
-
-### Drag-to-resize (GridSplitter)
-
-```
-DragStarted → _isDragging = true
-DragCompleted → проверка пороговых значений:
-  width ≤ 120 + !IsCompactMode → compact(72)
-  width ≥ 160 + IsCompactMode → normal
-  IsCompactMode + width < 160 → зафиксировать compact(72)
-```
-
-### Видимость InfoPanel
-
-```
-Показывать если:
-  - vm.CurrentChatViewModel != null  (чат открыт)
-  - _chatInfoPanelStateStore.IsOpen   (пользователь не закрыл)
-  - !_hideInfoPanelForWidth           (достаточно места)
-```
-
-### Публичные методы
-
-| Метод | Действие |
-|---|---|
-| `ToggleCompactMode()` | Переключение (если не `_forceCompactMode`) |
-| `ExpandFromCompact()` | Выход из компактного (если в нём) |
-
-### Обработчики кнопок
-
-| Кнопка | Действие |
-|---|---|
-| Expand | `ToggleCompactMode()` |
-| Search | `ExpandFromCompact()` + фокус на `SearchBox` |
-
----
-
-## 20.8 MessageControl.axaml — Шаблон сообщения
-
-**Путь:** `Desktop/Views/Chat/MessageControl.axaml`
-
-**Назначение:** Основной шаблон элемента списка сообщений.  
-**Изменения:**
-- В `Border.ContextFlyout` убран дублирующийся `DeletedTemplate`.
-- `ReplyPreviewBlock` теперь использует `ContentPreview` вместо `Content` для отображения превью.
-- Добавлено удалённое состояние для опросов, голосовых и текстовых сообщений.
-- **Заголовок пересылки** вынесен в отдельный `ForwardHeaderBlock` с кнопкой для открытия профиля отправителя.
-
----
-
-## 20.9 MessagePartSelector.cs — Селектор части сообщения
-
-**Путь:** `Desktop/Views/Chat/MessagePartSelector.cs`  
-**Назначение:** Выбирает один из трёх шаблонов на основе `OriginalIsVoiceMessage` и `OriginalHasPoll`.  
-**Изменения:**
-- Удалён `DeletedTemplate`.
-- Добавлен `PollTemplate`.
-- Логика: если `OriginalHasPoll` → PollTemplate, иначе если `OriginalIsVoiceMessage` → VoiceTemplate, иначе TextTemplate.  
-  Таким образом, при удалении сообщения сохраняется его исходный тип для превью.
-
----
-
-## 20.10 MessageParts — Обновлённые части
-
-- **PollMessagePart.axaml**: теперь содержит `StackPanel` с двумя состояниями — для удалённого опроса (показывается `DisplayContent` и мета-блок) и для живого опроса (прежнее содержимое).
-- **TextMessagePart.axaml**: аналогично, при `IsDeleted` отображается `DisplayContent` (сообщение удалено) с серым курсивом.
-- **VoiceMessagePart.axaml**: при `IsDeleted` показывается заглушка; плеер скрывается.
-
-Все части теперь используют свойство `ContentPreview` для отображения превью в `ChatView.axaml` (блок ответа).
-
----
-
-## 20.11 ForwardHeaderBlock.axaml — Блок пересылки
-
-**Путь:** `Desktop/Views/Chat/MessageParts/Shared/ForwardHeaderBlock.axaml`  
-**Полностью переработан.** Теперь отображает текст «Переслано от» и имя отправителя. Если известен `ForwardedFromSenderId` и `CanOpenForwardSenderProfile == true`, имя отправителя становится кнопкой, открывающей профиль. В противном случае имя отображается простым текстом.
-
----
-
-## 20.12 FilterAutocomplete.axaml.cs — Автодополнение фильтров
-
-**Путь:** `Desktop/Views/Controls/FilterAutocomplete.axaml.cs` (118 строк)
-
-**Назначение:** Кастомный контрол поиска с выпадающим списком. Используется в фильтрах глобального поиска (отправитель, чат).
-
-### Свойства
-
-| Свойство | Тип | Назначение |
-|---|---|---|
-| `SearchText` | `string` | Текст поиска (TwoWay) |
-| `Placeholder` | `string` | Текст-подсказка |
-| `Icon` | `Geometry?` | Иконка слева |
-| `SelectedItem` | `SearchFilterItem?` | Выбранный элемент (TwoWay) |
-| `IsDropdownOpen` | `bool` | Открыт ли дропдаун (TwoWay) |
-| `Suggestions` | `IEnumerable<SearchFilterItem>` | Список подсказок |
-
-### Команды
-
-| Команда | Действие |
-|---|---|
-| `ClearCommand` | `SelectedItem = null`, `SearchText = ""`, `IsDropdownOpen = false` |
-| `SelectItemCommand(item)` | `SelectedItem = item`, `SearchText = item.DisplayName`, `IsDropdownOpen = false` |
-
-### Логика закрытия дропдауна
-
-**Глобальный pointer-listener** (tunnel на TopLevel):
-```
-OnGlobalPointerPressed:
-  if IsPointerOver → return (клик внутри контрола)
-  if popup.Child.IsPointerOver → return (клик в дропдауне)
-  IsDropdownOpen = false
-```
-
-**Потеря фокуса** (`OnInputLostFocus`): пост на Background-приоритет → проверка `IsPointerOver` и popup → `IsDropdownOpen = false`.
-
----
-
-## 20.13 ChatEditDialogView.axaml — Редактирование группы
-
-**Изменение:** Видимость опции «Удалить группу» теперь управляется свойством `ShowDeleteGroupOption` вместо `IsNewChat`.
-
----
-
-## 20.14 ChatInfoPanel.axaml — Панель информации
+## 20.5 ChatInfoPanel.axaml — Панель информации
 
 **Изменения:**
 - Кнопка редактирования чата (`OpenEditChatCommand`) видна только при `CanEditGroupChat`.
 - Кнопка выхода из чата (`LeaveChatCommand`) видна только при `CanLeaveChat`.
+- Кнопка «Медиа и файлы» скрывается, если `PhotosCount == 0`.
+- Кнопка «Опросы» скрывается, если `PollsCount == 0`.
 - Убран условный `IsVisible` у секций «Медиа» и «Файлы» (теперь отображаются всегда, даже если счётчик равен нулю).
 
 ---
 
-## 20.15 ChatView.axaml — Основной вид чата
+## 20.6 ChatView.axaml — Основной вид чата
 
 **Изменение контекстного меню чата:**
 - «Редактировать чат»: `IsVisible` теперь привязан напрямую к `CanEditGroupChat`.
@@ -1690,7 +1325,28 @@ OnGlobalPointerPressed:
 
 ---
 
-## 20.16 Shared/Hubs/HubMethods.cs
+## 20.7 UserProfileDialog.axaml — Профиль пользователя
+
+**Изменение:** кнопка «Отправить сообщение» теперь имеет `IsVisible="{Binding CanSendMessage}"`. В `UserProfileDialogViewModel` добавлено свойство `CanSendMessage` (всегда true, но может быть переопределено).
+
+---
+
+## 20.8 ChatEditDialogView.axaml — Редактирование группы
+
+**Изменение:** Видимость опции «Удалить группу» теперь управляется свойством `ShowDeleteGroupOption` вместо `IsNewChat`. При успешном удалении вызывается `RequestCloseAsync()`.
+
+---
+
+## 20.9 Остальные View
+
+- **MessageControl.axaml**: исправлены привязки `FallbackValue` для `ShowPollResults` и `IsVisible`.
+- **PollResultsDialog.axaml**: исправлено имя свойства в привязке ширины: `VotesFraction` → `VotesPercentage`.
+- **ChatPickerDialog.axaml** и **UserListDialog.axaml**: добавлен `MinHeight="450"` / `MinHeight="500"`.
+- **DepartmentHeadDialog.axaml**: добавлен `Foreground="{DynamicResource TextOnAccent}"` для текста кнопки удаления.
+
+---
+
+## 20.10 Shared/Hubs/HubMethods.cs
 
 Добавлена константа:
 ```csharp
@@ -1729,7 +1385,6 @@ public const string ChatRemoved = "ChatRemoved";
 | 3 | При быстром скроле ломаются варианты ответа у опроса |
 | 4 | Безопасность звонков |
 | 5 | Добавь сид данные для первичного запуска через докер |
-| 6 | Утечка памяти в чатах, возможно аватарки |
 
 ## Не обязательно, но я бы закрыл
 

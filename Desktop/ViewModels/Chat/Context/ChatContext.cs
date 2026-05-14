@@ -2,9 +2,7 @@
 using Desktop.Services.Features.Media.Files;
 using Desktop.ViewModels.Chat.Navigation;
 using Desktop.ViewModels.ChatList.Factories;
-using System;
 using System.Diagnostics;
-using System.Threading;
 
 namespace Desktop.ViewModels.Chat.Context;
 
@@ -14,7 +12,7 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public event Action<MessageDto>? MessagePinStateChanged;
     private ObservableCollection<UserDto> _members = [];
     public IChatNavigator? Navigator { get; init; }
-
+    public Action<MessageDto>? RequestIncrementCounters { get; set; }
     public ObservableCollection<UserDto> Members
     {
         get => _members;

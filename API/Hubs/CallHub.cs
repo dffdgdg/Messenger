@@ -1,12 +1,11 @@
-﻿using Shared.DTO.Call;
-using Shared.Hubs;
+﻿using Shared.Hubs;
 using System.Security.Claims;
 
 namespace API.Hubs;
 
 [Authorize]
-public partial class CallHub(ICallSessionService callSessions, IAccessControlService accessControl, ISystemMessageService systemMessages,
-    MessengerDbContext db, ILogger<CallHub> logger) : Hub
+public partial class CallHub(ICallSessionService callSessions, IAccessControlService accessControl,
+    ISystemMessageService systemMessages, MessengerDbContext db, ILogger<CallHub> logger) : Hub
 {
     private const int MaxParticipants = 12;
     private const int RingingTimeoutSeconds = 60;

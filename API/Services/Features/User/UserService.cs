@@ -79,6 +79,24 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
         });
     }
 
+    public async Task<Result> RemoveAvatarAsync(int id, CancellationToken ct = default)
+    {
+        var user = await _userRepo.FindByIdAsync(id, ct);
+        if (user is null)
+            return Result.NotFound($"Пользователь с ID {id} не найден");
+
+        if (!string.IsNullOrWhiteSpace(user.Avatar))
+            _fileService.DeleteFile(user.Avatar);
+
+        user.Avatar = null;
+
+        var dbSave = await SaveChangesAsync(ct);
+        if (dbSave.IsFailure) return dbSave;
+
+        LogAvatarRemoved(id);
+        return Result.Success();
+    }
+
     public Task<Result<OnlineUsersResponseDto>> GetOnlineUsersAsync(CancellationToken ct = default)
     {
         var onlineIds = _onlineService.GetOnlineUserIds();
@@ -218,6 +236,10 @@ public partial class UserService(MessengerDbContext context, MediaBundle media, 
     [LoggerMessage(Level = LogLevel.Information,
         Message = "Аватар обновлён для пользователя {UserId}")]
     private partial void LogAvatarUpdated(int userId);
+
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Аватар удалён для пользователя {UserId}")]
+    private partial void LogAvatarRemoved(int userId);
 
     [LoggerMessage(Level = LogLevel.Information,
         Message = "Username изменён для пользователя {UserId}")]

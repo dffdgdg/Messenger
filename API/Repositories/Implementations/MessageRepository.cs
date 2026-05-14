@@ -49,8 +49,7 @@ public sealed class MessageRepository(MessengerDbContext context)
         return await q.ToListAsync(ct);
     }
 
-    public async Task<List<SystemMessage>> GetSystemMessagesAsync(int chatId, int? beforeId, int? afterId, DateTime? cutoff,
-        CancellationToken ct = default)
+    public async Task<List<SystemMessage>> GetSystemMessagesAsync(int chatId, int? beforeId, int? afterId, DateTime? cutoff, CancellationToken ct = default)
     {
         var q = _context.SystemMessages
             .Include(m => m.Initiator)
@@ -61,6 +60,10 @@ public sealed class MessageRepository(MessengerDbContext context)
         if (beforeId.HasValue) q = q.Where(m => m.Id < beforeId.Value);
         if (afterId.HasValue) q = q.Where(m => m.Id > afterId.Value);
         if (cutoff.HasValue) q = q.Where(m => m.CreatedAt >= cutoff.Value);
+
+        q = beforeId.HasValue
+            ? q.OrderByDescending(m => m.Id).Take(100)
+            : q.OrderBy(m => m.Id).Take(100);
 
         return await q.ToListAsync(ct);
     }
@@ -176,8 +179,10 @@ public sealed class MessageRepository(MessengerDbContext context)
 
     public Task<int> SoftDeleteAsync(int messageId, DateTime editedAt, CancellationToken ct = default)
         => _context.UserMessages
-            .Where(m => m.Id == messageId)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.IsDeleted, true).SetProperty(m => m.Content, (string?)null).SetProperty(m => m.EditedAt, editedAt), ct);
+            .Where(m => m.Id == messageId).ExecuteUpdateAsync(s => s
+            .SetProperty(m => m.IsDeleted, true).SetProperty(m => m.Content, (string?)null).SetProperty(m => m.EditedAt, editedAt)
+            .SetProperty(m => m.ReplyToMessageId, (int?)null).SetProperty(m => m.ForwardedFromMessageId, (int?)null), ct);
+
 
     public Task<int> PinAsync(int messageId, int pinnedByUserId, DateTime pinnedAt, CancellationToken ct = default)
         => _context.Messages.Where(m => m.Id == messageId).ExecuteUpdateAsync(s => s.SetProperty(m => m.PinnedAt, pinnedAt).SetProperty(m => m.PinnedByUserId, pinnedByUserId), ct);
@@ -190,6 +195,62 @@ public sealed class MessageRepository(MessengerDbContext context)
 
     public void RemoveVoiceMessage(VoiceMessage voiceMessage)
         => _context.VoiceMessages.Remove(voiceMessage);
+
+    public async Task<(List<Message> Messages, bool HasOlder)> GetLatestAsync(int chatId, int take, DateTime? cutoff = null, CancellationToken ct = default)
+    {
+        var limit = take + 1;
+
+        // UserMessages с полными includes
+        var userQuery = _context.UserMessages
+            .Include(m => m.Sender)
+            .Include(m => m.VoiceMessage)
+            .Include(m => m.MessageFiles)
+            .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
+            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.VoiceMessage)
+            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.MessageFiles)
+            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Poll)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
+            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll)
+                .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+            .AsNoTracking();
+
+        var sysQuery = _context.SystemMessages
+            .Include(m => m.Initiator)
+            .Include(m => m.TargetUser)
+            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
+            .AsNoTracking();
+
+        if (cutoff.HasValue)
+        {
+            userQuery = userQuery.Where(m => m.CreatedAt >= cutoff.Value);
+            sysQuery = sysQuery.Where(m => m.CreatedAt >= cutoff.Value);
+        }
+
+        var userMessages = await userQuery
+            .OrderByDescending(m => m.Id)
+            .Take(limit)
+            .ToListAsync(ct);
+
+        var sysMessages = await sysQuery.OrderByDescending(m => m.Id).Take(limit).ToListAsync(ct);
+
+        Console.WriteLine($"[GetLatest] chatId={chatId} take={take} cutoff={cutoff}");
+        Console.WriteLine($"[GetLatest] userMessages={userMessages.Count} sysMessages={sysMessages.Count}");
+
+        var merged = userMessages.Cast<Message>().Concat(sysMessages).OrderByDescending(m => m.Id).Take(limit).ToList();
+
+        Console.WriteLine($"[GetLatest] merged={merged.Count} hasOlder={merged.Count > take}");
+
+        var hasOlder = merged.Count > take;
+        if (hasOlder) merged.RemoveAt(merged.Count - 1);
+
+        merged.Reverse();
+
+        return (merged, hasOlder);
+    }
 
     private IQueryable<UserMessage> WithFullIncludes()
         => _context.UserMessages
@@ -218,4 +279,40 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
             .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
+
+    private static readonly string[] ImageContentTypes =
+[
+    "image/jpeg", "image/png", "image/gif",
+    "image/webp", "image/bmp", "image/avif"
+];
+
+    public async Task<ChatCountsDto> GetChatCountsAsync(int chatId, DateTime? cutoff)
+    {
+        var baseQuery = _context.UserMessages
+            .Where(m => m.ChatId == chatId
+                     && m.IsDeleted != true
+                     && (cutoff == null || m.CreatedAt >= cutoff));
+
+        var mediaCount = await baseQuery
+            .SelectMany(m => m.MessageFiles)
+            .CountAsync(f => ImageContentTypes.Contains(f.ContentType));
+
+        var filesCount = await baseQuery
+            .SelectMany(m => m.MessageFiles)
+            .CountAsync(f => !ImageContentTypes.Contains(f.ContentType));
+
+        var pollsCount = await baseQuery
+            .CountAsync(m => m.Poll != null);
+
+        var pinnedCount = await baseQuery
+            .CountAsync(m => m.PinnedAt != null);
+
+        return new ChatCountsDto
+        {
+            MediaCount = mediaCount,
+            FilesCount = filesCount,
+            PollsCount = pollsCount,
+            PinnedCount = pinnedCount
+        };
+    }
 }

@@ -7,7 +7,7 @@
         <ResourceDictionary>
             <converters:ConverterLocator x:Key="Converters"/>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Desktop/Assets/Icons.axaml"/>
+                <ResourceInclude Source="Assets/Icons.axaml"/>
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key='Dark'>
@@ -25,8 +25,8 @@
     </Application.Resources>
     <Application.Styles>
         <FluentTheme/>
-        <StyleInclude Source="avares://Desktop/Assets/Styles/Base/Animations.axaml"/>
-        <StyleInclude Source="avares://Desktop/Assets/Styles/Base/MainStyle.axaml"/>
-        <StyleInclude Source="avares://Desktop/Assets/Styles/MessageStyles.axaml"/>
+        <StyleInclude Source="Assets/Styles/Base/Animations.axaml"/>
+        <StyleInclude Source="Assets/Styles/Base/MainStyle.axaml"/>
+        <StyleInclude Source="Assets/Styles/MessageStyles.axaml"/>
     </Application.Styles>
 </Application>

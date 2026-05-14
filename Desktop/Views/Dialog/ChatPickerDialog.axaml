@@ -6,7 +6,7 @@
              x:Class="Desktop.Views.Dialog.ChatPickerDialog"
              x:DataType="vmDialog:ChatPickerDialogViewModel">
 
-    <Border Classes="DialogContainer">
+    <Border Classes="DialogContainer" MinHeight="450">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
 
             <!-- Шапка -->

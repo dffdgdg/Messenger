@@ -59,29 +59,6 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
     private static string EscapeLikePattern(string pattern)
         => string.IsNullOrEmpty(pattern)? pattern : pattern.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
-    private static List<UserMessage> ApplySearchFiltersInMemory(List<UserMessage> messages, int? senderId, DateTime? dateFrom, DateTime? dateTo,
-        bool hasFiles, bool hasVoice, bool hasPoll, bool onlyText)
-    {
-        IEnumerable<UserMessage> q = messages;
-
-        if (senderId.HasValue)
-            q = q.Where(m => m.SenderId == senderId.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(m => m.CreatedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(m => m.CreatedAt < dateTo.Value.AddDays(1));
-        if (hasFiles)
-            q = q.Where(m => m.MessageFiles.Count != 0);
-        if (hasVoice)
-            q = q.Where(m => m.VoiceMessage != null);
-        if (hasPoll)
-            q = q.Where(m => m.Poll != null);
-        if (onlyText)
-            q = q.Where(m => m.MessageFiles.Count == 0 && m.VoiceMessage == null && m.Poll == null);
-
-        return [.. q];
-    }
-
     private async Task<List<Message>> LoadAllMessagesAsync(int chatId, int? beforeId = null, int? afterId = null,
         DateTime? cutoff = null, int? take = null, bool oldestFirst = false)
     {
@@ -235,29 +212,19 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
     }
 
     #region Get Messages
-
-    public async Task<Result<PagedMessagesDto>> GetChatMessagesAsync(int chatId, int userId, int page, int pageSize)
+    public async Task<Result<PagedMessagesDto>> GetLatestMessagesAsync(int chatId, int userId, int take)
     {
         var access = await EnsureAccessAsync(userId, chatId);
         if (access.IsFailure) return access.As<PagedMessagesDto>();
 
-        var (np, nps) = NormalizePagination(page, pageSize, _settings.MaxPageSize);
+        var normalizedTake = Math.Clamp(take, 1, _settings.MaxPageSize);
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
-        var total = await messageRepository.CountAsync(chatId, cutoff);
+        var (messages, hasOlder) = await messageRepository.GetLatestAsync(chatId, normalizedTake, cutoff);
 
-        var skip = (np - 1) * nps;
-        var messages = await LoadAllMessagesAsync(chatId, cutoff: cutoff, oldestFirst: false);
-        var paged = messages.Skip(skip).Take(nps).ToList();
+        var dtos = messages.ConvertAll(m => m.ToDto(userId, _urlBuilder));
 
-        return Result<PagedMessagesDto>.Success(new PagedMessagesDto
-        {
-            Messages = [.. paged.Select(m => m.ToDto(userId, _urlBuilder)).Reverse()],
-            CurrentPage = np,
-            TotalCount = total,
-            HasMoreMessages = total > skip + nps,
-            HasNewerMessages = false
-        });
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlder, hasNewer: false));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count)
@@ -268,18 +235,58 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var half = count / 2;
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
-        var before = await LoadAllMessagesAsync(chatId, beforeId: messageId, cutoff: cutoff, take: half + 1, oldestFirst: false);
-        var after = await LoadAllMessagesAsync(chatId, afterId: messageId, cutoff: cutoff, take: half, oldestFirst: true);
+        var beforeTask = messageRepository.GetBeforeAsync(chatId, messageId, half + 1, cutoff);
+        var afterTask = messageRepository.GetAfterAsync(chatId, messageId, half, cutoff);
 
-        var msgs = before.OrderBy(m => m.Id).Concat(after).Select(m => m.ToDto(userId, _urlBuilder)).ToList();
+        var sysBeforeTask = messageRepository.GetSystemMessagesAsync(chatId, beforeId: messageId, afterId: null, cutoff: cutoff);
+        var sysAfterTask = messageRepository.GetSystemMessagesAsync(chatId, beforeId: null, afterId: messageId, cutoff: cutoff);
 
-        var oldestId = before.Count > 0 ? before.Min(m => m.Id) : messageId;
-        var newestId = after.Count > 0 ? after.Max(m => m.Id) : messageId;
+        await Task.WhenAll(beforeTask, afterTask, sysBeforeTask, sysAfterTask);
 
-        var hasOlder = await messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
-        var hasNewer = await messageRepository.HasNewerAsync(chatId, newestId, cutoff);
+        var before = beforeTask.Result;
+        var after = afterTask.Result;
+        var sysBefore = sysBeforeTask.Result;
+        var sysAfter = sysAfterTask.Result;
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(msgs, hasOlder, hasNewer));
+        var anchor = await messageRepository.FindUserMessageByIdAsync(messageId)?? (Message?)null;
+
+        var allMessages = before.Cast<Message>()
+            .Concat(sysBefore.Where(s => s.Id < messageId))
+            .Concat(after)
+            .Concat(sysAfter.Where(s => s.Id > messageId));
+
+        if (anchor != null)
+            allMessages = allMessages.Append(anchor);
+
+        var ordered = allMessages
+            .GroupBy(m => m.Id)
+            .Select(g => g.First())
+            .OrderBy(m => m.Id)
+            .ToList();
+
+        var anchorIdx = ordered.FindIndex(m => m.Id == messageId);
+        List<Message> window;
+
+        if (anchorIdx < 0)
+        {
+            window = [.. ordered.Take(count)];
+        }
+        else
+        {
+            var start = Math.Max(0, anchorIdx - half);
+            var end = Math.Min(ordered.Count, anchorIdx + half + 1);
+            window = ordered[start..end];
+        }
+
+        var oldestId = window.Count > 0 ? window[0].Id : messageId;
+        var newestId = window.Count > 0 ? window[^1].Id : messageId;
+
+        var hasOlderTask = messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
+        var hasNewerTask = messageRepository.HasNewerAsync(chatId, newestId, cutoff);
+        await Task.WhenAll(hasOlderTask, hasNewerTask);
+
+        var dtos = window.ConvertAll(m => m.ToDto(userId, _urlBuilder));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlderTask.Result, hasNewerTask.Result));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)
@@ -311,6 +318,17 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         return Result<PagedMessagesDto>.Success (BuildPagedResult([.. messages.Select(m => m.ToDto(userId, _urlBuilder))], true, hasNewer));
     }
 
+    public async Task<Result<ChatCountsDto>> GetChatCountsAsync(int chatId, int userId)
+    {
+        var access = await EnsureAccessAsync(userId, chatId);
+        if (access.IsFailure)
+            return access.As<ChatCountsDto>();
+
+        var cutoff = await GetHistoryCutoffAsync(chatId, userId);
+        var counts = await messageRepository.GetChatCountsAsync(chatId, cutoff);
+
+        return Result<ChatCountsDto>.Success(counts);
+    }
     #endregion
 
     #region Update

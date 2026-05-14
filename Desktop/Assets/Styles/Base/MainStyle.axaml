@@ -1181,6 +1181,13 @@
 		<Setter Property="HorizontalContentAlignment" Value="Center"/>
 	</Style>
 
+	<Style Selector="ToggleButton.SwitchSmall:checked TextBlock">
+		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+	</Style>
+	<Style Selector="ToggleButton.SwitchSmall:checked PathIcon">
+		<Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+	</Style>
+
 	<Style Selector="views|ChatsView[IsCompactMode=True] ListBox">
 		<Setter Property="Margin" Value="4"/>
 	</Style>

@@ -24,6 +24,13 @@ public sealed class UsersController(IUserService user, ILogger<UsersController> 
         return Map(await user.UploadAvatarAsync(id, file, ct));
     }
 
+    [HttpDelete("{id}/avatar")]
+    public async Task<IActionResult> RemoveAvatar(int id, CancellationToken ct)
+    {
+        if (!IsCurrentUser(id)) return Forbidden();
+        return Map(await user.RemoveAvatarAsync(id, ct));
+    }
+
     [HttpPut("{id}/username")]
     public async Task<IActionResult> ChangeUsername(int id, [FromBody] ChangeUsernameDto dto, CancellationToken ct)
     {

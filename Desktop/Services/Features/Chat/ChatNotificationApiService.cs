@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Desktop.Services.Features.Chat;
+﻿namespace Desktop.Services.Features.Chat;
 
 public class ChatNotificationApiService(IApiClientService apiClient) : IChatNotificationApiService
 {

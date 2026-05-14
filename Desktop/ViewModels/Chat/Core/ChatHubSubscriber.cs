@@ -1,9 +1,6 @@
 ﻿using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Managers;
-using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Desktop.ViewModels.Chat.Core;
 
@@ -33,7 +30,11 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
     {
         if (ctx.IsDisposed || msg.ChatId != ctx.ChatId) return;
 
-        Dispatcher.UIThread.Post(() => messageManager.AddReceivedMessage(msg));
+        Dispatcher.UIThread.Post(() =>
+        {
+            messageManager.AddReceivedMessage(msg);
+            ctx.RequestIncrementCounters?.Invoke(msg);
+        });
     }
 
     private void OnMessageUpdated(MessageDto msg)

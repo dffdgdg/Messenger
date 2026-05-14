@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Desktop.ViewModels.Dialog;
+﻿namespace Desktop.ViewModels.Dialog;
 
 public partial class UserListItemViewModel(UserDto user, bool isSelected = false) : ObservableObject
 {

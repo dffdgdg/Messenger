@@ -1,4 +1,4 @@
-﻿namespace Shared.DTO.Call;
+﻿namespace Shared.Dto.Call;
 
 /// <summary>
 /// Универсальный конверт для WebRTC-сигналов (Offer / Answer / ICECandidate)

@@ -226,7 +226,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <PathIcon Data="{StaticResource DeleteIcon}"
                                   Width="14" Height="14"/>
-                        <TextBlock Text="Удалить"/>
+                        <TextBlock Text="Удалить"
+                                   Foreground="{DynamicResource TextOnAccent}"/>
                     </StackPanel>
                 </Button>
                 <Border Grid.Column="1"/>

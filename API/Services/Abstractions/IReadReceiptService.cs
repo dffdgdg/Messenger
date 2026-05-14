@@ -1,7 +1,4 @@
 ﻿namespace API.Services.Abstractions;
-
-// IReadReceiptService.cs — добавляем метод
-
 public interface IReadReceiptService
 {
     Task<Result<ReadReceiptResponseDto>> MarkAsReadAsync(int userId, MarkAsReadDto request);

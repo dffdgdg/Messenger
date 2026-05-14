@@ -1,5 +1,4 @@
 ﻿using Desktop.ViewModels.Chat.Polls;
-using System.Collections.Generic;
 
 namespace Desktop.ViewModels.Chat;
 

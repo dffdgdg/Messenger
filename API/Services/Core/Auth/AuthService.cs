@@ -1,5 +1,6 @@
 ﻿using API.Repositories.Abstarctions;
 using API.Services.Base;
+using API.Services.Core.Auth;
 using API.Services.Infrastructure.Bundles;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -30,29 +31,29 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
         _dummyHash = BCrypt.Net.BCrypt.HashPassword("dummy_password", _settings.BcryptWorkFactor);
     }
 
-    public async Task<Result<AuthResponseDto>> LoginAsync(string username, string password, CancellationToken ct = default)
+    public async Task<Result<AuthLoginResult>> LoginAsync(string username, string password, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-            return Result<AuthResponseDto>.Unauthorized("Неверное имя пользователя или пароль");
+            return Result<AuthLoginResult>.Unauthorized("Неверное имя пользователя или пароль");
 
         var user = await _userRepo.FindByUsernameAsync(username, ct);
 
         if (user is null)
         {
             BCrypt.Net.BCrypt.Verify(password, _dummyHash);
-            return Result<AuthResponseDto>.Unauthorized("Неверное имя пользователя или пароль");
+            return Result<AuthLoginResult>.Unauthorized("Неверное имя пользователя или пароль");
         }
 
         if (!user.Password.Verify(password))
         {
             LogFailedLogin(username);
-            return Result<AuthResponseDto>.Unauthorized("Неверное имя пользователя или пароль");
+            return Result<AuthLoginResult>.Unauthorized("Неверное имя пользователя или пароль");
         }
 
         if (user.IsBanned)
         {
             LogBannedLogin(username);
-            return Result<AuthResponseDto>.Forbidden("Учётная запись заблокирована");
+            return Result<AuthLoginResult>.Forbidden("Учётная запись заблокирована");
         }
 
         var role = await DetermineUserRoleAsync(user, ct);
@@ -60,64 +61,63 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         var saveResult = await SaveRefreshTokenAsync(user.Id, tokenPair, ct);
         if (saveResult.IsFailure)
-            return saveResult.As<AuthResponseDto>();
-
-        var response = new AuthResponseDto
-        {
-            Id = user.Id,
-            Username = user.Username,
-            DisplayName = user.GetDisplayName(),
-            Token = tokenPair.AccessToken,
-            RefreshToken = tokenPair.RefreshToken,
-            Role = role
-        };
+            return saveResult.As<AuthLoginResult>();
 
         LogSuccessfulLogin(username, role);
 
-        return Result<AuthResponseDto>.Success(response);
+        return Result<AuthLoginResult>.Success(new AuthLoginResult
+        {
+            Response = new AuthResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                DisplayName = user.GetDisplayName(),
+                Token = tokenPair.AccessToken,
+                Role = role
+            },
+            RefreshToken = tokenPair.RefreshToken
+        });
     }
 
-    public async Task<Result<TokenResponseDto>> RefreshTokenAsync(
-    string accessToken, string refreshToken, CancellationToken ct = default)
+    public async Task<Result<AuthRefreshResult>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default)
     {
         var principalResult = _tokenService.GetPrincipalFromExpiredToken(accessToken);
         if (principalResult.IsFailure)
-            return principalResult.As<TokenResponseDto>();
+            return principalResult.As<AuthRefreshResult>();
 
         var principal = principalResult.Value!;
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var jtiClaim = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
         if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrEmpty(jtiClaim))
-            return Result<TokenResponseDto>.Unauthorized("Недействительный access token");
+            return Result<AuthRefreshResult>.Unauthorized("Недействительный access token");
 
         var refreshTokenHash = ITokenService.HashToken(refreshToken);
-
         var storedToken = await _tokenRepo.FindByHashAsync(refreshTokenHash, userId, ct);
 
         if (storedToken is null)
         {
             LogRefreshTokenNotFound(userId);
-            return Result<TokenResponseDto>.Unauthorized("Недействительный refresh token");
+            return Result<AuthRefreshResult>.Unauthorized("Недействительный refresh token");
         }
 
         if (storedToken.UsedAt != null || storedToken.RevokedAt != null)
         {
             LogTokenReuse(userId, storedToken.FamilyId);
             await _tokenRepo.RevokeByFamilyIdAsync(storedToken.FamilyId, _appDateTime.UtcNow, ct);
-            return Result<TokenResponseDto>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
+            return Result<AuthRefreshResult>.Unauthorized("Refresh token уже использован. Авторизуйтесь заново.");
         }
 
         if (storedToken.ExpiresAt <= _appDateTime.UtcNow)
         {
             LogExpiredRefreshToken(userId);
-            return Result<TokenResponseDto>.Unauthorized("Refresh token истёк");
+            return Result<AuthRefreshResult>.Unauthorized("Refresh token истёк");
         }
 
         if (storedToken.User.IsBanned)
         {
             await _tokenRepo.RevokeByFamilyIdAsync(storedToken.FamilyId, _appDateTime.UtcNow, ct);
-            return Result<TokenResponseDto>.Forbidden("Учётная запись заблокирована");
+            return Result<AuthRefreshResult>.Forbidden("Учётная запись заблокирована");
         }
 
         var role = await DetermineUserRoleAsync(storedToken.User, ct);
@@ -142,12 +142,15 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
         LogTokenRotated(userId);
 
-        return Result<TokenResponseDto>.Success(new TokenResponseDto
+        return Result<AuthRefreshResult>.Success(new AuthRefreshResult
         {
-            Token = newTokenPair.AccessToken,
-            RefreshToken = newTokenPair.RefreshToken,
-            UserId = userId,
-            Role = role
+            Response = new TokenResponseDto
+            {
+                Token = newTokenPair.AccessToken,
+                UserId = userId,
+                Role = role
+            },
+            RefreshToken = newTokenPair.RefreshToken
         });
     }
 

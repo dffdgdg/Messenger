@@ -2,7 +2,7 @@
 
 namespace API.Services.Infrastructure;
 
-public class HubNotifier(IHubContext<ChatHub> hubContext, ILogger<HubNotifier> logger) : IHubNotifier
+public class HubNotifier(IHubContext<MessengerHub> hubContext, ILogger<HubNotifier> logger) : IHubNotifier
 {
     public async Task SendToChatAsync(int chatId, string method, params object?[] args)
     {

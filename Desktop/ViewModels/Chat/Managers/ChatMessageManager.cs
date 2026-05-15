@@ -86,22 +86,37 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         return await LoadInitialFromServerAsync(ct);
     }
 
+    private const int CacheRevalidationThresholdSeconds = 30;
+
     private async Task<int?> TryLoadInitialFromCacheAsync()
     {
         if (_cacheService == null) return null;
 
         var cached = await Task.Run(() => _cacheService.GetMessagesAsync(_chatId, DefaultPage));
 
-        // Минимум 5 сообщений чтобы считать кэш валидным
-        // Иначе идём на сервер за полной загрузкой
-        if (cached is not { Messages.Count: >= 5 }) return null;
+        if (cached is not { Messages.Count: >= DefaultPage / 2 }) return null;
 
         RenderMessages(cached.Messages);
         _hasMoreOlder = cached.HasMoreOlder;
         _hasMoreNewer = false;
 
         Debug.WriteLine($"[MessageManager] Загружено {cached.Messages.Count} из кеша для чата {_chatId}");
-        RunInBackground(() => RevalidateNewestAsync(_disposeCts.Token));
+
+        var syncState = await _cacheService.GetSyncStateAsync(_chatId);
+        var cacheAge = syncState != null
+            ? (DateTime.UtcNow - syncState.LastSyncAt).TotalSeconds
+            : double.MaxValue;
+
+        if (cacheAge > CacheRevalidationThresholdSeconds)
+        {
+            Debug.WriteLine($"[MessageManager] Кэш устарел ({cacheAge:F0}с), запускаем ревалидацию");
+            RunInBackground(() => RevalidateNewestAsync(_disposeCts.Token));
+        }
+        else
+        {
+            Debug.WriteLine($"[MessageManager] Кэш свежий ({cacheAge:F0}с), ревалидация не нужна");
+        }
+
         return LastIndexOrNull();
     }
 

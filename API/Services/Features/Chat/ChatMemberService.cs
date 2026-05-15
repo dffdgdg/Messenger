@@ -7,7 +7,7 @@ using Shared.Hubs;
 namespace API.Services.Chat;
 
 public sealed partial class ChatMemberService(MessengerDbContext context, ChatBundle chat, IOnlineUserService onlineUserService,
-    IHubContext<ChatHub> hubContext, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
+    IHubContext<MessengerHub> hubContext, ILogger<ChatMemberService> logger) : BaseService<ChatMemberService>(context, logger), IChatMemberService
 {
     private readonly ICacheService cache = chat.Cache.CacheService;
     private readonly IAccessControlService accessControl = chat.Cache.AccessControl;

@@ -8,6 +8,5 @@ public class AuthResponseDto
     public string Username { get; set; } = null!;
     public string? DisplayName { get; set; }
     public string Token { get; set; } = null!;
-    public string RefreshToken { get; set; } = null!;
     public UserRole Role { get; set; }
 }

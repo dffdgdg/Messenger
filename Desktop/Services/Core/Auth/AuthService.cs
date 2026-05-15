@@ -68,7 +68,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 if (apiResponse != null)
                     return apiResponse;
             }
-            catch (JsonException) { /* Ожидаемо */}
+            catch (JsonException) { /* Ожидаемо */ }
 
             return ApiResponseHelper.Error<AuthResponseDto>("Не удалось прочитать ответ сервера");
         }
@@ -83,11 +83,11 @@ public class AuthService(HttpClient httpClient) : IAuthService
         }
     }
 
-    public async Task<ApiResponse<TokenResponseDto>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default)
+    public async Task<ApiResponse<TokenResponseDto>> RefreshTokenAsync(string accessToken, string? refreshToken = null, CancellationToken ct = default)
     {
         try
         {
-            var request = new RefreshTokenRequest(accessToken, refreshToken);
+            var request = new RefreshTokenRequest(accessToken);
             var response = await _httpClient.PostAsJsonAsync(ApiEndpoints.Auth.Refresh, request, ct);
 
             var json = await response.Content.ReadAsStringAsync(ct);
@@ -104,7 +104,7 @@ public class AuthService(HttpClient httpClient) : IAuthService
                 if (apiResponse != null)
                     return apiResponse;
             }
-            catch (JsonException) { /* Ожидаемо */}
+            catch (JsonException) { /* Ожидаемо */ }
 
             return ApiResponseHelper.Error<TokenResponseDto>("Не удалось прочитать ответ сервера");
         }
@@ -123,8 +123,10 @@ public class AuthService(HttpClient httpClient) : IAuthService
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiEndpoints.Auth.Revoke);
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post, ApiEndpoints.Auth.Revoke);
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.SendAsync(request, ct);
 

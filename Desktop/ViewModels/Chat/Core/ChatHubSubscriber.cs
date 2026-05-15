@@ -33,7 +33,7 @@ public sealed class ChatHubSubscriber(ChatContext ctx, ChatMessageManager messag
         Dispatcher.UIThread.Post(() =>
         {
             messageManager.AddReceivedMessage(msg);
-            ctx.RequestIncrementCounters?.Invoke(msg);
+            ctx.RequestRefreshCounters?.Invoke();
         });
     }
 

@@ -8,14 +8,13 @@ public sealed class AuthManager : IAuthManager, IDisposable
     private readonly IAuthService _authService;
     private readonly ISecureStorageService _secureStorage;
     private readonly ICacheMaintenanceService _cacheMaintenance;
+    private readonly ICookieStorageService _cookieStorage;
     private readonly TaskCompletionSource _initializationTcs = new();
     private readonly SemaphoreSlim _operationLock = new(1, 1);
-
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private Task<bool>? _activeRefreshTask;
 
     private const string TokenKey = "auth_token";
-    private const string RefreshTokenKey = "auth_refresh_token";
     private const string UserIdKey = "user_id";
     private const string UserRoleKey = "user_role";
     private const string CachedUserIdKey = "cached_user_id";
@@ -29,19 +28,21 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
     public bool IsInitialized { get; private set; }
     public ISessionStore Session { get; }
+
     public bool HasValidSession()
     {
         var token = Session.Token;
         return !string.IsNullOrWhiteSpace(token) && Session.UserId.HasValue && _authService.IsAccessTokenValid(token);
     }
 
-    public AuthManager(IAuthService authService, ISecureStorageService secureStorage, ISessionStore sessionStore, ICacheMaintenanceService cacheMaintenance)
+    public AuthManager(IAuthService authService, ISecureStorageService secureStorage, ISessionStore sessionStore,
+        ICacheMaintenanceService cacheMaintenance, ICookieStorageService cookieStorage)
     {
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
         Session = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _cacheMaintenance = cacheMaintenance ?? throw new ArgumentNullException(nameof(cacheMaintenance));
-
+        _cookieStorage = cookieStorage;
         _ = InitializeInternalAsync();
     }
 
@@ -75,31 +76,27 @@ public sealed class AuthManager : IAuthManager, IDisposable
             _initializationTcs.TrySetResult();
         }
     }
+
 #if DEBUG
-    /// <summary>
-    /// Небольшая пауза в Debug, чтобы API успел подняться при одновременном старте проектов в IDE.
-    /// </summary>
     private static async Task ApplyDebugStartupDelayAsync()
     {
-        if (!Debugger.IsAttached)
-            return;
-
-        Debug.WriteLine($"AuthManager: DEBUG-пауза {DebugStartupRefreshDelayMs}ms перед восстановлением сессии");
+        if (!Debugger.IsAttached) return;
+        Debug.WriteLine($"AuthManager: DEBUG-пауза {DebugStartupRefreshDelayMs}ms");
         await Task.Delay(DebugStartupRefreshDelayMs);
     }
 #endif
+
     private async Task TryLoadTokensWithoutRefreshAsync()
     {
         try
         {
             var storedToken = await _secureStorage.GetAsync<string>(TokenKey);
-            var storedRefreshToken = await _secureStorage.GetAsync<string>(RefreshTokenKey);
             var storedUserId = await _secureStorage.GetAsync<int?>(UserIdKey);
             var storedUserRole = await _secureStorage.GetAsync<UserRole>(UserRoleKey);
 
-            if (!string.IsNullOrEmpty(storedToken) && storedUserId.HasValue && !string.IsNullOrEmpty(storedRefreshToken))
+            if (!string.IsNullOrEmpty(storedToken) && storedUserId.HasValue)
             {
-                Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+                Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
                 Debug.WriteLine("AuthManager: Токены загружены без refresh (офлайн режим)");
             }
         }
@@ -112,22 +109,25 @@ public sealed class AuthManager : IAuthManager, IDisposable
     private async Task LoadStoredSessionAsync()
     {
         var storedToken = await _secureStorage.GetAsync<string>(TokenKey);
-        var storedRefreshToken = await _secureStorage.GetAsync<string>(RefreshTokenKey);
         var storedUserId = await _secureStorage.GetAsync<int?>(UserIdKey);
         var storedUserRole = await _secureStorage.GetAsync<UserRole>(UserRoleKey);
 
-        if (string.IsNullOrEmpty(storedToken) || !storedUserId.HasValue || string.IsNullOrEmpty(storedRefreshToken))
+        if (string.IsNullOrEmpty(storedToken) || !storedUserId.HasValue)
         {
             Debug.WriteLine("AuthManager: Нет сохранённой сессии");
             return;
         }
 
-        Debug.WriteLine($"AuthManager: Найден сохранённый токен для пользователя {storedUserId}");
+        // Восстанавливаем cookie ДО попытки refresh
+        await _cookieStorage.RestoreAsync();
+
+        Debug.WriteLine(
+            $"AuthManager: Найден сохранённый токен для пользователя {storedUserId}");
 
         if (_authService.IsAccessTokenValid(storedToken))
         {
-            Debug.WriteLine("AuthManager: Access token действителен (локальная проверка)");
-            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+            Debug.WriteLine("AuthManager: Access token действителен");
+            Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
             return;
         }
 
@@ -136,18 +136,18 @@ public sealed class AuthManager : IAuthManager, IDisposable
         ApiResponse<TokenResponseDto>? refreshResult;
         try
         {
-            refreshResult = await _authService.RefreshTokenAsync(storedToken, storedRefreshToken);
+            refreshResult = await _authService.RefreshTokenAsync(storedToken);
         }
         catch (HttpRequestException ex)
         {
-            Debug.WriteLine($"AuthManager: Сетевая ошибка при refresh, сохраняем токены: {ex.Message}");
-            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+            Debug.WriteLine($"AuthManager: Сетевая ошибка при refresh: {ex.Message}");
+            Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
             return;
         }
         catch (TaskCanceledException ex)
         {
-            Debug.WriteLine($"AuthManager: Таймаут при refresh, сохраняем токены: {ex.Message}");
-            Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+            Debug.WriteLine($"AuthManager: Таймаут при refresh: {ex.Message}");
+            Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
             return;
         }
 
@@ -155,8 +155,10 @@ public sealed class AuthManager : IAuthManager, IDisposable
         {
             Debug.WriteLine("AuthManager: Refresh успешен");
             var data = refreshResult.Data;
-            await SaveAuthAsync(data.Token, data.RefreshToken, data.UserId, data.Role);
-            Session.SetSession(data.Token, data.RefreshToken, data.UserId, data.Role);
+
+            await _cookieStorage.PersistAsync();
+            await SaveAuthAsync(data.Token, data.UserId, data.Role);
+            Session.SetSession(data.Token, data.UserId, data.Role);
         }
         else
         {
@@ -164,32 +166,42 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
             if (IsServerAuthRejection(refreshResult.Error))
             {
-                Debug.WriteLine("AuthManager: Сервер отклонил токен, очищаем сохранённые данные");
+                Debug.WriteLine("AuthManager: Сервер отклонил токен, очищаем данные");
+                await _cookieStorage.ClearAsync();
                 await ClearStoredAuthAsync();
             }
             else
             {
-                Debug.WriteLine("AuthManager: Неизвестная ошибка, сохраняем токены для повторной попытки");
-                Session.SetSession(storedToken, storedRefreshToken, storedUserId.Value, storedUserRole);
+                Debug.WriteLine("AuthManager: Сохраняем токены для повторной попытки");
+                Session.SetSession(storedToken, storedUserId.Value, storedUserRole);
             }
         }
     }
 
     private static bool IsServerAuthRejection(string? error)
     {
-        if (string.IsNullOrEmpty(error))
-            return false;
+        if (string.IsNullOrEmpty(error)) return false;
 
-        string[] networkErrors = ["connection", "timeout", "unreachable", "refused", "HttpRequestException", "TaskCanceled", "SocketException",
-        "соединение", "таймаут", "недоступен"];
+        string[] networkErrors =
+        [
+            "connection", "timeout", "unreachable", "refused",
+            "HttpRequestException", "TaskCanceled", "SocketException",
+            "соединение", "таймаут", "недоступен"
+        ];
 
         if (networkErrors.Any(e => error.Contains(e, StringComparison.OrdinalIgnoreCase)))
             return false;
 
-        string[] serverRejections = ["HTTP 401", "HTTP 403", "HTTP Unauthorized", "HTTP Forbidden", "Недействительный refresh token", "Refresh token истёк",
-            "Refresh token уже использован", "Учётная запись заблокирована", "Сессия истекла"];
+        string[] serverRejections =
+        [
+            "HTTP 401", "HTTP 403", "HTTP Unauthorized", "HTTP Forbidden",
+            "Недействительный refresh token", "Refresh token истёк",
+            "Refresh token уже использован", "Учётная запись заблокирована",
+            "Сессия истекла", "Refresh token отсутствует"
+        ];
 
-        return serverRejections.Any(keyword => error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        return serverRejections.Any(keyword =>
+            error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> TryRefreshTokenAsync()
@@ -201,7 +213,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
         {
             if (_activeRefreshTask != null)
             {
-                Debug.WriteLine("AuthManager: Refresh уже выполняется, присоединяемся к текущему");
+                Debug.WriteLine("AuthManager: Refresh уже выполняется, присоединяемся");
                 taskToAwait = _activeRefreshTask;
             }
             else
@@ -219,31 +231,76 @@ public sealed class AuthManager : IAuthManager, IDisposable
         return await taskToAwait;
     }
 
+    public Task InitializeAsync() => WaitForInitializationAsync();
+
+    public async Task<ApiResponse<AuthResponseDto>> LoginAsync(
+        string username, string password, bool rememberMe)
+    {
+        ThrowIfDisposed();
+        await _operationLock.WaitAsync();
+        try
+        {
+            var result = await _authService.LoginAsync(username, password);
+
+            if (result.Success && result.Data != null)
+            {
+                await CheckAndClearCacheOnUserChangeAsync(result.Data.Id);
+
+                // Сохраняем cookie сразу после логина
+                await _cookieStorage.PersistAsync();
+                await SaveAuthAsync(result.Data.Token, result.Data.Id, result.Data.Role);
+                Session.SetSession(result.Data.Token, result.Data.Id, result.Data.Role);
+
+                await _secureStorage.SaveAsync(RememberMeKey, rememberMe);
+                if (rememberMe)
+                    await _secureStorage.SaveAsync(SavedUsernameKey, username);
+                else
+                    await _secureStorage.RemoveAsync(SavedUsernameKey);
+
+                _ = WarmupConnectionAsync();
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"AuthManager: Исключение авторизации: {ex.Message}");
+            return new ApiResponse<AuthResponseDto>
+            {
+                Success = false,
+                Error = $"Ошибка входа: {ex.Message}",
+                Timestamp = DateTime.UtcNow
+            };
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
+    }
     private async Task<bool> ExecuteRefreshAsync()
     {
         try
         {
             var currentToken = Session.Token;
-            var currentRefreshToken = Session.RefreshToken;
 
-            if (string.IsNullOrEmpty(currentToken) || string.IsNullOrEmpty(currentRefreshToken))
+            if (string.IsNullOrEmpty(currentToken))
             {
-                Debug.WriteLine("AuthManager: Нет токенов для refresh");
+                Debug.WriteLine("AuthManager: Нет access token для refresh");
                 return false;
             }
 
-            Debug.WriteLine("AuthManager: Выполняем refresh token...");
-
-            var result = await _authService.RefreshTokenAsync(
-                currentToken, currentRefreshToken);
+            var result = await _authService.RefreshTokenAsync(currentToken);
 
             if (result.Success && result.Data != null)
             {
                 var data = result.Data;
-                Debug.WriteLine($"AuthManager: Refresh успешен для пользователя {data.UserId}");
+                Debug.WriteLine(
+                    $"AuthManager: Refresh успешен для пользователя {data.UserId}");
 
-                await SaveAuthAsync(data.Token, data.RefreshToken, data.UserId, data.Role);
-                Session.UpdateTokens(data.Token, data.RefreshToken);
+                // Сохраняем обновлённый cookie
+                await _cookieStorage.PersistAsync();
+                await SaveAuthAsync(data.Token, data.UserId, data.Role);
+                Session.UpdateTokens(data.Token);
 
                 return true;
             }
@@ -251,9 +308,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
             Debug.WriteLine($"AuthManager: Refresh неудачен: {result.Error}");
 
             if (IsServerAuthRejection(result.Error))
-            {
                 await ForceLogoutAsync();
-            }
 
             return false;
         }
@@ -275,69 +330,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
         finally
         {
             await _refreshLock.WaitAsync();
-            try
-            {
-                _activeRefreshTask = null;
-            }
-            finally
-            {
-                _refreshLock.Release();
-            }
-        }
-    }
-
-    public Task InitializeAsync() => WaitForInitializationAsync();
-
-    public async Task<ApiResponse<AuthResponseDto>> LoginAsync(string username, string password, bool rememberMe)
-    {
-        ThrowIfDisposed();
-
-        await _operationLock.WaitAsync();
-        try
-        {
-            Debug.WriteLine($"AuthManager: Попытка авторизации для {username}");
-            var result = await _authService.LoginAsync(username, password);
-
-            if (result.Success && result.Data != null)
-            {
-                Debug.WriteLine($"AuthManager: Авторизация успешна для пользователя {result.Data.Id}");
-
-                await CheckAndClearCacheOnUserChangeAsync(result.Data.Id);
-                await SaveAuthAsync(result.Data.Token, result.Data.RefreshToken, result.Data.Id, result.Data.Role);
-                Session.SetSession(result.Data.Token, result.Data.RefreshToken, result.Data.Id, result.Data.Role);
-
-                await _secureStorage.SaveAsync(RememberMeKey, rememberMe);
-                if (rememberMe)
-                {
-                    await _secureStorage.SaveAsync(SavedUsernameKey, username);
-                }
-                else
-                {
-                    await _secureStorage.RemoveAsync(SavedUsernameKey);
-                }
-
-                _ = WarmupConnectionAsync();
-            }
-            else
-            {
-                Debug.WriteLine($"AuthManager: Ошибка авторизации: {result.Error}");
-            }
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"AuthManager: Исключение авторизации: {ex.Message}");
-            return new ApiResponse<AuthResponseDto>
-            {
-                Success = false,
-                Error = $"Ошибка входа: {ex.Message}",
-                Timestamp = DateTime.UtcNow
-            };
-        }
-        finally
-        {
-            _operationLock.Release();
+            try { _activeRefreshTask = null; }
+            finally { _refreshLock.Release(); }
         }
     }
     private async Task WarmupConnectionAsync()
@@ -348,29 +342,19 @@ public sealed class AuthManager : IAuthManager, IDisposable
             await _authService.PingAsync();
             Debug.WriteLine("AuthManager: Connection warmed up");
         }
-        catch
-        {
-            // некритично — игнорируем
-        }
+        catch { /* некритично */ }
     }
 
     public async Task<ApiResponse<object>> LogoutAsync()
     {
         ThrowIfDisposed();
-
         await _operationLock.WaitAsync();
         try
         {
-            Debug.WriteLine($"AuthManager: Logout requested for user {Session.UserId}");
-
             var token = Session.Token;
-
             if (!string.IsNullOrEmpty(token))
             {
-                try
-                {
-                    await _authService.RevokeAsync(token);
-                }
+                try { await _authService.RevokeAsync(token); }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"AuthManager: Revoke error: {ex.Message}");
@@ -379,6 +363,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
             await ClearCacheOnLogoutAsync();
 
+            // Удаляем cookie при logout
+            await _cookieStorage.ClearAsync();
             await ClearStoredAuthAsync();
 
             var rememberMe = await _secureStorage.GetAsync<bool>(RememberMeKey);
@@ -399,7 +385,6 @@ public sealed class AuthManager : IAuthManager, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"AuthManager: Logout exception: {ex.Message}");
             return new ApiResponse<object>
             {
                 Success = false,
@@ -415,7 +400,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
     private async Task ForceLogoutAsync()
     {
-        Debug.WriteLine("AuthManager: Принудительный logout (refresh token недействителен)");
+        Debug.WriteLine("AuthManager: Принудительный logout");
+        await _cookieStorage.ClearAsync();
         await ClearStoredAuthAsync();
         Session.ClearSession();
     }
@@ -428,7 +414,7 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
             if (cachedUserId.HasValue && cachedUserId.Value != newUserId)
             {
-                Debug.WriteLine($"AuthManager: User changed ({cachedUserId.Value} → {newUserId}), clearing cache");
+                Debug.WriteLine($"AuthManager: User changed ({cachedUserId.Value}→{newUserId}), clearing cache");
                 await _cacheMaintenance.ClearAllDataAsync();
             }
 
@@ -442,20 +428,16 @@ public sealed class AuthManager : IAuthManager, IDisposable
 
     private async Task ClearCacheOnLogoutAsync()
     {
-        try
-        {
-            await _cacheMaintenance.ClearAllDataAsync();
-        }
+        try { await _cacheMaintenance.ClearAllDataAsync(); }
         catch (Exception ex)
         {
             Debug.WriteLine($"AuthManager: Cache clear on logout error: {ex.Message}");
         }
     }
 
-    private async Task SaveAuthAsync(string token, string refreshToken, int userId, UserRole role)
+    private async Task SaveAuthAsync(string token, int userId, UserRole role)
     {
         await _secureStorage.SaveAsync(TokenKey, token);
-        await _secureStorage.SaveAsync(RefreshTokenKey, refreshToken);
         await _secureStorage.SaveAsync(UserIdKey, userId);
         await _secureStorage.SaveAsync(UserRoleKey, role);
     }
@@ -463,7 +445,6 @@ public sealed class AuthManager : IAuthManager, IDisposable
     private async Task ClearStoredAuthAsync()
     {
         await _secureStorage.RemoveAsync(TokenKey);
-        await _secureStorage.RemoveAsync(RefreshTokenKey);
         await _secureStorage.RemoveAsync(UserIdKey);
         await _secureStorage.RemoveAsync(UserRoleKey);
     }
@@ -483,7 +464,6 @@ public sealed class AuthManager : IAuthManager, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-
         _operationLock.Dispose();
         _refreshLock.Dispose();
     }

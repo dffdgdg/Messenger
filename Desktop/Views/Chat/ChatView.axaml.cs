@@ -12,7 +12,7 @@ namespace Desktop.Views.Chat;
 public partial class ChatView : UserControl
 {
     private const int MaxScrollToEndRetries = 10;
-    private const double VisibilityCheckDelayMs = 1000;
+    private const double VisibilityCheckDelayMs = 300;
     private const double NearBottomThreshold = 200;
     private const double NearTopThreshold = 400;
     private const int ScrollStateSaveDebounceMs = 350;
@@ -144,6 +144,9 @@ public partial class ChatView : UserControl
 
     private void OnVisibilityTimerTick(object? s, EventArgs e)
     {
+        if ((DateTime.UtcNow - _lastScrollTime).TotalMilliseconds < 200)
+            return;
+
         _visibilityTimer?.Stop();
         CheckVisibleMessages();
     }
@@ -371,12 +374,14 @@ public partial class ChatView : UserControl
         _viewModel.IsScrolledToBottom = extent - viewport - offset < NearBottomThreshold;
     }
 
+    private DateTime _lastScrollTime;
+
     private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (_scrollViewer is null || _viewModel is null) return;
+        _lastScrollTime = DateTime.UtcNow;
 
-        _visibilityTimer?.Stop();
-        _visibilityTimer?.Start();
+        if (_visibilityTimer?.IsEnabled != true)
+            _visibilityTimer?.Start();
 
         if (_suppressScrollEvents || !_isInitialScrollDone || _viewModel.IsSearchMode)
             return;
@@ -387,6 +392,7 @@ public partial class ChatView : UserControl
         _saveScrollStateTimer?.Stop();
         _saveScrollStateTimer?.Start();
     }
+
 
     private void HandleScrollPosition()
     {
@@ -624,25 +630,67 @@ public partial class ChatView : UserControl
     {
         if (_scrollViewer is null || _viewModel is null) return;
 
-        double prevExtent = _scrollViewer.Extent.Height;
         _suppressPositionTracking = true;
         _suppressScrollEvents = true;
+
+        // Сохраняем якорь ДО загрузки
+        var anchor = FindAnchorMessage();
+        double anchorOffset = anchor?.OffsetFromTop ?? 0;
 
         try
         {
             await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
 
-            Dispatcher.UIThread.Post(() =>
+            // Небольшая задержка чтобы Avalonia успел выполнить layout
+            await Task.Delay(16);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_scrollViewer is null) return;
-                double delta = _scrollViewer.Extent.Height - prevExtent;
-                if (delta > 0)
-                    _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, _scrollViewer.Offset.Y + delta);
-                _suppressScrollEvents = false;
-                _suppressPositionTracking = false;
+
+                // Восстанавливаем позицию через якорь если он был
+                if (anchor != null)
+                {
+                    var vm = _viewModel?.Messages.FirstOrDefault(m => m.Id == anchor.MessageId);
+                    if (vm != null && _messagesList != null)
+                    {
+                        // Ищем контейнер
+                        ListBoxItem? container = null;
+                        foreach (var c in _messagesList.GetRealizedContainers())
+                        {
+                            if (c is ListBoxItem item && item.DataContext == vm)
+                            {
+                                container = item;
+                                break;
+                            }
+                        }
+
+                        if (container != null)
+                        {
+                            var transform = container.TransformToVisual(_scrollViewer);
+                            if (transform != null)
+                            {
+                                double currentTop = transform.Value
+                                    .Transform(new Avalonia.Point(0, 0)).Y;
+                                double currentOffset = _scrollViewer.Offset.Y;
+                                double newOffset = currentOffset + (currentTop - anchorOffset);
+                                double maxOffset = Math.Max(0,
+                                    _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
+
+                                _scrollViewer.Offset = new Avalonia.Vector(
+                                    _scrollViewer.Offset.X,
+                                    Math.Clamp(newOffset, 0, maxOffset));
+                            }
+                        }
+                    }
+                }
             }, DispatcherPriority.Render);
         }
         catch
+        {
+            // fallback — ничего не делаем, пусть скролл прыгнет
+        }
+        finally
         {
             _suppressScrollEvents = false;
             _suppressPositionTracking = false;

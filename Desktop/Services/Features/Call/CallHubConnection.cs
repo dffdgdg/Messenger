@@ -30,7 +30,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     public CallHubConnection(ISessionStore sessionStore, ILogger<CallHubConnection> logger, string baseUrl)
     {
         _logger = logger;
-        _hub = new HubConnectionBuilder().WithUrl($"{baseUrl}callHub", options => options.AccessTokenProvider = () => Task.FromResult(sessionStore.Token)).WithAutomaticReconnect().Build();
+        _hub = new HubConnectionBuilder().WithUrl($"{baseUrl}chatHub", options => options.AccessTokenProvider = () => Task.FromResult(sessionStore.Token)).WithAutomaticReconnect().Build();
         SubscribeEvents();
     }
 

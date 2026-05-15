@@ -664,7 +664,8 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
             }
         }
     }
-    private bool IsChatMatchingCurrentTab(ChatType type) => IsGroupMode ? type is ChatType.Chat or ChatType.Department : type == ChatType.Contact;
+    private bool IsChatMatchingCurrentTab(ChatType type) =>
+        IsGroupMode ? type is not ChatType.Contact : type == ChatType.Contact;
 
     private async Task<ChatDto?> FindDialogWithUser(int contactUserId)
     {

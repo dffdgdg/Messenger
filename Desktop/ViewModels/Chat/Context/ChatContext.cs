@@ -14,6 +14,8 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public ChatRole? CurrentUserRole { get; set; }
     public IChatNavigator? Navigator { get; init; }
     public Action<MessageDto>? RequestIncrementCounters { get; set; }
+    public Action? RequestRefreshCounters { get; set; }
+
     public ObservableCollection<UserDto> Members
     {
         get => _members;

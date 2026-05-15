@@ -134,14 +134,28 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     }
     public async Task TrimOldMessagesAsync(int keepPerChat = 200)
     {
-        await Db.ExecuteAsync(@"
-        DELETE FROM messages 
-        WHERE id NOT IN (
-            SELECT id FROM messages m2
-            WHERE m2.chat_id = messages.chat_id
-            ORDER BY id DESC
-            LIMIT ?
-        )", keepPerChat);
+        var chatIds = await Db.QueryAsync<ChatIdRow>("SELECT DISTINCT chat_id FROM messages");
+
+        if (chatIds.Count == 0) return;
+
+        await Db.RunInTransactionAsync(conn =>
+        {
+            foreach (var row in chatIds)
+            {
+                var cutoffId = conn.ExecuteScalar<int?>(
+                    @"SELECT MIN(id) FROM (
+                    SELECT id FROM messages 
+                    WHERE chat_id = ? 
+                    ORDER BY id DESC 
+                    LIMIT ?
+                )", row.ChatId, keepPerChat);
+
+                if (cutoffId.HasValue)
+                {
+                    conn.Execute("DELETE FROM messages WHERE chat_id = ? AND id < ?", row.ChatId, cutoffId.Value);
+                }
+            }
+        });
 
         Debug.WriteLine($"[MsgCache] Trimmed old messages, keeping {keepPerChat} per chat");
     }
@@ -151,5 +165,9 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
         var deleted = await Db.ExecuteAsync("DELETE FROM messages WHERE chat_id = ?", chatId);
 
         Debug.WriteLine($"[MsgCache] Deleted {deleted} messages for chat {chatId}");
+    }
+    private class ChatIdRow
+    {
+        [Column("chat_id")] public int ChatId { get; set; }
     }
 }

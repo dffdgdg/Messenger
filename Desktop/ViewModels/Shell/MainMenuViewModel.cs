@@ -554,7 +554,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     #region Chat open
     public async Task NavigateToForwardedChatAsync(ChatDto targetChat)
     {
-        bool isGroup = targetChat.Type is ChatType.Chat or ChatType.Department;
+        bool isGroup = targetChat.Type is not ChatType.Contact;
         SetActiveMenu(isGroup ? 1 : 5);
         await Task.Delay(50);
 
@@ -578,18 +578,24 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     public async Task SwitchToTabAndOpenChatAsync(ChatDto chat)
     {
-        if (chat.Type is ChatType.Chat or ChatType.Department) { await OpenChatAsync(chat); return; }
+        if (chat.Type is not ChatType.Contact)
+        {
+            await OpenChatAsync(chat);
+            return;
+        }
         _contactsVm ??= _chatsFactory.Create(this, false);
         await EnsureAndSelectChatAsync(_contactsVm, chat, 5);
     }
 
     public async Task SwitchToTabAndOpenMessageAsync(GlobalSearchMessageDto msg)
     {
-        bool isGroup = msg.ChatType is ChatType.Chat or ChatType.Department;
+        bool isGroup = msg.ChatType is not ChatType.Contact;
         SetActiveMenu(isGroup ? 1 : 5);
         await Task.Delay(50);
 
-        var vm = isGroup ? (_chatsVm ??= _chatsFactory.Create(this, true)) : (_contactsVm ??= _chatsFactory.Create(this, false));
+        var vm = isGroup
+            ? (_chatsVm ??= _chatsFactory.Create(this, true))
+            : (_contactsVm ??= _chatsFactory.Create(this, false));
 
         CurrentMenuViewModel = vm;
         await vm.OpenChatByIdAsync(msg.ChatId, msg.Id);

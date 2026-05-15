@@ -29,7 +29,7 @@
 		</Style>
 		<Style Selector="ListBox.MessagesList ListBoxItem">
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Margin" Value="0,1"/>
+			<Setter Property="Margin" Value="0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		</Style>
@@ -320,7 +320,7 @@
 							 SelectionMode="Single,Toggle">
 						<ListBox.ItemsPanel>
 							<ItemsPanelTemplate>
-								<VirtualizingStackPanel CacheLength="1"/>
+								<VirtualizingStackPanel CacheLength="2"/>
 							</ItemsPanelTemplate>
 						</ListBox.ItemsPanel>
 						<ListBox.ItemTemplate>

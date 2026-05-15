@@ -24,6 +24,7 @@ using Desktop.ViewModels.ChatList.Factories;
 using Desktop.ViewModels.Department;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Net;
 
 namespace Desktop.Infrastructure.Extensions;
 
@@ -59,15 +60,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ActiveCallStore>();
         services.AddSingleton<CallBannerViewModel>();
 
-        services.AddSingleton(_ =>
+        services.AddSingleton<CookieContainer>();
+
+        services.AddSingleton(sp =>
         {
+            var cookieContainer = sp.GetRequiredService<CookieContainer>();
+
             var handler = new HttpClientHandler
             {
                 CheckCertificateRevocationList = false,
                 UseProxy = false,
-#if DEBUG
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-#endif
+                UseCookies = true,
+                CookieContainer = cookieContainer,
+                #if DEBUG
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                #endif
             };
 
             return new HttpClient(handler)
@@ -77,7 +84,7 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.AddSingleton<AuthenticatedImageLoader>(sp =>
+        services.AddSingleton(sp =>
         {
             var http = sp.GetRequiredService<HttpClient>();
             var session = sp.GetRequiredService<ISessionStore>();
@@ -86,13 +93,17 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IAuthService, AuthService>();
         services.AddSingleton<ISessionStore, SessionStore>();
+
         services.AddSingleton<ISecureStorageService, SecureStorageService>();
+        services.AddSingleton<ICookieStorageService>(sp => new CookieStorageService(
+            sp.GetRequiredService<ISecureStorageService>(),
+            sp.GetRequiredService<CookieContainer>(), apiBaseUrl));
         services.AddSingleton<IAuthManager, AuthManager>();
 
         services.AddSingleton<IApiClientService>(sp => new ApiClientService(
-        sp.GetRequiredService<HttpClient>(),
-        sp.GetRequiredService<ISessionStore>(),
-        sp.GetRequiredService<IAuthManager>()));
+            sp.GetRequiredService<HttpClient>(),
+            sp.GetRequiredService<ISessionStore>(),
+            sp.GetRequiredService<IAuthManager>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();

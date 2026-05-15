@@ -307,7 +307,8 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
         var counts = await messageRepository.GetChatCountsAsync(chatId, cutoff);
-
+        _logger.LogInformation("[GetChatCounts] ChatId={ChatId}, UserId={UserId}, Cutoff={Cutoff} | Media={MediaCount}, Files={FilesCount}, Polls={PollsCount}, Pinned={PinnedCount}",
+        chatId, userId, cutoff, counts.MediaCount, counts.FilesCount, counts.PollsCount, counts.PinnedCount);
         return Result<ChatCountsDto>.Success(counts);
     }
     #endregion
@@ -547,8 +548,7 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
 
         foreach (var chatEntity in dialogs)
         {
-            var partner = chatEntity.ChatMembers
-                .FirstOrDefault(cm => cm.UserId != userId)?.User;
+            var partner = chatEntity.ChatMembers.FirstOrDefault(cm => cm.UserId != userId)?.User;
             if (partner is null) continue;
 
             var name = partner.GetDisplayName();

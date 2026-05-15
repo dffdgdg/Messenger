@@ -307,7 +307,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Context.ScrollToMessageRequested += _contextScrollToMessage;
         Context.ScrollToIndexRequested += _contextScrollToIndex;
         Context.ScrollToBottomRequested += _contextScrollToBottom;
-        Context.RequestIncrementCounters = IncrementCountersForMessage;
+        Context.RequestRefreshCounters = () => _ = RefreshCountersAndSectionAsync();
 
         dependencies.GlobalHub.SetCurrentChat(chatId);
 
@@ -788,51 +788,141 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private void RefreshInfoPanelLists()
     {
         if (Context.IsDisposed) return;
-
         RebuildMembersPreview();
+    }
+    private readonly HashSet<int> _countedMessageIds = [];
 
-        if (IsInfoSectionOpen)
+    private async Task RefreshCountersAndSectionAsync()
+    {
+        if (Context.IsDisposed) return;
+        try
         {
-            if (CurrentInfoSection != InfoSectionType.Photos)
-                InfoPanel.SetPhotos([]);
+            var result = await Context.Api.GetAsync<ChatCountsDto>(
+                ApiEndpoints.Messages.Counts(Context.ChatId), Context.LifetimeToken);
 
-            if (CurrentInfoSection != InfoSectionType.Files)
+            if (result is not { Success: true, Data: not null }) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Context.IsDisposed) return;
+                PhotosCount = result.Data.MediaCount;
+                FilesCount = result.Data.FilesCount;
+                PollsCount = result.Data.PollsCount;
+
+                // Если секция открыта — обновляем её содержимое
+                if (IsInfoSectionOpen)
+                {
+                    switch (CurrentInfoSection)
+                    {
+                        case InfoSectionType.Photos: _ = LoadInfoPanelPhotosAsync(); break;
+                        case InfoSectionType.Files: _ = LoadInfoPanelFilesAsync(); break;
+                        case InfoSectionType.Polls: _ = LoadInfoPanelPollsAsync(); break;
+                    }
+                }
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] RefreshCounters error: {ex.Message}");
+        }
+    }
+    private async Task LoadInfoPanelPhotosAsync()
+    {
+        if (Context.IsDisposed) return;
+        try
+        {
+            var query = new SearchMessagesQueryDto { HasFiles = true, PageSize = 50, OldestFirst = false };
+            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
+                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
+
+            if (result is not { Success: true, Data: not null }) return;
+
+            var photos = result.Data.Messages
+                .SelectMany(m => (m.Files ?? [])
+                    .Where(IsInfoPanelPhoto)
+                    .Select(f => new ChatInfoPanelMediaItem(CreateTempMessageViewModel(m), f)))
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
+            InfoPanel.SetPhotos(photos);
+            OnPropertyChanged(nameof(PhotosItems));
+            OnPropertyChanged(nameof(HasMorePhotos));
+            OnPropertyChanged(nameof(RemainingPhotosText));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadPhotos error: {ex.Message}"); }
+    }
+
+    private async Task LoadInfoPanelFilesAsync()
+    {
+        if (Context.IsDisposed) return;
+        try
+        {
+            var query = new SearchMessagesQueryDto { HasFiles = true, PageSize = 50, OldestFirst = false };
+            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
+                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
+
+            if (result is not { Success: true, Data: not null }) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Context.IsDisposed) return;
                 FilesItems.Clear();
 
-            if (CurrentInfoSection != InfoSectionType.Polls)
-            {
-                PollMessages.Clear();
-                InfoPanel.SetPolls(PollMessages);
-            }
+                var files = result.Data.Messages
+                    .SelectMany(m => (m.Files ?? []).Where(f => !IsInfoPanelPhoto(f))
+                    .Select(f => new ChatInfoPanelFileItem(CreateTempMessageViewModel(m), f))).OrderByDescending(x => x.CreatedAt);
+
+                foreach (var file in files)
+                    FilesItems.Add(file);
+
+                OnPropertyChanged(nameof(FilesItems));
+            });
         }
-
-        if (!IsInfoSectionOpen) return;
-
-        var visible = MessageManager.Messages
-            .Where(m => !m.IsDeleted && !m.IsSystemMessage).ToList();
-
-        switch (CurrentInfoSection)
-        {
-            case InfoSectionType.Photos: LoadInfoPanelPhotos(visible); break;
-            case InfoSectionType.Files: LoadInfoPanelFiles(visible); break;
-            case InfoSectionType.Polls: LoadInfoPanelPolls(visible); break;
-        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadFiles error: {ex.Message}"); }
     }
 
-    public void IncrementCountersForMessage(MessageDto dto)
+    private async Task LoadInfoPanelPollsAsync()
     {
-        if (dto.IsDeleted || dto.IsSystemMessage) return;
+        if (Context.IsDisposed) return;
+        try
+        {
+            var query = new SearchMessagesQueryDto { HasPoll = true, PageSize = 50, OldestFirst = false };
+            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
+                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
 
-        var files = dto.Files ?? [];
-        var imageFiles = files.Count(IsInfoPanelPhoto);
-        var otherFiles = files.Count(f => !IsInfoPanelPhoto(f));
+            if (result is not { Success: true, Data: not null }) return;
 
-        PhotosCount += imageFiles;
-        FilesCount += otherFiles;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Context.IsDisposed) return;
 
-        if (dto.Poll != null)
-            PollsCount++;
+                foreach (var old in PollMessages)
+                {
+                    if (MessageManager.Messages.All(m => m.Id != old.Id))
+                        old.Dispose();
+                }
+                PollMessages.Clear();
+
+                foreach (var dto in result.Data.Messages.OrderByDescending(m => m.CreatedAt))
+                {
+                    var existing = MessageManager.Messages.FirstOrDefault(m => m.Id == dto.Id);
+                    PollMessages.Add(existing ?? CreateTempMessageViewModel(dto));
+                }
+
+                InfoPanel.SetPolls(PollMessages);
+                OnPropertyChanged(nameof(FilteredPolls));
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadPolls error: {ex.Message}"); }
     }
+
+    private MessageViewModel CreateTempMessageViewModel(MessageDto dto)
+        => new(dto, _fileDownloadService, _notificationService, null, Context.Api,
+            currentUserId: UserId, stateService: _fileDownloadStateService);
 
     private static bool IsInfoPanelPhoto(MessageFileDto file)
         => file.PreviewType == "image" && !string.IsNullOrWhiteSpace(file.Url);
@@ -1080,12 +1170,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             IsInfoSectionOpen = false;
             CurrentInfoSection = InfoSectionType.None;
             InfoSectionTitle = string.Empty;
-
             InfoPanel.SetPhotos([]);
             FilesItems.Clear();
             PollMessages.Clear();
             InfoPanel.SetPolls(PollMessages);
-
             RebuildMembersPreview();
             return;
         }
@@ -1093,7 +1181,20 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         CurrentInfoSection = section;
         InfoSectionTitle = InfoSectionTitles.GetValueOrDefault(section, string.Empty);
         IsInfoSectionOpen = true;
-        RefreshInfoPanelLists();
+
+        switch (section)
+        {
+            case InfoSectionType.Photos: _ = LoadInfoPanelPhotosAsync(); break;
+            case InfoSectionType.Files: _ = LoadInfoPanelFilesAsync(); break;
+            case InfoSectionType.Polls:
+                _ = LoadInfoPanelPollsAsync();
+                InfoPanel.OnPollsSectionOpened(PollMessages);
+                break;
+            case InfoSectionType.Members:
+                RebuildMembersPreview();
+                InfoPanel.OnMembersSectionOpened();
+                break;
+        }
     }
 
     [RelayCommand]
@@ -1607,7 +1708,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         foreach (var msg in PinnedMessages) msg.Dispose();
         PinnedMessages.Clear();
 
-        foreach (var msg in PollMessages) msg.Dispose();
+        foreach (var msg in PollMessages)
+        {
+            if (MessageManager.Messages.All(m => m.Id != msg.Id))
+                msg.Dispose();
+        }
         PollMessages.Clear();
 
         PhotosItems.Clear();

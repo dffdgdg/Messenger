@@ -164,6 +164,7 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         conn.Execute("CREATE INDEX IF NOT EXISTS idx_msg_chat_id_asc ON messages(chat_id, id ASC)");
         conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_last_msg ON chats(last_message_date DESC)");
         conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
+        conn.Execute("CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id, id DESC)");
     });
 
     private async Task CreateFtsAsync()

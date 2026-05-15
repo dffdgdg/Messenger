@@ -130,6 +130,14 @@ app.UseMessengerStaticFiles();
 app.UseMissingFileCleanup();
 app.UseCors();
 
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.Strict,
+    HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
+    Secure = app.Environment.IsDevelopment()
+        ? CookieSecurePolicy.None
+        : CookieSecurePolicy.Always
+});
 app.UseRateLimiter();
 
 app.UseAuthentication();
@@ -142,7 +150,6 @@ app.MapGet("/", (HttpContext context) =>
 }).AllowAnonymous();
 
 app.MapControllers();
-app.MapHub<ChatHub>("/chatHub");
-app.MapHub<CallHub>("/callHub");
+app.MapHub<MessengerHub>("/chatHub");
 
 await app.RunAsync();

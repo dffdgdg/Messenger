@@ -196,60 +196,74 @@ public sealed class MessageRepository(MessengerDbContext context)
     public void RemoveVoiceMessage(VoiceMessage voiceMessage)
         => _context.VoiceMessages.Remove(voiceMessage);
 
-    public async Task<(List<Message> Messages, bool HasOlder)> GetLatestAsync(int chatId, int take, DateTime? cutoff = null, CancellationToken ct = default)
+    public async Task<(List<Message> Messages, bool HasOlder)> GetLatestAsync(
+    int chatId, int take, DateTime? cutoff = null, CancellationToken ct = default)
     {
         var limit = take + 1;
 
-        // UserMessages с полными includes
-        var userQuery = _context.UserMessages
-            .Include(m => m.Sender)
-            .Include(m => m.VoiceMessage)
-            .Include(m => m.MessageFiles)
-            .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
-            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
-            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.VoiceMessage)
-            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.MessageFiles)
-            .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Poll)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll)
-                .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+        // Получаем ID нужных сообщений одним запросом
+        var messageIds = await _context.Messages
             .Where(m => m.ChatId == chatId && m.IsDeleted != true)
-            .AsNoTracking();
-
-        var sysQuery = _context.SystemMessages
-            .Include(m => m.Initiator)
-            .Include(m => m.TargetUser)
-            .Where(m => m.ChatId == chatId && m.IsDeleted != true)
-            .AsNoTracking();
-
-        if (cutoff.HasValue)
-        {
-            userQuery = userQuery.Where(m => m.CreatedAt >= cutoff.Value);
-            sysQuery = sysQuery.Where(m => m.CreatedAt >= cutoff.Value);
-        }
-
-        var userMessages = await userQuery
+            .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
             .OrderByDescending(m => m.Id)
             .Take(limit)
+            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .AsNoTracking()
             .ToListAsync(ct);
 
-        var sysMessages = await sysQuery.OrderByDescending(m => m.Id).Take(limit).ToListAsync(ct);
+        var hasOlder = messageIds.Count > take;
+        if (hasOlder) messageIds.RemoveAt(messageIds.Count - 1);
 
-        Console.WriteLine($"[GetLatest] chatId={chatId} take={take} cutoff={cutoff}");
-        Console.WriteLine($"[GetLatest] userMessages={userMessages.Count} sysMessages={sysMessages.Count}");
+        if (messageIds.Count == 0)
+            return ([], false);
 
-        var merged = userMessages.Cast<Message>().Concat(sysMessages).OrderByDescending(m => m.Id).Take(limit).ToList();
+        var ids = messageIds.ConvertAll(x => x.Id);
+        var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
+        var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
 
-        Console.WriteLine($"[GetLatest] merged={merged.Count} hasOlder={merged.Count > take}");
+        var result = new List<Message>();
 
-        var hasOlder = merged.Count > take;
-        if (hasOlder) merged.RemoveAt(merged.Count - 1);
+        if (userIds.Count > 0)
+        {
+            var userMessages = await _context.UserMessages
+                .Include(m => m.Sender)
+                .Include(m => m.VoiceMessage)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Poll)
+                    .ThenInclude(p => p!.PollOptions)
+                    .ThenInclude(o => o.PollVotes)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.VoiceMessage)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.MessageFiles)
+                .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Poll)
+                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
+                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
+                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll)
+                    .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+                .Where(m => userIds.Contains(m.Id))
+                .AsNoTracking()
+                .ToListAsync(ct);
 
-        merged.Reverse();
+            result.AddRange(userMessages);
+        }
 
-        return (merged, hasOlder);
+        if (sysIds.Count > 0)
+        {
+            var sysMessages = await _context.SystemMessages
+                .Include(m => m.Initiator)
+                .Include(m => m.TargetUser)
+                .Where(m => sysIds.Contains(m.Id))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            result.AddRange(sysMessages);
+        }
+
+        var orderMap = ids.Select((id, idx) => (id, idx)).ToDictionary(x => x.id, x => x.idx);
+        result.Sort((a, b) => orderMap[a.Id].CompareTo(orderMap[b.Id]));
+
+        return (result, hasOlder);
     }
 
     private IQueryable<UserMessage> WithFullIncludes()
@@ -288,10 +302,18 @@ public sealed class MessageRepository(MessengerDbContext context)
 
     public async Task<ChatCountsDto> GetChatCountsAsync(int chatId, DateTime? cutoff)
     {
+        Console.WriteLine($"[GetChatCounts-REPO] chatId={chatId} cutoff={cutoff}");
+
         var baseQuery = _context.UserMessages
             .Where(m => m.ChatId == chatId
                      && m.IsDeleted != true
                      && (cutoff == null || m.CreatedAt >= cutoff));
+
+        var totalMessages = await baseQuery.CountAsync();
+
+        var totalFiles = await baseQuery
+            .SelectMany(m => m.MessageFiles)
+            .CountAsync();
 
         var mediaCount = await baseQuery
             .SelectMany(m => m.MessageFiles)
@@ -306,6 +328,10 @@ public sealed class MessageRepository(MessengerDbContext context)
 
         var pinnedCount = await baseQuery
             .CountAsync(m => m.PinnedAt != null);
+
+        Console.WriteLine(
+            $"[GetChatCounts-REPO] totalMessages={totalMessages} totalFiles={totalFiles} " +
+            $"media={mediaCount} files={filesCount} polls={pollsCount} pinned={pinnedCount}");
 
         return new ChatCountsDto
         {

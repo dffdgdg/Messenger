@@ -3,7 +3,8 @@ using Shared.Hubs;
 
 namespace API.Services.Infrastructure;
 
-public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUserService onlineUserService, IHubContext<ChatHub> hubContext, TimeProvider timeProvider,
+public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUserService onlineUserService,
+    IHubContext<MessengerHub> hubContext, TimeProvider timeProvider,
     ILogger<UserStatusService> logger) : IUserStatusService
 {
     public async Task<Result> SetStatusAsync(int userId, UserStatusType statusType, TimeSpan? duration)

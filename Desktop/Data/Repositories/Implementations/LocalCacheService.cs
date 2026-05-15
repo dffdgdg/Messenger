@@ -66,18 +66,27 @@ public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository me
         };
     });
 
-    public async Task<CachedMessagesResult?> GetMessagesBeforeAsync(int chatId, int beforeId, int count) => await Task.Run(async () =>
+    public async Task<CachedMessagesResult?> GetMessagesBeforeAsync(
+    int chatId, int beforeId, int count) => await Task.Run(async () =>
     {
         var cached = await _messageRepo.GetBeforeAsync(chatId, beforeId, count);
         if (cached.Count == 0) return null;
 
         var syncState = await GetSyncStateAsync(chatId);
-        var isComplete = cached.Count >= count || (syncState is { HasMoreOlder: false } && cached.Count > 0 && cached[0].Id == (syncState.OldestLoadedId ?? 0));
+
+        // Кэш полон если:
+        // 1. Вернули запрошенное количество, ИЛИ
+        // 2. Достигли начала истории (HasMoreOlder=false)
+        bool reachedHistoryStart = syncState is { HasMoreOlder: false }
+            && syncState.OldestLoadedId.HasValue
+            && cached.Any(m => m.Id <= syncState.OldestLoadedId.Value);
+
+        var isComplete = cached.Count >= count || reachedHistoryStart;
 
         return new CachedMessagesResult
         {
             Messages = cached.ConvertAll(m => m.ToDto()),
-            HasMoreOlder = syncState?.HasMoreOlder ?? true,
+            HasMoreOlder = !reachedHistoryStart && (syncState?.HasMoreOlder ?? true),
             HasMoreNewer = true,
             IsComplete = isComplete,
             CacheOldestId = syncState?.OldestLoadedId,

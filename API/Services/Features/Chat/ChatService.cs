@@ -10,7 +10,7 @@ using Shared.Hubs;
 namespace API.Services.Chat;
 
 public partial class ChatService(MessengerDbContext context, IChatRepository chatRepository, IUserRepository userRepository,
-    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url, IReadReceiptService readReceiptService, IHubContext<ChatHub> hubContext,
+    ChatBundle chatBundle, MediaBundle media, PresenceBundle presence, UrlBundle url, IReadReceiptService readReceiptService, IHubContext<MessengerHub> hubContext,
     ILogger<ChatService> logger) : BaseService<ChatService>(context, logger), IChatService
 {
     private readonly IAccessControlService _accessControl = chatBundle.Cache.AccessControl;

@@ -560,9 +560,9 @@ Refresh-токен передаётся исключительно в httpOnly c
 
 ---
 
-# 8. СЛОЙ СЕРВИСОВ API
+### 8. СЛОЙ СЕРВИСОВ API
 
-## BaseService\<T\>
+#### BaseService\<T\>
 
 `_context: MessengerDbContext`, `_logger: ILogger<T>`
 
@@ -572,7 +572,7 @@ Refresh-токен передаётся исключительно в httpOnly c
 
 ---
 
-## AuthService
+#### AuthService
 
 **Путь:** `API/Services/Core/Auth/AuthService.cs`
 
@@ -602,7 +602,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-## Бизнес-сервисы
+#### Бизнес-сервисы
 
 | Сервис | Строк | Ключевое поведение |
 |---|---|---|
@@ -611,7 +611,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `ChatMemberService` | 100 | При удалении участника отправляет `ChatRemoved` персонально. |
 | `DepartmentService` | 218+ | Автоматически управляет связанными чатами при создании/удалении/переименовании отдела. BFS для проверки циклов. |
 | `FileService` | 112 | Изображения → WebP. Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
-| `MessageService` | ~590 | Вызовы хаба используют `HubMethods.Chat.*`. `GetMessagesAroundAsync` загружает системные сообщения и пользовательские последовательными запросами (вместо `Task.WhenAll`), обеспечивая консистентность. `PinMessageAsync` проверяет, не закреплено ли уже. |
+| `MessageService` | ~590 | Вызовы хаба используют `HubMethods.Chat.*`. `GetMessagesAroundAsync` загружает якорное сообщение через `FindUserMessageWithIncludesNoTrackingAsync` (все связанные данные), а системные и пользовательские сообщения — последовательными запросами, гарантируя консистентность. `PinMessageAsync` проверяет, не закреплено ли уже. |
 | `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. |
 | `PollService` | ~150 | Внедрён `TimeBundle`. `ClosesAt` не сохраняется при создании опроса. |
 | `ReadReceiptService` | ~90 | Полный переход на `IReadReceiptRepository`. |
@@ -873,11 +873,11 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-# 18. DESKTOP — VIEW MODELS
+### 18. DESKTOP — VIEW MODELS
 
-## Chat Core
+#### Chat Core
 
-### ChatViewModel
+##### ChatViewModel
 
 **Путь:** `Desktop/ViewModels/Chat/Core/ChatViewModel.cs`  
 **Строк:** ~1700  
@@ -894,7 +894,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 - При получении нового сообщения через хаб (`RequestRefreshCounters`) вызывается полное обновление счётчиков и активной секции.
 - Метод `RefreshMembersPreview` сортирует участников: сначала по онлайн-статусу, затем по имени. Обработка `CollectionChanged` обновляет инфопанель при удалении сообщений.
 
-**Инициализация:** параллельно с сообщениями и участниками загружаются счётчики. После инициализации вызывается `RefreshChatPermissions`. Конструктор принимает необязательный `targetMessageId`, который передаётся в `LoadInitialMessagesAsync` для открытия чата сразу на нужном сообщении.
+**Инициализация:** параллельно с сообщениями и участниками загружаются счётчики. После инициализации вызывается `RefreshChatPermissions`. Конструктор принимает необязательный `targetMessageId` и сохраняет его в `_targetMessageId`; публичное свойство `HasInitialMessageTarget` возвращает `true`, если идентификатор был задан. При наличии `targetMessageId` и успешном получении индекса скролл выполняется с `highlight: true`; в противном случае (например, первый непрочитанный) также вызывается `RequestScrollToIndex` с подсветкой. Если индекс не найден, происходит обычный скролл вниз.
 
 **Обработка `OnChatUpdated`:** принимает `ChatUpdateEventDto`, обновляет поля чата, инвалидирует кэш аватара.
 
@@ -903,18 +903,18 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-### ChatMessageManager
+##### ChatMessageManager
 
 **Строк:** 599
 
 **Кэширование и загрузка:**
 - При старте пытается загрузить сообщения из локального кэша; при достаточности данных и недавней синхронизации пропускает запрос к серверу, иначе запускает фоновую ревалидацию.
-- `LoadInitialMessagesAsync` переработан: если указан `targetMessageId`, загружает сообщения вокруг него; иначе если существует `FirstUnreadMessageId`, загружает вокруг первого непрочитанного; затем пробует кэш; в конце обращается к серверу.
-- Добавлен отладочный вывод данных опроса в `FetchAsync`.
+- `LoadInitialMessagesAsync` теперь напрямую вызывает `LoadAroundCoreAsync` при наличии `FirstUnreadMessageId` или `targetMessageId`, а при отсутствии — пробует кэш, затем сервер. Удалён приватный метод `LoadInitialCoreAsync`.
+- Добавлен отладочный вывод данных опроса в `FetchAsync` и `LoadAroundCoreAsync`. `FetchAsync` проверяет токен отмены перед запросом и логирует результат.
 
 ---
 
-### MessageViewModel
+##### MessageViewModel
 
 **Строк:** 730
 
@@ -925,15 +925,15 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-### ChatHubSubscriber
+##### ChatHubSubscriber
 
 При получении сообщения вызывает `ctx.RequestRefreshCounters?.Invoke()` для обновления счётчиков.
 
 ---
 
-## Главные ViewModel
+#### Главные ViewModel
 
-### MainMenuViewModel
+##### MainMenuViewModel
 
 **Строк:** 700
 
@@ -942,7 +942,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-### ChatsViewModel
+##### ChatsViewModel
 
 **Путь:** `Desktop/ViewModels/ChatList/Core/ChatsViewModel.cs`
 
@@ -952,29 +952,33 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-### PollViewModel
+##### PollViewModel
 
 - Добавлено вычисляемое свойство `TotalVotesFormatted` с плюрализацией.
 - `TotalVotes` вычисляется до заполнения `Options`, чтобы избежать несогласованности.
 - Метод `ApplyDto` правильно сбрасывает `TotalVotes` и обновляет `TotalVotesFormatted`.
 - `UpdateOptions` устойчива к `null`-списку.
 
-### PollOptionViewModel
+##### PollOptionViewModel
 
 - `NotifyTotalVotesChanged` вызывает `PropertyChanged` для `VotesCount` через временный сброс/восстановление, гарантируя обновление привязанного процента.
 
 ---
 
-## Представления (Views)
+#### Представления (Views)
 
-### ChatView.axaml
+##### ChatView.axaml
 - `VirtualizingStackPanel CacheLength="2"`.
 - Элементы списка сообщений без дополнительного `Margin`.
 
-### ChatView.axaml.cs
+##### ChatView.axaml.cs
 - `VisibilityCheckDelayMs = 300`.
 - При скролле регистрируется время последнего скролла. Таймер проверки видимости откладывается, если с момента скролла прошло <200 мс.
 - При подгрузке старых сообщений сохраняется якорное сообщение и корректируется смещение для сохранения позиции просмотра.
+- Явный скролл к сообщению (по запросу из ViewModel) теперь выполняет центрирование элемента во вьюпорте: метод `ScrollToItemCentered` сначала вызывает `ScrollIntoView`, затем отложенно вычисляет смещение через `TransformToVisual` и устанавливает `ScrollViewer.Offset` так, чтобы сообщение оказалось по центру. Предусмотрено до трёх повторных попыток, если контейнер ещё не реализован. При флаге `highlight` у целевого сообщения взводится `IsHighlighted` на `AppConstants.HighlightDurationMs` миллисекунд.
+- Логика `ShouldDeferScrollRequest` теперь принимает параметр `isExplicitMessageNavigation`:
+  - если это явная навигация к сообщению (в том числе по `HasInitialMessageTarget`), отложенный скролл не блокируется, а ожидающее состояние сбрасывается;
+  - при обычном завершении инициализации, пока не восстановлено состояние скролла, скролл откладывается.
 
 ---
 
@@ -1034,37 +1038,40 @@ ChatMemberService.RemoveMemberAsync()
 
 ---
 
-# 20. DESKTOP — VIEWS (Слой представлений)
 
-### Основные стили и ресурсы
+### 20. DESKTOP — VIEWS (Слой представлений)
+
+#### Основные стили и ресурсы
 - `App.axaml`: подключает `Icons.axaml`, `Animations.axaml`, `MainStyle.axaml`, `MessageStyles.axaml`.
 - `MainStyle.axaml`: стили для `ToggleButton.SwitchSmall:checked`. Кнопка с круглым фоном теперь использует `PrimaryBG`.
 - `MessageStyles.axaml`: расширен стилями опросов (классы `PollOptionButton`, `PollOptionBorder`, `PollRadioOuter`, `PollRadioInner`, `PollCheckboxOuter`, `PollCheckboxTick`, `PollResultContainer`, `PollProgressBarBackground`, `PollProgressBar`, `PollResultText`, `PollPercentage`), обеспечивая кастомный вид голосования и результатов.
 
-### Главное окно
+#### Главное окно
 - Адаптивный режим при ширине ≤800px.
 - Анимация открытия/закрытия диалогов с защитой от гонок.
 - Закрытие поиска при клике вне поля.
 
-### ChatView
+#### ChatView
 - Виртуализирующий StackPanel с `CacheLength=2`.
 - Якорное восстановление позиции скролла после подгрузки старых сообщений.
 - Отложенная проверка видимости сообщений (300 мс) с учётом недавнего скролла.
+- При программном скролле к сообщению (из ViewModel) выполняется центрирование элемента во вьюпорте: после `ScrollIntoView` отложенно вычисляется смещение и устанавливается `Offset` так, чтобы сообщение оказалось по середине видимой области. Если контейнер не готов, выполняется до трёх попыток. При необходимости включается временная подсветка целевого сообщения.
+- Логика отложенного скролла (`ShouldDeferScrollRequest`) учитывает, является ли запрос явной навигацией к сообщению (включая начальную навигацию по `targetMessageId`): в этом случае отложенный скролл не блокируется, а состояние ожидания сбрасывается.
 
-### Информационная панель чата
+#### Информационная панель чата
 - Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`.
 - Секции «Медиа» и «Опросы» скрываются при нулевых счётчиках.
 - Добавлен вывод `LastSeen` для контакта и участников через `MultiBinding` с `LastSeenTextConverter`.
 
-### Профиль пользователя
+#### Профиль пользователя
 - Кнопка «Отправить сообщение» видна только при `CanSendMessage`.
 - Диалог профиля полностью переработан: аватар и имя по центру, статус онлайна/последней активности через `MultiBinding`, улучшенный дизайн информационной секции, растянутая кнопка отправки сообщения.
 
-### Сообщения
+#### Сообщения
 - **Опросы:** отдельный `PollView` удалён. Голосование и результаты теперь рендерятся непосредственно в `PollMessagePart.axaml` с использованием `ItemsControl` и встроенного шаблона. Прогресс-бар реализован через `FractionToGridLengthConverter`. Кнопки «Голосовать»/«Результаты» встроены в нижнюю часть.
 - **Системные сообщения:** в `SystemMessagePart.axaml` добавлен бейдж со временем (свойство `SystemMessageTime`) справа, стилизованный под `ThirdBG` с радиусом 14. Улучшено выравнивание элементов.
 - В контекстном меню сообщения исправлена видимость пункта «Результаты опроса» (FallbackValue=False).
-
+- 
 ---
 
 # 🔴 ИЗВЕСТНЫЕ ПРОБЛЕМЫ

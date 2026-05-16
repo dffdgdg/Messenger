@@ -131,11 +131,11 @@ public static class CacheMapper
             try
             {
                 dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts);
-                Debug.WriteLine($"[CacheMapper] Poll десериализован: id={dto.Poll?.Id} options={dto.Poll?.Options?.Count ?? -1} json={entity.PollJson}");
+                Debug.WriteLine($"[CacheMapper.ToDto] pollId={dto.Poll?.Id} options={dto.Poll?.Options?.Count}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CacheMapper] Poll ошибка десериализации: {ex.Message} json={entity.PollJson}");
+                Debug.WriteLine($"[CacheMapper.ToDto] ОШИБКА: {ex.Message} json={entity.PollJson}");
             }
         }
 

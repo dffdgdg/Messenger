@@ -221,7 +221,7 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var sysBefore = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: messageId, afterId: null, cutoff: cutoff);
         var sysAfter = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: null, afterId: messageId, cutoff: cutoff);
 
-        var anchor = await messageRepository.FindUserMessageByIdAsync(messageId);
+        var anchor = await messageRepository.FindUserMessageWithIncludesNoTrackingAsync(messageId);
 
         var allMessages = before.Cast<Message>()
             .Concat(sysBefore.Where(s => s.Id < messageId))

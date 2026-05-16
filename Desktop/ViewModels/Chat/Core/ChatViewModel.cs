@@ -272,6 +272,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     }
     #region Init
     private readonly int? _targetMessageId;
+    public bool HasInitialMessageTarget => _targetMessageId.HasValue;
 
     public ChatViewModel(ChatDto initialChat, ChatsViewModel parent, IChatNavigator navigator, ChatViewModelDependencies dependencies,
         IStorageProvider? storageProvider = null, int? targetMessageId = null)
@@ -455,9 +456,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(_targetMessageId, Context.LifetimeToken);
 
-            if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
+            if (_targetMessageId.HasValue && scrollToIndex.HasValue)
             {
-                Context.RequestScrollToIndex(scrollToIndex.Value);
+                Context.RequestScrollToIndex(scrollToIndex.Value, highlight: true);
+            }
+            else if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
+            {
+                Context.RequestScrollToIndex(scrollToIndex.Value, highlight: true);
             }
             else
             {

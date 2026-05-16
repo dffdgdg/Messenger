@@ -19,7 +19,8 @@ public partial class ChatView : UserControl
     private const string ScrollStateKeyPrefix = "chat_scroll_state:";
     private const int SeenIdsCleanupThreshold = 500;
     private const int ScrollStateMaxAgeHours = 72;
-
+    private int _scrollAdjustRetries;
+    private const int MaxScrollAdjustRetries = 3;
     private readonly ISettingsService? _settingsService;
 
     private ScrollViewer? _scrollViewer;
@@ -251,15 +252,17 @@ public partial class ChatView : UserControl
         EnsureScrollViewer();
         BeginScrollToBottom();
     }
-
     private void OnScrollToIndexRequested(int index, bool highlight)
     {
-        if (ShouldDeferScrollRequest()) return;
+        if (ShouldDeferScrollRequest(highlight)) return;
 
         ScheduleScrollAction(() =>
         {
-            if (_viewModel is null || index < 0 || index >= (_viewModel.Messages?.Count ?? 0)) return;
-            ScrollToItem(_viewModel.Messages![index]);
+            if (_viewModel is null || index < 0 || index >= (_viewModel.Messages?.Count ?? 0))
+                return;
+
+            var message = _viewModel.Messages![index];
+            ScrollToItemCentered(message, highlight);
             CompleteInitialScroll(atBottom: false);
         });
     }
@@ -267,20 +270,136 @@ public partial class ChatView : UserControl
     private void OnScrollToMessageRequested(MessageViewModel message, bool highlight)
     {
         if (message is null || _viewModel is null) return;
+        if (ShouldDeferScrollRequest(highlight)) return;
+
         ScheduleScrollAction(() =>
         {
-            ScrollToItem(message);
+            ScrollToItemCentered(message, highlight);
             CompleteInitialScroll(atBottom: false);
         });
     }
 
-    private void ScrollToItem(MessageViewModel message)
+    private void ScrollToItemCentered(MessageViewModel message, bool highlight = false)
     {
         EnsureScrollViewer();
-        _messagesList?.ScrollIntoView(message);
+        if (_messagesList == null || _scrollViewer == null) return;
+
+        _scrollAdjustRetries = 0;
+        _messagesList.ScrollIntoView(message);
+
+        Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight),
+            DispatcherPriority.Render);
     }
 
-    private bool ShouldDeferScrollRequest() => !_scrollStateRestored && _pendingScrollState is not null;
+    private void AdjustScrollToCenterItem(MessageViewModel message, bool highlight = false)
+    {
+        if (_messagesList == null || _scrollViewer == null) return;
+
+        ListBoxItem? container = null;
+        foreach (var c in _messagesList.GetRealizedContainers())
+        {
+            if (c is ListBoxItem item && item.DataContext == message)
+            {
+                container = item;
+                break;
+            }
+        }
+
+        if (container == null)
+        {
+            if (_scrollAdjustRetries++ < MaxScrollAdjustRetries)
+            {
+                Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight),
+                    DispatcherPriority.Background);
+            }
+            return;
+        }
+
+        _scrollAdjustRetries = 0;
+
+        var transform = container.TransformToVisual(_scrollViewer);
+        if (transform == null) return;
+
+        double itemTop = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
+        double itemHeight = container.Bounds.Height;
+        double viewportHeight = _scrollViewer.Viewport.Height;
+        double currentOffset = _scrollViewer.Offset.Y;
+
+        double targetOffset = currentOffset + itemTop - (viewportHeight / 2) + (itemHeight / 2);
+        double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - viewportHeight);
+        double clampedOffset = Math.Clamp(targetOffset, 0, maxOffset);
+
+        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, clampedOffset);
+
+        // Применяем highlight после позиционирования
+        if (highlight)
+        {
+            message.IsHighlighted = true;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(AppConstants.HighlightDurationMs);
+                Dispatcher.UIThread.Post(() => message.IsHighlighted = false);
+            });
+        }
+    }
+
+    private void AdjustScrollToCenterItem(MessageViewModel message)
+    {
+        if (_messagesList == null || _scrollViewer == null) return;
+
+        // Ищем контейнер
+        ListBoxItem? container = null;
+        foreach (var c in _messagesList.GetRealizedContainers())
+        {
+            if (c is ListBoxItem item && item.DataContext == message)
+            {
+                container = item;
+                break;
+            }
+        }
+
+        if (container == null)
+        {
+            if (_scrollAdjustRetries++ < MaxScrollAdjustRetries)
+            {
+                Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message),
+                    DispatcherPriority.Background);
+            }
+            return;
+        }
+
+        _scrollAdjustRetries = 0;
+
+        var transform = container.TransformToVisual(_scrollViewer);
+        if (transform == null) return;
+
+        double itemTop = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
+        double itemHeight = container.Bounds.Height;
+        double viewportHeight = _scrollViewer.Viewport.Height;
+        double currentOffset = _scrollViewer.Offset.Y;
+
+        // Центрируем элемент во вьюпорте
+        double targetOffset = currentOffset + itemTop - (viewportHeight / 2) + (itemHeight / 2);
+        double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - viewportHeight);
+        double clampedOffset = Math.Clamp(targetOffset, 0, maxOffset);
+
+        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, clampedOffset);
+    }
+    private bool ShouldDeferScrollRequest(bool isExplicitMessageNavigation = false)
+    {
+        if (_scrollStateRestored || _pendingScrollState is null)
+            return false;
+
+        if (!isExplicitMessageNavigation && _viewModel?.HasInitialMessageTarget != true)
+            return true;
+
+        _pendingScrollState = null;
+        _scrollStateRestored = true;
+        _restoreCts?.Cancel();
+        _restoreCts?.Dispose();
+        _restoreCts = null;
+        return false;
+    }
 
     private void BeginScrollToBottom()
     {
@@ -383,7 +502,7 @@ public partial class ChatView : UserControl
         if (_visibilityTimer?.IsEnabled != true)
             _visibilityTimer?.Start();
 
-        if (_suppressScrollEvents || !_isInitialScrollDone || _viewModel.IsSearchMode)
+        if (_viewModel is null || _suppressScrollEvents || !_isInitialScrollDone || _viewModel.IsSearchMode)
             return;
 
         if (!_suppressPositionTracking && !IsLoadingOlder() && !IsLoadingNewer())

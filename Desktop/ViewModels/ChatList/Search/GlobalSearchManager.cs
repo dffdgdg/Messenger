@@ -449,7 +449,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
 
     private bool IsChatAllowedForScope(ChatType type) => SelectedScope switch
     {
-        SearchScopeMode.Chats => type is ChatType.Chat or ChatType.Department,
+        SearchScopeMode.Chats => type is not ChatType.Contact,
         SearchScopeMode.Contacts => type == ChatType.Contact,
         _ => true
     };

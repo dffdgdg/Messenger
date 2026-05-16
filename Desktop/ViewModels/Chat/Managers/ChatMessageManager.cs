@@ -89,17 +89,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     public Task LoadNewerMessagesAsync(CancellationToken ct = default)
         => WithLoadingGuardVoidAsync(() => LoadPageAsync(LoadDirection.Newer, ct));
 
-    private async Task<int?> LoadInitialCoreAsync(CancellationToken ct)
-    {
-        if (FirstUnreadMessageId.HasValue)
-            return await LoadAroundCoreAsync(FirstUnreadMessageId.Value, ct);
-
-        if (await TryLoadInitialFromCacheAsync() is { } cachedIndex)
-            return cachedIndex;
-
-        return await LoadInitialFromServerAsync(ct);
-    }
-
     private const int CacheRevalidationThresholdSeconds = 30;
 
     private async Task<int?> TryLoadInitialFromCacheAsync()
@@ -158,9 +147,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private async Task<int?> LoadAroundCoreAsync(int messageId, CancellationToken ct)
     {
+        Debug.WriteLine($"[LoadAround] messageId={messageId} ct.IsCancellationRequested={ct.IsCancellationRequested}");
+
         if (_cacheService != null)
         {
-            var cached = await Task.Run(() => _cacheService.GetMessagesAroundAsync(_chatId, messageId, DefaultPage));
+            var cached = await Task.Run(() => _cacheService.GetMessagesAroundAsync(_chatId, messageId, DefaultPage), ct);
+            Debug.WriteLine($"[LoadAround] cache result: {(cached == null ? "null" : $"count={cached.Messages.Count} isComplete={cached.IsComplete} hasTarget={cached.Messages.Any(m => m.Id == messageId)}")}");
 
             if (cached is { IsComplete: true, Messages.Count: > 0 })
             {
@@ -616,6 +608,14 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private async Task<PagedMessagesDto?> FetchAsync(string url, CancellationToken ct)
     {
+        Debug.WriteLine($"[FetchAsync] START url={url} ct.IsCancellationRequested={ct.IsCancellationRequested}");
+
+        if (ct.IsCancellationRequested)
+        {
+            Debug.WriteLine("[FetchAsync] ABORTED - token already cancelled!");
+            return null;
+        }
+
         var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
 
         if (result?.Data?.Messages != null)

@@ -3,6 +3,7 @@ using Desktop.Data.Mapping;
 using Desktop.Data.Models.Cache;
 using Desktop.Data.Models.Sync;
 using Desktop.Data.Repositories.Abstractions;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Desktop.Data.Repositories.Implementations;
@@ -118,6 +119,8 @@ public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository me
         var cached = await _messageRepo.GetAroundAsync(chatId, messageId, halfCount);
         if (cached.Count == 0) return null;
 
+        foreach (var m in cached.Where(m => m.PollJson != null))
+            Debug.WriteLine($"[Cache.Around] msg={m.Id} pollJson={m.PollJson}");
         var syncState = await GetSyncStateAsync(chatId);
         var hasTarget = cached.Any(m => m.Id == messageId);
 

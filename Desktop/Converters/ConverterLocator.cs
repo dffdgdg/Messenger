@@ -50,6 +50,7 @@ public sealed class ConverterLocator
         Add<SearchScopeToHintConverter>("SearchScopeToHint");
         Add<SearchScopeToMessagesHeaderConverter>("SearchScopeToMessagesHeader");
         Add<ContentFilterToLabelConverter>("ContentFilterToLabel");
+        Add<FractionToGridLengthConverter>("FractionToGridLength");
 
         // Enum converters
         Add<UserRoleToVisibilityConverter>("UserRoleToVisibility", "HasRole");

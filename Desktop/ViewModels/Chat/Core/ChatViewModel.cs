@@ -271,9 +271,10 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
     #region Init
+    private readonly int? _targetMessageId;
 
-    public ChatViewModel(ChatDto initialChat, ChatsViewModel parent, IChatNavigator navigator,
-        ChatViewModelDependencies dependencies, IStorageProvider? storageProvider = null)
+    public ChatViewModel(ChatDto initialChat, ChatsViewModel parent, IChatNavigator navigator, ChatViewModelDependencies dependencies,
+        IStorageProvider? storageProvider = null, int? targetMessageId = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
@@ -291,6 +292,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
 
         UserId = currentUserId;
+        _targetMessageId = targetMessageId;
 
         var chatId = initialChat.Id;
 
@@ -451,7 +453,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
             OnPropertyChanged(nameof(InfoPanel));
 
-            var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(Context.LifetimeToken);
+            var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(_targetMessageId, Context.LifetimeToken);
 
             if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
             {
@@ -931,57 +933,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         MembersPreview.Clear();
 
-        foreach (var member in Context.Members.Take(5))
-            MembersPreview.Add(member);
-    }
-
-    private void UnloadInactiveInfoSectionCollections()
-    {
-        if (CurrentInfoSection != InfoSectionType.Photos || !IsInfoSectionOpen)
-            InfoPanel.SetPhotos([]);
-
-        if (CurrentInfoSection != InfoSectionType.Files || !IsInfoSectionOpen)
-            FilesItems.Clear();
-
-        if (CurrentInfoSection != InfoSectionType.Polls || !IsInfoSectionOpen)
+        foreach (var member in Context.Members.OrderByDescending(m => m.IsOnline)
+            .ThenBy(m => m.DisplayName ?? m.Username ?? string.Empty, StringComparer.OrdinalIgnoreCase).Take(5))
         {
-            PollMessages.Clear();
-            InfoPanel.SetPolls(PollMessages);
+
+            MembersPreview.Add(member);
         }
-    }
-
-    private void LoadInfoPanelPhotos(IReadOnlyList<MessageViewModel> visible)
-    {
-        var photos = visible.SelectMany(m => m.Files.Where(IsInfoPanelPhoto)
-            .Select(f => new ChatInfoPanelMediaItem(m, f))).OrderByDescending(x => x.CreatedAt).ToList();
-
-        InfoPanel.SetPhotos(photos);
-        OnPropertyChanged(nameof(PhotosItems));
-    }
-
-    private void LoadInfoPanelFiles(IReadOnlyList<MessageViewModel> visible)
-    {
-        FilesItems.Clear();
-
-        var files = visible.SelectMany(m => m.Files.Where(f => !IsInfoPanelPhoto(f))
-            .Select(f => new ChatInfoPanelFileItem(m, f))).OrderByDescending(x => x.CreatedAt);
-
-        foreach (var file in files)
-            FilesItems.Add(file);
-
-        OnPropertyChanged(nameof(FilesItems));
-    }
-
-    private void LoadInfoPanelPolls(IReadOnlyList<MessageViewModel> visible)
-    {
-        PollMessages.Clear();
-
-        var polls = visible.Where(m => m.Poll != null).OrderByDescending(m => m.CreatedAt);
-
-        foreach (var poll in polls)
-            PollMessages.Add(poll);
-
-        InfoPanel.SetPolls(PollMessages);
     }
 
     #endregion
@@ -1378,7 +1335,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     [RelayCommand]
     private async Task OpenCreatePoll()
-        => await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync());
+        => await _navigator.ShowPollDialogAsync(Context.ChatId, () => MessageManager.LoadInitialMessagesAsync(null));
 
     [RelayCommand]
     private async Task OpenEditChat()

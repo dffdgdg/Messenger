@@ -7,6 +7,7 @@ public partial class PollViewModel : BaseViewModel
     private readonly IApiClientService _apiClient;
 
     public event Action<PollDto>? ServerStateApplied;
+    public string TotalVotesFormatted => Pluralize(TotalVotes);
 
     [ObservableProperty] public partial ObservableCollection<PollOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
@@ -30,7 +31,15 @@ public partial class PollViewModel : BaseViewModel
     public bool HasSelection => Options.Any(o => o.IsSelected);
     public bool ShowResultsButton => !IsAnonymous && (!CanVote || IsClosed);
     public PollDto? CurrentPollDto { get; private set; }
-
+    private static string Pluralize(int count)
+    {
+        var abs = Math.Abs(count) % 100;
+        var n1 = abs % 10;
+        if (abs > 10 && abs < 20) return $"{count} голосов";
+        if (n1 > 1 && n1 < 5) return $"{count} голоса";
+        if (n1 == 1) return $"{count} голос";
+        return $"{count} голосов";
+    }
     public PollViewModel(PollDto poll, int userId, IApiClientService apiClient, int? pollOwnerId = null)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
@@ -39,16 +48,18 @@ public partial class PollViewModel : BaseViewModel
         UserId = userId;
         AllowsMultipleAnswers = poll.AllowsMultipleAnswers;
         IsAnonymous = poll.IsAnonymous;
-
-        CanVote = poll.CanVote;
-        HasVoted = !poll.CanVote;
-        TotalVotes = poll.Options.Sum(o => o.VotesCount);
-
-        CurrentPollDto = poll;
         IsClosed = ComputeIsClosed(poll.ClosesAt);
         CanClose = !IsClosed && userId == pollOwnerId;
 
-        Options = new ObservableCollection<PollOptionViewModel>(poll.Options.Select(o => new PollOptionViewModel(o, this)));
+        var options = poll.Options ?? [];
+
+        TotalVotes = options.Sum(o => o.VotesCount);
+        CanVote = poll.CanVote;
+        HasVoted = !poll.CanVote;
+        CurrentPollDto = poll;
+
+        Options = new ObservableCollection<PollOptionViewModel>(
+            options.Select(o => new PollOptionViewModel(o, this)));
 
         foreach (var opt in Options)
             opt.PropertyChanged += OnOptionPropertyChanged;
@@ -114,14 +125,16 @@ public partial class PollViewModel : BaseViewModel
     public void ApplyDto(PollDto dto)
     {
         AllowsMultipleAnswers = dto.AllowsMultipleAnswers;
-        TotalVotes = dto.Options.Sum(o => o.VotesCount);
 
-        UpdateOptions(dto.Options);
+        var options = dto.Options ?? [];
+        TotalVotes = options.Sum(o => o.VotesCount);
+        OnPropertyChanged(nameof(TotalVotesFormatted));
+
+        UpdateOptions(options);
         ApplySelectedOptions(dto.SelectedOptionIds);
 
         CanVote = dto.CanVote;
         HasVoted = !dto.CanVote;
-
         CurrentPollDto = dto;
         IsClosed = ComputeIsClosed(dto.ClosesAt);
 
@@ -134,6 +147,8 @@ public partial class PollViewModel : BaseViewModel
 
     private void UpdateOptions(List<PollOptionDto> optionDtos)
     {
+        optionDtos ??= [];
+
         foreach (var optDto in optionDtos)
         {
             var vm = Options.FirstOrDefault(o => o.Id == optDto.Id);

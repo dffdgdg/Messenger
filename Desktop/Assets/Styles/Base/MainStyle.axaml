@@ -333,7 +333,7 @@
 		<Setter Property="CornerRadius" Value="20"/>
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
-		<Setter Property="Background" Value="{DynamicResource SecondaryBG}"/>
+		<Setter Property="Background" Value="{DynamicResource PrimaryBG}"/>
 		<Setter Property="Cursor" Value="Hand"/>
 		<Setter Property="ZIndex" Value="10"/>
 		<Setter Property="Transitions">

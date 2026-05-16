@@ -15,7 +15,6 @@ public sealed partial class ChatSearchHandler(ChatContext context, ChatMessageMa
         try
         {
             var existing = messageManager.Messages.FirstOrDefault(m => m.Id == messageId);
-
             if (existing != null)
             {
                 var index = messageManager.Messages.IndexOf(existing);
@@ -25,12 +24,10 @@ public sealed partial class ChatSearchHandler(ChatContext context, ChatMessageMa
             }
 
             var targetIndex = await messageManager.LoadMessagesAroundAsync(messageId);
-
             if (targetIndex.HasValue)
             {
                 await Task.Delay(100);
                 Ctx.RequestScrollToIndex(targetIndex.Value);
-
                 var target = messageManager.Messages.FirstOrDefault(m => m.Id == messageId);
                 if (target != null) Highlight(target);
             }

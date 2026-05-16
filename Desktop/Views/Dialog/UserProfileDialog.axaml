@@ -2,102 +2,111 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
              xmlns:controls="using:Desktop.Views.Controls"
+             xmlns:conv="using:Desktop.Converters"
              x:Class="Desktop.Views.UserProfileDialog"
              x:DataType="vmDialog:UserProfileDialogViewModel">
 
     <Border Classes="DialogContainer" Width="400">
         <Grid RowDefinitions="Auto,*,Auto">
 
-            <!-- Шапка -->
-            <Border Grid.Row="0"
-                    Background="{DynamicResource PrimaryBG}"
-                    CornerRadius="16,16,0,0"
-                    Padding="24,18">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Профиль пользователя"
-                               FontSize="17"
-                               FontWeight="SemiBold"/>
-                    <Button Grid.Column="1"
-                            Classes="IconButton Small"
-                            Command="{Binding CloseOnBackgroundClickCommand}"
-                            ToolTip.Tip="Закрыть">
-                        <PathIcon Data="{StaticResource CloseIcon}"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource TextSecondary}"/>
-                    </Button>
-                </Grid>
-            </Border>
+            <Grid Grid.Row="0" Margin="24,20,24,12">
+                
+                <Button Classes="IconButton Small"
+                        Command="{Binding CloseOnBackgroundClickCommand}"
+                        ToolTip.Tip="Закрыть"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource CloseIcon}"
+                              Width="12" Height="12"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                </Button>
+            </Grid>
 
-            <!-- Тело -->
             <ScrollViewer Grid.Row="1"
                           Classes="ThinScrollbar"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Margin="24,20,24,24" Spacing="20">
+                <StackPanel Margin="0,0,0,24">
 
-                    <Grid ColumnDefinitions="Auto,*">
+                    <StackPanel Spacing="16" HorizontalAlignment="Center" Margin="24,12,24,0">
                         <controls:AvatarControl Classes="XLarge"
                                                 Source="{Binding User.Avatar}"
                                                 DisplayName="{Binding User.DisplayName}"
                                                 IsOnline="{Binding User.IsOnline}"
                                                 StatusType="{Binding User.StatusType}"
-                                                Margin="0,0,16,0"/>
-                        <StackPanel Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Spacing="4">
+                                                HorizontalAlignment="Center"/>
+
+                        <StackPanel Spacing="4">
                             <TextBlock Text="{Binding User.DisplayName}"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"/>
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                            
+                            <TextBlock FontSize="13"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
+                                        <Binding Path="User.IsOnline"/>
+                                        <Binding Path="User.LastOnline"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
 
-                    <Border Height="1" Background="{DynamicResource BorderDefault}"/>
+                    <Border Height="1" Background="{DynamicResource BorderDefault}" Margin="24,24"/>
 
-                    <StackPanel Spacing="12">
+                    <StackPanel Spacing="16" Margin="24,0">
                         <TextBlock Text="ИНФОРМАЦИЯ" Classes="SectionHeader"/>
 
-                        <Grid ColumnDefinitions="*,*">
+                        <Grid ColumnDefinitions="*, Auto">
                             <TextBlock Text="Имя пользователя"
                                        FontSize="14"
-                                       Foreground="{DynamicResource TextSecondary}"/>
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding User.Username, StringFormat='@{0}'}"
                                        FontSize="14"
-                                       Foreground="{DynamicResource AccentBrush}"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource Accent}"
                                        HorizontalAlignment="Right"/>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,*"
-                              IsVisible="{Binding Department,
-                                  Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid ColumnDefinitions="*, Auto"
+                              IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Text="Отдел"
                                        FontSize="14"
-                                       Foreground="{DynamicResource TextSecondary}"/>
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Department}"
                                        FontSize="14"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextPrimary}"
                                        HorizontalAlignment="Right"
-                                       TextTrimming="CharacterEllipsis"/>
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="200"/>
                         </Grid>
                     </StackPanel>
 
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Футер -->
             <Border Grid.Row="2"
-                    Background="{DynamicResource PrimaryBG}"
+                    Background="{DynamicResource SecondaryBG}"
                     CornerRadius="0,0,16,16"
-                    Padding="24,16">
-                <Button HorizontalAlignment="Stretch"
-                        Command="{Binding SendMessageCommand}"
+                    Padding="24,16,24,24">
+                <Button Command="{Binding SendMessageCommand}"
                         IsVisible="{Binding CanSendMessage}"
-                        HorizontalContentAlignment="Center"
-                        Classes="Primary FullWidth">
+                        Classes="Primary FullWidth"
+                        Height="44">
                     <TextBlock Text="Отправить сообщение"
                                FontSize="15"
-                               FontWeight="SemiBold"
+                               FontWeight="Medium"
                                Foreground="{DynamicResource TextOnAccent}"/>
                 </Button>
             </Border>

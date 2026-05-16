@@ -554,7 +554,7 @@ Refresh-токен передаётся исключительно в httpOnly c
 | `IUserRepository` | `UserRepository` | `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `Add`, `GetAllWithSettingsAsync`, `GetWithSettingsAsync`, `UsernameExistsByOtherUserAsync` |
 | `IRefreshTokenRepository` | `RefreshTokenRepository` | Управление токенами: отзыв семейства, отзыв всех для пользователя, удаление истёкших, активные семьи. |
 | `IChatRepository` | `ChatRepository` | Расширен: `GetLastMessagesAsync` разрешает цепочку пересылки. |
-| `IMessageRepository` | `MessageRepository` | `GetLatestAsync` теперь сначала выбирает ID, затем раздельно загружает UserMessages и SystemMessages, сортирует по карте порядка. `GetChatCountsAsync` вычисляет `totalFiles`. |
+| `IMessageRepository` | `MessageRepository` | `GetLatestAsync` теперь сначала выбирает ID, затем раздельно загружает UserMessages и SystemMessages, сортирует по карте порядка. `GetChatCountsAsync` вычисляет `totalFiles`. `LightQuery` загружает `Poll.PollOptions.PollVotes` как для основного сообщения, так и для пересланного, обеспечивая полные данные опроса. |
 | `IReadReceiptRepository` | `ReadReceiptRepository` | Все операции с отметками о прочтении. |
 | `IPollRepository` | `PollRepository` | Управление опросами и голосами. |
 
@@ -611,7 +611,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `ChatMemberService` | 100 | При удалении участника отправляет `ChatRemoved` персонально. |
 | `DepartmentService` | 218+ | Автоматически управляет связанными чатами при создании/удалении/переименовании отдела. BFS для проверки циклов. |
 | `FileService` | 112 | Изображения → WebP. Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
-| `MessageService` | ~590 | Вызовы хаба используют `HubMethods.Chat.*`. `CreateMessageAsync` разрешает корневое пересланное сообщение. `PinMessageAsync` проверяет, не закреплено ли уже. |
+| `MessageService` | ~590 | Вызовы хаба используют `HubMethods.Chat.*`. `GetMessagesAroundAsync` загружает системные сообщения и пользовательские последовательными запросами (вместо `Task.WhenAll`), обеспечивая консистентность. `PinMessageAsync` проверяет, не закреплено ли уже. |
 | `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. |
 | `PollService` | ~150 | Внедрён `TimeBundle`. `ClosesAt` не сохраняется при создании опроса. |
 | `ReadReceiptService` | ~90 | Полный переход на `IReadReceiptRepository`. |
@@ -703,11 +703,11 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 **Boolean:** `BoolToString`, `BoolToGeometry`, `BoolToDouble`, `BoolToColor`, `BoolToHAlignment`, `BoolToBrush`, `BoolToThickness`, `BooleanAnd`, `BooleanOr`, `EnumEquals`, `EnumNotEquals`, `UserRoleToVisibility`
 
-**DateTime:** `DateTimeFormatConverter` (Time/Date/ShortDate/DateTime/Chat/Relative), `LastMessageDateConverter`, `LastSeenTextConverter` (Multi)
+**DateTime:** `DateTimeFormatConverter` (Time/Date/ShortDate/DateTime/Chat/Relative), `LastMessageDateConverter`, `LastSeenTextConverter` (Multi; обрабатывает `DateTimeOffset`, извлекая `UtcDateTime`)
 
 **Domain:** `ChatRoleToDisplay`, `ContentFilterToLabel`, `InitialsConverter`, `LevelToMargin` (20px×level), `LevelToVisibility`, `SearchScopeToTitle/Watermark/Hint/MessagesHeader`, `ThemeToDisplay`
 
-**Generic:** `ComparisonConverter`, `IndexToText`, `HasContentConverter`, `HasTextOrAttachmentsMultiConverter`, `MultiplyConverter`, `PercentToWidthConverter` (Multi, min 8px), `PluralizeConverter`, `ResourceKeyToGeometryConverter`
+**Generic:** `ComparisonConverter`, `IndexToText`, `HasContentConverter`, `HasTextOrAttachmentsMultiConverter`, `MultiplyConverter`, `PercentToWidthConverter` (Multi, min 8px), `PluralizeConverter`, `ResourceKeyToGeometryConverter`, `FractionToGridLengthConverter`
 
 ---
 
@@ -740,7 +740,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `MessageCacheRepository` | CRUD, FTS5→LIKE fallback. `TrimOldMessages` теперь обрабатывает каждый чат отдельно. `MarkDeletedAsync` очищает поля reply и forward. |
 | `ChatCacheRepository` | Upsert, `UpdateLastMessageAsync` |
 | `LocalCacheService` | `GetMessagesBeforeAsync` корректно определяет достижение начала истории через сравнение с `OldestLoadedId`. `PatchChatMetaAsync` для точечного обновления метаданных. |
-| `CacheMapper` | `MessageDto↔CachedMessage`, `ChatDto↔CachedChat`. Source Generated JSON (`CacheJsonContext`). |
+| `CacheMapper` | `MessageDto↔CachedMessage`, `ChatDto↔CachedChat`. Source Generated JSON (`CacheJsonContext`). `ToEntity` использует отдельные `PollJsonOpts` с CamelCase; `CacheJsonContext` дополнен атрибутами для `PollOptionDto`, `PollVoteDto`, `List<PollOptionDto>`, `List<PollVoteDto>`, `MessageFileDto`. |
 | `DownloadedFileRepository` | Управление записями о скачанных файлах. |
 
 ---
@@ -868,7 +868,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `ChatCoreServices` | `IChatService` + `IMessageService` + `IPollService` |
 | `MediaServices` | `IAudioPlayerService` + `IAudioRecorderService` + `IFileDownloadService` + `IFileDownloadStateService` |
 | `ChatViewModelDependencies` | Полный набор для `ChatViewModel`, включает `IFileDownloadStateService` |
-| `ChatViewModelFactory` | Фабрика `ChatViewModel(chatId)` |
+| `ChatViewModelFactory` | Фабрика `ChatViewModel(chatId, targetMessageId?)` |
 | `ChatsViewModelFactory` | Фабрика `ChatsViewModel` |
 
 ---
@@ -892,11 +892,9 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 - Счётчики `PhotosCount`, `FilesCount`, `PollsCount` обновляются через вызов API `ChatCountsDto` (метод `RefreshCountersAndSectionAsync`).
 - При открытии секции (`OpenInfoSection`) сразу асинхронно загружаются соответствующие данные (фото, файлы, опросы) с сервера.
 - При получении нового сообщения через хаб (`RequestRefreshCounters`) вызывается полное обновление счётчиков и активной секции.
-- Метод `RefreshInfoPanelLists` теперь только перестраивает превью участников.
+- Метод `RefreshMembersPreview` сортирует участников: сначала по онлайн-статусу, затем по имени. Обработка `CollectionChanged` обновляет инфопанель при удалении сообщений.
 
-**Управление коллекциями:** обработчики `CollectionChanged` для `Messages` и `LocalAttachments` обновляют инфопанель при удалении сообщений.
-
-**Инициализация:** параллельно с сообщениями и участниками загружаются счётчики. После инициализации вызывается `RefreshChatPermissions`.
+**Инициализация:** параллельно с сообщениями и участниками загружаются счётчики. После инициализации вызывается `RefreshChatPermissions`. Конструктор принимает необязательный `targetMessageId`, который передаётся в `LoadInitialMessagesAsync` для открытия чата сразу на нужном сообщении.
 
 **Обработка `OnChatUpdated`:** принимает `ChatUpdateEventDto`, обновляет поля чата, инвалидирует кэш аватара.
 
@@ -909,10 +907,10 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 **Строк:** 599
 
-**Кэширование:**
-- При старте загружается из локального кэша, если там не менее `DefaultPage/2` сообщений.
-- После отображения кэша проверяется возраст синхронизации (порог 30 секунд). Если старше, запускается фоновая ревалидация с сервера; иначе пропускается.
-- В `HandleMessageDeleted` очищаются ссылки на удалённое сообщение.
+**Кэширование и загрузка:**
+- При старте пытается загрузить сообщения из локального кэша; при достаточности данных и недавней синхронизации пропускает запрос к серверу, иначе запускает фоновую ревалидацию.
+- `LoadInitialMessagesAsync` переработан: если указан `targetMessageId`, загружает сообщения вокруг него; иначе если существует `FirstUnreadMessageId`, загружает вокруг первого непрочитанного; затем пробует кэш; в конце обращается к серверу.
+- Добавлен отладочный вывод данных опроса в `FetchAsync`.
 
 ---
 
@@ -922,6 +920,8 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 - Принимает `IFileDownloadStateService` для асинхронной инициализации состояния загрузки файлов.
 - `ShowVoiceMessage` управляется свойством `OriginalIsVoiceMessage`.
+- Добавлено свойство `SystemMessageTime` (формат `HH:mm`), используемое в представлении системных сообщений.
+- `CreatePollViewModel` содержит дополнительную отладку и защиту от нулевого `userId`.
 
 ---
 
@@ -948,6 +948,20 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 - `IsChatMatchingCurrentTab` возвращает `type is not ChatType.Contact` для групп.
 - Метод `UpdateChatMeta` обновляет только метаданные.
+- Реализован механизм отложенной прокрутки: `_pendingScrollToMessageId` сохраняется при выборе чата; если чат уже открыт, сразу вызывается `ScrollToMessageAsync`; иначе идентификатор передаётся в конструктор `ChatViewModel`.
+
+---
+
+### PollViewModel
+
+- Добавлено вычисляемое свойство `TotalVotesFormatted` с плюрализацией.
+- `TotalVotes` вычисляется до заполнения `Options`, чтобы избежать несогласованности.
+- Метод `ApplyDto` правильно сбрасывает `TotalVotes` и обновляет `TotalVotesFormatted`.
+- `UpdateOptions` устойчива к `null`-списку.
+
+### PollOptionViewModel
+
+- `NotifyTotalVotesChanged` вызывает `PropertyChanged` для `VotesCount` через временный сброс/восстановление, гарантируя обновление привязанного процента.
 
 ---
 
@@ -1024,7 +1038,8 @@ ChatMemberService.RemoveMemberAsync()
 
 ### Основные стили и ресурсы
 - `App.axaml`: подключает `Icons.axaml`, `Animations.axaml`, `MainStyle.axaml`, `MessageStyles.axaml`.
-- `MainStyle.axaml`: стили для `ToggleButton.SwitchSmall:checked`.
+- `MainStyle.axaml`: стили для `ToggleButton.SwitchSmall:checked`. Кнопка с круглым фоном теперь использует `PrimaryBG`.
+- `MessageStyles.axaml`: расширен стилями опросов (классы `PollOptionButton`, `PollOptionBorder`, `PollRadioOuter`, `PollRadioInner`, `PollCheckboxOuter`, `PollCheckboxTick`, `PollResultContainer`, `PollProgressBarBackground`, `PollProgressBar`, `PollResultText`, `PollPercentage`), обеспечивая кастомный вид голосования и результатов.
 
 ### Главное окно
 - Адаптивный режим при ширине ≤800px.
@@ -1039,9 +1054,16 @@ ChatMemberService.RemoveMemberAsync()
 ### Информационная панель чата
 - Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`.
 - Секции «Медиа» и «Опросы» скрываются при нулевых счётчиках.
+- Добавлен вывод `LastSeen` для контакта и участников через `MultiBinding` с `LastSeenTextConverter`.
 
 ### Профиль пользователя
 - Кнопка «Отправить сообщение» видна только при `CanSendMessage`.
+- Диалог профиля полностью переработан: аватар и имя по центру, статус онлайна/последней активности через `MultiBinding`, улучшенный дизайн информационной секции, растянутая кнопка отправки сообщения.
+
+### Сообщения
+- **Опросы:** отдельный `PollView` удалён. Голосование и результаты теперь рендерятся непосредственно в `PollMessagePart.axaml` с использованием `ItemsControl` и встроенного шаблона. Прогресс-бар реализован через `FractionToGridLengthConverter`. Кнопки «Голосовать»/«Результаты» встроены в нижнюю часть.
+- **Системные сообщения:** в `SystemMessagePart.axaml` добавлен бейдж со временем (свойство `SystemMessageTime`) справа, стилизованный под `ThirdBG` с радиусом 14. Улучшено выравнивание элементов.
+- В контекстном меню сообщения исправлена видимость пункта «Результаты опроса» (FallbackValue=False).
 
 ---
 

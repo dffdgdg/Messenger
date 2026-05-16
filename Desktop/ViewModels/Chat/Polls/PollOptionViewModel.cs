@@ -39,8 +39,9 @@ public partial class PollOptionViewModel : ObservableObject
 
     public void NotifyTotalVotesChanged()
     {
-        VotesPercentage = _pollViewModel.TotalVotes == 0 ? 0 : Math.Round((double)VotesCount / _pollViewModel.TotalVotes * 100.0, 1);
-        OnPropertyChanged(nameof(VotesFraction));
+        var currentVotes = VotesCount;
+        VotesCount = 0;
+        VotesCount = currentVotes;
     }
 
     public void NotifyCanVoteChanged(bool canVote) => CanVote = canVote;

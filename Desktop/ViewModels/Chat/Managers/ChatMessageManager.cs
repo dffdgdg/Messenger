@@ -63,8 +63,22 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     public void InvalidateMembersCache() => _membersLookup = null;
 
-    public Task<int?> LoadInitialMessagesAsync(CancellationToken ct = default)
-        => WithLoadingGuardAsync(() => LoadInitialCoreAsync(ct));
+    public Task<int?> LoadInitialMessagesAsync(int? targetMessageId = null, CancellationToken ct = default)
+        => WithLoadingGuardAsync(() => LoadInitialCoreAsync(targetMessageId, ct));
+
+    private async Task<int?> LoadInitialCoreAsync(int? targetMessageId, CancellationToken ct)
+    {
+        if (targetMessageId.HasValue)
+            return await LoadAroundCoreAsync(targetMessageId.Value, ct);
+
+        if (FirstUnreadMessageId.HasValue)
+            return await LoadAroundCoreAsync(FirstUnreadMessageId.Value, ct);
+
+        if (await TryLoadInitialFromCacheAsync() is { } cachedIndex)
+            return cachedIndex;
+
+        return await LoadInitialFromServerAsync(ct);
+    }
 
     public Task<int?> LoadMessagesAroundAsync(int messageId, CancellationToken ct = default)
         => WithLoadingGuardAsync(() => LoadAroundCoreAsync(messageId, ct));
@@ -603,6 +617,14 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private async Task<PagedMessagesDto?> FetchAsync(string url, CancellationToken ct)
     {
         var result = await _apiClient.GetAsync<PagedMessagesDto>(url, ct);
+
+        if (result?.Data?.Messages != null)
+        {
+            foreach (var msg in result.Data.Messages.Where(m => m.Poll != null))
+            {
+                Debug.WriteLine($"[FetchAsync] Poll в сообщении id={msg.Id}: pollId={msg.Poll!.Id} options={msg.Poll.Options?.Count ?? -1}");
+            }
+        }
 
         Debug.WriteLine($"[MessageManager] FetchAsync: url={url} " +
             $"success={result?.Success} " +

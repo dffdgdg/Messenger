@@ -129,6 +129,135 @@
 		<Setter Property="CornerRadius" Value="1"/>
 	</Style>
 	<!--Poll-->
+	<!-- Базовая кнопка для выбора варианта -->
+<Style Selector="Button.PollOptionButton">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Cursor" Value="Hand"/>
+</Style>
+
+<Style Selector="Button.PollOptionButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
+
+<!-- Рамка варианта ответа -->
+<Style Selector="Border.PollOptionBorder">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="10,8"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Button.PollOptionButton:pointerover Border.PollOptionBorder">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+</Style>
+
+<Style Selector="Border.PollOptionBorder.Selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+<!-- Круглая радиокнопка -->
+<Style Selector="Border.PollRadioOuter">
+    <Setter Property="Width" Value="20"/>
+    <Setter Property="Height" Value="20"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource TextSecondary}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+    <Setter Property="Transitions">
+        <Transitions>
+            <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+        </Transitions>
+    </Setter>
+</Style>
+
+<Style Selector="Border.PollRadioOuter.Selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+</Style>
+
+<Style Selector="Border.PollRadioInner">
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+    <Setter Property="CornerRadius" Value="5"/>
+    <Setter Property="Margin" Value="3"/> <!-- Отступ от внешнего кольца -->
+</Style>
+
+<!-- Квадратный чекбокс -->
+<Style Selector="Border.PollCheckboxOuter">
+    <Setter Property="Width" Value="20"/>
+    <Setter Property="Height" Value="20"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource TextSecondary}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+    <Setter Property="Background" Value="Transparent"/>
+</Style>
+
+<Style Selector="Border.PollCheckboxOuter.Selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+</Style>
+
+<!-- Галочка (чекбокс и результаты) -->
+<Style Selector="Path.PollCheckboxTick, Path.PollResultCheck">
+    <Setter Property="Data" Value="M 4,10 L 8,14 L 16,6"/> <!-- Стандартная галочка -->
+    <Setter Property="Stroke" Value="{DynamicResource TextOnAccent}"/>
+    <Setter Property="StrokeThickness" Value="2"/>
+    <Setter Property="StrokeLineCap" Value="Round"/>
+    <Setter Property="StrokeJoin" Value="Round"/>
+    <Setter Property="Fill" Value="Transparent"/>
+    <Setter Property="Width" Value="20"/>
+    <Setter Property="Height" Value="20"/>
+    <Setter Property="Stretch" Value="Uniform"/>
+    <Setter Property="Margin" Value="2"/>
+</Style>
+
+<Style Selector="Path.PollResultCheck">
+    <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/> <!-- Или Accent цвет -->
+</Style>
+
+<!-- РЕЗУЛЬТАТЫ ОПРОСА -->
+<Style Selector="Border.PollResultContainer">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="ClipToBounds" Value="True"/> <!-- Важно для прогресс-бара -->
+</Style>
+
+<Style Selector="Border.PollProgressBarBackground">
+    <Setter Property="Background" Value="{DynamicResource ThirdBG}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+</Style>
+
+<Style Selector="Border.PollProgressBar">
+    <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <!-- ВНИМАНИЕ: Без Transitions для Width, чтобы при скролле (ресайкле) не было глитчей! -->
+</Style>
+
+<Style Selector="Border.PollProgressBar.Selected">
+    <Setter Property="Background" Value="{DynamicResource AccentMuted}"/>
+</Style>
+
+<!-- Текст внутри результатов -->
+<Style Selector="TextBlock.PollResultText">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    <Setter Property="FontSize" Value="14"/>
+</Style>
+
+<Style Selector="TextBlock.PollPercentage">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+</Style>
+
+<Style Selector="TextBlock.PollPercentage.Selected">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+</Style>
 	<Style Selector="Button.PollCloseButton">
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>

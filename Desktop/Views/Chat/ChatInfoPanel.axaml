@@ -241,7 +241,7 @@
 										<TextBlock FontSize="13"
 												   Foreground="{DynamicResource TextSecondary}"
 												   HorizontalAlignment="Center"
-												   Text="{Binding ContactLastSeen, FallbackValue='не в сети'}"/>
+												   Text="{Binding ContactLastSeen, FallbackValue=''}"/>
 									</StackPanel>
 								</StackPanel>
 
@@ -674,6 +674,17 @@
 																	   Foreground="{DynamicResource TextMuted}"
 																	   TextTrimming="CharacterEllipsis"
 																	   IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+															<TextBlock FontSize="11"
+																	   Foreground="{DynamicResource TextSecondary}"
+																	   TextTrimming="CharacterEllipsis"
+																	   IsVisible="{Binding !IsOnline}">
+																<TextBlock.Text>
+																	<MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
+																		<Binding Path="IsOnline"/>
+																		<Binding Path="LastOnline"/>
+																	</MultiBinding>
+																</TextBlock.Text>
+															</TextBlock>
 														</StackPanel>
 													</Grid>
 												</Button>
@@ -1004,6 +1015,17 @@
 																		   IsVisible="{Binding Department,
 																		   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 															</StackPanel>
+															<TextBlock FontSize="11"
+																	   Foreground="{DynamicResource TextSecondary}"
+																	   TextTrimming="CharacterEllipsis"
+																	   IsVisible="{Binding !IsOnline}">
+																<TextBlock.Text>
+																	<MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
+																		<Binding Path="IsOnline"/>
+																		<Binding Path="LastOnline"/>
+																	</MultiBinding>
+																</TextBlock.Text>
+															</TextBlock>
 														</StackPanel>
 													</Grid>
 												</Button>

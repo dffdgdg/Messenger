@@ -147,7 +147,7 @@
                     <MenuItem Header="Результаты опроса"
                               Command="{Binding Commands.ShowPollResults, FallbackValue={x:Null}}"
                               CommandParameter="{Binding Poll}"
-                              IsVisible="{Binding Poll.ShowResultsButton, FallbackValue={x:Null}}">
+                              IsVisible="{Binding Poll.ShowResultsButton, FallbackValue=False}">
                         <MenuItem.Icon>
                             <Path Data="{StaticResource ChartIcon}"
                                   Fill="{DynamicResource TextPrimary}"

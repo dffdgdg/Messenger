@@ -284,15 +284,15 @@ public sealed class MessageRepository(MessengerDbContext context)
         => WithFullIncludes().AsNoTracking().FirstOrDefaultAsync(m => m.Id == messageId, ct);
 
     private IQueryable<UserMessage> LightQuery()
-        => _context.UserMessages
-            .Include(m => m.Sender)
-            .Include(m => m.MessageFiles)
-            .Include(m => m.VoiceMessage)
-            .Include(m => m.Poll)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-            .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
+    => _context.UserMessages
+        .Include(m => m.Sender)
+        .Include(m => m.MessageFiles)
+        .Include(m => m.VoiceMessage)
+        .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
+        .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes);
 
     private static readonly string[] ImageContentTypes =
 [

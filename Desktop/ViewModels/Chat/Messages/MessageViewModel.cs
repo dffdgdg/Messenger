@@ -84,6 +84,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     #endregion
 
     #region Cached Computed Properties
+    public string SystemMessageTime { get; private set; } = string.Empty;
     public bool OriginalIsVoiceMessage { get; private set; }
     public bool OriginalHasPoll { get; private set; }
     public bool ShowPollResultsButton { get; private set; }
@@ -229,8 +230,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
     {
+        System.Diagnostics.Debug.WriteLine($"[MessageVM] CreatePollViewModel: userId={_currentUserId} apiClient={_apiClient != null} pollId={pollDto.Id} options={pollDto.Options?.Count ?? -1}");
+
         if (_currentUserId == 0 || _apiClient == null)
         {
+            System.Diagnostics.Debug.WriteLine($"[MessageVM] CreatePollViewModel SKIP: userId={_currentUserId} apiClient={_apiClient != null}");
             return null;
         }
 
@@ -370,6 +374,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         HasStructuredSystemMessage = IsSystemMessage && SystemEventType.HasValue;
         HasSystemTargetUser = TargetUserId > 0;
         SystemTargetUserId = TargetUserId ?? 0;
+        SystemMessageTime = IsSystemMessage ? CreatedAt.ToString("HH:mm") : string.Empty;
     }
 
     private void RecacheVoiceGroup()

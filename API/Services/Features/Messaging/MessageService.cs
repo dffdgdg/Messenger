@@ -216,20 +216,12 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var half = count / 2;
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
-        var beforeTask = messageRepository.GetBeforeAsync(chatId, messageId, half + 1, cutoff);
-        var afterTask = messageRepository.GetAfterAsync(chatId, messageId, half, cutoff);
+        var before = await messageRepository.GetBeforeAsync(chatId, messageId, half + 1, cutoff);
+        var after = await messageRepository.GetAfterAsync(chatId, messageId, half, cutoff);
+        var sysBefore = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: messageId, afterId: null, cutoff: cutoff);
+        var sysAfter = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: null, afterId: messageId, cutoff: cutoff);
 
-        var sysBeforeTask = messageRepository.GetSystemMessagesAsync(chatId, beforeId: messageId, afterId: null, cutoff: cutoff);
-        var sysAfterTask = messageRepository.GetSystemMessagesAsync(chatId, beforeId: null, afterId: messageId, cutoff: cutoff);
-
-        await Task.WhenAll(beforeTask, afterTask, sysBeforeTask, sysAfterTask);
-
-        var before = beforeTask.Result;
-        var after = afterTask.Result;
-        var sysBefore = sysBeforeTask.Result;
-        var sysAfter = sysAfterTask.Result;
-
-        var anchor = await messageRepository.FindUserMessageByIdAsync(messageId)?? (Message?)null;
+        var anchor = await messageRepository.FindUserMessageByIdAsync(messageId);
 
         var allMessages = before.Cast<Message>()
             .Concat(sysBefore.Where(s => s.Id < messageId))
@@ -262,12 +254,11 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var oldestId = window.Count > 0 ? window[0].Id : messageId;
         var newestId = window.Count > 0 ? window[^1].Id : messageId;
 
-        var hasOlderTask = messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
-        var hasNewerTask = messageRepository.HasNewerAsync(chatId, newestId, cutoff);
-        await Task.WhenAll(hasOlderTask, hasNewerTask);
+        var hasOlder = await messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
+        var hasNewer = await messageRepository.HasNewerAsync(chatId, newestId, cutoff);
 
         var dtos = window.ConvertAll(m => m.ToDto(userId, _urlBuilder));
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlderTask.Result, hasNewerTask.Result));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlder, hasNewer));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesBeforeAsync(int chatId, int messageId, int userId, int count)

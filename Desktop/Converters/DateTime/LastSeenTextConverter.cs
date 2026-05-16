@@ -9,7 +9,12 @@ public sealed class LastSeenTextConverter : IMultiValueConverter
         if (values.Count < 2) return "";
 
         var isOnline = values[0] is true;
-        var lastOnline = values[1] as System.DateTime?;
+        var lastOnline = values[1] switch
+        {
+            System.DateTime value => value,
+            System.DateTimeOffset value => value.UtcDateTime,
+            _ => (System.DateTime?)null
+        };
 
         if (isOnline) return "в сети";
         if (!lastOnline.HasValue) return "";

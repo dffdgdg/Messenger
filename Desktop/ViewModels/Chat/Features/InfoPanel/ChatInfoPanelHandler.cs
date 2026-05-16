@@ -109,7 +109,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         }
 
         if (IsContactOnline) return "в сети";
-        return ContactLastSeen ?? "не в сети";
+        return ContactLastSeen ?? "";
     }
 
     public string? ContactAvatar => ContactUser?.Avatar;
@@ -357,8 +357,8 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
     private void OnUserStatusChanged(UserStatusDto status) => Dispatcher.UIThread.Post(() =>
     {
         if (!IsAlive) return;
-        UpdateContactStatus(status.UserId, status.IsOnline);
-        UpdateMemberStatus(status.UserId, status.IsOnline);
+        UpdateContactStatus(status);
+        UpdateMemberStatus(status);
         UpdateMemberStatusType(status);
     });
 
@@ -374,24 +374,25 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         if (idx >= 0) Ctx.Members[idx] = member;
     }
 
-    private void UpdateContactStatus(int userId, bool isOnline)
+    private void UpdateContactStatus(UserStatusDto status)
     {
-        if (!IsContactChat || ContactUser?.Id != userId) return;
+        if (!IsContactChat || ContactUser?.Id != status.UserId) return;
 
-        IsContactOnline = isOnline;
-        ContactUser.IsOnline = isOnline;
-        ContactUser.LastOnline = DateTime.UtcNow;
-        ContactLastSeen = isOnline ? null : FormatLastSeen(ContactUser);
+        IsContactOnline = status.IsOnline;
+        ContactUser.IsOnline = status.IsOnline;
+        if (!status.IsOnline) ContactUser.LastOnline = status.LastOnline ?? DateTime.UtcNow;
+
+        ContactLastSeen = status.IsOnline ? null : FormatLastSeen(ContactUser);
         OnPropertyChanged(nameof(InfoPanelSubtitle));
     }
 
-    private void UpdateMemberStatus(int userId, bool isOnline)
+    private void UpdateMemberStatus(UserStatusDto status)
     {
-        var member = Ctx.Members.FirstOrDefault(m => m.Id == userId);
+        var member = Ctx.Members.FirstOrDefault(m => m.Id == status.UserId);
         if (member == null) return;
 
-        member.IsOnline = isOnline;
-        if (!isOnline) member.LastOnline = DateTime.UtcNow;
+        member.IsOnline = status.IsOnline;
+        if (!status.IsOnline) member.LastOnline = status.LastOnline ?? DateTime.UtcNow;
 
         var idx = Ctx.Members.IndexOf(member);
         if (idx >= 0) Ctx.Members[idx] = member;

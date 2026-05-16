@@ -299,14 +299,21 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         var chat = FindChat(chatId) ?? await FetchAndInsertChatAsync(chatId);
         if (chat == null) return;
 
-        SelectedChat = chat;
-
-        if (scrollToMessageId.HasValue && CurrentChatViewModel != null)
+        if (CurrentChatViewModel?.Chat?.Id == chatId)
         {
-            await CurrentChatViewModel.WaitForInitializationAsync();
-            await CurrentChatViewModel.ScrollToMessageAsync(scrollToMessageId.Value);
+            if (scrollToMessageId.HasValue)
+            {
+                await CurrentChatViewModel.WaitForInitializationAsync();
+                await CurrentChatViewModel.ScrollToMessageAsync(scrollToMessageId.Value);
+            }
+            return;
         }
+
+        _pendingScrollToMessageId = scrollToMessageId;
+        SelectedChat = chat;
     }
+
+    private int? _pendingScrollToMessageId;
 
     public async Task OpenOrCreateDialogWithUserAsync(UserDto user) => await SafeExecuteAsync(async () =>
     {
@@ -388,7 +395,11 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         }
 
         if (CurrentChatViewModel?.Chat?.Id != value.Id)
-            CurrentChatViewModel = _chatViewModelFactory.Create(value.ToDto(), this);
+        {
+            var messageId = _pendingScrollToMessageId;
+            _pendingScrollToMessageId = null;
+            CurrentChatViewModel = _chatViewModelFactory.Create(value.ToDto(), this, messageId);
+        }
     }
 
     partial void OnCurrentChatViewModelChanged(ChatViewModel? oldValue, ChatViewModel? newValue)

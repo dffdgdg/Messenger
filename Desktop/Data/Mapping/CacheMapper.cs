@@ -1,5 +1,6 @@
 ﻿using Desktop.Data.Mappers;
 using Desktop.Data.Models.Cache;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Desktop.Data.Mapping;
@@ -13,48 +14,59 @@ public static class CacheMapper
         TypeInfoResolver = CacheJsonContext.Default
     };
 
+    private static readonly JsonSerializerOptions PollJsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        TypeInfoResolver = CacheJsonContext.Default
+    };
     #region MessageDto ↔ CachedMessage
 
-    public static CachedMessage ToEntity(this MessageDto dto) => new()
+    public static CachedMessage ToEntity(this MessageDto dto)
     {
-        Id = dto.Id,
-        ChatId = dto.ChatId,
-        SenderId = dto.SenderId,
-        Content = dto.Content,
-        CreatedAtTicks = dto.CreatedAt.ToUniversalTime().Ticks,
-        EditedAtTicks = dto.EditedAt?.ToUniversalTime().Ticks,
-        IsDeleted = dto.IsDeleted,
-        ReplyToMessageId = dto.ReplyToMessageId,
-        ForwardedFromMessageId = dto.ForwardedFromMessageId,
-        IsOwn = dto.IsOwn,
-        IsVoiceMessage = dto.IsVoiceMessage,
-        VoiceDurationSeconds = dto.VoiceDurationSeconds,
-        VoiceWaveform = dto.VoiceWaveform,
-        VoiceFileUrl = dto.VoiceFileUrl,
-        VoiceFileSize = dto.VoiceFileSize,
-        IsSystemMessage = dto.IsSystemMessage,
-        SystemEventTypeInt = (int?)dto.SystemEventType,
-        TargetUserId = dto.TargetUserId,
-        TargetUserName = dto.TargetUserName,
-        SenderName = dto.SenderName,
-        SenderAvatarUrl = dto.SenderAvatarUrl,
-        ReplySenderName = dto.ReplyToMessage?.SenderName,
-        ReplyContentPreview = dto.ReplyToMessage?.Content,
-        ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
-        ReplySenderId = dto.ReplyToMessage?.SenderId,
-        ReplyChatId = dto.ReplyToMessage?.ChatId,
-        ReplyIsVoice = dto.ReplyToMessage?.IsVoiceMessage == true,
-        ReplyHasPoll = dto.ReplyToMessage?.HasPoll == true,
-        ReplyFilesCount = dto.ReplyToMessage?.FilesCount ?? 0,
-        ForwardSenderName = dto.ForwardedFrom?.OriginalSenderName,
-        ForwardOriginalSenderId = dto.ForwardedFrom?.OriginalSenderId,
-        ForwardOriginalChatId = dto.ForwardedFrom?.OriginalChatId,
-        ForwardOriginalDateTicks = dto.ForwardedFrom?.OriginalCreatedAt.ToUniversalTime().Ticks,
-        PollJson = dto.Poll != null ? JsonSerializer.Serialize(dto.Poll, JsonOpts) : null,
-        FilesJson = dto.Files is { Count: > 0 } ? JsonSerializer.Serialize(dto.Files, JsonOpts) : null,
-        CachedAtTicks = DateTime.UtcNow.Ticks,
-        IsPinned = dto.IsPinned
-    };
+        if (dto.Poll != null)
+            Debug.WriteLine($"[CacheMapper.ToEntity] Сохраняем poll id={dto.Poll.Id} options={dto.Poll.Options?.Count ?? -1}");
+
+        return new CachedMessage
+        {
+            Id = dto.Id,
+            ChatId = dto.ChatId,
+            SenderId = dto.SenderId,
+            Content = dto.Content,
+            CreatedAtTicks = dto.CreatedAt.ToUniversalTime().Ticks,
+            EditedAtTicks = dto.EditedAt?.ToUniversalTime().Ticks,
+            IsDeleted = dto.IsDeleted,
+            ReplyToMessageId = dto.ReplyToMessageId,
+            ForwardedFromMessageId = dto.ForwardedFromMessageId,
+            IsOwn = dto.IsOwn,
+            IsVoiceMessage = dto.IsVoiceMessage,
+            VoiceDurationSeconds = dto.VoiceDurationSeconds,
+            VoiceWaveform = dto.VoiceWaveform,
+            VoiceFileUrl = dto.VoiceFileUrl,
+            VoiceFileSize = dto.VoiceFileSize,
+            IsSystemMessage = dto.IsSystemMessage,
+            SystemEventTypeInt = (int?)dto.SystemEventType,
+            TargetUserId = dto.TargetUserId,
+            TargetUserName = dto.TargetUserName,
+            SenderName = dto.SenderName,
+            SenderAvatarUrl = dto.SenderAvatarUrl,
+            ReplySenderName = dto.ReplyToMessage?.SenderName,
+            ReplyContentPreview = dto.ReplyToMessage?.Content,
+            ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
+            ReplySenderId = dto.ReplyToMessage?.SenderId,
+            ReplyChatId = dto.ReplyToMessage?.ChatId,
+            ReplyIsVoice = dto.ReplyToMessage?.IsVoiceMessage == true,
+            ReplyHasPoll = dto.ReplyToMessage?.HasPoll == true,
+            ReplyFilesCount = dto.ReplyToMessage?.FilesCount ?? 0,
+            ForwardSenderName = dto.ForwardedFrom?.OriginalSenderName,
+            ForwardOriginalSenderId = dto.ForwardedFrom?.OriginalSenderId,
+            ForwardOriginalChatId = dto.ForwardedFrom?.OriginalChatId,
+            ForwardOriginalDateTicks = dto.ForwardedFrom?.OriginalCreatedAt.ToUniversalTime().Ticks,
+            PollJson = dto.Poll != null ? JsonSerializer.Serialize(dto.Poll, PollJsonOpts) : null,
+            FilesJson = dto.Files is { Count: > 0 } ? JsonSerializer.Serialize(dto.Files, JsonOpts) : null,
+            CachedAtTicks = DateTime.UtcNow.Ticks,
+            IsPinned = dto.IsPinned
+        };
+    }
 
     public static MessageDto ToDto(this CachedMessage entity)
     {
@@ -116,8 +128,15 @@ public static class CacheMapper
 
         if (!string.IsNullOrEmpty(entity.PollJson))
         {
-            try { dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts); }
-            catch { /* corrupted */ }
+            try
+            {
+                dto.Poll = JsonSerializer.Deserialize<PollDto>(entity.PollJson, JsonOpts);
+                Debug.WriteLine($"[CacheMapper] Poll десериализован: id={dto.Poll?.Id} options={dto.Poll?.Options?.Count ?? -1} json={entity.PollJson}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CacheMapper] Poll ошибка десериализации: {ex.Message} json={entity.PollJson}");
+            }
         }
 
         if (!string.IsNullOrEmpty(entity.FilesJson))

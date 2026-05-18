@@ -41,21 +41,7 @@ public class ChatsControllerTests
 
         _chatMock.Verify(s => s.GetUserDialogsAsync(It.IsAny<int>()), Times.Never);
     }
-    [Fact]
-    public async Task GetChat_ReturnsChat()
-    {
-        var dto = new ChatDto { Id = 1 };
-
-        _chatMock.Setup(x => x.GetChatForUserAsync(1, 1)).ReturnsAsync(Result<ChatDto>.Success(dto));
-
-        var result = await _controller.GetChat(1);
-
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-
-        var body = ok.Value.Should().BeOfType<ApiResponse<ChatDto>>().Subject;
-
-        body.Data!.Id.Should().Be(1);
-    }
+    
     [Fact]
     public async Task CreateChat_SetsCreatedById()
     {

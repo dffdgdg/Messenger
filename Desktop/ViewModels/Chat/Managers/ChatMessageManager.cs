@@ -1,4 +1,4 @@
-﻿using Desktop.Data.Models.Sync;
+using Desktop.Data.Models.Sync;
 using Desktop.Data.Repositories.Abstractions;
 using Desktop.Infrastructure;
 using Desktop.Services.Features.Media.Files;

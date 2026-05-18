@@ -70,8 +70,7 @@ public sealed class ReadReceiptRepository(MessengerDbContext context) : IReadRec
         return await context.ChatMembers.Where(cm => cm.ChatId == chatId && ids.Contains(cm.UserId)).Select(cm => new
         {
             cm.UserId,
-            Count = context.UserMessages.Count(m => m.ChatId == chatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true
-                && m.SenderId != cm.UserId)
+            Count = context.UserMessages.Count(m => m.ChatId == chatId && m.Id > (cm.LastReadMessageId ?? 0) && m.IsDeleted != true && m.SenderId != cm.UserId)
         }).AsNoTracking().ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
     }
 }

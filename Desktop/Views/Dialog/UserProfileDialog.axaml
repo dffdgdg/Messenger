@@ -34,7 +34,7 @@
                                                 DisplayName="{Binding User.DisplayName}"
                                                 IsOnline="{Binding User.IsOnline}"
                                                 StatusType="{Binding User.StatusType}"
-                                                HorizontalAlignment="Center"/>
+                                                HorizontalAlignment="Center"/>  
 
                         <StackPanel Spacing="4">
                             <TextBlock Text="{Binding User.DisplayName}"

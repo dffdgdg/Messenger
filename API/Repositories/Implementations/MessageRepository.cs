@@ -1,4 +1,4 @@
-﻿using API.Repositories.Abstarctions;
+using API.Repositories.Abstarctions;
 using API.Repositories.Base;
 
 namespace API.Repositories.Implementations;
@@ -15,20 +15,42 @@ public sealed class MessageRepository(MessengerDbContext context)
     public Task<UserMessage?> FindUserMessageForDeleteAsync(int messageId, CancellationToken ct = default)
         => _context.UserMessages.Include(m => m.VoiceMessage).Include(m => m.MessageFiles).FirstOrDefaultAsync(m => m.Id == messageId, ct);
 
-    public async Task<List<UserMessage>> GetBeforeAsync(int chatId, int beforeId, int take, DateTime? cutoff = null, CancellationToken ct = default)
+    public async Task<List<Message>> GetBeforeAsync(int chatId, int beforeId, int take, DateTime? cutoff = null, CancellationToken ct = default)
     {
-        var q = LightQuery().Where(m => m.ChatId == chatId && m.Id < beforeId && m.IsDeleted != true);
-        if (cutoff.HasValue)
-            q = q.Where(m => m.CreatedAt >= cutoff.Value);
-        return await q.OrderByDescending(m => m.Id).Take(take).AsNoTracking().ToListAsync(ct);
+        var messageIds = await _context.Messages
+            .Where(m => m.ChatId == chatId && m.Id < beforeId && m.IsDeleted != true)
+            .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
+            .OrderByDescending(m => m.Id)
+            .Take(take)
+            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) }).AsNoTracking().ToListAsync(ct);
+
+        if (messageIds.Count == 0) return [];
+        
+        var ids = messageIds.ConvertAll(x => x.Id);
+        var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
+        var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
+        
+        return await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
     }
 
-    public async Task<List<UserMessage>> GetAfterAsync(int chatId, int afterId, int take, DateTime? cutoff = null, CancellationToken ct = default)
+    public async Task<List<Message>> GetAfterAsync(int chatId, int afterId, int take, DateTime? cutoff = null, CancellationToken ct = default)
     {
-        var q = LightQuery().Where(m => m.ChatId == chatId && m.Id > afterId && m.IsDeleted != true);
-        if (cutoff.HasValue)
-            q = q.Where(m => m.CreatedAt >= cutoff.Value);
-        return await q.OrderBy(m => m.Id).Take(take).AsNoTracking().ToListAsync(ct);
+        var messageIds = await _context.Messages
+            .Where(m => m.ChatId == chatId && m.Id > afterId && m.IsDeleted != true)
+            .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
+            .OrderBy(m => m.Id)
+            .Take(take)
+            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (messageIds.Count == 0) return [];
+        
+        var ids = messageIds.ConvertAll(x => x.Id);
+        var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
+        var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
+        
+        return await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
     }
 
     public async Task<List<UserMessage>> GetUserMessagesForMixedAsync(int chatId, int? beforeId, int? afterId, DateTime? cutoff, CancellationToken ct = default)
@@ -162,8 +184,7 @@ public sealed class MessageRepository(MessengerDbContext context)
         if (historyFilter.Count > 0)
         {
             var restrictedIds = historyFilter.Keys.ToList();
-            q = q.Where(m => !restrictedIds.Contains(m.ChatId)
-                           || m.CreatedAt >= historyFilter[m.ChatId]);
+            q = q.Where(m => !restrictedIds.Contains(m.ChatId) || m.CreatedAt >= historyFilter[m.ChatId]);
         }
 
         q = oldestFirst ? q.OrderBy(m => m.CreatedAt) : q.OrderByDescending(m => m.CreatedAt);
@@ -201,7 +222,6 @@ public sealed class MessageRepository(MessengerDbContext context)
     {
         var limit = take + 1;
 
-        // Получаем ID нужных сообщений одним запросом
         var messageIds = await _context.Messages
             .Where(m => m.ChatId == chatId && m.IsDeleted != true)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
@@ -221,6 +241,13 @@ public sealed class MessageRepository(MessengerDbContext context)
         var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
         var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
 
+        var result = await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
+
+        return (result, hasOlder);
+    }
+
+    private async Task<List<Message>> FetchAndSortMessagesAsync(List<int> ids, List<int> userIds, List<int> sysIds, CancellationToken ct)
+    {
         var result = new List<Message>();
 
         if (userIds.Count > 0)
@@ -229,9 +256,7 @@ public sealed class MessageRepository(MessengerDbContext context)
                 .Include(m => m.Sender)
                 .Include(m => m.VoiceMessage)
                 .Include(m => m.MessageFiles)
-                .Include(m => m.Poll)
-                    .ThenInclude(p => p!.PollOptions)
-                    .ThenInclude(o => o.PollVotes)
+                .Include(m => m.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
                 .Include(m => m.ReplyToMessage).ThenInclude(r => r!.Sender)
                 .Include(m => m.ReplyToMessage).ThenInclude(r => r!.VoiceMessage)
                 .Include(m => m.ReplyToMessage).ThenInclude(r => r!.MessageFiles)
@@ -239,8 +264,7 @@ public sealed class MessageRepository(MessengerDbContext context)
                 .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Sender)
                 .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.VoiceMessage)
                 .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.MessageFiles)
-                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll)
-                    .ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
+                .Include(m => m.ForwardedFromMessage).ThenInclude(f => f!.Poll).ThenInclude(p => p!.PollOptions).ThenInclude(o => o.PollVotes)
                 .Where(m => userIds.Contains(m.Id))
                 .AsNoTracking()
                 .ToListAsync(ct);
@@ -263,7 +287,7 @@ public sealed class MessageRepository(MessengerDbContext context)
         var orderMap = ids.Select((id, idx) => (id, idx)).ToDictionary(x => x.id, x => x.idx);
         result.Sort((a, b) => orderMap[a.Id].CompareTo(orderMap[b.Id]));
 
-        return (result, hasOlder);
+        return result;
     }
 
     private IQueryable<UserMessage> WithFullIncludes()
@@ -302,8 +326,6 @@ public sealed class MessageRepository(MessengerDbContext context)
 
     public async Task<ChatCountsDto> GetChatCountsAsync(int chatId, DateTime? cutoff)
     {
-        Console.WriteLine($"[GetChatCounts-REPO] chatId={chatId} cutoff={cutoff}");
-
         var baseQuery = _context.UserMessages
             .Where(m => m.ChatId == chatId
                      && m.IsDeleted != true
@@ -328,10 +350,6 @@ public sealed class MessageRepository(MessengerDbContext context)
 
         var pinnedCount = await baseQuery
             .CountAsync(m => m.PinnedAt != null);
-
-        Console.WriteLine(
-            $"[GetChatCounts-REPO] totalMessages={totalMessages} totalFiles={totalFiles} " +
-            $"media={mediaCount} files={filesCount} polls={pollsCount} pinned={pinnedCount}");
 
         return new ChatCountsDto
         {

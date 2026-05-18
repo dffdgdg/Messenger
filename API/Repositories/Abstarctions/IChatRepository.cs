@@ -20,8 +20,6 @@ public interface IChatRepository : IRepository<Chat>
     Task<bool?> GetShowHistoryForNewMembersAsync(int chatId, CancellationToken ct = default);
     Task<List<Chat>> GetContactChatsWithMembersAsync(IEnumerable<int> chatIds, CancellationToken ct = default);
     Task<List<Chat>> SearchGroupChatsAsync(IEnumerable<int> chatIds, string query, int take, CancellationToken ct = default);
-
     Task<List<MemberNotificationProjection>> GetMembersForNotificationAsync(int chatId, int? excludeUserId, CancellationToken ct = default);
-
     Task<Dictionary<int, DateTime>> GetHistoryRestrictionsAsync(IEnumerable<int> chatIds, int userId, CancellationToken ct = default);
 }

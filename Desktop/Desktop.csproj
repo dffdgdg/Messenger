@@ -146,4 +146,15 @@
 		<BaseOutputPath>/tmp/MessengerDesktop/bin/</BaseOutputPath>
 		<BaseIntermediateOutputPath>/tmp/MessengerDesktop/obj/</BaseIntermediateOutputPath>
 	</PropertyGroup>
+	<Target Name="CopyToWindowsOutput" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+		<RemoveDir Directories="$(SolutionDir)Publish\Windows\" />
+		<Copy SourceFiles="@(PublishedFiles)" DestinationFolder="$(SolutionDir)Publish\Windows\%(RecursiveDir)" />
+		<Message Importance="high" Text="Published for Windows to $(SolutionDir)Publish\Windows" />
+	</Target>
+
+	<Target Name="CopyToLinuxOutput" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+		<RemoveDir Directories="$(SolutionDir)Publish\Linux\" />
+		<Copy SourceFiles="@(PublishedFiles)" DestinationFolder="$(SolutionDir)Publish\Linux\%(RecursiveDir)" />
+		<Message Importance="high" Text="Published for Linux to $(SolutionDir)Publish\Linux" />
+	</Target>
 </Project>

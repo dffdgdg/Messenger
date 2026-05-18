@@ -1,4 +1,4 @@
-﻿using API.Repositories.Abstarctions;
+using API.Repositories.Abstarctions;
 using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Infrastructure.Security;
@@ -203,7 +203,7 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
 
         var (messages, hasOlder) = await messageRepository.GetLatestAsync(chatId, normalizedTake, cutoff);
 
-        var dtos = messages.ConvertAll(m => m.ToDto(userId, _urlBuilder));
+        var dtos = messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, _urlBuilder)).ToList();
 
         return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlder, hasNewer: false));
     }
@@ -218,15 +218,9 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
 
         var before = await messageRepository.GetBeforeAsync(chatId, messageId, half + 1, cutoff);
         var after = await messageRepository.GetAfterAsync(chatId, messageId, half, cutoff);
-        var sysBefore = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: messageId, afterId: null, cutoff: cutoff);
-        var sysAfter = await messageRepository.GetSystemMessagesAsync(chatId, beforeId: null, afterId: messageId, cutoff: cutoff);
-
         var anchor = await messageRepository.FindUserMessageWithIncludesNoTrackingAsync(messageId);
 
-        var allMessages = before.Cast<Message>()
-            .Concat(sysBefore.Where(s => s.Id < messageId))
-            .Concat(after)
-            .Concat(sysAfter.Where(s => s.Id > messageId));
+        var allMessages = before.Concat(after);
 
         if (anchor != null)
             allMessages = allMessages.Append(anchor);

@@ -1,4 +1,4 @@
-﻿using API.Repositories.Base;
+using API.Repositories.Base;
 
 namespace API.Repositories.Abstarctions;
 
@@ -8,8 +8,8 @@ public interface IMessageRepository : IRepository<Message>
     Task<UserMessage?> FindUserMessageWithIncludesAsync(int messageId, CancellationToken ct = default);
     Task<UserMessage?> FindUserMessageForDeleteAsync(int messageId, CancellationToken ct = default);
     Task<UserMessage?> FindUserMessageWithIncludesNoTrackingAsync(int messageId, CancellationToken ct = default);
-    Task<List<UserMessage>> GetBeforeAsync(int chatId, int beforeId, int take, DateTime? cutoff = null, CancellationToken ct = default);
-    Task<List<UserMessage>> GetAfterAsync(int chatId, int afterId, int take, DateTime? cutoff = null, CancellationToken ct = default);
+    Task<List<Message>> GetBeforeAsync(int chatId, int beforeId, int take, DateTime? cutoff = null, CancellationToken ct = default);
+    Task<List<Message>> GetAfterAsync(int chatId, int afterId, int take, DateTime? cutoff = null, CancellationToken ct = default);
     Task<List<UserMessage>> GetUserMessagesForMixedAsync(int chatId, int? beforeId, int? afterId, DateTime? cutoff, CancellationToken ct = default);
     Task<List<SystemMessage>> GetSystemMessagesAsync(int chatId, int? beforeId, int? afterId, DateTime? cutoff, CancellationToken ct = default);
     Task<ChatCountsDto> GetChatCountsAsync(int chatId, DateTime? cutoff);

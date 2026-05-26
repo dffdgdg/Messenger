@@ -1,49 +1,51 @@
 ﻿$ErrorActionPreference = "Stop"
-
 $Root = Split-Path $PSScriptRoot -Parent
 Set-Location $Root
 
 Write-Host "=== ВнутрьСеть Server ===" -ForegroundColor Cyan
 
-# Проверяем .env
 if (-not (Test-Path ".env")) {
-    Write-Error ".env файл не найден. Скопируйте .env.example в .env и заполните."
+    Write-Error ".env файл не найден."
     exit 1
 }
 
-# Определяем IP
+# Ищем реальный IP: 192.168.x.x (кроме 192.168.56.x VirtualBox)
 $EXTERNAL_IP = (Get-NetIPAddress -AddressFamily IPv4 `
     | Where-Object {
-        $_.IPAddress -notmatch '^127\.' -and
-        $_.IPAddress -notmatch '^169\.254\.' -and
-        $_.IPAddress -notmatch '^172\.'
-    } `
-    | Select-Object -First 1).IPAddress
+        $_.IPAddress -match '^192\.168\.' -and
+        $_.IPAddress -notmatch '^192\.168\.56\.' -and
+        $_.InterfaceAlias -notmatch 'VirtualBox|Hyper-V|WSL|vEthernet|Bluetooth|Teredo'
+    } | Select-Object -First 1).IPAddress
 
+# Если нет — ищем 10.x.x.x (корпоративная сеть)
 if (-not $EXTERNAL_IP) {
-    Write-Error "Не удалось определить IP адрес"
-    exit 1
+    $EXTERNAL_IP = (Get-NetIPAddress -AddressFamily IPv4 `
+        | Where-Object {
+            $_.IPAddress -match '^10\.' -and
+            $_.InterfaceAlias -match 'Wi-Fi|Ethernet|Беспроводная|Подключение' -and
+            $_.InterfaceAlias -notmatch 'VirtualBox|Hyper-V|WSL|vEthernet|Bluetooth|Teredo'
+        } | Select-Object -First 1).IPAddress
+}
+
+# Если ничего — localhost
+if (-not $EXTERNAL_IP) {
+    Write-Host "Не удалось определить внешний IP, использую 127.0.0.1" -ForegroundColor Yellow
+    $EXTERNAL_IP = "127.0.0.1"
 }
 
 Write-Host "IP сервера: $EXTERNAL_IP" -ForegroundColor Green
 
-# Обновляем EXTERNAL_IP в .env
+# Обновляем .env
 $envContent = Get-Content ".env"
-$envContent = $envContent -replace '^EXTERNAL_IP=.*', "EXTERNAL_IP=$EXTERNAL_IP"
+if ($envContent -match '^EXTERNAL_IP=') {
+    $envContent = $envContent -replace '^EXTERNAL_IP=.*', "EXTERNAL_IP=$EXTERNAL_IP"
+} else {
+    $envContent += "`nEXTERNAL_IP=$EXTERNAL_IP"
+}
 $envContent | Set-Content ".env"
 
 # Запускаем
-Write-Host "Запускаем контейнеры..." -ForegroundColor Yellow
-
-$previousErrorAction = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
 docker compose up -d --build
-$ErrorActionPreference = $previousErrorAction
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Ошибка запуска Docker"
-    exit 1
-}
 
 Write-Host ""
 Write-Host "=== Готово ===" -ForegroundColor Green

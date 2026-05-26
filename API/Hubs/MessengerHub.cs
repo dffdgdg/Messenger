@@ -32,6 +32,9 @@ public sealed partial class MessengerHub(
             return;
         }
 
+        // Предзагружаем информацию о себе в кэш
+        _ = GetUserInfoAsync(userId.Value);
+
         onlineUserService.UserConnected(userId.Value, Context.ConnectionId);
         await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId.Value}");
 
@@ -250,6 +253,10 @@ public sealed partial class MessengerHub(
         }
 
         var memberIds = await accessControl.GetChatMemberIdsAsync(chatId);
+
+        var allUserIds = memberIds.Append(userId).Distinct().ToList();
+        await Task.WhenAll(allUserIds.Select(GetUserInfoAsync));
+
         var (name, avatar) = await GetUserInfoAsync(userId);
 
         var invite = new CallInviteDto
@@ -315,6 +322,9 @@ public sealed partial class MessengerHub(
                 return;
             }
 
+            // Предзагружаем информацию о себе перед формированием состояния
+            await GetUserInfoAsync(userId);
+
             var stateDto = await ToStateDtoAsync(session);
             await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
 
@@ -333,7 +343,7 @@ public sealed partial class MessengerHub(
         {
             LogJoinCallFailed(callId, userId, ex);
             try { await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Ошибка подключения к звонку"); }
-            catch { /* игнорируем */ }
+            catch { }
         }
     }
 
@@ -533,12 +543,20 @@ public sealed partial class MessengerHub(
 
     private async Task<(string? Name, string? Avatar)> GetUserInfoAsync(int userId)
     {
-        var task = _userCache.GetOrAdd(userId, FetchUserInfoAsync);
-        try { return await task; }
+        if (_userCache.TryGetValue(userId, out var cached) && cached.IsCompletedSuccessfully)
+            return cached.Result;
+
+        var task = FetchUserInfoAsync(userId);
+        _userCache[userId] = task;
+
+        try
+        {
+            return await task;
+        }
         catch
         {
-            _userCache.TryRemove(KeyValuePair.Create(userId, task));
-            return await _userCache.GetOrAdd(userId, FetchUserInfoAsync);
+            _userCache.TryRemove(userId, out _);
+            return (null, null);
         }
     }
 
@@ -546,10 +564,18 @@ public sealed partial class MessengerHub(
     {
         try
         {
-            var user = await db.Users.AsNoTracking().Where(u => u.Id == userId)
-                .Select(u => new { u.Surname, u.Name, u.Midname, u.Username, u.Avatar }).FirstOrDefaultAsync();
+            using var scope = scopeFactory.CreateScope();
+            var ctx = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
 
-            if (user == null) return (null, null);
+            var user = await ctx.Users.AsNoTracking().Where(u => u.Id == userId)
+                .Select(u => new { u.Surname, u.Name, u.Midname, u.Username, u.Avatar })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                logger.LogWarning("[MessengerHub] Пользователь {UserId} не найден в БД", userId);
+                return (null, null);
+            }
 
             string? displayName = null;
             if (!string.IsNullOrWhiteSpace(user.Surname) || !string.IsNullOrWhiteSpace(user.Name))
@@ -562,10 +588,10 @@ public sealed partial class MessengerHub(
 
             return (displayName, user.Avatar);
         }
-        catch
+        catch (Exception ex)
         {
-            _userCache.TryRemove(userId, out _);
-            throw;
+            logger.LogError(ex, "[MessengerHub] FetchUserInfoAsync error для userId={UserId}", userId);
+            return (null, null);
         }
     }
 
@@ -573,13 +599,14 @@ public sealed partial class MessengerHub(
     {
         var userIds = session.ActiveParticipants.Keys.Append(session.InitiatorId).Distinct().ToList();
 
-        var tasks = userIds.Select(id => GetUserInfoAsync(id).ContinueWith(t =>
-        {
-            if (t.IsFaulted)
-                logger.LogWarning(t.Exception?.GetBaseException(), "[MessengerHub] Не удалось загрузить инфо о пользователе {UserId}", id);
-        }, TaskScheduler.Default));
+        logger.LogInformation("[MessengerHub] ToStateDtoAsync: loading users {UserIds}", string.Join(",", userIds));
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(userIds.Select(async id =>
+        {
+            var (name, avatar) = await GetUserInfoAsync(id);
+            logger.LogInformation("[MessengerHub] ToStateDtoAsync: userId={UserId} name={Name} avatar={Avatar}",
+                id, name ?? "NULL", avatar ?? "NULL");
+        }));
 
         return callSessions.ToStateDto(session,
             uid => _userCache.TryGetValue(uid, out var t) && t.IsCompletedSuccessfully ? t.Result.Avatar : null,

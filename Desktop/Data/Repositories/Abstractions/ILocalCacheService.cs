@@ -12,7 +12,7 @@ public class CachedMessagesResult
     /// <summary>Сообщения в хронологическом порядке (старые → новые)</summary>
     public List<MessageDto> Messages { get; init; } = [];
     /// <summary>На сервере есть ещё более старые сообщения</summary>
-    public bool HasMoreOlder { get; init; }
+    public bool HasMoreOlder { get; set; }
     /// <summary>На сервере есть более новые сообщения</summary>
     public bool HasMoreNewer { get; init; }
     /// <summary>true если кэш полностью покрывает запрошенный диапазон</summary>

@@ -147,6 +147,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public bool IsVoiceRecording => Voice.IsVoiceRecording;
     public bool IsLoadingMuteState => Notification.IsLoadingMuteState;
     public bool HasMoreNewer => MessageManager.HasMoreNewer;
+    public bool HasMoreOlder => MessageManager.HasMoreOlder;
     public bool ShowScrollToBottom => !IsScrolledToBottom;
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
     public bool CanSendMessageNow => !string.IsNullOrWhiteSpace(NewMessage) || LocalAttachments.Count > 0 || Forward.ForwardingMessage != null;
@@ -210,6 +211,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [ObservableProperty] public partial int MentionSelectedIndex { get; set; } = -1;
     [ObservableProperty] public partial bool IsInitialLoading { get; set; } = true;
     [ObservableProperty] public partial bool IsLoadingOlderMessages { get; set; }
+    [ObservableProperty] public partial bool IsLoadingNewerMessages { get; set; }
     [ObservableProperty] public partial bool HasNewMessages { get; set; }
     [ObservableProperty] public partial bool IsScrolledToBottom { get; set; } = true;
     [ObservableProperty] public partial int UnreadCount { get; set; }
@@ -760,6 +762,18 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void OnInfoPanelMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(MessageViewModel.IsContinuation)
+            or nameof(MessageViewModel.HasNextFromSame)
+            or nameof(MessageViewModel.GroupPosition)
+            or nameof(MessageViewModel.BubbleClasses)
+            or nameof(MessageViewModel.ShowSenderName)
+            or nameof(MessageViewModel.IsHighlighted)
+            or nameof(MessageViewModel.IsUnread)
+            or nameof(MessageViewModel.IsRead))
+        {
+            return;
+        }
+
         if (e.PropertyName is nameof(MessageViewModel.IsDeleted)
             or nameof(MessageViewModel.Poll)
             or nameof(MessageViewModel.HasPoll)
@@ -971,8 +985,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
                 await _callService.JoinCallAsync(state.CallId, Context.ChatId);
 
+                await Task.Delay(200);
+
+                var freshState = await _callHub.GetCallStateAsync(Context.ChatId);
+
                 var chatName = Context.Chat?.Name ?? string.Empty;
-                Parent.ShowCallView(state, chatName, state.IsGroupCall);
+                Parent.ShowCallView(freshState ?? state, chatName, state.IsGroupCall);
             }
             else
             {
@@ -1103,10 +1121,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             IsLoadingOlderMessages = true;
             await MessageManager.LoadOlderMessagesAsync(Context.LifetimeToken);
         }
-        finally
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            IsLoadingOlderMessages = false;
+            Debug.WriteLine($"[ChatVM] LoadOlderMessages error: {ex.Message}");
         }
+        // НЕ сбрасываем IsLoadingOlderMessages здесь — View сбросит после
+        // восстановления позиции скролла
     }
 
     [RelayCommand]
@@ -1115,7 +1136,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (Context.IsDisposed || MessageManager.IsLoading || !MessageManager.HasMoreNewer)
             return;
 
-        await MessageManager.LoadNewerMessagesAsync(Context.LifetimeToken);
+        try
+        {
+            IsLoadingNewerMessages = true;
+            await MessageManager.LoadNewerMessagesAsync(Context.LifetimeToken);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatVM] LoadNewerMessages error: {ex.Message}");
+        }
+        // View сбросит IsLoadingNewerMessages
     }
 
     #endregion

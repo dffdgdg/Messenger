@@ -1,0 +1,412 @@
+﻿[
+  {
+    "Id": 2,
+    "Name": "Групповой чат 2",
+    "CreatedAt": "2025-08-22T19:05:31.073046",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-14T14:36:47.704532",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 3,
+    "Name": "Групповой чат 3",
+    "CreatedAt": "2025-08-22T19:05:32.137493",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-04-30T22:45:55.608689",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 5,
+    "Name": "Групповой чат 4",
+    "CreatedAt": "2025-10-07T07:34:08.707722",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-12T11:14:44.562972",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 6,
+    "Name": "Групповой чат 5",
+    "CreatedAt": "2025-10-07T07:34:15.915398",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-25T07:43:31.133055",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 8,
+    "Name": "Тестовый",
+    "CreatedAt": "2025-10-21T00:48:19.651738",
+    "CreatedByUserId": null,
+    "LastMessageTime": "2026-04-30T22:45:58.331129",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 9,
+    "Name": "Общий чат",
+    "CreatedAt": "2025-10-31T18:42:44.460446",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-04-30T22:45:52.475869",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 16,
+    "Name": "Отдел Компания",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-18T19:45:09.988564",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 17,
+    "Name": "Отдел Руководство2",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 18,
+    "Name": "Отдел Дирекция",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-04-22T19:30:17.982588",
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 19,
+    "Name": "Отдел HR (Отдел кадров)",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2025-12-21T00:09:42.378641",
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 20,
+    "Name": "Отдел IT-отдел",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-03T03:20:02.98962",
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 21,
+    "Name": "Отдел Разработка",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 22,
+    "Name": "Отдел Тестирование",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 23,
+    "Name": "Отдел Поддержка",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 24,
+    "Name": "Отдел Продажи",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 25,
+    "Name": "Отдел Маркетинг",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 26,
+    "Name": "Отдел Работа с клиентами",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 27,
+    "Name": "Отдел Финансы",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 28,
+    "Name": "Отдел Бухгалтерия",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-14T14:29:45.905347",
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 29,
+    "Name": "Отдел Аналитика",
+    "CreatedAt": "2025-11-01T10:58:04.327204",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 65,
+    "Name": "1",
+    "CreatedAt": "2025-12-19T11:27:13.34259",
+    "CreatedByUserId": 19,
+    "LastMessageTime": "2026-03-04T10:36:20.485332",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 66,
+    "Name": "14",
+    "CreatedAt": "2025-12-19T12:51:47.129606",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-18T13:04:34.676945",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 67,
+    "Name": "18",
+    "CreatedAt": "2025-12-20T06:50:46.79259",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 68,
+    "Name": "7",
+    "CreatedAt": "2025-12-21T22:35:05.517189",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-12T11:46:06.925766",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 69,
+    "Name": null,
+    "CreatedAt": "2025-12-24T10:04:53.367566",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 70,
+    "Name": null,
+    "CreatedAt": "2025-12-24T10:04:57.782416",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 71,
+    "Name": null,
+    "CreatedAt": "2025-12-24T10:57:58.592737",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-12T11:48:34.922539",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 72,
+    "Name": "Отдел Тестовый",
+    "CreatedAt": "2025-12-24T14:26:59.725586",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Department",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 74,
+    "Name": "Руководители отделов",
+    "CreatedAt": "2025-12-24T16:39:33.823457",
+    "CreatedByUserId": null,
+    "LastMessageTime": "2026-05-18T13:05:40.251965",
+    "Avatar": null,
+    "Type": "DepartmentHeads",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 75,
+    "Name": null,
+    "CreatedAt": "2025-12-30T20:20:40.617115",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 76,
+    "Name": null,
+    "CreatedAt": "2026-01-01T13:16:40.3139",
+    "CreatedByUserId": 19,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 77,
+    "Name": "Чат",
+    "CreatedAt": "2026-02-20T16:43:53.168506",
+    "CreatedByUserId": 1,
+    "LastMessageTime": "2026-05-18T19:44:29.782142",
+    "Avatar": "/uploads/chats/fd6704c8-3e39-4efe-9708-df29a6ad1410.webp",
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 79,
+    "Name": null,
+    "CreatedAt": "2026-03-02T13:58:10.730805",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 80,
+    "Name": null,
+    "CreatedAt": "2026-03-25T22:32:40.238689",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 81,
+    "Name": null,
+    "CreatedAt": "2026-04-08T11:34:53.166491",
+    "CreatedByUserId": 25,
+    "LastMessageTime": "2026-05-12T11:46:17.497984",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 82,
+    "Name": null,
+    "CreatedAt": "2026-04-18T16:59:59.032457",
+    "CreatedByUserId": 21,
+    "LastMessageTime": "2026-05-12T11:46:00.583751",
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 83,
+    "Name": null,
+    "CreatedAt": "2026-04-25T10:42:28.76719",
+    "CreatedByUserId": 7,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 84,
+    "Name": null,
+    "CreatedAt": "2026-05-11T21:55:25.760137",
+    "CreatedByUserId": 1,
+    "LastMessageTime": null,
+    "Avatar": null,
+    "Type": "Contact",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 86,
+    "Name": "Чатыксыв",
+    "CreatedAt": "2026-05-12T06:07:45.454643",
+    "CreatedByUserId": 7,
+    "LastMessageTime": "2026-05-12T07:27:40.042894",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 88,
+    "Name": "авыв",
+    "CreatedAt": "2026-05-12T06:18:13.466173",
+    "CreatedByUserId": 7,
+    "LastMessageTime": "2026-05-12T07:27:35.141902",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  },
+  {
+    "Id": 90,
+    "Name": "fff",
+    "CreatedAt": "2026-05-12T06:31:50.882292",
+    "CreatedByUserId": 7,
+    "LastMessageTime": "2026-05-12T07:27:28.519394",
+    "Avatar": null,
+    "Type": "Chat",
+    "ShowHistoryForNewMembers": true
+  }
+]

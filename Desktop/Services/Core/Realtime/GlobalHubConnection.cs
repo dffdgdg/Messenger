@@ -4,6 +4,7 @@ using Desktop.Services.UI;
 using Desktop.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using Shared.Dto.Online;
 using Shared.Hubs;
 using System.Diagnostics;
@@ -67,8 +68,30 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         try
         {
             UnsubscribeHubEvents();
-            _hub = new HubConnectionBuilder().WithUrl($"{App.ApiUrl}chatHub", o => o.AccessTokenProvider = ()
-                => Task.FromResult(_auth.Session.Token)).WithAutomaticReconnect().Build();
+
+            // Гарантируем trailing slash перед конкатенацией
+            var baseUrl = App.ApiUrl.TrimEnd('/') + '/';
+
+            _hub = new HubConnectionBuilder()
+                .WithUrl($"{baseUrl}chatHub", o =>
+                {
+                    o.AccessTokenProvider = () =>
+                        Task.FromResult(_auth.Session.Token ?? string.Empty);
+
+                    o.Transports =
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+                })
+                .WithAutomaticReconnect([
+                    TimeSpan.Zero,
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromSeconds(30)
+                ])
+                .ConfigureLogging(logging =>
+                    logging.SetMinimumLevel(LogLevel.Warning))
+                .Build();
 
             SubscribeHubEvents();
             _hub.Reconnecting += OnReconnecting;

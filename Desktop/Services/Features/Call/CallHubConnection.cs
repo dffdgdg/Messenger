@@ -27,10 +27,33 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     public bool IsConnected => _hub.State == HubConnectionState.Connected;
 
-    public CallHubConnection(ISessionStore sessionStore, ILogger<CallHubConnection> logger, string baseUrl)
+    public CallHubConnection(
+    ISessionStore sessionStore,
+    ILogger<CallHubConnection> logger,
+    string baseUrl)
     {
         _logger = logger;
-        _hub = new HubConnectionBuilder().WithUrl($"{baseUrl}chatHub", options => options.AccessTokenProvider = () => Task.FromResult(sessionStore.Token)).WithAutomaticReconnect().Build();
+
+        var normalizedUrl = baseUrl.TrimEnd('/') + '/';
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl($"{normalizedUrl}chatHub", options =>
+            {
+                options.AccessTokenProvider = () =>
+                    Task.FromResult(sessionStore.Token ?? string.Empty);
+                options.Transports =
+                    Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                    Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+            })
+            .WithAutomaticReconnect([
+                TimeSpan.Zero,
+            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(30)
+            ])
+            .Build();
+
         SubscribeEvents();
     }
 

@@ -18,6 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{ABC5CE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{B14842C5-FE3A-4765-B4BC-451ACC7955D5}"
 	ProjectSection(SolutionItems) = preProject
+		backup.txt = backup.txt
 		Doc.md = Doc.md
 	EndProjectSection
 EndProject

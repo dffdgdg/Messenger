@@ -7,14 +7,11 @@ using Desktop.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.Helpers;
 using System.Windows.Input;
-using MsgShared = Shared;
 
 namespace Desktop.ViewModels.Chat;
 
 public sealed partial class MessageViewModel : ObservableObject, IDisposable
 {
-    #region Properties
-
     public int Id { get; set; }
     public int ChatId { get; set; }
     public int? SenderId { get; set; }
@@ -28,10 +25,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public PollDto? PollDto { get; set; }
     public MessageDto Message { get; }
     public ChatCommands? Commands { get; set; }
-
-    #endregion
-
-    #region Observable Properties
 
     [ObservableProperty] public partial int? ReplyToMessageId { get; set; }
     [ObservableProperty] public partial string? ReplyToSenderName { get; set; }
@@ -68,27 +61,20 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string VoicePositionText { get; set; } = "0:00";
     [ObservableProperty] public partial string? VoiceError { get; set; }
 
-    #endregion
-
-    #region Commands
-
     public ICommand? MentionClickCommand { get; set; }
 
-    private ICommand? _replyActionCommand;
-    private ICommand? _forwardActionCommand;
-
     public ICommand ReplyActionCommand => _replyActionCommand ??= new RelayCommand(() => Commands?.Reply?.Execute(this));
+    private ICommand? _replyActionCommand;
 
     public ICommand ForwardActionCommand => _forwardActionCommand ??= new RelayCommand(() => Commands?.Forward?.Execute(this));
+    private ICommand? _forwardActionCommand;
 
-    #endregion
-
-    #region Cached Computed Properties
-    public string SystemMessageTime { get; private set; } = string.Empty;
+    public bool IsNewIncoming { get; set; }
+    public string SystemMessageTime { get; private set; } = "";
     public bool OriginalIsVoiceMessage { get; private set; }
     public bool OriginalHasPoll { get; private set; }
     public bool ShowPollResultsButton { get; private set; }
-    public string DisplayContent { get; private set; } = string.Empty;
+    public string DisplayContent { get; private set; } = "";
     public bool HasTextContent { get; private set; }
     public bool ShowFilesOnlyMeta { get; private set; }
     public bool ShowNonVoiceFiles { get; private set; }
@@ -97,18 +83,19 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool HasPoll { get; private set; }
     public bool HasReply { get; private set; }
     public bool HasForward { get; private set; }
-    public string ForwardedFromHeader { get; private set; } = string.Empty;
+    public string ForwardedFromHeader { get; private set; } = "";
     public bool CanOpenForwardSenderProfile { get; private set; }
     public bool ShowSenderName { get; private set; }
     public bool CanOpenSenderProfile { get; private set; }
     public string? SenderAvatarUrl { get => SenderAvatar; set => SenderAvatar = value; }
+    public bool IsTextMessage => !OriginalIsVoiceMessage && !OriginalHasPoll && !IsSystemMessage;
     public bool ShowDeliveryStatus { get; private set; }
     public bool CanEdit { get; private set; }
     public bool CanDelete { get; private set; }
     public bool CanPin { get; private set; }
     public bool ShowPinAction { get; private set; }
     public bool ShowUnpinAction { get; private set; }
-    public string EditedLabel { get; private set; } = string.Empty;
+    public string EditedLabel { get; private set; } = "";
     public string? EditedLabelFull { get; private set; }
     public bool HasStructuredSystemMessage { get; private set; }
     public bool HasSystemTargetUser { get; private set; }
@@ -123,205 +110,153 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     public bool ShowResumeButton { get; private set; }
     public string VoiceDurationFormatted { get; private set; } = "0:00";
     public string BubbleClasses { get; private set; } = "MessageBubble Other Alone";
-    public string ContentPreview { get; private set; } = string.Empty;
-    #endregion
-
-    #region Private Fields
+    public string ContentPreview { get; private set; } = "";
+    public bool IsDisposed => _disposed;
 
     private readonly IFileDownloadService? _downloadService;
     private readonly INotificationService? _notificationService;
     private readonly IFileDownloadStateService? _stateService;
     private readonly IApiClientService? _apiClient;
     private readonly IAudioPlayerService? _audioPlayer;
-
-    private static readonly TimeSpan VoiceLoadTimeout = TimeSpan.FromSeconds(20);
-
-    private byte[]? _cachedAudioBytes;
-    private bool _disposed;
-    private bool _subscribedToPlayer;
-    private bool _subscribedToPlaybackEvents;
-    private PollViewModel? _boundPollVm;
     private readonly int _currentUserId;
 
-    #endregion
+    private static readonly TimeSpan VoiceLoadTimeout = TimeSpan.FromSeconds(20);
+    private const long MaxCachedAudioBytes = 5 * 1024 * 1024;
 
-    #region Notification Batches
+    private byte[]? _cachedAudioBytes;
+    private bool _disposed, _heavyInitDone, _suppressNotifications;
+    private bool _subscribedToPlayer, _subscribedToPlaybackEvents;
+    private PollViewModel? _boundPollVm;
 
     private static readonly string[] ContentProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ContentPreview)];
-
     private static readonly string[] EditedProps = [nameof(EditedLabel), nameof(EditedLabelFull)];
-
     private static readonly string[] VoiceButtonProps = [nameof(ShowPlayButton), nameof(ShowPauseButton), nameof(ShowResumeButton)];
-
     private static readonly string[] PollDerivedProps = [nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit), nameof(ShowPollResultsButton)];
-
     private static readonly string[] ForwardDerivedProps = [nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit), nameof(CanOpenForwardSenderProfile)];
-
     private static readonly string[] PinProps = [nameof(ShowPinAction), nameof(ShowUnpinAction)];
-
-    private static readonly string[] DeletedProps =
-    [
-        nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta),
-        nameof(ShowNonVoiceFiles), nameof(ShowDeliveryStatus), nameof(CanEdit),
-        nameof(CanDelete), nameof(ShowVoiceMessage), nameof(VoiceDurationFormatted)
-    ];
-
-    #endregion
-
-    #region Constructor
+    private static readonly string[] DeletedProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowNonVoiceFiles), nameof(ShowDeliveryStatus), nameof(CanEdit), nameof(CanDelete), nameof(ShowVoiceMessage), nameof(VoiceDurationFormatted)];
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
         IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, int currentUserId = 0, IFileDownloadStateService? stateService = null)
     {
-        _downloadService = downloadService;
-        _notificationService = notificationService;
-        _stateService = stateService;
-        _audioPlayer = audioPlayer;
-        _currentUserId = currentUserId;
-        _apiClient = apiClient;
-        Message = message;
-        MemoryDiagnostics.OnMessageVmCreated();
+        (_downloadService, _notificationService, _stateService, _audioPlayer, _apiClient, _currentUserId, Message) =
+            (downloadService, notificationService, stateService, audioPlayer, apiClient, currentUserId, message);
 
+        MemoryDiagnostics.OnMessageVmCreated();
         MapFromDto(message);
-        InitChildViewModels(message);
 
         SystemActorDisplayName = string.IsNullOrWhiteSpace(message.SenderName) ? "Пользователь" : message.SenderName;
-
         SystemTargetDisplayName = string.IsNullOrWhiteSpace(message.TargetUserName) ? "пользователя" : message.TargetUserName;
-
         SystemActionPrefixText = SystemEventMeta.GetPrefix(message.SystemEventType);
         SystemActionSuffixText = SystemEventMeta.GetSuffix(message.SystemEventType);
 
+        InitChildViewModels(message);
         RecacheAllProperties();
         SubscribeToAudioPlayer();
     }
 
-    private void MapFromDto(MessageDto message)
+    private void MapFromDto(MessageDto m)
     {
-        (Id, ChatId, SenderId, Content, CreatedAt, IsOwn) = (message.Id, message.ChatId, message.SenderId, message.Content, message.CreatedAt, message.IsOwn);
+        (Id, ChatId, SenderId, Content, CreatedAt, IsOwn) = (m.Id, m.ChatId, m.SenderId, m.Content, m.CreatedAt, m.IsOwn);
+        (IsEdited, IsDeleted, EditedAt, PollDto, Files) = (m.IsEdited, m.IsDeleted, m.EditedAt, m.Poll, m.Files ?? []);
+        IsPinned = m.IsPinned;
+        (SenderName, SenderAvatar) = (m.SenderName, m.SenderAvatarUrl);
+        (IsVoiceMessage, VoiceDurationSeconds, VoiceWaveform, VoiceFileUrl) = (m.IsVoiceMessage, m.VoiceDurationSeconds, m.VoiceWaveform, m.VoiceFileUrl);
+        (IsSystemMessage, SystemEventType, TargetUserId, TargetUserName) = (m.IsSystemMessage, m.SystemEventType, m.TargetUserId, m.TargetUserName);
+        (ReplyToMessageId, ForwardedFromMessageId) = (m.ReplyToMessageId, m.ForwardedFromMessageId);
+        OriginalIsVoiceMessage = m.IsVoiceMessage;
+        OriginalHasPoll = m.Poll is not null;
 
-        (IsEdited, IsDeleted, EditedAt, PollDto, Files) = (message.IsEdited, message.IsDeleted, message.EditedAt, message.Poll, message.Files ?? []);
-
-        IsPinned = message.IsPinned;
-        (SenderName, SenderAvatar) = (message.SenderName, message.SenderAvatarUrl);
-
-        (IsVoiceMessage, VoiceDurationSeconds, VoiceWaveform, VoiceFileUrl) = (message.IsVoiceMessage, message.VoiceDurationSeconds, message.VoiceWaveform, message.VoiceFileUrl);
-
-        (IsSystemMessage, SystemEventType, TargetUserId, TargetUserName) = (message.IsSystemMessage, message.SystemEventType, message.TargetUserId, message.TargetUserName);
-
-        (ReplyToMessageId, ForwardedFromMessageId) = (message.ReplyToMessageId, message.ForwardedFromMessageId);
-
-        OriginalIsVoiceMessage = message.IsVoiceMessage;
-        OriginalHasPoll = message.Poll is not null;
-
-        if (message.ReplyToMessage is { } reply)
+        if (m.ReplyToMessage is { } reply)
         {
             ReplyToSenderName = reply.SenderName;
             ReplyToIsDeleted = reply.IsDeleted;
             ReplyToContent = ChatPreviewFormatter.BuildReplyPreview(reply);
         }
 
-        if (message.ForwardedFrom is not null)
+        if (m.ForwardedFrom is not null)
         {
-            ForwardedFromSenderName = message.ForwardedFrom.OriginalSenderName;
-            ForwardedFromSenderId = message.ForwardedFrom.OriginalSenderId;
+            ForwardedFromSenderName = m.ForwardedFrom.OriginalSenderName;
+            ForwardedFromSenderId = m.ForwardedFrom.OriginalSenderId;
         }
     }
 
-    private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
+    public void EnsureHeavyInit()
     {
-        System.Diagnostics.Debug.WriteLine($"[MessageVM] CreatePollViewModel: userId={_currentUserId} apiClient={_apiClient != null} pollId={pollDto.Id} options={pollDto.Options?.Count ?? -1}");
+        if (_heavyInitDone || _disposed) return;
+        _heavyInitDone = true;
 
-        if (_currentUserId == 0 || _apiClient == null)
+        InitChildViewModels(Message);
+        RecacheFileGroup();
+        RecachePollGroup();
+        RecacheContentGroup();
+        RecacheEditGroup();
+
+        if (HasFiles || HasPoll)
         {
-            System.Diagnostics.Debug.WriteLine($"[MessageVM] CreatePollViewModel SKIP: userId={_currentUserId} apiClient={_apiClient != null}");
-            return null;
+            Notify(ContentProps);
+            Notify(PollDerivedProps);
+            OnPropertyChanged(nameof(HasFiles));
+            OnPropertyChanged(nameof(HasImages));
+            OnPropertyChanged(nameof(FileViewModels));
         }
-
-        return new PollViewModel(pollDto, _currentUserId, _apiClient, ownerId);
     }
 
-    private void InitChildViewModels(MessageDto message)
+    private void InitChildViewModels(MessageDto m)
     {
-        if (message.Poll is not null)
+        if (m.Poll is not null)
         {
-            Poll = CreatePollViewModel(message.Poll, message.SenderId);
+            Poll = CreatePollViewModel(m.Poll, m.SenderId);
             BindPollViewModel(Poll);
         }
 
         if (Files.Count > 0)
         {
-            FileViewModels = new(Files.Select(f => new MessageFileViewModel(
-                f,
-                _downloadService,
-                _notificationService,
-                _stateService)));
-
-            _ = InitFileStatesAsync();
+            FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, _downloadService, _notificationService, _stateService)));
+            // _ = InitFileStatesAsync();
         }
     }
 
     private async Task InitFileStatesAsync()
     {
         foreach (var fileVm in FileViewModels)
-        {
             await fileVm.InitializeAsync();
-        }
     }
-    private static string BuildSystemActionSuffix(SystemEventType? eventType) => eventType switch
+
+    private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
     {
-        MsgShared.Enum.SystemEventType.MemberAdded => " в группу",
-        MsgShared.Enum.SystemEventType.MemberRemoved => " из группы",
-        _ => string.Empty
-    };
+        if (_currentUserId == 0 || _apiClient == null) return null;
+        return new PollViewModel(pollDto, _currentUserId, _apiClient, ownerId);
+    }
 
-    #endregion
-
-    #region RecacheAllProperties & Groups
-
-    /// <summary>
-    /// Единственное место полного пересчёта всех кэшированных свойств.
-    /// Вызывается при инициализации и при MarkAsDeleted.
-    /// </summary>
     private void RecacheAllProperties()
     {
-        RecacheFileGroup();
-        RecachePollGroup();
-        RecacheReplyForwardGroup();
-        RecacheContentGroup();
-        RecacheEditGroup();
-        RecacheDeliveryGroup();
-        RecachePinGroup();
-        RecacheSenderGroup();
-        RecacheSystemGroup();
-        RecacheVoiceGroup();
-        RecacheVoiceButtons();
-        UpdateBubbleClasses();
+        _suppressNotifications = true;
+        try
+        {
+            RecacheFileGroup(); RecachePollGroup(); RecacheReplyForwardGroup();
+            RecacheContentGroup(); RecacheEditGroup(); RecacheDeliveryGroup();
+            RecachePinGroup(); RecacheSenderGroup(); RecacheSystemGroup();
+            RecacheVoiceGroup(); RecacheVoiceButtons(); UpdateBubbleClasses();
+        }
+        finally { _suppressNotifications = false; }
+        OnPropertyChanged(string.Empty);
     }
 
-    private void RecacheFileGroup()
-    {
-        HasFiles = Files.Count > 0;
-        HasImages = Files.Any(f => f.PreviewType == "image");
-    }
-
-    private void RecachePollGroup()
-    {
-        HasPoll = Poll is not null;
-        ShowPollResultsButton = Poll is { ShowResultsButton: true };
-    }
+    private void RecacheFileGroup() { HasFiles = Files.Count > 0; HasImages = Files.Any(f => f.PreviewType == "image"); }
+    private void RecachePollGroup() { HasPoll = Poll is not null; ShowPollResultsButton = Poll is { ShowResultsButton: true }; }
 
     private void RecacheReplyForwardGroup()
     {
         HasReply = ReplyToMessageId.HasValue;
         HasForward = ForwardedFromMessageId.HasValue;
-        ForwardedFromHeader = HasForward ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}" : string.Empty;
+        ForwardedFromHeader = HasForward ? $"Переслано от {ForwardedFromSenderName ?? "неизвестного пользователя"}" : "";
         CanOpenForwardSenderProfile = HasForward && ForwardedFromSenderId > 0;
     }
 
     private void RecacheContentGroup()
     {
-        DisplayContent = IsDeleted ? "Сообщение удалено" : (Content ?? string.Empty);
+        DisplayContent = IsDeleted ? "Сообщение удалено" : (Content ?? "");
         HasTextContent = !IsDeleted && !IsSystemMessage && !string.IsNullOrWhiteSpace(Content) && !HasPoll && !IsVoiceMessage;
         ShowFilesOnlyMeta = !HasTextContent && !IsDeleted && HasFiles && !IsVoiceMessage;
         ShowNonVoiceFiles = HasFiles && !IsDeleted && !IsSystemMessage;
@@ -337,44 +272,31 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         var filesCount = Files?.Count ?? 0;
         if (filesCount > 0 && string.IsNullOrWhiteSpace(Content))
             return filesCount == 1 ? "Вложение" : $"{filesCount} файл(ов)";
-
         if (filesCount > 0 && !string.IsNullOrWhiteSpace(Content))
-            return $"{ChatPreviewFormatter.BuildContentPreview(Content)}";
+            return ChatPreviewFormatter.BuildContentPreview(Content);
 
         return ChatPreviewFormatter.BuildContentPreview(Content, "Сообщение");
     }
+
     private void RecacheEditGroup()
     {
         CanEdit = IsOwn && !IsDeleted && !IsSystemMessage && Poll is null && !IsVoiceMessage && !HasForward;
-        EditedLabel = IsEdited ? "изм." : string.Empty;
+        EditedLabel = IsEdited ? "изм." : "";
         EditedLabelFull = IsEdited && EditedAt.HasValue ? $"изменено {EditedAt.Value:HH:mm}" : null;
     }
 
-    private void RecacheDeliveryGroup()
-    {
-        ShowDeliveryStatus = IsOwn && !IsDeleted && !IsSystemMessage;
-        CanDelete = IsOwn && !IsDeleted && !IsSystemMessage;
-    }
+    private void RecacheDeliveryGroup() { ShowDeliveryStatus = IsOwn && !IsDeleted && !IsSystemMessage; CanDelete = IsOwn && !IsDeleted && !IsSystemMessage; }
 
-    private void RecachePinGroup()
-    {
-        CanPin = !IsDeleted && !IsSystemMessage;
-        ShowPinAction = CanPin && !IsPinned;
-        ShowUnpinAction = CanPin && IsPinned;
-    }
+    private void RecachePinGroup() { CanPin = !IsDeleted && !IsSystemMessage; ShowPinAction = CanPin && !IsPinned; ShowUnpinAction = CanPin && IsPinned; }
 
-    private void RecacheSenderGroup()
-    {
-        ShowSenderName = !IsOwn && !IsContinuation && !IsSystemMessage;
-        CanOpenSenderProfile = SenderId > 0;
-    }
+    private void RecacheSenderGroup() { ShowSenderName = !IsOwn && !IsContinuation && !IsSystemMessage; CanOpenSenderProfile = SenderId > 0; }
 
     private void RecacheSystemGroup()
     {
         HasStructuredSystemMessage = IsSystemMessage && SystemEventType.HasValue;
         HasSystemTargetUser = TargetUserId > 0;
         SystemTargetUserId = TargetUserId ?? 0;
-        SystemMessageTime = IsSystemMessage ? CreatedAt.ToString("HH:mm") : string.Empty;
+        SystemMessageTime = IsSystemMessage ? CreatedAt.ToString("HH:mm") : "";
     }
 
     private void RecacheVoiceGroup()
@@ -385,85 +307,46 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private void RecacheVoiceButtons()
     {
-        ShowPlayButton = ShowVoiceMessage && !IsVoicePlaying && !IsVoicePaused && !IsVoiceLoading;
-        ShowPauseButton = IsVoicePlaying && !IsVoicePaused;
-        ShowResumeButton = IsVoicePaused;
+        (ShowPlayButton, ShowPauseButton, ShowResumeButton) = ShowVoiceMessage switch
+        {
+            true when !IsVoicePlaying && !IsVoicePaused && !IsVoiceLoading => (true, false, false),
+            true when IsVoicePlaying && !IsVoicePaused => (false, true, false),
+            true when IsVoicePaused => (false, false, true),
+            _ => (false, false, false)
+        };
         Notify(VoiceButtonProps);
     }
 
     private void UpdateBubbleClasses()
     {
-        var owner = IsOwn ? "Own" : "Other";
-        var pos = GroupPosition switch
-        {
-            MessageGroupPosition.First => "First",
-            MessageGroupPosition.Middle => "Middle",
-            MessageGroupPosition.Last => "Last",
-            _ => "Alone"
-        };
-        BubbleClasses = $"MessageBubble {owner} {pos}";
+        var pos = GroupPosition switch { MessageGroupPosition.First => "First", MessageGroupPosition.Middle => "Middle", MessageGroupPosition.Last => "Last", _ => "Alone" };
+        BubbleClasses = $"MessageBubble {(IsOwn ? "Own" : "Other")} {pos}";
     }
-
-    #endregion
-
-    #region Public Update API
 
     public void ApplyUpdate(MessageDto updated)
     {
-        Content = updated.Content;
-        IsEdited = updated.IsEdited;
-        EditedAt = updated.EditedAt;
-        IsPinned = updated.IsPinned;
-
-        RecacheContentGroup();
-        RecacheEditGroup();
-        RecachePinGroup();
-
-        Notify(ContentProps);
-        Notify(EditedProps);
-        Notify(PinProps);
+        (Content, IsEdited, EditedAt, IsPinned) = (updated.Content, updated.IsEdited, updated.EditedAt, updated.IsPinned);
+        RecacheContentGroup(); RecacheEditGroup(); RecachePinGroup();
+        Notify(ContentProps); Notify(EditedProps); Notify(PinProps);
         OnPropertyChanged(nameof(CanEdit));
     }
 
     public void MarkAsDeleted()
     {
-        if (_audioPlayer?.CurrentMessageId == Id)
-            _audioPlayer.Stop();
+        if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Stop();
 
-        IsDeleted = true;
-        Content = null;
-        IsPinned = false;
-        VoiceFileUrl = null;
-        VoiceDurationSeconds = null;
-
-        ReplyToMessageId = null;
-        ReplyToSenderName = null;
-        ReplyToContent = null;
+        (IsDeleted, Content, IsPinned, VoiceFileUrl, VoiceDurationSeconds) = (true, null, false, null, null);
+        (ReplyToMessageId, ReplyToSenderName, ReplyToContent) = (null, null, null);
         ReplyToIsDeleted = false;
-
-        ForwardedFromMessageId = null;
-        ForwardedFromSenderName = null;
-        ForwardedFromSenderId = null;
-
-        ForwardedFromMessageId = null;
-        ForwardedFromSenderName = null;
-        ForwardedFromSenderId = null;
+        (ForwardedFromMessageId, ForwardedFromSenderName, ForwardedFromSenderId) = (null, null, null);
 
         ResetPlayerState();
         _cachedAudioBytes = null;
-
         RecacheAllProperties();
-
-        Notify(DeletedProps);
-        Notify(PinProps);
-        OnPropertyChanged(nameof(BubbleClasses));
+        EnsureHeavyInit();
     }
 
     public void MarkAsRead() => IsRead = true;
-
-    #endregion
-
-    #region Poll
 
     public void UpdatePoll(PollDto pollDto)
     {
@@ -474,47 +357,22 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         {
             Poll.ApplyDto(pollDto);
         }
-        else
-        {
-            Poll = CreatePollViewModel(pollDto);
-            BindPollViewModel(Poll);
-        }
+        else { Poll = CreatePollViewModel(pollDto); BindPollViewModel(Poll); }
 
         _ = PersistPollStateToCacheAsync();
-
-        RecachePollGroup();
-        RecacheContentGroup();
-        RecacheEditGroup();
-
+        RecachePollGroup(); RecacheContentGroup(); RecacheEditGroup();
         Notify(PollDerivedProps);
     }
 
-    private void OnPollServerStateApplied(PollDto pollDto)
+    private void OnPollServerStateApplied(PollDto pollDto) { PollDto = pollDto; Message.Poll = pollDto; _ = PersistPollStateToCacheAsync(); }
+
+    private void BindPollViewModel(PollViewModel? vm)
     {
-        PollDto = pollDto;
-        Message.Poll = pollDto;
-        _ = PersistPollStateToCacheAsync();
-    }
+        if (ReferenceEquals(_boundPollVm, vm)) return;
 
-    private void BindPollViewModel(PollViewModel? pollViewModel)
-    {
-        if (ReferenceEquals(_boundPollVm, pollViewModel)) return;
-
-        if (_boundPollVm != null)
-        {
-            _boundPollVm.ServerStateApplied -= OnPollServerStateApplied;
-            _boundPollVm.PropertyChanged -= OnBoundPollPropertyChanged;
-            _boundPollVm.ShowResultsRequested -= OnShowResultsRequested;
-        }
-
-        _boundPollVm = pollViewModel;
-
-        if (_boundPollVm != null)
-        {
-            _boundPollVm.ServerStateApplied += OnPollServerStateApplied;
-            _boundPollVm.PropertyChanged += OnBoundPollPropertyChanged;
-            _boundPollVm.ShowResultsRequested += OnShowResultsRequested;
-        }
+        if (_boundPollVm != null) { _boundPollVm.ServerStateApplied -= OnPollServerStateApplied; _boundPollVm.PropertyChanged -= OnBoundPollPropertyChanged; _boundPollVm.ShowResultsRequested -= OnShowResultsRequested; }
+        _boundPollVm = vm;
+        if (_boundPollVm != null) { _boundPollVm.ServerStateApplied += OnPollServerStateApplied; _boundPollVm.PropertyChanged += OnBoundPollPropertyChanged; _boundPollVm.ShowResultsRequested += OnShowResultsRequested; }
     }
 
     private void OnShowResultsRequested(PollViewModel vm) => Commands?.ShowPollResults?.Execute(vm);
@@ -532,19 +390,10 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     {
         var originalFiles = Message.Files;
         Message.Files = [];
-        try
-        {
-            await App.Current.Services.GetRequiredService<ILocalCacheService>().UpsertMessageAsync(Message);
-        }
-        catch { /* best-effort */ }
-        finally
-        {
-            Message.Files = originalFiles;
-        }
+        try { await App.Current.Services.GetRequiredService<ILocalCacheService>().UpsertMessageAsync(Message); }
+        catch { }
+        finally { Message.Files = originalFiles; }
     }
-    #endregion
-
-    #region Subscriptions
 
     private void SubscribeToAudioPlayer()
     {
@@ -580,21 +429,27 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         UnsubscribeFromPlaybackEvents();
         _subscribedToPlayer = false;
     }
+    private CancellationTokenSource? _postCts = new();
 
-    #endregion
+    private void PostIfNotDisposed(Action action)
+    {
+        if (_disposed) return;
 
-    #region Event Handlers
+        var cts = _postCts;
+        if (cts?.IsCancellationRequested != false) return;
 
-    private void PostIfNotDisposed(Action action) => Dispatcher.UIThread.Post(() => { if (!_disposed) action(); });
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed) action();
+        }, DispatcherPriority.Normal);
+    }
 
     private void OnPlaybackStarted(int msgId) => PostIfNotDisposed(() =>
     {
         if (msgId == Id)
         {
             SubscribeToPlaybackEvents();
-            IsVoicePlaying = true;
-            IsVoicePaused = false;
-            VoiceError = null;
+            (IsVoicePlaying, IsVoicePaused, VoiceError) = (true, false, null);
             RecacheVoiceButtons();
         }
         else
@@ -603,27 +458,14 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
     });
 
-    private void OnPlaybackPaused(int msgId)
-    {
-        if (msgId == Id)
-            PostIfNotDisposed(() => { IsVoicePaused = true; RecacheVoiceButtons(); });
-    }
-
-    private void OnPlaybackResumed(int msgId)
-    {
-        if (msgId == Id)
-            PostIfNotDisposed(() => { IsVoicePaused = false; RecacheVoiceButtons(); });
-    }
+    private void OnPlaybackPaused(int msgId) { if (msgId == Id) PostIfNotDisposed(() => { IsVoicePaused = true; RecacheVoiceButtons(); }); }
+    private void OnPlaybackResumed(int msgId) { if (msgId == Id) PostIfNotDisposed(() => { IsVoicePaused = false; RecacheVoiceButtons(); }); }
 
     private void OnPlaybackStopped(int msgId)
     {
         if (msgId != Id) return;
         UnsubscribeFromPlaybackEvents();
-        PostIfNotDisposed(() =>
-        {
-            ResetPlayerState();
-            _cachedAudioBytes = null;
-        });
+        PostIfNotDisposed(() => { ResetPlayerState(); _cachedAudioBytes = null; });
     }
 
     private void OnPositionChanged(int msgId, TimeSpan pos)
@@ -639,15 +481,10 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
 
     private void ResetPlayerState()
     {
-        IsVoicePlaying = IsVoicePaused = IsVoiceLoading = false;
-        VoicePositionPercent = 0;
-        VoicePositionText = "0:00";
+        (IsVoicePlaying, IsVoicePaused, IsVoiceLoading) = (false, false, false);
+        (VoicePositionPercent, VoicePositionText) = (0, "0:00");
         RecacheVoiceButtons();
     }
-
-    #endregion
-
-    #region Commands
 
     [RelayCommand]
     private async Task PlayVoice()
@@ -660,7 +497,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
             _cachedAudioBytes = await LoadAudioBytesAsync(mediaUrl!);
             if (_cachedAudioBytes is null) return;
         }
-
         _audioPlayer!.Play(Id, new MemoryStream(_cachedAudioBytes, writable: false));
     }
 
@@ -669,11 +505,7 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         mediaUrl = null;
         if (_audioPlayer is null || _apiClient is null || _disposed) return false;
 
-        if (string.IsNullOrEmpty(VoiceFileUrl))
-        {
-            VoiceError = "URL аудио недоступен";
-            return false;
-        }
+        if (string.IsNullOrEmpty(VoiceFileUrl)) { VoiceError = "URL аудио недоступен"; return false; }
 
         mediaUrl = BuildMediaUrl(VoiceFileUrl);
         return true;
@@ -685,70 +517,32 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         _audioPlayer.Resume();
         return true;
     }
-    public bool IsDisposed => _disposed;
-    private const long MaxCachedAudioBytes = 5 * 1024 * 1024; // 5 MB
+
     private async Task<byte[]?> LoadAudioBytesAsync(string mediaUrl)
     {
-        IsVoiceLoading = true;
-        RecacheVoiceButtons();
-
+        IsVoiceLoading = true; RecacheVoiceButtons();
         try
         {
             using var cts = new CancellationTokenSource(VoiceLoadTimeout);
             await using var stream = await _apiClient!.GetStreamAsync(mediaUrl, cts.Token);
-
-            if (stream is null)
-            {
-                VoiceError = "Не удалось загрузить аудио";
-                return null;
-            }
+            if (stream is null) { VoiceError = "Не удалось загрузить аудио"; return null; }
 
             await using var ms = new MemoryStream();
             await stream.CopyToAsync(ms, cts.Token);
-
             if (_disposed) return null;
 
             var data = ms.ToArray();
-
-            if (data.Length <= MaxCachedAudioBytes)
-                _cachedAudioBytes = data;
-
+            if (data.Length <= MaxCachedAudioBytes) _cachedAudioBytes = data;
             return data;
         }
-        catch (OperationCanceledException)
-        {
-            VoiceError = "Не удалось загрузить голосовое: превышено время ожидания.";
-            return null;
-        }
-        catch (Exception ex)
-        {
-            VoiceError = $"Ошибка: {ex.Message}";
-            return null;
-        }
-        finally
-        {
-            IsVoiceLoading = false;
-            RecacheVoiceButtons();
-        }
+        catch (OperationCanceledException) { VoiceError = "Превышено время ожидания"; return null; }
+        catch (Exception ex) { VoiceError = $"Ошибка: {ex.Message}"; return null; }
+        finally { IsVoiceLoading = false; RecacheVoiceButtons(); }
     }
 
-    [RelayCommand]
-    private void PauseVoice()
-    {
-        if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Pause();
-    }
-
-    [RelayCommand]
-    private void StopVoice()
-    {
-        if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Stop();
-    }
-
-    [RelayCommand]
-    private void SeekVoice(double pct)
-    {
-        if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Seek(pct / 100.0);
-    }
+    [RelayCommand] private void PauseVoice() { if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Pause(); }
+    [RelayCommand] private void StopVoice() { if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Stop(); }
+    [RelayCommand] private void SeekVoice(double pct) { if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Seek(pct / 100.0); }
 
     [RelayCommand]
     private async Task DownloadVoice()
@@ -756,21 +550,11 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(VoiceFileUrl) || _downloadService is null) return;
         try
         {
-            var mediaUrl = BuildMediaUrl(VoiceFileUrl);
-            var name = $"voice_{Id}_{CreatedAt:yyyyMMdd_HHmmss}.wav";
-            var path = await _downloadService.DownloadFileAsync(mediaUrl, name);
-            if (path is not null)
-                _notificationService?.ShowSuccessAsync($"Голосовое сохранено: {name}", copyToClipboard: false);
+            var path = await _downloadService.DownloadFileAsync(BuildMediaUrl(VoiceFileUrl), $"voice_{Id}_{CreatedAt:yyyyMMdd_HHmmss}.wav");
+            if (path is not null) _notificationService?.ShowSuccessAsync($"Голосовое сохранено: {path}", copyToClipboard: false);
         }
-        catch (Exception ex)
-        {
-            _notificationService?.ShowErrorAsync($"Ошибка загрузки: {ex.Message}", copyToClipboard: false);
-        }
+        catch (Exception ex) { _notificationService?.ShowErrorAsync($"Ошибка: {ex.Message}", copyToClipboard: false); }
     }
-
-    #endregion
-
-    #region Grouping
 
     private static readonly long GroupingThresholdTicks = TimeSpan.FromMinutes(5).Ticks;
 
@@ -782,180 +566,105 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         (true, false) => MessageGroupPosition.Last,
     };
 
-    public static bool CanGroup(MessageViewModel a, MessageViewModel b) => !a.IsSystemMessage && !b.IsSystemMessage && a.SenderId == b.SenderId && !a.IsDeleted && !b.IsDeleted
-        && a.CreatedAt.Date == b.CreatedAt.Date && Math.Abs(b.CreatedAt.Ticks - a.CreatedAt.Ticks) <= GroupingThresholdTicks;
+    public static bool CanGroup(MessageViewModel a, MessageViewModel b) =>
+        !a.IsSystemMessage && !b.IsSystemMessage && a.SenderId == b.SenderId && !a.IsDeleted && !b.IsDeleted &&
+        a.CreatedAt.Date == b.CreatedAt.Date && Math.Abs(b.CreatedAt.Ticks - a.CreatedAt.Ticks) <= GroupingThresholdTicks;
 
-    public static void RecalculateGrouping(IList<MessageViewModel> msgs) =>
-        ApplyGrouping(msgs, 0, msgs.Count - 1);
-
-    public static void UpdateGroupingAround(IList<MessageViewModel> msgs, int idx) =>
-        ApplyGrouping(msgs, Math.Max(0, idx - 1), Math.Min(msgs.Count - 1, idx + 1));
+    public static void RecalculateGrouping(IList<MessageViewModel> msgs) => ApplyGrouping(msgs, 0, msgs.Count - 1);
+    public static void UpdateGroupingAround(IList<MessageViewModel> msgs, int idx) => ApplyGrouping(msgs, Math.Max(0, idx - 1), Math.Min(msgs.Count - 1, idx + 1));
 
     private static void ApplyGrouping(IList<MessageViewModel> msgs, int start, int end)
     {
         for (var i = start; i <= end; i++)
         {
-            var cur = msgs[i];
-            cur.IsContinuation = i > 0 && CanGroup(msgs[i - 1], cur);
-            cur.HasNextFromSame = i < msgs.Count - 1 && CanGroup(cur, msgs[i + 1]);
+            msgs[i].IsContinuation = i > 0 && CanGroup(msgs[i - 1], msgs[i]);
+            msgs[i].HasNextFromSame = i < msgs.Count - 1 && CanGroup(msgs[i], msgs[i + 1]);
         }
     }
-
-    #endregion
-
-    #region PropertyChanged Partial Methods
-
-    partial void OnContentChanged(string? value)
-    {
-        RecacheContentGroup();
-        Notify(ContentProps);
-    }
+    partial void OnContentChanged(string? value) { if (_suppressNotifications) return; RecacheContentGroup(); Notify(ContentProps); }
 
     partial void OnPollChanged(PollViewModel? oldValue, PollViewModel? newValue)
     {
-        if (oldValue != null && !ReferenceEquals(oldValue, newValue))
-            oldValue.Dispose();
-
+        if (oldValue != null && !ReferenceEquals(oldValue, newValue)) oldValue.Dispose();
         BindPollViewModel(newValue);
-        RecachePollGroup();
-        RecacheContentGroup();
-        RecacheEditGroup();
-        Notify(PollDerivedProps);
+        if (_suppressNotifications) return;
+        RecachePollGroup(); RecacheContentGroup(); RecacheEditGroup(); Notify(PollDerivedProps);
     }
 
-    partial void OnIsEditedChanged(bool value)
-    {
-        RecacheEditGroup();
-        Notify(EditedProps);
-    }
-
-    partial void OnEditedAtChanged(DateTime? value)
-    {
-        EditedLabelFull = IsEdited && value.HasValue ? $"изменено {value.Value:HH:mm}" : null;
-        Notify(EditedProps);
-    }
+    partial void OnIsEditedChanged(bool value) { if (!_suppressNotifications) { RecacheEditGroup(); Notify(EditedProps); } }
+    partial void OnEditedAtChanged(DateTime? value) { if (!_suppressNotifications) { EditedLabelFull = IsEdited && value.HasValue ? $"изменено {value.Value:HH:mm}" : null; Notify(EditedProps); } }
 
     partial void OnIsDeletedChanged(bool value)
     {
-        RecacheContentGroup();
-        RecacheEditGroup();
-        RecacheDeliveryGroup();
-        RecachePinGroup();
-
-        Notify(ContentProps);
-        Notify(PinProps);
-        OnPropertyChanged(nameof(ShowDeliveryStatus));
-        OnPropertyChanged(nameof(CanEdit));
-        OnPropertyChanged(nameof(CanDelete));
-        OnPropertyChanged(nameof(CanPin));
+        if (_suppressNotifications) return;
+        RecacheContentGroup(); RecacheEditGroup(); RecacheDeliveryGroup(); RecachePinGroup();
+        Notify(ContentProps); Notify(PinProps);
+        OnPropertyChanged(nameof(ShowDeliveryStatus)); OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanDelete)); OnPropertyChanged(nameof(CanPin));
     }
 
-    partial void OnIsReadChanged(bool value) => OnPropertyChanged(nameof(ShowDeliveryStatus));
-
-    partial void OnIsContinuationChanged(bool value)
-    {
-        RecacheSenderGroup();
-        OnPropertyChanged(nameof(ShowSenderName));
-        UpdateGroupPosition();
-    }
-
-    partial void OnHasNextFromSameChanged(bool value) => UpdateGroupPosition();
-
-    partial void OnIsVoiceMessageChanged(bool value)
-    {
-        RecacheVoiceGroup();
-        RecacheContentGroup();
-        RecacheEditGroup();
-        RecacheVoiceButtons();
-
-        Notify([nameof(ShowVoiceMessage), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowNonVoiceFiles), nameof(CanEdit), nameof(ShowPlayButton)]);
-    }
+    partial void OnIsReadChanged(bool value) { if (!_suppressNotifications) OnPropertyChanged(nameof(ShowDeliveryStatus)); }
+    partial void OnIsContinuationChanged(bool value) { if (!_suppressNotifications) { RecacheSenderGroup(); OnPropertyChanged(nameof(ShowSenderName)); UpdateGroupPosition(); } }
+    partial void OnHasNextFromSameChanged(bool value) { if (!_suppressNotifications) UpdateGroupPosition(); }
 
     partial void OnVoiceDurationSecondsChanged(double? value)
     {
         VoiceDurationFormatted = value.HasValue ? FormatTime(TimeSpan.FromSeconds(value.Value)) : "0:00";
-        OnPropertyChanged(nameof(VoiceDurationFormatted));
+        if (!_suppressNotifications) OnPropertyChanged(nameof(VoiceDurationFormatted));
     }
 
     partial void OnIsVoicePlayingChanged(bool value) => RecacheVoiceButtons();
     partial void OnIsVoicePausedChanged(bool value) => RecacheVoiceButtons();
     partial void OnIsVoiceLoadingChanged(bool value) => RecacheVoiceButtons();
 
-    partial void OnForwardedFromMessageIdChanged(int? value)
-    {
-        RecacheReplyForwardGroup();
-        RecacheEditGroup();
-        Notify(ForwardDerivedProps);
-    }
-
-    partial void OnForwardedFromSenderNameChanged(string? value)
-    {
-        ForwardedFromHeader = HasForward ? $"Переслано от {value ?? "неизвестного пользователя"}" : string.Empty;
-        OnPropertyChanged(nameof(ForwardedFromHeader));
-    }
-    partial void OnForwardedFromSenderIdChanged(int? value)
-    {
-        CanOpenForwardSenderProfile = HasForward && value > 0;
-        OnPropertyChanged(nameof(CanOpenForwardSenderProfile));
-    }
-
-    partial void OnIsPinnedChanged(bool value)
-    {
-        RecachePinGroup();
-        Notify(PinProps);
-    }
-
-    partial void OnGroupPositionChanged(MessageGroupPosition value)
-    {
-        UpdateBubbleClasses();
-        OnPropertyChanged(nameof(BubbleClasses));
-    }
-
-    #endregion
-
-    #region Helpers
-
-    private void Notify(string[] names)
-    {
-        foreach (var n in names) OnPropertyChanged(n);
-    }
-
+    partial void OnForwardedFromMessageIdChanged(int? value) { if (_suppressNotifications) return; RecacheReplyForwardGroup(); RecacheEditGroup(); Notify(ForwardDerivedProps); }
+    partial void OnForwardedFromSenderNameChanged(string? value) { ForwardedFromHeader = HasForward ? $"Переслано от {value ?? "неизвестного пользователя"}" : ""; if (!_suppressNotifications) OnPropertyChanged(nameof(ForwardedFromHeader)); }
+    partial void OnForwardedFromSenderIdChanged(int? value) { CanOpenForwardSenderProfile = HasForward && value > 0; if (!_suppressNotifications) OnPropertyChanged(nameof(CanOpenForwardSenderProfile)); }
+    partial void OnIsPinnedChanged(bool value) { if (_suppressNotifications) return; RecachePinGroup(); Notify(PinProps); }
+    partial void OnGroupPositionChanged(MessageGroupPosition value) { UpdateBubbleClasses(); if (!_suppressNotifications) OnPropertyChanged(nameof(BubbleClasses)); }
+    private void Notify(string[] names) { if (_suppressNotifications) return; foreach (var n in names) OnPropertyChanged(n); }
     private static string FormatTime(TimeSpan t) => t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"m\:ss");
 
     private static string BuildMediaUrl(string url)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri))
-            return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var absolute)) return $"{App.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+        if (!Uri.TryCreate(App.ApiUrl, UriKind.Absolute, out var api)) return absolute.ToString();
 
-        if (!Uri.TryCreate(App.ApiUrl, UriKind.Absolute, out var apiUri))
-            return absoluteUri.ToString();
-
-        var sameHost = string.Equals(absoluteUri.Host, apiUri.Host, StringComparison.OrdinalIgnoreCase) && absoluteUri.Port == apiUri.Port;
-
-        if (sameHost) return absoluteUri.ToString();
-
-        if (!absoluteUri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
-            return absoluteUri.ToString();
-
-        return new Uri(apiUri, absoluteUri.PathAndQuery).ToString();
+        bool sameHost = string.Equals(absolute.Host, api.Host, StringComparison.OrdinalIgnoreCase) && absolute.Port == api.Port;
+        return sameHost || !absolute.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ? absolute.ToString() : new Uri(api, absolute.PathAndQuery).ToString();
     }
-
-    #endregion
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
 
-        Poll?.Dispose();
+        _postCts?.Cancel();
+
+        if (_audioPlayer?.CurrentMessageId == Id)
+        {
+            _audioPlayer.Stop();
+        }
+        UnsubscribeFromAudioPlayer();
+
         BindPollViewModel(null);
+        Poll?.Dispose();
+        Poll = null;
+
+        if (FileViewModels is { Count: > 0 })
+        {
+            foreach (var fileVm in FileViewModels)
+            {
+                fileVm?.Dispose();
+            }
+            FileViewModels.Clear();
+        }
+
+        _cachedAudioBytes = null;
         Commands = null;
 
-        if (_audioPlayer?.CurrentMessageId == Id) _audioPlayer.Stop();
-        UnsubscribeFromAudioPlayer();
-        _cachedAudioBytes = null;
+        _postCts?.Dispose();
+        _postCts = null;
 
         MemoryDiagnostics.OnMessageVmDisposed();
-        GC.SuppressFinalize(this);
     }
 }

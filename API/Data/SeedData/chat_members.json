@@ -1,0 +1,902 @@
+﻿[
+  {
+    "ChatId": 2,
+    "UserId": 7,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Admin",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 892,
+    "LastReadAt": "2026-04-25T13:43:15.348125"
+  },
+  {
+    "ChatId": 2,
+    "UserId": 11,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 2,
+    "UserId": 12,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 2,
+    "UserId": 13,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 3,
+    "UserId": 7,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Admin",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 229,
+    "LastReadAt": "2026-03-11T08:27:03.404657"
+  },
+  {
+    "ChatId": 3,
+    "UserId": 14,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 3,
+    "UserId": 15,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 3,
+    "UserId": 16,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 5,
+    "UserId": 1,
+    "JoinedAt": "2025-10-07T07:34:08.840638",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1248,
+    "LastReadAt": "2026-05-12T08:14:35.266339"
+  },
+  {
+    "ChatId": 5,
+    "UserId": 8,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Admin",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 5,
+    "UserId": 23,
+    "JoinedAt": "2026-03-06T18:58:57.550575",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 6,
+    "UserId": 1,
+    "JoinedAt": "2025-10-07T07:34:15.927598",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1356,
+    "LastReadAt": "2026-05-18T16:58:39.217078"
+  },
+  {
+    "ChatId": 6,
+    "UserId": 7,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1338,
+    "LastReadAt": "2026-05-14T11:31:28.878038"
+  },
+  {
+    "ChatId": 6,
+    "UserId": 8,
+    "JoinedAt": "2026-03-27T13:34:17.186131",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 6,
+    "UserId": 9,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 6,
+    "UserId": 10,
+    "JoinedAt": "2026-05-08T15:53:16.61676",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 6,
+    "UserId": 11,
+    "JoinedAt": "2026-03-02T11:33:40.313627",
+    "Role": "Admin",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 8,
+    "UserId": 7,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 957,
+    "LastReadAt": "2026-05-12T06:02:04.396226"
+  },
+  {
+    "ChatId": 8,
+    "UserId": 10,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 9,
+    "UserId": 7,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 238,
+    "LastReadAt": "2026-03-11T08:27:06.189926"
+  },
+  {
+    "ChatId": 9,
+    "UserId": 12,
+    "JoinedAt": "2025-11-01T10:55:29.999365",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 16,
+    "UserId": 1,
+    "JoinedAt": "2026-05-04T21:47:04.455498",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1360,
+    "LastReadAt": "2026-05-18T16:58:01.679826"
+  },
+  {
+    "ChatId": 16,
+    "UserId": 9,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 16,
+    "UserId": 10,
+    "JoinedAt": "2026-03-06T09:39:13.436532",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 16,
+    "UserId": 12,
+    "JoinedAt": "2026-05-12T00:34:33.584926",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 16,
+    "UserId": 13,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 16,
+    "UserId": 19,
+    "JoinedAt": "2025-12-24T14:11:27.770685",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 17,
+    "UserId": 8,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 17,
+    "UserId": 20,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 17,
+    "UserId": 24,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 18,
+    "UserId": 11,
+    "JoinedAt": "2026-03-19T12:12:56.455619",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 18,
+    "UserId": 21,
+    "JoinedAt": "2026-05-11T10:09:57.221637",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 19,
+    "UserId": 14,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 19,
+    "UserId": 16,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 19,
+    "UserId": 25,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 20,
+    "UserId": 15,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 20,
+    "UserId": 23,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 21,
+    "UserId": 17,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 21,
+    "UserId": 18,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 21,
+    "UserId": 22,
+    "JoinedAt": "2025-11-01T11:01:45.657834",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 28,
+    "UserId": 7,
+    "JoinedAt": "2026-05-12T05:13:50.009173",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1337,
+    "LastReadAt": "2026-05-14T11:30:12.786068"
+  },
+  {
+    "ChatId": 65,
+    "UserId": 1,
+    "JoinedAt": "2025-12-19T11:27:13.689465",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": 478,
+    "LastReadAt": "2026-03-04T10:36:20.664041"
+  },
+  {
+    "ChatId": 65,
+    "UserId": 19,
+    "JoinedAt": "2025-12-19T11:27:13.655864",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 377,
+    "LastReadAt": "2026-02-11T20:43:28.251081"
+  },
+  {
+    "ChatId": 66,
+    "UserId": 1,
+    "JoinedAt": "2025-12-19T12:51:47.161904",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1340,
+    "LastReadAt": "2026-05-14T12:29:05.821499"
+  },
+  {
+    "ChatId": 66,
+    "UserId": 14,
+    "JoinedAt": "2025-12-19T12:51:47.174242",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 480,
+    "LastReadAt": "2026-03-15T16:03:27.435234"
+  },
+  {
+    "ChatId": 67,
+    "UserId": 1,
+    "JoinedAt": "2025-12-20T06:50:46.844694",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 67,
+    "UserId": 18,
+    "JoinedAt": "2025-12-20T06:50:46.868413",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 68,
+    "UserId": 1,
+    "JoinedAt": "2025-12-21T22:35:05.803085",
+    "Role": "Owner",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 657,
+    "LastReadAt": "2026-04-28T08:52:43.144633"
+  },
+  {
+    "ChatId": 68,
+    "UserId": 7,
+    "JoinedAt": "2025-12-21T22:35:05.856404",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1265,
+    "LastReadAt": "2026-05-14T11:31:14.260274"
+  },
+  {
+    "ChatId": 69,
+    "UserId": 1,
+    "JoinedAt": "2025-12-24T10:04:53.422615",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 69,
+    "UserId": 8,
+    "JoinedAt": "2025-12-24T10:04:53.426369",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 70,
+    "UserId": 1,
+    "JoinedAt": "2025-12-24T10:04:57.789646",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 70,
+    "UserId": 10,
+    "JoinedAt": "2025-12-24T10:04:57.790198",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 71,
+    "UserId": 1,
+    "JoinedAt": "2025-12-24T10:57:58.671241",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 71,
+    "UserId": 9,
+    "JoinedAt": "2025-12-24T10:57:58.676155",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 74,
+    "UserId": 1,
+    "JoinedAt": "2026-05-04T21:46:28.682859",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1353,
+    "LastReadAt": "2026-05-18T10:05:40.520888"
+  },
+  {
+    "ChatId": 74,
+    "UserId": 7,
+    "JoinedAt": "2026-05-12T08:22:05.309373",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1308,
+    "LastReadAt": "2026-05-14T11:20:48.325741"
+  },
+  {
+    "ChatId": 74,
+    "UserId": 8,
+    "JoinedAt": "2026-03-26T16:16:34.858514",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 74,
+    "UserId": 12,
+    "JoinedAt": "2026-05-04T21:46:26.163598",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 74,
+    "UserId": 20,
+    "JoinedAt": "2026-04-14T13:36:07.841691",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 75,
+    "UserId": 1,
+    "JoinedAt": "2025-12-30T20:20:40.843035",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 75,
+    "UserId": 13,
+    "JoinedAt": "2025-12-30T20:20:40.870268",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 76,
+    "UserId": 9,
+    "JoinedAt": "2026-01-01T13:16:40.397849",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 76,
+    "UserId": 19,
+    "JoinedAt": "2026-01-01T13:16:40.389194",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 1,
+    "JoinedAt": "2026-02-20T16:43:53.420636",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": 1358,
+    "LastReadAt": "2026-05-23T08:19:07.274689"
+  },
+  {
+    "ChatId": 77,
+    "UserId": 3,
+    "JoinedAt": "2026-02-20T19:58:39.493142",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 7,
+    "JoinedAt": "2026-02-20T19:58:39.34526",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 1277,
+    "LastReadAt": "2026-05-12T11:05:30.839561"
+  },
+  {
+    "ChatId": 77,
+    "UserId": 8,
+    "JoinedAt": "2026-02-20T19:58:39.255685",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 9,
+    "JoinedAt": "2026-02-20T20:31:24.655695",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 10,
+    "JoinedAt": "2026-02-20T19:58:39.239248",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 11,
+    "JoinedAt": "2026-02-20T20:31:24.472209",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 12,
+    "JoinedAt": "2026-02-20T19:57:49.909905",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 13,
+    "JoinedAt": "2026-02-20T19:58:39.418587",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 14,
+    "JoinedAt": "2026-02-20T19:58:39.299448",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 15,
+    "JoinedAt": "2026-02-20T19:58:39.314294",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 16,
+    "JoinedAt": "2026-02-20T19:58:39.477859",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 17,
+    "JoinedAt": "2026-02-20T19:58:39.360041",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 18,
+    "JoinedAt": "2026-02-20T19:58:39.28487",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 19,
+    "JoinedAt": "2026-02-20T19:58:39.26971",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 20,
+    "JoinedAt": "2026-02-20T19:58:39.216602",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 21,
+    "JoinedAt": "2026-02-20T19:58:39.329523",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 796,
+    "LastReadAt": "2026-04-22T19:26:19.801008"
+  },
+  {
+    "ChatId": 77,
+    "UserId": 22,
+    "JoinedAt": "2026-02-20T19:58:39.374362",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 23,
+    "JoinedAt": "2026-02-20T19:57:57.082002",
+    "Role": "Admin",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 24,
+    "JoinedAt": "2026-02-20T19:58:39.46199",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 77,
+    "UserId": 25,
+    "JoinedAt": "2026-02-20T19:57:49.773448",
+    "Role": "Member",
+    "NotificationsEnabled": true,
+    "LastReadMessageId": 585,
+    "LastReadAt": "2026-04-08T11:35:02.216438"
+  },
+  {
+    "ChatId": 79,
+    "UserId": 1,
+    "JoinedAt": "2026-03-02T13:58:10.987797",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 79,
+    "UserId": 12,
+    "JoinedAt": "2026-03-02T13:58:11.019844",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 80,
+    "UserId": 1,
+    "JoinedAt": "2026-03-25T22:32:40.50209",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 80,
+    "UserId": 11,
+    "JoinedAt": "2026-03-25T22:32:40.51614",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 81,
+    "UserId": 1,
+    "JoinedAt": "2026-04-08T11:34:53.217569",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": 586,
+    "LastReadAt": "2026-04-30T09:08:14.107781"
+  },
+  {
+    "ChatId": 81,
+    "UserId": 25,
+    "JoinedAt": "2026-04-08T11:34:53.215103",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 82,
+    "UserId": 1,
+    "JoinedAt": "2026-04-18T16:59:59.209404",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": 662,
+    "LastReadAt": "2026-04-18T17:00:30.384722"
+  },
+  {
+    "ChatId": 82,
+    "UserId": 21,
+    "JoinedAt": "2026-04-18T16:59:59.161184",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 83,
+    "UserId": 7,
+    "JoinedAt": "2026-04-25T10:42:28.899441",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 83,
+    "UserId": 10,
+    "JoinedAt": "2026-04-25T10:42:28.90846",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 84,
+    "UserId": 1,
+    "JoinedAt": "2026-05-11T21:55:26.248129",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 84,
+    "UserId": 23,
+    "JoinedAt": "2026-05-11T21:55:26.29469",
+    "Role": "Member",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 86,
+    "UserId": 7,
+    "JoinedAt": "2026-05-12T06:07:45.530073",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 88,
+    "UserId": 7,
+    "JoinedAt": "2026-05-12T06:18:13.553416",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": null,
+    "LastReadAt": null
+  },
+  {
+    "ChatId": 90,
+    "UserId": 7,
+    "JoinedAt": "2026-05-12T06:31:50.983459",
+    "Role": "Owner",
+    "NotificationsEnabled": false,
+    "LastReadMessageId": 1230,
+    "LastReadAt": "2026-05-14T11:20:32.555276"
+  }
+]

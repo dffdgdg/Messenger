@@ -264,10 +264,12 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
 
         var messages = await messageRepository.GetBeforeAsync(chatId, messageId, count, cutoff);
         var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
+        var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
         var hasOlder = await messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
+        var hasNewer = await messageRepository.HasNewerAsync(chatId, newestId, cutoff);
 
         return Result<PagedMessagesDto>.Success(
-            BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, _urlBuilder))],hasOlder,hasNewer: true));
+            BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, _urlBuilder))], hasOlder, hasNewer));
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAfterAsync(int chatId, int messageId, int userId, int count)
@@ -278,10 +280,12 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
         var messages = await messageRepository.GetAfterAsync(chatId, messageId, count, cutoff);
+        var oldestId = messages.Count > 0 ? messages.Min(m => m.Id) : messageId;
         var newestId = messages.Count > 0 ? messages.Max(m => m.Id) : messageId;
+        var hasOlder = await messageRepository.HasOlderAsync(chatId, oldestId, cutoff);
         var hasNewer = await messageRepository.HasNewerAsync(chatId, newestId, cutoff);
 
-        return Result<PagedMessagesDto>.Success (BuildPagedResult([.. messages.Select(m => m.ToDto(userId, _urlBuilder))], true, hasNewer));
+        return Result<PagedMessagesDto>.Success(BuildPagedResult([.. messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, _urlBuilder))], hasOlder, hasNewer));
     }
 
     public async Task<Result<ChatCountsDto>> GetChatCountsAsync(int chatId, int userId)

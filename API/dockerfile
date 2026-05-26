@@ -1,21 +1,42 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y libkrb5-3
+
 EXPOSE 5274
 EXPOSE 5275/udp
 
 RUN mkdir -p /app/wwwroot/uploads /app/wwwroot/avatars
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
 WORKDIR /src
 
 COPY ["API/API.csproj", "API/"]
 COPY ["Shared/Shared.csproj", "Shared/"]
+
 RUN dotnet restore "API/API.csproj"
 
 COPY . .
-RUN dotnet publish "API/API.csproj" -c Release -o /app/publish --no-restore
+
+RUN mkdir -p /src/API/Data/SeedData
+
+COPY API/Data/SeedData/*.json /src/API/Data/SeedData/
+
+RUN dotnet publish "API/API.csproj" \
+    -c Release \
+    -o /app/publish \
+    --no-restore
 
 FROM base AS final
+
 WORKDIR /app
+
 COPY --from=build /app/publish .
+
+RUN mkdir -p /app/Data/SeedData
+
+COPY --from=build /src/API/Data/SeedData/*.json /app/Data/SeedData/
+
 ENTRYPOINT ["dotnet", "API.dll"]

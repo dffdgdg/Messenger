@@ -65,7 +65,9 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
 
     public async Task<List<CachedMessage>> GetLatestAsync(int chatId, int count)
     {
-        var messages = await Db.QueryAsync<CachedMessage>("SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?", chatId, count);
+        var messages = await Db.QueryAsync<CachedMessage>(
+            "SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+            chatId, count);
         messages.Reverse();
         return messages;
     }
@@ -134,30 +136,57 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     }
     public async Task TrimOldMessagesAsync(int keepPerChat = 200)
     {
-        var chatIds = await Db.QueryAsync<ChatIdRow>("SELECT DISTINCT chat_id FROM messages");
+        var chatIds = await Db.QueryAsync<ChatIdRow>(
+            "SELECT DISTINCT chat_id FROM messages");
 
         if (chatIds.Count == 0) return;
 
+        // Собираем данные вне транзакции (транзакция только для записи)
+        var trimResults = new List<(int ChatId, int CutoffId)>();
+
+        foreach (var row in chatIds)
+        {
+            var cutoffId = await Db.ExecuteScalarAsync<int?>(
+                @"SELECT MIN(id) FROM (
+                SELECT id FROM messages 
+                WHERE chat_id = ? 
+                ORDER BY id DESC 
+                LIMIT ?
+            )", row.ChatId, keepPerChat);
+
+            if (cutoffId.HasValue)
+                trimResults.Add((row.ChatId, cutoffId.Value));
+        }
+
+        if (trimResults.Count == 0) return;
+
         await Db.RunInTransactionAsync(conn =>
         {
-            foreach (var row in chatIds)
+            foreach (var (chatId, cutoffId) in trimResults)
             {
-                var cutoffId = conn.ExecuteScalar<int?>(
-                    @"SELECT MIN(id) FROM (
-                    SELECT id FROM messages 
-                    WHERE chat_id = ? 
-                    ORDER BY id DESC 
-                    LIMIT ?
-                )", row.ChatId, keepPerChat);
+                var deleted = conn.Execute(
+                    "DELETE FROM messages WHERE chat_id = ? AND id < ?",
+                    chatId, cutoffId);
 
-                if (cutoffId.HasValue)
+                if (deleted > 0)
                 {
-                    conn.Execute("DELETE FROM messages WHERE chat_id = ? AND id < ?", row.ChatId, cutoffId.Value);
+                    conn.Execute(
+                        @"INSERT INTO chat_sync_state 
+                        (chat_id, oldest_loaded_id, has_more_older, has_more_newer, last_sync_at)
+                      VALUES (?, ?, 1, 0, ?)
+                      ON CONFLICT(chat_id) DO UPDATE SET
+                        oldest_loaded_id = excluded.oldest_loaded_id,
+                        has_more_older = 1",
+                        chatId, cutoffId, DateTime.UtcNow.Ticks);
+
+                    Debug.WriteLine(
+                        $"[MsgCache] Trimmed chat {chatId}: deleted {deleted} msgs, " +
+                        $"oldest kept = {cutoffId}, set has_more_older = true");
                 }
             }
         });
 
-        Debug.WriteLine($"[MsgCache] Trimmed old messages, keeping {keepPerChat} per chat");
+        Debug.WriteLine($"[MsgCache] Trim complete, keeping {keepPerChat} per chat");
     }
 
     public async Task DeleteForChatAsync(int chatId)

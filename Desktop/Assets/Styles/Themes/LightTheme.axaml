@@ -5,6 +5,8 @@
     <Color x:Key="BaseBg">#F4F6FB</Color>
     <SolidColorBrush x:Key="PinnedBannerBg" Color="#F0F5FF"/>
 
+    <BoxShadows x:Key="DropdownShadow">0 4 16 0 #1A000000</BoxShadows>
+
     <SolidColorBrush x:Key="ChatHeaderBg" Color="#F8FAFD"/>
     <Color x:Key="ChatMessagesBgTop">#F7F9FD</Color>
     <Color x:Key="ChatMessagesBgBottom">#EEF3FA</Color>

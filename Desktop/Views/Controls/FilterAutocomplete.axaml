@@ -1,88 +1,50 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Desktop.Views.Controls"
+             xmlns:shared="using:Desktop.Views.Controls.Shared"
              x:Class="Desktop.Views.Controls.FilterAutocomplete"
              x:Name="Root"
              x:DataType="controls:FilterAutocomplete">
-    <Panel>
-        <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0"
-                     Classes="Input"
-                     Text="{Binding #Root.SearchText, Mode=TwoWay}"
-                     PlaceholderText="{Binding #Root.Placeholder}"
-                     GotFocus="OnInputFocused"
-                     LostFocus="OnInputLostFocus">
-                <TextBox.InnerLeftContent>
-                    <Panel>
-                        <controls:AvatarControl Classes="Small"
-                                                Source="{Binding #Root.SelectedItem.Avatar}"
-                                                DisplayName="{Binding #Root.SelectedItem.DisplayName}"
-                                                ShowOnlineIndicator="False"
-                                                Margin="8,0,4,0"
-                                                IsVisible="{Binding #Root.SelectedItem, 
-                                                            Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                        <PathIcon Data="{Binding #Root.Icon}"
-                                  Classes="InputIcon"
-                                  Margin="12,0,8,0"
-                                  IsVisible="{Binding #Root.SelectedItem, 
-                                              Converter={x:Static ObjectConverters.IsNull}}"/>
-                    </Panel>
-                </TextBox.InnerLeftContent>
-            </TextBox>
+    
+    <TextBox x:Name="InputTextBox"
+             Classes="Input"
+             Text="{Binding #Root.SearchText, Mode=TwoWay}"
+             PlaceholderText="{Binding #Root.Placeholder}"
+             GotFocus="OnInputFocused"
+             LostFocus="OnInputLostFocus">
+        
+        <TextBox.InnerLeftContent>
+            <Panel>
+                <controls:AvatarControl Classes="Small"
+                                        Source="{Binding #Root.SelectedItem.Avatar, FallbackValue={x:Null}}"
+                                        DisplayName="{Binding #Root.SelectedItem.DisplayName, FallbackValue=''}"
+                                        ShowOnlineIndicator="False"
+                                        Margin="8,0,4,0"
+                                        IsVisible="{Binding #Root.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <PathIcon Data="{Binding #Root.Icon}"
+                          Classes="InputIcon"
+                          Margin="12,0,8,0"
+                          IsVisible="{Binding #Root.SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
+                <shared:CircularProgress IsIndeterminate="True"
+                                         Size="16"
+                                         StrokeWidth="2"
+                                         Margin="12,0,8,0"
+                                         IsVisible="{Binding #Root.IsLoading}"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Center"/>
+            </Panel>
+        </TextBox.InnerLeftContent>
 
-            <Button Grid.Column="1"
-                    Classes="IconButton Small"
-                    Margin="4,0,0,0"
+        <TextBox.InnerRightContent>
+            <Button Classes="IconButton Small"
+                    Margin="0,0,8,0"
                     Command="{Binding #Root.ClearCommand}"
-                    IsVisible="{Binding #Root.SelectedItem, 
-                                Converter={x:Static ObjectConverters.IsNotNull}}"
+                    IsVisible="{Binding #Root.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"
                     ToolTip.Tip="Очистить">
                 <PathIcon Data="{StaticResource CloseIcon}"
                           Width="10" Height="10"
                           Foreground="{DynamicResource TextMuted}"/>
             </Button>
-        </Grid>
-
-        <Popup IsOpen="{Binding #Root.IsDropdownOpen}"
-               PlacementTarget="{Binding #Root}"
-               Placement="Bottom"
-               HorizontalOffset="0"
-               Width="{Binding #Root.Bounds.Width}"
-               MaxHeight="200">
-            <Border Background="{DynamicResource SecondaryBG}"
-                    BorderBrush="{DynamicResource BorderDefault}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    BoxShadow="{DynamicResource DialogShadow}"
-                    Padding="4">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding #Root.Suggestions}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="MemberItem"
-                                        Padding="8,6"
-                                        Command="{Binding #Root.SelectItemCommand}"
-                                        CommandParameter="{Binding}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <controls:AvatarControl Grid.Column="0"
-                                                                Size="28"
-                                                                Source="{Binding Avatar}"
-                                                                DisplayName="{Binding DisplayName}"
-                                                                ShowOnlineIndicator="False"
-                                                                Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding DisplayName}"
-                                                   FontSize="13"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Grid>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Border>
-        </Popup>
-    </Panel>
+        </TextBox.InnerRightContent>
+    </TextBox>
 </UserControl>

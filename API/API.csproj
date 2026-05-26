@@ -6,9 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>27e926d2-2584-4b47-81f9-9358da32f217</UserSecretsId>
 	</PropertyGroup>
-	<ItemGroup>
-		<Compile Include="dockerfile" />
-	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
@@ -27,13 +25,16 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
 	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>
+
 	<ItemGroup>
 		<InternalsVisibleTo Include="API.Tests" />
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
 		<None Include="Dockerfile" />
 	</ItemGroup>
+
 </Project>

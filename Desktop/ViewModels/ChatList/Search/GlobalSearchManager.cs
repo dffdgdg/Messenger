@@ -10,16 +10,25 @@ public enum SearchAuthorFilter { Any = 0, Me = 1, Others = 2 }
 
 public sealed record SearchFilterItem(int Id, string DisplayName, string? Avatar);
 
-public sealed partial class GlobalSearchManager(int userId, bool startWithChatsScope, IApiClientService apiClient, Func<Task<List<SearchFilterItem>>>? getUsersFunc = null,
-    Func<Task<List<SearchFilterItem>>>? getChatsFunc = null, int debounceMs = AppConstants.DefaultDebounceMs) : ObservableObject, IDisposable
+public sealed partial class GlobalSearchManager(int userId, bool startWithChatsScope, IApiClientService apiClient,
+    Func<Task<List<SearchFilterItem>>>? getUsersFunc = null,
+    Func<Task<List<SearchFilterItem>>>? getChatsFunc = null,
+    int debounceMs = AppConstants.DefaultDebounceMs) : ObservableObject, IDisposable
 {
     private List<SearchFilterItem>? _cachedUsers;
     private List<SearchFilterItem>? _cachedChats;
-    private CancellationTokenSource? _searchCts;
     private List<SearchFilterItem>? _cachedChatMembers;
+    private List<SearchFilterItem>? _cachedChatsForSender;
 
+    private Task? _loadChatMembersTask;
+    private Task? _loadChatsForSenderTask;
+
+    private CancellationTokenSource? _searchCts;
     private bool _disposed;
-    public bool IsChatFilterVisible => SelectedScope != SearchScopeMode.Contacts && SelectedScope != SearchScopeMode.CurrentChatMessages;
+
+    public bool IsChatFilterVisible =>
+        SelectedScope != SearchScopeMode.Contacts &&
+        SelectedScope != SearchScopeMode.CurrentChatMessages;
 
     [ObservableProperty] public partial ObservableCollection<SearchFilterItem> SenderSuggestions { get; set; } = [];
     [ObservableProperty] public partial SearchFilterItem? SelectedSender { get; set; }
@@ -38,7 +47,10 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     [ObservableProperty] public partial bool HasMoreMessages { get; set; }
     [ObservableProperty] public partial string? ErrorMessage { get; set; }
 
-    [ObservableProperty] public partial SearchScopeMode SelectedScope { get; set; } = startWithChatsScope ? SearchScopeMode.Chats : SearchScopeMode.All;
+    [ObservableProperty]
+    public partial SearchScopeMode SelectedScope { get; set; } =
+        startWithChatsScope ? SearchScopeMode.Chats : SearchScopeMode.All;
+
     [ObservableProperty] public partial int? ChatLocalSearchChatId { get; set; }
     [ObservableProperty] public partial ChatType? ChatLocalSearchChatType { get; set; }
     [ObservableProperty] public partial string? ChatLocalSearchChatName { get; set; }
@@ -65,8 +77,14 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     public bool IsEmpty => !IsSearching && !string.IsNullOrWhiteSpace(SearchQuery) && !HasResults;
     public bool IsSortNewest => SortOrder == SearchSortOrder.Newest;
 
-    public bool HasActiveFilters => SelectedSender != null || SelectedChatFilter != null || !string.IsNullOrWhiteSpace(MentionFilter) || ContentFilter != SearchContentFilter.Any ||
-        AuthorFilter != SearchAuthorFilter.Any || DateFromFilter.HasValue || DateToFilter.HasValue;
+    public bool HasActiveFilters =>
+        SelectedSender != null ||
+        SelectedChatFilter != null ||
+        !string.IsNullOrWhiteSpace(MentionFilter) ||
+        ContentFilter != SearchContentFilter.Any ||
+        AuthorFilter != SearchAuthorFilter.Any ||
+        DateFromFilter.HasValue ||
+        DateToFilter.HasValue;
 
     private bool? ServerHasFiles => ContentFilter == SearchContentFilter.WithFiles ? true : null;
     private bool? ServerHasVoice => ContentFilter == SearchContentFilter.WithVoice ? true : null;
@@ -74,9 +92,8 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     private bool? ServerOnlyText => ContentFilter == SearchContentFilter.OnlyText ? true : null;
     private bool ServerOldestFirst => SortOrder == SearchSortOrder.Oldest;
 
-    // senderId: Me → свой userId, выбранный отправитель → его Id, иначе null
-    // AuthorFilter.Others не выразить через senderId — фильтруем на клиенте
-    private int? ServerSenderId => AuthorFilter == SearchAuthorFilter.Me ? userId : SelectedSender?.Id;
+    private int? ServerSenderId =>
+        AuthorFilter == SearchAuthorFilter.Me ? userId : SelectedSender?.Id;
 
     #region Property change handlers
 
@@ -99,6 +116,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
             SelectedChatFilter = null;
             ChatSearchText = string.Empty;
             _cachedChatMembers = null;
+            _loadChatMembersTask = null;
         }
 
         if (!string.IsNullOrWhiteSpace(SearchQuery) || HasActiveFilters)
@@ -153,6 +171,21 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
     {
         OnPropertyChanged(nameof(HasActiveFilters));
         IsSenderDropdownOpen = false;
+
+        if (value == null)
+        {
+            _cachedChatsForSender = null;
+            _loadChatsForSenderTask = null;
+        }
+        else
+        {
+            _cachedChatsForSender = null;
+            _loadChatsForSenderTask = LoadChatsForSenderAsync(value.Id);
+        }
+
+        // Предзагружаем подсказки чатов, но НЕ открываем дропдаун
+        _ = UpdateChatSuggestionsAsync(ChatSearchText);
+
         if (!string.IsNullOrWhiteSpace(SearchQuery) || HasActiveFilters)
             RestartSearch();
     }
@@ -162,55 +195,22 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         OnPropertyChanged(nameof(HasActiveFilters));
         IsChatDropdownOpen = false;
 
-        _cachedChatMembers = null;
-
-        if (value != null && SelectedSender != null)
+        if (value == null)
         {
-            SelectedSender = null;
-            SenderSearchText = string.Empty;
+            _cachedChatMembers = null;
+            _loadChatMembersTask = null;
+        }
+        else
+        {
+            _cachedChatMembers = null;
+            _loadChatMembersTask = LoadChatMembersAsync(value.Id);
         }
 
-        if (value != null)
-            _ = LoadChatMembersAsync(value.Id);
+        // Предзагружаем подсказки пользователей, но НЕ открываем дропдаун
+        _ = UpdateSenderSuggestionsAsync(SenderSearchText);
 
         if (!string.IsNullOrWhiteSpace(SearchQuery) || HasActiveFilters)
             RestartSearch();
-    }
-
-    private async Task LoadChatMembersAsync(int chatId)
-    {
-        try
-        {
-            var membersTask = apiClient.GetAsync<List<ChatMemberDto>>(ApiEndpoints.Chats.MembersDetailed(chatId));
-            var sendersTask = apiClient.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
-                ApiEndpoints.Messages.ChatSearch(chatId),
-                new SearchMessagesQueryDto { Query = string.Empty, Page = 1, PageSize = 100 });
-
-            await Task.WhenAll(membersTask, sendersTask);
-
-            var membersResult = await membersTask;
-            var sendersResult = await sendersTask;
-
-            if (!membersResult.Success || membersResult.Data == null || !sendersResult.Success || sendersResult.Data == null)
-            {
-                _cachedChatMembers = [];
-                return;
-            }
-            var senderIds = sendersResult.Data.Messages
-                .Where(m => m.SenderId.HasValue)
-                .Select(m => m.SenderId!.Value)
-                .Distinct()
-                .ToHashSet();
-
-            _cachedChatMembers = [.. membersResult.Data
-                .Where(m => senderIds.Contains(m.UserId))
-                .Select(m => new SearchFilterItem(m.UserId, m.DisplayName ?? m.Username ?? string.Empty, m.Avatar))
-                .OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase)];
-        }
-        catch
-        {
-            _cachedChatMembers = [];
-        }
     }
 
     partial void OnSenderSearchTextChanged(string value)
@@ -224,6 +224,165 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         OnPropertyChanged(nameof(HasActiveFilters));
         _ = UpdateChatSuggestionsAsync(value);
     }
+
+    #endregion
+
+    #region Autocomplete data loading
+
+    private async Task LoadChatMembersAsync(int chatId)
+    {
+        try
+        {
+            var membersResult = await apiClient.GetAsync<List<ChatMemberDto>>(
+                ApiEndpoints.Chats.MembersDetailed(chatId));
+
+            if (!membersResult.Success || membersResult.Data == null || membersResult.Data.Count == 0)
+            {
+                _cachedChatMembers = [];
+                return;
+            }
+
+            var memberIds = membersResult.Data.Select(m => m.UserId).ToHashSet();
+
+            if (_cachedUsers == null && getUsersFunc != null)
+            {
+                _cachedUsers = await getUsersFunc();
+            }
+
+            _cachedChatMembers = [.. (_cachedUsers ?? [])
+                .Where(u => memberIds.Contains(u.Id))
+                .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)];
+
+            System.Diagnostics.Debug.WriteLine($"[GlobalSearchManager] LoadChatMembersAsync: {_cachedChatMembers.Count} members from user cache");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalSearchManager] LoadChatMembersAsync error: {ex.Message}");
+            _cachedChatMembers = [];
+        }
+    }
+
+    private async Task UpdateSenderSuggestionsAsync(string query)
+    {
+        SenderSuggestionsLoadingChanged?.Invoke(true);
+        try
+        {
+            List<SearchFilterItem> source;
+
+            if (SelectedChatFilter != null)
+            {
+                // Выбран чат — показываем только его участников
+                if (_loadChatMembersTask != null)
+                    await _loadChatMembersTask;
+                else if (_cachedChatMembers == null)
+                {
+                    _loadChatMembersTask = LoadChatMembersAsync(SelectedChatFilter.Id);
+                    await _loadChatMembersTask;
+                }
+
+                source = _cachedChatMembers ?? [];
+            }
+            else
+            {
+                // Чат не выбран — показываем всех пользователей
+                if (_cachedUsers == null && getUsersFunc != null)
+                {
+                    _cachedUsers = await getUsersFunc();
+                }
+                source = _cachedUsers ?? [];
+            }
+
+            var filtered = string.IsNullOrWhiteSpace(query)
+                ? source.Take(8)
+                : source.Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8);
+
+            SenderSuggestions = new ObservableCollection<SearchFilterItem>(filtered);
+        }
+        finally
+        {
+            SenderSuggestionsLoadingChanged?.Invoke(false);
+            SenderSuggestionsReady?.Invoke();
+        }
+    }
+
+    private async Task LoadChatsForSenderAsync(int senderId)
+    {
+        try
+        {
+            var result = await apiClient.PostAsync<GlobalSearchQueryDto, GlobalSearchResponseDto>(
+                ApiEndpoints.Messages.Search(userId),
+                new GlobalSearchQueryDto
+                {
+                    Query = string.Empty,
+                    Page = 1,
+                    PageSize = 100,
+                    SenderId = senderId
+                });
+
+            if (!result.Success || result.Data == null)
+            {
+                _cachedChatsForSender = [];
+                return;
+            }
+
+            var chatIds = result.Data.Messages
+                .Select(m => m.ChatId)
+                .Distinct()
+                .ToHashSet();
+
+            _cachedChats ??= getChatsFunc != null ? await getChatsFunc() : [];
+
+            _cachedChatsForSender = [.. _cachedChats
+                .Where(c => chatIds.Contains(c.Id))
+                .OrderBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)];
+        }
+        catch
+        {
+            _cachedChatsForSender = [];
+        }
+    }
+    public event Action<bool>? SenderSuggestionsLoadingChanged;
+    public event Action? SenderSuggestionsReady;
+    public event Action? ChatSuggestionsReady;
+
+    private async Task UpdateChatSuggestionsAsync(string query)
+    {
+        List<SearchFilterItem> source;
+
+        if (SelectedSender != null)
+        {
+            if (_loadChatsForSenderTask != null)
+                await _loadChatsForSenderTask;
+            else if (_cachedChatsForSender == null)
+                await LoadChatsForSenderAsync(SelectedSender.Id);
+
+            source = _cachedChatsForSender ?? [];
+        }
+        else
+        {
+            _cachedChats ??= getChatsFunc != null ? await getChatsFunc() : [];
+            source = _cachedChats;
+        }
+
+        var filtered = string.IsNullOrWhiteSpace(query)
+            ? source.Take(8)
+            : source.Where(c => c.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8);
+
+        ChatSuggestions = new ObservableCollection<SearchFilterItem>(filtered);
+        ChatSuggestionsReady?.Invoke();
+    }
+
+    /// <summary>
+    /// Вызывать при фокусе на поле "От кого" чтобы триггернуть загрузку подсказок.
+    /// </summary>
+    public async Task RequestSenderSuggestionsAsync()
+        => await UpdateSenderSuggestionsAsync(SenderSearchText);
+
+    /// <summary>
+    /// Вызывать при фокусе на поле "В чате" чтобы триггернуть загрузку подсказок.
+    /// </summary>
+    public async Task RequestChatSuggestionsAsync()
+        => await UpdateChatSuggestionsAsync(ChatSearchText);
 
     #endregion
 
@@ -247,7 +406,7 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
             if (ct.IsCancellationRequested) return;
             await ExecuteSearchAsync(query, ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) {/* Игнорируем отмену, вызванную новым поиском */ }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
     public async Task ExecuteSearchAsync(string query, CancellationToken ct = default)
@@ -284,7 +443,6 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
 
     private async Task ExecuteGlobalSearchAsync(string query, int page, CancellationToken ct)
     {
-        System.Diagnostics.Debug.WriteLine($"ExecuteGlobal: ContentFilter={ContentFilter}, ServerHasVoice={ServerHasVoice}, dto.HasVoice будет={ContentFilter == SearchContentFilter.WithVoice}");
         var dto = new GlobalSearchQueryDto
         {
             Query = query,
@@ -317,7 +475,8 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
                     ChatResults.Add(new ChatListItemViewModel(chat));
             }
 
-            foreach (var msg in result.Data.Messages.Where(m => IsChatAllowedForScope(m.ChatType) && IsClientOnlyFilter(m)))
+            foreach (var msg in result.Data.Messages
+                .Where(m => IsChatAllowedForScope(m.ChatType) && IsClientOnlyFilter(m)))
             {
                 MessageResults.Add(new SearchMessageResultViewModel(msg, userId));
             }
@@ -431,11 +590,6 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
 
     #region Filters
 
-    /// <summary>
-    /// Фильтры, которые нельзя передать на сервер одним параметром.
-    /// AuthorFilter.Others — исключить свои сообщения (нет серверного excludeSenderId).
-    /// MentionFilter — поиск по упоминанию внутри content, сервер ищет по query.
-    /// </summary>
     private bool IsClientOnlyFilter(GlobalSearchMessageDto message)
     {
         if (AuthorFilter == SearchAuthorFilter.Others && message.SenderId == userId)
@@ -493,8 +647,6 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
 
     public async Task ApplyFiltersAsync()
     {
-        System.Diagnostics.Debug.WriteLine($"ApplyFilters: ContentFilter={ContentFilter}, ServerHasVoice={ServerHasVoice}, HasActiveFilters={HasActiveFilters}");
-
         EnterSearchMode();
 
         if (string.IsNullOrWhiteSpace(SearchQuery) && !HasActiveFilters)
@@ -506,7 +658,10 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         await ExecuteSearchAsync(SearchQuery, CancellationToken.None);
     }
 
-    public void ToggleSortOrder() => SortOrder = SortOrder == SearchSortOrder.Newest ? SearchSortOrder.Oldest : SearchSortOrder.Newest;
+    public void ToggleSortOrder() =>
+        SortOrder = SortOrder == SearchSortOrder.Newest
+            ? SearchSortOrder.Oldest
+            : SearchSortOrder.Newest;
 
     public void ResetFilters()
     {
@@ -514,48 +669,17 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         SenderSearchText = string.Empty;
         SelectedChatFilter = null;
         ChatSearchText = string.Empty;
+
+        _cachedChatMembers = null;
+        _cachedChatsForSender = null;
+        _loadChatMembersTask = null;
+        _loadChatsForSenderTask = null;
+
         MentionFilter = string.Empty;
         ContentFilter = SearchContentFilter.Any;
         AuthorFilter = SearchAuthorFilter.Any;
         DateFromFilter = null;
         DateToFilter = null;
-    }
-
-    #endregion
-
-    #region Autocomplete
-
-    private async Task UpdateSenderSuggestionsAsync(string query)
-    {
-        List<SearchFilterItem> source;
-
-        if (SelectedChatFilter != null)
-        {
-            if (_cachedChatMembers == null)
-                await LoadChatMembersAsync(SelectedChatFilter.Id);
-
-            source = _cachedChatMembers ?? [];
-        }
-        else
-        {
-            _cachedUsers ??= getUsersFunc != null ? await getUsersFunc() : [];
-            source = _cachedUsers;
-        }
-
-        var filtered = string.IsNullOrWhiteSpace(query) ? source.Take(8) : source.Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8);
-
-        SenderSuggestions = new ObservableCollection<SearchFilterItem>(filtered);
-        IsSenderDropdownOpen = SenderSuggestions.Count > 0;
-    }
-
-    private async Task UpdateChatSuggestionsAsync(string query)
-    {
-        _cachedChats ??= getChatsFunc != null ? await getChatsFunc() : [];
-
-        var filtered = string.IsNullOrWhiteSpace(query) ? _cachedChats.Take(8) : _cachedChats.Where(c => c.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(8);
-
-        ChatSuggestions = new ObservableCollection<SearchFilterItem>(filtered);
-        IsChatDropdownOpen = ChatSuggestions.Count > 0;
     }
 
     #endregion

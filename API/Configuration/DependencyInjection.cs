@@ -1,4 +1,5 @@
-﻿using API.Repositories.Abstarctions;
+﻿using API.Data.SeedData;
+using API.Repositories.Abstarctions;
 using API.Repositories.Implementations;
 using API.Services.Auth;
 using API.Services.Call;
@@ -33,6 +34,7 @@ public static class DependencyInjection
                 npgsql.MapEnum<ChatType>("chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator);
                 npgsql.MapEnum<SystemEventType>("system_event_type");
                 npgsql.MapEnum<UserStatusType>("user_status_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.UserStatusTypeNameTranslator);
+                npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
 
             if (environment.IsDevelopment())
@@ -54,6 +56,7 @@ public static class DependencyInjection
         services.AddSingleton<AppDateTime>();
         services.AddSingleton<ICallSessionService, CallSessionService>();
         services.AddSingleton<IOnlineUserService, OnlineUserService>();
+        services.AddScoped<DataSeeder>();
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddScoped<IFileService, FileService>();

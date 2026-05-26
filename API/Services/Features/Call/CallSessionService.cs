@@ -161,10 +161,22 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         InitiatorId = session.InitiatorId,
         StartedAt = session.StartedAt,
         IsGroupCall = session.IsGroupCall,
-        Participants = [.. session.ActiveParticipants.Values.Select(p => new CallParticipantDto
+        ElapsedSeconds = (int)(DateTimeOffset.UtcNow - session.StartedAt).TotalSeconds, // <-- сервер считает
+        Participants = [.. session.ActiveParticipants.Values.Select(p =>
+    {
+        var name = nameResolver(p.UserId);
+        var avatar = avatarResolver(p.UserId);
+        logger.LogInformation("[CallSessionService] ToStateDto: userId={UserId} name={Name} avatar={Avatar}",
+            p.UserId, name ?? "NULL", avatar ?? "NULL");
+        return new CallParticipantDto
         {
-            UserId = p.UserId, IsMuted = p.IsMuted, IsSpeaking = p.IsSpeaking, DisplayName = nameResolver(p.UserId) ?? $"User {p.UserId}", AvatarUrl = avatarResolver(p.UserId)
-        })]
+            UserId = p.UserId,
+            IsMuted = p.IsMuted,
+            IsSpeaking = p.IsSpeaking,
+            DisplayName = name ?? $"User {p.UserId}",
+            AvatarUrl = avatar
+        };
+    })]
     };
 
     #region Log

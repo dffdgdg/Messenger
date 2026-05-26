@@ -12,4 +12,17 @@ public class ChatSyncState
     [Column("has_more_newer")] public bool HasMoreNewer { get; set; }
     [Column("last_sync_at")] public long LastSyncAtTicks { get; set; }
     [Ignore] public DateTime LastSyncAt => new(LastSyncAtTicks, DateTimeKind.Utc);
+
+    public ChatSyncState With(
+        int? oldestLoadedId = null,
+        bool? hasMoreOlder = null,
+        bool? hasMoreNewer = null) => new()
+        {
+            ChatId = ChatId,
+            OldestLoadedId = oldestLoadedId ?? OldestLoadedId,
+            NewestLoadedId = NewestLoadedId,
+            HasMoreOlder = hasMoreOlder ?? HasMoreOlder,
+            HasMoreNewer = hasMoreNewer ?? HasMoreNewer,
+            LastSyncAtTicks = LastSyncAtTicks
+        };
 }

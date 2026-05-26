@@ -25,11 +25,11 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Select(m => new { m.Id, IsUser = !(m is SystemMessage) }).AsNoTracking().ToListAsync(ct);
 
         if (messageIds.Count == 0) return [];
-        
+
         var ids = messageIds.ConvertAll(x => x.Id);
         var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
         var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
-        
+
         return await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
     }
 
@@ -45,11 +45,11 @@ public sealed class MessageRepository(MessengerDbContext context)
             .ToListAsync(ct);
 
         if (messageIds.Count == 0) return [];
-        
+
         var ids = messageIds.ConvertAll(x => x.Id);
         var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
         var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
-        
+
         return await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
     }
 

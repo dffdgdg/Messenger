@@ -1,6 +1,7 @@
 ﻿using Desktop.Services.Features.Call;
 using Microsoft.Extensions.Logging;
 using Shared.Dto.Call;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -214,7 +215,6 @@ public sealed partial class CallService : ICallService
             try
             {
                 _udpClient.Send(packet, packet.Length, endpoint);
-                LogUdpSent(peerId, endpoint, packet.Length);
             }
             catch (Exception ex)
             {
@@ -251,6 +251,8 @@ public sealed partial class CallService : ICallService
         var candidates = signal.Payload.Split(',');
 
         IPEndPoint? bestEndpoint = null;
+        int bestMatchOctets = -1;
+        string? selectedCandidate = null;
 
         foreach (var candidate in candidates)
         {
@@ -261,28 +263,36 @@ public sealed partial class CallService : ICallService
 
             var endpoint = new IPEndPoint(ip, port);
 
-            if (IsInSameSubnet(ip))
+            if (IsInSameSubnet(ip, out int matchOctets))
             {
-                bestEndpoint = endpoint;
-                break;
+                if (matchOctets > bestMatchOctets)
+                {
+                    bestMatchOctets = matchOctets;
+                    bestEndpoint = endpoint;
+                    selectedCandidate = candidate;
+                }
+                continue;
             }
 
-            bestEndpoint ??= endpoint;
+            if (bestEndpoint == null)
+            {
+                bestEndpoint = endpoint;
+                selectedCandidate = candidate;
+            }
         }
 
         if (bestEndpoint == null) return;
 
+        LogEndpointSelected(signal.FromUserId, selectedCandidate!, signal.Payload);
+
         _peerEndpoints[signal.FromUserId] = bestEndpoint;
-        _audio.AddParticipant(signal.FromUserId);
 
         LogPeerEndpointRegistered(signal.FromUserId, bestEndpoint);
-
-        if (_endpointAnnounced.TryAdd(signal.FromUserId, true))
-            _ = AnnounceUdpEndpointAsync(signal.FromUserId);
     }
 
-    private bool IsInSameSubnet(IPAddress remoteIp)
+    private bool IsInSameSubnet(IPAddress remoteIp, out int matchOctets)
     {
+        matchOctets = 0;
         var remoteBytes = remoteIp.GetAddressBytes();
 
         foreach (var localIpStr in _localIps)
@@ -290,13 +300,15 @@ public sealed partial class CallService : ICallService
             if (!IPAddress.TryParse(localIpStr, out var localIp)) continue;
             var localBytes = localIp.GetAddressBytes();
 
-            if (remoteBytes[0] == localBytes[0] && remoteBytes[1] == localBytes[1] && remoteBytes[2] == localBytes[2])
+            int matches = 0;
+            for (int i = 0; i < 4; i++)
             {
-                return true;
+                if (remoteBytes[i] == localBytes[i]) matches++;
+                else break;
             }
+            matchOctets = Math.Max(matchOctets, matches);
         }
-
-        return false;
+        return matchOctets >= 3;
     }
 
     private void SubscribeHubEvents()
@@ -339,9 +351,15 @@ public sealed partial class CallService : ICallService
         foreach (var p in state.Participants)
         {
             if (p.UserId == myUserId) continue;
-            _audio.AddParticipant(p.UserId);
-            if (_endpointAnnounced.TryAdd(p.UserId, true))
+
+            bool isNew = !_audio.HasParticipant(p.UserId);
+            if (isNew)
+                _audio.AddParticipant(p.UserId);
+
+            if (isNew || !wasInCall)
+            {
                 _ = AnnounceUdpEndpointAsync(p.UserId);
+            }
         }
     }
 
@@ -362,8 +380,7 @@ public sealed partial class CallService : ICallService
         if (_session.UserId is int myId && participant.UserId == myId) return;
 
         _audio.AddParticipant(participant.UserId);
-        if (_endpointAnnounced.TryAdd(participant.UserId, true))
-            _ = AnnounceUdpEndpointAsync(participant.UserId);
+        _ = AnnounceUdpEndpointAsync(participant.UserId);
     }
 
     private void OnParticipantLeft(string callId, int userId)
@@ -389,11 +406,21 @@ public sealed partial class CallService : ICallService
     {
         if (signal.CallId != _activeCallId) return;
         if (signal.Type == "udp-endpoint")
+        {
+            var myUserId = _session.UserId ?? 0;
+            if (signal.FromUserId == myUserId) return;
+            if (!_audio.HasParticipant(signal.FromUserId))
+            {
+                LogEndpointSkippedNotInCall(signal.FromUserId);
+                return;
+            }
             HandleUdpEndpointSignal(signal);
+        }
     }
 
     private void Cleanup()
     {
+        LogCleanupStarted(new StackTrace().ToString());
         _receiveCts?.Cancel();
         _receiveCts?.Dispose();
         _receiveCts = null;
@@ -463,6 +490,11 @@ public sealed partial class CallService : ICallService
     private partial void LogPeerEndpointRegistered(int userId, IPEndPoint endpoint);
     [LoggerMessage(Level = LogLevel.Warning, Message = "ToggleSpeaking SignalR error")]
     private partial void LogSpeakingToggleFailed(Exception? ex);
-
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cleanup called, stack: {Stack}")]
+    private partial void LogCleanupStarted(string? stack);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Выбран endpoint для userId={UserId}: {Selected} из {AllCandidates}")]
+    private partial void LogEndpointSelected(int userId, string selected, string allCandidates);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Пропущен endpoint от userId={UserId}: участник не в звонке")]
+    private partial void LogEndpointSkippedNotInCall(int userId);
     #endregion
 }

@@ -96,9 +96,6 @@ public static class MemoryDiagnostics
     public static void OnImageDiskHit() => Interlocked.Increment(ref _imgDiskHits);
     public static void OnImageNetworkFetch() => Interlocked.Increment(ref _imgNetworkFetches);
 
-    /// <summary>
-    /// Вызывается из AuthenticatedImageLoader.ClearCache() чтобы синхронизировать счётчики.
-    /// </summary>
     public static void OnImageCacheCleared(int count, long bytes)
     {
         Interlocked.Add(ref _imgRamCount, -count);
@@ -124,20 +121,12 @@ public static class MemoryDiagnostics
     private static Func<(int count, long bytes)>? _getCacheStats;
     private static Action? _clearImageCache;
 
-    /// <summary>
-    /// Регистрируем делегаты из AuthenticatedImageLoader чтобы не создавать зависимость напрямую.
-    /// Вызвать один раз при старте приложения.
-    /// </summary>
     public static void RegisterImageLoader(Func<(int count, long bytes)> getStats, Action clearCache)
     {
         _getCacheStats = getStats;
         _clearImageCache = clearCache;
     }
 
-    /// <summary>
-    /// Очищает RAM-кэш изображений и замеряет изменение LOH.
-    /// Используй только для диагностики — в продакшне не вызывать.
-    /// </summary>
     public static void ExperimentClearImageCacheAndMeasureLoh(StringBuilder sb)
     {
         if (_getCacheStats == null || _clearImageCache == null)
@@ -156,7 +145,7 @@ public static class MemoryDiagnostics
         ForceFullGc();
         var lohAfter = GC.GetGCMemoryInfo().GenerationInfo[3].SizeAfterBytes;
 
-        var freed = (long)lohBefore - (long)lohAfter;
+        var freed = lohBefore - lohAfter;
         sb.AppendLine($"  [LOH experiment] кэш до: {countBefore} items / {bytesBefore / 1024}KB");
         sb.AppendLine($"  [LOH experiment] LOH до:  {lohBefore / 1024}KB  после: {lohAfter / 1024}KB  freed: {freed / 1024}KB");
         sb.AppendLine(freed > 0
@@ -224,7 +213,6 @@ public static class MemoryDiagnostics
 
         var (diskFiles, diskBytes) = GetDiskCacheInfo();
 
-        // TCP connections
         int tcpCount = 0;
         try
         {
@@ -245,21 +233,18 @@ public static class MemoryDiagnostics
         sb.AppendLine($"  Handles:           {handleCount} (delta: {handleDelta:+#;-#;0})");
         sb.AppendLine($"  TCP connections:   {tcpCount}");
 
-        // GC managed
         sb.AppendLine($"  GC TotalMemory:    {totalMemory / 1024 / 1024} MB");
         sb.AppendLine($"  GC TotalAllocated: {totalAllocated / 1024 / 1024} MB");
         sb.AppendLine($"  Gen0 collections:  {GC.CollectionCount(0)}");
         sb.AppendLine($"  Gen1 collections:  {GC.CollectionCount(1)}");
         sb.AppendLine($"  Gen2 collections:  {GC.CollectionCount(2)}");
 
-        // Heap breakdown
         sb.AppendLine($"  HeapSize:          {info.HeapSizeBytes / 1024 / 1024} MB");
         sb.AppendLine($"  FragmentedBytes:   {info.FragmentedBytes / 1024 / 1024} MB");
         sb.AppendLine($"  Gen0Size:          {info.GenerationInfo[0].SizeAfterBytes / 1024 / 1024} MB");
         sb.AppendLine($"  Gen1Size:          {info.GenerationInfo[1].SizeAfterBytes / 1024 / 1024} MB");
         sb.AppendLine($"  Gen2Size:          {info.GenerationInfo[2].SizeAfterBytes / 1024 / 1024} MB");
 
-        // LOH с дельтой
         var lohDeltaStr = lohDelta == 0 ? "±0" : $"{lohDelta / 1024:+#;-#;0} KB";
         sb.AppendLine($"  LOHSize:           {lohBytes / 1024 / 1024} MB  ({lohDeltaStr})");
         if (lohDelta > 1024 * 1024)
@@ -269,23 +254,18 @@ public static class MemoryDiagnostics
         sb.AppendLine($"  PinnedObjects:     {info.PinnedObjectsCount}");
         sb.AppendLine($"  FinalizationPending:{info.FinalizationPendingCount}");
 
-        // Нативная дельта
         var nativeDelta = proc.WorkingSet64 - totalMemory;
         sb.AppendLine($"  Нативная (delta):  {nativeDelta / 1024 / 1024} MB");
 
-        // ImageLoader
         sb.AppendLine($"  [ImageRAMCache]    items={_imgRamCount} size={_imgRamBytes / 1024}KB " +
                       $"largeSkipped={_imgLargeSkipped} diskHits={_imgDiskHits} netFetches={_imgNetworkFetches}");
         sb.AppendLine($"  [ImageDiskCache]   files={diskFiles} size={diskBytes / 1024 / 1024}MB");
 
-        // Bitmap
         sb.AppendLine($"  [Bitmap]           created={_bitmapCreated} disposed={_bitmapDisposed} alive={AliveBitmaps}");
 
-        // RemoteImage
         sb.AppendLine($"  [RemoteImage]      started={_loadStarted} cancelled={_loadCancelled} " +
                       $"completed={_loadCompleted} inflight={_loadStarted - _loadCancelled - _loadCompleted}");
 
-        // ViewModels
         sb.AppendLine($"  [ChatVM]           alive={_chatVmAlive} created={_chatVmCreated} disposed={_chatVmDisposed}");
         sb.AppendLine($"  [MessageVM]        alive={_messageVmAlive} finalized={_messageVmFinalized}");
         sb.AppendLine($"  [RichTextBlock]    alive={_richTextBlockAlive}");

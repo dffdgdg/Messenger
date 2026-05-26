@@ -22,39 +22,64 @@ public class RangeObservableCollection<T> : ObservableCollection<T>
     public void AddRange(IEnumerable<T> items)
     {
         if (items == null) return;
+        var list = items as IList<T> ?? [.. items];
+        if (list.Count == 0) return;
 
         _suppressNotification = true;
-        foreach (var item in items)
+        var startIndex = Items.Count;
+        foreach (var item in list)
             Items.Add(item);
         _suppressNotification = false;
 
-        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+            NotifyCollectionChangedAction.Add,
+            (System.Collections.IList)list,
+            startIndex));
     }
 
     public void InsertRange(int index, IEnumerable<T> items)
     {
         if (items == null) return;
+        var list = items as List<T> ?? [.. items];
+        if (list.Count == 0) return;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
         _suppressNotification = true;
-        var list = items as List<T> ?? [.. items];
         ((List<T>)Items).InsertRange(index, list);
         _suppressNotification = false;
 
-        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+            NotifyCollectionChangedAction.Add,
+            (System.Collections.IList)list,
+            index));
+
+        sw.Stop();
+        System.Diagnostics.Debug.WriteLine($"[InsertRange] count={list.Count} took={sw.ElapsedMilliseconds}ms");
     }
 
     public void RemoveRange(IEnumerable<T> items)
     {
         if (items == null) return;
+        var toRemove = items as IList<T> ?? [.. items];
+        if (toRemove.Count == 0) return;
 
         _suppressNotification = true;
-        var toRemove = new HashSet<T>(items);
+        var indices = new List<int>();
+        foreach (var item in toRemove)
+        {
+            var idx = Items.IndexOf(item);
+            if (idx >= 0) indices.Add(idx);
+        }
         ((List<T>)Items).RemoveAll(toRemove.Contains);
         _suppressNotification = false;
 
-        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
     }
 }

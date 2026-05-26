@@ -21,7 +21,7 @@ public sealed class CallAudioService : IDisposable
     private const int VadDebounceMs = 150;
     private double _noiseFloor = 0.02;
     private const double NoiseFloorAlpha = 0.005; // скорость адаптации — медленная
-
+    public bool HasParticipant(int userId) => _playbackQueues.ContainsKey(userId);
     private Stream? _inputStream;
     private Stream? _outputStream;
     private IOpusEncoder? _encoder;
@@ -97,6 +97,8 @@ public sealed class CallAudioService : IDisposable
 
     public void AddParticipant(int userId)
     {
+        if (_playbackQueues.ContainsKey(userId)) return;
+
         _playbackQueues.TryAdd(userId, new ConcurrentQueue<float[]>());
         Debug.WriteLine($"[CallAudio] Participant added: {userId}");
     }

@@ -51,7 +51,6 @@ public sealed class MessagesController(IMessageService message, ILogger<Messages
         => Map(await message.GetMessagesAfterAsync(chatId, messageId, GetCurrentUserId(), count));
 
     [HttpPost("chat/{chatId}/search")]
-    [EnableRateLimiting("search")]
     public async Task<IActionResult> SearchMessages(int chatId, [FromBody] SearchMessagesQueryDto query)
         => Map(await message.SearchMessagesAsync(chatId, GetCurrentUserId(), query));
 
@@ -60,7 +59,6 @@ public sealed class MessagesController(IMessageService message, ILogger<Messages
         => Map(await message.GetChatCountsAsync(chatId, GetCurrentUserId()));
 
     [HttpPost("user/{userId}/search")]
-    [EnableRateLimiting("search")]
     public async Task<IActionResult> GlobalSearch(int userId, [FromBody] GlobalSearchQueryDto query)
     {
         if (!IsCurrentUser(userId))

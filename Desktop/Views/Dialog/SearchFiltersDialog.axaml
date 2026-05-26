@@ -41,8 +41,10 @@
             <ScrollViewer Grid.Row="2"
                           Classes="ThinScrollbar"
                           VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Spacing="12" Margin="24,16,24,16">
+                          HorizontalScrollBarVisibility="Disabled"
+                          ClipToBounds="False">
+                <StackPanel Spacing="12" Margin="24,16,24,16"
+                            ClipToBounds="False">
 
                     <TextBlock Text="ОБЛАСТЬ ПОИСКА"
                                Classes="CategoryHeader"

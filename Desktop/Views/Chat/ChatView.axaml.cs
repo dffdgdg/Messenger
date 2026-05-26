@@ -6,6 +6,7 @@ using Desktop.ViewModels.Chat;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace Desktop.Views.Chat;
 
@@ -14,14 +15,16 @@ public partial class ChatView : UserControl
     private const int MaxScrollToEndRetries = 10;
     private const double VisibilityCheckDelayMs = 300;
     private const double NearBottomThreshold = 200;
-    private const double NearTopThreshold = 400;
+    private const double NearTopThreshold = 800;
     private const int ScrollStateSaveDebounceMs = 350;
     private const string ScrollStateKeyPrefix = "chat_scroll_state:";
     private const int SeenIdsCleanupThreshold = 500;
     private const int ScrollStateMaxAgeHours = 72;
-    private int _scrollAdjustRetries;
     private const int MaxScrollAdjustRetries = 3;
+    private const int OlderLoadCooldownMs = 2000;
+
     private readonly ISettingsService? _settingsService;
+    private readonly HashSet<int> _seenMessageIds = [];
 
     private ScrollViewer? _scrollViewer;
     private ListBox? _messagesList;
@@ -35,9 +38,16 @@ public partial class ChatView : UserControl
     private bool _isRestoringScrollState;
     private ChatScrollState? _pendingScrollState;
     private int _scrollToEndRetries;
+    private int _scrollAdjustRetries;
 
     private int _loadingOlderMessages;
     private int _loadingNewerMessages;
+
+    private DateTime _lastOlderTrigger = DateTime.MinValue;
+    private DateTime _lastNewerTrigger = DateTime.MinValue;
+
+    private DateTime _lastScrollTime;
+    private DateTime _visibilityTimerLastStarted;
 
     private CancellationTokenSource? _findCts;
     private CancellationTokenSource? _restoreCts;
@@ -47,23 +57,316 @@ public partial class ChatView : UserControl
     private DispatcherTimer? _visibilityTimer;
     private DispatcherTimer? _saveScrollStateTimer;
 
-    private readonly HashSet<int> _seenMessageIds = [];
-
     public ChatView()
     {
         InitializeComponent();
         _settingsService = App.Current.Services.GetService<ISettingsService>();
         DataContextChanged += OnDataContextChanged;
     }
+    private readonly SemaphoreSlim _olderLoadSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _newerLoadSemaphore = new(1, 1);
+
+    private async Task LoadOlderMessagesAsync()
+    {
+        if (_viewModel is null || _scrollViewer is null || _messagesList is null) return;
+        if (!_olderLoadSemaphore.Wait(0)) return;
+
+        _lastOlderTrigger = DateTime.UtcNow;
+        _suppressPositionTracking = true;
+        _viewModel.IsLoadingOlderMessages = true;
+
+        try
+        {
+            // 1. Запоминаем высоту контента ДО загрузки
+            double extentBefore = _scrollViewer.Extent.Height;
+            double offsetBefore = _scrollViewer.Offset.Y;
+
+            // 2. Загружаем старые сообщения (InsertRange в начало)
+            await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
+
+            // 3. Ждем завершения layout pass
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+            if (_scrollViewer is null) return;
+
+            // 4. Вычисляем насколько вырос контент
+            double extentAfter = _scrollViewer.Extent.Height;
+            double extentDelta = extentAfter - extentBefore;
+
+            // 5. Сдвигаем offset вниз на эту разницу
+            // Это компенсирует добавление элементов в начало
+            if (extentDelta > 0.5)
+            {
+                double newOffset = offsetBefore + extentDelta;
+                double maxOffset = Math.Max(0, extentAfter - _scrollViewer.Viewport.Height);
+                _scrollViewer.Offset = new Vector(
+                    _scrollViewer.Offset.X,
+                    Math.Clamp(newOffset, 0, maxOffset));
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SCROLL] LoadOlder error: {ex.Message}");
+        }
+        finally
+        {
+            _viewModel.IsLoadingOlderMessages = false;
+
+            // КРИТИЧЕСКИ ВАЖНО: сбрасываем флаг через Background приоритет
+            // Это гарантирует, что ScrollChanged от ручного сдвига offset будет проигнорирован
+            Dispatcher.UIThread.Post(() => _suppressPositionTracking = false, DispatcherPriority.Background);
+
+            _olderLoadSemaphore.Release();
+        }
+    }
+
+    private (int MessageId, double OffsetFromViewportTop)? CaptureTopVisibleAnchor()
+    {
+        if (_messagesList is null || _scrollViewer is null) return null;
+
+        double minTop = double.MaxValue;
+        (int MessageId, double OffsetFromViewportTop)? bestAnchor = null;
+
+        foreach (var container in _messagesList.GetRealizedContainers())
+        {
+            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
+
+            var transform = container.TransformToVisual(_scrollViewer);
+            if (transform is null) continue;
+
+            double top = transform.Value.Transform(new Point(0, 0)).Y;
+            double bottom = top + container.Bounds.Height;
+
+            // Ищем самый верхний видимый элемент
+            if (bottom > 0 && top < _scrollViewer.Viewport.Height)
+            {
+                if (top < minTop)
+                {
+                    minTop = top;
+                    bestAnchor = (msg.Id, top);
+                }
+            }
+        }
+        return bestAnchor;
+    }
+
+    private bool TryRestoreAnchorPosition((int MessageId, double OffsetFromViewportTop) anchor)
+    {
+        if (_messagesList is null || _scrollViewer is null) return false;
+
+        foreach (var container in _messagesList.GetRealizedContainers())
+        {
+            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
+            if (msg.Id != anchor.MessageId) continue;
+
+            var transform = container.TransformToVisual(_scrollViewer);
+            if (transform is null) continue;
+
+            double currentTop = transform.Value.Transform(new Point(0, 0)).Y;
+            double delta = currentTop - anchor.OffsetFromViewportTop;
+
+            if (Math.Abs(delta) > 0.5)
+            {
+                double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
+                _scrollViewer.Offset = new Vector(
+                    _scrollViewer.Offset.X,
+                    Math.Clamp(_scrollViewer.Offset.Y + delta, 0, maxOffset));
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private void FineAdjustAnchorPosition((int MessageId, double OffsetFromViewportTop) anchor)
+    {
+        if (_messagesList is null || _scrollViewer is null) return;
+
+        foreach (var container in _messagesList.GetRealizedContainers())
+        {
+            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
+            if (msg.Id != anchor.MessageId) continue;
+
+            var transform = container.TransformToVisual(_scrollViewer);
+            if (transform is null) continue;
+
+            double currentTop = transform.Value.Transform(new Point(0, 0)).Y;
+            double delta = currentTop - anchor.OffsetFromViewportTop;
+
+            if (Math.Abs(delta) > 0.5)
+            {
+                double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
+                _scrollViewer.Offset = new Vector(
+                    _scrollViewer.Offset.X,
+                    Math.Clamp(_scrollViewer.Offset.Y + delta, 0, maxOffset));
+            }
+            return;
+        }
+    }
+
+    private async Task LoadOlderWithExtentDeltaAsync()
+    {
+        if (_scrollViewer is null || _viewModel is null) return;
+
+        double extentBefore = _scrollViewer.Extent.Height;
+        double offsetBefore = _scrollViewer.Offset.Y;
+
+        await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
+
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+        if (_scrollViewer is null) return;
+
+        double extentAfter = _scrollViewer.Extent.Height;
+        double extentDelta = extentAfter - extentBefore;
+
+        if (extentDelta > 0.5)
+        {
+            double newOffset = Math.Clamp(
+                offsetBefore + extentDelta,
+                0,
+                Math.Max(0, extentAfter - _scrollViewer.Viewport.Height));
+            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, newOffset);
+        }
+    }
+
+    private int? CaptureAnchorMessageId()
+    {
+        if (_messagesList is null || _scrollViewer is null) return null;
+
+        // Ищем первое видимое сообщение
+        foreach (var container in _messagesList.GetRealizedContainers())
+        {
+            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
+
+            var transform = container.TransformToVisual(_scrollViewer);
+            if (transform is null) continue;
+
+            double top = transform.Value.Transform(new Point(0, 0)).Y;
+            double bottom = top + container.Bounds.Height;
+
+            // Возвращаем ID первого видимого сообщения
+            if (bottom > 0 && top < _scrollViewer.Viewport.Height)
+                return msg.Id;
+        }
+        return null;
+    }
+
+    private void HandleScrollPosition()
+    {
+        if (_scrollViewer is null || _viewModel is null) return;
+        if (!_isInitialScrollDone) return;
+
+        // ← ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
+        if (_suppressPositionTracking) return;
+        if (_viewModel.IsLoadingOlderMessages || _viewModel.IsLoadingNewerMessages) return;
+
+        double offset = _scrollViewer.Offset.Y;
+        double extent = _scrollViewer.Extent.Height;
+        double viewport = _scrollViewer.Viewport.Height;
+
+        bool isNearBottom = extent - viewport - offset < NearBottomThreshold;
+        bool isNearTop = offset < NearTopThreshold;
+
+        _viewModel.IsScrolledToBottom = isNearBottom;
+
+        if (isNearBottom)
+        {
+            _viewModel.HasNewMessages = false;
+            _viewModel.UnreadCount = 0;
+        }
+
+        var now = DateTime.UtcNow;
+
+        if (isNearTop
+            && !_viewModel.IsInitialLoading
+            && _viewModel.HasMoreOlder
+            && !_viewModel.IsLoadingOlderMessages
+            && _olderLoadSemaphore.CurrentCount > 0
+            && (now - _lastOlderTrigger).TotalMilliseconds > OlderLoadCooldownMs)
+        {
+            _ = LoadOlderMessagesAsync();
+        }
+
+        if (isNearBottom
+            && _viewModel.HasMoreNewer
+            && !_viewModel.IsInitialLoading
+            && !_viewModel.IsLoadingNewerMessages
+            && _newerLoadSemaphore.CurrentCount > 0
+            && (now - _lastNewerTrigger).TotalMilliseconds > OlderLoadCooldownMs)
+        {
+            _ = LoadNewerMessagesAsync();
+        }
+    }
+
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        // ← САМАЯ ПЕРВАЯ ПРОВЕРКА
+        if (_suppressPositionTracking) return;
+
+        _lastScrollTime = DateTime.UtcNow;
+
+        if (_visibilityTimer?.IsEnabled == false &&
+            (DateTime.UtcNow - _visibilityTimerLastStarted).TotalMilliseconds > 500)
+        {
+            _visibilityTimerLastStarted = DateTime.UtcNow;
+            _visibilityTimer?.Start();
+        }
+
+        if (_viewModel is null || !_isInitialScrollDone || _viewModel.IsSearchMode) return;
+
+        HandleScrollPosition();
+
+        _saveScrollStateTimer?.Stop();
+        _saveScrollStateTimer?.Start();
+    }
+
+    private async Task LoadNewerMessagesAsync()
+    {
+        if (_viewModel is null) return;
+        if (!_newerLoadSemaphore.Wait(0)) return;
+
+        _lastNewerTrigger = DateTime.UtcNow;
+        _viewModel.IsLoadingNewerMessages = true;
+
+        try
+        {
+            await _viewModel.LoadNewerMessagesCommand.ExecuteAsync(null);
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SCROLL] LoadNewer error: {ex.Message}");
+        }
+        finally
+        {
+            _lastNewerTrigger = DateTime.UtcNow;
+            _viewModel?.IsLoadingNewerMessages = false;
+            _newerLoadSemaphore.Release();
+        }
+    }
+
+    // Вспомогательные методы для атомарного чтения флагов
+    private int IsLoadingOlderAtomic() => Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0);
+    private int IsLoadingNewerAtomic() => Interlocked.CompareExchange(ref _loadingNewerMessages, 0, 0);
+
+    // Оставить старые методы для обратной совместимости с остальным кодом
+    private bool IsLoadingOlder() => IsLoadingOlderAtomic() == 1;
+    private bool IsLoadingNewer() => IsLoadingNewerAtomic() == 1;
+
+    // ══════════════════════════════════════════════════
+    // Остальные методы без изменений
+    // ══════════════════════════════════════════════════
 
     private void SetMessagesVisible(bool visible)
     {
         if (_messagesList is null) return;
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_messagesList is null) return;
-            _messagesList.Opacity = visible ? 1.0 : 0.0;
-        }, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(()
+            => _messagesList?.Opacity = visible ? 1.0 : 0.0, DispatcherPriority.Background);
     }
 
     private void ScheduleFallbackVisibility()
@@ -85,7 +388,6 @@ public partial class ChatView : UserControl
         }, token);
     }
 
-
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         CancelAllPendingOperations();
@@ -93,7 +395,6 @@ public partial class ChatView : UserControl
         StopTimers();
 
         _viewModel = DataContext as ChatViewModel;
-
         ResetScrollState();
         CreateTimers();
         AttachToViewModel();
@@ -105,10 +406,18 @@ public partial class ChatView : UserControl
         _isInitialScrollDone = false;
         _scrollToEndRetries = 0;
         _suppressScrollEvents = false;
+        if (_olderLoadSemaphore.CurrentCount == 0)
+            _olderLoadSemaphore.Release();
+        if (_newerLoadSemaphore.CurrentCount == 0)
+            _newerLoadSemaphore.Release();
         _suppressPositionTracking = false;
         _isScrollViewerInitialized = false;
         _scrollStateRestored = false;
         _isRestoringScrollState = false;
+
+        // Сбрасываем cooldown при смене чата
+        _lastOlderTrigger = DateTime.MinValue;
+        _lastNewerTrigger = DateTime.MinValue;
 
         SetMessagesVisible(false);
 
@@ -129,25 +438,13 @@ public partial class ChatView : UserControl
 
     private void StopTimers()
     {
-        if (_visibilityTimer != null)
-        {
-            _visibilityTimer.Stop();
-            _visibilityTimer.Tick -= OnVisibilityTimerTick;
-            _visibilityTimer = null;
-        }
-        if (_saveScrollStateTimer != null)
-        {
-            _saveScrollStateTimer.Stop();
-            _saveScrollStateTimer.Tick -= OnSaveScrollStateTimerTick;
-            _saveScrollStateTimer = null;
-        }
+        if (_visibilityTimer != null) { _visibilityTimer.Stop(); _visibilityTimer.Tick -= OnVisibilityTimerTick; _visibilityTimer = null; }
+        if (_saveScrollStateTimer != null) { _saveScrollStateTimer.Stop(); _saveScrollStateTimer.Tick -= OnSaveScrollStateTimerTick; _saveScrollStateTimer = null; }
     }
 
     private void OnVisibilityTimerTick(object? s, EventArgs e)
     {
-        if ((DateTime.UtcNow - _lastScrollTime).TotalMilliseconds < 200)
-            return;
-
+        if ((DateTime.UtcNow - _lastScrollTime).TotalMilliseconds < 200) return;
         _visibilityTimer?.Stop();
         CheckVisibleMessages();
     }
@@ -166,7 +463,6 @@ public partial class ChatView : UserControl
         _viewModel.ScrollToIndexRequested += OnScrollToIndexRequested;
         _viewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
         _viewModel.Messages?.CollectionChanged += OnMessagesCollectionChanged;
-
         ScheduleFallbackVisibility();
     }
 
@@ -204,7 +500,6 @@ public partial class ChatView : UserControl
 
         if (!_isScrollViewerInitialized)
             ScheduleFind(FindScrollViewer, 50);
-
         if (!_isInitialScrollDone) return;
 
         bool isNewAtBottom = e.NewStartingIndex == (_viewModel.Messages?.Count ?? 0) - 1;
@@ -230,11 +525,7 @@ public partial class ChatView : UserControl
         if (_messagesList is null) return;
 
         _scrollViewer = _messagesList.FindDescendantOfType<ScrollViewer>();
-        if (_scrollViewer is null)
-        {
-            ScheduleFind(FindScrollViewer, 200);
-            return;
-        }
+        if (_scrollViewer is null) { ScheduleFind(FindScrollViewer, 200); return; }
 
         _scrollViewer.ScrollChanged -= OnScrollChanged;
         _scrollViewer.ScrollChanged += OnScrollChanged;
@@ -245,24 +536,68 @@ public partial class ChatView : UserControl
 
     private void OnScrollToBottomRequested()
     {
-        if (ShouldDeferScrollRequest()) return;
+        Debug.WriteLine($"[View] OnScrollToBottomRequested: _isInitialScrollDone={_isInitialScrollDone}");
 
+        if (_suppressPositionTracking) return;
+
+        if (ShouldDeferScrollRequest()) return;
         _scrollToEndRetries = 0;
         _suppressScrollEvents = true;
         EnsureScrollViewer();
         BeginScrollToBottom();
     }
+
+    private void BeginScrollToBottom()
+    {
+        if (_viewModel is null) return;
+        if (_scrollViewer is null) EnsureScrollViewer();
+        Dispatcher.UIThread.Post(() => PerformScrollToBottom(_viewModel, _scrollViewer), DispatcherPriority.Render);
+    }
+
+    private void PerformScrollToBottom(ChatViewModel vm, ScrollViewer? sv)
+    {
+        if (_viewModel != vm) return;
+
+        if (sv is null) { EnsureScrollViewer(); sv = _scrollViewer; }
+        if (sv is null) { RetryScrollToBottom(vm); return; }
+
+        double extent = sv.Extent.Height;
+        double viewport = sv.Viewport.Height;
+
+        if (extent <= viewport || extent < 1) { RetryScrollToBottom(vm); return; }
+
+        sv.Offset = new Avalonia.Vector(sv.Offset.X, extent - viewport);
+        Dispatcher.UIThread.Post(() => FinishScrollToBottom(vm), DispatcherPriority.Background);
+    }
+
+    private void RetryScrollToBottom(ChatViewModel vm)
+    {
+        if (_viewModel != vm) return;
+        if (_scrollToEndRetries++ < MaxScrollToEndRetries)
+            Dispatcher.UIThread.Post(() => PerformScrollToBottom(vm, _scrollViewer), DispatcherPriority.Render);
+        else
+            FinishScrollToBottom(vm);
+    }
+
+    private void FinishScrollToBottom(ChatViewModel vm)
+    {
+        if (_viewModel != vm) return;
+        _suppressScrollEvents = false;
+        _isInitialScrollDone = true;
+        vm.IsScrolledToBottom = true;
+        vm.HasNewMessages = false;
+        vm.UnreadCount = 0;
+        _fallbackVisibilityCts?.Cancel();
+        SetMessagesVisible(true);
+    }
+
     private void OnScrollToIndexRequested(int index, bool highlight)
     {
         if (ShouldDeferScrollRequest(highlight)) return;
-
         ScheduleScrollAction(() =>
         {
-            if (_viewModel is null || index < 0 || index >= (_viewModel.Messages?.Count ?? 0))
-                return;
-
-            var message = _viewModel.Messages![index];
-            ScrollToItemCentered(message, highlight);
+            if (_viewModel is null || index < 0 || index >= (_viewModel.Messages?.Count ?? 0)) return;
+            ScrollToItemCentered(_viewModel.Messages![index], highlight);
             CompleteInitialScroll(atBottom: false);
         });
     }
@@ -271,7 +606,6 @@ public partial class ChatView : UserControl
     {
         if (message is null || _viewModel is null) return;
         if (ShouldDeferScrollRequest(highlight)) return;
-
         ScheduleScrollAction(() =>
         {
             ScrollToItemCentered(message, highlight);
@@ -282,56 +616,28 @@ public partial class ChatView : UserControl
     private void ScrollToItemCentered(MessageViewModel message, bool highlight = false)
     {
         EnsureScrollViewer();
-        if (_messagesList == null || _scrollViewer == null) return;
+        if (_messagesList is null || _scrollViewer is null) return;
 
         _scrollAdjustRetries = 0;
         _messagesList.ScrollIntoView(message);
-
-        Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight),
-            DispatcherPriority.Render);
+        Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight), DispatcherPriority.Render);
     }
 
     private void AdjustScrollToCenterItem(MessageViewModel message, bool highlight = false)
     {
-        if (_messagesList == null || _scrollViewer == null) return;
+        if (_messagesList is null || _scrollViewer is null) return;
 
-        ListBoxItem? container = null;
-        foreach (var c in _messagesList.GetRealizedContainers())
-        {
-            if (c is ListBoxItem item && item.DataContext == message)
-            {
-                container = item;
-                break;
-            }
-        }
-
-        if (container == null)
+        var container = FindContainer(message);
+        if (container is null)
         {
             if (_scrollAdjustRetries++ < MaxScrollAdjustRetries)
-            {
-                Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight),
-                    DispatcherPriority.Background);
-            }
+                Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message, highlight), DispatcherPriority.Background);
             return;
         }
 
         _scrollAdjustRetries = 0;
+        CenterItemInViewport(container);
 
-        var transform = container.TransformToVisual(_scrollViewer);
-        if (transform == null) return;
-
-        double itemTop = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
-        double itemHeight = container.Bounds.Height;
-        double viewportHeight = _scrollViewer.Viewport.Height;
-        double currentOffset = _scrollViewer.Offset.Y;
-
-        double targetOffset = currentOffset + itemTop - (viewportHeight / 2) + (itemHeight / 2);
-        double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - viewportHeight);
-        double clampedOffset = Math.Clamp(targetOffset, 0, maxOffset);
-
-        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, clampedOffset);
-
-        // Применяем highlight после позиционирования
         if (highlight)
         {
             message.IsHighlighted = true;
@@ -343,55 +649,38 @@ public partial class ChatView : UserControl
         }
     }
 
-    private void AdjustScrollToCenterItem(MessageViewModel message)
+    private ListBoxItem? FindContainer(MessageViewModel message)
     {
-        if (_messagesList == null || _scrollViewer == null) return;
-
-        // Ищем контейнер
-        ListBoxItem? container = null;
+        if (_messagesList is null) return null;
         foreach (var c in _messagesList.GetRealizedContainers())
         {
             if (c is ListBoxItem item && item.DataContext == message)
-            {
-                container = item;
-                break;
-            }
+                return item;
         }
+        return null;
+    }
 
-        if (container == null)
-        {
-            if (_scrollAdjustRetries++ < MaxScrollAdjustRetries)
-            {
-                Dispatcher.UIThread.Post(() => AdjustScrollToCenterItem(message),
-                    DispatcherPriority.Background);
-            }
-            return;
-        }
-
-        _scrollAdjustRetries = 0;
+    private void CenterItemInViewport(ListBoxItem container)
+    {
+        if (_scrollViewer is null) return;
 
         var transform = container.TransformToVisual(_scrollViewer);
-        if (transform == null) return;
+        if (transform is null) return;
 
-        double itemTop = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
+        double itemTop = transform.Value.Transform(new Point(0, 0)).Y;
         double itemHeight = container.Bounds.Height;
         double viewportHeight = _scrollViewer.Viewport.Height;
         double currentOffset = _scrollViewer.Offset.Y;
 
-        // Центрируем элемент во вьюпорте
         double targetOffset = currentOffset + itemTop - (viewportHeight / 2) + (itemHeight / 2);
         double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - viewportHeight);
-        double clampedOffset = Math.Clamp(targetOffset, 0, maxOffset);
-
-        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, clampedOffset);
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Clamp(targetOffset, 0, maxOffset));
     }
+
     private bool ShouldDeferScrollRequest(bool isExplicitMessageNavigation = false)
     {
-        if (_scrollStateRestored || _pendingScrollState is null)
-            return false;
-
-        if (!isExplicitMessageNavigation && _viewModel?.HasInitialMessageTarget != true)
-            return true;
+        if (_scrollStateRestored || _pendingScrollState is null) return false;
+        if (!isExplicitMessageNavigation && _viewModel?.HasInitialMessageTarget != true) return true;
 
         _pendingScrollState = null;
         _scrollStateRestored = true;
@@ -401,81 +690,13 @@ public partial class ChatView : UserControl
         return false;
     }
 
-    private void BeginScrollToBottom()
-    {
-        var vm = _viewModel;
-        if (vm is null) return;
-
-        if (_scrollViewer is null)
-            EnsureScrollViewer();
-
-        Dispatcher.UIThread.Post(() => PerformScrollToBottom(vm, _scrollViewer), DispatcherPriority.Render);
-    }
-
-    private void PerformScrollToBottom(ChatViewModel vm, ScrollViewer? sv)
-    {
-        if (_viewModel != vm) return;
-
-        if (sv is null)
-        {
-            EnsureScrollViewer();
-            sv = _scrollViewer;
-        }
-
-        if (sv is null)
-        {
-            RetryScrollToBottom(vm);
-            return;
-        }
-
-        double extent = sv.Extent.Height;
-        double viewport = sv.Viewport.Height;
-
-        if (extent <= viewport || extent < 1)
-        {
-            RetryScrollToBottom(vm);
-            return;
-        }
-
-        sv.Offset = new Avalonia.Vector(sv.Offset.X, extent - viewport);
-        Dispatcher.UIThread.Post(() => FinishScrollToBottom(vm), DispatcherPriority.Background);
-    }
-
-    private void RetryScrollToBottom(ChatViewModel vm)
-    {
-        if (_viewModel != vm) return;
-
-        if (_scrollToEndRetries++ < MaxScrollToEndRetries)
-            Dispatcher.UIThread.Post(() => PerformScrollToBottom(vm, _scrollViewer), DispatcherPriority.Render);
-        else
-            FinishScrollToBottom(vm);
-    }
-
-    private void FinishScrollToBottom(ChatViewModel vm)
-    {
-        if (_viewModel != vm) return;
-
-        _suppressScrollEvents = false;
-        _isInitialScrollDone = true;
-
-        vm.IsScrolledToBottom = true;
-        vm.HasNewMessages = false;
-        vm.UnreadCount = 0;
-
-        _fallbackVisibilityCts?.Cancel();
-        SetMessagesVisible(true);
-    }
-
-
     private void CompleteInitialScroll(bool atBottom)
     {
         _isInitialScrollDone = true;
-
         _fallbackVisibilityCts?.Cancel();
         SetMessagesVisible(true);
 
         if (_viewModel is null) return;
-
         if (atBottom)
             _viewModel.IsScrolledToBottom = true;
         else
@@ -485,79 +706,21 @@ public partial class ChatView : UserControl
     private void UpdateIsScrolledToBottomFromOffset()
     {
         if (_scrollViewer is null || _viewModel is null) return;
-
-        double extent = _scrollViewer.Extent.Height;
-        double viewport = _scrollViewer.Viewport.Height;
-        double offset = _scrollViewer.Offset.Y;
-
-        _viewModel.IsScrolledToBottom = extent - viewport - offset < NearBottomThreshold;
+        _viewModel.IsScrolledToBottom = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height - _scrollViewer.Offset.Y < NearBottomThreshold;
     }
-
-    private DateTime _lastScrollTime;
-
-    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        _lastScrollTime = DateTime.UtcNow;
-
-        if (_visibilityTimer?.IsEnabled != true)
-            _visibilityTimer?.Start();
-
-        if (_viewModel is null || _suppressScrollEvents || !_isInitialScrollDone || _viewModel.IsSearchMode)
-            return;
-
-        if (!_suppressPositionTracking && !IsLoadingOlder() && !IsLoadingNewer())
-            HandleScrollPosition();
-
-        _saveScrollStateTimer?.Stop();
-        _saveScrollStateTimer?.Start();
-    }
-
-
-    private void HandleScrollPosition()
-    {
-        if (_scrollViewer is null || _viewModel is null) return;
-
-        double offset = _scrollViewer.Offset.Y;
-        double extent = _scrollViewer.Extent.Height;
-        double viewport = _scrollViewer.Viewport.Height;
-
-        bool isNearBottom = extent - viewport - offset < NearBottomThreshold;
-        bool isNearTop = offset < NearTopThreshold;
-
-        _viewModel.IsScrolledToBottom = isNearBottom;
-
-        if (isNearBottom)
-        {
-            _viewModel.HasNewMessages = false;
-            _viewModel.UnreadCount = 0;
-        }
-
-        if (isNearTop && !IsLoadingOlder() && !_viewModel.IsInitialLoading)
-            _ = LoadOlderMessagesAsync();
-
-        if (isNearBottom && _viewModel.HasMoreNewer && !_viewModel.IsInitialLoading)
-            _ = LoadNewerMessagesAsync();
-    }
-
-    private bool IsLoadingOlder() => Interlocked.CompareExchange(ref _loadingOlderMessages, 0, 0) == 1;
-    private bool IsLoadingNewer() => Interlocked.CompareExchange(ref _loadingNewerMessages, 0, 0) == 1;
 
     private void SaveScrollState()
     {
-        if (_settingsService is null || _scrollViewer is null || _viewModel is null || !_isInitialScrollDone)
-            return;
+        if (_settingsService is null || _scrollViewer is null || _viewModel is null || !_isInitialScrollDone) return;
 
         double extent = _scrollViewer.Extent.Height;
         double viewport = _scrollViewer.Viewport.Height;
-        double offset = _scrollViewer.Offset.Y;
-        bool isAtBottom = extent - viewport - offset < NearBottomThreshold;
+        bool isAtBottom = extent - viewport - _scrollViewer.Offset.Y < NearBottomThreshold;
 
         var anchor = FindAnchorMessage();
-        if (anchor is null && !isAtBottom)
-            return;
+        if (anchor is null && !isAtBottom) return;
 
         var state = new ChatScrollState(anchor?.MessageId ?? -1, anchor?.OffsetFromTop ?? 0, isAtBottom, DateTime.UtcNow);
-
         _settingsService.Set(GetScrollStateKey(_viewModel.Context.ChatId), state);
     }
 
@@ -575,7 +738,7 @@ public partial class ChatView : UserControl
             var transform = container.TransformToVisual(_scrollViewer);
             if (transform is null) continue;
 
-            double top = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
+            double top = transform.Value.Transform(new Point(0, 0)).Y;
             double bottom = top + container.Bounds.Height;
 
             if (bottom > 0 && top < _scrollViewer.Viewport.Height && top < bestTop)
@@ -594,8 +757,8 @@ public partial class ChatView : UserControl
 
         var key = GetScrollStateKey(_viewModel.Context.ChatId);
         var state = _settingsService.Get<ChatScrollState>(key);
-        if (state is null) return null;
 
+        if (state is null) return null;
         if ((DateTime.UtcNow - state.SavedAtUtc).TotalHours > ScrollStateMaxAgeHours)
         {
             _settingsService.Remove(key);
@@ -610,18 +773,12 @@ public partial class ChatView : UserControl
         _restoreCts?.Cancel();
         _restoreCts?.Dispose();
         _restoreCts = new CancellationTokenSource();
-        var token = _restoreCts.Token;
-        _ = RunDelayedAsync(TryRestoreSavedScrollState, delayMs, token);
+        _ = RunDelayedAsync(TryRestoreSavedScrollState, delayMs, _restoreCts.Token);
     }
 
     private void TryRestoreSavedScrollState()
     {
-        if (_pendingScrollState is null)
-        {
-            _scrollStateRestored = true;
-            return;
-        }
-
+        if (_pendingScrollState is null) { _scrollStateRestored = true; return; }
         if (_scrollStateRestored || _isRestoringScrollState) return;
         if (_viewModel?.IsInitialLoading != false) return;
 
@@ -634,23 +791,12 @@ public partial class ChatView : UserControl
         _scrollStateRestored = true;
 
         var state = _pendingScrollState;
-
         try
         {
-            if (state.IsAtBottom)
-            {
-                _scrollToEndRetries = 0;
-                BeginScrollToBottom();
-            }
-            else
-            {
-                RestoreToAnchor(state.AnchorMessageId, state.AnchorOffset);
-            }
+            if (state.IsAtBottom) { _scrollToEndRetries = 0; BeginScrollToBottom(); }
+            else { RestoreToAnchor(state.AnchorMessageId, state.AnchorOffset); }
         }
-        finally
-        {
-            _isRestoringScrollState = false;
-        }
+        finally { _isRestoringScrollState = false; }
     }
 
     private void RestoreToAnchor(int anchorMessageId, double anchorOffsetFromTop)
@@ -661,17 +807,9 @@ public partial class ChatView : UserControl
             ?? _viewModel.Messages.Where(m => m.Id <= anchorMessageId).OrderByDescending(m => m.Id).FirstOrDefault()
             ?? _viewModel.Messages.FirstOrDefault();
 
-        if (message is null)
-        {
-            _isInitialScrollDone = true;
-            _suppressScrollEvents = false;
-            _fallbackVisibilityCts?.Cancel();
-            SetMessagesVisible(true);
-            return;
-        }
+        if (message is null) { CompleteInitialScroll(atBottom: false); return; }
 
         _messagesList.ScrollIntoView(message);
-
         Dispatcher.UIThread.Post(() => AdjustOffsetAfterScrollIntoView(message, anchorOffsetFromTop), DispatcherPriority.Render);
     }
 
@@ -679,16 +817,7 @@ public partial class ChatView : UserControl
     {
         if (_scrollViewer is null || _messagesList is null) return;
 
-        ListBoxItem? container = null;
-        foreach (var c in _messagesList.GetRealizedContainers())
-        {
-            if (c is ListBoxItem item && item.DataContext == targetMessage)
-            {
-                container = item;
-                break;
-            }
-        }
-
+        var container = FindContainer(targetMessage);
         if (container is null)
         {
             Dispatcher.UIThread.Post(() => AdjustOffsetAfterScrollIntoView(targetMessage, desiredOffsetFromTop), DispatcherPriority.Background);
@@ -696,130 +825,21 @@ public partial class ChatView : UserControl
         }
 
         var transform = container.TransformToVisual(_scrollViewer);
-        if (transform is null)
-        {
-            _isInitialScrollDone = true;
-            _suppressScrollEvents = false;
-            UpdateIsScrolledToBottomFromOffset();
-            _fallbackVisibilityCts?.Cancel();
-            SetMessagesVisible(true);
-            return;
-        }
+        if (transform is null) { CompleteInitialScroll(atBottom: false); return; }
 
-        double currentTop = transform.Value.Transform(new Avalonia.Point(0, 0)).Y;
-        double currentOffset = _scrollViewer.Offset.Y;
-        double newOffset = currentOffset + (currentTop - desiredOffsetFromTop);
+        double currentTop = transform.Value.Transform(new Point(0, 0)).Y;
+        double newOffset = _scrollViewer.Offset.Y + (currentTop - desiredOffsetFromTop);
         double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
 
-        _scrollViewer.Offset = new Avalonia.Vector(_scrollViewer.Offset.X, Math.Clamp(newOffset, 0, maxOffset));
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            _isInitialScrollDone = true;
-            _suppressScrollEvents = false;
-            UpdateIsScrolledToBottomFromOffset();
-            _fallbackVisibilityCts?.Cancel();
-            SetMessagesVisible(true);
-        }, DispatcherPriority.Background);
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, Math.Clamp(newOffset, 0, maxOffset));
+        CompleteInitialScroll(atBottom: false);
     }
 
     private static string GetScrollStateKey(int chatId) => $"{ScrollStateKeyPrefix}{chatId}";
 
-    private sealed record AnchorInfo(int MessageId, double OffsetFromTop);
-
-    private sealed record ChatScrollState(int AnchorMessageId, double AnchorOffset, bool IsAtBottom, DateTime SavedAtUtc);
-
-    private async Task LoadOlderMessagesAsync()
-    {
-        if (_viewModel is null || _scrollViewer is null) return;
-        if (Interlocked.CompareExchange(ref _loadingOlderMessages, 1, 0) != 0) return;
-        try { await LoadOlderWithPositionPreservationAsync(); }
-        finally { Interlocked.Exchange(ref _loadingOlderMessages, 0); }
-    }
-
-    private async Task LoadNewerMessagesAsync()
-    {
-        if (_viewModel is null) return;
-        if (Interlocked.CompareExchange(ref _loadingNewerMessages, 1, 0) != 0) return;
-        try { await _viewModel.LoadNewerMessagesCommand.ExecuteAsync(null); }
-        finally { Interlocked.Exchange(ref _loadingNewerMessages, 0); }
-    }
-
-    private async Task LoadOlderWithPositionPreservationAsync()
-    {
-        if (_scrollViewer is null || _viewModel is null) return;
-
-        _suppressPositionTracking = true;
-        _suppressScrollEvents = true;
-
-        // Сохраняем якорь ДО загрузки
-        var anchor = FindAnchorMessage();
-        double anchorOffset = anchor?.OffsetFromTop ?? 0;
-
-        try
-        {
-            await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
-
-            // Небольшая задержка чтобы Avalonia успел выполнить layout
-            await Task.Delay(16);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (_scrollViewer is null) return;
-
-                // Восстанавливаем позицию через якорь если он был
-                if (anchor != null)
-                {
-                    var vm = _viewModel?.Messages.FirstOrDefault(m => m.Id == anchor.MessageId);
-                    if (vm != null && _messagesList != null)
-                    {
-                        // Ищем контейнер
-                        ListBoxItem? container = null;
-                        foreach (var c in _messagesList.GetRealizedContainers())
-                        {
-                            if (c is ListBoxItem item && item.DataContext == vm)
-                            {
-                                container = item;
-                                break;
-                            }
-                        }
-
-                        if (container != null)
-                        {
-                            var transform = container.TransformToVisual(_scrollViewer);
-                            if (transform != null)
-                            {
-                                double currentTop = transform.Value
-                                    .Transform(new Avalonia.Point(0, 0)).Y;
-                                double currentOffset = _scrollViewer.Offset.Y;
-                                double newOffset = currentOffset + (currentTop - anchorOffset);
-                                double maxOffset = Math.Max(0,
-                                    _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
-
-                                _scrollViewer.Offset = new Avalonia.Vector(
-                                    _scrollViewer.Offset.X,
-                                    Math.Clamp(newOffset, 0, maxOffset));
-                            }
-                        }
-                    }
-                }
-            }, DispatcherPriority.Render);
-        }
-        catch
-        {
-            // fallback — ничего не делаем, пусть скролл прыгнет
-        }
-        finally
-        {
-            _suppressScrollEvents = false;
-            _suppressPositionTracking = false;
-        }
-    }
-
     private void CheckVisibleMessages()
     {
-        if (_viewModel is null || _scrollViewer is null || _messagesList is null || !_isInitialScrollDone)
-            return;
+        if (_viewModel is null || _scrollViewer is null || _messagesList is null || !_isInitialScrollDone) return;
 
         double viewportHeight = _scrollViewer.Viewport.Height;
         foreach (var container in _messagesList.GetRealizedContainers())
@@ -857,27 +877,25 @@ public partial class ChatView : UserControl
         var t = item.TransformToVisual(_scrollViewer!);
         if (t is null) return false;
         double top = t.Value.Transform(new Avalonia.Point(0, 0)).Y;
-        double bottom = top + item.Bounds.Height;
-        return bottom > 0 && top < viewportHeight;
+        return top + item.Bounds.Height > 0 && top < viewportHeight;
     }
 
     private void ComposerTextBox_OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_viewModel is null) return;
-        if (_viewModel.HandleMentionNavigationKey(e.Key))
+        if (_viewModel?.HandleMentionNavigationKey(e.Key) == true)
             e.Handled = true;
     }
 
     private void ComposerTextBox_OnKeyUp(object? sender, KeyEventArgs e)
     {
-        if (_viewModel is null || sender is not TextBox tb) return;
-        _viewModel.OnComposerSelectionChanged(tb.CaretIndex);
+        if (_viewModel is not null && sender is TextBox tb)
+            _viewModel.OnComposerSelectionChanged(tb.CaretIndex);
     }
 
     private void ComposerTextBox_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_viewModel is null || sender is not TextBox tb) return;
-        _viewModel.OnComposerSelectionChanged(tb.CaretIndex);
+        if (_viewModel is not null && sender is TextBox tb)
+            _viewModel.OnComposerSelectionChanged(tb.CaretIndex);
     }
 
     private void ScheduleFind(Action action, int delayMs)
@@ -885,8 +903,7 @@ public partial class ChatView : UserControl
         _findCts?.Cancel();
         _findCts?.Dispose();
         _findCts = new CancellationTokenSource();
-        var token = _findCts.Token;
-        _ = RunDelayedAsync(action, delayMs, token);
+        _ = RunDelayedAsync(action, delayMs, _findCts.Token);
     }
 
     private void ScheduleScrollAction(Action action)
@@ -894,41 +911,25 @@ public partial class ChatView : UserControl
         _suppressScrollEvents = true;
         _scrollCts?.Cancel();
         _scrollCts = new CancellationTokenSource();
-        var token = _scrollCts.Token;
         _ = RunDelayedAsync(() =>
         {
             try { EnsureScrollViewer(); action(); }
             finally { _suppressScrollEvents = false; }
-        }, 100, token);
+        }, 100, _scrollCts.Token);
     }
 
     private static async Task RunDelayedAsync(Action action, int delayMs, CancellationToken ct)
     {
-        try
-        {
-            await Task.Delay(delayMs, ct);
-            if (!ct.IsCancellationRequested) action();
-        }
+        try { await Task.Delay(delayMs, ct); if (!ct.IsCancellationRequested) action(); }
         catch (OperationCanceledException) { }
     }
 
     private void CancelAllPendingOperations()
     {
-        _findCts?.Cancel();
-        _findCts?.Dispose();
-        _findCts = null;
-
-        _restoreCts?.Cancel();
-        _restoreCts?.Dispose();
-        _restoreCts = null;
-
-        _scrollCts?.Cancel();
-        _scrollCts?.Dispose();
-        _scrollCts = null;
-
-        _fallbackVisibilityCts?.Cancel();
-        _fallbackVisibilityCts?.Dispose();
-        _fallbackVisibilityCts = null;
+        _findCts?.Cancel(); _findCts?.Dispose(); _findCts = null;
+        _restoreCts?.Cancel(); _restoreCts?.Dispose(); _restoreCts = null;
+        _scrollCts?.Cancel(); _scrollCts?.Dispose(); _scrollCts = null;
+        _fallbackVisibilityCts?.Cancel(); _fallbackVisibilityCts?.Dispose(); _fallbackVisibilityCts = null;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)
@@ -964,10 +965,15 @@ public partial class ChatView : UserControl
         CancelAllPendingOperations();
         _scrollViewer?.ScrollChanged -= OnScrollChanged;
         _scrollViewer = null;
-
         DetachFromViewModel();
         _seenMessageIds.Clear();
         _isScrollViewerInitialized = false;
         _messagesList = null;
+
+        _olderLoadSemaphore?.Dispose();
+        _newerLoadSemaphore?.Dispose();
     }
+
+    private sealed record AnchorInfo(int MessageId, double OffsetFromTop);
+    private sealed record ChatScrollState(int AnchorMessageId, double AnchorOffset, bool IsAtBottom, DateTime SavedAtUtc);
 }

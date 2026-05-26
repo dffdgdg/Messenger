@@ -1,0 +1,107 @@
+﻿[
+  {
+    "Id": 1,
+    "Name": "Компания",
+    "ParentDepartmentId": null,
+    "ChatId": 16,
+    "HeadId": 1
+  },
+  {
+    "Id": 2,
+    "Name": "Руководство2",
+    "ParentDepartmentId": null,
+    "ChatId": 17,
+    "HeadId": 20
+  },
+  {
+    "Id": 3,
+    "Name": "Дирекция",
+    "ParentDepartmentId": 14,
+    "ChatId": 18,
+    "HeadId": 8
+  },
+  {
+    "Id": 4,
+    "Name": "HR (Отдел кадров)",
+    "ParentDepartmentId": 1,
+    "ChatId": 19,
+    "HeadId": null
+  },
+  {
+    "Id": 5,
+    "Name": "IT-отдел",
+    "ParentDepartmentId": 1,
+    "ChatId": 20,
+    "HeadId": 12
+  },
+  {
+    "Id": 6,
+    "Name": "Разработка",
+    "ParentDepartmentId": 5,
+    "ChatId": 21,
+    "HeadId": null
+  },
+  {
+    "Id": 7,
+    "Name": "Тестирование",
+    "ParentDepartmentId": 5,
+    "ChatId": 22,
+    "HeadId": null
+  },
+  {
+    "Id": 8,
+    "Name": "Поддержка",
+    "ParentDepartmentId": 5,
+    "ChatId": 23,
+    "HeadId": null
+  },
+  {
+    "Id": 9,
+    "Name": "Продажи",
+    "ParentDepartmentId": 1,
+    "ChatId": 24,
+    "HeadId": null
+  },
+  {
+    "Id": 10,
+    "Name": "Маркетинг",
+    "ParentDepartmentId": 9,
+    "ChatId": 25,
+    "HeadId": null
+  },
+  {
+    "Id": 11,
+    "Name": "Работа с клиентами",
+    "ParentDepartmentId": 9,
+    "ChatId": 26,
+    "HeadId": null
+  },
+  {
+    "Id": 12,
+    "Name": "Финансы",
+    "ParentDepartmentId": 1,
+    "ChatId": 27,
+    "HeadId": null
+  },
+  {
+    "Id": 13,
+    "Name": "Бухгалтерия",
+    "ParentDepartmentId": 14,
+    "ChatId": 28,
+    "HeadId": 7
+  },
+  {
+    "Id": 14,
+    "Name": "Аналитика",
+    "ParentDepartmentId": 12,
+    "ChatId": 29,
+    "HeadId": null
+  },
+  {
+    "Id": 15,
+    "Name": "Тестовый",
+    "ParentDepartmentId": null,
+    "ChatId": 72,
+    "HeadId": null
+  }
+]

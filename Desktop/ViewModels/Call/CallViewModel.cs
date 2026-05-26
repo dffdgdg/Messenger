@@ -45,7 +45,9 @@ public partial class CallViewModel : BaseViewModel
     { 1 => 1, 2 => 1, <= 4 => 2, <= 6 => 2, <= 9 => 3, _ => 3 };
 
     private readonly DispatcherTimer _durationTimer;
-    private DateTimeOffset _callStartedAt;
+    private int _elapsedSecondsAtStart;
+    private DateTimeOffset _localStartedAt;
+    private TimeSpan _clockOffset;
     private readonly CallAudioService _audioService;
 
     public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store, CallAudioService audioService)
@@ -82,11 +84,21 @@ public partial class CallViewModel : BaseViewModel
         ChatId = state.ChatId;
         ChatName = chatName;
         IsGroupCall = isGroupCall;
-        _callStartedAt = state.StartedAt.ToUniversalTime();
+
+        _elapsedSecondsAtStart = state.ElapsedSeconds;
+        _localStartedAt = DateTimeOffset.UtcNow;
 
         Participants.Clear();
+
+        var me = state.Participants.FirstOrDefault(p => p.UserId == myUserId);
+        if (me != null)
+            Participants.Add(new CallParticipantViewModel(me));
+
         foreach (var p in state.Participants)
+        {
+            if (p.UserId == myUserId) continue;
             Participants.Add(new CallParticipantViewModel(p));
+        }
 
         OnParticipantsChanged();
         _durationTimer.Start();
@@ -298,9 +310,10 @@ public partial class CallViewModel : BaseViewModel
 
     private void OnDurationTick(object? sender, EventArgs e)
     {
-        var elapsed = DateTimeOffset.UtcNow - _callStartedAt;
+        var localElapsed = (int)(DateTimeOffset.UtcNow - _localStartedAt).TotalSeconds;
+        var totalSeconds = _elapsedSecondsAtStart + localElapsed;
 
-        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+        var elapsed = TimeSpan.FromSeconds(totalSeconds);
 
         DurationText = elapsed.TotalHours >= 1
             ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}"

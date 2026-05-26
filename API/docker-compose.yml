@@ -1,14 +1,17 @@
 ﻿services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: messenger-db
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
@@ -17,23 +20,36 @@
 
   api:
     build:
-      context: .
+      context: ..
       dockerfile: API/Dockerfile
+
     container_name: messenger-api
     restart: unless-stopped
+
     ports:
       - "5274:5274"
       - "5275:5275/udp"
+
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5274
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - Jwt__Secret=${JWT_SECRET}
-      - Discovery__ExternalIp=${EXTERNAL_IP}
-      - DisableHttpsRedirection=true
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5274
+
+      ConnectionStrings__DefaultConnection: >
+        Host=db;
+        Port=5432;
+        Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};
+        Password=${POSTGRES_PASSWORD}
+
+      Jwt__Secret: ${JWT_SECRET}
+      Discovery__ExternalIp: ${EXTERNAL_IP}
+      DisableHttpsRedirection: true
+
     volumes:
       - uploads:/app/wwwroot/uploads
       - avatars:/app/wwwroot/avatars
+      - ../API/Data/SeedData:/app/Data/SeedData
+
     depends_on:
       db:
         condition: service_healthy

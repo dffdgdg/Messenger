@@ -47,7 +47,7 @@ public partial class CallViewModel : BaseViewModel
     private readonly DispatcherTimer _durationTimer;
     private int _elapsedSecondsAtStart;
     private DateTimeOffset _localStartedAt;
-    private TimeSpan _clockOffset;
+    private readonly TimeSpan _clockOffset;
     private readonly CallAudioService _audioService;
 
     public CallViewModel(ICallService callService, ICallHubConnection hub, ActiveCallStore store, CallAudioService audioService)

@@ -22,7 +22,8 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
             .OrderByDescending(m => m.Id)
             .Take(take)
-            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) }).AsNoTracking().ToListAsync(ct);
+            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .AsNoTracking().ToListAsync(ct);
 
         if (messageIds.Count == 0) return [];
 
@@ -330,12 +331,6 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Where(m => m.ChatId == chatId
                      && m.IsDeleted != true
                      && (cutoff == null || m.CreatedAt >= cutoff));
-
-        var totalMessages = await baseQuery.CountAsync();
-
-        var totalFiles = await baseQuery
-            .SelectMany(m => m.MessageFiles)
-            .CountAsync();
 
         var mediaCount = await baseQuery
             .SelectMany(m => m.MessageFiles)

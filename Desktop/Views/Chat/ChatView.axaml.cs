@@ -122,145 +122,11 @@ public partial class ChatView : UserControl
         }
     }
 
-    private (int MessageId, double OffsetFromViewportTop)? CaptureTopVisibleAnchor()
-    {
-        if (_messagesList is null || _scrollViewer is null) return null;
-
-        double minTop = double.MaxValue;
-        (int MessageId, double OffsetFromViewportTop)? bestAnchor = null;
-
-        foreach (var container in _messagesList.GetRealizedContainers())
-        {
-            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
-
-            var transform = container.TransformToVisual(_scrollViewer);
-            if (transform is null) continue;
-
-            double top = transform.Value.Transform(new Point(0, 0)).Y;
-            double bottom = top + container.Bounds.Height;
-
-            // Ищем самый верхний видимый элемент
-            if (bottom > 0 && top < _scrollViewer.Viewport.Height)
-            {
-                if (top < minTop)
-                {
-                    minTop = top;
-                    bestAnchor = (msg.Id, top);
-                }
-            }
-        }
-        return bestAnchor;
-    }
-
-    private bool TryRestoreAnchorPosition((int MessageId, double OffsetFromViewportTop) anchor)
-    {
-        if (_messagesList is null || _scrollViewer is null) return false;
-
-        foreach (var container in _messagesList.GetRealizedContainers())
-        {
-            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
-            if (msg.Id != anchor.MessageId) continue;
-
-            var transform = container.TransformToVisual(_scrollViewer);
-            if (transform is null) continue;
-
-            double currentTop = transform.Value.Transform(new Point(0, 0)).Y;
-            double delta = currentTop - anchor.OffsetFromViewportTop;
-
-            if (Math.Abs(delta) > 0.5)
-            {
-                double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
-                _scrollViewer.Offset = new Vector(
-                    _scrollViewer.Offset.X,
-                    Math.Clamp(_scrollViewer.Offset.Y + delta, 0, maxOffset));
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    private void FineAdjustAnchorPosition((int MessageId, double OffsetFromViewportTop) anchor)
-    {
-        if (_messagesList is null || _scrollViewer is null) return;
-
-        foreach (var container in _messagesList.GetRealizedContainers())
-        {
-            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
-            if (msg.Id != anchor.MessageId) continue;
-
-            var transform = container.TransformToVisual(_scrollViewer);
-            if (transform is null) continue;
-
-            double currentTop = transform.Value.Transform(new Point(0, 0)).Y;
-            double delta = currentTop - anchor.OffsetFromViewportTop;
-
-            if (Math.Abs(delta) > 0.5)
-            {
-                double maxOffset = Math.Max(0, _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height);
-                _scrollViewer.Offset = new Vector(
-                    _scrollViewer.Offset.X,
-                    Math.Clamp(_scrollViewer.Offset.Y + delta, 0, maxOffset));
-            }
-            return;
-        }
-    }
-
-    private async Task LoadOlderWithExtentDeltaAsync()
-    {
-        if (_scrollViewer is null || _viewModel is null) return;
-
-        double extentBefore = _scrollViewer.Extent.Height;
-        double offsetBefore = _scrollViewer.Offset.Y;
-
-        await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
-
-        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
-        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-        if (_scrollViewer is null) return;
-
-        double extentAfter = _scrollViewer.Extent.Height;
-        double extentDelta = extentAfter - extentBefore;
-
-        if (extentDelta > 0.5)
-        {
-            double newOffset = Math.Clamp(
-                offsetBefore + extentDelta,
-                0,
-                Math.Max(0, extentAfter - _scrollViewer.Viewport.Height));
-            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, newOffset);
-        }
-    }
-
-    private int? CaptureAnchorMessageId()
-    {
-        if (_messagesList is null || _scrollViewer is null) return null;
-
-        // Ищем первое видимое сообщение
-        foreach (var container in _messagesList.GetRealizedContainers())
-        {
-            if (container is not ListBoxItem { DataContext: MessageViewModel msg }) continue;
-
-            var transform = container.TransformToVisual(_scrollViewer);
-            if (transform is null) continue;
-
-            double top = transform.Value.Transform(new Point(0, 0)).Y;
-            double bottom = top + container.Bounds.Height;
-
-            // Возвращаем ID первого видимого сообщения
-            if (bottom > 0 && top < _scrollViewer.Viewport.Height)
-                return msg.Id;
-        }
-        return null;
-    }
-
     private void HandleScrollPosition()
     {
         if (_scrollViewer is null || _viewModel is null) return;
         if (!_isInitialScrollDone) return;
 
-        // ← ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
         if (_suppressPositionTracking) return;
         if (_viewModel.IsLoadingOlderMessages || _viewModel.IsLoadingNewerMessages) return;
 
@@ -304,7 +170,6 @@ public partial class ChatView : UserControl
 
     private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        // ← САМАЯ ПЕРВАЯ ПРОВЕРКА
         if (_suppressPositionTracking) return;
 
         _lastScrollTime = DateTime.UtcNow;

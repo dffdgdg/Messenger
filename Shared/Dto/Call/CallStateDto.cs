@@ -1,5 +1,6 @@
-﻿using Shared.Dto.Call;
-using Shared.Enum;
+﻿using Shared.Enum;
+
+namespace Shared.Dto.Call;
 
 public class CallStateDto
 {

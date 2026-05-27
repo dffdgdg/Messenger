@@ -1,3 +1,10 @@
 ﻿namespace Shared.Enum;
 
-public enum UserRole { User, Head, Admin }
+[Flags]
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum UserRole
+{
+    User = 0,
+    Head = 1,
+    Admin = 2
+}

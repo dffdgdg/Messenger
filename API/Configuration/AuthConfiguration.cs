@@ -1,14 +1,12 @@
 ﻿using API.Services.Core.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace API.Configuration;
 
 public static class AuthConfiguration
 {
-    public static IServiceCollection AddMessengerAuth(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddMessengerAuth(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -16,7 +14,6 @@ public static class AuthConfiguration
                 options.TokenValidationParameters =
                     TokenService.CreateValidationParameters(configuration);
 
-                // Критично для Docker (HTTP без TLS)
                 options.RequireHttpsMetadata = false;
 
                 options.Events = new JwtBearerEvents
@@ -35,11 +32,14 @@ public static class AuthConfiguration
                 };
             });
 
-        services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(
-                new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build());
+        services.AddAuthorizationBuilder().SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser().Build())
+            .AddPolicy("IsAdmin", policy =>
+            policy.RequireAssertion(context =>
+            {
+                var roleClaim = context.User.FindFirst(ClaimTypes.Role)?.Value;
+                return int.TryParse(roleClaim, out var roleInt) && ((UserRole)roleInt).HasFlag(UserRole.Admin);
+            }));
 
         return services;
     }

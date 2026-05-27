@@ -1,5 +1,7 @@
 namespace API.Controllers;
 
+[ApiController]
+[Route("api/departments")]
 public sealed class DepartmentsController(IDepartmentService department, ILogger<DepartmentsController> logger) : BaseController<DepartmentsController>(logger)
 {
     [HttpGet]
@@ -11,17 +13,17 @@ public sealed class DepartmentsController(IDepartmentService department, ILogger
         => Map(await department.GetDepartmentAsync(id, ct));
 
     [HttpPost]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Policy = "IsAdmin")]
     public async Task<IActionResult> CreateDepartment([FromBody] DepartmentDto dto, CancellationToken ct)
         => Map(await department.CreateDepartmentAsync(dto, ct));
 
     [HttpPut("{id}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Policy = "IsAdmin")]
     public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDto dto, CancellationToken ct)
         => Map(await department.UpdateDepartmentAsync(id, dto, ct));
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Policy = "IsAdmin")]
     public async Task<IActionResult> DeleteDepartment(int id, CancellationToken ct)
         => Map(await department.DeleteDepartmentAsync(id, ct));
 

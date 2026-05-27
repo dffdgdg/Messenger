@@ -25,6 +25,8 @@ public static class HubMethods
         public const string ReceiveNotification = "ReceiveNotification";
 
         public const string UserProfileUpdated = "UserProfileUpdated";
+        public const string UserRoleUpdated = "UserRoleUpdated";
+        public const string UserPermissionsChanged = "UserPermissionsChanged";
     }
 
     public static class ChatInvoke

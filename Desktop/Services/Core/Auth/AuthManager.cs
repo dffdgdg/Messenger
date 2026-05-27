@@ -189,6 +189,13 @@ public sealed class AuthManager : IAuthManager, IDisposable
             error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
+    public async Task UpdateRoleAsync(UserRole role)
+    {
+        if (!Session.IsAuthenticated || Session.UserRole == role) return;
+        Session.UpdateRole(role);
+        await _secureStorage.SaveAsync(UserRoleKey, role);
+    }
+
     public async Task<bool> TryRefreshTokenAsync()
     {
         Task<bool> taskToAwait;
@@ -286,6 +293,8 @@ public sealed class AuthManager : IAuthManager, IDisposable
                 await _cookieStorage.PersistAsync();
                 await SaveAuthAsync(data.Token, data.UserId, data.Role);
                 Session.UpdateTokens(data.Token);
+                Session.UpdateRole(data.Role);
+                await _secureStorage.SaveAsync(UserRoleKey, data.Role);
 
                 return true;
             }

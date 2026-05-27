@@ -280,6 +280,9 @@ public sealed class ApiClientService : IApiClientService
         catch (Exception ex) { return CreateErrorResponse<T>(ex); }
     }
 
+    public void UpdateBaseUrl(string newBaseUrl)
+        => _httpClient.BaseAddress = new Uri(newBaseUrl);
+
     #region Response Processing
 
     private async Task<ApiResponse<T>> ProcessResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)

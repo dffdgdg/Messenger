@@ -11,6 +11,7 @@ public interface ISessionStore
     bool IsUser { get; }
 
     void SetSession(string token, int userId, UserRole role);
+    void UpdateRole(UserRole role);
     void UpdateTokens(string token);
     void ClearSession();
 

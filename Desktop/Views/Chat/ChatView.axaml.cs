@@ -221,7 +221,6 @@ public partial class ChatView : UserControl
 
     // Оставить старые методы для обратной совместимости с остальным кодом
     private bool IsLoadingOlder() => IsLoadingOlderAtomic() == 1;
-    private bool IsLoadingNewer() => IsLoadingNewerAtomic() == 1;
 
     // ══════════════════════════════════════════════════
     // Остальные методы без изменений

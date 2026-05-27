@@ -13,4 +13,5 @@ public interface IAuthManager
     Task WaitForInitializationAsync();
     Task<bool> WaitForInitializationAsync(TimeSpan timeout);
     Task<bool> TryRefreshTokenAsync();
+    Task UpdateRoleAsync(UserRole role);
 }

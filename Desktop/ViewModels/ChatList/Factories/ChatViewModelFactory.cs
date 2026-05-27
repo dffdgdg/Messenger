@@ -1,6 +1,6 @@
-﻿using Desktop.ViewModels;
-using Desktop.ViewModels.Chat;
-using Desktop.ViewModels.ChatList.Factories;
+﻿using Desktop.ViewModels.Chat;
+
+namespace Desktop.ViewModels.ChatList.Factories;
 
 public interface IChatViewModelFactory
 {

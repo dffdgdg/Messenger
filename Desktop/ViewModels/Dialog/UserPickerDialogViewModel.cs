@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Desktop.ViewModels.Dialog;
+﻿namespace Desktop.ViewModels.Dialog;
 
 public partial class UserPickerDialogViewModel : DialogBaseViewModel
 {
@@ -74,11 +69,16 @@ public partial class UserPickerDialogViewModel : DialogBaseViewModel
     {
         if (string.IsNullOrWhiteSpace(SearchQuery))
         {
-            FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
+            FilteredItems = new ObservableCollection<UserListItemViewModel>(_sourceItems);
             return;
         }
 
-        FilteredItems = new ObservableCollection<UserListItemViewModel>(Items);
+        var query = SearchQuery.ToLowerInvariant();
+        var filtered = _sourceItems.Where(u =>
+            u.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
+            u.Username?.Contains(query, StringComparison.OrdinalIgnoreCase) == true);
+
+        FilteredItems = new ObservableCollection<UserListItemViewModel>(filtered);
     }
 
     /// <summary>

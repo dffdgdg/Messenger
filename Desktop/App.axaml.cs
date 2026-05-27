@@ -24,7 +24,7 @@ public sealed class App : Application, IDisposable
 
     private bool _disposed;
     private INotificationService? _notificationService;
-
+    public static bool WasDiscovered { get; private set; }
     public static new App Current => (App)Application.Current!;
 
     public IServiceProvider Services { get; private set; } = null!;
@@ -53,26 +53,23 @@ public sealed class App : Application, IDisposable
 
     private static string ResolveApiUrl(IConfiguration configuration)
     {
-#if DEBUG
-        Thread.Sleep(5000);
-#endif
+        var discoveredUrl = DiscoverServerBlocking();
+        if (discoveredUrl is not null)
+        {
+            SaveServerUrlToSettings(discoveredUrl, manual: false);
+            WasDiscovered = true;
+            Debug.WriteLine($"[App] Сервер найден через UDP: {discoveredUrl}");
+            return discoveredUrl;
+        }
+
+        WasDiscovered = false;
+        Debug.WriteLine("[App] UDP-обнаружение не дало результатов");
 
         var savedUrl = TryLoadSavedServerUrl();
         if (savedUrl is not null)
         {
-            if (HealthCheck(savedUrl))
-            {
-                Debug.WriteLine($"[App] Сохранённый URL жив: {savedUrl}");
-                return savedUrl;
-            }
-            Debug.WriteLine("[App] Сохранённый URL не отвечает, запускаем поиск...");
-        }
-
-        var discoveredUrl = DiscoverServerBlocking();
-        if (discoveredUrl is not null)
-        {
-            SaveServerUrlToSettings(discoveredUrl);
-            return discoveredUrl;
+            Debug.WriteLine($"[App] Используем резервный сохранённый URL: {savedUrl}");
+            return savedUrl;
         }
 
         var fallback = configuration["ApiUrl"] ?? configuration["Api:BaseUrl"] ?? "http://localhost:5274/";
@@ -112,7 +109,7 @@ public sealed class App : Application, IDisposable
         }
     }
 
-    private static void SaveServerUrlToSettings(string url)
+    private static void SaveServerUrlToSettings(string url, bool manual = false)
     {
         try
         {
@@ -121,9 +118,7 @@ public sealed class App : Application, IDisposable
 
             string json;
             if (File.Exists(filePath))
-            {
                 json = File.ReadAllText(filePath);
-            }
             else
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
@@ -133,11 +128,10 @@ public sealed class App : Application, IDisposable
             using var doc = JsonDocument.Parse(json);
             var root = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json) ?? [];
             root["server_url"] = JsonSerializer.SerializeToElement(url);
+            root["manual_server"] = JsonSerializer.SerializeToElement(manual);
 
-            var newJson = JsonSerializer.Serialize(root, IndentedJsonOptions);
-
-            File.WriteAllText(filePath, newJson);
-            Debug.WriteLine($"[App] Сохранён новый URL сервера: {url}");
+            File.WriteAllText(filePath, JsonSerializer.Serialize(root, IndentedJsonOptions));
+            Debug.WriteLine($"[App] Сохранён URL сервера: {url} (manual={manual})");
         }
         catch (Exception ex)
         {
@@ -234,6 +228,35 @@ public sealed class App : Application, IDisposable
         {
             Debug.WriteLine($"[App] Local database/maintenance failed (non-critical): {ex.Message}");
         }
+    }
+
+    public static void SetApiUrl(string url, bool manual = false)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new ArgumentException("URL cannot be empty", nameof(url));
+
+        if (!url.EndsWith('/'))
+            url += "/";
+
+        ApiUrl = url;
+        SaveServerUrlToSettings(url, manual);
+
+        Debug.WriteLine($"[App] ApiUrl изменён на: {url} (manual={manual})");
+    }
+
+    private static bool IsManualServerMode()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var filePath = Path.Combine(appData, "Desktop", "settings.json");
+            if (!File.Exists(filePath)) return false;
+
+            var json = File.ReadAllText(filePath);
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("manual_server", out var el) && el.ValueKind == JsonValueKind.True;
+        }
+        catch { return false; }
     }
 
     private void ConfigureImageLoader()

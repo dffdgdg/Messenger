@@ -20,4 +20,6 @@ public class UserDto
     public bool? NotificationsEnabled { get; set; }
     public UserStatusType StatusType { get; set; } = UserStatusType.Online;
     public DateTime? StatusExpiresAt { get; set; }
+    [JsonIgnore]
+    public bool CanManage { get; set; } = true;
 }

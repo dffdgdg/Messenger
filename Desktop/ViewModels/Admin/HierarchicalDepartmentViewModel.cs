@@ -38,6 +38,8 @@ public partial class HierarchicalDepartmentViewModel(DepartmentDto department, i
     [ObservableProperty] public partial bool IsSelected { get; set; }
     [ObservableProperty] public partial bool IsHighlighted { get; set; }
 
+    [ObservableProperty] public partial bool CanEdit { get; set; } = true;
+
     /// <summary>
     /// ”гол поворота шеврона
     /// </summary>

@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using Avalonia.Controls.ApplicationLifetimes;
+using Desktop.Services;
+using Desktop.ViewModels.Dialog;
+using System.Diagnostics;
 
 namespace Desktop.ViewModels;
 
@@ -7,6 +10,8 @@ public partial class LoginViewModel : BaseViewModel
     private readonly IAuthManager _authManager;
     private readonly INavigationService _navigation;
     private readonly ISecureStorageService _secureStorage;
+    private readonly IDialogService _dialogService;
+    private readonly ISettingsService _settingsService;
 
     private const string RememberMeKey = "remember_me";
     private const string SavedUsernameKey = "saved_username";
@@ -18,15 +23,17 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty] public partial bool IsInitializing { get; set; } = true;
     [ObservableProperty] public partial bool CanRetryAutoLogin { get; set; }
     [ObservableProperty] public partial string ServerUrl { get; set; } = string.Empty;
+    private const string CustomServerUrlKey = "server_url";
 
-    public LoginViewModel(IAuthManager authManager, INavigationService navigation, ISecureStorageService secureStorage)
+    public LoginViewModel(IAuthManager authManager, INavigationService navigation,
+        ISecureStorageService secureStorage, IDialogService dialogService, ISettingsService settingsService)
     {
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
-
+        _dialogService = dialogService;
+        _settingsService = settingsService;
         ServerUrl = App.ApiUrl;
-
         _ = InitializeAsync();
     }
 
@@ -59,10 +66,14 @@ public partial class LoginViewModel : BaseViewModel
 
             if (completed != initTask)
             {
+                // ⚠️ Авто-инициализация не успела
                 ErrorMessage = "Не удалось автоматически восстановить сессию. Войдите вручную.";
                 CanRetryAutoLogin = true;
                 await LoadSavedUsernameAsync();
                 _ = ObserveLateInitializationAsync(initTask);
+
+                // 🔍 Если сервер не был обнаружен через UDP — предлагаем ввести вручную
+                await SuggestManualServerAsync();
                 return;
             }
 
@@ -77,6 +88,9 @@ public partial class LoginViewModel : BaseViewModel
 
             Debug.WriteLine("LoginVM: Сессия не восстановлена, показываем форму логина");
             await LoadSavedUsernameAsync();
+
+            // 🔍 Если сервер не был обнаружен через UDP — предлагаем ввести вручную
+            await SuggestManualServerAsync();
         }
         catch (Exception ex)
         {
@@ -86,6 +100,37 @@ public partial class LoginViewModel : BaseViewModel
         finally
         {
             IsInitializing = false;
+        }
+    }
+
+    /// <summary>
+    /// Если сервер не был найден через UDP, предлагаем пользователю ввести адрес вручную
+    /// </summary>
+    private async Task SuggestManualServerAsync()
+    {
+        await Task.Delay(500);
+
+        if (App.WasDiscovered)
+            return;
+
+        if (ServerUrl.Contains("localhost") || ServerUrl == "http://localhost:5274/")
+        {
+            var dialog = new ConfirmDialogViewModel(
+                "Сервер не найден",
+                "Не удалось обнаружить сервер в локальной сети.\n\nХотите указать адрес сервера вручную?",
+                "Указать адрес",
+                "Пропустить")
+            {
+                CanCloseOnBackgroundClick = false
+            };
+
+            await _dialogService.ShowAsync(dialog);
+            var shouldConfigure = await dialog.Result;
+
+            if (shouldConfigure)
+            {
+                await SetServerUrlAsync();
+            }
         }
     }
 
@@ -200,6 +245,66 @@ public partial class LoginViewModel : BaseViewModel
         {
             Password = string.Empty;
             IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetServerUrlAsync()
+    {
+        var dialog = new ServerUrlDialogViewModel(ServerUrl);
+        await _dialogService.ShowAsync(dialog);
+
+        if (string.IsNullOrWhiteSpace(dialog.ServerUrl))
+            return;
+
+        var newUrl = dialog.ServerUrl;
+
+        if (string.Equals(newUrl.TrimEnd('/'), ServerUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            return;
+
+        App.SetApiUrl(newUrl, manual: true);
+        ServerUrl = newUrl;
+
+        var confirmDialog = new ConfirmDialogViewModel(
+            "Смена сервера",
+            $"Адрес сервера изменён на:\n{newUrl}\n\nДля применения изменений требуется перезапуск приложения. Перезапустить сейчас?",
+            "Перезапустить",
+            "Позже")
+        {
+            CanCloseOnBackgroundClick = false
+        };
+
+        await _dialogService.ShowAsync(confirmDialog);
+        var shouldRestart = await confirmDialog.Result;
+
+        if (shouldRestart)
+        {
+            RestartApplication();
+        }
+    }
+
+    private static void RestartApplication()
+    {
+        var exePath = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exePath))
+        {
+            Environment.Exit(0);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = exePath,
+            UseShellExecute = true
+        });
+
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Shutdown();
+        }
+        else
+        {
+            Environment.Exit(0);
         }
     }
 

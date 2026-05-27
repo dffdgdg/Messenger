@@ -985,7 +985,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
                 await _callService.JoinCallAsync(state.CallId, Context.ChatId);
 
-                await Task.Delay(200);
+                await Task.Delay(200, _);
 
                 var freshState = await _callHub.GetCallStateAsync(Context.ChatId);
 

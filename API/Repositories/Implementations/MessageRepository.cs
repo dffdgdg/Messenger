@@ -22,7 +22,7 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
             .OrderByDescending(m => m.Id)
             .Take(take)
-            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .Select(m => new { m.Id, IsUser = m is UserMessage })
             .AsNoTracking().ToListAsync(ct);
 
         if (messageIds.Count == 0) return [];
@@ -41,7 +41,7 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
             .OrderBy(m => m.Id)
             .Take(take)
-            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .Select(m => new { m.Id, IsUser = m is UserMessage })
             .AsNoTracking()
             .ToListAsync(ct);
 
@@ -228,7 +228,7 @@ public sealed class MessageRepository(MessengerDbContext context)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
             .OrderByDescending(m => m.Id)
             .Take(limit)
-            .Select(m => new { m.Id, IsUser = !(m is SystemMessage) })
+            .Select(m => new { m.Id, IsUser = m is UserMessage })
             .AsNoTracking()
             .ToListAsync(ct);
 

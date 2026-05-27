@@ -1,4 +1,6 @@
-﻿namespace API.Services.Infrastructure;
+﻿using System.Security.Claims;
+
+namespace API.Services.Infrastructure;
 
 public sealed partial class AccessControlService(MessengerDbContext context, ICacheService cache,
     IHttpContextAccessor httpContextAccessor, ILogger<AccessControlService> logger) : IAccessControlService
@@ -50,7 +52,9 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
         if (_cachedIsSystemAdmin.HasValue)
             return _cachedIsSystemAdmin.Value;
 
-        var isAdmin = httpContextAccessor.HttpContext?.User.IsInRole("Admin") ?? false;
+        var roleClaim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.Role)?.Value;
+        var isAdmin = int.TryParse(roleClaim, out var roleInt) && ((UserRole)roleInt).HasFlag(UserRole.Admin);
+
         _cachedIsSystemAdmin = isAdmin;
 
         if (isAdmin)
@@ -58,6 +62,9 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
 
         return isAdmin;
     }
+
+
+    public void InvalidateSystemAdminCache() => _cachedIsSystemAdmin = null;
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Членство: пользователь {UserId} в чате {ChatId} имеет роль {Role}")]
     private partial void LogMembershipResult(int userId, int chatId, ChatRole? role);

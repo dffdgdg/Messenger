@@ -1,5 +1,6 @@
 ﻿using Desktop.Infrastructure.Diagnostics;
 using Desktop.Services.Features.Call;
+using Desktop.Services.UI;
 using Desktop.ViewModels.Call;
 using Desktop.ViewModels.Chat;
 using Desktop.ViewModels.Chat.Navigation;
@@ -53,6 +54,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     [ObservableProperty] public partial ObservableCollection<ChatDto> UserChats { get; set; } = [];
     [ObservableProperty] public partial bool IsSearching { get; set; }
     [ObservableProperty] public partial int SelectedMenuIndex { get; set; } = 1;
+    [ObservableProperty] public partial bool IsAdminSectionVisible { get; set; }
+    [ObservableProperty] public partial bool IsDepartmentSectionVisible { get; set; }
 
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool ShowNoResults => HasSearchText && !IsSearching;
@@ -76,6 +79,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _callHub.CallStateUpdated += OnCallStateUpdated;
         _activeCallStore = activeCallStore;
         _globalHub.UserStatusChanged += OnUserStatusChanged;
+        _globalHub.UserRoleUpdated += OnUserRoleUpdated;
+        _globalHub.UserPermissionsChanged += OnUserPermissionsChanged;
+        _globalHub.UserBanned += OnUserBanned;
 
         CallBanner = new CallBannerViewModel(activeCallStore, _sp.GetRequiredService<ICallService>());
 
@@ -92,6 +98,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         };
 
         _auth.Session.SessionChanged += OnSessionChanged;
+        RefreshRoleBasedUi();
 
         CurrentMenuViewModel = _chatsVm = _chatsFactory.Create(this, isGroupMode: true);
 
@@ -104,10 +111,53 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     }
     private void OnSessionChanged()
     {
+        RefreshRoleBasedUi();
         if (_auth.Session.IsAuthenticated && !_callHub.IsConnected)
         {
             _ = InitGlobalHubAsync();
         }
+    }
+
+    private async void OnUserRoleUpdated(UserRole role)
+    {
+        await _auth.UpdateRoleAsync(role);
+
+        try
+        {
+            await _auth.TryRefreshTokenAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainMenu] Failed to refresh token after role update: {ex.Message}");
+        }
+
+        var currentIndex = SelectedMenuIndex;
+        RefreshRoleBasedUi();
+
+        if (_adminVm != null)
+        {
+            await _adminVm.RefreshCommand.ExecuteAsync(null);
+        }
+
+        if ((currentIndex == 4 || currentIndex == 6) && !IsAdminSectionVisible && !IsDepartmentSectionVisible)
+        {
+            NavigateTo(1, false);
+            var notify = _sp.GetRequiredService<INotificationService>();
+            notify.Show(
+                "Права изменены",
+                "Ваши права администратора были отозваны. Вы переведены в основной раздел.",
+                DesktopNotificationType.Warning);
+        }
+    }
+
+    private void RefreshRoleBasedUi()
+    {
+        IsAdminSectionVisible = _auth.Session.IsAdmin;
+        IsDepartmentSectionVisible = _auth.Session.IsHead;
+
+        if ((SelectedMenuIndex == 4 && !IsAdminSectionVisible) ||
+            (SelectedMenuIndex == 6 && !IsDepartmentSectionVisible))
+            NavigateTo(1, false);
     }
 
     private async Task InitGlobalHubAsync()
@@ -409,8 +459,22 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     public void SetActiveMenu(int index) => NavigateTo(index, true);
 
+    private bool HasAccessToMenu(int index) => index switch
+    {
+        4 => IsAdminSectionVisible,
+        6 => IsDepartmentSectionVisible,
+        _ => true
+    };
+
     private void NavigateTo(int index, bool addToHistory)
     {
+        if (!HasAccessToMenu(index))
+        {
+            if (SelectedMenuIndex is 4 or 6)
+                index = 1;
+            else return;
+        }
+
         if (addToHistory && SelectedMenuIndex != index)
         {
             _backHistory.Push(SelectedMenuIndex);
@@ -720,6 +784,37 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         else ErrorMessage = $"Ошибка создания опроса: {r.Error}";
     });
 
+    private void OnUserPermissionsChanged(UserPermissionsChangedDto dto)
+    {
+        var notify = _sp.GetRequiredService<INotificationService>();
+        notify.Show(
+            "Права изменены",
+            dto.Reason,
+            DesktopNotificationType.Warning);
+    }
+
+    private void OnUserBanned(UserBannedDto dto)
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            var notify = _sp.GetRequiredService<INotificationService>();
+            notify.Show(
+                "Доступ заблокирован",
+                dto.Reason,
+                DesktopNotificationType.Error);
+
+            await Task.Delay(500);
+            await _auth.LogoutAsync();
+            NavigateToLogin();
+        });
+    }
+
+    private void NavigateToLogin()
+    {
+        var loginVm = _sp.GetRequiredService<LoginViewModel>();
+        _mainWindowVm.CurrentViewModel = loginVm;
+    }
+
     private async Task LoadContactsAndChatsAsync() => await SafeExecuteAsync(async () =>
     {
         var usersTask = _api.GetAsync<List<UserDto>>(ApiEndpoints.Users.GetAll);
@@ -889,6 +984,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
             _callHub.IncomingCall -= OnIncomingCall;
             _callHub.CallStateUpdated -= OnCallStateUpdated;
             _globalHub.UserStatusChanged -= OnUserStatusChanged;
+            _globalHub.UserRoleUpdated -= OnUserRoleUpdated;
+            _globalHub.UserPermissionsChanged -= OnUserPermissionsChanged;
+            _globalHub.UserBanned -= OnUserBanned;
             _searchCts?.Cancel();
             _searchCts?.Dispose();
             DisposeVm(ref _chatsVm);

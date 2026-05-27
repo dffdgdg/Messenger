@@ -2,21 +2,14 @@
 
 public partial class SessionStore : ObservableObject, ISessionStore
 {
-    private static readonly Dictionary<UserRole, int> RoleHierarchy = new()
-    {
-        [UserRole.User] = 0,
-        [UserRole.Head] = 1,
-        [UserRole.Admin] = 2
-    };
-
     [ObservableProperty] public partial int? UserId { get; set; }
     [ObservableProperty] public partial string? Token { get; set; }
 
     [ObservableProperty] public partial UserRole UserRole { get; set; } = UserRole.User;
 
     public bool IsAuthenticated => !string.IsNullOrEmpty(Token) && UserId.HasValue;
-    public bool IsAdmin => UserRole == UserRole.Admin;
-    public bool IsHead => UserRole == UserRole.Head;
+    public bool IsAdmin => UserRole.HasFlag(UserRole.Admin);
+    public bool IsHead => UserRole.HasFlag(UserRole.Head);
     public bool IsUser => UserRole == UserRole.User;
 
     public event Action? SessionChanged;
@@ -45,6 +38,16 @@ public partial class SessionStore : ObservableObject, ISessionStore
         SessionChanged?.Invoke();
     }
 
+    public void UpdateRole(UserRole role)
+    {
+        if (!IsAuthenticated || UserRole == role) return;
+        UserRole = role;
+        OnPropertyChanged(nameof(IsAdmin));
+        OnPropertyChanged(nameof(IsHead));
+        OnPropertyChanged(nameof(IsUser));
+        SessionChanged?.Invoke();
+    }
+
     public void ClearSession()
     {
         Token = null;
@@ -63,19 +66,13 @@ public partial class SessionStore : ObservableObject, ISessionStore
         OnPropertyChanged(nameof(IsUser));
     }
 
-    public bool HasRole(UserRole requiredRole)
-    {
-        if (!IsAuthenticated) return false;
-        if (!RoleHierarchy.TryGetValue(UserRole, out var currentLevel)) return false;
-        if (!RoleHierarchy.TryGetValue(requiredRole, out var requiredLevel)) return false;
-        return currentLevel >= requiredLevel;
-    }
+    public bool HasRole(UserRole requiredRole) => UserRole.HasFlag(requiredRole);
 
     public bool HasAnyRole(params UserRole[] roles)
     {
         if (roles.Length == 0 || !IsAuthenticated) return false;
-        return roles.Any(IsInRole);
+        return roles.Any(r => UserRole.HasFlag(r));
     }
 
-    public bool IsInRole(UserRole role) => IsAuthenticated && UserRole == role;
+    public bool IsInRole(UserRole role) => IsAuthenticated && UserRole.HasFlag(role);
 }

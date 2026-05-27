@@ -2,7 +2,7 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = nameof(UserRole.Admin))]
+[Authorize(Policy = "IsAdmin")]
 public class AdminController(IAdminService admin, ILogger<AdminController> logger) : BaseController<AdminController>(logger)
 {
     [HttpGet("users")]

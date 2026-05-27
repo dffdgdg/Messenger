@@ -226,12 +226,16 @@ public sealed partial class AuthService : BaseService<AuthService>, IAuthService
 
     private async Task<UserRole> DetermineUserRoleAsync(Data.User user, CancellationToken ct)
     {
+        var role = UserRole.User;
+
         if (user.DepartmentId == _settings.AdminDepartmentId)
-            return UserRole.Admin;
+            role |= UserRole.Admin;
 
         var isHead = await _context.Departments.AnyAsync(d => d.HeadId == user.Id, ct);
+        if (isHead)
+            role |= UserRole.Head;
 
-        return isHead ? UserRole.Head : UserRole.User;
+        return role;
     }
 
     #endregion

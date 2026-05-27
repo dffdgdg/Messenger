@@ -10,4 +10,5 @@ public interface IAccessControlService
     Task<List<int>> GetChatMemberIdsAsync(int chatId);
     Task<ChatType> GetChatTypeAsync(int chatId);
     Task<ChatMember?> GetChatMemberAsync(int userId, int chatId);
+    void InvalidateSystemAdminCache();
 }

@@ -28,17 +28,20 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredHierarchicalDepartments =>
         DepartmentsTab.FilteredDepartments;
 
-    // Есть ли вообще хоть один пользователь в отфильтрованных группах
     public bool HasUsers => FilteredGroupedUsers?.Any(g => g.Users.Count > 0) == true;
-
-    // Есть ли хоть один отдел после фильтрации
     public bool HasDepartments => FilteredHierarchicalDepartments?.Any() == true;
 
-    public AdminViewModel(UsersTabViewModel usersTab, DepartmentsTabViewModel departmentsTab, INotificationService notificationService)
+    public AdminViewModel(
+        UsersTabViewModel usersTab,
+        DepartmentsTabViewModel departmentsTab,
+        INotificationService notificationService,
+        IGlobalHubConnection globalHub)
     {
         UsersTab = usersTab;
         DepartmentsTab = departmentsTab;
         _notificationService = notificationService;
+
+        globalHub.UserPermissionsChanged += OnUserPermissionsChanged;
 
         UsersTab.PropertyChanged += (_, e) =>
         {
@@ -63,6 +66,15 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
         };
 
         _ = InitializeAsync();
+    }
+
+    private void OnUserPermissionsChanged(UserPermissionsChangedDto dto)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (RefreshCommand.CanExecute(null))
+                RefreshCommand.Execute(null);
+        });
     }
 
     private async Task InitializeAsync()
@@ -91,7 +103,6 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
 
     partial void OnSelectedTabIndexChanged(int value) => ClearMessages();
 
-    // Сброс поиска — используется кнопкой в пустом состоянии
     [RelayCommand]
     private void ClearSearch() => SearchQuery = string.Empty;
 
@@ -165,11 +176,8 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
                 _lastShownError = source.ErrorMessage;
                 _ = _notificationService.ShowErrorAsync(source.ErrorMessage);
             }
-
             ErrorMessage = null;
         }
-
-
         else if (propertyName == nameof(SuccessMessage) && !string.IsNullOrEmpty(source.SuccessMessage))
         {
             if (!string.Equals(_lastShownSuccess, source.SuccessMessage, StringComparison.Ordinal))
@@ -177,7 +185,6 @@ public partial class AdminViewModel : BaseViewModel, IRefreshable
                 _lastShownSuccess = source.SuccessMessage;
                 _ = _notificationService.ShowSuccessAsync(source.SuccessMessage);
             }
-
             SuccessMessage = null;
         }
     }

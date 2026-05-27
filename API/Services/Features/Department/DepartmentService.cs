@@ -1,12 +1,14 @@
 ﻿using API.Services.Base;
+using Shared.Hubs;
 
 namespace API.Services.Department;
 
 public sealed partial class DepartmentService(MessengerDbContext context, IOptions<MessengerSettings> settings, AppDateTime appDateTime,
-    ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
+    IHubNotifier hubNotifier, ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
 {
     private readonly MessengerSettings _settings = settings.Value;
     private readonly AppDateTime _appDateTime = appDateTime;
+    private readonly IHubNotifier _hubNotifier = hubNotifier;
 
     public async Task<Result<List<DepartmentDto>>> GetDepartmentsAsync(CancellationToken ct = default)
     {
@@ -83,7 +85,6 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         };
 
         _context.Chats.Add(departmentChat);
-
         _context.Departments.Add(entity);
 
         var save = await SaveChangesAsync(ct);
@@ -93,8 +94,19 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         var linkSave = await SaveChangesAsync(ct);
         if (linkSave.IsFailure) return linkSave.As<DepartmentDto>();
 
-        await SyncHeadsChatMembershipAsync(null, entity.HeadId, ct);
+        if (dto.Head.HasValue)
+        {
+            var headUser = await _context.Users.FindAsync([dto.Head.Value], ct);
+            if (headUser != null)
+            {
+                var oldDeptId = headUser.DepartmentId;
+                headUser.DepartmentId = entity.Id;
+                await SyncDepartmentChatMembershipAsync(headUser.Id, oldDeptId, entity.Id, ct);
+                await NotifyUserRoleAsync(headUser.Id, ct);
+            }
+        }
 
+        await SyncHeadsChatMembershipAsync(null, entity.HeadId, ct);
 
         LogDepartmentCreated(entity.Id, entity.Name);
 
@@ -129,12 +141,45 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             if (!headExists)
                 return Result.NotFound("Указанный пользователь не существует");
         }
+
         var oldHeadId = entity.HeadId;
         var oldName = entity.Name;
+
+        if (dto.Head.HasValue && dto.Head != oldHeadId)
+        {
+            var otherDepartment = await _context.Departments
+                .FirstOrDefaultAsync(d => d.HeadId == dto.Head.Value && d.Id != id, ct);
+
+            if (otherDepartment != null)
+            {
+                var otherOldHeadId = otherDepartment.HeadId;
+                otherDepartment.HeadId = null;
+
+                var interimSave = await SaveChangesAsync(ct);
+                if (interimSave.IsFailure) return interimSave;
+
+                if (otherOldHeadId.HasValue)
+                    await NotifyUserRoleAsync(otherOldHeadId.Value, ct);
+
+                await SyncHeadsChatMembershipAsync(otherOldHeadId, null, ct, excludeDepartmentId: otherDepartment.Id);
+            }
+        }
 
         entity.Name = dto.Name.Trim();
         entity.ParentDepartmentId = dto.ParentDepartmentId;
         entity.HeadId = dto.Head;
+
+        if (dto.Head.HasValue && dto.Head != oldHeadId)
+        {
+            var headUser = await _context.Users.FindAsync([dto.Head.Value], ct);
+            if (headUser != null && headUser.DepartmentId != id)
+            {
+                var oldUserDeptId = headUser.DepartmentId;
+                headUser.DepartmentId = id;
+                await SyncDepartmentChatMembershipAsync(headUser.Id, oldUserDeptId, id, ct);
+                await NotifyUserRoleAsync(headUser.Id, ct);
+            }
+        }
 
         if (entity.ChatId.HasValue && !string.Equals(oldName, entity.Name, StringComparison.Ordinal))
         {
@@ -146,6 +191,12 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
+
+        if (oldHeadId.HasValue && oldHeadId != entity.HeadId)
+            await NotifyUserRoleAsync(oldHeadId.Value, ct);
+
+        if (entity.HeadId.HasValue && entity.HeadId != oldHeadId)
+            await NotifyUserRoleAsync(entity.HeadId.Value, ct);
 
         LogDepartmentUpdated(id);
         return Result.Success();
@@ -234,6 +285,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
 
+        await NotifyUserRoleAsync(userId, ct);
         LogUserAddedToDepartment(userId, departmentId);
 
         return Result.Success();
@@ -264,6 +316,7 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
 
+        await NotifyUserRoleAsync(userId, ct);
         LogUserRemovedFromDepartment(userId, departmentId);
 
         return Result.Success();
@@ -273,6 +326,27 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         => Result<bool>.Success(await CanManageDepartmentInternalAsync(userId, departmentId, ct));
 
     #region Private
+    private async Task NotifyUserRoleAsync(int userId, CancellationToken ct)
+    {
+        var role = await ResolveUserRoleAsync(userId, ct);
+        await _hubNotifier.SendToUserAsync(userId, HubMethods.Chat.UserRoleUpdated, role);
+    }
+
+    private async Task<UserRole> ResolveUserRoleAsync(int userId, CancellationToken ct)
+    {
+        var role = UserRole.User;
+
+        var isAdmin = await _context.Users.AnyAsync(u => u.Id == userId && u.DepartmentId == _settings.AdminDepartmentId, ct);
+        if (isAdmin)
+            role |= UserRole.Admin;
+
+        var isHead = await _context.Departments.AnyAsync(d => d.HeadId == userId, ct);
+        if (isHead)
+            role |= UserRole.Head;
+
+        return role;
+    }
+
     private async Task SyncHeadsChatMembershipAsync(int? oldHeadId, int? newHeadId, CancellationToken ct, int? excludeDepartmentId = null)
     {
         if (oldHeadId == newHeadId)

@@ -4,12 +4,14 @@ using Shared.Dto.Department;
 
 namespace Desktop.ViewModels;
 
-public partial class UsersTabViewModel(IApiClientService apiClient, IDialogService dialogService) : BaseViewModel
+public partial class UsersTabViewModel(IApiClientService apiClient, IDialogService dialogService, ISessionStore session) : BaseViewModel
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+    private readonly ISessionStore _session = session ?? throw new ArgumentNullException(nameof(session));
 
     private IReadOnlyList<DepartmentDto> _departments = [];
+    private const int AdminDepartmentId = 1;
 
     [ObservableProperty]
     public partial ObservableCollection<UserDto> Users { get; set; } = [];
@@ -36,6 +38,7 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
         if (result is { Success: true, Data: not null })
         {
             Users = new ObservableCollection<UserDto>(result.Data);
+            ApplyManagePermissions();
             RebuildGroups();
         }
         else
@@ -43,6 +46,32 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
             ErrorMessage = $"Ошибка загрузки пользователей: {result.Error}";
         }
     });
+
+    private void ApplyManagePermissions()
+    {
+        var isCurrentUserHead = _session.IsHead;
+        var currentUserId = _session.UserId;
+
+        foreach (var user in Users)
+        {
+            if (isCurrentUserHead)
+            {
+                user.CanManage = true;
+                continue;
+            }
+
+            var isTargetAdmin = user.DepartmentId == AdminDepartmentId;
+
+            if (isTargetAdmin)
+            {
+                user.CanManage = user.Id == currentUserId;
+            }
+            else
+            {
+                user.CanManage = true;
+            }
+        }
+    }
 
     [RelayCommand]
     private async Task Create()
@@ -85,6 +114,12 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     [RelayCommand]
     private async Task Edit(UserDto user)
     {
+        if (!user.CanManage)
+        {
+            ErrorMessage = "Недостаточно прав для редактирования этого пользователя";
+            return;
+        }
+
         var dialog = new UserEditDialogViewModel(user, new ObservableCollection<DepartmentDto>(_departments));
 
         var tcs = new TaskCompletionSource<bool>();
@@ -134,6 +169,12 @@ public partial class UsersTabViewModel(IApiClientService apiClient, IDialogServi
     [RelayCommand]
     private async Task ToggleBan(UserDto user)
     {
+        if (!user.CanManage)
+        {
+            ErrorMessage = "Недостаточно прав для управления этим пользователем";
+            return;
+        }
+
         var action = user.IsBanned ? "разблокировать" : "заблокировать";
         var actionLabel = user.IsBanned ? "Разблокировать" : "Заблокировать";
         var userName = user.DisplayName ?? user.Username;

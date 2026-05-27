@@ -3,10 +3,12 @@ using Shared.Dto.Department;
 
 namespace Desktop.ViewModels;
 
-public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialogService dialogService) : BaseViewModel
+public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialogService dialogService, ISessionStore session) : BaseViewModel
 {
     private readonly IApiClientService _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly IDialogService _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+    private readonly ISessionStore _session = session ?? throw new ArgumentNullException(nameof(session));
+    private const int AdminDepartmentId = 1;
 
     [ObservableProperty] public partial ObservableCollection<DepartmentDto> Departments { get; set; } = [];
     [ObservableProperty] public partial ObservableCollection<UserDto> Users { get; set; } = [];
@@ -17,21 +19,20 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     public partial string SearchQuery { get; set; } = string.Empty;
     public IEnumerable<HierarchicalDepartmentViewModel> FilteredDepartments => ApplyFilter();
 
-    public async Task LoadAsync() =>
-        await SafeExecuteAsync(async () =>
-        {
-            var result = await _apiClient.GetAsync<List<DepartmentDto>>(ApiEndpoints.Departments.GetAll);
+    public async Task LoadAsync() => await SafeExecuteAsync(async () =>
+    {
+        var result = await _apiClient.GetAsync<List<DepartmentDto>>(ApiEndpoints.Departments.GetAll);
 
-            if (result is { Success: true, Data: not null })
-            {
-                Departments = new ObservableCollection<DepartmentDto>(result.Data);
-                BuildHierarchy();
-            }
-            else
-            {
-                ErrorMessage = $"Ошибка загрузки отделов: {result.Error}";
-            }
-        });
+        if (result is { Success: true, Data: not null })
+        {
+            Departments = new ObservableCollection<DepartmentDto>(result.Data);
+            BuildHierarchy();
+        }
+        else
+        {
+            ErrorMessage = $"Ошибка загрузки отделов: {result.Error}";
+        }
+    });
 
     public void SetUsers(IEnumerable<UserDto> users) => Users = new ObservableCollection<UserDto>(users);
 
@@ -67,10 +68,23 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Edit(HierarchicalDepartmentViewModel item)
     {
+        if (!item.CanEdit)
+        {
+            ErrorMessage = "Недостаточно прав для редактирования этого отдела";
+            return;
+        }
+
+        var oldHeadId = item.Department.Head;
+
         await _dialogService.ShowAsync(new DepartmentHeadDialogViewModel([.. Departments.Where(d => d.Id != item.Id)], Users, _dialogService, item.Department, item.HasChildren)
         {
             SaveAction = async dialogVm =>
             {
+                if (!_session.IsHead && dialogVm.HeadId != oldHeadId)
+                {
+                    throw new InvalidOperationException("Только глава отдела администраторов может назначать руководителей отделов");
+                }
+
                 var dto = new DepartmentDto
                 {
                     Id = item.Id,
@@ -115,6 +129,12 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
     [RelayCommand]
     private async Task Delete(HierarchicalDepartmentViewModel item)
     {
+        if (!item.CanEdit)
+        {
+            ErrorMessage = "Недостаточно прав для удаления этого отдела";
+            return;
+        }
+
         if (item.HasChildren)
         {
             ErrorMessage = "Невозможно удалить отдел с подразделениями. Сначала удалите дочерние отделы.";
@@ -166,7 +186,10 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
     private HierarchicalDepartmentViewModel CreateHierarchicalItem(DepartmentDto dept, int level)
     {
-        var vm = new HierarchicalDepartmentViewModel(dept, level);
+        var vm = new HierarchicalDepartmentViewModel(dept, level)
+        {
+            CanEdit = _session.IsHead || dept.Id != AdminDepartmentId
+        };
 
         foreach (var child in Departments.Where(d => d.ParentDepartmentId == dept.Id).Select(d => CreateHierarchicalItem(d, level + 1)).OrderBy(d => d.Name))
         {
@@ -206,7 +229,8 @@ public partial class DepartmentsTabViewModel(IApiClientService apiClient, IDialo
 
         var clone = new HierarchicalDepartmentViewModel(item.Department, item.Level)
         {
-            IsExpanded = true
+            IsExpanded = true,
+            CanEdit = item.CanEdit
         };
 
         foreach (var child in filteredChildren)

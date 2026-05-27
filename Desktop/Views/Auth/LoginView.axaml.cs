@@ -2,7 +2,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Desktop.ViewModels;
 
-namespace Desktop.Views;
+namespace Desktop.Views.Auth;
 
 public partial class LoginView : UserControl
 {

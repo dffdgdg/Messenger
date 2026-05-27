@@ -39,7 +39,7 @@ public sealed class TokenService : ITokenService
         };
 
         if (role.HasValue)
-            claims.Add(new Claim(ClaimTypes.Role, role.Value.ToString()));
+            claims.Add(new Claim(ClaimTypes.Role, ((int)role.Value).ToString()));
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

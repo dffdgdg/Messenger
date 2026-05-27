@@ -13,6 +13,7 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action<PollDto>? PollUpdatedGlobally;
     event Action<int, int>? MessageDeletedGlobally;
     event Action<UserDto>? UserProfileUpdated;
+    event Action<UserRole>? UserRoleUpdated;
     event Action<int, int>? UserTyping;
     event Action<int, int, int?, DateTime?>? MessageRead;
     event Action<int, UserDto>? MemberJoined;
@@ -20,6 +21,8 @@ public interface IGlobalHubConnection : IAsyncDisposable, IDisposable
     event Action? Reconnected;
     event Action<ChatUpdateEventDto>? ChatUpdated;
     event Action<int>? ChatRemoved;
+    event Action<UserPermissionsChangedDto>? UserPermissionsChanged;
+    event Action<UserBannedDto>? UserBanned;
 
     bool IsConnected { get; }
     Task ConnectAsync(CancellationToken ct = default);

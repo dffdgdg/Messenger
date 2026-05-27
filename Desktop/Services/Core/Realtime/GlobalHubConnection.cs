@@ -43,6 +43,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action<PollDto>? PollUpdatedGlobally;
     public event Action<int, int>? MessageDeletedGlobally;
     public event Action<UserDto>? UserProfileUpdated;
+    public event Action<UserRole>? UserRoleUpdated;
     public event Action<int, int>? UserTyping;
     public event Action<int, int, int?, DateTime?>? MessageRead;
     public event Action<int, UserDto>? MemberJoined;
@@ -50,6 +51,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
     public event Action? Reconnected;
     public event Action<ChatUpdateEventDto>? ChatUpdated;
     public event Action<int>? ChatRemoved;
+    public event Action<UserPermissionsChangedDto>? UserPermissionsChanged;
+    public event Action<UserBannedDto>? UserBanned;
     #endregion
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;
@@ -293,7 +296,8 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
             PostUI(() => UserStatusChanged?.Invoke(dto));
         }));
         _subs.Add(_hub.On<UserDto>(HubMethods.Chat.UserProfileUpdated, u => PostUI(() => UserProfileUpdated?.Invoke(u))));
-        _subs.Add(_hub.On<int, int>(HubMethods.Chat.UnreadCountUpdated, (cid, cnt) => UpdateUnread(cid, cnt)));
+        _subs.Add(_hub.On<UserRole>(HubMethods.Chat.UserRoleUpdated, role => PostUI(() => UserRoleUpdated?.Invoke(role))));
+        _subs.Add(_hub.On<int, int>(HubMethods.Chat.UnreadCountUpdated, UpdateUnread));
         _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.ReceiveMessage, OnNewMessageReceived));
         _subs.Add(_hub.On<MessageDto>(HubMethods.Chat.MessageUpdated, msg =>
         {
@@ -308,6 +312,17 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
         _subs.Add(_hub.On<int, int>(HubMethods.Chat.MemberLeft, (c, u) => PostUI(() => MemberLeft?.Invoke(c, u))));
         _subs.Add(_hub.On<ChatUpdateEventDto>(HubMethods.Chat.ChatUpdated, OnChatUpdated));
         _subs.Add(_hub.On<int>(HubMethods.Chat.ChatRemoved, chatId => PostUI(() => ChatRemoved?.Invoke(chatId))));
+        _subs.Add(_hub.On<UserPermissionsChangedDto>(HubMethods.Chat.UserPermissionsChanged, dto =>
+        {
+            Log($"UserPermissionsChanged: userId={dto.UserId} role={dto.Role}");
+            PostUI(() => UserPermissionsChanged?.Invoke(dto));
+        }));
+
+        _subs.Add(_hub.On<UserBannedDto>("UserBanned", dto =>
+        {
+            Log($"UserBanned: reason={dto.Reason}");
+            PostUI(() => UserBanned?.Invoke(dto));
+        }));
     }
 
     private void OnChatUpdated(ChatUpdateEventDto update)

@@ -1,19 +1,33 @@
-﻿using API.Repositories.Abstarctions;
+﻿using API.Data;
+using API.Hubs;
+using API.Repositories.Abstarctions;
 using API.Services.Base;
 using API.Services.Infrastructure.Bundles;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using Shared.Dto.User;
+using Shared.Enum;
+using Shared.Hubs;
+using System.Collections.Concurrent;
 
 namespace API.Services.User;
 
-public partial class AdminService(MessengerDbContext context, TimeBundle time, IUserRepository userRepo, IRefreshTokenRepository tokenRepo, ILogger<AdminService> logger)
-    : BaseService<AdminService>(context, logger), IAdminService
+public partial class AdminService(
+    MessengerDbContext context,
+    TimeBundle time,
+    IUserRepository userRepo,
+    IRefreshTokenRepository tokenRepo,
+    ILogger<AdminService> logger,
+    IHubContext<MessengerHub> hubContext,
+    IOptions<MessengerSettings> messengerSettings) : BaseService<AdminService>(context, logger), IAdminService
 {
     private readonly AppDateTime appDateTime = time.AppDateTime;
-    private readonly IUserRepository _userRepo = userRepo;
-    private readonly IRefreshTokenRepository _tokenRepo = tokenRepo;
+    private readonly MessengerSettings _messengerSettings = messengerSettings.Value;
+    private static readonly ConcurrentDictionary<int, DateTime> _lastNotificationTime = new();
 
     public async Task<Result<List<UserDto>>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await _userRepo.GetAllWithSettingsAsync(ct);
+        var users = await userRepo.GetAllWithSettingsAsync(ct);
 
         var result = users.ConvertAll(u => new UserDto
         {
@@ -55,7 +69,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        if (await _userRepo.UsernameExistsAsync(username, ct))
+        if (await userRepo.UsernameExistsAsync(username, ct))
             return Result<UserDto>.Conflict("Пользователь с таким логином уже существует");
 
         if (dto.DepartmentId.HasValue)
@@ -82,7 +96,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
             },
         };
 
-        _userRepo.Add(user);
+        userRepo.Add(user);
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save.As<UserDto>();
@@ -111,7 +125,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         var username = dto.Username!.Trim().ToLowerInvariant();
 
-        var user = await _userRepo.FindByIdAsync(userId, ct);
+        var user = await userRepo.FindByIdAsync(userId, ct);
         if (user is null)
             return Result<UserDto>.NotFound($"Пользователь с ID {userId} не найден");
 
@@ -126,6 +140,10 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
                 return Result<UserDto>.NotFound("Указанный отдел не существует");
         }
 
+        // Запоминаем старые значения для определения изменения роли
+        var previousDepartmentId = user.DepartmentId;
+        var wasHead = await _context.Departments.AnyAsync(d => d.HeadId == userId, ct);
+
         user.Username = username;
         user.Surname = dto.Surname.Trim();
         user.Name = dto.Name.Trim();
@@ -134,6 +152,23 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save.As<UserDto>();
+
+        // Определяем, изменилась ли роль
+        var newRole = await DetermineUserRoleAsync(userId, ct);
+        var oldRole = DetermineOldRole(previousDepartmentId, wasHead);
+
+        if (newRole != oldRole)
+        {
+            await SendToUserOnceAsync(userId, HubMethods.Chat.UserRoleUpdated, newRole, ct);
+            await SendToUserOnceAsync(userId, HubMethods.Chat.UserPermissionsChanged, new UserPermissionsChangedDto
+            {
+                UserId = userId,
+                Role = newRole,
+                Reason = newRole > oldRole
+                    ? "Ваши права были повышены администратором"
+                    : "Ваши права были изменены администратором"
+            }, ct);
+        }
 
         LogUserUpdated(userId);
 
@@ -144,7 +179,7 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
     public async Task<Result> ToggleBanAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _userRepo.FindByIdAsync(userId, ct);
+        var user = await userRepo.FindByIdAsync(userId, ct);
         if (user is null)
             return Result.NotFound($"Пользователь с ID {userId} не найден");
 
@@ -152,7 +187,12 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
         if (user.IsBanned)
         {
-            await _tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
+            await tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
+
+            await SendToUserOnceAsync(userId, "UserBanned", new UserBannedDto
+            {
+                Reason = "Вы были забанены администратором"
+            }, ct);
         }
 
         var save = await SaveChangesAsync(ct);
@@ -168,19 +208,65 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
         if (passwordValidation.IsFailure)
             return Result.Failure(passwordValidation.Error!);
 
-        var user = await _userRepo.FindByIdWithPasswordAsync(userId, ct);
+        var user = await userRepo.FindByIdWithPasswordAsync(userId, ct);
         if (user is null)
             return Result.NotFound($"Пользователь с ID {userId} не найден");
 
         user.Password.SetPassword(newPassword);
 
-        await _tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
+        await tokenRepo.RevokeAllForUserAsync(userId, appDateTime.UtcNow, ct);
 
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save;
 
         LogPasswordReset(userId);
         return Result.Success();
+    }
+
+    private async Task SendToUserOnceAsync(int userId, string method, object dto, CancellationToken ct)
+    {
+        var now = appDateTime.UtcNow;
+        if (_lastNotificationTime.TryGetValue(userId, out var last) && (now - last).TotalSeconds < 3)
+            return;
+
+        _lastNotificationTime[userId] = now;
+
+        try
+        {
+            await hubContext.Clients.User(userId.ToString()).SendAsync(method, dto, ct);
+        }
+        catch (Exception ex)
+        {
+            LogNotificationFailed(userId, method, ex.Message);
+        }
+    }
+
+    private async Task<UserRole> DetermineUserRoleAsync(int userId, CancellationToken ct)
+    {
+        var deptId = await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.DepartmentId)
+            .FirstAsync(ct);
+
+        var role = UserRole.User;
+
+        if (deptId == _messengerSettings.AdminDepartmentId)
+            role |= UserRole.Admin;
+
+        var isHead = await _context.Departments.AnyAsync(d => d.HeadId == userId, ct);
+        if (isHead)
+            role |= UserRole.Head;
+
+        return role;
+    }
+
+    private static UserRole DetermineOldRole(int? previousDepartmentId, bool wasHead)
+    {
+        if (previousDepartmentId == 1)
+            return UserRole.Admin;
+        if (wasHead)
+            return UserRole.Head;
+        return UserRole.User;
     }
 
     private static IQueryable<UserDto> ProjectToDto(IQueryable<Data.User> query) => query.Select(u => new UserDto
@@ -212,5 +298,8 @@ public partial class AdminService(MessengerDbContext context, TimeBundle time, I
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь ID={UserId} {Action}", EventName = "UserBanStatusChanged")]
     private partial void LogBanStatusChanged(int userId, string action);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Не удалось отправить уведомление {Method} пользователю ID={UserId}: {Error}")]
+    private partial void LogNotificationFailed(int userId, string method, string error);
     #endregion
 }

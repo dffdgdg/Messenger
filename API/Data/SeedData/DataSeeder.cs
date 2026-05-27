@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
 
 namespace API.Data.SeedData;
 
@@ -13,29 +12,21 @@ public class DataSeeder(MessengerDbContext db, ILogger<DataSeeder> logger, IConf
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public async Task SeedAsync()
-    {
-        var count = await db.Users.CountAsync();
+    public async Task SeedAsync() => await UpdatePasswordsAsync();
 
-        var ids = await db.Users.Select(u => u.Id).Take(10).ToListAsync();
-
-        var userDtos = await LoadUserDtosAsync();
-
-        await UpdatePasswordsAsync();
-    }
     /// <summary>
     /// Обновляет пароли у всех пользователей из users.json.
     /// Остальные данные не трогает — они уже есть в БД.
     /// </summary>
     private async Task UpdatePasswordsAsync()
     {
-        logger.LogInformation("🔐 Обновление паролей пользователей...");
+        logger.LogInformation("Обновление паролей пользователей...");
 
         var userDtos = await LoadUserDtosAsync();
 
         if (userDtos.Count == 0)
         {
-            logger.LogWarning("⚠️ Файл users.json пуст или не найден");
+            logger.LogWarning("Файл users.json пуст или не найден");
             return;
         }
 

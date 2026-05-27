@@ -37,6 +37,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
     public bool CanManageParticipants => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
     public bool CanManageAdmins => IsNewChat || CurrentUserRole == ChatRole.Owner;
+    public bool CanEditChatSettings => IsNewChat || CurrentUserRole is ChatRole.Admin or ChatRole.Owner || _isSystemAdmin;
     public string CurrentUserRoleDisplay => CurrentUserRole switch
     {
         ChatRole.Owner => "Владелец",
@@ -45,7 +46,7 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         _ => "Участник"
     };
 
-    public bool CanSave => !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
+    public bool CanSave => CanEditChatSettings && !string.IsNullOrWhiteSpace(Name) && ParticipantsCount >= 1;
 
     public Func<ChatDto, List<int>, List<int>, Stream?, string?, bool, Task<bool>>? SaveAction { get; set; }
     public Func<DialogBaseViewModel, Task>? ShowDialogAction { get; set; }
@@ -317,6 +318,11 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         if (string.IsNullOrWhiteSpace(Name)) { ErrorMessage = "Введите название группы"; return; }
         if (SelectedUsersCount < 1) { ErrorMessage = "Выберите минимум одного участника"; return; }
+        if (!CanEditChatSettings)
+        {
+            ErrorMessage = "У вас нет прав на изменение настроек чата. Только администратор или владелец может редактировать чат.";
+            return;
+        }
 
         await SafeExecuteAsync(async () =>
         {
@@ -339,6 +345,14 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
             }
         });
     }
+
+    public void ForceCloseDueToRoleChange()
+    {
+        ErrorMessage = "Ваши права были изменены. Редактирование чата недоступно.";
+        _ = Task.Delay(1500).ContinueWith(_ =>
+            Dispatcher.UIThread.Post(() => _ = RequestCloseAsync()));
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

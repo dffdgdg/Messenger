@@ -12,6 +12,7 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public event Action<MessageDto>? MessagePinStateChanged;
     private ObservableCollection<UserDto> _members = [];
     public ChatRole? CurrentUserRole { get; set; }
+    public bool IsSystemAdmin { get; set; }
     public IChatNavigator? Navigator { get; init; }
     public Action<MessageDto>? RequestIncrementCounters { get; set; }
     public Action? RequestRefreshCounters { get; set; }
@@ -30,17 +31,9 @@ public sealed class ChatContext : ObservableObject, IDisposable
 
     public int ChatId { get; }
     public int CurrentUserId { get; }
-
-    private ChatDto? _chat;
     public ChatDto? Chat
     {
-        get => _chat;
-        set
-        {
-            Debug.WriteLine($"[ChatContext id={ChatId}] Chat.Avatar = '{value?.Avatar}'");
-            Debug.WriteLine($"[ChatContext id={ChatId}] Stack trace:\n{Environment.StackTrace}");
-            SetProperty(ref _chat, value);
-        }
+        get => chat; set => SetProperty(ref chat, value);
     }
 
     public IApiClientService Api { get; }
@@ -84,6 +77,8 @@ public sealed class ChatContext : ObservableObject, IDisposable
     public bool IsDisposed { get; private set; }
 
     private CancellationTokenSource? _lifetimeCts = new();
+    private ChatDto? chat;
+
     public CancellationToken LifetimeToken => _lifetimeCts?.Token ?? CancellationToken.None;
 
     public void Dispose()

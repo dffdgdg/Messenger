@@ -229,6 +229,7 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     private void OnGlobalChatUpdated(ChatUpdateEventDto update)
     {
+        Debug.WriteLine($"[ChatsVM] ChatUpdated: id={update.Id}, type={update.Type}, role={update.CurrentUserRole}");
         if (!IsChatMatchingCurrentTab(update.Type))
             return;
 

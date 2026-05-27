@@ -85,8 +85,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
                         Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
                         Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
                 })
-                .WithAutomaticReconnect([
-                    TimeSpan.Zero,
+                .WithAutomaticReconnect([TimeSpan.Zero,
                 TimeSpan.FromSeconds(2),
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromSeconds(10),
@@ -327,6 +326,7 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
 
     private void OnChatUpdated(ChatUpdateEventDto update)
     {
+        Debug.WriteLine($"[GlobalHub] ChatUpdated received: id={update.Id}, role={update.CurrentUserRole}");
         _ = SafeCacheAsync(() => _cache.PatchChatMetaAsync(update), "chat meta update");
         PostUI(() => ChatUpdated?.Invoke(update));
     }

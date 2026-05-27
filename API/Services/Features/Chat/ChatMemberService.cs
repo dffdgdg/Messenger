@@ -110,7 +110,8 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
         var owner = await accessControl.EnsureOwnerOfAsync(updatedByUserId, chatId);
         if (owner.IsFailure) return owner.As<ChatMemberDto>();
 
-        var member = await _context.ChatMembers.FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
+        var member = await _context.ChatMembers
+            .FirstOrDefaultAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
         if (member is null)
             return Result<ChatMemberDto>.NotFound("Пользователь не является участником чата");
@@ -127,10 +128,28 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
         if (save.IsFailure) return save.As<ChatMemberDto>();
 
         cache.InvalidateMembership(userId, chatId);
-
         LogRoleUpdated(userId, chatId, newRole);
 
         await systemMessages.CreateAsync(chatId, updatedByUserId, SystemEventType.RoleChanged, userId);
+
+        var chatEntity = await _context.Chats.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == chatId);
+
+        if (chatEntity is not null)
+        {
+            var roleEvent = new ChatUpdateEventDto
+            {
+                Id = chatEntity.Id,
+                Name = chatEntity.Name,
+                Type = chatEntity.Type,
+                CreatedById = chatEntity.CreatedById ?? 0,
+                Avatar = chatEntity.Avatar,
+                ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers,
+                CurrentUserRole = newRole
+            };
+
+            await hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatUpdated, roleEvent);
+        }
 
         return Result<ChatMemberDto>.Success(MapToDto(member));
     }

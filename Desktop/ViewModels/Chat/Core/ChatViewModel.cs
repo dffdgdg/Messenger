@@ -2,6 +2,7 @@
 using Avalonia.Platform.Storage;
 using Desktop.Infrastructure.Media;
 using Desktop.Services.Features.Media.Files;
+using Desktop.Services.UI;
 using Desktop.ViewModels.Chat.Commands;
 using Desktop.ViewModels.Chat.Context;
 using Desktop.ViewModels.Chat.Core;
@@ -73,7 +74,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private readonly ICallService _callService;
     private readonly ICallHubConnection _callHub;
     private readonly IAudioRecorderService _audioRecorderService;
-    private readonly bool _isSystemAdmin;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
@@ -290,7 +290,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _notificationService = dependencies.NotificationService;
         _audioPlayerService = dependencies.AudioPlayer;
         _audioRecorderService = dependencies.AudioRecorder;
-        _isSystemAdmin = dependencies.AuthManager.Session.IsAdmin;
 
         var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
 
@@ -309,6 +308,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _contextScrollToIndex = (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
         _contextScrollToBottom = () => ScrollToBottomRequested?.Invoke();
 
+        Context.IsSystemAdmin = dependencies.AuthManager.Session.IsAdmin;
         Context.ScrollToMessageRequested += _contextScrollToMessage;
         Context.ScrollToIndexRequested += _contextScrollToIndex;
         Context.ScrollToBottomRequested += _contextScrollToBottom;
@@ -358,6 +358,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _hubSubscriber.Subscribe();
         SubscribePropertyForwarding();
         Context.Hub.ChatUpdated += OnChatUpdated;
+        Context.Hub.UserRoleUpdated += OnUserRoleUpdated;
 
         _callService = dependencies.CallService;
         _callHub = dependencies.CallHub;
@@ -366,6 +367,19 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _ = InitializeAsync();
     }
 
+    private void OnUserRoleUpdated(UserRole role) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Context.IsDisposed) return;
+        Context.IsSystemAdmin = role.HasFlag(UserRole.Admin);
+        RefreshChatPermissions();
+
+        if (!CanEditGroupChat)
+        {
+            var dialogService = App.Current.Services.GetRequiredService<IDialogService>();
+            if (dialogService.CurrentDialog is ChatEditDialogViewModel editDialog)
+                editDialog.ForceCloseDueToRoleChange();
+        }
+    });
 
     private async Task InitializeAsync()
     {
@@ -1442,6 +1456,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     private void RefreshChatPermissions()
     {
+        Debug.WriteLine($"[ChatVM] RefreshChatPermissions: Chat={Context.Chat != null}, IsGroup={InfoPanel.IsGroupChat}, IsSystemAdmin={Context.IsSystemAdmin}, Role={Context.CurrentUserRole}, CreatedById={Context.Chat?.CreatedById}, CurrentUserId={Context.CurrentUserId}");
+
         if (Context.Chat == null)
         {
             CanLeaveChat = false;
@@ -1462,7 +1478,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             return;
         }
 
-        CanEditGroupChat = _isSystemAdmin
+        CanEditGroupChat = Context.IsSystemAdmin
             || Context.Chat.CreatedById == Context.CurrentUserId
             || Context.CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
 
@@ -1683,6 +1699,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _hubSubscriber.Dispose();
         Context.Hub.SetCurrentChat(null);
         Context.Hub.ChatUpdated -= OnChatUpdated;
+        Context.Hub.UserRoleUpdated -= OnUserRoleUpdated;
 
         EditDelete.Dispose();
         Reply.Dispose();
@@ -1713,6 +1730,28 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         MembersPreview.Clear();
     }
 
+    public void OnGlobalRoleChanged(UserRole role) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Context.IsDisposed) return;
+        Context.IsSystemAdmin = role == UserRole.Admin;
+        RefreshChatPermissions();
+    });
+
+    /// <summary>
+    /// Вызывается из ChatsViewModel при получении ChatUpdated с новой ролью.
+    /// Не дублирует логику OnChatUpdated — тот обрабатывает событие напрямую из хаба.
+    /// Этот метод нужен только если ChatViewModel не подписан на хаб (не активен).
+    /// </summary>
+    public void ApplyChatRoleUpdate(ChatRole newRole)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Context.IsDisposed) return;
+            Context.CurrentUserRole = newRole;
+            RefreshChatPermissions();
+        });
+    }
+
     private void OnChatUpdated(ChatUpdateEventDto update)
     {
         if (update.Id != Context.ChatId || Context.IsDisposed) return;
@@ -1728,6 +1767,30 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 Context.Chat.Name = update.Name;
                 Context.Chat.ShowHistoryForNewMembers = update.ShowHistoryForNewMembers;
                 Context.Chat.Type = update.Type;
+            }
+
+            if (update.CurrentUserRole.HasValue)
+            {
+                var oldRole = Context.CurrentUserRole;
+                Context.CurrentUserRole = update.CurrentUserRole.Value;
+                if (oldRole is ChatRole.Admin or ChatRole.Owner && Context.CurrentUserRole == ChatRole.Member)
+                {
+                    Debug.WriteLine($"[ChatVM] Role downgraded, checking dialog...");
+                    var dialogService = App.Current.Services.GetRequiredService<IDialogService>();
+                    var currentDialog = dialogService.CurrentDialog;
+                    Debug.WriteLine($"[ChatVM] CurrentDialog: {currentDialog?.GetType().Name ?? "null"}");
+
+
+                    if (currentDialog is ChatEditDialogViewModel editDialog)
+                    {
+                        Debug.WriteLine($"[ChatVM] Found ChatEditDialog, closing...");
+                        editDialog.ForceCloseDueToRoleChange();
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[ChatVM] Dialog is not ChatEditDialogViewModel!");
+                    }
+                }
             }
 
             if (oldAvatar != update.Avatar)
@@ -1750,8 +1813,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
 
             OnPropertyChanged(nameof(Chat));
-
             RefreshChatPermissions();
+            OnPropertyChanged(nameof(CanEditGroupChat));
+            OnPropertyChanged(nameof(CanLeaveChat));
         });
     }
     #endregion

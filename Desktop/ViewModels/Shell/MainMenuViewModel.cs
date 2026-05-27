@@ -143,9 +143,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         {
             NavigateTo(1, false);
             var notify = _sp.GetRequiredService<INotificationService>();
-            notify.Show(
-                "Права изменены",
-                "Ваши права администратора были отозваны. Вы переведены в основной раздел.",
+            notify.Show("Права изменены", "Ваши права администратора были отозваны. Вы переведены в основной раздел.",
                 DesktopNotificationType.Warning);
         }
     }
@@ -234,8 +232,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         {
             var callService = _sp.GetRequiredService<ICallService>();
 
-            string? joinError = null;
-            void OnError(string msg) => joinError = msg;
+            var joinErrorTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnError(string msg) => joinErrorTcs.TrySetResult(msg);
             _callHub.CallError += OnError;
 
             CallStateDto? receivedState = null;
@@ -249,16 +247,19 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
             _callHub.CallStateUpdated += OnStateUpdated;
 
-            await callService.JoinCallAsync(invite.CallId, invite.ChatId);
+            var joinTask = callService.JoinCallAsync(invite.CallId, invite.ChatId);
+            var completedJoinOrError = await Task.WhenAny(joinTask, joinErrorTcs.Task);
 
-            _callHub.CallError -= OnError;
-
-            if (joinError != null)
+            if (completedJoinOrError == joinErrorTcs.Task)
             {
+                _callHub.CallError -= OnError;
                 _callHub.CallStateUpdated -= OnStateUpdated;
-                Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {joinError}");
+                Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {joinErrorTcs.Task.Result}");
                 return;
             }
+
+            await joinTask;
+            _callHub.CallError -= OnError;
 
             using var cts = new CancellationTokenSource(3000);
 
@@ -888,8 +889,13 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
     {
         try
         {
-            var ur = await _api.PutAsync<UpdateChatDto, ChatDto>(ApiEndpoints.Chats.ById(chatDto.Id),
-                new UpdateChatDto { Id = chatDto.Id, Name = chatDto.Name, ChatType = ChatType.Chat });
+            var ur = await _api.PutAsync<UpdateChatDto, ChatDto>(ApiEndpoints.Chats.ById(chatDto.Id), new UpdateChatDto
+            {
+                Id = chatDto.Id,
+                Name = chatDto.Name,
+                ChatType = ChatType.Chat,
+                ShowHistoryForNewMembers = chatDto.ShowHistoryForNewMembers
+            });
             if (!ur.Success || ur.Data == null) { ErrorMessage = $"Ошибка обновления группы: {ur.Error}"; return false; }
 
             var chat = ur.Data;

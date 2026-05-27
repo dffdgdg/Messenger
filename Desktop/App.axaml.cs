@@ -125,7 +125,6 @@ public sealed class App : Application, IDisposable
                 json = "{}";
             }
 
-            using var doc = JsonDocument.Parse(json);
             var root = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json) ?? [];
             root["server_url"] = JsonSerializer.SerializeToElement(url);
             root["manual_server"] = JsonSerializer.SerializeToElement(manual);

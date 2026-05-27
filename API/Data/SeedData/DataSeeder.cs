@@ -16,13 +16,10 @@ public class DataSeeder(MessengerDbContext db, ILogger<DataSeeder> logger, IConf
     public async Task SeedAsync()
     {
         var count = await db.Users.CountAsync();
-        logger.LogInformation("📊 Пользователей в БД: {Count}", count);
 
         var ids = await db.Users.Select(u => u.Id).Take(10).ToListAsync();
-        logger.LogInformation("🔑 ID первых пользователей в БД: {@Ids}", ids);
 
         var userDtos = await LoadUserDtosAsync();
-        logger.LogInformation("📄 ID из users.json: {@Ids}", userDtos.Select(u => u.Id).Take(10));
 
         await UpdatePasswordsAsync();
     }
@@ -51,11 +48,10 @@ public class DataSeeder(MessengerDbContext db, ILogger<DataSeeder> logger, IConf
 
         if (users.Count == 0)
         {
-            logger.LogWarning("⚠️ Пользователи не найдены в БД. Убедитесь, что данные уже засеяны");
+            logger.LogWarning("Пользователи не найдены в БД. Убедитесь, что данные уже засеяны");
             return;
         }
 
-        // Индексируем DTO по Id для быстрого доступа
         var dtoById = userDtos.ToDictionary(u => u.Id);
 
         int updated = 0;
@@ -69,23 +65,17 @@ public class DataSeeder(MessengerDbContext db, ILogger<DataSeeder> logger, IConf
 
             if (user.Password is null)
             {
-                // Пароля ещё нет — создаём
                 user.Password = new UserPassword { Hash = newHash };
-                logger.LogDebug("➕ Создан пароль для пользователя {Id} ({Username})", user.Id, user.Username);
             }
             else
             {
-                // Пароль есть — обновляем хэш
                 user.Password.Hash = newHash;
-                logger.LogDebug("🔄 Обновлён пароль для пользователя {Id} ({Username})", user.Id, user.Username);
             }
 
             updated++;
         }
 
         await db.SaveChangesAsync();
-
-        logger.LogInformation("✅ Пароли обновлены: {Updated} из {Total} пользователей", updated, userDtos.Count);
     }
 
     private async Task<List<UserSeedDto>> LoadUserDtosAsync()
@@ -94,15 +84,11 @@ public class DataSeeder(MessengerDbContext db, ILogger<DataSeeder> logger, IConf
 
         if (!File.Exists(path))
         {
-            logger.LogError("❌ Файл не найден: {Path}", path);
-            return new List<UserSeedDto>();
+            logger.LogError("Файл не найден: {Path}", path);
+            return [];
         }
-
-        logger.LogInformation("📂 Загрузка пользователей из: {Path}", path);
-
         var jsonData = await File.ReadAllTextAsync(path);
-        return JsonSerializer.Deserialize<List<UserSeedDto>>(jsonData, _jsonOptions)
-               ?? new List<UserSeedDto>();
+        return JsonSerializer.Deserialize<List<UserSeedDto>>(jsonData, _jsonOptions) ?? [];
     }
 }
 

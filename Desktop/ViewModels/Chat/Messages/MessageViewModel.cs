@@ -217,12 +217,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task InitFileStatesAsync()
-    {
-        foreach (var fileVm in FileViewModels)
-            await fileVm.InitializeAsync();
-    }
-
     private PollViewModel? CreatePollViewModel(PollDto pollDto, int? ownerId = null)
     {
         if (_currentUserId == 0 || _apiClient == null) return null;

@@ -1,5 +1,4 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
-using Desktop.Services;
 using Desktop.ViewModels.Dialog;
 using System.Diagnostics;
 
@@ -23,16 +22,14 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty] public partial bool IsInitializing { get; set; } = true;
     [ObservableProperty] public partial bool CanRetryAutoLogin { get; set; }
     [ObservableProperty] public partial string ServerUrl { get; set; } = string.Empty;
-    private const string CustomServerUrlKey = "server_url";
 
     public LoginViewModel(IAuthManager authManager, INavigationService navigation,
-        ISecureStorageService secureStorage, IDialogService dialogService, ISettingsService settingsService)
+        ISecureStorageService secureStorage, IDialogService dialogService)
     {
         _authManager = authManager ?? throw new ArgumentNullException(nameof(authManager));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _secureStorage = secureStorage ?? throw new ArgumentNullException(nameof(secureStorage));
         _dialogService = dialogService;
-        _settingsService = settingsService;
         ServerUrl = App.ApiUrl;
         _ = InitializeAsync();
     }
@@ -66,13 +63,11 @@ public partial class LoginViewModel : BaseViewModel
 
             if (completed != initTask)
             {
-                // ⚠️ Авто-инициализация не успела
                 ErrorMessage = "Не удалось автоматически восстановить сессию. Войдите вручную.";
                 CanRetryAutoLogin = true;
                 await LoadSavedUsernameAsync();
                 _ = ObserveLateInitializationAsync(initTask);
 
-                // 🔍 Если сервер не был обнаружен через UDP — предлагаем ввести вручную
                 await SuggestManualServerAsync();
                 return;
             }
@@ -89,7 +84,6 @@ public partial class LoginViewModel : BaseViewModel
             Debug.WriteLine("LoginVM: Сессия не восстановлена, показываем форму логина");
             await LoadSavedUsernameAsync();
 
-            // 🔍 Если сервер не был обнаружен через UDP — предлагаем ввести вручную
             await SuggestManualServerAsync();
         }
         catch (Exception ex)

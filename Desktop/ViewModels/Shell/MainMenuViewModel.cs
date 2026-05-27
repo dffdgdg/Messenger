@@ -260,7 +260,8 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
                 return;
             }
 
-            var cts = new CancellationTokenSource(3000);
+            using var cts = new CancellationTokenSource(3000);
+
             try
             {
                 receivedState = await stateTcs.Task.WaitAsync(cts.Token);

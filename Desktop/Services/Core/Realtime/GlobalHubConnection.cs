@@ -474,9 +474,6 @@ public sealed class GlobalHubConnection(IAuthManager authManager, INotificationS
             var uid = _auth.Session.UserId;
             var (preview, _) = ChatPreviewFormatter.BuildPreviewWithMeta(msg, uid);
             var senderName = ChatPreviewFormatter.FormatSenderName(msg.SenderName, msg.SenderId, uid);
-
-            var hasFilesOnly = msg.Files is { Count: > 0 } && string.IsNullOrWhiteSpace(msg.Content) && !msg.IsVoiceMessage;
-
             await _cache.UpdateChatLastMessageAsync(msg.ChatId, preview, senderName, msg.CreatedAt);
         }
         catch (Exception ex) { Log($"Cache incoming error: {ex.Message}"); }

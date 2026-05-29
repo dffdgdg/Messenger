@@ -1,9 +1,9 @@
 ﻿namespace Shared.Dto.Call;
 
 /// <summary>
-/// Универсальный конверт для WebRTC-сигналов (Offer / Answer / ICECandidate)
+/// Универсальный конверт для сигналов (Offer / Answer / ICECandidate)
 /// </summary>
-public class WebRtcSignalDto
+public class SignalDto
 {
     public string CallId { get; set; } = string.Empty;
 

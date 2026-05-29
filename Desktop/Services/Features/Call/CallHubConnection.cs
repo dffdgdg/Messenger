@@ -16,7 +16,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     public event Action<string, CallParticipantDto>? CallParticipantJoined;
     public event Action<string, int>? CallParticipantLeft;
     public event Action<string, CallEndReason>? CallEnded;
-    public event Action<WebRtcSignalDto>? SignalReceived;
+    public event Action<SignalDto>? SignalReceived;
     public event Action<string, int, bool>? ParticipantMuteChanged;
     public event Action<CallStateDto>? CallStateUpdated;
     public event Action<CallStateDto>? ActiveCallStarted;
@@ -83,7 +83,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
             CallEnded?.Invoke(callId, reason);
         });
 
-        _hub.On<WebRtcSignalDto>(HubMethods.Call.ReceiveSignal, signal =>
+        _hub.On<SignalDto>(HubMethods.Call.ReceiveSignal, signal =>
         {
             LogSignalReceived(signal.Type, signal.FromUserId, signal.TargetUserId);
             SignalReceived?.Invoke(signal);
@@ -148,7 +148,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     public Task CancelCallAsync(string callId)
         => SafeInvokeAsync(HubMethods.CallInvoke.CancelCall, callId);
 
-    public Task SendSignalAsync(WebRtcSignalDto signal)
+    public Task SendSignalAsync(SignalDto signal)
         => SafeInvokeAsync(HubMethods.CallInvoke.SendSignal, signal);
 
     public Task SendCallMessageAsync(string callId, string text)

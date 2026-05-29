@@ -135,12 +135,6 @@ public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository me
         };
     });
 
-    public async Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50) => await Task.Run(async () =>
-    {
-        var cached = await _messageRepo.SearchAsync(query, limit);
-        return cached.ConvertAll(m => m.ToDto());
-    });
-
     public async Task<List<ChatDto>> GetChatsAsync(bool isGroupMode)
     {
         int[] typeFilter = isGroupMode ? [(int)ChatType.Chat, (int)ChatType.Department] : [(int)ChatType.Contact];

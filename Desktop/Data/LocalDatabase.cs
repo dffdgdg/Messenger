@@ -64,7 +64,6 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
             Debug.WriteLine("[LocalDB] Tables created");
 
             await CreateIndexesAsync();
-            await CreateFtsAsync();
 
             _initialized = true;
             sw.Stop();
@@ -166,55 +165,6 @@ public sealed class LocalDatabase : IAsyncDisposable, IDisposable
         conn.Execute("CREATE INDEX IF NOT EXISTS idx_chats_type_date ON chats(type, last_message_date DESC)");
         conn.Execute("CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id, id DESC)");
     });
-
-    private async Task CreateFtsAsync()
-    {
-        try
-        {
-            await _db.ExecuteAsync("CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content, content=messages, content_rowid=id)");
-
-            await _db.ExecuteAsync(@"
-                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_ins 
-                AFTER INSERT ON messages 
-                WHEN new.content IS NOT NULL 
-                    AND new.is_deleted = 0
-                BEGIN
-                    INSERT INTO messages_fts(rowid, content) 
-                        VALUES (new.id, new.content);
-                END");
-
-            await _db.ExecuteAsync(@"
-                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_upd 
-                AFTER UPDATE OF content, is_deleted ON messages
-                BEGIN
-                    INSERT INTO messages_fts(
-                        messages_fts, rowid, content) 
-                        VALUES('delete', old.id, 
-                            COALESCE(old.content, ''));
-                    INSERT OR IGNORE INTO 
-                        messages_fts(rowid, content) 
-                        SELECT new.id, new.content 
-                        WHERE new.content IS NOT NULL 
-                            AND new.is_deleted = 0;
-                END");
-
-            await _db.ExecuteAsync(@"
-                CREATE TRIGGER IF NOT EXISTS trg_msg_fts_del 
-                AFTER DELETE ON messages
-                WHEN old.content IS NOT NULL
-                BEGIN
-                    INSERT INTO messages_fts(
-                        messages_fts, rowid, content) 
-                        VALUES('delete', old.id, old.content);
-                END");
-
-            Debug.WriteLine("[LocalDB] FTS5 table + triggers created");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[LocalDB] FTS5 setup failed (non-critical): {ex.Message}");
-        }
-    }
 
     public async Task ClearAllAsync()
     {

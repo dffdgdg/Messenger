@@ -49,8 +49,6 @@ public interface ILocalCacheService
     Task<CachedMessagesResult?> GetMessagesAfterAsync(int chatId, int afterId, int count);
     /// <summary>Сообщения вокруг указанного ID (прыжок к сообщению)</summary>
     Task<CachedMessagesResult?> GetMessagesAroundAsync(int chatId, int messageId, int count);
-    /// <summary>Полнотекстовый поиск по локальным сообщениям</summary>
-    Task<List<MessageDto>> SearchMessagesLocalAsync(string query, int limit = 50);
     Task<List<ChatDto>> GetChatsAsync(bool isGroupMode);
     Task UpsertChatsAsync(IEnumerable<ChatDto> chats);
     Task UpdateChatLastMessageAsync(int chatId, string? preview, string? senderName, DateTime date);

@@ -10,7 +10,7 @@ public interface ICallHubConnection : IAsyncDisposable
     Task LeaveCallAsync(string callId);
     Task DeclineCallAsync(string callId);
     Task CancelCallAsync(string callId);
-    Task SendSignalAsync(WebRtcSignalDto signal);
+    Task SendSignalAsync(SignalDto signal);
     Task ToggleMuteAsync(string callId, bool isMuted);
     Task ToggleSpeakingAsync(string callId, bool isSpeaking);
     event Action<string, int, bool>? ParticipantSpeakingChanged;
@@ -19,7 +19,7 @@ public interface ICallHubConnection : IAsyncDisposable
     event Action<string, CallParticipantDto>? CallParticipantJoined;
     event Action<string, int>? CallParticipantLeft;
     event Action<string, CallEndReason>? CallEnded;
-    event Action<WebRtcSignalDto>? SignalReceived;
+    event Action<SignalDto>? SignalReceived;
     event Action<string, int, bool>? ParticipantMuteChanged;
     event Action<CallStateDto>? CallStateUpdated;
     event Action<CallStateDto>? ActiveCallStarted;

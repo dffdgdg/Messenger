@@ -10,8 +10,6 @@ public partial class LoginViewModel : BaseViewModel
     private readonly INavigationService _navigation;
     private readonly ISecureStorageService _secureStorage;
     private readonly IDialogService _dialogService;
-    private readonly ISettingsService _settingsService;
-
     private const string RememberMeKey = "remember_me";
     private const string SavedUsernameKey = "saved_username";
     private static readonly TimeSpan InitTimeout = TimeSpan.FromSeconds(15);

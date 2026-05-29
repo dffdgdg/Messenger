@@ -87,11 +87,7 @@ public partial class FilterAutocomplete : UserControl
         PropertyChanged += OnPropertyChangedHandler;
 
         _inputBox = this.FindControl<TextBox>("InputTextBox");
-        if (_inputBox != null)
-        {
-            // Добавляем обработку клика по полю ввода
-            _inputBox.AddHandler(PointerPressedEvent, OnInputBoxPressed, RoutingStrategies.Tunnel);
-        }
+        _inputBox?.AddHandler(PointerPressedEvent, OnInputBoxPressed, RoutingStrategies.Tunnel);
     }
 
     private void OnInputBoxPressed(object? sender, PointerPressedEventArgs e)
@@ -244,9 +240,7 @@ public partial class FilterAutocomplete : UserControl
     {
         if (_dropdownBorder == null || !_isAttachedToOverlay) return;
 
-        var hit = e.Source as Visual;
-        // Если кликнули по дропдауну или по самому контролу — не закрываем
-        if (hit != null && (_dropdownBorder.IsVisualAncestorOf(hit) || this.IsVisualAncestorOf(hit)))
+        if (e.Source is Visual hit && (_dropdownBorder.IsVisualAncestorOf(hit) || this.IsVisualAncestorOf(hit)))
             return;
 
         CloseDropdown();

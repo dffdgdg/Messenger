@@ -39,9 +39,6 @@ public interface IMessageCacheRepository
     /// <summary>Общее количество сообщений во всём кэше</summary>
     Task<int> GetTotalCountAsync();
 
-    /// <summary>Полнотекстовый поиск через FTS5</summary>
-    Task<List<CachedMessage>> SearchAsync(string query, int limit);
-
     /// <summary>Удалить все сообщения чата</summary>
     Task DeleteForChatAsync(int chatId);
     /// <summary>

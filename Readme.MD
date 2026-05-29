@@ -265,7 +265,6 @@ docker compose logs -f messenger-api
 |--------|----------|
 | **Result Pattern** | Паттерн обработки ошибок без исключений (`Result<T>.Success()` / `Result.NotFound()`) |
 | **Soft Delete** | Удаление помечается флагом `is_deleted=true`, запись остаётся в БД |
-| **FTS5** | Полнотекстовый поисковый индекс SQLite для быстрого локального поиска |
 | **FamilyId** | Группа связанных Refresh-токенов для обнаружения replay-атак |
 | **Handler Composition** | Паттерн декомпозиции `ChatViewModel` на независимые Handler-классы |
 | **Gap-fill** | Догрузка пропущенных сообщений после переподключения SignalR |

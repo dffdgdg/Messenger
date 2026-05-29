@@ -16,7 +16,6 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
     private const int BitsPerSample = 16;
     private const int FramesPerBuffer = 512;
 
-    private readonly PortAudioLifetime _portAudio;
     private Stream? _paStream;
     private IOMemoryStream? _buffer;
     private readonly Stopwatch _stopwatch = new();
@@ -30,10 +29,7 @@ public sealed class AudioRecorderService : IAudioRecorderService, IDisposable
     public TimeSpan Elapsed => _stopwatch.Elapsed;
 
     public AudioRecorderService(PortAudioLifetime portAudio)
-    {
-        _portAudio = portAudio;
-        _portAudio.EnsureInitialized();
-    }
+        => portAudio.EnsureInitialized();
 
     public Task<bool> StartAsync(CancellationToken ct = default)
     {

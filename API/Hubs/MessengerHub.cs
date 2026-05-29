@@ -413,7 +413,7 @@ public sealed partial class MessengerHub(
 
     #region Call — Signals / Media
 
-    public async Task SendSignal(WebRtcSignalDto signal)
+    public async Task SendSignal(SignalDto signal)
     {
         var session = callSessions.GetCall(signal.CallId);
         if (session == null) return;

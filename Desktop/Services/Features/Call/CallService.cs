@@ -233,7 +233,7 @@ public sealed partial class CallService : ICallService
 
         var payload = string.Join(",", _localIps.Select(ip => $"{ip}:{_localUdpPort}"));
 
-        await _hub.SendSignalAsync(new WebRtcSignalDto
+        await _hub.SendSignalAsync(new SignalDto
         {
             CallId = _activeCallId,
             TargetUserId = targetUserId,
@@ -244,7 +244,7 @@ public sealed partial class CallService : ICallService
         LogEndpointAnnounced(payload, _localUdpPort, targetUserId);
     }
 
-    private void HandleUdpEndpointSignal(WebRtcSignalDto signal)
+    private void HandleUdpEndpointSignal(SignalDto signal)
     {
         LogEndpointReceived(signal.FromUserId, signal.Payload);
 
@@ -402,7 +402,7 @@ public sealed partial class CallService : ICallService
         CallEnded?.Invoke();
     }
 
-    private void OnSignalReceived(WebRtcSignalDto signal)
+    private void OnSignalReceived(SignalDto signal)
     {
         if (signal.CallId != _activeCallId) return;
         if (signal.Type == "udp-endpoint")

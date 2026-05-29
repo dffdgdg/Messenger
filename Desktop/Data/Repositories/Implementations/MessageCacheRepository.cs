@@ -115,25 +115,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
     public async Task DeleteByChatIdAsync(int chatId)
         => await Db.ExecuteAsync("DELETE FROM messages WHERE chat_id = ?", chatId);
 
-    public async Task<List<CachedMessage>> SearchAsync(string query, int limit)
-    {
-        if (string.IsNullOrWhiteSpace(query)) return [];
-
-        var ftsQuery = query.Trim().Replace("\"", "\"\"") + "*";
-
-        try
-        {
-            return await Db.QueryAsync<CachedMessage>(@"SELECT m.* FROM messages m INNER JOIN messages_fts fts ON m.id = fts.rowid WHERE messages_fts MATCH ?
-                  AND m.is_deleted = 0 ORDER BY m.id DESC LIMIT ?", $"\"{ftsQuery}\"", limit);
-        }
-        catch (SQLiteException ex)
-        {
-            Debug.WriteLine($"[MsgCache] FTS search failed, falling back to LIKE: {ex.Message}");
-
-            return await Db.QueryAsync<CachedMessage>("SELECT * FROM messages WHERE content LIKE ? AND is_deleted = 0 ORDER BY id DESC LIMIT ?",
-                $"%{query}%", limit);
-        }
-    }
+    
     public async Task TrimOldMessagesAsync(int keepPerChat = 200)
     {
         var chatIds = await Db.QueryAsync<ChatIdRow>(

@@ -1,27 +1,172 @@
-# Документация проекта ВнутрьСеть
+Достаточно, структура + `Program.cs` + `DependencyInjection.cs` + `ApiEndpoints.cs` дают всё необходимое. Баги опиши отдельно после — вставлю в нужное место.
 
-> **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite  
-> **Архитектура:** Слоёная (Entities → Services → Controllers / Hubs), Event-Driven через SignalR  
-> **Принцип:** Railway-Oriented Programming (все ошибки через `Result`, а не исключения)  
-> **Паттерн ошибок:** `BaseController.Map(Result<T>)` → HTTP-статус автоматически по `ResultErrorType`  
-> **Авторизация:** JWT Bearer + WebSocket query token `?access_token=` для SignalR  
+Вот оптимальная версия:
 
 ---
 
-# 1. СЛОЙ СУЩНОСТЕЙ (API.Data)
+# Документация проекта ВнутрьСеть
+
+> **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite
+> **Архитектура:** Слоёная (Entities → Repositories → Services → Controllers/Hubs)
+> **Принцип ошибок:** Railway-Oriented Programming — все ошибки через `Result<T>`, исключения не используются в бизнес-логике
+> **Авторизация:** JWT Bearer + WebSocket query token `?access_token=` для SignalR
+> **Паттерн ответов:** `BaseController.Map(Result<T>)` → HTTP-статус автоматически по `ResultErrorType`
+
+---
+
+## БЫСТРЫЙ ПОИСК
+
+| Что ищешь | Где |
+|---|---|
+| JWT, токены, авторизация | §1.1, §2.1, §7.2 (JwtSettings), §8.2 |
+| Сущности БД | §1 |
+| DTO | §2 |
+| HTTP эндпоинты (маршруты) | §3 |
+| SignalR события и методы | §4 |
+| Middleware и порядок | §5 |
+| Маппинг сущностей в DTO | §6 |
+| Конфигурация, DI, настройки | §7 |
+| Бизнес-сервисы API | §8 |
+| Абстракции (интерфейсы) | §9 |
+| Перечисления | §10 |
+| Формат ответов API | §11 |
+| Desktop: конвертеры Avalonia | §12 |
+| Desktop: локальная БД SQLite | §13 |
+| Desktop: инфраструктура | §14 |
+| Desktop: сервисы | §15 |
+| Desktop: абстракции | §16 |
+| Desktop: фабрики ViewModel | §17 |
+| Desktop: ViewModels | §18 |
+| Desktop: Views | §20 |
+| Типичные потоки данных | §19 |
+| Известные проблемы и баги | §21 |
+
+---
+
+## СТРУКТУРА ПРОЕКТА
+
+```
+/API
+  /Common              — AppDateTime, Result, ValidationHelper, StatusExtensions, UrlHelpers
+  /Configuration       — DI, JWT, Kestrel, RateLimit, Swagger, StaticFiles
+  /Controllers         — HTTP контроллеры
+  /Data                — EF сущности, DbContext, Migrations, SeedData
+  /Hubs                — MessengerHub (SignalR)
+  /Mapping             — extension-методы ToDto()
+  /Middleware          — ExceptionHandling, MissingFileCleanup
+  /Repositories        — Abstractions, Base, Implementations, Projections
+  /Services
+    /Abstractions      — интерфейсы сервисов
+    /Base              — BaseService
+    /Core/Auth         — AuthService, TokenService
+    /Features          — Call, Chat, Department, Messaging, ReadReceipt, User
+    /Infrastructure    — Bundles, Cache, Database, Network, Security, Status
+
+/Desktop
+  /Converters          — Boolean, DateTime, Domain, Generic
+  /Data                — LocalDatabase (SQLite), Models, Repositories, Mapping
+  /Infrastructure      — Configuration, Diagnostics, Helpers, Media
+  /Services
+    /Abstractions
+    /Core              — ApiClient, Auth, Realtime (GlobalHubConnection)
+    /Features          — Call, Chat, Media
+    /Platform          — Cache, Navigation, Network, OS, Storage, UI
+  /ViewModels          — Auth, Call, Chat, ChatList, Admin, Dialog, Shell
+  /Views               — Controls, Chat, Auth, Call, Admin, Dialog, Shell
+
+/Shared
+  /Dto                 — Auth, Call, Chat, Department, Message, Notification, Online, Poll, ReadReceipt, Search, User
+  /Enum
+  /Helpers             — SystemEventMeta
+  /Hubs                — HubMethods (константы)
+  /Response            — ApiResponse, ApiResponseHelper
+```
+
+**Точки входа:**
+- API: `Program.cs` — порт **5274**, HTTP1+HTTP2
+- Desktop: `App.axaml.cs`
+- Тесты: `API.Tests/`
+
+---
+
+## ПОРЯДОК MIDDLEWARE (Program.cs)
+
+```
+ExceptionHandlingMiddleware        ← первым, ловит всё
+MigrateAsync + SeedAsync           ← при старте
+Swagger                            ← только Development
+HttpsRedirection                   ← если !DisableHttpsRedirection
+X-Content-Type-Options header
+StaticFiles (/uploads, /avatars)
+MissingFileCleanupMiddleware       ← после StaticFiles, на 404
+CORS
+CookiePolicy (SameSite=Lax, HttpOnly=Always)
+WebSockets
+RateLimiter
+Authentication
+Authorization
+MapHub /chatHub
+MapControllers
+```
+
+---
+
+## КОНФИГУРАЦИЯ (appsettings.json)
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=...;Database=...;Username=...;Password=..."
+  },
+  "JwtSettings": {
+    "Secret": "<минимум 32 символа>",
+    "Issuer": "API",
+    "Audience": "MessengerClient",
+    "AccessTokenLifetimeMinutes": 15,
+    "RefreshTokenLifetimeDays": 30
+  },
+  "MessengerSettings": {
+    "AdminDepartmentId": 1,
+    "MaxFileSizeBytes": 20971520,
+    "BcryptWorkFactor": 12,
+    "MaxImageDimension": 100,
+    "ImageQuality": 85,
+    "DefaultPageSize": 50,
+    "MaxPageSize": 100
+  },
+  "DisableHttpsRedirection": false
+}
+```
+
+---
+
+## RATE LIMITING
+
+| Политика | Лимит | Окно | Партиция |
+|---|---|---|---|
+| Global | 100 req | 10 сек | по IP |
+| `login` | 5 req | 1 мин | по IP |
+| `upload` | 10 req | 1 мин | по userId или IP |
+| `search` | 15 req | 1 мин | по userId или IP |
+| `messaging` | 30 req | 1 мин | по userId или IP |
+
+При превышении → 429 + `Retry-After` header + JSON `{ success, error, retryAfterSeconds, timestamp }`.
+
+---
+
+# 1. СУЩНОСТИ (API/Data)
 
 ## 1.1 Пользователи и авторизация
 
 ### User
-
 **Путь:** `API/Data/User.cs` + `API/Data/Partial.cs`
 
 | Свойство | Тип | Назначение |
 |---|---|---|
 | `Id` | `int` | PK |
 | `Username` | `string` | Уникальный логин |
-| `Surname`, `Name`, `Midname` | `string?` | ФИО (русская модель) |
-| `Password` | `UserPassword` | Owned-сущность (только хэш BCrypt) |
+| `Surname`, `Name`, `Midname` | `string?` | ФИО |
+| `Password` | `UserPassword` | Owned-сущность (только BCrypt хэш) |
 | `CreatedAt` | `DateTime?` | Дата регистрации |
 | `LastOnline` | `DateTime?` | Последняя активность |
 | `DepartmentId` | `int?` | FK → Department |
@@ -31,22 +176,19 @@
 | `StatusExpiresAt` | `DateTime?` | Истечение статуса |
 | `DisplayName` | `string?` | Вычисляемое: "Фамилия Имя Отчество" или Username |
 
-**Методы:** `GetDisplayName()` – возвращает `DisplayName`, иначе `Username`, иначе заглушку.
-
-**Навигация:** `ChatMembers`, `Chats`, `Department`, `Departments` (где Head), `SentMessages` (ICollection<UserMessage>), `PollVotes`, `UserSetting` (1:1), `RefreshTokens`
+**Методы:** `GetDisplayName()` → `DisplayName` ?? `Username` ?? заглушка
+**Навигация:** `ChatMembers`, `Chats`, `Department`, `Departments` (где Head), `SentMessages` (`ICollection<UserMessage>`), `PollVotes`, `UserSetting` (1:1), `RefreshTokens`
 
 ---
 
 ### UserPassword
-
-**Путь:** `API/Data/UserPassword.cs`  
-**Методы:** `SetPassword(string)`, `Verify(string) → bool`  
-**Поле:** `Hash: string` (BCrypt, стоимость из `MessengerSettings.BcryptWorkFactor=12`)
+**Путь:** `API/Data/UserPassword.cs`
+**Поле:** `Hash: string` (BCrypt, фактор из `MessengerSettings.BcryptWorkFactor=12`)
+**Методы:** `SetPassword(string)`, `Verify(string) → bool`
 
 ---
 
 ### UserSetting
-
 **Путь:** `API/Data/UserSetting.cs`
 
 | Свойство | Тип | Default |
@@ -58,29 +200,27 @@
 ---
 
 ### RefreshToken
-
 **Путь:** `API/Data/RefreshToken.cs`
 
 | Поле | Тип | Назначение |
 |---|---|---|
 | `Id` | `int` | PK |
 | `UserId` | `int` | FK → User |
-| `TokenHash` | `string` | SHA-256 хэш |
+| `TokenHash` | `string` | SHA-256 хэш токена |
 | `JwtId` | `string` | Связанный JWT `jti` |
 | `CreatedAt`, `ExpiresAt` | `DateTime` | Период действия |
 | `UsedAt` | `DateTime?` | null = не использован |
 | `RevokedAt` | `DateTime?` | null = активен |
-| `ReplacedByTokenId` | `int?` | Ссылка на следующий |
+| `ReplacedByTokenId` | `int?` | Ссылка на следующий токен в цепочке |
 | `FamilyId` | `string` | Группа токенов одной сессии |
 | `IsActive` | `bool` | Вычисляемое: !UsedAt && !RevokedAt && ExpiresAt > now |
 
-**Механика:** reuse (UsedAt != null) → отзыв всей семьи через `FamilyId`. Цепочка: `ReplacedByTokenId`.
+**Механика:** повторное использование токена (UsedAt != null) → отзыв всей семьи через `FamilyId`.
 
 ---
 
 ### TokenPair
-
-**Путь:** `API/Data/TokenPair.cs` (не persist)
+**Путь:** `API/Data/TokenPair.cs` (не персистируется)
 
 | Поле | Тип |
 |---|---|
@@ -93,7 +233,6 @@
 ## 1.2 Чаты и участники
 
 ### Chat
-
 **Путь:** `API/Data/Chat.cs` + `Partial.cs`
 
 | Свойство | Тип | Назначение |
@@ -107,12 +246,11 @@
 | `Avatar` | `string?` | |
 | `ShowHistoryForNewMembers` | `bool` | default: true |
 
-**Навигация:** `ChatMembers`, `Messages` (ICollection<Message>), `CreatedBy`, `Department` (1:1)
+**Навигация:** `ChatMembers`, `Messages` (`ICollection<Message>`), `CreatedBy`, `Department` (1:1)
 
 ---
 
 ### ChatMember
-
 **Путь:** `API/Data/ChatMember.cs`
 
 | Свойство | Тип | Назначение |
@@ -122,13 +260,12 @@
 | `Role` | `ChatRole` | Member/Admin/Owner |
 | `JoinedAt` | `DateTime` | |
 | `NotificationsEnabled` | `bool` | default: true |
-| `LastReadMessageId` | `int?` | Для unread-счётчика (ссылка на Message) |
+| `LastReadMessageId` | `int?` | Для unread-счётчика |
 | `LastReadAt` | `DateTime?` | |
 
 ---
 
 ### Department
-
 **Путь:** `API/Data/Department.cs`
 
 | Свойство | Тип | Назначение |
@@ -136,17 +273,16 @@
 | `Id` | `int` | PK |
 | `Name` | `string` | |
 | `ParentDepartmentId` | `int?` | Self-referencing FK |
-| `ChatId` | `int?` | FK → Chat (1:1, auto-created при создании отдела) |
+| `ChatId` | `int?` | FK → Chat (1:1, создаётся автоматически при создании отдела) |
 | `HeadId` | `int?` | FK → User (уникальный индекс) |
 
 ---
 
 ## 1.3 Сообщения и вложения
 
-### Message (абстрактный базовый класс)
-
-**Путь:** `API/Data/Message.cs`  
-**Иерархия:** TPH с дискриминатором `message_type` (false = UserMessage, true = SystemMessage)
+### Message (абстрактный)
+**Путь:** `API/Data/Message.cs`
+**Иерархия:** TPH, дискриминатор `message_type` (false = UserMessage, true = SystemMessage)
 
 | Свойство | Тип | Назначение |
 |---|---|---|
@@ -154,17 +290,14 @@
 | `ChatId` | `int` | FK → Chat |
 | `CreatedAt` | `DateTime` | |
 | `IsDeleted` | `bool?` | Soft-delete |
-| `PinnedAt` | `DateTime?` | Закреплено, если не null (логический `IsPinned` отсутствует) |
-| `PinnedByUserId` | `int?` | |
-| `Chat` | `Chat` | Навигация |
-| `PinnedByUser` | `User?` | Навигация |
-| `ChatMembers` | `ICollection<ChatMember>` | Обратная навигация для LastReadMessage |
+| `PinnedAt` | `DateTime?` | Закреплено если не null |
+| `PinnedByUserId` | `int?` | FK → User |
 
 ### UserMessage : Message
 
 | Свойство | Тип | Назначение |
 |---|---|---|
-| `SenderId` | `int?` | FK → User (может быть null для системных действий, но в UserMessage обычно заполнен) |
+| `SenderId` | `int?` | FK → User |
 | `Content` | `string?` | Текст (до 4000 символов) |
 | `EditedAt` | `DateTime?` | |
 | `ReplyToMessageId` | `int?` | Самореференс |
@@ -172,26 +305,22 @@
 | `VoiceMessage` | `VoiceMessage?` | 1:1 |
 | `Poll` | `Poll?` | 1:1 |
 | `IsVoiceMessage` | `bool` | Вычисляемое: VoiceMessage != null |
-| `MessageFiles` | `ICollection<MessageFile>` | Файлы |
-| `InverseReplyToMessage`, `InverseForwardedFromMessage` | `ICollection<UserMessage>` | Обратные навигации |
+| `MessageFiles` | `ICollection<MessageFile>` | |
 
 ### SystemMessage : Message
 
 | Свойство | Тип | Назначение |
 |---|---|---|
-| `InitiatorId` | `int?` | FK → User (кто инициировал событие) |
+| `InitiatorId` | `int?` | FK → User (кто инициировал). Хранится в колонке `sender_id` |
 | `TargetUserId` | `int?` | FK → User (кого касается) |
-| `SystemEventType` | `SystemEventType` | Тип системного события |
+| `SystemEventType` | `SystemEventType` | Тип события |
 | `Content` | `string?` | Дополнительный текст |
-
-**Примечание:** Для SystemMessage столбец `sender_id` хранит `InitiatorId`, для совместимости с FK ограничениями.
 
 ---
 
 ### VoiceMessage
-
-**Путь:** `API/Data/VoiceMessage.cs`  
-PK = FK → UserMessage (столбец `message_id`)
+**Путь:** `API/Data/VoiceMessage.cs`
+PK = FK → UserMessage (колонка `message_id`)
 
 | Свойство | Тип |
 |---|---|
@@ -204,7 +333,6 @@ PK = FK → UserMessage (столбец `message_id`)
 ---
 
 ### MessageFile
-
 **Путь:** `API/Data/MessageFile.cs`
 
 | Свойство | Тип |
@@ -217,7 +345,7 @@ PK = FK → UserMessage (столбец `message_id`)
 
 ---
 
-## 1.4 Звонки (In-Memory, не persist)
+## 1.4 Звонки (In-Memory, не персистируются)
 
 ### CallSession
 
@@ -232,8 +360,6 @@ PK = FK → UserMessage (столбец `message_id`)
 | `PendingParticipants` | `ConcurrentDictionary<int, CallParticipant>` |
 | `ActiveParticipants` | `ConcurrentDictionary<int, CallParticipant>` |
 | `TimeoutCts` | `CancellationTokenSource` |
-
----
 
 ### CallParticipant
 
@@ -290,103 +416,103 @@ Key-Value: `Key: string (PK)`, `Value: string`
 ---
 
 ## 1.7 MessengerDbContext
-
 **Путь:** `API/Data/MessengerDbContext.cs`
 
-**DbSets:** `Messages` (базовый), `UserMessages`, `SystemMessages`, `Chats`, `RefreshTokens`, `ChatMembers`, `Departments`, `VoiceMessages`, `MessageFiles`, `Polls`, `PollOptions`, `PollVotes`, `SystemSettings`, `Users`, `UserSettings`
+**DbSets:** `Messages`, `UserMessages`, `SystemMessages`, `Chats`, `RefreshTokens`, `ChatMembers`, `Departments`, `VoiceMessages`, `MessageFiles`, `Polls`, `PollOptions`, `PollVotes`, `SystemSettings`, `Users`, `UserSettings`
 
-**Конфигурации:**
+**Ключевые конфигурации:**
 - PostgreSQL Enum: `theme`, `chat_role`, `chat_type`, `system_event_type`, `user_status_type`
 - TPH: дискриминатор `message_type` (false/true) для UserMessage/SystemMessage
-- `User.Password` → Owned Entity (колонка `password_hash`)
-- Все timestamp: `timestamp without time zone` (кроме `CallSession.StartedAt` – не persist, в памяти как `DateTimeOffset`)
-- Каскады: Chat→Messages, User→RefreshTokens, UserMessage→Poll; SetNull для остальных FK
-- `PinnedAt` индекс с фильтром `WHERE Pinned_At IS NOT NULL`
-- `UserMessage.ReplyToMessage` и `ForwardedFromMessage` – самореференс с SetNull
-- `SystemMessage` использует колонку `sender_id` для `InitiatorId`, переиспользуя ограничение `Messages_SenderId_fkey`
+- `User.Password` → Owned Entity, колонка `password_hash`
+- Все timestamp: `timestamp without time zone`
+- Каскады: Chat→Messages (delete), User→RefreshTokens (delete), UserMessage→Poll (delete); SetNull для остальных FK
+- Индекс `PinnedAt` с фильтром `WHERE pinned_at IS NOT NULL`
+- `SystemMessage.InitiatorId` хранится в колонке `sender_id`
+- `QuerySplittingBehavior.SplitQuery` глобально
 
 ---
 
-## 1.8 Проекции API
+## 1.8 Инициализация данных (Seed)
+
+**Путь:** `API/Data/SeedData/DataSeeder.cs`
+Обновляет пароли из `Data/SeedData/users.json`. Только хэширование, записей не создаёт.
+
+**Формат `users.json`:** массив `UserSeedDto` — поля: `Id`, `Username`, `PasswordPlain`, `Name`, `Surname`, `Midname`, `DepartmentId`, `Avatar`, `StatusType`, `CreatedAt`
+
+---
+
+## 1.9 Проекции API
 
 **Путь:** `API/Repositories/Projections/`
 
 ### UserWithSettingsProjection
+Эффективная выборка пользователей с настройками (без загрузки полной сущности).
 
-Используется для эффективной выборки пользователей с их настройками без загрузки полных сущностей.
+| Свойство | Тип |
+|---|---|
+| `Id`, `Username`, `Surname`, `Name`, `Midname` | базовые |
+| `Avatar`, `DepartmentId`, `DepartmentName` | |
+| `IsBanned`, `LastOnline`, `CreatedAt` | |
+| `Theme`, `NotificationsEnabled` | из UserSetting |
+| `StatusType`, `StatusExpiresAt` | |
 
-| Свойство | Тип | Назначение |
-|---|---|---|
-| `Id` | `int` | PK |
-| `Username` | `string` | Уникальный логин |
-| `Surname`, `Name`, `Midname` | `string?` | ФИО |
-| `Avatar` | `string?` | Относительный путь к аватару |
-| `DepartmentId` | `int?` | FK → Department |
-| `DepartmentName` | `string?` | Имя отдела (из навигации) |
-| `IsBanned` | `bool` | Заблокирован |
-| `LastOnline` | `DateTime?` | Последняя активность |
-| `CreatedAt` | `DateTime?` | Дата регистрации |
-| `Theme` | `Theme?` | Тема из `UserSetting` |
-| `NotificationsEnabled` | `bool` | Уведомления из `UserSetting` (дефолт `true`, если настройки нет) |
-| `StatusType` | `UserStatusType` | Текущий статус |
-| `StatusExpiresAt` | `DateTime?` | Истечение статуса |
+### ChatProjections (`API/Repositories/Projections/ChatProjections.cs`)
+- `LastMessageProjection` — данные последнего сообщения (Id, ChatId, CreatedAt, флаги голоса/опроса/файлов, SenderName)
+- `DialogPartnerProjection` — партнёр для Contact-чата (UserId, ФИО, Avatar, статус)
+- `ChatMemberProjection` — участник с ролью и онлайн-статусом
+- `MemberNotificationProjection` — настройки уведомлений участника
 
 ---
 
-# 2. СЛОЙ DTO (Shared.Dto)
+# 2. СЛОЙ DTO (Shared/Dto)
 
-## 2.1 Auth
+## 2.1 Auth (`Shared/Dto/Auth/`)
 
-| DTO | Поля | Назначение |
-|---|---|---|
-| `AuthResponseDto` | `Id`, `Username`, `DisplayName`, `Token`, `Role` | Ответ логина (без refresh-токена в теле) |
-| `LoginRequest` | `Username`, `Password` (record) | Вход |
-| `RefreshTokenRequest` | `AccessToken` (record) | Обновление токенов (refresh-токен передаётся через httpOnly cookie) |
-| `TokenResponseDto` | `Token`, `UserId`, `Role` | Ответ обновления (без refresh-токена в теле) |
+| DTO | Поля |
+|---|---|
+| `LoginRequest` | `Username`, `Password` |
+| `RefreshTokenRequest` | `AccessToken` |
+| `AuthResponseDto` | `Id`, `Username`, `DisplayName`, `Token`, `Role` |
+| `TokenResponseDto` | `Token`, `UserId`, `Role` |
 
-Refresh-токен передаётся исключительно в httpOnly cookie `refresh_token`.  
-Серверные внутренние модели:
-- `AuthLoginResult` (содержит `AuthResponseDto` и `RefreshToken` для установки cookie).
-- `AuthRefreshResult` (содержит `TokenResponseDto` и `RefreshToken`).
+**Важно:** Refresh-токен передаётся только через httpOnly cookie. В теле ответа его нет.
+Серверные модели (не DTO): `AuthLoginResult` (DTO + RefreshToken), `AuthRefreshResult` (DTO + RefreshToken).
 
 ---
 
-## 2.2 Call
+## 2.2 Call (`Shared/Dto/Call/`)
 
-| DTO | Поля | Назначение |
-|---|---|---|
-| `CallChatMessageDto` | `CallId`, `SenderId`, `SenderName`, `SenderAvatar`, `Text`, `SentAt` | Сообщение в чате звонка |
-| `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall` | Входящий звонок |
-| `CallParticipantDto` | `UserId`, `DisplayName`, `AvatarUrl`, `IsMuted`, `IsSpeaking` | Участник |
-| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (DateTimeOffset), `IsGroupCall`, `Participants` | Полное состояние |
-| `WebRtcSignalDto` | `CallId`, `FromUserId`, `TargetUserId` (-1=broadcast), `Type` (offer/answer/candidate/hangup), `Payload` (JSON) | SDP/ICE сигнал |
-
-Пространство имён: `Shared.Dto.Call`.
+| DTO | Ключевые поля |
+|---|---|
+| `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall` |
+| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (DateTimeOffset), `IsGroupCall`, `Participants` |
+| `CallParticipantDto` | `UserId`, `DisplayName`, `AvatarUrl`, `IsMuted`, `IsSpeaking` |
+| `SignalDto` | `CallId`, `FromUserId`, `TargetUserId` (-1=broadcast), `Type`, `Payload` | Сигнальное сообщение. В проекте используется только тип udp-endpoint: Payload = строка вида "192.168.1.5:49200,10.0.0.3:49200" (список IP:port через запятую). |
+| `CallChatMessageDto` | `CallId`, `SenderId`, `SenderName`, `SenderAvatar`, `Text`, `SentAt` |
 
 ---
 
-## 2.3 Chat
+## 2.3 Chat (`Shared/Dto/Chat/`)
 
-| DTO | Ключевые поля | Назначение |
-|---|---|---|
-| `ChatDto` | `Id`, `Name`, `Type`, `LastMessage*` (7 полей), `UnreadCount`, `Contact*` (4 поля), `HideSenderPrefix` [JsonIgnore], `CurrentUserRole` (ChatRole?, игнорируется при null), `ShowHistoryForNewMembers` | Представление чата |
-| `ChatMemberDto` | `ChatId`, `UserId`, `Role`, `JoinedAt`, `NotificationsEnabled`, `Username`, `DisplayName`, `Avatar` | Участник |
-| `ChatNotificationSettingsDto` | `ChatId`, `NotificationsEnabled` | Настройки уведомлений |
-| `UpdateChatDto` | `Id`, `Name?`, `ChatType?`, `ShowHistoryForNewMembers?` | Редактирование |
-| `UpdateChatMemberDto` | `UserId` | Изменение участника |
-| `ChatUpdateEventDto` | `Id`, `Name`, `Type`, `CreatedById`, `Avatar`, `ShowHistoryForNewMembers` | Событие обновления метаданных чата (отправляется через SignalR) |
+| DTO | Ключевые поля |
+|---|---|
+| `ChatDto` | `Id`, `Name`, `Type`, `LastMessage*` (7 полей), `UnreadCount`, `Contact*` (4 поля), `CurrentUserRole` (ChatRole?, игнорируется при null), `ShowHistoryForNewMembers`, `HideSenderPrefix` [JsonIgnore] |
+| `ChatMemberDto` | `ChatId`, `UserId`, `Role`, `JoinedAt`, `NotificationsEnabled`, `Username`, `DisplayName`, `Avatar` |
+| `ChatUpdateEventDto` | `Id`, `Name`, `Type`, `CreatedById`, `Avatar`, `ShowHistoryForNewMembers` — отправляется через SignalR при обновлении метаданных чата |
+| `UpdateChatDto` | `Id`, `Name?`, `ChatType?`, `ShowHistoryForNewMembers?` |
+| `ChatNotificationSettingsDto` | `ChatId`, `NotificationsEnabled` |
 
 ---
 
-## 2.4 Message
+## 2.4 Message (`Shared/Dto/Message/`)
 
 | DTO | Назначение |
 |---|---|
-| `CreateMessageRequest` | `ChatId` [Required], `Content` [MaxLength 4000], `ReplyToMessageId?`, `ForwardedFromMessageId?`, `IsVoiceMessage`, `Voice*` (3 поля: DurationSeconds, Waveform, FileSize, FileUrl), `Files?` |
-| `MessageDto` | Полное представление сообщения. `Files` – `List<MessageFileDto>?`, не сериализуется при null. `Poll` nullable. Многие поля имеют `JsonIgnoreCondition.WhenWritingNull`. `IsPinned` вычисляется по `PinnedAt != null`. |
+| `CreateMessageRequest` | `ChatId` [Required], `Content` [MaxLength 4000], `ReplyToMessageId?`, `ForwardedFromMessageId?`, `IsVoiceMessage`, `VoiceDurationSeconds`, `VoiceWaveform`, `VoiceFileSize`, `VoiceFileUrl`, `Files?` |
+| `MessageDto` | Полное представление. `IsPinned` = `PinnedAt != null`. Многие поля с `JsonIgnore(WhenWritingNull)`. `Files` не сериализуется при null. |
 | `MessageFileDto` | `Id`, `MessageId`, `FileName`, `ContentType`, `Url`, `PreviewType` (file/image/video), `FileSize` |
-| `MessageForwardInfoDto` | `OriginalMessageId`, `OriginalChatId`, `OriginalSenderId?`, `OriginalSenderName?`, `OriginalCreatedAt` |
 | `MessageReplyPreviewDto` | `Id`, `ChatId`, `SenderId?`, `SenderName?`, `Content?`, `CreatedAt`, `IsDeleted`, `IsVoiceMessage`, `HasPoll`, `FilesCount` |
+| `MessageForwardInfoDto` | `OriginalMessageId`, `OriginalChatId`, `OriginalSenderId?`, `OriginalSenderName?`, `OriginalCreatedAt` |
 | `PagedMessagesDto` | `Messages`, `HasMoreMessages`, `HasNewerMessages` |
 | `UpdateMessageDto` | `Id`, `Content?` |
 | `ChatCountsDto` | `MediaCount`, `FilesCount`, `PollsCount`, `PinnedCount` |
@@ -395,238 +521,475 @@ Refresh-токен передаётся исключительно в httpOnly c
 
 ## 2.5 Прочие DTO
 
-| Группа | DTO и поля |
-|---|---|
-| **Department** | `DepartmentDto` (Id, Name, ParentDepartmentId, Head, HeadName, UserCount), `UpdateDepartmentMemberDto` (UserId) |
-| **Notification** | `NotificationDto` (Type: message/mention/poll, ChatId, ChatName, Avatar, MessageId, Sender*, Preview до 100 символов, CreatedAt) |
-| **Online** | `UserStatusDto` (UserId, IsOnline, LastOnline, StatusType, StatusExpiresAt), `OnlineUsersResponseDto` (OnlineUserIds, TotalOnline), `SetStatusRequest` (StatusType, Duration) |
-| **Poll** | `CreatePollDto` (ChatId, Question, IsAnonymous, AllowsMultipleAnswers, Options), `PollDto` (+ SelectedOptionIds, CanVote), `PollOptionDto` (+ VotesCount, Votes), `PollVoteDto` |
-| **ReadReceipt** | `MarkAsReadDto` (ChatId, MessageId), `ReadReceiptResponseDto`, `UnreadCountDto`, `AllUnreadCountsDto`, `ChatReadInfoDto` (+ FirstUnreadMessageId) |
-| **Search** | `GlobalSearchMessageDto` (+ HighlightedContent, HasFiles/Voice/Poll, `SenderId` nullable), `GlobalSearchResponseDto`, `SearchMessagesResponseDto`, `SearchMessagesQueryDto` / `GlobalSearchQueryDto` |
-| **User** | `AvatarResponseDto`, `ChangePasswordDto`, `ChangeUsernameDto`, `CreateUserDto` (ФИО + DepartmentId), `ResetPasswordAdminDto`, `UserDto` (16 полей) |
+### Department (`Shared/Dto/Department/`)
+- `DepartmentDto` — `Id`, `Name`, `ParentDepartmentId`, `Head`, `HeadName`, `UserCount`
+- `UpdateDepartmentMemberDto` — `UserId`
+
+### Notification (`Shared/Dto/Notification/`)
+- `NotificationDto` — `Type` (message/mention/poll), `ChatId`, `ChatName`, `Avatar`, `MessageId`, `Sender*`, `Preview` (до 100 символов), `CreatedAt`
+
+### Online (`Shared/Dto/Online/`)
+- `UserStatusDto` — `UserId`, `IsOnline`, `LastOnline`, `StatusType`, `StatusExpiresAt`
+- `OnlineUsersResponseDto` — `OnlineUserIds`, `TotalOnline`
+- `SetStatusRequest` — `StatusType`, `Duration`
+
+### Poll (`Shared/Dto/Poll/`)
+- `CreatePollDto` — `ChatId`, `Question`, `IsAnonymous`, `AllowsMultipleAnswers`, `Options`
+- `PollDto` — + `SelectedOptionIds`, `CanVote`
+- `PollOptionDto` — + `VotesCount`, `Votes`
+- `PollVoteDto`
+
+### ReadReceipt (`Shared/Dto/ReadReceipt/`)
+- `MarkAsReadDto` — `ChatId`, `MessageId`
+- `ReadReceiptResponseDto`, `UnreadCountDto`, `AllUnreadCountsDto`
+- `ChatReadInfoDto` — + `FirstUnreadMessageId`
+
+### Search (`Shared/Dto/Search/`)
+- `GlobalSearchMessageDto` — + `HighlightedContent`, `HasFiles/Voice/Poll`, `SenderId` nullable
+- `GlobalSearchResponseDto`, `SearchMessagesResponseDto`
+- `SearchMessagesQueryDto` / `GlobalSearchQueryDto`
+
+### User (`Shared/Dto/User/`)
+- `UserDto` — 16 полей
+- `CreateUserDto` — ФИО + `DepartmentId`
+- `ChangePasswordDto`, `ChangeUsernameDto`, `ResetPasswordAdminDto`
+- `AvatarResponseDto`
+- `UserBannedDto` — `Reason`
+- `UserPermissionsChangedDto` — `UserId`, `Role`, `Reason`
 
 ---
 
-# 3. КОНТРОЛЛЕРЫ (API.Controllers)
+# 3. КОНТРОЛЛЕРЫ (API/Controllers)
 
-## BaseController\<T\>
-
+## BaseController
 **Путь:** `API/Controllers/BaseController.cs`
 
-| Метод | Назначение |
-|---|---|
-| `GetCurrentUserId()` | Из JWT claim `sub` |
-| `IsCurrentUser(int)` | Сравнение с текущим |
-| `Map(Result<T>)` | Успех → 200+ApiResponse, ошибка → вызов `MapFailureToObjectResult<T>` |
-| `MapFailureToObjectResult<T>(Result result)` | Создаёт `ApiResponse<T>` и возвращает HTTP-статус по `ResultErrorType` |
-| `Forbidden(...)` | 403 |
-| `ExecuteAsync(...)` | Обёртка с try-catch, логирует ошибку перед возвратом |
+Методы: `GetCurrentUserId()`, `IsCurrentUser(int)`, `Map(Result<T>)`, `ExecuteAsync(...)`
 
-**Маппинг:** Unauthorized→401, Forbidden→403, NotFound→404, Conflict→409, Internal→500, default→400
+Маппинг `Result` → HTTP:
+- `Unauthorized` → 401
+- `Forbidden` → 403
+- `NotFound` → 404
+- `Conflict` → 409
+- `Internal` → 500
+- default → 400
 
 ---
 
-## Контроллеры
+## AuthController
+**Путь:** `API/Controllers/AuthController.cs`
+**Rate limit:** `login` на POST login
 
-| Контроллер | Эндпоинты | Авторизация | Rate Limit |
+| Метод | Маршрут | Auth | Тело / Ответ |
 |---|---|---|---|
-| `AuthController` | POST login, refresh, revoke | login/refresh — AllowAnonymous | `login` |
-| `UsersController` | GET/PUT users, avatar, username, password, online-статусы, DELETE avatar | IsCurrentUser для изменений | — |
-| `ChatsController` | CRUD, участники, роли, аватар | IsMember/Admin/Owner | — |
-| `MessagesController` | CRUD, pin/unpin, GET /chat/{chatId}/latest, GET /chat/{chatId}/counts, before/after/around, поиск | IsMember | `messaging`, `search` |
-| `FilesController` | POST upload | IsMember | `upload` |
-| `DepartmentsController` | CRUD, участники | Admin или Head | — |
-| `PollsController` | Create/vote/close/get | IsMember | — |
-| `ReadReceiptsController` | Mark read, unread-счётчики | Authorized | — |
-| `StatusController` | Set/get | Authorized | — |
-| `NotificationsController` | Настройки по чату | Authorized | — |
-| `AdminController` | CRUD пользователей, бан, сброс пароля | Admin | — |
+| POST | `/api/auth/login` | Anonymous | `LoginRequest` → `AuthResponseDto` + cookie |
+| POST | `/api/auth/refresh` | Anonymous | `RefreshTokenRequest` (AccessToken) + cookie → `TokenResponseDto` + новый cookie |
+| POST | `/api/auth/revoke` | Authorized | — → отзыв refresh-токена из cookie |
 
-**AuthController**  
-- Принимает `IOptions<JwtSettings>` для получения времени жизни refresh-токена.  
-- `POST /login` возвращает `AuthResponseDto` (без refresh-токена) и устанавливает httpOnly cookie `refresh_token` (Secure, SameSite=Strict, Path=/api/auth).  
-- `POST /refresh` читает refresh-токен из cookie `refresh_token`, при успехе обновляет cookie и возвращает `TokenResponseDto` (без refresh-токена).  
-- `POST /revoke` удаляет cookie `refresh_token`.
+---
+
+## UsersController
+**Путь:** `API/Controllers/UsersController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| GET | `/api/users` | Authorized |
+| GET | `/api/users/{id}` | Authorized |
+| PUT | `/api/users/{id}` | IsCurrentUser |
+| GET | `/api/users/online` | Authorized |
+| GET | `/api/users/status/batch` | Authorized |
+| GET | `/api/users/{id}/status` | Authorized |
+| PUT | `/api/users/{id}/status` | IsCurrentUser |
+| POST | `/api/users/{id}/avatar` | IsCurrentUser |
+| DELETE | `/api/users/{id}/avatar` | IsCurrentUser |
+| PUT | `/api/users/{id}/username` | IsCurrentUser |
+| PUT | `/api/users/{id}/password` | IsCurrentUser |
+
+---
+
+## ChatsController
+**Путь:** `API/Controllers/ChatsController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| GET | `/api/chats/user/{userId}` | IsMember |
+| GET | `/api/chats/user/{userId}/dialogs` | Authorized |
+| GET | `/api/chats/user/{userId}/groups` | Authorized |
+| GET | `/api/chats/user/{userId}/contact/{contactUserId}` | Authorized |
+| POST | `/api/chats` | Authorized |
+| GET | `/api/chats/{id}` | IsMember |
+| PUT | `/api/chats/{id}` | IsAdmin |
+| DELETE | `/api/chats/{id}` | IsOwner |
+| POST | `/api/chats/{chatId}/avatar` | IsAdmin |
+| GET | `/api/chats/{chatId}/members` | IsMember |
+| GET | `/api/chats/{chatId}/members/detailed` | IsMember |
+| POST | `/api/chats/{chatId}/members` | IsAdmin |
+| DELETE | `/api/chats/{chatId}/members/{userId}` | IsAdmin или IsCurrentUser |
+| PUT | `/api/chats/{chatId}/members/{userId}/role` | IsOwner |
+
+---
+
+## MessagesController
+**Путь:** `API/Controllers/MessagesController.cs`
+**Rate limit:** `messaging` на Create, `search` на Search
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| POST | `/api/messages` | IsMember |
+| GET | `/api/messages/{id}` | IsMember |
+| PUT | `/api/messages/{id}` | IsCurrentUser (sender) |
+| DELETE | `/api/messages/{id}` | IsCurrentUser или IsAdmin |
+| POST | `/api/messages/{id}/pin` | IsAdmin |
+| DELETE | `/api/messages/{id}/pin` | IsAdmin |
+| GET | `/api/messages/chat/{chatId}/latest` | IsMember |
+| GET | `/api/messages/chat/{chatId}/pinned` | IsMember |
+| GET | `/api/messages/chat/{chatId}/counts` | IsMember |
+| GET | `/api/messages/chat/{chatId}/before/{beforeId}` | IsMember |
+| GET | `/api/messages/chat/{chatId}/after/{afterId}` | IsMember |
+| GET | `/api/messages/chat/{chatId}/around/{messageId}` | IsMember |
+| GET | `/api/messages/chat/{chatId}/search` | IsMember |
+| GET | `/api/messages/user/{userId}/search` | IsCurrentUser |
+
+---
+
+## FilesController
+**Путь:** `API/Controllers/FilesController.cs`
+**Rate limit:** `upload`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| POST | `/api/files/upload?chatId={chatId}` | IsMember |
+
+---
+
+## DepartmentsController
+**Путь:** `API/Controllers/DepartmentsController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| GET | `/api/departments` | Authorized |
+| POST | `/api/departments` | Admin |
+| GET | `/api/departments/{id}` | Authorized |
+| PUT | `/api/departments/{id}` | Admin или Head |
+| DELETE | `/api/departments/{id}` | Admin |
+| GET | `/api/departments/{id}/members` | Authorized |
+| POST | `/api/departments/{id}/members` | Admin или Head |
+| DELETE | `/api/departments/{departmentId}/members/{userId}` | Admin или Head |
+| GET | `/api/departments/{id}/can-manage` | Authorized |
+
+---
+
+## PollsController
+**Путь:** `API/Controllers/PollsController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| POST | `/api/polls` | IsMember |
+| GET | `/api/polls/{pollId}?userId={userId}` | IsMember |
+| POST | `/api/polls/vote` | IsMember |
+| POST | `/api/polls/{pollId}/close` | IsMember |
+
+---
+
+## ReadReceiptsController
+**Путь:** `API/Controllers/ReadReceiptsController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| POST | `/api/readreceipts/mark-read` | Authorized |
+| GET | `/api/readreceipts/chat/{chatId}/unread-count` | Authorized |
+| GET | `/api/readreceipts/unread-counts` | Authorized |
+
+---
+
+## StatusController
+**Путь:** `API/Controllers/StatusController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| PUT | `/api/users/{id}/status` | IsCurrentUser |
+| GET | `/api/users/{id}/status` | Authorized |
+
+---
+
+## NotificationsController
+**Путь:** `API/Controllers/NotificationsController.cs`
+
+| Метод | Маршрут | Auth |
+|---|---|---|
+| GET | `/api/notifications/settings` | Authorized |
+| GET | `/api/notifications/chat/{chatId}/settings` | Authorized |
+| POST | `/api/notifications/chat/mute` | Authorized |
+
+---
+
+## AdminController
+**Путь:** `API/Controllers/AdminController.cs`
+**Auth:** только роль Admin
+
+| Метод | Маршрут |
+|---|---|
+| GET | `/api/admin/users` |
+| POST | `/api/admin/users` |
+| PUT | `/api/admin/users/{userId}` |
+| POST | `/api/admin/users/{userId}/toggle-ban` |
+| POST | `/api/admin/users/{userId}/reset-password` |
 
 ---
 
 # 4. ХАБЫ (SignalR)
 
 ## MessengerHub
+**Путь:** `API/Hubs/MessengerHub.cs`
+**Эндпоинт:** `/chatHub`
+**Группы:** `user_{id}` (личные уведомления), `chat_{id}` (события чата)
 
-**Путь:** `API/Hubs/MessengerHub.cs`  
-**Эндпоинт:** `/chatHub` (единый хаб для чата и звонков)  
-**Группы:** `user_{id}` (личные), `chat_{id}` (чат)
+### Жизненный цикл подключения
+- `OnConnectedAsync` — добавление в группы чатов пользователя, публикация `UserStatusChanged` / `UserOnline`
+- `OnDisconnectedAsync` — обновление `LastOnline`, рассылка `UserOffline`, выход из активных звонков
 
-### Подключение
-- `OnConnectedAsync` — пользователь добавляется в группы своих чатов, публикуется `UserStatusChanged` или `UserOnline`.
-- `OnDisconnectedAsync` — обновляется `LastOnline`, рассылается `UserOffline`, выполняется выход из всех активных звонков.
+### Клиентские методы (вызываются с клиента → сервер)
 
-### Клиентские методы чата
-`JoinChat`, `LeaveChat`, `MarkAsRead`, `MarkMessageAsRead`, `GetUnreadCounts`, `GetReadInfo`, `SendTyping`, `GetOnlineUsersInChat`, `SetStatus`
+**Чат:**
 
-### Клиентские методы звонков
-`InitiateCall`, `JoinCall`, `LeaveCall`, `DeclineCall`, `CancelCall`, `SendSignal`, `ToggleMute`, `ToggleSpeaking`, `SendCallMessage`, `GetCallState`
+| Метод | Назначение |
+|---|---|
+| `JoinChat(chatId)` | Подписаться на группу чата |
+| `LeaveChat(chatId)` | Отписаться от группы чата |
+| `MarkAsRead(chatId, messageId)` | Отметить сообщение прочитанным |
+| `MarkMessageAsRead(chatId, messageId)` | То же (алиас) |
+| `GetUnreadCounts()` | Получить счётчики непрочитанных |
+| `GetReadInfo(chatId)` | Информация о прочтении в чате |
+| `SendTyping(chatId)` | Индикатор печати |
+| `GetOnlineUsersInChat(chatId)` | Онлайн-пользователи чата |
+| `SetStatus(statusType, duration)` | Установить статус |
 
-### Серверные события
-- **Чат:** `UserStatusChanged`, `UserOnline`, `UserOffline`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`, `ChatUpdated`, `ChatRemoved`, `ReceiveMessage`, `MessageUpdated`, `MessageDeleted`, `PollUpdated`, `ReceiveNotification`
-- **Звонки:** `IncomingCall`, `CallStateUpdated`, `CallEnded`, `CallMessageReceived`, `CallParticipantJoined`, `CallParticipantLeft`, `ParticipantMuteChanged`, `ParticipantSpeakingChanged`, `ActiveCallStarted`, `ActiveCallUpdated`, `ActiveCallEnded`, `CallError`, `ReceiveSignal`
+**Звонки:**
 
-### Особенности реализации звонков
-- Кэш информации о пользователях `ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>>`.
-- Параллельная загрузка данных участников в `ToStateDtoAsync`.
-- `JoinCall` обёрнут в try-catch с отправкой `CallError`.
-- `CancelCall` для групповых звонков делегирует в `LeaveCall`.
-- Имена методов вынесены в константы `HubMethods`.
+| Метод | Назначение |
+|---|---|
+| `InitiateCall(chatId)` | Начать звонок |
+| `JoinCall(callId)` | Присоединиться |
+| `LeaveCall(callId)` | Покинуть |
+| `DeclineCall(callId)` | Отклонить |
+| `CancelCall(callId)` | Отменить (для группового делегирует в LeaveCall) |
+| `SendSignal(dto)` | Передача сигнального сообщения. В проекте: тип udp-endpoint, Payload = список IP:port локальных адресов отправителя 
+| `ToggleMute(callId, isMuted)` | Мьют |
+| `ToggleSpeaking(callId, isSpeaking)` | Индикатор речи |
+| `SendCallMessage(callId, text)` | Сообщение в чате звонка |
+| `GetCallState(callId)` | Текущее состояние звонка |
+
+### Серверные события (сервер → клиент)
+
+**Чат:**
+
+| Событие | Данные |
+|---|---|
+| `UserStatusChanged` | `UserStatusDto` |
+| `UserOnline` | `userId` |
+| `UserOffline` | `userId` |
+| `UserTyping` | `chatId`, `userId`, `userName` |
+| `MessageRead` | `chatId`, `userId`, `messageId` |
+| `UnreadCountUpdated` | `UnreadCountDto` |
+| `ChatUpdated` | `ChatUpdateEventDto` |
+| `ChatRemoved` | `chatId` — отправляется персонально удалённому участнику |
+| `ReceiveMessage` | `MessageDto` |
+| `MessageUpdated` | `MessageDto` |
+| `MessageDeleted` | `messageId` |
+| `PollUpdated` | `PollDto` |
+| `ReceiveNotification` | `NotificationDto` |
+
+**Звонки:**
+
+| Событие | Данные |
+|---|---|
+| `IncomingCall` | `CallInviteDto` |
+| `CallStateUpdated` | `CallStateDto` |
+| `CallEnded` | `callId`, `reason` |
+| `CallMessageReceived` | `CallChatMessageDto` |
+| `CallParticipantJoined` | `CallParticipantDto` |
+| `CallParticipantLeft` | `userId` |
+| `ParticipantMuteChanged` | `userId`, `isMuted` |
+| `ParticipantSpeakingChanged` | `userId`, `isSpeaking` |
+| `ActiveCallStarted` | `CallStateDto` |
+| `ActiveCallUpdated` | `CallStateDto` |
+| `ActiveCallEnded` | `callId` |
+| `CallError` | `message` |
+| `ReceiveSignal` | `SignalDto` — используется для обмена UDP-эндпоинтами (тип `udp-endpoint`) |
+
+### Особенности реализации
+- Кэш имён/аватаров участников: `ConcurrentDictionary<int, Task<(string? Name, string? Avatar)>>`
+- `JoinCall` обёрнут в try-catch с отправкой `CallError`
+- Имена методов вынесены в константы `HubMethods` (`Shared/Hubs/HubMethods.cs`)
 
 ---
 
 # 5. MIDDLEWARE
 
-| Middleware | Назначение |
-|---|---|
-| `ExceptionHandlingMiddleware` | Все исключения → 500 + ApiResponse. Dev: стектрейс, Prod: "Произошла внутренняя ошибка" |
-| `MissingFileCleanupMiddleware` | 404 на `/uploads` или `/avatars` → очистка ссылок в БД (только GET/HEAD, после next) |
-| `CookiePolicy` | `MinimumSameSitePolicy=Strict`, `HttpOnly=Always`, `Secure` зависит от окружения |
+**Порядок регистрации** — см. секцию «Порядок middleware» в начале документа.
+
+| Middleware | Путь | Назначение |
+|---|---|---|
+| `ExceptionHandlingMiddleware` | `API/Middleware/ExceptionHandlingMiddleware.cs` | Все исключения → 500 + `ApiResponse`. Dev: стектрейс, Prod: "Произошла внутренняя ошибка" |
+| `MissingFileCleanupMiddleware` | `API/Middleware/MissingFileCleanupMiddleware.cs` | 404 на `/uploads` или `/avatars` → очистка ссылок в БД (только GET/HEAD, после StaticFiles) |
+
+**CookiePolicy:** `SameSite=Lax`, `HttpOnly=Always`, `Secure` зависит от `DisableHttpsRedirection`
 
 ---
 
-# 6. МАППИНГ (Ручной, extension-методы)
+# 6. МАППИНГ (API/Mapping)
 
-| Класс маппинга | Ключевые методы |
+Ручной маппинг через extension-методы, без AutoMapper.
+
+| Файл | Ключевые методы |
 |---|---|
-| `ChatMappings` | `.ToDto(IUrlBuilder?)`, `.ToDto(User? contact, IUrlBuilder?)` |
-| `FileMappings` | `.ToDto()`, `DeterminePreviewType(contentType)` → file/image/video/audio |
-| `MessageMappings` | `.ToDto(currentUserId, urlBuilder)` — рекурсивный обход цепочки пересылки, заполняет `OriginalSenderId` |
-| `PollMappings` | `Poll.ToDto(currentUserId?)` (SelectedOptionIds, CanVote), `PollOption.ToDto(isAnonymous)` |
-| `UserMappings` | `.ToDto(urlBuilder, isOnline?)` (включает `StatusType` и `StatusExpiresAt`), `GetDisplayName()` |
+| `ChatMappings.cs` | `.ToDto(IUrlBuilder?)`, `.ToDto(User? contact, IUrlBuilder?)` |
+| `FileMappings.cs` | `.ToDto()`, `DeterminePreviewType(contentType)` → file/image/video/audio |
+| `MessageMappings.cs` | `.ToDto(currentUserId, urlBuilder)` — рекурсивный обход цепочки пересылки, заполняет `OriginalSenderId` |
+| `PollMappings.cs` | `Poll.ToDto(currentUserId?)` (SelectedOptionIds, CanVote), `PollOption.ToDto(isAnonymous)` |
+| `UserMappings.cs` | `.ToDto(urlBuilder, isOnline?)` — включает `StatusType` и `StatusExpiresAt` |
 
 ---
 
 # 7. ИНФРАСТРУКТУРА API
 
-## Утилиты (Common)
+## 7.1 Утилиты (API/Common)
 
-| Класс | Назначение |
-|---|---|
-| `AppDateTime` | Обёртка `TimeProvider`. Возвращает `DateTimeKind.Unspecified` |
-| `Result<T>` / `Result` | ROP: `IsSuccess`, `IsFailure`, `Error`, `ErrorType`. Фабрики: `Success()`, `Failure()`, `NotFound()`, `Forbidden()`, `Conflict()`, `Internal()` |
-| `ResultExtensions` | `UnwrapOrDefault`, `UnwrapOrFallback`, `TryUnwrap` |
-| `ValidationHelper` | `ValidateUsername` (regex `^[a-z0-9_]{3,30}$`), `ValidatePassword` (≥6 символов) |
-| `StatusExtensions` | `Parse(string?)` → TimeSpan: "15m", "30m", "1h", "2h", "4h", "8h", "24h" |
-| `UrlHelpers` | `BuildFullUrl(string?, IUrlBuilder?)` |
-| `HubMethods` | Статические константы для имён хаб-методов. Вложенные классы: `Chat`, `Call`, `ChatInvoke`, `CallInvoke`. |
-| `SystemEventMeta` | Форматирует системные сообщения и предоставляет префиксы/суффиксы для UI. |
-
----
-
-## Конфигурация
-
-| Класс | Ключевые значения |
-|---|---|
-| `JwtSettings` | `AccessTokenLifetimeMinutes=15`, `RefreshTokenLifetimeDays=30`, `Issuer="API"`, `Audience="MessengerClient"` |
-| `MessengerSettings` | `AdminDepartmentId=1`, `MaxFileSizeBytes=20MB`, `BcryptWorkFactor=12`, `MaxImageDimension=100px`, `ImageQuality=85`, `DefaultPageSize=50`, `MaxPageSize=100` |
-| `AuthConfiguration` | JWT Bearer + query token `access_token` для `/chatHub` |
-| `StaticFilesConfiguration` | `/uploads`, `/avatars`. Аватары: `Cache-Control: no-cache, no-store` |
-
----
-
-## Инфраструктурные сервисы
-
-| Класс | Назначение |
-|---|---|
-| `AccessControlService` | Проверка прав с двойным кэшем (MemoryCache + per-request). `IsSystemAdmin()` – bypass для роли Admin. |
-| `OnlineUserService` | Singleton. `ConcurrentDictionary<userId, ConcurrentDictionary<connectionId, byte>>`. Очистка каждые 5 мин. |
-| `UserStatusService` | Статусы обновляются через `ExecuteUpdateAsync`. Использует `IHubContext<MessengerHub>`. |
-| `StatusCleanupHostedService` | Фоновый: очистка истёкших статусов каждую минуту |
-| `CacheService` | MemoryCache: чаты (TTL 5м, sliding 2м), членство (TTL 10м, sliding 3м) |
-| `HubNotifier` | `SendToChatAsync`, `SendToUserAsync` через `IHubContext<MessengerHub>`. Глотает исключения. |
-| `HttpUrlBuilder` | Абсолютный URL через `IHttpContextAccessor` |
-| `UdpDiscoveryService` | UDP порт 5275. Запрос: `MESSENGER_DISCOVER`, ответ: `MESSENGER_HERE:PORT` или `MESSENGER_HERE:PORT:IP`. |
-| `EnumNameTranslator` | CLR → PostgreSQL snake_case для enum. |
-
----
-
-## Репозитории
-
-| Интерфейс | Реализация | Назначение |
+| Класс | Путь | Назначение |
 |---|---|---|
-| `IUserRepository` | `UserRepository` | `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `Add`, `GetAllWithSettingsAsync`, `GetWithSettingsAsync`, `UsernameExistsByOtherUserAsync` |
-| `IRefreshTokenRepository` | `RefreshTokenRepository` | Управление токенами: отзыв семейства, отзыв всех для пользователя, удаление истёкших, активные семьи. |
-| `IChatRepository` | `ChatRepository` | Расширен: `GetLastMessagesAsync` разрешает цепочку пересылки. |
-| `IMessageRepository` | `MessageRepository` | `GetLatestAsync` теперь сначала выбирает ID, затем раздельно загружает UserMessages и SystemMessages, сортирует по карте порядка. `GetChatCountsAsync` вычисляет `totalFiles`. `LightQuery` загружает `Poll.PollOptions.PollVotes` как для основного сообщения, так и для пересланного, обеспечивая полные данные опроса. |
-| `IReadReceiptRepository` | `ReadReceiptRepository` | Все операции с отметками о прочтении. |
-| `IPollRepository` | `PollRepository` | Управление опросами и голосами. |
+| `AppDateTime` | `API/Common/AppDateTime.cs` | Обёртка `TimeProvider`. **Возвращает `DateTimeKind.Unspecified`** (см. §21) |
+| `Result<T>` / `Result` | `API/Common/Result.cs` | ROP: `IsSuccess`, `IsFailure`, `Error`, `ErrorType`. Фабрики: `Success()`, `Failure()`, `NotFound()`, `Forbidden()`, `Conflict()`, `Internal()` |
+| `ResultExtensions` | `API/Common/Result.cs` | `UnwrapOrDefault`, `UnwrapOrFallback`, `TryUnwrap` |
+| `ValidationHelper` | `API/Common/ValidationHelper.cs` | `ValidateUsername` (regex `^[a-z0-9_]{3,30}$`), `ValidatePassword` (≥6 символов) |
+| `StatusExtensions` | `API/Common/StatusExtensions.cs` | `Parse(string?)` → TimeSpan: "15m"/"30m"/"1h"/"2h"/"4h"/"8h"/"24h" |
+| `UrlHelpers` | `API/Common/UrlHelpers.cs` | `BuildFullUrl(string?, IUrlBuilder?)` |
+| `HubMethods` | `Shared/Hubs/HubMethods.cs` | Константы имён хаб-методов. Вложенные классы: `Chat`, `Call`, `ChatInvoke`, `CallInvoke` |
+| `SystemEventMeta` | `Shared/Helpers/SystemEventMeta.cs` | Форматирует системные сообщения, предоставляет префиксы/суффиксы для UI |
 
 ---
 
-### 8. СЛОЙ СЕРВИСОВ API
+## 7.2 Конфигурация (API/Configuration)
 
-#### BaseService\<T\>
+### JwtSettings (`API/Configuration/JwtSettings.cs`)
+`AccessTokenLifetimeMinutes=15`, `RefreshTokenLifetimeDays=30`, `Issuer="API"`, `Audience="MessengerClient"`
 
-`_context: MessengerDbContext`, `_logger: ILogger<T>`
+### MessengerSettings (`API/Configuration/MessengerSettings.cs`)
+`AdminDepartmentId=1`, `MaxFileSizeBytes=20MB`, `BcryptWorkFactor=12`, `MaxImageDimension=100px`, `ImageQuality=85`, `DefaultPageSize=50`, `MaxPageSize=100`
 
-`SaveChangesAsync` → ConcurrencyException: Conflict, UniqueViolation (23505): Conflict, прочие DbUpdateException: Internal
+### RateLimitKey (`API/Configuration/RateLimitKey.cs`)
+- `GetIpPartitionKey(context)` — по IP
+- `GetUserOrIpPartitionKey(context)` — по userId если авторизован, иначе по IP
 
-Методы: `FindEntityAsync<T>(id)`, `Paginate(query, page, pageSize)`, `NormalizePagination(page, pageSize, max)`
+### DependencyInjection (`API/Configuration/DependencyInjection.cs`)
+
+| Метод | Что регистрирует |
+|---|---|
+| `AddMessengerDatabase` | DbContext + PostgreSQL enum mapping через `EnumTypeMappings` |
+| `AddInfrastructureServices` | Репозитории (Scoped), `CacheService`, `AccessControlService`, `FileService`, `TokenService`, `HubNotifier`, `UrlBuilder`, `CallSessionService` (Singleton), `OnlineUserService` (Singleton), бандлы |
+| `AddBundles` | `TimeBundle`, `UrlBundle`, `CacheBundle`, `NotificationBundle`, `MediaBundle`, `PresenceBundle`, `ChatBundle` |
+| `AddBusinessServices` | Все бизнес-сервисы (Scoped) + `StatusCleanupHostedService` |
+| `AddMessengerJson` | `ReferenceHandler.IgnoreCycles`, `WriteIndented` в Dev |
+
+### Бандлы (`API/Services/Infrastructure/Bundles/`)
+Группировка зависимостей для упрощения DI в сервисах:
+- `TimeBundle(AppDateTime)`
+- `UrlBundle(IUrlBuilder)`
+- `CacheBundle(IAccessControlService, ICacheService)`
+- `NotificationBundle(IHubNotifier, INotificationService)`
+- `MediaBundle(IFileService)`
+- `PresenceBundle(IOnlineUserService)`
+- `ChatBundle(ISystemMessageService, CacheBundle, NotificationBundle, TimeBundle)`
 
 ---
 
-#### AuthService
+## 7.3 Инфраструктурные сервисы (API/Services/Infrastructure)
 
-**Путь:** `API/Services/Core/Auth/AuthService.cs`
+### База данных
+- `EnumTypeMappings` — трансляторы имён enum для Npgsql (ChatRole, ChatType, UserStatusType)
+- `EnumNameTranslator` — реализует `INpgsqlNameTranslator`, берёт маппинг из словаря, fallback на snake_case
 
-**LoginAsync:**
-1. Dummy-hash BCrypt для несуществующих пользователей (timing-safe)
-2. Проверка бана
-3. Роль: `DepartmentId == AdminDepartmentId` → Admin; является HeadId → Head; иначе User
-4. `MaxActiveSessions=5` — при превышении отзыв старых семей
-5. Удаление токенов истёкших >60 дней
-6. Возвращает `Result<AuthLoginResult>` (содержит `AuthResponseDto` без refresh-токена и строку `RefreshToken` для установки cookie).
+### Безопасность
+- `AccessControlService` (`API/Services/Infrastructure/Security/`) — проверка прав с двойным кэшем (MemoryCache + per-request). `IsSystemAdmin()` даёт bypass для роли Admin
+- `AccessControlExtensions` — `EnsureMemberOfAsync`, `EnsureAdminOfAsync`, `EnsureOwnerOfAsync` → `Result`
 
-**RefreshTokenAsync:**
-- `UsedAt != null` ИЛИ `RevokedAt != null` → reuse detected → отзыв всей семьи
-- Ротация: UsedAt = now, новый токен с тем же FamilyId
-- Возвращает `Result<AuthRefreshResult>` (содержит `TokenResponseDto` без refresh-токена и строку `RefreshToken`).
+### Остальные
+- `OnlineUserService` — Singleton, `ConcurrentDictionary<userId, ConcurrentDictionary<connectionId, byte>>`, очистка каждые 5 мин
+- `UserStatusService` — обновление статусов через `ExecuteUpdateAsync`, использует `IHubContext<MessengerHub>`
+- `StatusCleanupHostedService` — фоновый сервис, очистка истёкших статусов каждую минуту
+- `CacheService` — MemoryCache: чаты (TTL 5м, sliding 2м), членство (TTL 10м, sliding 3м)
+- `HubNotifier` — `SendToChatAsync`, `SendToUserAsync` через `IHubContext<MessengerHub>`, глотает исключения
+- `HttpUrlBuilder` — абсолютный URL через `IHttpContextAccessor`
+- `UdpDiscoveryService` — UDP порт 5275. Запрос: `MESSENGER_DISCOVER`, ответ: `MESSENGER_HERE:PORT` или `MESSENGER_HERE:PORT:IP`
+
+---
+
+## 7.4 Репозитории (API/Repositories)
+
+### Базовый класс
+`RepositoryBase<TEntity>` (`API/Repositories/Base/`) — `FindByIdAsync`, `ExistsAsync`, `Add`, `Remove`
+
+### Реализации
+
+| Интерфейс | Реализация | Путь | Особенности |
+|---|---|---|---|
+| `IUserRepository` | `UserRepository` | `Implementations/UserRepository.cs` | `FindByUsernameAsync`, `FindByIdWithPasswordAsync`, `GetAllWithSettingsAsync`, `GetWithSettingsAsync`, `UsernameExistsByOtherUserAsync` |
+| `IRefreshTokenRepository` | `RefreshTokenRepository` | `Implementations/RefreshTokenRepository.cs` | Отзыв семейства, отзыв всех для пользователя, удаление истёкших, активные семьи |
+| `IChatRepository` | `ChatRepository` | `Implementations/ChatRepository.cs` | `GetLastMessagesAsync` разрешает цепочку пересылки |
+| `IMessageRepository` | `MessageRepository` | `Implementations/MessageRepository.cs` | `GetLatestAsync` выбирает ID → раздельно UserMessages и SystemMessages → сортирует по карте порядка. `GetChatCountsAsync` считает файлы. `LightQuery` загружает `Poll.PollOptions.PollVotes` |
+| `IReadReceiptRepository` | `ReadReceiptRepository` | `Implementations/ReadReceiptRepository.cs` | Все операции с отметками о прочтении |
+| `IPollRepository` | `PollRepository` | `Implementations/PollRepository.cs` | Управление опросами и голосами |
+
+---
+
+# 8. СЛОЙ СЕРВИСОВ (API/Services)
+
+## 8.1 BaseService
+**Путь:** `API/Services/Base/BaseService.cs`
+Обрабатывает `DbUpdateException`: Concurrency → Conflict, UniqueViolation → Conflict, остальные → Internal.
+Методы: `FindEntityAsync`, `Paginate`, `NormalizePagination`
+
+---
+
+## 8.2 AuthService + TokenService
+**Путь:** `API/Services/Core/Auth/`
+
+**AuthService:**
+- `LoginAsync` — timing-safe проверка пароля, проверка бана, определение роли (Admin если `DepartmentId == AdminDepartmentId`, Head если руководит отделом, иначе User), ограничение сессий (MaxActiveSessions=5, удаление старых)
+- `RefreshTokenAsync` — обнаружение повторного использования токена, ротация, возврат `AuthRefreshResult`
 
 **TokenService:**
-- HMAC-SHA256, `ClockSkew=Zero`, секрет ≥32 символов (проверяется при старте)
-- Refresh: 64 случайных байта в Base64
-
-**Интерфейс `IAuthService`:**
-```csharp
-Task<Result<AuthLoginResult>> LoginAsync(string username, string password, CancellationToken ct = default);
-Task<Result<AuthRefreshResult>> RefreshTokenAsync(string accessToken, string refreshToken, CancellationToken ct = default);
-Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default);
-```
+- JWT: HMAC-SHA256, ClockSkew=Zero
+- Refresh-токен: 64 байта Base64
+- `GenerateTokenPair`, `ValidateToken`, `GetPrincipalFromExpiredToken`, `HashToken`
 
 ---
 
-#### Бизнес-сервисы
+## 8.3 Бизнес-сервисы (API/Services/Features)
 
-| Сервис | Строк | Ключевое поведение |
-|---|---|---|
-| `CallSessionService` | 141 | Singleton. `ConcurrentDictionary`. Не масштабируется. |
-| `ChatService` | ~440 | Использует `IChatRepository` и `IUserRepository`. `BuildChatDto` принимает словарь ролей и устанавливает `CurrentUserRole`. События в хаб отправляются через `IHubContext<MessengerHub>`. |
-| `ChatMemberService` | 100 | При удалении участника отправляет `ChatRemoved` персонально. |
-| `DepartmentService` | 218+ | Автоматически управляет связанными чатами при создании/удалении/переименовании отдела. BFS для проверки циклов. |
-| `FileService` | 112 | Изображения → WebP. Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
-| `MessageService` | ~590 | Вызовы хаба используют `HubMethods.Chat.*`. `GetMessagesAroundAsync` загружает якорное сообщение через `FindUserMessageWithIncludesNoTrackingAsync` (все связанные данные), а системные и пользовательские сообщения — последовательными запросами, гарантируя консистентность. `PinMessageAsync` проверяет, не закреплено ли уже. |
-| `NotificationService` | 98 | Для Contact: ChatName = имя отправителя. Preview ≤100 символов. |
-| `PollService` | ~150 | Внедрён `TimeBundle`. `ClosesAt` не сохраняется при создании опроса. |
-| `ReadReceiptService` | ~90 | Полный переход на `IReadReceiptRepository`. |
-| `AdminService` | 149 | Использует репозитории, маппит `UserWithSettingsProjection` в `UserDto`. |
-| `UserService` | 180 | `GetAllUsersAsync`/`GetUserAsync` используют проекции. `ChangeUsernameAsync` проверяет уникальность. `RemoveAvatarAsync`. |
-| `SystemMessageService` | 49 | Создаёт `SystemMessage` с `InitiatorId`. Отправка через `HubMethods.Chat.ReceiveMessage`. |
-| `SystemMessageFormatter` | 23 | Делегирует форматирование `SystemEventMeta`. |
+| Сервис | Путь | Строк | Ключевое поведение |
+|---|---|---|---|
+| `CallSessionService` | `Features/Call/` | 150 | Singleton, `ConcurrentDictionary`. Не масштабируется горизонтально |
+| `ChatService` | `Features/Chat/` | ~486 | `BuildChatDto` принимает словарь ролей, устанавливает `CurrentUserRole`. События отправляются через `IHubContext<MessengerHub>` |
+| `ChatMemberService` | `Features/Chat/` | 136 | При удалении участника отправляет `ChatRemoved` персонально через `HubNotifier.SendToUserAsync` |
+| `DepartmentService` | `Features/Department/` | 378 | Автоуправление связанными чатами при CRUD отделов. BFS для проверки циклов в иерархии |
+| `FileService` | `Features/Messaging/` | 105 | Изображения → WebP. Путь: `wwwroot/uploads/chats/{chatId}/{guid}{ext}` |
+| `MessageService` | `Features/Messaging/` | ~516 | `GetMessagesAroundAsync` загружает якорное сообщение через `FindUserMessageWithIncludesNoTrackingAsync`, затем UserMessages и SystemMessages последовательно. `PinMessageAsync` проверяет дубликат закрепления |
+| `NotificationService` | `Features/Chat/` | 108 | Для Contact-чата: `ChatName` = имя отправителя. Preview ≤100 символов |
+| `PollService` | `Features/Messaging/` | 144 | `ClosesAt` **не сохраняется** при создании (намеренно — поле зарезервировано для будущего) |
+| `ReadReceiptService` | `Features/ReadReceipt/` | 114 | Использует `IReadReceiptRepository` |
+| `AdminService` | `Features/User/` | 229 | Маппит `UserWithSettingsProjection` → `UserDto` |
+| `UserService` | `Features/User/` | 189 | `GetAllUsersAsync`/`GetUserAsync` используют проекции. `ChangeUsernameAsync` проверяет уникальность |
+| `SystemMessageService` | `Features/Chat/` | 43 | Создаёт `SystemMessage` с `InitiatorId`. Отправка через `HubMethods.Chat.ReceiveMessage` |
 
 ---
 
-# 9. АБСТРАКЦИИ API
+# 9. АБСТРАКЦИИ (интерфейсы)
+
+## API сервисы (`API/Services/Abstractions/`)
 
 | Интерфейс | Ключевые методы |
 |---|---|
-| `IAuthService` | `LoginAsync` → `Result<AuthLoginResult>`, `RefreshTokenAsync` → `Result<AuthRefreshResult>`, `RevokeRefreshTokenAsync` |
+| `IAuthService` | `LoginAsync → Result<AuthLoginResult>`, `RefreshTokenAsync → Result<AuthRefreshResult>`, `RevokeRefreshTokenAsync` |
 | `ITokenService` | `GenerateTokenPair`, `ValidateToken`, `GetPrincipalFromExpiredToken`, `HashToken` |
 | `ICallSessionService` | `CreateCallAsync`, `JoinCall`, `LeaveCall`, `EndCallAsync`, `ToStateDto` |
 | `IChatService` | `GetUserChatsAsync`, `GetContactChatAsync`, `CreateChatAsync`, `UpdateChatAsync`, `DeleteChatAsync` |
@@ -646,16 +1009,21 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `ICacheService` | `GetUserChatIdsAsync`, `GetMembershipAsync`, `InvalidateUserChats`, `InvalidateMembership`, `InvalidateChat` |
 | `IAccessControlService` | `IsMemberAsync`, `IsAdminAsync`, `IsOwnerAsync`, `EnsureMemberOfAsync`, `GetChatMemberIdsAsync` |
 | `IUrlBuilder` | `BuildUrl(string?)` |
-| `IUserRepository` | `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `UsernameExistsAsync`, `Add` |
+
+## Репозитории (`API/Repositories/Abstractions/`)
+
+| Интерфейс | Ключевые методы |
+|---|---|
+| `IUserRepository` | `FindByUsernameAsync`, `FindByIdAsync`, `FindByIdWithPasswordAsync`, `UsernameExistsAsync`, `Add`, `GetAllWithSettingsAsync`, `GetWithSettingsAsync` |
 | `IRefreshTokenRepository` | `RevokeByFamilyIdAsync`, `RevokeAllForUserAsync`, `DeleteExpiredAsync`, `GetActiveFamiliesAsync` |
 | `IChatRepository` | `FindByIdAsync`, `FindByIdWithMembersAsync`, `IsMemberAsync`, `GetByIdsLightAsync`, `GetLastMessagesAsync`, `GetDialogPartnersAsync`, `UpdateLastMessageTimeAsync`, `GetMembersWithUsersAsync`, `GetVoiceFilePathsAsync`, `GetChatTypeAsync`, `GetShowHistoryForNewMembersAsync`, `GetContactChatsWithMembersAsync`, `SearchGroupChatsAsync`, `GetMembersForNotificationAsync`, `GetHistoryRestrictionsAsync`, `Add`, `AddMember`, `RemoveMember` |
 | `IMessageRepository` | `FindUserMessageByIdAsync`, `FindUserMessageWithIncludesAsync`, `FindUserMessageForDeleteAsync`, `FindForBroadcastAsync`, `GetWithIncludesAsync`, `GetBeforeAsync`, `GetAfterAsync`, `GetUserMessagesForMixedAsync`, `GetSystemMessagesAsync`, `GetPinnedAsync`, `CountAsync`, `HasOlderAsync`, `HasNewerAsync`, `ExistsInChatAsync`, `ExistsAsync`, `SearchInChatAsync`, `SearchGlobalAsync`, `GetForwardedToChatIdsAsync`, `SoftDeleteAsync`, `PinAsync`, `UnpinAsync`, `Add`, `RemoveVoiceMessage`, `FindUserMessageWithIncludesNoTrackingAsync`, `GetLatestAsync`, `GetChatCountsAsync` |
 | `IReadReceiptRepository` | `FindMemberAsync`, `FindMemberReadonlyAsync`, `UpdateReadPointerAsync`, `CountUnreadAsync`, `GetUnreadInfoAsync`, `GetAllUnreadCountsAsync`, `GetUnreadCountsAsync`, `MessageExistsAsync`, `GetLastMessageIdAsync` |
-| `IPollRepository` | `FindByIdWithDetailsAsync`, `Add(Poll)`, `AddOption(PollOption)`, `AddVote(PollVote)`, `GetUserVotesAsync`, `RemoveVotes(IEnumerable<PollVote>)`, `CloseAsync` |
+| `IPollRepository` | `FindByIdWithDetailsAsync`, `Add(Poll)`, `AddOption`, `AddVote`, `GetUserVotesAsync`, `RemoveVotes`, `CloseAsync` |
 
 ---
 
-# 10. ПЕРЕЧИСЛЕНИЯ (Shared.Enum)
+# 10. ПЕРЕЧИСЛЕНИЯ (Shared/Enum)
 
 | Enum | Значения | Примечание |
 |---|---|---|
@@ -670,152 +1038,164 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-# 11. ОТВЕТЫ API (Shared.Response)
+# 11. ОТВЕТЫ API (Shared/Response)
 
 ## ApiResponse\<T\>
 
-| Поле | Тип | Назначение |
-|---|---|---|
-| `Success` | `bool` | |
-| `Data` | `T?` | |
-| `Message` | `string?` | При успехе |
-| `Error` | `string?` | Код ошибки |
-| `Details` | `string?` | Детали |
-| `Timestamp` | `DateTime` | UTC |
+| Поле | Тип |
+|---|---|
+| `Success` | `bool` |
+| `Data` | `T?` |
+| `Message` | `string?` |
+| `Error` | `string?` |
+| `Details` | `string?` |
+| `Timestamp` | `DateTime` (UTC) |
 
-**Фабрики:** `Ok(data, message?)`, `Fail(error, details?)`  
-**ApiResponseHelper:** `Success<T>(data, msg?)`, `Error<T>(error, details?)`, `Error(error, details?)`
+**Фабрики:** `Ok(data, message?)`, `Fail(error, details?)`
+
+## ApiResponseHelper (`Shared/Response/ApiResponseHelper.cs`)
+`Success<T>(data, message?)`, `Error<T>(error, details?)`, `Error(error, details?)`
 
 ---
 
-# 12. DESKTOP — КОНВЕРТЕРЫ (Desktop.Converters)
+# 12. DESKTOP — КОНВЕРТЕРЫ (Desktop/Converters)
 
 ## Инфраструктура
-
-| Класс | Назначение |
-|---|---|
-| `ConverterLocator` | Singleton, регистрирует 60+ конвертеров |
-| `Converter` (MarkupExtension) | `{conv:Converter Name=...}` |
-| `MultiConverter` (MarkupExtension) | `{conv:MultiConverter Name=...}` |
-| `ConverterBase<TIn, TOut>` | `AllowNull`, `DefaultValue`, защита от исключений |
+- `ConverterLocator` (`ConverterLocator.cs`) — Singleton, регистрирует 60+ конвертеров
+- `Converter` / `MultiConverter` (`ConverterExtension.cs`) — MarkupExtension для XAML
+- `ConverterBase<TIn, TOut>` (`Base/ConverterBase.cs`) — `AllowNull`, `DefaultValue`, защита от исключений
 
 ## Группы конвертеров
 
-**Boolean:** `BoolToString`, `BoolToGeometry`, `BoolToDouble`, `BoolToColor`, `BoolToHAlignment`, `BoolToBrush`, `BoolToThickness`, `BooleanAnd`, `BooleanOr`, `EnumEquals`, `EnumNotEquals`, `UserRoleToVisibility`
+**Boolean** (`Converters/Boolean/`):
+`BoolToString`, `BoolToGeometry`, `BoolToDouble`, `BoolToColor`, `BoolToHAlignment`, `BoolToBrush`, `BoolToThickness`, `BooleanAnd`, `BooleanOr`, `EnumEquals`, `EnumNotEquals`, `UserRoleToVisibility`
 
-**DateTime:** `DateTimeFormatConverter` (Time/Date/ShortDate/DateTime/Chat/Relative), `LastMessageDateConverter`, `LastSeenTextConverter` (Multi; обрабатывает `DateTimeOffset`, извлекая `UtcDateTime`)
+**DateTime** (`Converters/DateTime/`):
+- `DateTimeFormatConverter` — форматы: Time/Date/ShortDate/DateTime/Chat/Relative
+- `LastMessageDateConverter`
+- `LastSeenTextConverter` — Multi; обрабатывает `DateTimeOffset`, извлекает `UtcDateTime`
 
-**Domain:** `ChatRoleToDisplay`, `ContentFilterToLabel`, `InitialsConverter`, `LevelToMargin` (20px×level), `LevelToVisibility`, `SearchScopeToTitle/Watermark/Hint/MessagesHeader`, `ThemeToDisplay`
+**Domain** (`Converters/Domain/`):
+`ChatRoleToDisplay`, `ContentFilterToLabel`, `InitialsConverter`, `LevelToMargin` (20px×level), `LevelToVisibility`, `SearchScopeToTitle/Watermark/Hint/MessagesHeader`, `ThemeToDisplay`
 
-**Generic:** `ComparisonConverter`, `IndexToText`, `HasContentConverter`, `HasTextOrAttachmentsMultiConverter`, `MultiplyConverter`, `PercentToWidthConverter` (Multi, min 8px), `PluralizeConverter`, `ResourceKeyToGeometryConverter`, `FractionToGridLengthConverter`
+**Generic** (`Converters/Generic/`):
+`ComparisonConverter`, `IndexToText`, `HasContentConverter`, `HasTextOrAttachmentsMultiConverter`, `MultiplyConverter`, `PercentToWidthConverter` (Multi, min 8px), `PluralizeConverter`, `ResourceKeyToGeometryConverter`, `FractionToGridLengthConverter`
 
 ---
 
-# 13. DESKTOP — ЛОКАЛЬНАЯ БД (Desktop.Data, SQLite)
+# 13. DESKTOP — ЛОКАЛЬНАЯ БД (Desktop/Data, SQLite)
 
-## LocalDatabase
-
-**Путь:** `Desktop/Data/LocalDatabase.cs`
+## LocalDatabase (`Desktop/Data/LocalDatabase.cs`)
 - WAL-режим, `synchronous=NORMAL`, `cache_size=-4000`, `mmap_size=33554432`
-- Миграции через `PRAGMA user_version` (текущая: 2)
-- FTS5 для полнотекстового поиска с триггерами
+- Миграции через `PRAGMA user_version` (текущая версия: 2)
 - Потокобезопасность: `SemaphoreSlim`
-- Индексы: `idx_msg_chat_id_asc`, `idx_chats_last_msg`, `idx_chats_type_date`, `idx_messages_chat_id`
+Индексы: `idx_msg_chat_id` (chat_id, id DESC), `idx_msg_chat_id_asc` (chat_id, id ASC), `idx_chats_last_msg`, `idx_chats_type_date`, `idx_messages_chat_id`
 
-## Cached-модели
+## Cached-модели (`Desktop/Data/Models/Cache/`)
 
 | Модель | Таблица | Особенности |
 |---|---|---|
-| `CachedMessage` | `messages` | 30+ колонок, `poll_json`/`files_json`, даты в Ticks. `sender_id` `int?`. Поля `reply_is_voice`, `reply_has_poll`, `reply_files_count`. |
-| `CachedChat` | `chats` | 18 колонок, `contact_*`, Ticks |
+| `CachedMessage` | `messages` | 30+ колонок, `poll_json`/`files_json`, даты в Ticks. `sender_id` — `int?`. Поля `reply_is_voice`, `reply_has_poll`, `reply_files_count` |
+| `CachedChat` | `chats` | 18 колонок, `contact_*`, даты в Ticks |
 | `CachedUser` | `users` | id, username, display_name, avatar, cached_at |
 | `CachedReadPointer` | `read_pointers` | chat_id (PK), last_read, first_unread, unread_count |
-| `ChatSyncState` | `chat_sync_state` | OldestLoadedId, NewestLoadedId, has_more_older/newer |
+| `ChatSyncState` | `chat_sync_state` (`Desktop/Data/Models/Sync/`) | OldestLoadedId, NewestLoadedId, has_more_older/newer |
 | `CachedDownloadedFile` | `downloaded_files` | file_id (PK), message_id, local_path, file_name, file_size, downloaded_at, content_type |
 
-## Репозитории и сервисы
+## Репозитории и сервисы (`Desktop/Data/Repositories/`)
 
 | Класс | Назначение |
 |---|---|
-| `MessageCacheRepository` | CRUD, FTS5→LIKE fallback. `TrimOldMessages` теперь обрабатывает каждый чат отдельно. `MarkDeletedAsync` очищает поля reply и forward. |
+| `MessageCacheRepository` | CRUD сообщений. `TrimOldMessagesAsync` обрабатывает каждый чат отдельно, держит последние 200 сообщений. `MarkDeletedAsync` очищает поля reply и forward |
 | `ChatCacheRepository` | Upsert, `UpdateLastMessageAsync` |
-| `LocalCacheService` | `GetMessagesBeforeAsync` корректно определяет достижение начала истории через сравнение с `OldestLoadedId`. `PatchChatMetaAsync` для точечного обновления метаданных. |
-| `CacheMapper` | `MessageDto↔CachedMessage`, `ChatDto↔CachedChat`. Source Generated JSON (`CacheJsonContext`). `ToEntity` использует отдельные `PollJsonOpts` с CamelCase; `CacheJsonContext` дополнен атрибутами для `PollOptionDto`, `PollVoteDto`, `List<PollOptionDto>`, `List<PollVoteDto>`, `MessageFileDto`. |
-| `DownloadedFileRepository` | Управление записями о скачанных файлах. |
+| `LocalCacheService` | `GetMessagesBeforeAsync` определяет достижение начала истории через сравнение с `OldestLoadedId`. `PatchChatMetaAsync` для точечного обновления метаданных чата. Поиск по кэшу отсутствует — всегда идёт через API |
+| `CacheMapper` | `MessageDto↔CachedMessage`, `ChatDto↔CachedChat`. Source Generated JSON (`CacheJsonContext`). `ToEntity` использует отдельные `PollJsonOpts` с CamelCase |
+| `DownloadedFileRepository` | Управление записями о скачанных файлах |
 
 ---
 
 # 14. DESKTOP — ИНФРАСТРУКТУРА
 
-## Конфигурация
+## Конфигурация (`Desktop/Infrastructure/Configuration/`)
 
 | Класс | Назначение |
 |---|---|
-| `ApiEndpoints` | Статический билдер URL всех эндпоинтов. Включает `Messages.Latest`, `Messages.Counts`. |
-| `AppConstants` | `MaxFileSizeBytes=20MB`, `DefaultPageSize=50`, `LoadMorePageSize=30`, `SearchPageSize=20`, `TypingIndicatorDurationMs=3500` |
-| `ServiceCollectionExtensions` | Регистрации `CookieContainer`, `ICookieStorageService`, `HttpClient` с `UseCookies = true` и `CookieContainer`. |
+| `ApiEndpoints` | Статический билдер URL всех эндпоинтов API |
+| `AppConstants` | `MaxFileSizeBytes=20MB`, `DefaultPageSize=50`, `LoadMorePageSize=30`, `SearchPageSize=20`, `TypingIndicatorDurationMs=3500`, `HighlightDurationMs` |
 
-## Хелперы
+## Хелперы (`Desktop/Infrastructure/Helpers/`)
 
 | Класс | Назначение |
 |---|---|
 | `AvatarHelper` | `GetSafeUri`, `GetUriWithCacheBuster`, `WithFreshCacheBuster` |
 | `MimeTypeHelper` | `GetMimeType(extension)` |
-| `ChatPreviewFormatter` | `BuildPreview`, `BuildReplyPreview`, `Pluralize` (публичный), делегирует системные сообщения `SystemEventMeta`. |
+| `ChatPreviewFormatter` | `BuildPreview`, `BuildReplyPreview`, `Pluralize` (публичный), делегирует системные сообщения `SystemEventMeta` |
 | `HttpResponseHelper` | `TryExtractErrorMessage` |
 | `PasswordHelper` | `CalculateStrength(0–4)`, `ToStrengthLabel` |
 | `RangeObservableCollection<T>` | `AddRange`, `InsertRange`, `RemoveRange` |
 
-## Медиа
+## Медиа (`Desktop/Infrastructure/Media/`)
 
 | Класс | Назначение |
 |---|---|
-| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита, дедупликация, дисковый кэш. Методы `InvalidateUrl`, `InvalidateByRelativePath`, `IsCached`. Поддержка `CancellationToken`. |
-| `RemoteImage` | Attached Property для Avalonia Image. `CurrentUrlProperty` публичное. Оптимизация повторной загрузки того же URL. |
-| `ImageCacheService` | (deprecated) |
-| `MemoryDiagnostics` | Счётчики ChatVM/MessageVM/Bitmap/RemoteImage, LOH, дамп GC. Активирован. `OnMessageVmDisposed`. |
+| `AuthenticatedImageLoader` | LRU RAM (80 items/30MB), LOH-защита, дедупликация, дисковый кэш. Методы `InvalidateUrl`, `InvalidateByRelativePath`, `IsCached`. Поддержка `CancellationToken` |
+| `RemoteImage` | Attached Property для Avalonia Image. `CurrentUrlProperty` публичное. Оптимизация повторной загрузки |
+| `MemoryDiagnostics` | Счётчики ChatVM/MessageVM/Bitmap/RemoteImage, LOH, дамп GC. `OnMessageVmDisposed` |
+
+## DI (`Desktop/Infrastructure/Extensions/ServiceCollectionExtensions.cs`)
+Регистрирует `CookieContainer`, `ICookieStorageService`, `HttpClient` с `UseCookies=true` и общим `CookieContainer`.
 
 ---
 
 # 15. DESKTOP — СЕРВИСЫ
 
-## Auth
+## Auth (`Desktop/Services/Core/Auth/`)
 
 | Сервис | Назначение |
 |---|---|
-| `AuthService` (клиент) | `LoginAsync`, `RefreshTokenAsync` (без явного refresh-токена), `RevokeAsync`, `Ping`, `IsAccessTokenValid` |
-| `SessionStore` | In-Memory: Token, UserId, UserRole, события. Свойство `RefreshToken` отсутствует. |
-| `SecureStorageService` | DPAPI/KeyChain/AES |
-| `CookieStorageService` | Сохраняет/восстанавливает cookies из `CookieContainer` через `ISecureStorageService`. Методы `PersistAsync`, `RestoreAsync`, `ClearAsync`. |
-| `AuthManager` | `InitializeAsync`, `LoginAsync`, `TryRefreshTokenAsync`, `LogoutAsync`. Управляет cookie через `ICookieStorageService`. При запуске восстанавливает cookie до попытки обновления токена. При логауте очищает cookie и secure storage. |
+| `AuthService` | `LoginAsync`, `RefreshTokenAsync` (без явного refresh-токена — через cookie), `RevokeAsync`, `Ping`, `IsAccessTokenValid` |
+| `SessionStore` | In-Memory: Token, UserId, UserRole, события. Методы: `SetSession(token, userId, role)`, `UpdateTokens(token)`. Свойство `RefreshToken` **отсутствует** |
+| `SecureStorageService` | DPAPI/KeyChain/AES в зависимости от платформы |
+| `CookieStorageService` | Сохраняет/восстанавливает cookies из `CookieContainer` через `ISecureStorageService`. `PersistAsync`, `RestoreAsync`, `ClearAsync` |
+| `AuthManager` | `InitializeAsync` — при запуске сначала восстанавливает cookie, затем пробует refresh. `LoginAsync`, `TryRefreshTokenAsync`, `LogoutAsync` — при логауте очищает cookie и secure storage |
 
-## API & Realtime
-
-| Сервис | Назначение |
-|---|---|
-| `ApiClientService` | HTTP + авто-рефреш 401. Cookie прикрепляются автоматически. |
-| `GlobalHubConnection` | SignalR `/chatHub`, 15+ событий. Retry при 503. События `ChatRemoved`, `ChatUpdated` (через `ChatUpdateEventDto`). |
-| `CallHubConnection` | SignalR `/chatHub`, 12 событий. Retry при 503. |
-
-## Call
+## API & Realtime (`Desktop/Services/Core/`)
 
 | Сервис | Назначение |
 |---|---|
-| `CallService` | Оркестратор. `CallStarted` при первом `CallStateUpdated`. Поддержка нескольких сетевых интерфейсов. |
-| `CallAudioService` | PortAudio. 48kHz/моно/20ms. Opus 32kbps. VAD адаптивный (noiseFloor*2.5) |
-| `NoiseReducer` | Спектральное шумоподавление: FFT→Wiener Filter→Gate. Decision-Directed SNR α=0.96 |
+| `ApiClientService` | HTTP + авто-рефреш при 401. Cookie прикрепляются автоматически через `CookieContainer` |
+| `GlobalHubConnection` | SignalR `/chatHub`, 15+ событий. Retry при 503. События `ChatRemoved`, `ChatUpdated` (через `ChatUpdateEventDto`) |
+| `CallHubConnection` | SignalR `/chatHub`, 12 событий. Retry при 503 |
+
+## Звонки (`Desktop/Services/Features/Call/`)
+
+| Сервис | Назначение |
+|---|---|
+| `CallService` | Оркестратор P2P-звонков. Управляет UDP-сокетом, регистрирует эндпоинты peers, маршрутизирует аудио. CallStarted при первом CallStateUpdated или при JoinCallAsync. |
+| `CallAudioService` | PortAudio 48kHz/моно/20ms. Opus 32kbps, VBR, VOIP-режим, complexity=5. VAD адаптивный: noiseFloor обновляется α=0.005, порог = max(0.008, noiseFloor×2.5). Hold 1200ms, debounce 150ms. Микширование входящих потоков от всех участников в _mixBuffer. |
+| `NoiseReducer` | FFT → Wiener Filter → Gate. Decision-Directed SNR α=0.96. Включается/выключается через NoiseSuppressionEnabled. |
+| `CallHubConnection` | SignalR-соединение к /chatHub. Используется только для сигнализации: передача UDP-эндпоинтов через SendSignalAsync (тип udp-endpoint), управление состоянием звонка (join/leave/mute). Retry при 503. |
 | `ActiveCallStore` | ObservableObject: `ActiveCall`, `IsCallUiOpen`, `IsInCall` |
 
-## Media
+### AudioRecordingState (`Desktop/Services/Features/Media/Audio/`)
+Enum: `Idle`, `Recording`, `Sending`, `Error`
+
+### PortAudioLifetime
+Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureInitialized()`, `IsAvailable`.
+
+### WavData
+Загружает 16-битный PCM WAV из потока. `short[] Samples`, `Duration`, `SampleRate`.
+
+## Медиа (`Desktop/Services/Features/Media/`)
 
 | Сервис | Назначение |
 |---|---|
-| `AudioPlayerService` | WAV через PortAudio. Play/Pause/Resume/Stop/Seek. |
-| `AudioRecorderService` | 16kHz/моно/16-bit PCM. WAV+Waveform(100 баров). |
-| `FileDownloadService` | Скачивание+прогресс, OS-открытие. |
-| `FileDownloadStateService` | Состояние скачанных файлов, взаимодействует с `IDownloadedFileRepository`. |
+| `AudioPlayerService` | WAV через PortAudio. Play/Pause/Resume/Stop/Seek |
+| `AudioRecorderService` | 16kHz/моно/16-bit PCM, WAV + Waveform (100 баров) |
+| `FileDownloadService` | Скачивание + прогресс, открытие через OS |
+| `FileDownloadStateService` | Состояние скачанных файлов, взаимодействует с `IDownloadedFileRepository` |
 
-## Platform
+## Platform (`Desktop/Services/Platform/`)
 
 | Сервис | Назначение |
 |---|---|
@@ -827,12 +1207,12 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `NotificationService` | Стек ≤3, анимация прогресс-бара |
 | `DialogService` | Стек диалогов, `Channel<CloseRequest>`, анимация |
 | `CacheMaintenanceService` | Trim, VACUUM, очистка |
-| `ChatNotificationApiService` | GET/POST настройки уведомлений |
+| `ChatNotificationApiService` | GET/POST настройки уведомлений чата |
 | `ChatInfoPanelStateStore` | `IsOpen` ↔ `ISettingsService["ChatInfoPanelIsOpen"]` |
 
 ---
 
-# 16. DESKTOP — АБСТРАКЦИИ
+# 16. DESKTOP — АБСТРАКЦИИ (`Desktop/Services/Abstractions/`)
 
 | Интерфейс | Ключевые члены |
 |---|---|
@@ -840,16 +1220,16 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `IAudioPlayerService` | `Play`, `Pause`, `Resume`, `Stop`, `Seek`, события Position/Started/Stopped |
 | `IAudioRecorderService` | `StartAsync`, `StopAsync → AudioRecordingResult?`, `CancelAsync` |
 | `IAuthManager` | `LoginAsync`, `LogoutAsync`, `TryRefreshTokenAsync`, `WaitForInitializationAsync` |
-| `IAuthService` (клиент) | `LoginAsync(username, password)`, `RefreshTokenAsync(accessToken, refreshToken? = null)` |
-| `ICallHubConnection` | 10 методов + 12 событий WebRTC |
+| `IAuthService` (клиент) | `LoginAsync(username, password)`, `RefreshTokenAsync(accessToken, refreshToken?=null)` |
+| `ICallHubConnection` | 10 методов + 12 событий |
 | `ICallService` | `StartCallAsync`, `JoinCallAsync`, `LeaveCallAsync`, `ToggleMuteAsync`, события |
 | `IDialogService` | `ShowAsync<T>`, `CloseAsync`, `CloseAllAsync` |
 | `IFileDownloadService` | `DownloadFileAsync(progress?)`, `OpenFileAsync`, `OpenFolderAsync` |
 | `IFileDownloadStateService` | `GetStateAsync(MessageFileDto)`, `RegisterDownloadAsync`, `ResetAsync` |
-| `IGlobalHubConnection` | `ConnectAsync`, `DisconnectAsync`, 15+ событий (включая `ChatRemoved`, `ChatUpdated` как `Action<ChatUpdateEventDto>`) |
+| `IGlobalHubConnection` | `ConnectAsync`, `DisconnectAsync`, 15+ событий включая `ChatRemoved`, `ChatUpdated` как `Action<ChatUpdateEventDto>` |
 | `INavigationService` | `NavigateToLogin`, `NavigateToMainMenu`, `NavigateTo<T>`, `GoBack` |
 | `ISecureStorageService` | `SaveAsync<T>`, `GetAsync<T>`, `RemoveAsync` |
-| `ISessionStore` | Token, UserId, UserRole, `HasRole(UserRole)`, события. Методы: `SetSession(string token, int userId, UserRole role)`, `UpdateTokens(string token)`. |
+| `ISessionStore` | Token, UserId, UserRole, `HasRole(UserRole)`, `SetSession(token, userId, role)`, `UpdateTokens(token)`, события |
 | `ISettingsService` | `Get<T>(key)`, `Set<T>(key, value)` |
 | `IThemeService` | `Toggle`, `LoadFromSettings`, `SaveTheme` |
 | `ICookieStorageService` | `PersistAsync()`, `RestoreAsync()`, `ClearAsync()` |
@@ -857,9 +1237,7 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ---
 
-# 17. DESKTOP — ФАБРИКИ
-
-**Путь:** `Desktop/ViewModels/ChatList/Factories/`
+# 17. DESKTOP — ФАБРИКИ (`Desktop/ViewModels/ChatList/Factories/`)
 
 | Класс | Назначение |
 |---|---|
@@ -867,118 +1245,84 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 | `CallServices` | `ICallService` + `ActiveCallStore` |
 | `ChatCoreServices` | `IChatService` + `IMessageService` + `IPollService` |
 | `MediaServices` | `IAudioPlayerService` + `IAudioRecorderService` + `IFileDownloadService` + `IFileDownloadStateService` |
-| `ChatViewModelDependencies` | Полный набор для `ChatViewModel`, включает `IFileDownloadStateService` |
-| `ChatViewModelFactory` | Фабрика `ChatViewModel(chatId, targetMessageId?)` |
+| `ChatViewModelDependencies` | Полный набор зависимостей для `ChatViewModel` |
+| `ChatViewModelFactory` | Фабрика: `ChatViewModel(chatId, targetMessageId?)` |
 | `ChatsViewModelFactory` | Фабрика `ChatsViewModel` |
 
 ---
 
-### 18. DESKTOP — VIEW MODELS
+# 18. DESKTOP — VIEW MODELS
 
-#### Chat Core
+## Базовые классы (`Desktop/ViewModels/Shared/`)
 
-##### ChatViewModel
+### BaseViewModel (`BaseViewModel.cs`)
+`IsBusy`, `ErrorMessage`, `SuccessMessage`.
+- `SafeExecuteAsync` — обёртка с обработкой исключений и отмены
+- `GetCancellationToken` — создаёт новый `CancellationTokenSource`
+- `ClearMessages`
+- Виртуальные: `OnIsBusyUpdated`, `OnErrorMessageUpdated`, `OnSuccessMessageUpdated`
 
-**Путь:** `Desktop/ViewModels/Chat/Core/ChatViewModel.cs`  
-**Строк:** ~1700  
-
-**Права и роли:**
-- `CanEditGroupChat` – можно редактировать группу (системный администратор, создатель или роль Admin/Owner).
-- `CanLeaveChat` – можно ли покинуть чат (не отделовский чат и не являешься создателем группового).
-- `_isSystemAdmin` – флаг, определяемый по роли `Admin` в сессии.
-- `CurrentUserRole` загружается из `ChatDto`.
-
-**Счётчики и информационная панель:**
-- Счётчики `PhotosCount`, `FilesCount`, `PollsCount` обновляются через вызов API `ChatCountsDto` (метод `RefreshCountersAndSectionAsync`).
-- При открытии секции (`OpenInfoSection`) сразу асинхронно загружаются соответствующие данные (фото, файлы, опросы) с сервера.
-- При получении нового сообщения через хаб (`RequestRefreshCounters`) вызывается полное обновление счётчиков и активной секции.
-- Метод `RefreshMembersPreview` сортирует участников: сначала по онлайн-статусу, затем по имени. Обработка `CollectionChanged` обновляет инфопанель при удалении сообщений.
-
-**Инициализация:** параллельно с сообщениями и участниками загружаются счётчики. После инициализации вызывается `RefreshChatPermissions`. Конструктор принимает необязательный `targetMessageId` и сохраняет его в `_targetMessageId`; публичное свойство `HasInitialMessageTarget` возвращает `true`, если идентификатор был задан. При наличии `targetMessageId` и успешном получении индекса скролл выполняется с `highlight: true`; в противном случае (например, первый непрочитанный) также вызывается `RequestScrollToIndex` с подсветкой. Если индекс не найден, происходит обычный скролл вниз.
-
-**Обработка `OnChatUpdated`:** принимает `ChatUpdateEventDto`, обновляет поля чата, инвалидирует кэш аватара.
-
-**Handler'ы:**
-- `MessageManager`, `Attachments`, `MemberLoader`, `EditDelete`, `Reply`, `Forward`, `Typing`, `Voice`, `InfoPanel`, `Search`, `Notification`.
+### IRefreshable (`IRefreshable.cs`)
+`IAsyncRelayCommand RefreshCommand`
 
 ---
 
-##### ChatMessageManager
+## Chat Core (`Desktop/ViewModels/Chat/`)
 
-**Строк:** 599
+### ChatContext (`Context/ChatContext.cs`)
+Центральный объект, содержит все зависимости для `ChatViewModel`. События скролла: `ScrollToMessageRequested`, `ScrollToIndexRequested`, `ScrollToBottomRequested`. Хранит `CurrentUserRole`, `IsSystemAdmin`, список участников. `IDisposable` с токеном отмены.
 
-**Кэширование и загрузка:**
-- При старте пытается загрузить сообщения из локального кэша; при достаточности данных и недавней синхронизации пропускает запрос к серверу, иначе запускает фоновую ревалидацию.
-- `LoadInitialMessagesAsync` теперь напрямую вызывает `LoadAroundCoreAsync` при наличии `FirstUnreadMessageId` или `targetMessageId`, а при отсутствии — пробует кэш, затем сервер. Удалён приватный метод `LoadInitialCoreAsync`.
-- Добавлен отладочный вывод данных опроса в `FetchAsync` и `LoadAroundCoreAsync`. `FetchAsync` проверяет токен отмены перед запросом и логирует результат.
+### ChatCommands (`Commands/ChatCommands.cs`)
+Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, Forward, ShowPollResults и др.), разделяемый между всеми `MessageViewModel` через `ChatMessageManager`.
 
----
+### ChatFeatureHandler (`Shared/ChatFeatureHandler.cs`)
+Базовый класс для обработчиков фич. Содержит ссылку на `ChatContext`, виртуальный `DisposeManaged`.
 
-##### MessageViewModel
+### IChatNavigator (`Navigation/IChatNavigator.cs`)
+Показать диалог опроса, редактирования группы, перейти в чат по пересылке, открыть профиль, открыть интерфейс звонка.
 
-**Строк:** 730
+### ChatViewModel (`Core/ChatViewModel.cs`)
+**Строк: ~1446.** Основная логика чата: инициализация, загрузка сообщений, управление правами. Принимает `targetMessageId` для начальной навигации. Обрабатывает `ChatUpdatedEvent`.
+Состоит из обработчиков: `MessageManager`, `Attachments`, `MemberLoader`, `EditDelete`, `Reply`, `Forward`, `Typing`, `Voice`, `InfoPanel`, `Search`, `Notification`.
 
-- Принимает `IFileDownloadStateService` для асинхронной инициализации состояния загрузки файлов.
-- `ShowVoiceMessage` управляется свойством `OriginalIsVoiceMessage`.
-- Добавлено свойство `SystemMessageTime` (формат `HH:mm`), используемое в представлении системных сообщений.
-- `CreatePollViewModel` содержит дополнительную отладку и защиту от нулевого `userId`.
+### ChatMessageManager (`Managers/ChatMessageManager.cs`)
+**Строк: ~612.** Загрузка сообщений (кэш → сервер). `LoadAroundCoreAsync`. При получении сообщения вызывает `ctx.RequestRefreshCounters?.Invoke()`.
 
----
+### ChatHubSubscriber (`Core/ChatHubSubscriber.cs`)
+Подписки на SignalR события для чата.
 
-##### ChatHubSubscriber
+### MessageViewModel (`Messages/MessageViewModel.cs`)
+**Строк: ~556.** Представление сообщения: файлы, голос, опросы. `SystemMessageTime` для системных сообщений. Создаёт `PollViewModel` с проверкой userId.
 
-При получении сообщения вызывает `ctx.RequestRefreshCounters?.Invoke()` для обновления счётчиков.
-
----
-
-#### Главные ViewModel
-
-##### MainMenuViewModel
-
-**Строк:** 700
-
-- Для определения вкладки группы/контакты используется `chat.Type is not ChatType.Contact`.
-- Управление жизненным циклом CallHub: подписки/отписки при инициализации и переподключении.
+### Вспомогательные модели
+- `LocalFileAttachment` (`Managers/`) — локальное вложение перед отправкой: `MemoryStream`, `Thumbnail`, форматированный размер
+- `MessageGroupPosition` (`Messages/`) — enum `Alone, First, Middle, Last` для радиуса пузырей
+- `ChatInfoPanelItems` (`Context/`) — `ChatInfoPanelMediaItem`, `ChatInfoPanelFileItem`
 
 ---
 
-##### ChatsViewModel
+## ChatList (`Desktop/ViewModels/ChatList/`)
 
-**Путь:** `Desktop/ViewModels/ChatList/Core/ChatsViewModel.cs`
+### ChatsViewModel (`Core/ChatsViewModel.cs`)
+**Строк: ~603.**
+- `IsChatMatchingCurrentTab`: `type is not ChatType.Contact` для групп
+- `UpdateChatMeta` — обновляет только метаданные чата
+- Отложенная прокрутка: `_pendingScrollToMessageId` — если чат уже открыт, вызывает `ScrollToMessageAsync` немедленно; иначе передаёт id в конструктор `ChatViewModel`
 
-- `IsChatMatchingCurrentTab` возвращает `type is not ChatType.Contact` для групп.
-- Метод `UpdateChatMeta` обновляет только метаданные.
-- Реализован механизм отложенной прокрутки: `_pendingScrollToMessageId` сохраняется при выборе чата; если чат уже открыт, сразу вызывается `ScrollToMessageAsync`; иначе идентификатор передаётся в конструктор `ChatViewModel`.
-
----
-
-##### PollViewModel
-
-- Добавлено вычисляемое свойство `TotalVotesFormatted` с плюрализацией.
-- `TotalVotes` вычисляется до заполнения `Options`, чтобы избежать несогласованности.
-- Метод `ApplyDto` правильно сбрасывает `TotalVotes` и обновляет `TotalVotesFormatted`.
-- `UpdateOptions` устойчива к `null`-списку.
-
-##### PollOptionViewModel
-
-- `NotifyTotalVotesChanged` вызывает `PropertyChanged` для `VotesCount` через временный сброс/восстановление, гарантируя обновление привязанного процента.
+### MainMenuViewModel (`Shell/MainMenuViewModel.cs`)
+**Строк: ~833.**
+- Группы/контакты: `chat.Type is not ChatType.Contact`
+- Управление жизненным циклом CallHub при инициализации и переподключении
 
 ---
 
-#### Представления (Views)
+## Опросы (`Desktop/ViewModels/Chat/Polls/`)
 
-##### ChatView.axaml
-- `VirtualizingStackPanel CacheLength="2"`.
-- Элементы списка сообщений без дополнительного `Margin`.
+### PollViewModel (`PollViewModel.cs`)
+`TotalVotesFormatted` с плюрализацией. `TotalVotes` вычисляется до заполнения `Options`. `ApplyDto` сбрасывает и обновляет. `UpdateOptions` устойчива к null-списку.
 
-##### ChatView.axaml.cs
-- `VisibilityCheckDelayMs = 300`.
-- При скролле регистрируется время последнего скролла. Таймер проверки видимости откладывается, если с момента скролла прошло <200 мс.
-- При подгрузке старых сообщений сохраняется якорное сообщение и корректируется смещение для сохранения позиции просмотра.
-- Явный скролл к сообщению (по запросу из ViewModel) теперь выполняет центрирование элемента во вьюпорте: метод `ScrollToItemCentered` сначала вызывает `ScrollIntoView`, затем отложенно вычисляет смещение через `TransformToVisual` и устанавливает `ScrollViewer.Offset` так, чтобы сообщение оказалось по центру. Предусмотрено до трёх повторных попыток, если контейнер ещё не реализован. При флаге `highlight` у целевого сообщения взводится `IsHighlighted` на `AppConstants.HighlightDurationMs` миллисекунд.
-- Логика `ShouldDeferScrollRequest` теперь принимает параметр `isExplicitMessageNavigation`:
-  - если это явная навигация к сообщению (в том числе по `HasInitialMessageTarget`), отложенный скролл не блокируется, а ожидающее состояние сбрасывается;
-  - при обычном завершении инициализации, пока не восстановлено состояние скролла, скролл откладывается.
+### PollOptionViewModel (`PollOptionViewModel.cs`)
+`NotifyTotalVotesChanged` — временный сброс/восстановление для гарантированного обновления привязанного процента.
 
 ---
 
@@ -986,117 +1330,208 @@ Task<Result> RevokeRefreshTokenAsync(int userId, CancellationToken ct = default)
 
 ## Отправка сообщения
 ```
-Пользователь → ChatViewModel.SendMessage()
-  → загрузка файлов
+ChatViewModel.SendMessage()
+  → загрузка файлов (FileService)
   → POST /api/messages (CreateMessageRequest)
   → MessageService.CreateMessageAsync()
-    → проверка доступа, извлечение @mentions
-    → сохранение в БД
-    → HubNotifier.SendToChatAsync("ReceiveMessage")
-  → MessengerHub → все клиенты чата
-  → ChatHubSubscriber → ChatMessageManager.AddReceivedMessage()
-  → обновление UI и счётчиков (RefreshCountersAndSectionAsync)
+      → AccessControlService.EnsureMemberOfAsync()
+      → извлечение @mentions
+      → сохранение в PostgreSQL
+      → HubNotifier.SendToChatAsync("ReceiveMessage", MessageDto)
+  → MessengerHub → все клиенты группы chat_{id}
+  → ChatHubSubscriber.OnReceiveMessage()
+  → ChatMessageManager.AddReceivedMessage()
+  → RequestRefreshCounters?.Invoke()
+  → обновление UI
 ```
 
-## Звонок (WebRTC)
+## Звонок
 ```
-Инициатор → CallService.StartCallAsync(chatId)
+CallService.StartCallAsync(chatId)
   → MessengerHub.InitiateCall(chatId)
   → CallSessionService.CreateCallAsync()
-  → рассылка IncomingCall
-Принятие → CallService.JoinCallAsync() → MessengerHub.JoinCall()
-  → CallSession.Status = Active
-  → прямой UDP аудио (обмен endpoint'ами через сигнальные сообщения)
+  → рассылка IncomingCall всем участникам чата
+
+## Звонок (P2P UDP)
+
+Инициатор → CallService.StartCallAsync(chatId)
+  → InitUdp(): UdpClient(0) → случайный локальный порт
+  → CallAudioService.Start(): PortAudio input + output streams
+  → CallHubConnection.InitiateCallAsync(chatId)
+  → сервер: CallSessionService.CreateCallAsync()
+            → рассылка IncomingCall всем участникам чата
+
+Принятие → CallService.JoinCallAsync(callId, chatId)
+  → InitUdp() + CallAudioService.Start()
+  → CallHubConnection.JoinCallAsync(callId)
+  → сервер: CallSession.Status = Active
+  → рассылка CallStateUpdated всем участникам
+
+Обмен эндпоинтами (для каждого нового участника):
+  → CallService.OnCallStateUpdated() / OnParticipantJoined()
+  → AnnounceUdpEndpointAsync(targetUserId)
+      → SendSignalAsync(SignalDto { Type="udp-endpoint",
+          Payload="192.168.1.5:49200,10.0.0.3:49200" })
+  → сервер пересылает сигнал целевому пользователю
+  → OnSignalReceived() → HandleUdpEndpointSignal()
+      → выбор лучшего эндпоинта: совпадение подсети (≥3 октета) → приоритет
+      → _peerEndpoints[fromUserId] = bestEndpoint
+
+Аудио (реальное время):
+  PortAudio InputCallback (Int16, 48kHz)
+    → _captureBuffer накапливает 960 сэмплов (20ms)
+    → EncodeAndSend():
+        → ProcessVoiceActivity(): RMS → адаптивный noiseFloor → VAD решение
+        → NoiseReducer.Process(): FFT Wiener Gate
+        → если речь: OpusEncoder.Encode() → 32kbps
+        → OnEncodedFrame → SendAudioToAllPeers()
+            → пакет: [userId(4) | seq(4) | opusData]
+            → UdpClient.Send() на каждый _peerEndpoints[peerId]
+
+  UdpClient ReceiveLoopAsync:
+    → ProcessUdpPacket(): парсит [userId(4) | seq(4) | opusData]
+    → CallAudioService.ReceiveEncodedAudio(fromUserId, opusData)
+        → OpusDecoder.Decode() → float[]
+        → _playbackQueues[fromUserId].Enqueue()
+
+  PortAudio OutputCallback (Float32):
+    → микширует все _playbackQueues в _mixBuffer
+    → Clamp(-1, 1)
+    → Marshal.Copy → output
+
+Завершение:
+  CallService.LeaveCallAsync() / CancelCallAsync()
+  → CallHubConnection.LeaveCallAsync(callId) / CancelCallAsync(callId)
+  → Cleanup(): _receiveCts.Cancel(), UdpClient.Dispose(),
+               _peerEndpoints.Clear(), CallAudioService.Stop()
+  → CallEnded?.Invoke()
 ```
 
 ## Обновление токенов
 ```
-401 от API
+ApiClientService получает 401
   → AuthManager.TryRefreshTokenAsync()
-  → POST /api/auth/refresh (RefreshTokenRequest с AccessToken; cookie refresh_token прикреплён)
+  → POST /api/auth/refresh (AccessToken в теле, refresh-токен в cookie)
   → AuthService.RefreshTokenAsync()
-    → проверка refresh-токена из cookie
-    → ротация, выдача нового refresh-токена
-    → сервер устанавливает cookie, возвращает TokenResponseDto (без refresh-токена)
-  → клиент: _cookieStorage.PersistAsync(), SessionStore.UpdateTokens(newAccessToken)
-  → повтор запроса
+      → проверка refresh-токена из cookie
+      → обнаружение reuse → отзыв семьи
+      → ротация токенов
+      → новый refresh-токен в httpOnly cookie
+      → TokenResponseDto в теле (без refresh-токена)
+  → CookieStorageService.PersistAsync()
+  → SessionStore.UpdateTokens(newAccessToken)
+  → повтор оригинального запроса
+```
+
+## Загрузка чатов при старте Desktop
+```
+AuthManager.InitializeAsync()
+  → CookieStorageService.RestoreAsync()
+  → TryRefreshTokenAsync()
+  → NavigationService.NavigateToMainMenu()
+
+MainMenuViewModel.InitializeAsync()
+  → LocalCacheService.GetChatsAsync() → мгновенный показ из SQLite
+  → GET /api/chats/user/{userId} → обновление из сети
+  → merge: LocalCacheService.UpsertChatsAsync()
+  → GlobalHubConnection.ConnectAsync()
 ```
 
 ## Обновление метаданных чата
 ```
 ChatService → BuildUpdateEvent(chatEntity) → ChatUpdateEventDto
-  → HubNotifier.SendToChatAsync("ChatUpdated")
-  → GlobalHubConnection → ChatsViewModel.UpdateChatMeta / ChatViewModel.OnChatUpdated
+  → HubNotifier.SendToChatAsync("ChatUpdated", dto)
+  → GlobalHubConnection → ChatsViewModel.UpdateChatMeta()
+                        → ChatViewModel.OnChatUpdated()
 ```
 
-## Удаление из чата
+## Удаление участника из чата
 ```
 ChatMemberService.RemoveMemberAsync()
   → HubNotifier.SendToUserAsync(userId, "ChatRemoved", chatId)
-  → Клиент удаляет чат из списка, сбрасывает SelectedChat
+  → GlobalHubConnection.ChatRemoved
+  → ChatsViewModel удаляет чат из списка, сбрасывает SelectedChat
 ```
 
 ---
 
+# 20. DESKTOP — VIEWS
 
-### 20. DESKTOP — VIEWS (Слой представлений)
+## 20.1 Ресурсы и стили
+- `App.axaml`: подключает `Icons.axaml`, `Animations.axaml`, `MainStyle.axaml`, `MessageStyles.axaml`
+- `MainStyle.axaml`: `ToggleButton.SwitchSmall:checked` — фон `PrimaryBG`
+- `MessageStyles.axaml`: стили опросов — классы `PollOptionButton`, `PollOptionBorder`, `PollRadioOuter/Inner`, `PollCheckboxOuter/Tick`, `PollResultContainer`, `PollProgressBarBackground/Bar`, `PollResultText`, `PollPercentage`
 
-#### Основные стили и ресурсы
-- `App.axaml`: подключает `Icons.axaml`, `Animations.axaml`, `MainStyle.axaml`, `MessageStyles.axaml`.
-- `MainStyle.axaml`: стили для `ToggleButton.SwitchSmall:checked`. Кнопка с круглым фоном теперь использует `PrimaryBG`.
-- `MessageStyles.axaml`: расширен стилями опросов (классы `PollOptionButton`, `PollOptionBorder`, `PollRadioOuter`, `PollRadioInner`, `PollCheckboxOuter`, `PollCheckboxTick`, `PollResultContainer`, `PollProgressBarBackground`, `PollProgressBar`, `PollResultText`, `PollPercentage`), обеспечивая кастомный вид голосования и результатов.
+## 20.2 Главное окно (`Views/Shell/MainWindow.axaml.cs`)
+- Адаптивный режим при ширине ≤800px
+- Анимация открытия/закрытия диалогов с защитой от гонок
 
-#### Главное окно
-- Адаптивный режим при ширине ≤800px.
-- Анимация открытия/закрытия диалогов с защитой от гонок.
-- Закрытие поиска при клике вне поля.
+## 20.3 ChatView (`Views/Chat/ChatView.axaml` + `.cs`)
+- `VirtualizingStackPanel CacheLength="2"`
+- `VisibilityCheckDelayMs=300`; таймер откладывается если с последнего скролла прошло <200мс
+- При подгрузке старых сообщений: сохранение якорного сообщения → корректировка смещения скролла
+- Центрирование при программном скролле к сообщению: `ScrollIntoView` → отложенный `TransformToVisual` → `ScrollViewer.Offset`. До трёх повторных попыток если контейнер не готов. При флаге `highlight` — `IsHighlighted` на `AppConstants.HighlightDurationMs` мс
+- `ShouldDeferScrollRequest(isExplicitMessageNavigation)`: явная навигация (включая `HasInitialMessageTarget`) не блокируется; обычная инициализация откладывается до восстановления состояния скролла
 
-#### ChatView
-- Виртуализирующий StackPanel с `CacheLength=2`.
-- Якорное восстановление позиции скролла после подгрузки старых сообщений.
-- Отложенная проверка видимости сообщений (300 мс) с учётом недавнего скролла.
-- При программном скролле к сообщению (из ViewModel) выполняется центрирование элемента во вьюпорте: после `ScrollIntoView` отложенно вычисляется смещение и устанавливается `Offset` так, чтобы сообщение оказалось по середине видимой области. Если контейнер не готов, выполняется до трёх попыток. При необходимости включается временная подсветка целевого сообщения.
-- Логика отложенного скролла (`ShouldDeferScrollRequest`) учитывает, является ли запрос явной навигацией к сообщению (включая начальную навигацию по `targetMessageId`): в этом случае отложенный скролл не блокируется, а состояние ожидания сбрасывается.
+## 20.4 Информационная панель чата (`Views/Chat/ChatInfoPanel.axaml.cs`)
+- Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`
+- Секции «Медиа» и «Опросы» скрываются при нулевых счётчиках
+- `LastSeen` для контакта и участников через `MultiBinding` с `LastSeenTextConverter`
 
-#### Информационная панель чата
-- Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`.
-- Секции «Медиа» и «Опросы» скрываются при нулевых счётчиках.
-- Добавлен вывод `LastSeen` для контакта и участников через `MultiBinding` с `LastSeenTextConverter`.
+## 20.5 Сообщения
+- Опросы: `PollMessagePart.axaml` с `ItemsControl` + `FractionToGridLengthConverter`
+- Системные сообщения: бейдж `SystemMessageTime` справа
+- Контекстное меню: пункт «Результаты опроса» управляется видимостью корректно
 
-#### Профиль пользователя
-- Кнопка «Отправить сообщение» видна только при `CanSendMessage`.
-- Диалог профиля полностью переработан: аватар и имя по центру, статус онлайна/последней активности через `MultiBinding`, улучшенный дизайн информационной секции, растянутая кнопка отправки сообщения.
+## 20.6 Кастомные контролы (`Views/Controls/`)
 
-#### Сообщения
-- **Опросы:** отдельный `PollView` удалён. Голосование и результаты теперь рендерятся непосредственно в `PollMessagePart.axaml` с использованием `ItemsControl` и встроенного шаблона. Прогресс-бар реализован через `FractionToGridLengthConverter`. Кнопки «Голосовать»/«Результаты» встроены в нижнюю часть.
-- **Системные сообщения:** в `SystemMessagePart.axaml` добавлен бейдж со временем (свойство `SystemMessageTime`) справа, стилизованный под `ThirdBG` с радиусом 14. Улучшено выравнивание элементов.
-- В контекстном меню сообщения исправлена видимость пункта «Результаты опроса» (FallbackValue=False).
-- 
+### CircularProgress (`Shared/CircularProgress.cs`)
+Круговой прогресс-бар. Determinate (0–Maximum) и indeterminate (анимированная дуга). Свойства: `Value`, `StrokeWidth`, `Foreground`, `BackgroundTrack`. Рисуется через `StreamGeometry`.
+
+### PasswordStrengthControl (`Shared/PasswordStrengthControl.axaml.cs`)
+4 сегмента сложности + проверка совпадения паролей. Привязки: `StrengthLabel`, `PasswordsMatch`.
+
+### RichMessageTextBlock (`Shared/RichMessageTextBlock.cs`)
+`TextBlock` с распознаванием URL и @упоминаний. Клики: открытие ссылок, `MentionClickCommand`.
+
+### WaveformView (`Shared/WaveformView.cs`)
+Визуализация волны из Base64 `Waveform`. `Progress`, перетаскивание → `SeekCommand`. Прореживание пиков под ширину.
+
+### FilterAutocomplete (`Controls/FilterAutocomplete.axaml.cs`)
+Выпадающий список с автодополнением. `SearchText`, `Suggestions`, `OverlayLayer`. Поддерживает аватары.
+
+### SearchBox (`Controls/SearchBox.axaml.cs`)
+Поле поиска с кнопкой очистки. Событие `SearchFocused`. Метод `FocusInput()`.
+
+## 20.7 Template Selectors (`Views/Chat/`)
+
+| Класс | Логика выбора |
+|---|---|
+| `MessageBodyTemplateSelector` | `IsDeleted` → удалённое; `HasPoll` → опрос; `ShowVoiceMessage` → голосовое; иначе → текст |
+| `MessageContentTemplateSelector` | Для пересланных: `OriginalIsVoiceMessage`, `OriginalHasPoll` |
+| `MessagePartSelector` | Аналогично, для встроенного контента |
+
 ---
 
-# 🔴 ИЗВЕСТНЫЕ ПРОБЛЕМЫ
-
-## Критические
-
-| # | Проблема | Где | Рекомендация |
-|---|---|---|---|
-| 1 | In-Memory звонки — не масштабируются | `CallSessionService` (Singleton) | Redis Backplane |
-| 2 | `AppDateTime.UtcNow` → `DateTimeKind.Unspecified` | `API/Infrastructure/Common/AppDateTime.cs` | `DateTimeKind.Utc` или `DateTimeOffset` |
-| 3 | `MissingFileCleanupMiddleware` — DB-запрос на каждый 404 | Middleware | Rate limiting по IP |
-| 4 | `PollOptionDto.Votes` для анонимных опросов | `PollMappings.ToDto(isAnonymous)` | Фильтруется, но проверить |
-| 5 | `MessageForwardInfoDto` без проверки доступа к чату | `MessageMappings` | Проверка IsMember для OriginalChatId |
+# 21. ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
 ## Архитектурные
 
-| # | Проблема | Рекомендация |
-|---|---|---|
-| 6 | `MessageService` — ~590 строк | `MessageWriter`, `MessageReader`, `MessageSearchService` |
-| 7 | `ChatDto` — множество полей, смешивает чат + сообщение + контакт | `ChatListItemDto`, `ChatDetailDto` |
+| # | Проблема | Файл | Рекомендация |
+|---|---|---|---|
+| 1 | `AppDateTime.UtcNow` возвращает `DateTimeKind.Unspecified` вместо `Utc` | `API/Common/AppDateTime.cs` | Заменить на `DateTimeKind.Utc` или использовать `DateTimeOffset` |
+| 2 | `MissingFileCleanupMiddleware` — DB-запрос на каждый 404 `/uploads` или `/avatars` | `API/Middleware/MissingFileCleanupMiddleware.cs` | Добавить rate limiting по IP |
+| 3 | `MessageService` ~516 строк | `API/Services/Features/Messaging/MessageService.cs` | Разбить на `MessageWriter`, `MessageReader`, `MessageSearchService` |
+| 4 | `ChatDto` смешивает данные чата + последнего сообщения + контакта | `Shared/Dto/Chat/ChatDto.cs` | `ChatListItemDto` + `ChatDetailDto` |
 
-## БАГИ
+## Баги
 
-| # | Баг |
-|---|---|
-| 1 | Баги в полях фильтров поиска |
-| 2 | Требуется в LoginView добавить кнопку с диалогом ввода IP для случаев, когда UDP-обнаружение не работает |
-| 4 | Безопасность звонков |
+| # | Баг | Где воспроизводится | Детали |
+|---|---|---|---|
+| 1 | [ДОПОЛНИТЬ — опиши симптом, файл, условия] | Поля фильтров поиска | |
+| 2 | Нет ручного ввода IP если UDP-обнаружение не работает | `Views/Auth/LoginView.axaml` | Нужна кнопка → диалог `ServerUrlDialogViewModel` уже существует, требуется подключить |
+3	UDP-эндпоинты не верифицируются	CallService.HandleUdpEndpointSignal	Любой участник звонка может объявить произвольный IP:port, сервер пересылает без проверки. Злоумышленник внутри сети может перенаправить аудиопоток.
+3a	UDP-пакеты не аутентифицированы	CallService.ProcessUdpPacket	fromUserId берётся из пакета без верификации — любой в сети может подделать userId и внедриться в аудиопоток.
+3b	Нет шифрования аудио	CallService.SendAudioToAllPeers	Opus-данные передаются открытым текстом по UDP.
+
+---

@@ -1,9 +1,3 @@
-Достаточно, структура + `Program.cs` + `DependencyInjection.cs` + `ApiEndpoints.cs` дают всё необходимое. Баги опиши отдельно после — вставлю в нужное место.
-
-Вот оптимальная версия:
-
----
-
 # Документация проекта ВнутрьСеть
 
 > **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite

@@ -9,7 +9,8 @@ namespace Desktop.ViewModels.Chat.Shared;
 /// </summary>
 public abstract class ChatFeatureHandler(ChatContext context) : ObservableObject, IDisposable
 {
-    protected ChatContext Ctx { get; } = context ?? throw new ArgumentNullException(nameof(context));
+    protected ChatContext Ctx { get; } = context
+        ?? throw new ArgumentNullException(nameof(context));
 
     private bool _disposed;
     protected bool Disposed => _disposed;
@@ -17,12 +18,29 @@ public abstract class ChatFeatureHandler(ChatContext context) : ObservableObject
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        DisposeManaged();
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void DisposeManaged() { /* Expected to be overridden by derived classes */ }
+    /// <param name="disposing">
+    /// true  — вызов из Dispose(), освобождаем управляемые ресурсы;
+    /// false — вызов из финализатора, только неуправляемые ресурсы.
+    /// </param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // В данном классе нет неуправляемых ресурсов,
+        // поэтому финализатор не нужен — только управляемая ветка.
+        if (disposing)
+        {
+            DisposeManagedResources();
+        }
+    }
+
+    /// <summary>
+    /// Переопределите для освобождения управляемых ресурсов.
+    /// </summary>
+    protected virtual void DisposeManagedResources() { }
 }

@@ -6,7 +6,6 @@ public sealed partial class PollResultsDialogViewModel : DialogBaseViewModel
 {
     private readonly IApiClientService _apiClient;
     private readonly ObservableCollection<UserDto> _chatMembers;
-    private readonly int _currentUserId;
 
     [ObservableProperty] public partial ObservableCollection<PollResultOptionViewModel> Options { get; set; } = [];
     [ObservableProperty] public partial bool IsAnonymous { get; set; }
@@ -15,12 +14,10 @@ public sealed partial class PollResultsDialogViewModel : DialogBaseViewModel
     public PollResultsDialogViewModel(
         PollDto poll,
         ObservableCollection<UserDto> chatMembers,
-        int currentUserId,
         IApiClientService apiClient)
     {
         _apiClient = apiClient;
         _chatMembers = chatMembers;
-        _currentUserId = currentUserId;
 
         Title = "Результаты опроса";
         CanCloseOnBackgroundClick = true;
@@ -29,9 +26,7 @@ public sealed partial class PollResultsDialogViewModel : DialogBaseViewModel
         TotalVotes = poll.Options.Sum(o => o.VotesCount);
 
         Options = new ObservableCollection<PollResultOptionViewModel>(
-            poll.Options
-                .OrderByDescending(o => o.VotesCount)
-                .Select(o => new PollResultOptionViewModel(o, poll.IsAnonymous, TotalVotes)));
+            poll.Options.OrderByDescending(o => o.VotesCount).Select(o => new PollResultOptionViewModel(o, poll.IsAnonymous, TotalVotes)));
     }
 
     public Task TriggerInitializeAsync()

@@ -192,12 +192,17 @@ public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelR
         VoiceRecording = null;
     }
 
-    protected override void DisposeManaged()
+    protected override void DisposeManagedResources()
     {
         _autoStopCts?.Cancel();
         _autoStopCts?.Dispose();
+        _autoStopCts = null;
+
         _voiceSendCts?.Cancel();
         _voiceSendCts?.Dispose();
+        _voiceSendCts = null;
+
         _voiceRecording?.Dispose();
+        _voiceRecording = null;
     }
 }

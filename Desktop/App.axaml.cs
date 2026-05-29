@@ -79,20 +79,6 @@ public sealed class App : Application, IDisposable
         return fallback;
     }
 
-    private static bool HealthCheck(string url)
-    {
-        try
-        {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var response = client.GetAsync(url + "api/health").GetAwaiter().GetResult();
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static string? DiscoverServerBlocking()
     {
         try
@@ -241,21 +227,6 @@ public sealed class App : Application, IDisposable
         SaveServerUrlToSettings(url, manual);
 
         Debug.WriteLine($"[App] ApiUrl изменён на: {url} (manual={manual})");
-    }
-
-    private static bool IsManualServerMode()
-    {
-        try
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var filePath = Path.Combine(appData, "Desktop", "settings.json");
-            if (!File.Exists(filePath)) return false;
-
-            var json = File.ReadAllText(filePath);
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("manual_server", out var el) && el.ValueKind == JsonValueKind.True;
-        }
-        catch { return false; }
     }
 
     private void ConfigureImageLoader()

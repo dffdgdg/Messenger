@@ -322,11 +322,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ShowPollResults = new AsyncRelayCommand<PollViewModel>(async vm =>
             {
                 if (vm?.CurrentPollDto == null) return;
-                var dialog = new PollResultsDialogViewModel(
-                    vm.CurrentPollDto,
-                    Context.Members,
-                    Context.CurrentUserId,
-                    Context.Api);
+                var dialog = new PollResultsDialogViewModel(vm.CurrentPollDto, Context.Members, Context.Api);
                 await Context.Dialogs.ShowAsync(dialog);
                 await dialog.TriggerInitializeAsync();
             })

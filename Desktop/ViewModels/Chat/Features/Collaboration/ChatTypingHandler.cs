@@ -106,10 +106,12 @@ public sealed partial class ChatTypingHandler : ChatFeatureHandler
         return member?.DisplayName ?? member?.Username ?? "Пользователь";
     }
 
-    protected override void DisposeManaged()
+    protected override void DisposeManagedResources()
     {
         Ctx.Hub.UserTyping -= OnUserTyping;
         _cleanupCts?.Cancel();
+        _cleanupCts?.Dispose();
+        _cleanupCts = null;
         _typingUsers.Clear();
     }
 }

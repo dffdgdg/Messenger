@@ -148,5 +148,5 @@ public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
         if (IsEditMode) CancelEdit();
     }
 
-    protected override void DisposeManaged() => Ctx.CompositionModeReset -= OnCompositionReset;
+    protected override void DisposeManagedResources() => Ctx.CompositionModeReset -= OnCompositionReset;
 }

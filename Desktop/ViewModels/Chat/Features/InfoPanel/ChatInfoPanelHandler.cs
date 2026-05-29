@@ -251,7 +251,7 @@ public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoP
         UpdateFilteredMembers();
     }
 
-    protected override void DisposeManaged()
+    protected override void DisposeManagedResources()
     {
         Ctx.Hub.UserStatusChanged -= OnUserStatusChanged;
         Ctx.Hub.UserProfileUpdated -= OnUserProfileUpdated;

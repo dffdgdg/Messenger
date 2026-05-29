@@ -106,5 +106,5 @@ public sealed partial class ChatForwardHandler : ChatFeatureHandler
         if (IsForwardMode) CancelForward();
     }
 
-    protected override void DisposeManaged() => Ctx.CompositionModeReset -= OnCompositionReset;
+    protected override void DisposeManagedResources() => Ctx.CompositionModeReset -= OnCompositionReset;
 }

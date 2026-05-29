@@ -65,5 +65,5 @@ public sealed partial class ChatReplyHandler : ChatFeatureHandler
         if (IsReplyMode) CancelReply();
     }
 
-    protected override void DisposeManaged() => Ctx.CompositionModeReset -= OnCompositionReset;
+    protected override void DisposeManagedResources() => Ctx.CompositionModeReset -= OnCompositionReset;
 }

@@ -134,7 +134,6 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
     private static readonly string[] PollDerivedProps = [nameof(HasPoll), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(CanEdit), nameof(ShowPollResultsButton)];
     private static readonly string[] ForwardDerivedProps = [nameof(HasForward), nameof(ForwardedFromHeader), nameof(CanEdit), nameof(CanOpenForwardSenderProfile)];
     private static readonly string[] PinProps = [nameof(ShowPinAction), nameof(ShowUnpinAction)];
-    private static readonly string[] DeletedProps = [nameof(DisplayContent), nameof(HasTextContent), nameof(ShowFilesOnlyMeta), nameof(ShowNonVoiceFiles), nameof(ShowDeliveryStatus), nameof(CanEdit), nameof(CanDelete), nameof(ShowVoiceMessage), nameof(VoiceDurationFormatted)];
 
     public MessageViewModel(MessageDto message, IFileDownloadService? downloadService = null, INotificationService? notificationService = null,
         IAudioPlayerService? audioPlayer = null, IApiClientService? apiClient = null, int currentUserId = 0, IFileDownloadStateService? stateService = null)

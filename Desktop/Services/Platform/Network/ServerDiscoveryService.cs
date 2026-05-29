@@ -11,6 +11,7 @@ public sealed partial class ServerDiscoveryService(ILogger<ServerDiscoveryServic
     private const int DiscoveryPort = 5275;
     private const string RequestMagic = "MESSENGER_DISCOVER";
     private const string ResponsePrefix = "MESSENGER_HERE:";
+    private const string local = "127.0.0.1:";
 
     public async Task<string?> DiscoverAsync(
         int timeoutMs = 3000,
@@ -31,11 +32,11 @@ public sealed partial class ServerDiscoveryService(ILogger<ServerDiscoveryServic
 
         try
         {
-            localResult = await TryDirectAsync("127.0.0.1", 1000, ct);
+            localResult = await TryDirectAsync(local, 1000, ct);
         }
         catch (Exception ex)
         {
-            LogDirectError(ex, "127.0.0.1");
+            LogDirectError(ex, local);
         }
 
         if (localResult != null)
@@ -50,7 +51,7 @@ public sealed partial class ServerDiscoveryService(ILogger<ServerDiscoveryServic
         var envIp = Environment.GetEnvironmentVariable("MESSENGER_SERVER_IP");
 
         if (!string.IsNullOrWhiteSpace(envIp) &&
-            envIp != "127.0.0.1")
+            envIp != local)
         {
             try
             {
@@ -129,9 +130,9 @@ public sealed partial class ServerDiscoveryService(ILogger<ServerDiscoveryServic
             var payload = message[ResponsePrefix.Length..];
             var parts = payload.Split(':', 2);
             var port = parts[0];
-            var serverIp = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]) ? parts[1] : "127.0.0.1";
+            var serverIp = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]) ? parts[1] : local;
             var isLocalRequest = IPAddress.IsLoopback(result.RemoteEndPoint.Address);
-            var ip = isLocalRequest ? "127.0.0.1" : serverIp;
+            var ip = isLocalRequest ? local : serverIp;
             LogServerFound(ip, port);
             return $"http://{ip}:{port}/";
         }

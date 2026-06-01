@@ -1,12 +1,14 @@
-﻿namespace API.Services.Call;
+﻿using API.Services.Features.Call;
 
-public partial class CallSessionService(ILogger<CallSessionService> logger) : ICallSessionService
+namespace API.Services.Call;
+
+public partial class CallSessionService(ILogger<CallSessionService> logger, CallRelayService relay) : ICallSessionService
 {
     private readonly ConcurrentDictionary<string, CallSession> _calls = new();
 
     private readonly ConcurrentDictionary<int, string> _chatCallIndex = new();
 
-    public Task<CallSession?> CreateCallAsync(int chatId, int initiatorId, string initiatorConnectionId, bool isGroupCall)
+    public Task<CallSession?> CreateCallAsync(int chatId, int initiatorId, string initiatorConnectionId, ChatType chatType)
     {
         if (_chatCallIndex.ContainsKey(chatId))
         {
@@ -14,13 +16,17 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
             return Task.FromResult<CallSession?>(null);
         }
 
+        var mode = chatType == ChatType.Contact ? CallMode.PeerToPeer : CallMode.ServerMixed;
+        var isGroupCall = chatType != ChatType.Contact;
+
         var session = new CallSession
         {
             ChatId = chatId,
             InitiatorId = initiatorId,
             StartedAt = DateTime.UtcNow,
             Status = CallStatus.Ringing,
-            IsGroupCall = isGroupCall
+            IsGroupCall = isGroupCall,
+            Mode = mode
         };
 
         var initiator = new CallParticipant
@@ -38,6 +44,12 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         }
 
         _chatCallIndex[chatId] = session.CallId;
+
+        if (session.Mode == CallMode.ServerMixed)
+        {
+            relay.RegisterCall(session.CallId);
+            relay.AddParticipant(session.CallId, initiatorId);
+        }
 
         LogCallCreated(session.CallId, chatId, initiatorId);
 
@@ -82,6 +94,9 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
             session.TimeoutCts.Cancel();
         }
 
+        if (session.Mode == CallMode.ServerMixed)
+            relay.AddParticipant(callId, userId);
+
         LogUserJoined(userId, callId);
 
         return true;
@@ -96,6 +111,9 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
 
         session.ActiveParticipants.TryRemove(userId, out _);
         session.PendingParticipants.TryRemove(userId, out _);
+
+        if (session.Mode == CallMode.ServerMixed)
+            relay.RemoveParticipant(callId, userId);
 
         LogUserLeft(userId, callId, session.ActiveParticipants.Count);
 
@@ -146,6 +164,9 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         session.TimeoutCts.Cancel();
         session.Status = CallStatus.Ended;
 
+        if (session.Mode == CallMode.ServerMixed)
+            relay.RemoveCall(callId);
+
         var duration = DateTimeOffset.UtcNow - session.StartedAt;
 
         LogCallEnded(callId, duration);
@@ -161,7 +182,8 @@ public partial class CallSessionService(ILogger<CallSessionService> logger) : IC
         InitiatorId = session.InitiatorId,
         StartedAt = session.StartedAt,
         IsGroupCall = session.IsGroupCall,
-        ElapsedSeconds = (int)(DateTimeOffset.UtcNow - session.StartedAt).TotalSeconds, // <-- сервер считает
+        Mode = session.Mode,
+        ElapsedSeconds = (int)(DateTimeOffset.UtcNow - session.StartedAt).TotalSeconds,
         Participants = [.. session.ActiveParticipants.Values.Select(p =>
     {
         var name = nameResolver(p.UserId);

@@ -6,7 +6,7 @@ public interface ICallSessionService
     /// Создать новый звонок.
     /// Возвращает null если в чате уже есть активный звонок.
     /// </summary>
-    Task<CallSession?> CreateCallAsync(int chatId, int initiatorId, string initiatorConnectionId, bool isGroupCall);
+    Task<CallSession?> CreateCallAsync(int chatId, int initiatorId, string initiatorConnectionId, ChatType chatType);
 
     /// <summary>Получить активный звонок по callId</summary>
     CallSession? GetCall(string callId);

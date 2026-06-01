@@ -1,9 +1,11 @@
 ﻿using Desktop.Services.Features.Call;
 using Microsoft.Extensions.Logging;
 using Shared.Dto.Call;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace Desktop.Services.Call;
 
@@ -18,6 +20,8 @@ public sealed partial class CallService : ICallService
     private int? _activeChatId;
     private bool _disposed;
     private int _sendSequence;
+    private CallMode _mode = CallMode.PeerToPeer;
+    private IPEndPoint? _relayEndpoint;
 
     private UdpClient? _udpClient;
     private int _localUdpPort;
@@ -178,14 +182,25 @@ public sealed partial class CallService : ICallService
 
     private void ProcessUdpPacket(byte[] data, int length)
     {
+        if (_mode == CallMode.ServerMixed)
+        {
+            if (length < 5) return;
+
+            var opusLength = length - 4;
+            var opusData = new byte[opusLength];
+            Buffer.BlockCopy(data, 4, opusData, 0, opusLength);
+            _audio.ReceiveMixedAudio(opusData);
+            return;
+        }
+
         if (length < 9) return;
 
         var fromUserId = BitConverter.ToInt32(data, 0);
-        var opusLength = length - 8;
-        var opusData = new byte[opusLength];
-        Buffer.BlockCopy(data, 8, opusData, 0, opusLength);
+        var peerOpusLength = length - 8;
+        var peerOpusData = new byte[peerOpusLength];
+        Buffer.BlockCopy(data, 8, peerOpusData, 0, peerOpusLength);
 
-        _audio.ReceiveEncodedAudio(fromUserId, opusData, opusLength);
+        _audio.ReceiveEncodedAudio(fromUserId, peerOpusData, peerOpusLength);
     }
 
     private void SendAudioToAllPeers(byte[] opusData, int opusLength)
@@ -195,6 +210,12 @@ public sealed partial class CallService : ICallService
         if (_session.UserId is not int userId || userId <= 0)
         {
             LogNoPeers();
+            return;
+        }
+
+        if (_mode == CallMode.ServerMixed)
+        {
+            SendAudioToRelay(opusData, opusLength, userId);
             return;
         }
 
@@ -220,6 +241,33 @@ public sealed partial class CallService : ICallService
             {
                 LogUdpSendError(peerId, ex);
             }
+        }
+    }
+
+    private void SendAudioToRelay(byte[] opusData, int opusLength, int userId)
+    {
+        if (_udpClient == null || _relayEndpoint == null || _activeCallId == null) return;
+
+        var callIdBytes = Encoding.UTF8.GetBytes(_activeCallId);
+        if (callIdBytes.Length is <= 0 or > byte.MaxValue) return;
+
+        var packet = new byte[1 + callIdBytes.Length + 8 + opusLength];
+        packet[0] = (byte)callIdBytes.Length;
+        Buffer.BlockCopy(callIdBytes, 0, packet, 1, callIdBytes.Length);
+        var offset = 1 + callIdBytes.Length;
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(offset, 4), userId);
+        offset += 4;
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(offset, 4), Interlocked.Increment(ref _sendSequence));
+        offset += 4;
+        Buffer.BlockCopy(opusData, 0, packet, offset, opusLength);
+
+        try
+        {
+            _udpClient.Send(packet, packet.Length, _relayEndpoint);
+        }
+        catch (Exception ex)
+        {
+            LogRelaySendError(ex);
         }
     }
 
@@ -319,6 +367,7 @@ public sealed partial class CallService : ICallService
         _hub.CallParticipantLeft += OnParticipantLeft;
         _hub.CallEnded += OnCallEndedRemotely;
         _hub.SignalReceived += OnSignalReceived;
+        _hub.RelayEndpoint += OnRelayEndpoint;
     }
 
     private void OnParticipantSpeakingChanged(string callId, int userId, bool isSpeaking)
@@ -337,6 +386,7 @@ public sealed partial class CallService : ICallService
         _hub.CallParticipantLeft -= OnParticipantLeft;
         _hub.CallEnded -= OnCallEndedRemotely;
         _hub.SignalReceived -= OnSignalReceived;
+        _hub.RelayEndpoint -= OnRelayEndpoint;
     }
 
     private void OnCallStateUpdated(CallStateDto state)
@@ -356,11 +406,38 @@ public sealed partial class CallService : ICallService
             if (isNew)
                 _audio.AddParticipant(p.UserId);
 
-            if (isNew || !wasInCall)
+            if (_mode == CallMode.PeerToPeer && (isNew || !wasInCall))
             {
                 _ = AnnounceUdpEndpointAsync(p.UserId);
             }
         }
+    }
+
+    private void OnRelayEndpoint(RelayEndpointInfo endpoint)
+    {
+        if (endpoint.CallId != _activeCallId) return;
+        if (!IPAddress.TryParse(endpoint.Host, out IPAddress? address))
+        {
+            try
+            {
+                address = Dns.GetHostAddresses(endpoint.Host).FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
+            }
+            catch (Exception ex)
+            {
+                LogRelayResolveFailed(endpoint.Host, ex);
+            }
+        }
+
+        if (address == null)
+        {
+            LogRelayEndpointInvalid(endpoint.Host, endpoint.Port);
+            return;
+        }
+
+        _relayEndpoint = new IPEndPoint(address, endpoint.Port);
+        _mode = CallMode.ServerMixed;
+        _audio.SetMode(CallMode.ServerMixed);
+        LogRelayConnected(endpoint.Host, endpoint.Port);
     }
 
     private void OnSpeakingStateChanged(bool isSpeaking)
@@ -380,7 +457,8 @@ public sealed partial class CallService : ICallService
         if (_session.UserId is int myId && participant.UserId == myId) return;
 
         _audio.AddParticipant(participant.UserId);
-        _ = AnnounceUdpEndpointAsync(participant.UserId);
+        if (_mode == CallMode.PeerToPeer)
+            _ = AnnounceUdpEndpointAsync(participant.UserId);
     }
 
     private void OnParticipantLeft(string callId, int userId)
@@ -405,6 +483,7 @@ public sealed partial class CallService : ICallService
     private void OnSignalReceived(SignalDto signal)
     {
         if (signal.CallId != _activeCallId) return;
+        if (_mode == CallMode.ServerMixed) return;
         if (signal.Type == "udp-endpoint")
         {
             var myUserId = _session.UserId ?? 0;
@@ -431,6 +510,10 @@ public sealed partial class CallService : ICallService
         _peerEndpoints.Clear();
         _endpointAnnounced.Clear();
         _localIps.Clear();
+        _relayEndpoint = null;
+        _mode = CallMode.PeerToPeer;
+        _audio.SetMode(CallMode.PeerToPeer);
+
 
         _audio.SpeakingStateChanged -= OnSpeakingStateChanged;
 
@@ -473,6 +556,17 @@ public sealed partial class CallService : ICallService
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "UDP отправлен → userId={PeerId} endpoint={Endpoint} bytes={Bytes}")]
     private partial void LogUdpSent(int peerId, IPEndPoint endpoint, int bytes);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "UDP relay send error")]
+    private partial void LogRelaySendError(Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ошибка разрешения relay host {Host}")]
+    private partial void LogRelayResolveFailed(string host, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Некорректный relay endpoint {Host}:{Port}")]
+    private partial void LogRelayEndpointInvalid(string host, int port);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Подключён relay endpoint {Host}:{Port}")]
+    private partial void LogRelayConnected(string host, int port);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "UDP send error → peer {PeerId}")]
     private partial void LogUdpSendError(int peerId, Exception ex);

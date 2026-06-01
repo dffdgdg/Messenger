@@ -29,6 +29,7 @@
     ports:
       - "5274:5274"
       - "5275:5275/udp"
+      - "5276:5276/udp"
 
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -44,6 +45,7 @@
       Jwt__Secret: ${JWT_SECRET}
       Discovery__ExternalIp: ${EXTERNAL_IP}
       DisableHttpsRedirection: true
+      CallSettings__RelayHost: ${EXTERNAL_IP}
 
     volumes:
       - uploads:/app/wwwroot/uploads

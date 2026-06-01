@@ -563,9 +563,8 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
 
     public async Task LoadMoreMessagesAsync()
     {
-        if (!HasMoreMessages || IsSearching || (string.IsNullOrWhiteSpace(SearchQuery) && !HasActiveFilters))
+        if (!HasMoreMessages || IsSearching)
             return;
-
         try
         {
             IsSearching = true;
@@ -658,10 +657,8 @@ public sealed partial class GlobalSearchManager(int userId, bool startWithChatsS
         await ExecuteSearchAsync(SearchQuery, CancellationToken.None);
     }
 
-    public void ToggleSortOrder() =>
-        SortOrder = SortOrder == SearchSortOrder.Newest
-            ? SearchSortOrder.Oldest
-            : SearchSortOrder.Newest;
+    public void ToggleSortOrder() => SortOrder = SortOrder == SearchSortOrder.Newest
+        ? SearchSortOrder.Oldest : SearchSortOrder.Newest;
 
     public void ResetFilters()
     {

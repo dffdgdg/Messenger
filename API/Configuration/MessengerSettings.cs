@@ -4,7 +4,8 @@ public sealed class MessengerSettings
 {
     public const string SectionName = "Messenger";
     public int AdminDepartmentId { get; set; } = 1;
-    public long MaxFileSizeBytes { get; set; } = 20 * 1024 * 1024;
+    public const int MaxFileSizeMegabytes = 300;
+    public long MaxFileSizeBytes { get; set; } = MaxFileSizeMegabytes * 1024L * 1024L;
     public int BcryptWorkFactor { get; set; } = 12;
     public int MaxImageDimension { get; set; } = 100;
     public int ImageQuality { get; set; } = 85;

@@ -21,15 +21,16 @@
 
 Система построена по архитектуре **клиент-сервер**:
 - **Backend (API):** ASP.NET Core 10 REST API + SignalR Hub. База данных — PostgreSQL 16. Серверная часть контейнеризирована (Docker).
-- **Frontend (Desktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальной базой SQLite и FTS5.
-- **Shared (Shared):** Общие DTO и контракты данных.
+- **Frontend (Desktop):** Кроссплатформенный десктоп-клиент на **Avalonia UI**. Использует архитектуру **MVVM** и стратегию **Offline-first** с локальным кэшем на SQLite.
+- **Shared:** Общие DTO, перечисления и контракты данных.
 
 ### Ключевые особенности
-- **Безопасность:** JWT ротация токенов (FamilyId), BCrypt паролей, Rate Limiting, разграничение уровней доступа.
+- **Безопасность:** JWT с ротацией токенов (FamilyId), BCrypt паролей, Rate Limiting, разграничение уровней доступа.
 - **Real-time:** Мгновенные уведомления, статусы набора текста, прочтения, онлайн/офлайн через SignalR.
-- **Кэширование:** Быстрый офлайн-доступ к истории чатов через SQLite + FTS5 поиск.
-- **Файлы:** Отправка файлов до 100 МБ, автоконвертация аватаров в WebP.
-- **Голосовые:** Запись и воспроизведение голосовых сообщений.
+- **Кэширование:** Быстрый офлайн-доступ к истории чатов через SQLite. Поиск — через серверный API.
+- **Голосовые звонки:** P2P аудио через прямой UDP, кодек Opus, сигнализация через SignalR.
+- **Файлы:** Отправка файлов, автоконвертация аватаров в WebP.
+- **Голосовые сообщения:** Запись и воспроизведение с визуализацией формы волны.
 
 ---
 
@@ -37,28 +38,31 @@
 
 ### Коммуникация
 - Личные диалоги и групповые чаты
+- Голосовые звонки (P2P UDP, Opus, шумоподавление)
 - Опросы с анонимным и множественным голосованием
 - Ответы на сообщения (Quote) и пересылка (Forward)
 - Редактирование и удаление сообщений (soft-delete)
-- Голосовые сообщения
-- Индикаторы прочтения (Read Receipts) и статус "печатает..."
+- Голосовые сообщения с формой волны
+- Индикаторы прочтения (Read Receipts) и статус «печатает…»
+- Закрепление сообщений
 - Настройка уведомлений (мут чата)
 
 ### Организация
-- Иерархические отделы (дерево без циклов)
+- Иерархические отделы (дерево без циклов, BFS-проверка)
 - Ролевая модель: Пользователь / Руководитель отдела / Администратор
 - Управление составом отделов и назначением руководителей
-- Глобальный поиск по всем чатам и сообщениям с подсветкой совпадений
+- Глобальный поиск по всем чатам и сообщениям с фильтрами и подсветкой совпадений
 
 ### Клиент
 - Работает на Windows и Linux
 - Темы оформления (светлая / тёмная / системная)
-- Безопасное хранение учётных данных (Secure Storage)
-- Асинхронная загрузка изображений (аватары, вложения)
+- Безопасное хранение учётных данных (DPAPI / KeyChain / AES)
+- Асинхронная загрузка изображений с LRU-кэшем (80 элементов / 30 MB)
+- Автообнаружение сервера в локальной сети (UDP)
 
 ### Администрирование
-- Панель управления пользователями (бан/разбан, смена пароля)
-- Создание и управление структурой организации
+- Панель управления пользователями (бан/разбан, сброс пароля, создание)
+- Управление структурой организации
 - Контейнеризация сервера (Healthchecks, Restart Policies)
 
 ---
@@ -66,16 +70,16 @@
 ## Технологический стек
 
 | Компонент | Технологии | Версия |
-|-----------|------------|--------|
+|---|---|---|
 | **Runtime** | .NET | 10.0 |
 | **Сервер** | ASP.NET Core Web API + SignalR | 10.0 |
-| **Клиент** | Avalonia UI (MVVM) + CommunityToolkit.Mvvm | 11.3.12 |
-| **ORM (Server)** | Entity Framework Core | 10.0 |
+| **Клиент** | Avalonia UI + CommunityToolkit.Mvvm | 11.3.12 |
+| **ORM (Server)** | Entity Framework Core + Npgsql | 10.0 |
 | **ORM (Client)** | sqlite-net-pcl | 1.9.172 |
-| **База данных** | PostgreSQL + Npgsql | 16 / 10.0 |
-| **Audio** | NAudio | 2.3.0 |
-| **Security** | JwtBearer, BCrypt.Net-Next | 10.0.5 / 4.1.0 |
-| **Images** | SixLabors.ImageSharp.Web | 3.2.0 |
+| **База данных** | PostgreSQL | 16 |
+| **Аудио** | PortAudio + Opus (Concentus) | — |
+| **Security** | JwtBearer, BCrypt.Net-Next | 10.0 / 4.1.0 |
+| **Images** | SixLabors.ImageSharp | 3.2.0 |
 
 ---
 
@@ -84,56 +88,79 @@
 ```text
 📦 Messenger
 │
-├── 📂 Shared/         # Общие компоненты (Class Library)
-│   ├── 📂 DTO/                 # Объекты передачи данных
-│   │   ├── Auth/               # LoginRequest, TokenResponseDto
-│   │   ├── Chat/               # ChatDto, ChatMemberDto
-│   │   ├── Message/            # MessageDto, CreateMessageRequest
-│   │   ├── User/               # UserDto, CreateUserDto
-│   │   └── ...                 # Poll, Notification, Department, Search, ReadReceipt
-│   ├── 📂 Enum/                # ChatType, ChatRole, Theme, UserRoles, SystemEventTypes
-│   └── 📂 Response/            # ApiResponse<T>
+├── 📂 Shared/                  # Общие компоненты (Class Library)
+│   ├── 📂 Dto/                 # DTO: Auth, Chat, Message, User, Poll,
+│   │                           #       Notification, Department, Search,
+│   │                           #       ReadReceipt, Call, Online
+│   ├── 📂 Enum/                # ChatType, ChatRole, Theme, UserRole,
+│   │                           #   SystemEventType, CallStatus, UserStatusType
+│   ├── 📂 Helpers/             # SystemEventMeta
+│   ├── 📂 Hubs/                # HubMethods (константы имён SignalR-методов)
+│   └── 📂 Response/            # ApiResponse<T>, ApiResponseHelper
 │
-├── 📂 API/            # Серверная часть (ASP.NET Core)
-│   ├── 📂 Controllers/         # REST API endpoints
-│   │   ├── BaseController      # ExecuteAsync (Result → HTTP)
+├── 📂 API/                     # Серверная часть (ASP.NET Core)
+│   ├── 📂 Controllers/         # REST API эндпоинты
+│   │   ├── BaseController      # Map(Result<T>) → HTTP-статус
 │   │   ├── AuthController      # Login, Refresh, Revoke
-│   │   ├── ChatsController     # CRUD чатов, участники
-│   │   ├── MessagesController  # Сообщения, поиск, пагинация
-│   │   ├── PollsController     # Опросы
-│   │   └── ...                 # Users, Departments, Admin, Files, Notifications
-│   ├── 📂 Hubs/                # ChatHub (/chatHub)
-│   ├── 📂 Model/               # EF Core сущности + MessengerDbContext
-│   ├── 📂 Services/            # Бизнес-логика
-│   │   ├── Infrastructure/     # CacheService, AccessControlService, HubNotifier, OnlineUserService
-│   │   ├── Messaging/          # MessageService, FileService, PollService
-│   │   ├── Chat/               # ChatService, ChatMemberService, NotificationService
-│   │   └── ...                 # AuthService, UserService, DepartmentService
-│   ├── 📂 Mapping/             # Ручной маппинг моделей → DTO
+│   │   ├── ChatsController     # CRUD чатов, участники, роли
+│   │   ├── MessagesController  # Сообщения, поиск, пагинация, pin
+│   │   ├── PollsController     # Опросы и голосование
+│   │   └── ...                 # Users, Departments, Admin, Files,
+│   │                           #   Notifications, ReadReceipts, Status
+│   ├── 📂 Hubs/                # MessengerHub (/chatHub)
+│   ├── 📂 Data/                # EF Core сущности + MessengerDbContext
+│   │   └── 📂 SeedData/        # DataSeeder (users.json)
+│   ├── 📂 Services/
+│   │   ├── 📂 Core/Auth/       # AuthService, TokenService
+│   │   ├── 📂 Features/        # Chat, Messaging, Department,
+│   │   │                       #   ReadReceipt, User, Call
+│   │   └── 📂 Infrastructure/  # CacheService, AccessControlService,
+│   │                           #   HubNotifier, OnlineUserService,
+│   │                           #   UdpDiscoveryService, Bundles
+│   ├── 📂 Repositories/        # Abstractions + Implementations
+│   ├── 📂 Mapping/             # Ручной маппинг сущностей → DTO
 │   ├── 📂 Middleware/          # ExceptionHandling, MissingFileCleanup
-│   ├── 📂 Configuration/       # DI, Swagger, JWT, RateLimit
+│   ├── 📂 Configuration/       # DI, Swagger, JWT, RateLimit, StaticFiles
 │   └── 📄 Dockerfile
 │
-├── 📂 Desktop/        # Клиент (Avalonia UI)
-│   ├── 📂 ViewModels/          # MVVM логика
-│   │   ├── Shell/              # MainWindowViewModel, MainMenuViewModel
-│   │   ├── Chat/               # ChatViewModel (Handler Composition)
-│   │   │   ├── Handlers/       # Edit, Reply, Forward, Typing, Voice, Search, Notifications
-│   │   │   └── Managers/       # ChatMessageManager, ChatAttachmentManager
-│   │   ├── ChatList/           # ChatsViewModel, GlobalSearchManager
-│   │   ├── Dialog/             # Модальные диалоги
-│   │   └── Factories/          # ChatViewModelFactory
-│   ├── 📂 Services/            # Сервисы клиента
-│   │   ├── Api/                # ApiClientService (auto-refresh при 401)
-│   │   ├── Auth/               # AuthManager, SecureStorage, SessionStore
-│   │   ├── Realtime/           # GlobalHubConnection (единый SignalR-клиент)
-│   │   └── Audio/              # AudioPlayerService, NAudioRecorderService
-│   ├── 📂 Data/                # Локальный кэш
-│   │   ├── LocalDatabase       # SQLite + FTS5, схема v3
-│   │   └── Repositories/       # LocalCacheService, Chat/MessageCacheRepository
-│   ├── 📂 Converters/          # Value converters для Avalonia bindings
-│   └── 📂 Views/               # AXAML разметка
+├── 📂 Desktop/                 # Клиент (Avalonia UI)
+│   ├── 📂 ViewModels/
+│   │   ├── 📂 Shell/           # MainWindowViewModel, MainMenuViewModel
+│   │   ├── 📂 Chat/            # ChatViewModel + обработчики:
+│   │   │   ├── 📂 Features/    #   Edit, Reply, Forward, Typing,
+│   │   │   │                   #   Voice, Search, InfoPanel, Notifications
+│   │   │   ├── 📂 Managers/    #   ChatMessageManager, AttachmentManager
+│   │   │   ├── 📂 Polls/       #   PollViewModel, PollOptionViewModel
+│   │   │   └── 📂 Messages/    #   MessageViewModel, MessageFileViewModel
+│   │   ├── 📂 ChatList/        # ChatsViewModel, GlobalSearchManager
+│   │   ├── 📂 Call/            # CallViewModel, IncomingCallViewModel
+│   │   ├── 📂 Dialog/          # Модальные диалоги
+│   │   └── 📂 Factories/       # ChatViewModelFactory, ChatsViewModelFactory
+│   ├── 📂 Services/
+│   │   ├── 📂 Core/            # ApiClientService, GlobalHubConnection,
+│   │   │                       #   AuthManager, SessionStore, CookieStorage
+│   │   ├── 📂 Features/        # CallService, CallAudioService,
+│   │   │                       #   CallHubConnection, NoiseReducer,
+│   │   │                       #   AudioPlayerService, AudioRecorderService,
+│   │   │                       #   FileDownloadService
+│   │   └── 📂 Platform/        # NavigationService, DialogService,
+│   │                           #   ThemeService, SettingsService,
+│   │                           #   ServerDiscoveryService, NotificationService
+│   ├── 📂 Data/                # Локальный кэш (SQLite, схема v3)
+│   │   ├── LocalDatabase       # WAL, индексы, миграции
+│   │   └── 📂 Repositories/    # LocalCacheService,
+│   │                           #   ChatCacheRepository,
+│   │                           #   MessageCacheRepository,
+│   │                           #   DownloadedFileRepository
+│   ├── 📂 Converters/          # 60+ value converters для Avalonia
+│   ├── 📂 Infrastructure/      # ApiEndpoints, AppConstants,
+│   │                           #   AuthenticatedImageLoader, MemoryDiagnostics
+│   └── 📂 Views/               # AXAML + code-behind
+│       ├── 📂 Controls/        # CircularProgress, WaveformView,
+│       │                       #   RichMessageTextBlock, FilterAutocomplete
+│       └── 📂 Chat/            # ChatView, MessageControl, MessageParts
 │
+├── 📂 API.Tests/               # Интеграционные тесты контроллеров
 ├── 📄 docker-compose.server.yml
 ├── 📄 README.md
 └── 📄 LICENSE
@@ -163,9 +190,9 @@ docker compose logs -f postgres
 docker compose logs -f messenger-api
 ```
 
-По умолчанию сервер доступен на порту **8080**.
+По умолчанию сервер доступен на порту **5274**.
 
-> **Примечание:** Первый запуск может занять время на миграцию базы данных.
+> **Примечание:** При первом запуске автоматически применяются миграции БД и запускается DataSeeder.
 
 ### Развёртывание клиента (Release)
 1. Скачайте архив из Releases (Windows / Linux).
@@ -173,24 +200,31 @@ docker compose logs -f messenger-api
 3. Установите **[.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**.
 4. Запустите `Desktop.exe` (Windows) или бинарник (Linux).
 
-> Учётные данные шифруются средствами ОС при сохранении (Secure Storage).
+При первом запуске клиент автоматически обнаруживает сервер в локальной сети через UDP (порт 5275). Если автообнаружение не работает — введите адрес сервера вручную через диалог в окне входа.
+
+> Учётные данные шифруются средствами ОС (DPAPI на Windows, KeyChain на macOS, AES на Linux).
 
 ---
 
 ## Архитектурные особенности
 
 ### Backend
-- **Result Pattern:** Сервисы возвращают `Result<T>` вместо исключений. `BaseController.ExecuteAsync` автоматически маппит результат на HTTP-статус и `ApiResponse<T>`.
-- **Access Control:** `AccessControlService` проверяет права (Owner/Admin/Member) перед выполнением бизнес-логики.
+- **Result Pattern:** Сервисы возвращают `Result<T>` вместо исключений. `BaseController.Map()` автоматически транслирует результат в HTTP-статус и `ApiResponse<T>`.
+- **Access Control:** `AccessControlService` проверяет права (Owner/Admin/Member) с двойным кэшем (MemoryCache + per-request).
 - **Caching:** `IMemoryCache` для списков чатов (TTL 5 мин) и состава участников (TTL 10 мин) с явной инвалидацией.
-- **Rate Limiting:** Sliding Window Policy для Login, Upload, Search, Messaging.
-- **SignalR:** Единый `ChatHub` с рассылкой через `HubNotifier`. Группы: `chat_{id}` и `user_{id}`.
+- **Rate Limiting:** Sliding Window Policy для Login (5/мин), Upload (10/мин), Search (15/мин), Messaging (30/мин).
+- **SignalR:** Единый `MessengerHub` (`/chatHub`) с рассылкой через `HubNotifier`. Группы: `chat_{id}` и `user_{id}`.
 
 ### Frontend (MVVM)
-- **Handler Composition:** `ChatViewModel` разделён на независимые Handler-классы (Edit, Reply, Forward, Typing...) для снижения связанности.
-- **Stale-While-Revalidate:** При открытии чата мгновенно показываются данные из SQLite, параллельно загружаются свежие с сервера.
-- **Offline-First:** Все важные данные хранятся в SQLite. Локальный поиск через FTS5.
-- **Global Hub Connection:** Одно WebSocket-соединение на всё приложение. Фильтрация событий по чату через `ChatHubSubscriber`.
+- **Handler Composition:** `ChatViewModel` декомпозирован на независимые Handler-классы (Edit, Reply, Forward, Typing, Voice, Search, InfoPanel, Notifications) через базовый `ChatFeatureHandler`.
+- **Stale-While-Revalidate:** При открытии чата мгновенно показываются данные из SQLite, параллельно обновляются с сервера.
+- **Offline-First:** История чатов хранится в SQLite (последние 200 сообщений на чат). Поиск всегда выполняется через серверный API.
+- **Единое SignalR-соединение:** `GlobalHubConnection` — одно WebSocket-соединение на всё приложение. Фильтрация событий по чату через `ChatHubSubscriber`.
+
+### Голосовые звонки
+- **P2P UDP:** Аудио передаётся напрямую между клиентами, сервер аудио не обрабатывает.
+- **Сигнализация:** Обмен UDP-эндпоинтами через SignalR (`WebRtcSignalDto`, тип `udp-endpoint`). Выбор лучшего эндпоинта по совпадению подсети.
+- **Аудиостек:** PortAudio (48kHz/моно/20ms) + Opus 32kbps + адаптивный VAD + спектральное шумоподавление (Wiener Filter).
 
 ---
 
@@ -200,7 +234,7 @@ docker compose logs -f messenger-api
 <summary><b>Темы оформления</b></summary>
 
 | Светлая тема | Тёмная тема |
-|:-------------:|:-----------:|
+|:---:|:---:|
 | *(Screenshot)* | *(Screenshot)* |
 </details>
 
@@ -208,7 +242,7 @@ docker compose logs -f messenger-api
 <summary><b>Рабочее пространство</b></summary>
 
 | Список диалогов | Переписка с опросом |
-|:---------------:|:-------------------:|
+|:---:|:---:|
 | *(Screenshot)* | *(Screenshot)* |
 </details>
 
@@ -216,7 +250,7 @@ docker compose logs -f messenger-api
 <summary><b>Администрирование</b></summary>
 
 | Управление пользователями | Управление отделами |
-|:-------------------------:|:-------------------:|
+|:---:|:---:|
 | *(Screenshot)* | *(Screenshot)* |
 </details>
 
@@ -225,46 +259,54 @@ docker compose logs -f messenger-api
 ## API Документация
 
 После запуска сервера Swagger доступен по адресу:
-`http://localhost:8080/swagger`
+`http://localhost:5274/swagger`
 
 ### Основные эндпоинты
 
 #### Аутентификация
 | Endpoint | Метод | Описание |
-|----------|-------|----------|
-| `/api/auth/login` | POST | Вход, получение токенов |
-| `/api/auth/refresh` | POST | Обновление access-токена |
-| `/api/auth/revoke` | POST | Выход (отзыв всех refresh-токенов) |
+|---|---|---|
+| `/api/auth/login` | POST | Вход, получение JWT + refresh-токен в cookie |
+| `/api/auth/refresh` | POST | Обновление access-токена по cookie |
+| `/api/auth/revoke` | POST | Выход, отзыв refresh-токена |
 
 #### Чаты и сообщения
 | Endpoint | Метод | Описание |
-|----------|-------|----------|
+|---|---|---|
 | `/api/chats/user/{userId}` | GET | Список чатов пользователя |
+| `/api/chats` | POST | Создать чат |
 | `/api/chats/{id}/members` | GET | Участники чата |
-| `/api/messages/chat/{id}` | GET | История сообщений (paginated) |
 | `/api/messages` | POST | Отправить сообщение |
 | `/api/messages/{id}` | PUT | Редактировать сообщение |
-| `/api/messages/{id}` | DELETE | Удалить сообщение (soft-delete) |
+| `/api/messages/{id}` | DELETE | Удалить (soft-delete) |
+| `/api/messages/chat/{chatId}/latest` | GET | Последние сообщения |
+| `/api/messages/chat/{chatId}/around/{messageId}` | GET | Сообщения вокруг якорного |
+| `/api/messages/user/{userId}/search` | POST | Глобальный поиск |
 
-#### Пользователи
+#### Пользователи и администрирование
 | Endpoint | Метод | Описание |
-|----------|-------|----------|
+|---|---|---|
 | `/api/users/{id}` | GET | Профиль пользователя |
 | `/api/users/{id}/avatar` | POST | Загрузка аватара |
-| `/api/admin/users` | GET | Список всех пользователей (Admin) |
+| `/api/users/{id}/status` | PUT | Установить статус |
+| `/api/admin/users` | GET | Все пользователи (Admin) |
+| `/api/admin/users/{id}/toggle-ban` | POST | Бан/разбан (Admin) |
 
 #### SignalR
-Подключение: `{ApiUrl}/chatHub`
-Ключевые события: `ReceiveMessageDto`, `UserOnline`, `UserOffline`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`
+Подключение: `{server}/chatHub?access_token={jwt}`
+
+Ключевые события сервера → клиент: `ReceiveMessage`, `MessageUpdated`, `MessageDeleted`, `UserOnline`, `UserOffline`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`, `ChatUpdated`, `ChatRemoved`, `PollUpdated`, `IncomingCall`, `CallStateUpdated`, `CallEnded`
 
 ---
 
 ## Глоссарий
 
 | Термин | Значение |
-|--------|----------|
-| **Result Pattern** | Паттерн обработки ошибок без исключений (`Result<T>.Success()` / `Result.NotFound()`) |
+|---|---|
+| **Result Pattern** | Обработка ошибок без исключений: `Result<T>.Success()` / `Result.NotFound()` / `Result.Forbidden()` и т.д. |
 | **Soft Delete** | Удаление помечается флагом `is_deleted=true`, запись остаётся в БД |
-| **FamilyId** | Группа связанных Refresh-токенов для обнаружения replay-атак |
-| **Handler Composition** | Паттерн декомпозиции `ChatViewModel` на независимые Handler-классы |
-| **Gap-fill** | Догрузка пропущенных сообщений после переподключения SignalR |
+| **FamilyId** | Группа связанных Refresh-токенов одной сессии для обнаружения повторного использования |
+| **Handler Composition** | Декомпозиция `ChatViewModel` на независимые `ChatFeatureHandler`-классы |
+| **Stale-While-Revalidate** | Мгновенный показ кэша из SQLite + фоновое обновление с сервера |
+| **P2P UDP** | Прямая передача аудио между клиентами без участия сервера |
+| **VAD** | Voice Activity Detection — определение наличия речи для подавления тишины перед отправкой |

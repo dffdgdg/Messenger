@@ -7,6 +7,7 @@ public class CallSession
     public int InitiatorId { get; init; }
     public DateTimeOffset StartedAt { get; init; }
     public CallStatus Status { get; set; } = CallStatus.Ringing;
+    public CallMode Mode { get; init; } = CallMode.PeerToPeer;
 
     /// <summary>
     /// Contact = 1:1, группа = любой может войти

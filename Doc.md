@@ -121,7 +121,7 @@ MapControllers
   },
   "MessengerSettings": {
     "AdminDepartmentId": 1,
-    "MaxFileSizeBytes": 20971520,
+    "MaxFileSizeBytes": 314572800,
     "BcryptWorkFactor": 12,
     "MaxImageDimension": 100,
     "ImageQuality": 85,
@@ -868,7 +868,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 `AccessTokenLifetimeMinutes=15`, `RefreshTokenLifetimeDays=30`, `Issuer="API"`, `Audience="MessengerClient"`
 
 ### MessengerSettings (`API/Configuration/MessengerSettings.cs`)
-`AdminDepartmentId=1`, `MaxFileSizeBytes=20MB`, `BcryptWorkFactor=12`, `MaxImageDimension=100px`, `ImageQuality=85`, `DefaultPageSize=50`, `MaxPageSize=100`
+`AdminDepartmentId=1`, `MaxFileSizeBytes=300MB`, `BcryptWorkFactor=12`, `MaxImageDimension=100px`, `ImageQuality=85`, `DefaultPageSize=50`, `MaxPageSize=100`
 
 ### RateLimitKey (`API/Configuration/RateLimitKey.cs`)
 - `GetIpPartitionKey(context)` — по IP
@@ -1115,7 +1115,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Класс | Назначение |
 |---|---|
 | `ApiEndpoints` | Статический билдер URL всех эндпоинтов API |
-| `AppConstants` | `MaxFileSizeBytes=20MB`, `DefaultPageSize=50`, `LoadMorePageSize=30`, `SearchPageSize=20`, `TypingIndicatorDurationMs=3500`, `HighlightDurationMs` |
+| `AppConstants` | `MaxFileSizeBytes=300MB`, `DefaultPageSize=50`, `LoadMorePageSize=30`, `SearchPageSize=20`, `TypingIndicatorDurationMs=3500`, `HighlightDurationMs` |
 
 ## Хелперы (`Desktop/Infrastructure/Helpers/`)
 

@@ -10,6 +10,7 @@ public class CallStateDto
     public int InitiatorId { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public bool IsGroupCall { get; set; }
+    public CallMode Mode { get; set; } = CallMode.PeerToPeer;
     public List<CallParticipantDto> Participants { get; set; } = [];
 
     /// <summary>

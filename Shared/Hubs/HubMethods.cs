@@ -57,6 +57,7 @@ public static class HubMethods
         public const string ActiveCallUpdated = "ActiveCallUpdated";
         public const string ActiveCallEnded = "ActiveCallEnded";
         public const string ReceiveSignal = "ReceiveSignal";
+        public const string RelayEndpoint = "RelayEndpoint";
     }
 
     public static class CallInvoke

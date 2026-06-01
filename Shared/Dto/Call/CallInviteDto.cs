@@ -1,4 +1,6 @@
-﻿namespace Shared.Dto.Call;
+﻿using Shared.Enum;
+
+namespace Shared.Dto.Call;
 
 public class CallInviteDto
 {
@@ -10,4 +12,5 @@ public class CallInviteDto
     public string? InitiatorAvatar { get; set; }
     public int ActiveParticipantsCount { get; set; }
     public bool IsGroupCall { get; set; }
+    public CallMode Mode { get; set; } = CallMode.PeerToPeer;
 }

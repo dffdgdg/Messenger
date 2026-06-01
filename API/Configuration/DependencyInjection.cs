@@ -6,6 +6,7 @@ using API.Services.Call;
 using API.Services.Chat;
 using API.Services.Core.Auth;
 using API.Services.Department;
+using API.Services.Features.Call;
 using API.Services.Features.Chat;
 using API.Services.Infrastructure;
 using API.Services.Infrastructure.Bundles;
@@ -54,6 +55,9 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<AppDateTime>();
+        services.AddSingleton<CallMixerService>();
+        services.AddSingleton<CallRelayService>();
+        services.AddHostedService(sp => sp.GetRequiredService<CallRelayService>());
         services.AddSingleton<ICallSessionService, CallSessionService>();
         services.AddSingleton<IOnlineUserService, OnlineUserService>();
         services.AddScoped<DataSeeder>();

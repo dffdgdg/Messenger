@@ -7,9 +7,24 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var messengerSettings = builder.Configuration
+    .GetSection(MessengerSettings.SectionName)
+    .Get<MessengerSettings>() ?? new MessengerSettings();
+var maxUploadRequestBodySize = messengerSettings.MaxFileSizeBytes + 1024L * 1024L;
+
 builder.WebHost.ConfigureKestrel(options =>
-    options.Listen(System.Net.IPAddress.Any, 5274,
-        listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2));
+{
+options.Limits.MaxRequestBodySize = maxUploadRequestBodySize;
+options.Listen(System.Net.IPAddress.Any, 5274,
+        listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+});
+
+builder.Services.Configure<FormOptions>(options =>
+    options.MultipartBodyLengthLimit = messengerSettings.MaxFileSizeBytes);
+
+builder.Services.Configure<IISServerOptions>(options =>
+    options.MaxRequestBodySize = maxUploadRequestBodySize);
+
 
 builder.Services.Configure<MessengerSettings>(
     builder.Configuration.GetSection(MessengerSettings.SectionName));

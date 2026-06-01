@@ -2,7 +2,8 @@
 
 public static class AppConstants
 {
-    public const long MaxFileSizeBytes = 20 * 1024 * 1024;
+    public const int MaxFileSizeMegabytes = 300;
+    public const long MaxFileSizeBytes = MaxFileSizeMegabytes * 1024L * 1024L;
     public const int DefaultDebounceMs = 300;
     public const int DefaultPageSize = 30;
     public const int LoadMorePageSize = 25;

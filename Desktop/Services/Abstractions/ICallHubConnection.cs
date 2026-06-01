@@ -14,6 +14,7 @@ public interface ICallHubConnection : IAsyncDisposable
     Task ToggleMuteAsync(string callId, bool isMuted);
     Task ToggleSpeakingAsync(string callId, bool isSpeaking);
     event Action<string, int, bool>? ParticipantSpeakingChanged;
+    event Action<RelayEndpointInfo>? RelayEndpoint;
     Task<CallStateDto?> GetCallStateAsync(int chatId);
     event Action<CallInviteDto>? IncomingCall;
     event Action<string, CallParticipantDto>? CallParticipantJoined;

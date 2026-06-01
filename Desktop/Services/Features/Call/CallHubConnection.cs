@@ -11,6 +11,7 @@ public sealed partial class CallHubConnection : ICallHubConnection
     private readonly ILogger<CallHubConnection> _logger;
     private int _disposed;
     public event Action<CallChatMessageDto>? CallMessageReceived;
+    public event Action<RelayEndpointInfo>? RelayEndpoint;
 
     public event Action<CallInviteDto>? IncomingCall;
     public event Action<string, CallParticipantDto>? CallParticipantJoined;
@@ -121,6 +122,12 @@ public sealed partial class CallHubConnection : ICallHubConnection
         {
             LogCallError(message);
             CallError?.Invoke(message);
+        });
+
+        _hub.On<RelayEndpointInfo>(HubMethods.Call.RelayEndpoint, endpoint =>
+        {
+            LogRelayEndpoint(endpoint.CallId, endpoint.Host, endpoint.Port);
+            RelayEndpoint?.Invoke(endpoint);
         });
 
         _hub.Reconnected += async connectionId =>
@@ -279,6 +286,9 @@ public sealed partial class CallHubConnection : ICallHubConnection
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "CallError: {Message}")]
     private partial void LogCallError(string message);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "RelayEndpoint: callId={CallId} {Host}:{Port}")]
+    private partial void LogRelayEndpoint(string callId, string host, int port);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "CallHub reconnected: {ConnectionId}")]
     private partial void LogReconnected(string? connectionId);

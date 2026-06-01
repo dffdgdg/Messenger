@@ -30,9 +30,11 @@ public sealed class CallAudioService : IDisposable
     private int _captureBufferCount;
     private readonly Lock _captureLock = new();
     private readonly ConcurrentDictionary<int, ConcurrentQueue<float[]>> _playbackQueues = new();
+    private readonly ConcurrentQueue<float[]> _serverMixedPlaybackQueue = new();
     private readonly float[] _mixBuffer = new float[FrameSamples];
     private bool _isRunning;
     private bool _isMuted;
+    private CallMode _mode = CallMode.PeerToPeer;
     private bool _disposed;
     private readonly Lock _stateLock = new();
 
@@ -95,6 +97,12 @@ public sealed class CallAudioService : IDisposable
 
     public void SetMuted(bool muted) => _isMuted = muted;
 
+    public void SetMode(CallMode mode)
+    {
+        _mode = mode;
+        ClearServerMixedQueue();
+    }
+
     public void AddParticipant(int userId)
     {
         if (_playbackQueues.ContainsKey(userId)) return;
@@ -130,6 +138,24 @@ public sealed class CallAudioService : IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"[CallAudio] Decode error from {fromUserId}: {ex.Message}");
+        }
+    }
+
+    public void ReceiveMixedAudio(byte[] opusData)
+    {
+        if (_decoder == null || opusData.Length == 0) return;
+
+        try
+        {
+            var decoded = new float[FrameSamples];
+            var samplesDecoded = _decoder.Decode(opusData.AsSpan(), decoded.AsSpan(), FrameSamples);
+
+            if (samplesDecoded > 0 && _serverMixedPlaybackQueue.Count < 10)
+                _serverMixedPlaybackQueue.Enqueue(decoded);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CallAudio] Decode mixed error: {ex.Message}");
         }
     }
 
@@ -274,16 +300,29 @@ public sealed class CallAudioService : IDisposable
         Array.Clear(_mixBuffer, 0, samplesNeeded);
         var hasAudio = false;
 
-        foreach (var queue in _playbackQueues.Values)
+        if (_mode == CallMode.ServerMixed)
         {
-            if (!queue.TryDequeue(out var frame)) continue;
-
-            hasAudio = true;
-            var count = Math.Min(frame.Length, samplesNeeded);
-
-            for (var i = 0; i < count; i++)
+            if (_serverMixedPlaybackQueue.TryDequeue(out var frame))
             {
-                _mixBuffer[i] += frame[i];
+                hasAudio = true;
+                var count = Math.Min(frame.Length, samplesNeeded);
+                Array.Copy(frame, _mixBuffer, count);
+            }
+        }
+        else
+        {
+            foreach (var queue in _playbackQueues.Values)
+            {
+                if (!queue.TryDequeue(out var frame)) continue;
+
+
+                hasAudio = true;
+                var count = Math.Min(frame.Length, samplesNeeded);
+
+                for (var i = 0; i < count; i++)
+                {
+                    _mixBuffer[i] += frame[i];
+                }
             }
         }
 
@@ -322,7 +361,13 @@ public sealed class CallAudioService : IDisposable
         StopStream(ref _outputStream);
 
         _playbackQueues.Clear();
+        ClearServerMixedQueue();
         _captureBufferCount = 0;
+    }
+
+    private void ClearServerMixedQueue()
+    {
+        while (_serverMixedPlaybackQueue.TryDequeue(out _)) { }
     }
 
     private static void StopStream(ref PortAudioSharp.Stream? stream)

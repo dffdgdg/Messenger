@@ -1,5 +1,6 @@
 ﻿using API.Services.Infrastructure.Security;
 using Shared.Hubs;
+using SixLabors.ImageSharp;
 using System.Security.Claims;
 
 namespace API.Hubs;
@@ -13,9 +14,10 @@ public sealed partial class MessengerHub(
     ISystemMessageService systemMessages,
     MessengerDbContext db,
     AppDateTime appDateTime,
+    IConfiguration configuration,
     ILogger<MessengerHub> logger) : Hub
 {
-    private const int MaxParticipants = 12;
+    private int MaxParticipants => configuration.GetValue("CallSettings:MaxParticipants", 30);
     private const int RingingTimeoutSeconds = 60;
 
     // ─── User info cache (per-connection, живёт пока хаб жив) ────────────────
@@ -245,7 +247,7 @@ public sealed partial class MessengerHub(
         var chatType = await accessControl.GetChatTypeAsync(chatId);
         var isGroup = chatType != ChatType.Contact;
 
-        var session = await callSessions.CreateCallAsync(chatId, userId, Context.ConnectionId, isGroup);
+        var session = await callSessions.CreateCallAsync(chatId, userId, Context.ConnectionId, chatType);
         if (session == null)
         {
             await Clients.Caller.SendAsync(HubMethods.Call.CallError, "Не удалось создать звонок");
@@ -268,7 +270,8 @@ public sealed partial class MessengerHub(
             InitiatorName = name ?? $"User {userId}",
             InitiatorAvatar = avatar,
             ActiveParticipantsCount = 1,
-            IsGroupCall = isGroup
+            IsGroupCall = isGroup,
+            Mode = session.Mode
         };
 
         foreach (var memberId in memberIds.Where(id => id != userId))
@@ -281,6 +284,7 @@ public sealed partial class MessengerHub(
 
         var stateDto = await ToStateDtoAsync(session);
         await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
+        await SendRelayEndpointIfNeededAsync(session);
         await Clients.Group($"chat_{chatId}").SendAsync(HubMethods.Call.ActiveCallStarted, stateDto);
 
         await systemMessages.CreateCallStartedMessageAsync(chatId, userId);
@@ -327,6 +331,7 @@ public sealed partial class MessengerHub(
 
             var stateDto = await ToStateDtoAsync(session);
             await Clients.Caller.SendAsync(HubMethods.Call.CallStateUpdated, stateDto);
+            await SendRelayEndpointIfNeededAsync(session);
 
             var (name, avatar) = await GetUserInfoAsync(userId);
             var notification = new CallParticipantDto
@@ -501,6 +506,25 @@ public sealed partial class MessengerHub(
     #endregion
 
     #region Call — Private helpers
+    private async Task SendRelayEndpointIfNeededAsync(CallSession session)
+    {
+        if (session.Mode != CallMode.ServerMixed) return;
+
+        var configHost = configuration.GetValue<string>("CallSettings:RelayHost");
+
+        var host = !string.IsNullOrWhiteSpace(configHost)
+            ? configHost
+            : Context.GetHttpContext()?.Request.Host.Host ?? "localhost";
+
+        var endpoint = new RelayEndpointInfo
+        {
+            Host = host,
+            Port = configuration.GetValue("CallSettings:RelayPort", 5276),
+            CallId = session.CallId
+        };
+
+        await Clients.Caller.SendAsync(HubMethods.Call.RelayEndpoint, endpoint);
+    }
 
     private async Task TerminateCallAsync(string callId, int chatId, CallEndReason reason)
     {

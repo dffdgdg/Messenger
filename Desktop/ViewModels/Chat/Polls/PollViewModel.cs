@@ -15,7 +15,10 @@ public partial class PollViewModel : BaseViewModel
     [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
     public partial bool IsAnonymous { get; set; }
     [ObservableProperty] public partial int TotalVotes { get; set; }
-    [ObservableProperty] public partial bool HasVoted { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
+    public partial bool HasVoted { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResultsButton))]
     public partial bool CanVote { get; set; } = true;
@@ -29,7 +32,7 @@ public partial class PollViewModel : BaseViewModel
     public int PollId { get; }
     public int UserId { get; }
     public bool HasSelection => Options.Any(o => o.IsSelected);
-    public bool ShowResultsButton => !IsAnonymous && (!CanVote || IsClosed);
+    public bool ShowResultsButton => !IsAnonymous && (HasVoted || IsClosed);
     public PollDto? CurrentPollDto { get; private set; }
     private static string Pluralize(int count)
     {
@@ -52,10 +55,11 @@ public partial class PollViewModel : BaseViewModel
         CanClose = !IsClosed && userId == pollOwnerId;
 
         var options = poll.Options ?? [];
+        var selectedOptionIds = poll.SelectedOptionIds ?? [];
 
         TotalVotes = options.Sum(o => o.VotesCount);
-        CanVote = poll.CanVote;
-        HasVoted = !poll.CanVote;
+        CanVote = poll.CanVote && !IsClosed;
+        HasVoted = selectedOptionIds.Count > 0;
         CurrentPollDto = poll;
 
         Options = new ObservableCollection<PollOptionViewModel>(
@@ -64,7 +68,7 @@ public partial class PollViewModel : BaseViewModel
         foreach (var opt in Options)
             opt.PropertyChanged += OnOptionPropertyChanged;
 
-        ApplySelectedOptions(poll.SelectedOptionIds);
+        ApplySelectedOptions(selectedOptionIds);
     }
 
     [RelayCommand]
@@ -131,17 +135,18 @@ public partial class PollViewModel : BaseViewModel
         OnPropertyChanged(nameof(TotalVotesFormatted));
 
         UpdateOptions(options);
-        ApplySelectedOptions(dto.SelectedOptionIds);
+        var selectedOptionIds = dto.SelectedOptionIds ?? [];
+        ApplySelectedOptions(selectedOptionIds);
 
-        CanVote = dto.CanVote;
-        HasVoted = !dto.CanVote;
-        CurrentPollDto = dto;
         IsClosed = ComputeIsClosed(dto.ClosesAt);
+        CanVote = dto.CanVote && !IsClosed;
+        HasVoted = selectedOptionIds.Count > 0;
+        CurrentPollDto = dto;
 
         foreach (var opt in Options)
         {
             opt.NotifyTotalVotesChanged();
-            opt.NotifyCanVoteChanged(dto.CanVote);
+            opt.NotifyCanVoteChanged(CanVote);
         }
     }
 

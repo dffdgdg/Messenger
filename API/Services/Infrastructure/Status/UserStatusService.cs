@@ -49,13 +49,29 @@ public sealed partial class UserStatusService(MessengerDbContext db, IOnlineUser
 
     public async Task CleanupExpiredStatusesAsync()
     {
-        var now = DateTime.SpecifyKind(timeProvider.GetUtcNow().DateTime, DateTimeKind.Unspecified);
+        var now = DateTime.SpecifyKind(timeProvider.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified);
+        var expiredUsers = await db.Users.AsNoTracking()
+            .Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
+            .Select(u => new { u.Id, u.LastOnline })
+            .ToListAsync();
 
-        var count = await db.Users.Where(u => u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
+        if (expiredUsers.Count == 0)
+            return;
+
+        var expiredUserIds = expiredUsers.Select(u => u.Id).ToList();
+        var count = await db.Users.Where(u => expiredUserIds.Contains(u.Id) && u.StatusExpiresAt != null && u.StatusExpiresAt <= now)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.StatusType, UserStatusType.Online).SetProperty(u => u.StatusExpiresAt, (DateTime?)null));
 
-        if (count > 0)
-            LogStatusesCleanedUp(count);
+        if (count == 0)
+            return;
+
+        foreach (var user in expiredUsers)
+        {
+            var dto = new UserStatusDto(user.Id, onlineUserService.IsOnline(user.Id), user.LastOnline, UserStatusType.Online, null);
+            await hubContext.Clients.All.SendAsync(HubMethods.Chat.UserStatusChanged, dto);
+        }
+
+        LogStatusesCleanedUp(count);
     }
 
     #region Log

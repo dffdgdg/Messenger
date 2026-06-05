@@ -520,9 +520,9 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
     private static void ResetChat(ChatsViewModel? vm)
     {
-        if (vm?.CurrentChatViewModel == null) return;
-        vm.SelectedChat = null;
+        if (vm == null) return;
         vm.CurrentChatViewModel = null;
+        vm.SelectedChat = null;
     }
 
     private void NotifyNavState()

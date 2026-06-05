@@ -1,4 +1,8 @@
-﻿namespace API.Services.Features.Call;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+
+namespace API.Services.Features.Call;
 
 public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDisposable
 {
@@ -7,7 +11,8 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
 
     private readonly ConcurrentDictionary<string, MixerSession> _sessions = new();
 
-    public void RegisterCall(string callId) => _sessions.GetOrAdd(callId, id => new MixerSession(id, logger));
+    public void RegisterCall(string callId)
+        => _sessions.GetOrAdd(callId, id => new MixerSession(id, logger));
 
     public void RemoveCall(string callId)
     {
@@ -16,7 +21,8 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
     }
 
     public void AddParticipant(string callId, int userId, Action<int, byte[], int> sendMixedAudio)
-        => _sessions.GetOrAdd(callId, id => new MixerSession(id, logger)).AddParticipant(userId, sendMixedAudio);
+        => _sessions.GetOrAdd(callId, id => new MixerSession(id, logger))
+                    .AddParticipant(userId, sendMixedAudio);
 
     public void RemoveParticipant(string callId, int userId)
     {
@@ -37,13 +43,23 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
         _sessions.Clear();
     }
 
+    // ════════════════════════════════════════════════════════════════════════
     private sealed class MixerSession : IDisposable
     {
         private readonly string _callId;
         private readonly ILogger _logger;
         private readonly ConcurrentDictionary<int, ParticipantState> _participants = new();
         private readonly Timer _timer;
-        private readonly Lock _tickLock = new();
+        private readonly object _tickLock = new();
+
+        // Все буферы переиспользуются — нулевые аллокации в hot path
+        private readonly float[] _mixBuffer = new float[ParticipantCodec.FrameSamples];
+        private float[] _personalBuffer = new float[ParticipantCodec.FrameSamples];
+        private readonly byte[] _encodedBuffer = new byte[ParticipantCodec.MaxEncodedBytes];
+        private readonly byte[] _sharedEncodedBuffer = new byte[ParticipantCodec.MaxEncodedBytes];
+        private KeyValuePair<int, ParticipantState>[] _snapshot = [];
+        private int[] _frameUserIds = new int[64];
+        private float[]?[] _framePcms = new float[]?[64];
         private bool _disposed;
 
         public MixerSession(string callId, ILogger logger)
@@ -54,7 +70,8 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
         }
 
         public void AddParticipant(int userId, Action<int, byte[], int> sendMixedAudio)
-            => _participants.AddOrUpdate(userId,
+            => _participants.AddOrUpdate(
+                userId,
                 _ => new ParticipantState(sendMixedAudio),
                 (_, existing) => existing.WithSender(sendMixedAudio));
 
@@ -64,73 +81,128 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
                 state.Dispose();
         }
 
+        /// <summary>
+        /// Вызывается из receive-loop relay'а.
+        /// Декодирует Opus → PCM и кладёт в канал участника.
+        /// Если канал полон — вытесняет старый фрейм (DropOldest).
+        /// </summary>
         public void ReceiveAudio(int userId, ReadOnlySpan<byte> opusData)
         {
             if (!_participants.TryGetValue(userId, out var state)) return;
 
-            var frame = new float[ParticipantCodec.FrameSamples];
-            if (!state.Codec.TryDecode(opusData, frame)) return;
-
-            lock (state.Sync)
+            var frame = ParticipantState.FramePool.Rent(ParticipantCodec.FrameSamples);
+            if (!state.Codec.TryDecode(opusData, frame))
             {
-                state.LatestFrame = frame;
-                state.SilentTicks = 0;
+                ParticipantState.FramePool.Return(frame);
+                return;
             }
+
+            if (!state.FrameChannel.Writer.TryWrite(frame))
+            {
+                // Канал полон — вытесняем старый фрейм, кладём новый
+                if (state.FrameChannel.Reader.TryRead(out var old))
+                    ParticipantState.FramePool.Return(old);
+                state.FrameChannel.Writer.TryWrite(frame);
+            }
+
+            state.SilentTicks = 0;
         }
 
         private void Tick()
         {
             if (_disposed || !Monitor.TryEnter(_tickLock)) return;
-
             try
             {
-                var snapshot = _participants.ToArray();
-                if (snapshot.Length == 0) return;
+                var count = _participants.Count;
+                if (count == 0) return;
 
-                var frames = new Dictionary<int, float[]>(snapshot.Length);
-                foreach (var (userId, state) in snapshot)
+                EnsureBufferCapacity(count);
+
+                var written = 0;
+                foreach (var kv in _participants)
+                    _snapshot[written++] = kv;
+
+                // ── 1. Собираем актуальные фреймы ────────────────────────
+                var activeSpeakers = CollectFrames(written);
+
+                // Никто не говорил в этом окне — пропускаем тик
+                if (activeSpeakers == 0)
                 {
-                    lock (state.Sync)
+                    ReturnAllFrames(written);
+                    return;
+                }
+
+                // ── 2. Глобальный микс O(N) ──────────────────────────────
+                Array.Clear(_mixBuffer, 0, ParticipantCodec.FrameSamples);
+                for (var s = 0; s < written; s++)
+                {
+                    var srcPcm = _framePcms[s];
+                    if (srcPcm == null) continue;
+                    ref var mix = ref _mixBuffer[0];
+                    ref var src = ref srcPcm[0];
+                    for (var i = 0; i < ParticipantCodec.FrameSamples; i++)
+                        Unsafe.Add(ref mix, i) += Unsafe.Add(ref src, i);
+                }
+                Normalize(_mixBuffer);
+
+                // ── 3. Shared encode для молчащих участников ─────────────
+                // Молчащие слышат глобальный микс без изменений.
+                // Кодируем один раз и переиспользуем буфер — без аллокации.
+                var hasListeners = activeSpeakers < written;
+                var sharedBytes = 0;
+                var hasSharedPacket = false;
+
+                if (hasListeners)
+                {
+                    sharedBytes = _snapshot[0].Value.Codec.Encode(
+                        _mixBuffer.AsSpan(0, ParticipantCodec.FrameSamples),
+                        _sharedEncodedBuffer);
+                    hasSharedPacket = sharedBytes > 0;
+                }
+
+                // ── 4. Рассылка: globalMix − selfVoice для говорящих ─────
+                for (var t = 0; t < written; t++)
+                {
+                    var targetUserId = _frameUserIds[t];
+                    var target = _snapshot[t].Value;
+                    var targetPcm = _framePcms[t];
+
+                    // Единственный говорящий слышит тишину — пропускаем
+                    if (activeSpeakers == 1 && targetPcm != null) continue;
+
+                    if (targetPcm != null)
                     {
-                        if (state.LatestFrame != null)
-                            frames[userId] = state.LatestFrame;
+                        // Говорящий: вычитаем свой голос из глобального микса
+                        ref var mix = ref _mixBuffer[0];
+                        ref var src = ref targetPcm[0];
+                        ref var dst = ref _personalBuffer[0];
+                        for (var i = 0; i < ParticipantCodec.FrameSamples; i++)
+                            Unsafe.Add(ref dst, i) = Unsafe.Add(ref mix, i) - Unsafe.Add(ref src, i);
+
+                        Normalize(_personalBuffer);
+
+                        var bytes = target.Codec.Encode(
+                            _personalBuffer.AsSpan(0, ParticipantCodec.FrameSamples),
+                            _encodedBuffer);
+                        if (bytes <= 0) continue;
+
+                        // Единственная неизбежная аллокация: пакет для отправки
+                        var packet = new byte[bytes];
+                        Buffer.BlockCopy(_encodedBuffer, 0, packet, 0, bytes);
+                        target.SendMixedAudio(targetUserId, packet, bytes);
+                    }
+                    else
+                    {
+                        // Молчащий: переиспользуем уже закодированный shared-буфер
+                        if (!hasSharedPacket) continue;
+                        var packet = new byte[sharedBytes];
+                        Buffer.BlockCopy(_sharedEncodedBuffer, 0, packet, 0, sharedBytes);
+                        target.SendMixedAudio(targetUserId, packet, sharedBytes);
                     }
                 }
 
-                foreach (var (targetUserId, target) in snapshot)
-                {
-                    var mix = new float[ParticipantCodec.FrameSamples];
-                    var hasAudio = false;
-
-                    foreach (var (sourceUserId, frame) in frames)
-                    {
-                        if (sourceUserId == targetUserId) continue;
-
-                        hasAudio = true;
-                        for (var i = 0; i < mix.Length; i++)
-                            mix[i] += frame[i];
-                    }
-
-                    if (!hasAudio) continue;
-
-                    Normalize(mix);
-
-                    Span<byte> encoded = stackalloc byte[ParticipantCodec.MaxEncodedBytes];
-                    var bytes = target.Codec.Encode(mix, encoded);
-                    if (bytes <= 0) continue;
-
-                    var packet = encoded[..bytes].ToArray();
-                    target.SendMixedAudio(targetUserId, packet, bytes);
-                }
-
-                foreach (var (_, state) in snapshot)
-                {
-                    lock (state.Sync)
-                    {
-                        if (state.LatestFrame != null && ++state.SilentTicks >= SilentTicksBeforeReset)
-                            state.LatestFrame = null;
-                    }
-                }
+                // ── 5. Возвращаем PCM-буферы в пул ──────────────────────
+                ReturnAllFrames(written);
             }
             catch (Exception ex)
             {
@@ -142,17 +214,90 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
             }
         }
 
+        /// <summary>
+        /// Собирает последний фрейм каждого участника из канала.
+        /// Промежуточные фреймы возвращаются в пул.
+        /// Возвращает количество говорящих участников.
+        /// </summary>
+        private int CollectFrames(int written)
+        {
+            var activeSpeakers = 0;
+            for (var i = 0; i < written; i++)
+            {
+                var (userId, state) = _snapshot[i];
+                _frameUserIds[i] = userId;
+
+                // Берём самый свежий фрейм, промежуточные возвращаем в пул
+                float[]? latest = null;
+                while (state.FrameChannel.Reader.TryRead(out var f))
+                {
+                    if (latest != null)
+                        ParticipantState.FramePool.Return(latest);
+                    latest = f;
+                }
+
+                _framePcms[i] = latest;
+
+                if (latest != null)
+                {
+                    activeSpeakers++;
+                    state.SilentTicks = 0;
+                }
+                else
+                {
+                    state.SilentTicks = state.SilentTicks + 1 >= SilentTicksBeforeReset
+                        ? 0
+                        : state.SilentTicks + 1;
+                }
+            }
+            return activeSpeakers;
+        }
+
+        private void EnsureBufferCapacity(int count)
+        {
+            if (_snapshot.Length >= count) return;
+            var newSize = count * 2;
+            _snapshot = new KeyValuePair<int, ParticipantState>[newSize];
+            _frameUserIds = new int[newSize];
+            _framePcms = new float[]?[newSize];
+        }
+
+        private void ReturnAllFrames(int written)
+        {
+            for (var i = 0; i < written; i++)
+            {
+                if (_framePcms[i] == null) continue;
+                ParticipantState.FramePool.Return(_framePcms[i]!);
+                _framePcms[i] = null;
+            }
+        }
+
         private static void Normalize(float[] mix)
         {
             var peak = 0f;
             for (var i = 0; i < mix.Length; i++)
-                peak = Math.Max(peak, Math.Abs(mix[i]));
-
+            {
+                var abs = Math.Abs(mix[i]);
+                if (abs > peak) peak = abs;
+            }
             if (peak <= 1.0f) return;
-
-            var gain = 1.0f / peak;
+            var inv = 1.0f / peak;
             for (var i = 0; i < mix.Length; i++)
-                mix[i] *= gain;
+                mix[i] *= inv;
+        }
+
+        private static void Normalize(Span<float> mix)
+        {
+            var peak = 0f;
+            for (var i = 0; i < mix.Length; i++)
+            {
+                var abs = Math.Abs(mix[i]);
+                if (abs > peak) peak = abs;
+            }
+            if (peak <= 1.0f) return;
+            var inv = 1.0f / peak;
+            for (var i = 0; i < mix.Length; i++)
+                mix[i] *= inv;
         }
 
         public void Dispose()
@@ -165,20 +310,35 @@ public sealed class CallMixerService(ILogger<CallMixerService> logger) : IDispos
         }
     }
 
+    // ════════════════════════════════════════════════════════════════════════
     private sealed class ParticipantState(Action<int, byte[], int> sendMixedAudio) : IDisposable
     {
-        public Lock Sync { get; } = new();
+        internal static readonly ArrayPool<float> FramePool = ArrayPool<float>.Shared;
+
+        // Буферизация до 4 фреймов (80ms). DropOldest — теряем старое, не новое.
+        internal readonly Channel<float[]> FrameChannel = Channel.CreateBounded<float[]>(
+            new BoundedChannelOptions(4)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.DropOldest,
+                AllowSynchronousContinuations = false
+            });
+
         public ParticipantCodec Codec { get; } = new();
         public Action<int, byte[], int> SendMixedAudio { get; private set; } = sendMixedAudio;
-        public float[]? LatestFrame { get; set; }
         public int SilentTicks { get; set; }
 
-        public ParticipantState WithSender(Action<int, byte[], int> sendMixedAudio)
+        public ParticipantState WithSender(Action<int, byte[], int> send)
         {
-            SendMixedAudio = sendMixedAudio;
+            SendMixedAudio = send;
             return this;
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+            while (FrameChannel.Reader.TryRead(out var f))
+                FramePool.Return(f);
+        }
     }
 }

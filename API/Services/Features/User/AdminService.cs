@@ -82,7 +82,7 @@ public partial class AdminService(
         var user = new Data.User
         {
             Username = username,
-            Password = new UserPassword(),
+            Password = UserPassword.Create(dto.Password!),
             Surname = dto.Surname.Trim(),
             Name = dto.Name.Trim(),
             Midname = dto.Midname?.Trim(),

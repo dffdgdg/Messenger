@@ -835,7 +835,7 @@
                                         Classes="IconButton"
                                         Command="{Binding Voice.StartRecordingCommand}"
                                         CornerRadius="10"
-                                        IsVisible="{Binding NewMessage, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                                        IsVisible="{Binding ShowVoiceMessageButton}"
                                         ToolTip.Tip="Записать голосовое сообщение">
                                         <Path
                                             Width="20"
@@ -854,7 +854,7 @@
                                         Classes="Primary"
                                         Command="{Binding SendMessageCommand}"
                                         CornerRadius="10"
-                                        IsVisible="{Binding NewMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                        IsVisible="{Binding ShowSendMessageButton}"
                                         ToolTip.Tip="Отправить">
                                         <Path
                                             Width="18"

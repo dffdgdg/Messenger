@@ -342,7 +342,7 @@ public sealed class CallAudioService : IDisposable
         _encoder = OpusCodecFactory.CreateEncoder(SampleRate, Channels, OpusApplication.OPUS_APPLICATION_VOIP);
 
         _encoder.Bitrate = 32000;
-        _encoder.Complexity = 5;
+        _encoder.Complexity = 2;
         _encoder.UseVBR = true;
         _encoder.SignalType = OpusSignal.OPUS_SIGNAL_VOICE;
 

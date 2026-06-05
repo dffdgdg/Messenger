@@ -189,10 +189,22 @@ public partial class PollService(MessengerDbContext context, IPollRepository pol
 
     private async Task BroadcastPollUpdateAsync(int messageId, PollDto updatedPoll)
     {
+        var broadcastPoll = new PollDto
+        {
+            Id = updatedPoll.Id,
+            MessageId = updatedPoll.MessageId,
+            IsAnonymous = updatedPoll.IsAnonymous,
+            AllowsMultipleAnswers = updatedPoll.AllowsMultipleAnswers,
+            ClosesAt = updatedPoll.ClosesAt,
+            Options = updatedPoll.Options,
+            SelectedOptionIds = [],
+            CanVote = !updatedPoll.ClosesAt.HasValue || updatedPoll.ClosesAt > _appDateTime.UtcNow
+        };
+
         var affectedChatIds = await messageRepository.GetForwardedToChatIdsAsync(messageId);
 
         foreach (var chatId in affectedChatIds)
-            await hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.PollUpdated, updatedPoll);
+            await hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.PollUpdated, broadcastPoll);
     }
 
     #endregion

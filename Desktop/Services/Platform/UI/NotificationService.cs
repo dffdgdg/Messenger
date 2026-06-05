@@ -83,12 +83,11 @@ public class NotificationService : INotificationService
         => ShowAsync("Предупреждение", message, DesktopNotificationType.Warning, copyToClipboard);
 
     public Task ShowInfoAsync(string message, bool copyToClipboard = false)
-        => ShowAsync("Messenger", message, DesktopNotificationType.Information, copyToClipboard);
+        => ShowAsync("Система", message, DesktopNotificationType.Information, copyToClipboard);
 
     private async Task ShowInternalAsync(string title, string message, DesktopNotificationType type, int durationMs, Func<Task>? onClick)
     {
-        var notification = new DesktopNotificationViewModel(
-            title, message, type, durationMs, CloseNotificationAsync, onClick);
+        var notification = new DesktopNotificationViewModel(title, message, type, durationMs, CloseNotificationAsync, onClick);
 
         var cts = new CancellationTokenSource();
 

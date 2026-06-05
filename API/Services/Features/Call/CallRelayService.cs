@@ -1,70 +1,111 @@
 ﻿using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace API.Services.Features.Call;
 
-public sealed class CallRelayService(
-    IServiceProvider serviceProvider,
-    CallMixerService mixer,
-    IConfiguration configuration,
-    ILogger<CallRelayService> logger) : BackgroundService
+public sealed class CallRelayService : BackgroundService
 {
+    private const int SioUdpConnectionReset = -1744830452;
+
+    private readonly IServiceProvider _serviceProvider;
+    private readonly CallMixerService _mixer;
+    private readonly ILogger<CallRelayService> _logger;
+
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, IPEndPoint>> _endpoints = new();
-    private readonly int _port = configuration.GetValue("CallSettings:RelayPort", 5276);
+    private readonly ConcurrentDictionary<int, IPEndPoint> _userEndpoints = new();
+
+    // Lazy разрывает циклическую зависимость:
+    // CallRelayService → ICallSessionService → CallSessionService → CallRelayService
+    // Singleton резолвится один раз при первом обращении, не в конструкторе.
+    private readonly Lazy<ICallSessionService> _callSessions;
+
+    private readonly int _port;
     private UdpClient? _udpClient;
     private int _mixedSequence;
 
     public int Port => _port;
 
+    public CallRelayService(
+        IServiceProvider serviceProvider,
+        CallMixerService mixer,
+        IConfiguration configuration,
+        ILogger<CallRelayService> logger)
+    {
+        _serviceProvider = serviceProvider;
+        _mixer = mixer;
+        _logger = logger;
+        _port = configuration.GetValue("CallSettings:RelayPort", 5276);
+        _callSessions = new Lazy<ICallSessionService>(
+            () => _serviceProvider.GetRequiredService<ICallSessionService>());
+    }
+
     public void RegisterCall(string callId)
     {
         _endpoints.GetOrAdd(callId, _ => new ConcurrentDictionary<int, IPEndPoint>());
-        mixer.RegisterCall(callId);
+        _mixer.RegisterCall(callId);
     }
 
     public void AddParticipant(string callId, int userId)
     {
         RegisterCall(callId);
-        mixer.AddParticipant(callId, userId, SendMixedAudio);
+        _mixer.AddParticipant(callId, userId, SendMixedAudio);
     }
 
     public void RemoveParticipant(string callId, int userId)
     {
         if (_endpoints.TryGetValue(callId, out var endpoints))
             endpoints.TryRemove(userId, out _);
-
-        mixer.RemoveParticipant(callId, userId);
+        _userEndpoints.TryRemove(userId, out _);
+        _mixer.RemoveParticipant(callId, userId);
     }
 
     public void RemoveCall(string callId)
     {
-        _endpoints.TryRemove(callId, out _);
-        mixer.RemoveCall(callId);
+        if (_endpoints.TryRemove(callId, out var endpoints))
+            foreach (var userId in endpoints.Keys)
+                _userEndpoints.TryRemove(userId, out _);
+        _mixer.RemoveCall(callId);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, _port));
-        logger.LogInformation("Call relay UDP запущен на порту {Port}", _port);
+        DisableUdpConnectionReset(_udpClient);
+        _logger.LogInformation("Call relay UDP запущен на порту {Port}", _port);
 
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var result = await _udpClient.ReceiveAsync(stoppingToken);
-                ProcessPacket(result.Buffer, result.RemoteEndPoint);
+                try
+                {
+                    var result = await _udpClient.ReceiveAsync(stoppingToken);
+                    ProcessPacket(result.Buffer, result.RemoteEndPoint);
+                }
+                catch (SocketException ex)
+                    when (ex.SocketErrorCode == SocketError.ConnectionReset
+                          && !stoppingToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug(ex,
+                        "UDP relay получил ICMP connection reset от клиента и продолжает работу");
+                }
             }
         }
-        catch (OperationCanceledException)
-        {
-            // штатная остановка
-        }
+        catch (OperationCanceledException) { }
         finally
         {
             _udpClient.Dispose();
             _udpClient = null;
         }
+    }
+
+    private static void DisableUdpConnectionReset(UdpClient udpClient)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try { udpClient.Client.IOControl((IOControlCode)SioUdpConnectionReset, [0], null); }
+        catch (SocketException) { }
     }
 
     private void ProcessPacket(byte[] packet, IPEndPoint remoteEndPoint)
@@ -74,46 +115,39 @@ public sealed class CallRelayService(
         var callIdLength = packet[0];
         if (callIdLength <= 0 || packet.Length < 1 + callIdLength + 8) return;
 
-        var callId = System.Text.Encoding.UTF8.GetString(packet, 1, callIdLength);
+        var callId = Encoding.UTF8.GetString(packet, 1, callIdLength);
         var offset = 1 + callIdLength;
         var userId = BinaryPrimitives.ReadInt32LittleEndian(packet.AsSpan(offset, 4));
         offset += 4;
-        _ = BinaryPrimitives.ReadInt32LittleEndian(packet.AsSpan(offset, 4));
-        offset += 4;
+        offset += 4; // seq — пропускаем
 
         if (!IsParticipant(callId, userId)) return;
 
         var endpoints = _endpoints.GetOrAdd(callId, _ => new ConcurrentDictionary<int, IPEndPoint>());
         endpoints[userId] = remoteEndPoint;
+        _userEndpoints[userId] = remoteEndPoint;
 
-        mixer.AddParticipant(callId, userId, SendMixedAudio);
-        mixer.ReceiveAudio(callId, userId, packet.AsSpan(offset));
+        _mixer.AddParticipant(callId, userId, SendMixedAudio);
+        _mixer.ReceiveAudio(callId, userId, packet.AsSpan(offset));
     }
 
+    /// <summary>
+    /// O(1) — Singleton резолвится один раз через Lazy,
+    /// затем только чтение из ConcurrentDictionary.
+    /// </summary>
     private bool IsParticipant(string callId, int userId)
     {
-        var sessions = serviceProvider.GetRequiredService<ICallSessionService>();
-        var session = sessions.GetCall(callId);
+        var session = _callSessions.Value.GetCall(callId);
         return session?.ActiveParticipants.ContainsKey(userId) == true;
     }
 
     private void SendMixedAudio(int userId, byte[] opusData, int opusLength)
     {
         if (_udpClient == null) return;
-
-        IPEndPoint? endpoint = null;
-        foreach (var (_, endpoints) in _endpoints)
-        {
-            if (endpoints.TryGetValue(userId, out endpoint))
-                break;
-        }
-
-        if (endpoint == null) return;
+        if (!_userEndpoints.TryGetValue(userId, out var endpoint)) return;
 
         var packet = new byte[4 + opusLength];
-        BinaryPrimitives.WriteInt32LittleEndian(
-            packet.AsSpan(0, 4),
-            Interlocked.Increment(ref _mixedSequence));
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(0, 4), Interlocked.Increment(ref _mixedSequence));
         Buffer.BlockCopy(opusData, 0, packet, 4, opusLength);
 
         try
@@ -122,7 +156,7 @@ public sealed class CallRelayService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Ошибка отправки микса пользователю {UserId}", userId);
+            _logger.LogWarning(ex, "Ошибка отправки микса пользователю {UserId}", userId);
         }
     }
 }

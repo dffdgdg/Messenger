@@ -45,18 +45,18 @@ public sealed partial class ChatMemberService(MessengerDbContext context, ChatBu
         var chatEntity = await _context.Chats.AsNoTracking().FirstOrDefaultAsync(c => c.Id == chatId);
         if (chatEntity is not null)
         {
-            var chatDto = new ChatDto
+            var chatUpdate = new ChatUpdateEventDto
             {
                 Id = chatEntity.Id,
                 Name = chatEntity.Name,
                 Type = chatEntity.Type,
                 CreatedById = chatEntity.CreatedById ?? 0,
-                LastMessageDate = chatEntity.LastMessageTime,
                 Avatar = chatEntity.Avatar,
-                ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers
+                ShowHistoryForNewMembers = chatEntity.ShowHistoryForNewMembers,
+                CurrentUserRole = role
             };
 
-            await hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatUpdated, chatDto);
+            await hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatUpdated, chatUpdate);
         }
 
         foreach (var connectionId in onlineUserService.GetConnectionIds(userId))

@@ -1,0 +1,11 @@
+{
+  "calls": 2,
+  "participantsPerCall": 30,
+  "durationSeconds": 30,
+  "framesPerSecond": 50,
+  "rampUpSeconds": 0,
+  "relayHost": "127.0.0.1",
+  "relayPort": 0,
+  "minReceiveRatio": 0.50,
+  "verbose": false
+}

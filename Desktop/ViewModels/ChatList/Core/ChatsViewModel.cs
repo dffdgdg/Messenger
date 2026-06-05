@@ -233,6 +233,16 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         if (!IsChatMatchingCurrentTab(update.Type))
             return;
 
+        var target = FindChat(update.Id);
+        if (target == null)
+        {
+            var dto = CreateChatDto(update);
+            dto.UnreadCount = _globalHub.GetUnreadCount(update.Id);
+            InsertAndReturn(new ChatListItemViewModel(dto));
+            _ = RefreshChatDetailsAsync(update.Id);
+            return;
+        }
+
         UpdateChatMeta(update);
     }
 
@@ -542,16 +552,14 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
         foreach (var c in ordered)
             c.UnreadCount = _globalHub.GetUnreadCount(c.Id);
 
+        var selectedChatId = SelectedChat?.Id;
+         
         MergeChats(ordered);
 
         TotalUnreadCount = _globalHub.GetTotalUnread();
 
-        if (SelectedChat != null)
-        {
-            var restored = FindChat(SelectedChat.Id);
-            if (restored != null && !ReferenceEquals(restored, SelectedChat))
-                SelectedChat = restored;
-        }
+        if (selectedChatId.HasValue)
+            ReapplySelectedChatAfterListMutation(selectedChatId.Value);
 
         await SaveCacheSilentAsync(ordered);
     }
@@ -623,6 +631,52 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
         target.Apply(updatedChat);
     }
+    private async Task RefreshChatDetailsAsync(int chatId)
+    {
+        try
+        {
+            var result = await _apiClient.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(chatId));
+            if (!result.Success || result.Data == null)
+            {
+                Debug.WriteLine($"[ChatsVM] Failed to refresh chat {chatId}: {result.Error}");
+                return;
+            }
+
+            var dto = result.Data;
+            if (!IsChatMatchingCurrentTab(dto.Type))
+                return;
+
+            var currentUserId = _authManager.Session.UserId ?? 0;
+            ApplyClientSideTransforms([dto], currentUserId);
+            dto.UnreadCount = _globalHub.GetUnreadCount(chatId);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var target = FindChat(chatId);
+                if (target == null)
+                    InsertAndReturn(new ChatListItemViewModel(dto));
+                else
+                    target.Apply(dto);
+            });
+
+            await SaveCacheSilentAsync([dto]);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ChatsVM] Refresh chat {chatId} error: {ex.Message}");
+        }
+    }
+
+    private static ChatDto CreateChatDto(ChatUpdateEventDto update) => new()
+    {
+        Id = update.Id,
+        Name = update.Name,
+        Type = update.Type,
+        CreatedById = update.CreatedById,
+        Avatar = update.Avatar,
+        ShowHistoryForNewMembers = update.ShowHistoryForNewMembers,
+        CurrentUserRole = update.CurrentUserRole
+    };
 
     private ChatListItemViewModel? FindChat(int chatId) => Chats.FirstOrDefault(c => c.Id == chatId);
 
@@ -643,12 +697,41 @@ public partial class ChatsViewModel : BaseViewModel, IRefreshable
 
     private void MoveChatToTop(ChatListItemViewModel chat)
     {
+        var wasSelected = SelectedChat?.Id == chat.Id;
         var idx = Chats.IndexOf(chat);
         if (idx <= 0) return;
 
         Chats.Move(idx, 0);
-        if (SelectedChat?.Id == chat.Id)
+        if (wasSelected)
+            ReapplySelectedChatAfterListMutation(chat.Id);
+    }
+
+    private void ReapplySelectedChatAfterListMutation(int chatId)
+    {
+        var chat = FindChat(chatId);
+        if (chat == null) return;
+
+        ReapplySelectedChat(chat);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed || CurrentChatViewModel?.Chat?.Id != chatId) return;
+
+            var currentChat = FindChat(chatId);
+            if (currentChat != null)
+                ReapplySelectedChat(currentChat);
+        }, DispatcherPriority.Background);
+    }
+
+    private void ReapplySelectedChat(ChatListItemViewModel chat)
+    {
+        if (!ReferenceEquals(SelectedChat, chat))
+        {
             SelectedChat = chat;
+            return;
+        }
+
+        OnPropertyChanged(nameof(SelectedChat));
     }
 
     private static void ApplyClientSideTransforms(List<ChatDto> chats, int currentUserId)

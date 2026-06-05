@@ -1,262 +1,223 @@
 ﻿using API.Configuration;
 using API.Controllers;
 using API.Services.Core.Auth;
+using API.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using Moq;
 using Shared.Dto.Auth;
 using Shared.Response;
-using System.Security.Claims;
 using Xunit;
 
 namespace API.Tests.Controllers;
 
 public class AuthControllerTests
 {
-    private readonly Mock<IAuthService> _authServiceMock;
-    private readonly Mock<IOptions<JwtSettings>> _jwtOptionsMock;
+    private readonly Mock<IAuthService> _authServiceMock = new();
     private readonly AuthController _controller;
+
+    private static readonly JwtSettings JwtSettings = new()
+    {
+        AccessTokenLifetimeMinutes = 15,
+        RefreshTokenLifetimeDays = 30,
+        Issuer = "API",
+        Audience = "MessengerClient"
+    };
+
+    private const string ValidUser = "evelyn.chen";
+    private const string ValidPassword = "v8#KpT!2xQzL";
+    private const string ValidAccess = "eyJhbGciOiJIUzI1NiJ9.valid_access_token";
+    private const string ValidRefresh = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     public AuthControllerTests()
     {
-        _authServiceMock = new Mock<IAuthService>();
-        _jwtOptionsMock = new Mock<IOptions<JwtSettings>>();
-        _jwtOptionsMock.Setup(o => o.Value).Returns(new JwtSettings
-        {
-            AccessTokenLifetimeMinutes = 15,
-            RefreshTokenLifetimeDays = 30,
-            Issuer = "API",
-            Audience = "MessengerClient"
-        });
+        var jwtOptions = Mock.Of<IOptions<JwtSettings>>(o => o.Value == JwtSettings);
 
         _controller = new AuthController(
             _authServiceMock.Object,
-            _jwtOptionsMock.Object,
-            NullLogger<AuthController>.Instance);
-
-        // Базовый HttpContext для всех тестов
-        var httpContext = new DefaultHttpContext();
-        _controller.ControllerContext = new ControllerContext
+            jwtOptions,
+            NullLogger<AuthController>.Instance)
         {
-            HttpContext = httpContext
-        };
-    }
-
-    private void SetupAuthenticatedUser(string userId = "1")
-    {
-        var httpContext = new DefaultHttpContext
-        {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+            ControllerContext = new ControllerContext
             {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim("sub", userId)
-            }, "TestAuth"))
-        };
-
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContext
+                HttpContext = new DefaultHttpContext()
+            }
         };
     }
 
-    private void SetupRefreshTokenCookie(string refreshToken)
-    {
+    private void SetupAuthenticatedUser(string userId = "582") =>
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, userId),
+                    new Claim("sub", userId)
+                ], "TestAuth"))
+            }
+        };
+
+    private void SetupRefreshTokenCookie(string refreshToken) =>
         _controller.ControllerContext.HttpContext.Request.Headers
             .Append("Cookie", $"refresh_token={refreshToken}");
-    }
+
+    // ── Login ────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Login_InternalError_Returns500()
     {
-        _authServiceMock.Setup(x => x.LoginAsync("alice", "123", It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(x => x.LoginAsync(ValidUser, ValidPassword, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthLoginResult>.Internal("DB error"));
 
-        var result = await _controller.Login(new LoginRequest("alice", "123"), CancellationToken.None);
+        var result = await _controller.Login(new LoginRequest(ValidUser, ValidPassword), CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(500);
+        result.ShouldHaveStatus(500);
     }
 
     [Fact]
     public async Task Login_ValidCredentials_Returns200WithTokens()
     {
-        var expectedAuthResponse = new AuthResponseDto
+        var expected = new AuthResponseDto
         {
-            Id = 1,
-            Username = "alice",
-            DisplayName = "Alice",
-            Token = "access-token",
+            Id = 582,
+            Username = ValidUser,
+            DisplayName = "Evelyn Chen",
+            Token = ValidAccess,
             Role = UserRole.User
         };
 
-        _authServiceMock.Setup(s => s.LoginAsync("alice", "secret123", It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.LoginAsync(ValidUser, ValidPassword, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthLoginResult>.Success(new AuthLoginResult
             {
-                Response = expectedAuthResponse,
-                RefreshToken = "refresh-token-string"
+                Response = expected,
+                RefreshToken = ValidRefresh
             }));
 
-        var result = await _controller.Login(
-            new LoginRequest("alice", "secret123"),
-            CancellationToken.None);
+        var result = await _controller.Login(new LoginRequest(ValidUser, ValidPassword), CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.StatusCode.Should().Be(200);
-
         var body = ok.Value.Should().BeOfType<ApiResponse<AuthResponseDto>>().Subject;
+
         body.Success.Should().BeTrue();
-        body.Data!.Token.Should().Be("access-token");
-        body.Data.Username.Should().Be("alice");
+        body.Data!.Token.Should().Be(ValidAccess);
+        body.Data.Username.Should().Be(ValidUser);
         body.Data.Role.Should().Be(UserRole.User);
     }
 
     [Fact]
     public async Task Login_InvalidCredentials_Returns401()
     {
-        _authServiceMock.Setup(s => s.LoginAsync("alice", "wrongpass", It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.LoginAsync(ValidUser, "Wr0ng#P@ssw0rd!", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthLoginResult>.Unauthorized("Invalid credentials"));
 
-        var result = await _controller.Login(
-            new LoginRequest("alice", "wrongpass"),
-            CancellationToken.None);
+        var result = await _controller.Login(new LoginRequest(ValidUser, "Wr0ng#P@ssw0rd!"), CancellationToken.None);
 
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        unauthorized.StatusCode.Should().Be(401);
+        result.Should().BeOfType<UnauthorizedObjectResult>()
+            .Which.StatusCode.Should().Be(401);
     }
 
     [Fact]
     public async Task Login_UserBanned_Returns403()
     {
-        _authServiceMock.Setup(s => s.LoginAsync("banned_user", "pass123", It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.LoginAsync(ValidUser, ValidPassword, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthLoginResult>.Forbidden("User is banned"));
 
-        var result = await _controller.Login(
-            new LoginRequest("banned_user", "pass123"),
-            CancellationToken.None);
+        var result = await _controller.Login(new LoginRequest(ValidUser, ValidPassword), CancellationToken.None);
 
-        var forbidden = result.Should().BeOfType<ObjectResult>().Subject;
-        forbidden.StatusCode.Should().Be(403);
+        result.ShouldHaveStatus(403);
     }
+
+    // ── Refresh ──────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Refresh_ValidToken_Returns200WithNewTokens()
     {
-        // Arrange
-        var expectedTokenResponse = new TokenResponseDto
-        {
-            Token = "new-access",
-            UserId = 1,
-            Role = UserRole.User
-        };
+        const string oldAccess = "eyJhbGciOiJIUzI1NiJ9.old_valid_access";
+        const string newAccess = "eyJhbGciOiJIUzI1NiJ9.new_access_token";
+        const string newRefresh = "b2c3d4e5-f6a7-8901-bcde-f12345678901";
 
-        _authServiceMock.Setup(s => s.RefreshTokenAsync(
-                "old-access",
-                "old-refresh",
-                It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.RefreshTokenAsync(oldAccess, ValidRefresh, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthRefreshResult>.Success(new AuthRefreshResult
             {
-                Response = expectedTokenResponse,
-                RefreshToken = "new-refresh"
+                Response = new TokenResponseDto { Token = newAccess, UserId = 582, Role = UserRole.User },
+                RefreshToken = newRefresh
             }));
 
-        // Добавляем refresh-токен в cookie
-        SetupRefreshTokenCookie("old-refresh");
+        SetupRefreshTokenCookie(ValidRefresh);
+        var result = await _controller.Refresh(new RefreshTokenRequest(oldAccess), CancellationToken.None);
 
-        // Act
-        var result = await _controller.Refresh(
-            new RefreshTokenRequest("old-access"),
-            CancellationToken.None);
-
-        // Assert
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.StatusCode.Should().Be(200);
-
         var body = ok.Value.Should().BeOfType<ApiResponse<TokenResponseDto>>().Subject;
+
         body.Success.Should().BeTrue();
-        body.Data!.Token.Should().Be("new-access");
-        body.Data.UserId.Should().Be(1);
+        body.Data!.Token.Should().Be(newAccess);
+        body.Data.UserId.Should().Be(582);
         body.Data.Role.Should().Be(UserRole.User);
-    }
-
-    [Fact]
-    public async Task Refresh_ExpiredToken_Returns401()
-    {
-        _authServiceMock.Setup(s => s.RefreshTokenAsync(
-                "expired-access",
-                "expired-refresh",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AuthRefreshResult>.Unauthorized("Token expired"));
-
-        SetupRefreshTokenCookie("expired-refresh");
-
-        var result = await _controller.Refresh(
-            new RefreshTokenRequest("expired-access"),
-            CancellationToken.None);
-
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        unauthorized.StatusCode.Should().Be(401);
     }
 
     [Fact]
     public async Task Refresh_TokenReuseDetected_Returns401()
     {
-        _authServiceMock.Setup(s => s.RefreshTokenAsync(
-                "reused-access",
-                "reused-refresh",
-                It.IsAny<CancellationToken>()))
+        const string reusedAccess = "eyJhbGciOiJIUzI1NiJ9.reused_access_token";
+        const string reusedRefresh = "f9e8d7c6-b5a4-3210-fedc-ba9876543210";
+
+        _authServiceMock
+            .Setup(s => s.RefreshTokenAsync(reusedAccess, reusedRefresh, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AuthRefreshResult>.Unauthorized("Token reuse detected"));
 
-        SetupRefreshTokenCookie("reused-refresh");
+        SetupRefreshTokenCookie(reusedRefresh);
+        var result = await _controller.Refresh(new RefreshTokenRequest(reusedAccess), CancellationToken.None);
 
-        var result = await _controller.Refresh(
-            new RefreshTokenRequest("reused-access"),
-            CancellationToken.None);
-
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        unauthorized.StatusCode.Should().Be(401);
+        result.Should().BeOfType<UnauthorizedObjectResult>()
+            .Which.StatusCode.Should().Be(401);
     }
 
     [Fact]
     public async Task Refresh_MissingCookie_Returns401()
     {
-        // Не добавляем cookie - должен вернуть 401
         var result = await _controller.Refresh(
-            new RefreshTokenRequest("some-access"),
+            new RefreshTokenRequest("eyJhbGciOiJIUzI1NiJ9.some_valid_access"),
             CancellationToken.None);
 
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        unauthorized.StatusCode.Should().Be(401);
+        result.Should().BeOfType<UnauthorizedObjectResult>()
+            .Which.StatusCode.Should().Be(401);
     }
+
+    // ── Revoke ───────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Revoke_ValidRequest_Returns200()
     {
-        _authServiceMock.Setup(s => s.RevokeRefreshTokenAsync(1, It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.RevokeRefreshTokenAsync(582, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
 
-        SetupAuthenticatedUser("1");
-
+        SetupAuthenticatedUser("582");
         var result = await _controller.Revoke(CancellationToken.None);
 
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.StatusCode.Should().Be(200);
+        result.Should().BeOfType<OkObjectResult>()
+            .Which.StatusCode.Should().Be(200);
     }
 
     [Fact]
     public async Task Revoke_ServiceError_Returns500()
     {
-        _authServiceMock.Setup(s => s.RevokeRefreshTokenAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _authServiceMock
+            .Setup(s => s.RevokeRefreshTokenAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Internal("Database error"));
 
-        SetupAuthenticatedUser("1");
-
+        SetupAuthenticatedUser("582");
         var result = await _controller.Revoke(CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(500);
+        result.ShouldHaveStatus(500);
     }
 }

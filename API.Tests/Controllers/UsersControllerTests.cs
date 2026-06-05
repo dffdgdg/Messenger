@@ -13,24 +13,23 @@ namespace API.Tests.Controllers;
 
 public class UsersControllerTests
 {
-    private readonly Mock<IUserService> _userMock;
+    private readonly Mock<IUserService> _userMock = new();
     private readonly UsersController _controller;
 
     public UsersControllerTests()
     {
-        _userMock = new Mock<IUserService>();
         _controller = new UsersController(_userMock.Object, NullLogger<UsersController>.Instance);
-        AuthHelper.SetUser(_controller, userId: 1);
+        AuthHelper.SetUser(_controller, userId: 582);
     }
+
+    // ── 403 ownership guard ──────────────────────────────────────────────────
 
     [Fact]
     public async Task UpdateUser_AnotherUserId_Returns403WithoutCallingService()
     {
-        // TC15: Редактирование чужого профиля → 403, сервис не вызывается
-        var result = await _controller.UpdateUser(id: 99, new UserDto(), CancellationToken.None);
+        var result = await _controller.UpdateUser(id: 731, new UserDto(), CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(403);
+        result.ShouldHaveStatus(403);
         _userMock.Verify(x => x.UpdateUserAsync(
             It.IsAny<int>(), It.IsAny<UserDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -38,11 +37,9 @@ public class UsersControllerTests
     [Fact]
     public async Task ChangePassword_AnotherUserId_Returns403WithoutCallingService()
     {
-        // TC16: Смена пароля чужого аккаунта → 403, сервис не вызывается
-        var result = await _controller.ChangePassword(id: 99, new ChangePasswordDto(), CancellationToken.None);
+        var result = await _controller.ChangePassword(id: 731, new ChangePasswordDto(), CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(403);
+        result.ShouldHaveStatus(403);
         _userMock.Verify(x => x.ChangePasswordAsync(
             It.IsAny<int>(), It.IsAny<ChangePasswordDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -50,13 +47,9 @@ public class UsersControllerTests
     [Fact]
     public async Task UploadAvatar_AnotherUserId_Returns403WithoutCallingService()
     {
-        // TC17: Загрузка аватара от чужого имени → 403, сервис не вызывается
-        var file = new Mock<IFormFile>().Object;
+        var result = await _controller.UploadAvatar(id: 731, new Mock<IFormFile>().Object, CancellationToken.None);
 
-        var result = await _controller.UploadAvatar(id: 99, file, CancellationToken.None);
-
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(403);
+        result.ShouldHaveStatus(403);
         _userMock.Verify(x => x.UploadAvatarAsync(
             It.IsAny<int>(), It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -64,27 +57,25 @@ public class UsersControllerTests
     [Fact]
     public async Task ChangeUsername_AnotherUserId_Returns403WithoutCallingService()
     {
-        // TC18: Смена логина чужого аккаунта → 403, сервис не вызывается
-        var result = await _controller.ChangeUsername(id: 99, new ChangeUsernameDto(), CancellationToken.None);
+        var result = await _controller.ChangeUsername(id: 731, new ChangeUsernameDto(), CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(403);
+        result.ShouldHaveStatus(403);
         _userMock.Verify(x => x.ChangeUsernameAsync(
             It.IsAny<int>(), It.IsAny<ChangeUsernameDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── 404 not found ────────────────────────────────────────────────────────
+
     [Fact]
     public async Task GetUser_ServiceReturnsNotFound_Returns404()
     {
-        // TC19: Запрос несуществующего пользователя → 404
         _userMock.Setup(x => x.GetUserAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<UserDto>.NotFound("Пользователь не найден"));
 
         var result = await _controller.GetUser(999, CancellationToken.None);
 
-        var objectResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(404);
-        var body = objectResult.Value.Should().BeOfType<ApiResponse<UserDto>>().Subject;
-        body.Success.Should().BeFalse();
+        result.Should().BeOfType<NotFoundObjectResult>()
+            .Which.Value.Should().BeOfType<ApiResponse<UserDto>>()
+            .Which.Success.Should().BeFalse();
     }
 }

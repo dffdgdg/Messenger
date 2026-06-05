@@ -2,6 +2,7 @@
 using API.Hubs;
 using API.Middleware;
 using API.Services;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Threading.RateLimiting;
 
@@ -24,7 +25,6 @@ builder.Services.Configure<FormOptions>(options =>
 
 builder.Services.Configure<IISServerOptions>(options =>
     options.MaxRequestBodySize = maxUploadRequestBodySize);
-
 
 builder.Services.Configure<MessengerSettings>(
     builder.Configuration.GetSection(MessengerSettings.SectionName));

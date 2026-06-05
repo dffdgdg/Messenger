@@ -14,11 +14,11 @@ public partial class ChatsView : UserControl
     private bool _compactModeWasForced;
     private bool _hideInfoPanelForWidth;
 
-    private const double COMPACT_WIDTH = 72;
+    private const double COMPACT_WIDTH = 96;
     private const double ENTER_COMPACT_THRESHOLD = 120;
     private const double EXIT_COMPACT_THRESHOLD = 160;
     private const double NORMAL_DEFAULT_WIDTH = 280;
-    private const double MIN_WIDTH = 72;
+    private const double MIN_WIDTH = COMPACT_WIDTH;
     private const double MAX_WIDTH = 400;
     private const double FORCE_COMPACT_ENTER_WIDTH = 1020;
     private const double FORCE_COMPACT_EXIT_WIDTH = 1100;

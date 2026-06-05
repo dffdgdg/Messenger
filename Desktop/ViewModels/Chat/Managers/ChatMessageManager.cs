@@ -372,8 +372,33 @@ public sealed class ChatMessageManager(
 
     public void HandlePollUpdated(PollDto pollDto)
     {
+        if (_disposeCts.IsCancellationRequested || !HasLoadedPoll(pollDto.Id)) return;
+
+        RunInBackground(async () =>
+        {
+            var currentUserPoll = await FetchPollForCurrentUserAsync(pollDto.Id, _disposeCts.Token);
+            if (currentUserPoll == null) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() => ApplyPollUpdate(currentUserPoll));
+        });
+    }
+
+    private void ApplyPollUpdate(PollDto pollDto)
+    {
+        if (_disposeCts.IsCancellationRequested) return;
+
         foreach (var msg in Messages.Where(m => m.PollDto?.Id == pollDto.Id || m.Poll?.PollId == pollDto.Id))
             msg.UpdatePoll(pollDto);
+    }
+
+    private bool HasLoadedPoll(int pollId)
+        => Messages.Any(m => m.PollDto?.Id == pollId || m.Poll?.PollId == pollId);
+
+    private async Task<PollDto?> FetchPollForCurrentUserAsync(int pollId, CancellationToken ct)
+    {
+        var result = await _apiClient.GetAsync<PollDto>(ApiEndpoints.Polls.ById(pollId, _userId), ct);
+
+        return result is { Success: true, Data: not null } ? result.Data : null;
     }
 
     public void MarkAsReadLocally(int messageId)

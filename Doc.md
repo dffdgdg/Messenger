@@ -1,3 +1,4 @@
+```markdown
 # Документация проекта ВнутрьСеть
 
 > **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite
@@ -118,6 +119,11 @@ MapControllers
     "Audience": "MessengerClient",
     "AccessTokenLifetimeMinutes": 15,
     "RefreshTokenLifetimeDays": 30
+  },
+  "CallSettings": {
+    "RelayHost": "",
+    "RelayPort": 5276,
+    "MaxParticipants": 30
   },
   "MessengerSettings": {
     "AdminDepartmentId": 1,
@@ -350,6 +356,7 @@ PK = FK → UserMessage (колонка `message_id`)
 | `InitiatorId` | `int` |
 | `StartedAt` | `DateTimeOffset` |
 | `Status` | `CallStatus` |
+| `Mode` | `CallMode` |
 | `IsGroupCall` | `bool` |
 | `PendingParticipants` | `ConcurrentDictionary<int, CallParticipant>` |
 | `ActiveParticipants` | `ConcurrentDictionary<int, CallParticipant>` |
@@ -478,9 +485,10 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | DTO | Ключевые поля |
 |---|---|
-| `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall` |
-| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (DateTimeOffset), `IsGroupCall`, `Participants` |
+| `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall`, `Mode` |
+| `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (DateTimeOffset), `IsGroupCall`, `Mode`, `Participants` |
 | `CallParticipantDto` | `UserId`, `DisplayName`, `AvatarUrl`, `IsMuted`, `IsSpeaking` |
+| `RelayEndpointInfo` | `Host`, `Port`, `CallId` |
 | `SignalDto` | `CallId`, `FromUserId`, `TargetUserId` (-1=broadcast), `Type`, `Payload` | Сигнальное сообщение. В проекте используется только тип udp-endpoint: Payload = строка вида "192.168.1.5:49200,10.0.0.3:49200" (список IP:port через запятую). |
 | `CallChatMessageDto` | `CallId`, `SenderId`, `SenderName`, `SenderAvatar`, `Text`, `SentAt` |
 
@@ -767,7 +775,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `LeaveCall(callId)` | Покинуть |
 | `DeclineCall(callId)` | Отклонить |
 | `CancelCall(callId)` | Отменить (для группового делегирует в LeaveCall) |
-| `SendSignal(dto)` | Передача сигнального сообщения. В проекте: тип udp-endpoint, Payload = список IP:port локальных адресов отправителя 
+| `SendSignal(dto)` | Передача сигнального сообщения. В проекте: тип udp-endpoint, Payload = список IP:port локальных адресов отправителя |
 | `ToggleMute(callId, isMuted)` | Мьют |
 | `ToggleSpeaking(callId, isSpeaking)` | Индикатор речи |
 | `SendCallMessage(callId, text)` | Сообщение в чате звонка |
@@ -809,6 +817,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `ActiveCallUpdated` | `CallStateDto` |
 | `ActiveCallEnded` | `callId` |
 | `CallError` | `message` |
+| `RelayEndpoint` | `RelayEndpointInfo` |
 | `ReceiveSignal` | `SignalDto` — используется для обмена UDP-эндпоинтами (тип `udp-endpoint`) |
 
 ### Особенности реализации
@@ -879,7 +888,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Метод | Что регистрирует |
 |---|---|
 | `AddMessengerDatabase` | DbContext + PostgreSQL enum mapping через `EnumTypeMappings` |
-| `AddInfrastructureServices` | Репозитории (Scoped), `CacheService`, `AccessControlService`, `FileService`, `TokenService`, `HubNotifier`, `UrlBuilder`, `CallSessionService` (Singleton), `OnlineUserService` (Singleton), бандлы |
+| `AddInfrastructureServices` | Репозитории (Scoped), `CacheService`, `AccessControlService`, `FileService`, `TokenService`, `HubNotifier`, `UrlBuilder`, `CallSessionService` (Singleton), `CallMixerService` (Singleton), `CallRelayService` (HostedService + Singleton), `OnlineUserService` (Singleton), бандлы |
 | `AddBundles` | `TimeBundle`, `UrlBundle`, `CacheBundle`, `NotificationBundle`, `MediaBundle`, `PresenceBundle`, `ChatBundle` |
 | `AddBusinessServices` | Все бизнес-сервисы (Scoped) + `StatusCleanupHostedService` |
 | `AddMessengerJson` | `ReferenceHandler.IgnoreCycles`, `WriteIndented` в Dev |
@@ -963,6 +972,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Сервис | Путь | Строк | Ключевое поведение |
 |---|---|---|---|
 | `CallSessionService` | `Features/Call/` | 150 | Singleton, `ConcurrentDictionary`. Не масштабируется горизонтально |
+| `CallMixerService` | `Features/Call/` | 184 | Микширование Opus-потоков на сервере для ServerMixed. Аудио от всех участников смешивается в один поток для каждого |
+| `CallRelayService` | `Features/Call/` | 128 | UDP relay для групповых звонков (порт 5276). Передаёт аудио между клиентами и CallMixerService |
 | `ChatService` | `Features/Chat/` | ~486 | `BuildChatDto` принимает словарь ролей, устанавливает `CurrentUserRole`. События отправляются через `IHubContext<MessengerHub>` |
 | `ChatMemberService` | `Features/Chat/` | 136 | При удалении участника отправляет `ChatRemoved` персонально через `HubNotifier.SendToUserAsync` |
 | `DepartmentService` | `Features/Department/` | 378 | Автоуправление связанными чатами при CRUD отделов. BFS для проверки циклов в иерархии |
@@ -1023,6 +1034,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|---|
 | `CallEndReason` | Ended, Cancelled, Timeout, Declined | |
 | `CallStatus` | Ringing, Active, Ended | |
+| `CallMode` | PeerToPeer, ServerMixed | Определяет режим передачи аудио: напрямую между клиентами или через серверный микшер |
 | `ChatRole` | Member, Admin, Owner | |
 | `ChatType` | Chat, Department, Contact, DepartmentHeads | `EnumMember`: `"chat"`, `"department"`, `"contact"`, `"department_heads"` |
 | `SystemEventType` | ChatCreated, MemberAdded, MemberRemoved, MemberLeft, RoleChanged, CallStarted, CallEnded, MessagePinned, MessageUnpinned, ChatAvatarUpdated | `[JsonStringEnumConverter]` |
@@ -1165,10 +1177,10 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | Сервис | Назначение |
 |---|---|
-| `CallService` | Оркестратор P2P-звонков. Управляет UDP-сокетом, регистрирует эндпоинты peers, маршрутизирует аудио. CallStarted при первом CallStateUpdated или при JoinCallAsync. |
-| `CallAudioService` | PortAudio 48kHz/моно/20ms. Opus 32kbps, VBR, VOIP-режим, complexity=5. VAD адаптивный: noiseFloor обновляется α=0.005, порог = max(0.008, noiseFloor×2.5). Hold 1200ms, debounce 150ms. Микширование входящих потоков от всех участников в _mixBuffer. |
+| `CallService` | Оркестратор P2P и ServerMixed звонков. Управляет UDP-сокетом (порты 5275/5276). При получении `RelayEndpoint` переключается в режим серверного микшера. Отправляет аудио на relay или напрямую peers. |
+| `CallAudioService` | PortAudio 48kHz/моно/20ms. Opus 32kbps, VBR, VOIP-режим, complexity=5. VAD адаптивный: noiseFloor обновляется α=0.005, порог = max(0.008, noiseFloor×2.5). Hold 1200ms, debounce 150ms. Поддерживает режимы: P2P (микширует индивидуальные очереди) и ServerMixed (плейбек из одного `_serverMixedPlaybackQueue`, заполняемого через `ReceiveMixedAudio`). |
 | `NoiseReducer` | FFT → Wiener Filter → Gate. Decision-Directed SNR α=0.96. Включается/выключается через NoiseSuppressionEnabled. |
-| `CallHubConnection` | SignalR-соединение к /chatHub. Используется только для сигнализации: передача UDP-эндпоинтов через SendSignalAsync (тип udp-endpoint), управление состоянием звонка (join/leave/mute). Retry при 503. |
+| `CallHubConnection` | SignalR-соединение к /chatHub. Используется только для сигнализации: передача UDP-эндпоинтов через SendSignalAsync (тип udp-endpoint), управление состоянием звонка (join/leave/mute). Подписывается на `RelayEndpoint` для получения адреса relay. |
 | `ActiveCallStore` | ObservableObject: `ActiveCall`, `IsCallUiOpen`, `IsInCall` |
 
 ### AudioRecordingState (`Desktop/Services/Features/Media/Audio/`)
@@ -1197,7 +1209,7 @@ Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureIniti
 | `SettingsService` | JSON в AppData |
 | `ThemeService` | `Application.RequestedThemeVariant` |
 | `NavigationService` | Стек истории, проверка авторизации |
-| `ServerDiscoveryService` | UDP 5275, парсит `MESSENGER_HERE:PORT:IP` |
+| `ServerDiscoveryService` | UDP 5275, парсит `MESSENGER_HERE:PORT:IP`. Если IP отсутствует, используется `127.0.0.1` |
 | `NotificationService` | Стек ≤3, анимация прогресс-бара |
 | `DialogService` | Стек диалогов, `Channel<CloseRequest>`, анимация |
 | `CacheMaintenanceService` | Trim, VACUUM, очистка |
@@ -1215,7 +1227,7 @@ Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureIniti
 | `IAudioRecorderService` | `StartAsync`, `StopAsync → AudioRecordingResult?`, `CancelAsync` |
 | `IAuthManager` | `LoginAsync`, `LogoutAsync`, `TryRefreshTokenAsync`, `WaitForInitializationAsync` |
 | `IAuthService` (клиент) | `LoginAsync(username, password)`, `RefreshTokenAsync(accessToken, refreshToken?=null)` |
-| `ICallHubConnection` | 10 методов + 12 событий |
+| `ICallHubConnection` | 10 методов + 12 событий (включая `RelayEndpoint`) |
 | `ICallService` | `StartCallAsync`, `JoinCallAsync`, `LeaveCallAsync`, `ToggleMuteAsync`, события |
 | `IDialogService` | `ShowAsync<T>`, `CloseAsync`, `CloseAllAsync` |
 | `IFileDownloadService` | `DownloadFileAsync(progress?)`, `OpenFileAsync`, `OpenFolderAsync` |
@@ -1339,16 +1351,10 @@ ChatViewModel.SendMessage()
   → обновление UI
 ```
 
-## Звонок
-```
-CallService.StartCallAsync(chatId)
-  → MessengerHub.InitiateCall(chatId)
-  → CallSessionService.CreateCallAsync()
-  → рассылка IncomingCall всем участникам чата
-
 ## Звонок (P2P UDP)
 
-Инициатор → CallService.StartCallAsync(chatId)
+```
+CallService.StartCallAsync(chatId)
   → InitUdp(): UdpClient(0) → случайный локальный порт
   → CallAudioService.Start(): PortAudio input + output streams
   → CallHubConnection.InitiateCallAsync(chatId)
@@ -1361,44 +1367,54 @@ CallService.StartCallAsync(chatId)
   → сервер: CallSession.Status = Active
   → рассылка CallStateUpdated всем участникам
 
-Обмен эндпоинтами (для каждого нового участника):
+Обмен эндпоинтами:
   → CallService.OnCallStateUpdated() / OnParticipantJoined()
   → AnnounceUdpEndpointAsync(targetUserId)
       → SendSignalAsync(SignalDto { Type="udp-endpoint",
           Payload="192.168.1.5:49200,10.0.0.3:49200" })
-  → сервер пересылает сигнал целевому пользователю
-  → OnSignalReceived() → HandleUdpEndpointSignal()
-      → выбор лучшего эндпоинта: совпадение подсети (≥3 октета) → приоритет
+  → OnSignalReceived() → выбор лучшего эндпоинта по совпадению подсети
       → _peerEndpoints[fromUserId] = bestEndpoint
 
 Аудио (реальное время):
-  PortAudio InputCallback (Int16, 48kHz)
-    → _captureBuffer накапливает 960 сэмплов (20ms)
-    → EncodeAndSend():
-        → ProcessVoiceActivity(): RMS → адаптивный noiseFloor → VAD решение
-        → NoiseReducer.Process(): FFT Wiener Gate
-        → если речь: OpusEncoder.Encode() → 32kbps
-        → OnEncodedFrame → SendAudioToAllPeers()
-            → пакет: [userId(4) | seq(4) | opusData]
-            → UdpClient.Send() на каждый _peerEndpoints[peerId]
+  PortAudio InputCallback → Opus кодирование → OnEncodedFrame
+      → SendAudioToAllPeers(): пакет [userId(4) | seq(4) | opusData]
+        на каждый _peerEndpoints[peerId]
+  ReceiveLoopAsync → ProcessUdpPacket → CallAudioService.ReceiveEncodedAudio
+      → декодирование в очередь воспроизведения
+  PortAudio OutputCallback → микширование всех _playbackQueues
+```
 
-  UdpClient ReceiveLoopAsync:
-    → ProcessUdpPacket(): парсит [userId(4) | seq(4) | opusData]
-    → CallAudioService.ReceiveEncodedAudio(fromUserId, opusData)
-        → OpusDecoder.Decode() → float[]
-        → _playbackQueues[fromUserId].Enqueue()
+## Звонок (ServerMixed UDP)
 
-  PortAudio OutputCallback (Float32):
-    → микширует все _playbackQueues в _mixBuffer
-    → Clamp(-1, 1)
-    → Marshal.Copy → output
+```
+При инициализации группового звонка:
+  → сервер устанавливает CallSession.Mode = ServerMixed
+  → вызывает CallRelayService.RegisterCall + AddParticipant
+  → отправляет инициатору RelayEndpoint (RelayEndpointInfo)
+  → CallService.OnRelayEndpoint переключает _mode = ServerMixed
+      и CallAudioService.SetMode(CallMode.ServerMixed)
 
-Завершение:
-  CallService.LeaveCallAsync() / CancelCallAsync()
-  → CallHubConnection.LeaveCallAsync(callId) / CancelCallAsync(callId)
-  → Cleanup(): _receiveCts.Cancel(), UdpClient.Dispose(),
-               _peerEndpoints.Clear(), CallAudioService.Stop()
-  → CallEnded?.Invoke()
+Аудио (клиент → сервер):
+  CallService.SendAudioToRelay(userId, opusData)
+      → пакет: [callIdLen(1) | callId(UTF8) | userId(4) | seq(4) | opusData]
+      → UdpClient.Send на _relayEndpoint
+
+Серверный relay (CallRelayService):
+  → ReceiveLoop → ProcessPacket
+      → валидация участника через CallSessionService
+      → запись эндпоинта, обновление участника
+      → CallMixerService.ReceiveAudio(callId, userId, opusData)
+  CallMixerService каждые 20ms:
+      → микширует все последние кадры (исключая говорящего)
+      → нормализация громкости
+      → кодирование в Opus
+      → CallRelayService.SendMixedAudio для каждого участника
+
+Аудио (сервер → клиент):
+  CallRelayService.SendMixedAudio(userId, opusData)
+      → пакет: [seq(4) | opusData]
+      → отправка на сохранённый IPEndPoint участника
+  Клиент: ProcessUdpPacket → ReceiveMixedAudio → ServerMixed плейбек
 ```
 
 ## Обновление токенов
@@ -1509,23 +1525,11 @@ ChatMemberService.RemoveMemberAsync()
 
 # 21. ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
-## Архитектурные
-
-| # | Проблема | Файл | Рекомендация |
-|---|---|---|---|
-| 1 | `AppDateTime.UtcNow` возвращает `DateTimeKind.Unspecified` вместо `Utc` | `API/Common/AppDateTime.cs` | Заменить на `DateTimeKind.Utc` или использовать `DateTimeOffset` |
-| 2 | `MissingFileCleanupMiddleware` — DB-запрос на каждый 404 `/uploads` или `/avatars` | `API/Middleware/MissingFileCleanupMiddleware.cs` | Добавить rate limiting по IP |
-| 3 | `MessageService` ~516 строк | `API/Services/Features/Messaging/MessageService.cs` | Разбить на `MessageWriter`, `MessageReader`, `MessageSearchService` |
-| 4 | `ChatDto` смешивает данные чата + последнего сообщения + контакта | `Shared/Dto/Chat/ChatDto.cs` | `ChatListItemDto` + `ChatDetailDto` |
-
 ## Баги
 
 | # | Баг | Где воспроизводится | Детали |
 |---|---|---|---|
-| 1 | [ДОПОЛНИТЬ — опиши симптом, файл, условия] | Поля фильтров поиска | |
-| 2 | Нет ручного ввода IP если UDP-обнаружение не работает | `Views/Auth/LoginView.axaml` | Нужна кнопка → диалог `ServerUrlDialogViewModel` уже существует, требуется подключить |
-3	UDP-эндпоинты не верифицируются	CallService.HandleUdpEndpointSignal	Любой участник звонка может объявить произвольный IP:port, сервер пересылает без проверки. Злоумышленник внутри сети может перенаправить аудиопоток.
-3a	UDP-пакеты не аутентифицированы	CallService.ProcessUdpPacket	fromUserId берётся из пакета без верификации — любой в сети может подделать userId и внедриться в аудиопоток.
-3b	Нет шифрования аудио	CallService.SendAudioToAllPeers	Opus-данные передаются открытым текстом по UDP.
-
----
+| 1 | UDP-эндпоинты не верифицируются | `CallService.HandleUdpEndpointSignal` | Любой участник звонка может объявить произвольный IP:port, сервер пересылает без проверки |
+| 2 | UDP-пакеты не аутентифицированы | `CallService.ProcessUdpPacket` | `fromUserId` берётся из пакета без верификации |
+| 3 | Нет шифрования аудио | `CallService.SendAudioToAllPeers` | Opus-данные передаются открытым текстом по UDP |
+```

@@ -1,258 +1,343 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:controls="using:Desktop.Views.Controls"
-			 xmlns:vm="using:Desktop.ViewModels.Department"
-			 xmlns:conv="using:Desktop.Converters"
-			 xmlns:skeleton="using:Desktop.Views.Controls.Skeleton"
-			 x:Class="Desktop.Views.Department.DepartmentManagementView"
-			 x:DataType="vm:DepartmentManagementViewModel"
-			 x:Name="Root"
-			 Background="{DynamicResource PrimaryBG}">
-	<UserControl.Styles>
-		<!-- Стили для кнопок внутри списка сотрудников -->
-<Style Selector="Border.DepartmentCard StackPanel.Actions">
-    <Setter Property="Opacity" Value="0.4"/>
-    <Setter Property="Transitions">
-        <Transitions>
-            <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
-        </Transitions>
-    </Setter>
-</Style>
+<UserControl
+    x:Class="Desktop.Views.Department.DepartmentManagementView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Desktop.Views.Controls"
+    xmlns:conv="using:Desktop.Converters"
+    xmlns:skeleton="using:Desktop.Views.Controls.Skeleton"
+    xmlns:vm="using:Desktop.ViewModels.Department"
+    x:Name="Root"
+    x:DataType="vm:DepartmentManagementViewModel"
+    Background="{DynamicResource PrimaryBG}">
+    <UserControl.Styles>
+        <!--  Стили для кнопок внутри списка сотрудников  -->
+        <Style Selector="Border.DepartmentCard StackPanel.Actions">
+            <Setter Property="Opacity" Value="0.4" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Setter>
+        </Style>
 
-<Style Selector="Border.DepartmentCard:pointerover StackPanel.Actions">
-    <Setter Property="Opacity" Value="1"/>
-</Style>
+        <Style Selector="Border.DepartmentCard:pointerover StackPanel.Actions">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
 
-<!-- Мягкая кнопка удаления (краснеет при наведении) -->
-<Style Selector="Button.DangerSubtle">
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="Foreground" Value="{DynamicResource Icon}"/>
-</Style>
+        <!--  Мягкая кнопка удаления (краснеет при наведении)  -->
+        <Style Selector="Button.DangerSubtle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Icon}" />
+        </Style>
 
-<Style Selector="Button.DangerSubtle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
-</Style>
+        <Style Selector="Button.DangerSubtle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
+        </Style>
 
-<Style Selector="Button.DangerSubtle:pointerover PathIcon">
-    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-</Style>
-	</UserControl.Styles>
-	<Border Classes="PageContainer">
-		<Grid RowDefinitions="Auto,*">
+        <Style Selector="Button.DangerSubtle:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+    </UserControl.Styles>
+    <Border Classes="PageContainer">
+        <Grid RowDefinitions="Auto,*">
 
-			<!-- 1. ЗАГОЛОВОК (Header) -->
-			<Border Grid.Row="0"
-					Background="{DynamicResource SecondaryBG}"
-					Padding="24,18"
-					BorderThickness="0,0,0,1"
-					BorderBrush="{DynamicResource BorderDefault}">
-				<Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-					<StackPanel Spacing="2" VerticalAlignment="Center">
-						<TextBlock Text="Мой отдел" Classes="PageTitle" FontSize="22"/>
-						<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-							<PathIcon Data="{StaticResource OrganizationIcon}"
-									  Foreground="{DynamicResource Accent}"
-									  Width="12" Height="12"/>
-							<TextBlock Text="{Binding DepartmentName}"
-									   Foreground="{DynamicResource TextSecondary}"
-									   FontSize="13"
-									   FontWeight="Medium"/>
-							<TextBlock IsVisible="{Binding CanManage}"
-									   Foreground="{DynamicResource TextMuted}"
-									   FontSize="13">
-								<TextBlock.Text>
-									<MultiBinding StringFormat=" •  {0} онлайн из {1}">
-										<Binding Path="OnlineCount"/>
-										<Binding Path="TotalCount"/>
-									</MultiBinding>
-								</TextBlock.Text>
-							</TextBlock>
-						</StackPanel>
-					</StackPanel>
+            <!--  1. ЗАГОЛОВОК (Header)  -->
+            <Border
+                Grid.Row="0"
+                Padding="24,18"
+                Background="{DynamicResource SecondaryBG}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock
+                            Classes="PageTitle"
+                            FontSize="22"
+                            Text="Мой отдел" />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <PathIcon
+                                Width="12"
+                                Height="12"
+                                Data="{StaticResource OrganizationIcon}"
+                                Foreground="{DynamicResource Accent}" />
+                            <TextBlock
+                                FontSize="13"
+                                FontWeight="Medium"
+                                Foreground="{DynamicResource TextSecondary}"
+                                Text="{Binding DepartmentName}" />
+                        </StackPanel>
+                    </StackPanel>
 
-					<!-- Действия в заголовке -->
-					<StackPanel Grid.Column="1"
-								Orientation="Horizontal"
-								Spacing="10"
-								VerticalAlignment="Center"
-								IsVisible="{Binding CanManage}">
-						<Button Classes="IconButton Subtle"
-								Command="{Binding RefreshCommand}"
-								IsEnabled="{Binding !IsBusy}"
-								ToolTip.Tip="Обновить список">
-							<PathIcon Data="{StaticResource RefreshIcon}" Width="18" Height="18"/>
-						</Button>
-						<Button Classes="Primary"
-								Command="{Binding AddMemberCommand}"
-								Padding="16,8" Height="38">
-							<StackPanel Orientation="Horizontal" Spacing="8">
-								<PathIcon Data="{StaticResource AddIcon}" Width="14" Height="14"/>
-								<TextBlock Text="Добавить сотрудника" FontWeight="SemiBold" Foreground="{DynamicResource TextOnAccent}"/>
-							</StackPanel>
-						</Button>
-					</StackPanel>
-				</Grid>
-			</Border>
+                    <!--  Действия в заголовке  -->
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding CanManage}"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <Button
+                            Classes="IconButton Subtle"
+                            Command="{Binding RefreshCommand}"
+                            IsEnabled="{Binding !IsBusy}"
+                            ToolTip.Tip="Обновить список">
+                            <PathIcon
+                                Width="18"
+                                Height="18"
+                                Data="{StaticResource RefreshIcon}" />
+                        </Button>
+                        <Button
+                            Height="38"
+                            Padding="16,8"
+                            Classes="Primary"
+                            Command="{Binding AddMemberCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon
+                                    Width="14"
+                                    Height="14"
+                                    Data="{StaticResource AddIcon}" />
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextOnAccent}"
+                                    Text="Добавить сотрудника" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-			<Panel Grid.Row="1">
-				<!-- Загрузка -->
-				<skeleton:DepartmentMembersSkeleton IsVisible="{Binding IsBusy}" Background="{DynamicResource PrimaryBG}"/>
+            <Panel Grid.Row="1">
+                <!--  Загрузка  -->
+                <skeleton:DepartmentMembersSkeleton Background="{DynamicResource PrimaryBG}" IsVisible="{Binding IsBusy}" />
 
-				<!-- ОСНОВНОЙ КОНТЕНТ -->
-				<ScrollViewer Classes="ThinScrollbar" Padding="0,24">
-					<ScrollViewer.IsVisible>
-						<MultiBinding Converter="{x:Static BoolConverters.And}">
-							<Binding Path="IsBusy" Converter="{x:Static BoolConverters.Not}"/>
-							<Binding Path="CanManage"/>
-						</MultiBinding>
-					</ScrollViewer.IsVisible>
-					
-					<StackPanel Spacing="24" MaxWidth="1000" HorizontalAlignment="Stretch">
-						
-						<!-- Секция списка (MaxWidth для удобства чтения) -->
-						<Border Classes="Section" MaxWidth="850" 
-								HorizontalAlignment="Center" 
-								BoxShadow="0 4 12 0 #20000000"
-								Background="{DynamicResource PrimaryBG}">
-							<StackPanel Spacing="20">
-								
-								<!-- Инструменты списка -->
-								<Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-									<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-										<PathIcon Data="{StaticResource PersonIcon}"
-												  Width="18" Height="18"
-												  Foreground="{DynamicResource Accent}"/>
-										<TextBlock Text="Состав отдела"
-												   VerticalAlignment="Center"
-												   FontSize="16"
-												   FontWeight="Bold"/>
-										<Border Background="{DynamicResource AccentMuted}" 
-												CornerRadius="6" Padding="6,2">
-											<TextBlock Text="{Binding TotalCount}"
-													   FontSize="12" FontWeight="Bold"
-													   Foreground="{DynamicResource Accent}"/>
-										</Border>
-									</StackPanel>
-									
-									<controls:SearchBox Grid.Column="1"
-														SearchText="{Binding SearchQuery}"
-														Width="260"
-														Watermark="Поиск..."/>
-								</Grid>
+                <!--  ОСНОВНОЙ КОНТЕНТ  -->
+                <ScrollViewer Padding="0,24" Classes="ThinScrollbar">
+                    <ScrollViewer.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Converter="{x:Static BoolConverters.Not}" Path="IsBusy" />
+                            <Binding Path="CanManage" />
+                        </MultiBinding>
+                    </ScrollViewer.IsVisible>
 
-								<!-- Состояние: Не найдено -->
-								<Border IsVisible="{Binding !FilteredMembers.Count}"
-										Padding="60"
-										Background="{DynamicResource PrimaryBG}"
-										CornerRadius="12">
-									<StackPanel Spacing="12" HorizontalAlignment="Center">
-										<PathIcon Data="{StaticResource SearchIcon}"
-												  Width="48" Height="48"
-												  Foreground="{DynamicResource TextMuted}" Opacity="0.5"/>
-										<TextBlock Text="Сотрудники не найдены"
-												   FontWeight="Medium"
-												   Foreground="{DynamicResource TextSecondary}"/>
-									</StackPanel>
-								</Border>
+                    <StackPanel
+                        MaxWidth="1000"
+                        HorizontalAlignment="Stretch"
+                        Spacing="24">
 
-								<!-- Список сотрудников -->
-								<ItemsControl ItemsSource="{Binding FilteredMembers}"
-											  IsVisible="{Binding FilteredMembers.Count}">
-									<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<StackPanel Spacing="4"/>
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
+                        <!--  Секция списка (MaxWidth для удобства чтения)  -->
+                        <Border
+                            MaxWidth="850"
+                            HorizontalAlignment="Center"
+                            Background="{DynamicResource PrimaryBG}"
+                            BoxShadow="0 4 12 0 #20000000"
+                            Classes="Section">
+                            <StackPanel Spacing="20">
 
-									<ItemsControl.ItemTemplate>
-										<DataTemplate DataType="vm:DepartmentMemberViewModel">
-											<!-- Карточка -->
-											<Border Classes="Hoverable DepartmentCard"
-													Background="{DynamicResource ItemBgBrush}"
-													CornerRadius="10"
-													Padding="12,10">
-												<Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <!--  Инструменты списка  -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="10">
+                                        <PathIcon
+                                            Width="18"
+                                            Height="18"
+                                            Data="{StaticResource PersonIcon}"
+                                            Foreground="{DynamicResource Accent}" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="16"
+                                            FontWeight="Bold"
+                                            Text="Состав отдела" />
+                                        <Border
+                                            Padding="6,2"
+                                            Background="{DynamicResource AccentMuted}"
+                                            CornerRadius="6">
+                                            <TextBlock
+                                                FontSize="12"
+                                                FontWeight="Bold"
+                                                Foreground="{DynamicResource Accent}"
+                                                Text="{Binding TotalCount}" />
+                                        </Border>
+                                    </StackPanel>
 
-													<controls:AvatarControl Grid.Column="0"
-																			Classes="Medium"
-																			Source="{Binding AvatarUrl}"
-																			DisplayName="{Binding DisplayName}"
-																			IsOnline="{Binding IsOnline}"
-																			VerticalAlignment="Center"/>
+                                    <controls:SearchBox
+                                        Grid.Column="1"
+                                        Width="260"
+                                        SearchText="{Binding SearchQuery}"
+                                        Watermark="Поиск..." />
+                                </Grid>
 
-													<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-														<TextBlock Text="{Binding DisplayName}"
-																   FontWeight="SemiBold"
-																   FontSize="14"/>
-														<TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-																   Foreground="{DynamicResource TextMuted}"
-																   FontSize="12"/>
-													</StackPanel>
+                                <!--  Состояние: Не найдено  -->
+                                <Border
+                                    Padding="60"
+                                    Background="{DynamicResource PrimaryBG}"
+                                    CornerRadius="12"
+                                    IsVisible="{Binding !FilteredMembers.Count}">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="12">
+                                        <PathIcon
+                                            Width="48"
+                                            Height="48"
+                                            Data="{StaticResource SearchIcon}"
+                                            Foreground="{DynamicResource TextMuted}"
+                                            Opacity="0.5" />
+                                        <TextBlock
+                                            FontWeight="Medium"
+                                            Foreground="{DynamicResource TextSecondary}"
+                                            Text="Сотрудники не найдены" />
+                                    </StackPanel>
+                                </Border>
 
-													<!-- Статус -->
-													<StackPanel Grid.Column="2"
-																Orientation="Horizontal"
-																Spacing="8"
-																VerticalAlignment="Center">
-														<Ellipse Width="8" Height="8"
-																 Fill="{Binding IsOnline, Converter={conv:Converter Name=BoolToOnline}}"/>
-														<TextBlock Text="{Binding StatusText}"
-																   FontSize="12"
-																   Foreground="{DynamicResource TextMuted}"/>
-													</StackPanel>
+                                <!--  Список сотрудников  -->
+                                <ItemsControl IsVisible="{Binding FilteredMembers.Count}" ItemsSource="{Binding FilteredMembers}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
 
-													<!-- Кнопки действий -->
-													<StackPanel Grid.Column="3"
-																Orientation="Horizontal"
-																Spacing="4"
-																Classes="Actions"
-																VerticalAlignment="Center">
-														<Button Classes="IconButton Small Subtle"
-																Command="{Binding #Root.DataContext.OpenChatCommand}"
-																CommandParameter="{Binding}"
-																ToolTip.Tip="Написать">
-															<PathIcon Data="{StaticResource SendIcon}" Width="14" Height="14"/>
-														</Button>
-														<Button Classes="IconButton Small DangerSubtle"
-																Command="{Binding #Root.DataContext.RemoveMemberCommand}"
-																CommandParameter="{Binding}"
-																ToolTip.Tip="Удалить из отдела">
-															<PathIcon Data="{StaticResource CloseIcon}" Width="14" Height="14"/>
-														</Button>
-													</StackPanel>
-												</Grid>
-											</Border>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</StackPanel>
-						</Border>
-					</StackPanel>
-				</ScrollViewer>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:DepartmentMemberViewModel">
+                                            <!--  Карточка  -->
+                                            <Border
+                                                Padding="12,10"
+                                                Background="{DynamicResource ItemBgBrush}"
+                                                Classes="Hoverable DepartmentCard"
+                                                CornerRadius="10">
+                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
 
-				<!-- 2. СОСТОЯНИЕ: ОШИБКА -->
-				<Border Background="{DynamicResource PrimaryBG}" 
-						IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
-						<Panel>
-							<Ellipse Width="80" Height="80" Fill="{DynamicResource DangerBgBrush}"/>
-							<PathIcon Data="{StaticResource WarningIcon}" Width="32" Height="32" Foreground="{DynamicResource DangerBrush}"/>
-						</Panel>
-						<TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource TextSecondary}" TextAlignment="Center" MaxWidth="300"/>
-						<Button Classes="Primary" Content="Повторить запрос" Command="{Binding RefreshCommand}"/>
-					</StackPanel>
-				</Border>
+                                                    <controls:AvatarControl
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        Classes="Medium"
+                                                        DisplayName="{Binding DisplayName}"
+                                                        IsOnline="{Binding IsOnline}"
+                                                        Source="{Binding AvatarUrl}" />
 
-				<!-- 3. СОСТОЯНИЕ: НЕТ ОТДЕЛА -->
-				<Border Background="{DynamicResource PrimaryBG}" IsVisible="{Binding HasNoDepartment}">
-					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
-						<Border Width="80" Height="80" CornerRadius="40" Background="{DynamicResource SecondaryBG}">
-							<PathIcon Data="{StaticResource OrganizationIcon}" Width="32" Height="32" Foreground="{DynamicResource TextMuted}"/>
-						</Border>
-						<TextBlock Text="{Binding NoDepartmentMessage}" Foreground="{DynamicResource TextSecondary}" FontSize="16" FontWeight="Medium"/>
-					</StackPanel>
-				</Border>
-			</Panel>
-		</Grid>
-	</Border>
+                                                    <StackPanel
+                                                        Grid.Column="1"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="1">
+                                                        <TextBlock
+                                                            FontSize="14"
+                                                            FontWeight="SemiBold"
+                                                            Text="{Binding DisplayName}" />
+                                                        <TextBlock
+                                                            FontSize="12"
+                                                            Foreground="{DynamicResource TextMuted}"
+                                                            Text="{Binding Username, StringFormat='@{0}'}" />
+                                                    </StackPanel>
+
+                                                    <!--  Статус  -->
+                                                    <StackPanel
+                                                        Grid.Column="2"
+                                                        VerticalAlignment="Center"
+                                                        Orientation="Horizontal"
+                                                        Spacing="8">
+                                                        <Ellipse
+                                                            Width="8"
+                                                            Height="8"
+                                                            Fill="{Binding IsOnline, Converter={conv:Converter Name=BoolToOnline}}" />
+                                                        <TextBlock
+                                                            FontSize="12"
+                                                            Foreground="{DynamicResource TextMuted}"
+                                                            Text="{Binding StatusText}" />
+                                                    </StackPanel>
+
+                                                    <!--  Кнопки действий  -->
+                                                    <StackPanel
+                                                        Grid.Column="3"
+                                                        VerticalAlignment="Center"
+                                                        Classes="Actions"
+                                                        Orientation="Horizontal"
+                                                        Spacing="4">
+                                                        <Button
+                                                            Classes="IconButton Small Subtle"
+                                                            Command="{Binding #Root.DataContext.OpenChatCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Написать">
+                                                            <PathIcon
+                                                                Width="14"
+                                                                Height="14"
+                                                                Data="{StaticResource SendIcon}" />
+                                                        </Button>
+                                                        <Button
+                                                            Classes="IconButton Small DangerSubtle"
+                                                            Command="{Binding #Root.DataContext.RemoveMemberCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Удалить из отдела">
+                                                            <PathIcon
+                                                                Width="14"
+                                                                Height="14"
+                                                                Data="{StaticResource CloseIcon}" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!--  2. СОСТОЯНИЕ: ОШИБКА  -->
+                <Border Background="{DynamicResource PrimaryBG}" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="20">
+                        <Panel>
+                            <Ellipse
+                                Width="80"
+                                Height="80"
+                                Fill="{DynamicResource DangerBgBrush}" />
+                            <PathIcon
+                                Width="32"
+                                Height="32"
+                                Data="{StaticResource WarningIcon}"
+                                Foreground="{DynamicResource DangerBrush}" />
+                        </Panel>
+                        <TextBlock
+                            MaxWidth="300"
+                            Foreground="{DynamicResource TextSecondary}"
+                            Text="{Binding ErrorMessage}"
+                            TextAlignment="Center" />
+                        <Button
+                            Classes="Primary"
+                            Command="{Binding RefreshCommand}"
+                            Content="Повторить запрос" />
+                    </StackPanel>
+                </Border>
+
+                <!--  3. СОСТОЯНИЕ: НЕТ ОТДЕЛА  -->
+                <Border Background="{DynamicResource PrimaryBG}" IsVisible="{Binding HasNoDepartment}">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="20">
+                        <Border
+                            Width="80"
+                            Height="80"
+                            Background="{DynamicResource SecondaryBG}"
+                            CornerRadius="40">
+                            <PathIcon
+                                Width="32"
+                                Height="32"
+                                Data="{StaticResource OrganizationIcon}"
+                                Foreground="{DynamicResource TextMuted}" />
+                        </Border>
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="Medium"
+                            Foreground="{DynamicResource TextSecondary}"
+                            Text="{Binding NoDepartmentMessage}" />
+                    </StackPanel>
+                </Border>
+            </Panel>
+        </Grid>
+    </Border>
 </UserControl>

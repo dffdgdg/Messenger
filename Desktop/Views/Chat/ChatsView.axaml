@@ -214,7 +214,7 @@
 	</UserControl.Styles>
 	<Grid x:Name="MainGrid">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="280" MinWidth="72" MaxWidth="400"/>
+			<ColumnDefinition Width="280" MinWidth="96" MaxWidth="400"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition MinWidth="400"/>
 			<ColumnDefinition Width="Auto"/>

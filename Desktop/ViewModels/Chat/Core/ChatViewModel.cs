@@ -151,6 +151,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public bool ShowScrollToBottom => !IsScrolledToBottom;
     public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
     public bool CanSendMessageNow => !string.IsNullOrWhiteSpace(NewMessage) || LocalAttachments.Count > 0 || Forward.ForwardingMessage != null;
+    public bool ShowSendMessageButton => CanSendMessageNow && !EditDelete.IsEditMode;
+    public bool ShowVoiceMessageButton => !CanSendMessageNow && !EditDelete.IsEditMode;
 
     public ChatDto? Chat
     {
@@ -196,6 +198,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     public ObservableCollection<MessageViewModel> PinnedMessages { get; } = [];
     public int PinnedCount => PinnedMessages.Count;
+    public bool HasPhotos => PhotosCount > 0;
+    public bool HasFiles => FilesCount > 0;
+    public bool HasPolls => PollsCount > 0;
+    public bool HasPinnedMessages => PinnedCount > 0;
+    public bool HasContactInfoMediaSection => HasPhotos || HasFiles || HasPinnedMessages;
+    public bool HasGroupInfoMediaSection => HasPhotos || HasFiles || HasPinnedMessages || HasPolls;
+
 
     public bool ShowPinnedSection => CurrentInfoSection == InfoSectionType.Pinned;
 
@@ -215,9 +224,23 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     [ObservableProperty] public partial bool HasNewMessages { get; set; }
     [ObservableProperty] public partial bool IsScrolledToBottom { get; set; } = true;
     [ObservableProperty] public partial int UnreadCount { get; set; }
-    [ObservableProperty] public partial int PhotosCount { get; set; }
-    [ObservableProperty] public partial int FilesCount { get; set; }
-    [ObservableProperty] public partial int PollsCount { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPhotos))]
+    [NotifyPropertyChangedFor(nameof(HasContactInfoMediaSection))]
+    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
+    public partial int PhotosCount { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFiles))]
+    [NotifyPropertyChangedFor(nameof(HasContactInfoMediaSection))]
+    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
+    public partial int FilesCount { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPolls))]
+    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
+    public partial int PollsCount { get; set; }
+
     [ObservableProperty] public partial int UserId { get; set; }
     [ObservableProperty] public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
     [ObservableProperty] public partial bool IsInfoSectionOpen { get; set; }
@@ -534,11 +557,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private void SubscribePropertyForwarding()
     {
         ForwardProperties(Typing, (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
-        ForwardProperties(EditDelete, (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)));
+        ForwardProperties(EditDelete,
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)),
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowSendMessageButton)),
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowVoiceMessageButton)));
+        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
         ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
         ForwardProperties(Forward,
             (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)),
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(CanSendMessageNow)));
+            (nameof(ChatForwardHandler.IsForwardMode), nameof(CanSendMessageNow)),
+            (nameof(ChatForwardHandler.IsForwardMode), nameof(ShowSendMessageButton)),
+            (nameof(ChatForwardHandler.IsForwardMode), nameof(ShowVoiceMessageButton)));
         ForwardProperties(Search, (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
         ForwardProperties(Voice, (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
 
@@ -583,7 +612,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _filteredPollsCollectionHandler = (_, _) => OnPropertyChanged(nameof(FilteredPolls));
         InfoPanel.FilteredPolls.CollectionChanged += _filteredPollsCollectionHandler;
 
-        _attachmentsCollectionHandler = (_, _) => OnPropertyChanged(nameof(CanSendMessageNow));
+        _attachmentsCollectionHandler = (_, _) => NotifyComposerActionStateChanged();
         LocalAttachments.CollectionChanged += _attachmentsCollectionHandler;
 
         Context.MessagePinStateChanged += OnMessagePinStateChanged;
@@ -703,7 +732,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Typing.NotifyTextChanged(value);
         _composerCaretIndex = Math.Clamp(_composerCaretIndex, 0, value?.Length ?? 0);
         UpdateMentionSuggestions(value, _composerCaretIndex);
+        NotifyComposerActionStateChanged();
+    }
+
+    private void NotifyComposerActionStateChanged()
+    {
         OnPropertyChanged(nameof(CanSendMessageNow));
+        OnPropertyChanged(nameof(ShowSendMessageButton));
+        OnPropertyChanged(nameof(ShowVoiceMessageButton));
     }
 
     partial void OnIsScrolledToBottomChanged(bool value)
@@ -1046,7 +1082,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;
 
+        NotifyPinnedSummaryChanged();
+    }
+
+    private void NotifyPinnedSummaryChanged()
+    {
         OnPropertyChanged(nameof(PinnedCount));
+        OnPropertyChanged(nameof(HasPinnedMessages));
+        OnPropertyChanged(nameof(HasContactInfoMediaSection));
+        OnPropertyChanged(nameof(HasGroupInfoMediaSection));
+        OnPropertyChanged(nameof(HasMultiplePinned));
         OnPropertyChanged(nameof(HasMultiplePinned));
     }
 
@@ -1106,7 +1151,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 Attachments.Clear();
                 Reply.CancelReply();
                 Forward.CancelForward();
-                OnPropertyChanged(nameof(CanSendMessageNow));
+                NotifyComposerActionStateChanged();
 
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -1517,8 +1562,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (wasBanner)
                 PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;
 
-            OnPropertyChanged(nameof(PinnedCount));
-            OnPropertyChanged(nameof(HasMultiplePinned));
+            NotifyPinnedSummaryChanged();
         }
     }
 
@@ -1533,8 +1577,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         {
             var vm = CreatePinnedMessageViewModel(dto);
             PinnedMessages.Insert(0, vm);
-            OnPropertyChanged(nameof(PinnedCount));
-            OnPropertyChanged(nameof(HasMultiplePinned));
+            NotifyPinnedSummaryChanged();
         }
 
         PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;

@@ -7,7 +7,7 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
 {
     private const string SafeUnixPath = "/usr/bin:/bin";
     private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-
+     
     public string GetDownloadsFolder()
     {
         string downloadsPath;
@@ -126,11 +126,7 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
 
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = filePath,
-                UseShellExecute = true
-            });
+            Process.Start(CreateOpenFileStartInfo(filePath));
         }
         catch (Exception ex)
         {
@@ -153,12 +149,12 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
                 var explorerPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),
                     "explorer.exe");
 
-                Process.Start(CreateSafeProcessStartInfo(explorerPath, $"/select,\"{folderPath}\""));
+                Process.Start(CreateSafeProcessStartInfo(explorerPath, $"/select,{folderPath}"));
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 const string openPath = "/usr/bin/open";
-                Process.Start(CreateSafeProcessStartInfo(openPath, $"-R \"{folderPath}\""));
+                Process.Start(CreateSafeProcessStartInfo(openPath, "-R", folderPath));
             }
             else
             {
@@ -183,7 +179,30 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
 
         return Task.CompletedTask;
     }
-    private static ProcessStartInfo CreateSafeProcessStartInfo(string executablePath, string arguments)
+    private static ProcessStartInfo CreateOpenFileStartInfo(string filePath)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return new ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true,
+                Verb = "open"
+            };
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return CreateSafeProcessStartInfo("/usr/bin/open", filePath);
+
+        const string xdgOpenPrimaryPath = "/usr/bin/xdg-open";
+        const string xdgOpenSecondaryPath = "/bin/xdg-open";
+        var xdgOpenPath = File.Exists(xdgOpenPrimaryPath)
+            ? xdgOpenPrimaryPath : xdgOpenSecondaryPath;
+
+        return CreateSafeProcessStartInfo(xdgOpenPath, filePath);
+    }
+
+    private static ProcessStartInfo CreateSafeProcessStartInfo(string executablePath, params string[] arguments)
     {
         if (!Path.IsPathFullyQualified(executablePath))
             throw new ArgumentException("Executable path must be absolute.", nameof(executablePath));
@@ -194,9 +213,11 @@ public class FileDownloadService(HttpClient httpClient) : IFileDownloadService
         var processStartInfo = new ProcessStartInfo
         {
             FileName = executablePath,
-            Arguments = arguments,
             UseShellExecute = false
         };
+
+        foreach (var argument in arguments)
+            processStartInfo.ArgumentList.Add(argument);
 
         processStartInfo.Environment["PATH"] = SafeUnixPath;
         return processStartInfo;

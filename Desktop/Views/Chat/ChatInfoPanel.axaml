@@ -360,9 +360,12 @@
 
                                 <StackPanel
                                     Margin="16,4,16,0"
-                                    IsVisible="{Binding HasContactInfoMediaSection}"
+                                    IsVisible="{Binding HasGroupInfoMediaSection}"
                                     Spacing="4">
-                                    <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ" />
+                                    <TextBlock
+                                        Classes="SectionHeader"
+                                        IsVisible="{Binding HasGroupInfoMediaSection}"
+                                        Text="МЕДИА И ФАЙЛЫ" />
 
                                     <Button
                                         Classes="InfoRow"
@@ -823,10 +826,7 @@
 
                                 <Border Margin="16,12" Classes="Divider" />
 
-                                <StackPanel
-                                    Margin="16,4,16,0"
-                                    IsVisible="{Binding HasGroupInfoMediaSection}"
-                                    Spacing="4">
+                                <StackPanel Margin="16,4,16,0" Spacing="4">
 
                                     <Button
                                         Margin="0,0,0,4"

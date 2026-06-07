@@ -1,113 +1,133 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
-             xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="using:Desktop.Converters"
-             x:Class="Desktop.Views.UserProfileDialog"
-             x:DataType="vmDialog:UserProfileDialogViewModel">
+<UserControl
+    x:Class="Desktop.Views.UserProfileDialog"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Desktop.Views.Controls"
+    xmlns:conv="using:Desktop.Converters"
+    xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+    x:DataType="vmDialog:UserProfileDialogViewModel">
 
-    <Border Classes="DialogContainer" Width="400">
+    <Border Width="400" Classes="DialogContainer">
         <Grid RowDefinitions="Auto,*,Auto">
 
             <Grid Grid.Row="0" Margin="24,20,24,12">
-                
-                <Button Classes="IconButton Small"
-                        Command="{Binding CloseOnBackgroundClickCommand}"
-                        ToolTip.Tip="Закрыть"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center">
-                    <PathIcon Data="{StaticResource CloseIcon}"
-                              Width="12" Height="12"
-                              Foreground="{DynamicResource TextSecondary}"/>
+
+                <Button
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Classes="IconButton Small"
+                    Command="{Binding CloseOnBackgroundClickCommand}"
+                    ToolTip.Tip="Закрыть">
+                    <PathIcon
+                        Width="12"
+                        Height="12"
+                        Data="{StaticResource CloseIcon}"
+                        Foreground="{DynamicResource TextSecondary}" />
                 </Button>
             </Grid>
 
-            <ScrollViewer Grid.Row="1"
-                          Classes="ThinScrollbar"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer
+                Grid.Row="1"
+                Classes="ThinScrollbar"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,0,0,24">
 
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" Margin="24,12,24,0">
-                        <controls:AvatarControl Classes="XLarge"
-                                                Source="{Binding User.Avatar}"
-                                                DisplayName="{Binding User.DisplayName}"
-                                                IsOnline="{Binding User.IsOnline}"
-                                                StatusType="{Binding User.StatusType}"
-                                                HorizontalAlignment="Center"/>  
+                    <StackPanel
+                        Margin="24,12,24,0"
+                        HorizontalAlignment="Center"
+                        Spacing="16">
+                        <controls:AvatarControl
+                            HorizontalAlignment="Center"
+                            Classes="XLarge"
+                            DisplayName="{Binding User.DisplayName}"
+                            IsOnline="{Binding User.IsOnline}"
+                            Source="{Binding User.Avatar}"
+                            StatusType="{Binding User.StatusType}" />
 
                         <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding User.DisplayName}"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       TextWrapping="Wrap"
-                                       TextAlignment="Center"
-                                       HorizontalAlignment="Center"/>
-                            
-                            <TextBlock FontSize="13"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       TextAlignment="Center"
-                                       TextTrimming="CharacterEllipsis">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="20"
+                                FontWeight="Bold"
+                                Text="{Binding User.DisplayName}"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                FontSize="13"
+                                Foreground="{DynamicResource TextSecondary}"
+                                TextAlignment="Center"
+                                TextTrimming="CharacterEllipsis">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
-                                        <Binding Path="User.IsOnline"/>
-                                        <Binding Path="User.LastOnline"/>
+                                        <Binding Path="User.IsOnline" />
+                                        <Binding Path="User.LastOnline" />
                                     </MultiBinding>
                                 </TextBlock.Text>
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>
 
-                    <Border Height="1" Background="{DynamicResource BorderDefault}" Margin="24,24"/>
+                    <Border
+                        Height="1"
+                        Margin="24,24"
+                        Background="{DynamicResource BorderDefault}" />
 
-                    <StackPanel Spacing="16" Margin="24,0">
-                        <TextBlock Text="ИНФОРМАЦИЯ" Classes="SectionHeader"/>
+                    <StackPanel Margin="24,0" Spacing="16">
+                        <TextBlock Classes="SectionHeader" Text="ИНФОРМАЦИЯ" />
 
                         <Grid ColumnDefinitions="*, Auto">
-                            <TextBlock Text="Имя пользователя"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding User.Username, StringFormat='@{0}'}"
-                                       FontSize="14"
-                                       FontWeight="Medium"
-                                       Foreground="{DynamicResource Accent}"
-                                       HorizontalAlignment="Right"/>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{DynamicResource TextSecondary}"
+                                Text="Имя пользователя" />
+                            <TextBlock
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                FontSize="14"
+                                FontWeight="Medium"
+                                Foreground="{DynamicResource Accent}"
+                                Text="{Binding User.Username, StringFormat='@{0}'}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="*, Auto"
-                              IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Text="Отдел"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Department}"
-                                       FontSize="14"
-                                       FontWeight="Medium"
-                                       Foreground="{DynamicResource TextPrimary}"
-                                       HorizontalAlignment="Right"
-                                       TextTrimming="CharacterEllipsis"
-                                       MaxWidth="200"/>
+                        <Grid ColumnDefinitions="*, Auto" IsVisible="{Binding Department, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{DynamicResource TextSecondary}"
+                                Text="Отдел" />
+                            <TextBlock
+                                Grid.Column="1"
+                                MaxWidth="200"
+                                HorizontalAlignment="Right"
+                                FontSize="14"
+                                FontWeight="Medium"
+                                Foreground="{DynamicResource TextPrimary}"
+                                Text="{Binding Department}"
+                                TextTrimming="CharacterEllipsis" />
                         </Grid>
                     </StackPanel>
 
                 </StackPanel>
             </ScrollViewer>
 
-            <Border Grid.Row="2"
-                    Background="{DynamicResource SecondaryBG}"
-                    CornerRadius="0,0,16,16"
-                    Padding="24,16,24,24">
-                <Button Command="{Binding SendMessageCommand}"
-                        IsVisible="{Binding CanSendMessage}"
-                        Classes="Primary FullWidth"
-                        Height="44">
-                    <TextBlock Text="Отправить сообщение"
-                               FontSize="15"
-                               FontWeight="Medium"
-                               Foreground="{DynamicResource TextOnAccent}"/>
+            <Border
+                Grid.Row="2"
+                Padding="24,16,24,24"
+                Background="{DynamicResource SecondaryBG}"
+                CornerRadius="0,0,16,16">
+                <Button
+                    Height="44"
+                    Classes="Primary FullWidth"
+                    Command="{Binding SendMessageCommand}"
+                    IsVisible="{Binding CanSendMessage}">
+                    <TextBlock
+                        FontSize="15"
+                        FontWeight="Medium"
+                        Foreground="{DynamicResource TextOnAccent}"
+                        Text="Отправить сообщение" />
                 </Button>
             </Border>
 

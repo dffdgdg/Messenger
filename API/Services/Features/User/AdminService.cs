@@ -19,7 +19,8 @@ public partial class AdminService(
     IRefreshTokenRepository tokenRepo,
     ILogger<AdminService> logger,
     IHubContext<MessengerHub> hubContext,
-    IOptions<MessengerSettings> messengerSettings) : BaseService<AdminService>(context, logger), IAdminService
+IOptions<MessengerSettings> messengerSettings,
+    IDepartmentService departmentService) : BaseService<AdminService>(context, logger), IAdminService
 {
     private readonly AppDateTime appDateTime = time.AppDateTime;
     private readonly MessengerSettings _messengerSettings = messengerSettings.Value;
@@ -101,6 +102,12 @@ public partial class AdminService(
         var save = await SaveChangesAsync(ct);
         if (save.IsFailure) return save.As<UserDto>();
 
+        if (user.DepartmentId.HasValue)
+        {
+            var sync = await departmentService.SyncDepartmentChatMembershipAsync(user.Id, null, user.DepartmentId, ct);
+            if (sync.IsFailure) return sync.As<UserDto>();
+        }
+
         LogUserCreated(username, user.Id);
 
         var created = await ProjectToDto(_context.Users.Where(u => u.Id == user.Id)).AsNoTracking().FirstAsync(ct);
@@ -150,8 +157,8 @@ public partial class AdminService(
         user.Midname = dto.Midname?.Trim();
         user.DepartmentId = dto.DepartmentId;
 
-        var save = await SaveChangesAsync(ct);
-        if (save.IsFailure) return save.As<UserDto>();
+        var departmentChatSync = await departmentService.SyncDepartmentChatMembershipAsync(userId, previousDepartmentId, dto.DepartmentId, ct);
+        if (departmentChatSync.IsFailure) return departmentChatSync.As<UserDto>();
 
         // Определяем, изменилась ли роль
         var newRole = await DetermineUserRoleAsync(userId, ct);
@@ -260,9 +267,9 @@ public partial class AdminService(
         return role;
     }
 
-    private static UserRole DetermineOldRole(int? previousDepartmentId, bool wasHead)
+    private UserRole DetermineOldRole(int? previousDepartmentId, bool wasHead)
     {
-        if (previousDepartmentId == 1)
+        if (previousDepartmentId == _messengerSettings.AdminDepartmentId)
             return UserRole.Admin;
         if (wasHead)
             return UserRole.Head;

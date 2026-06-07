@@ -11,4 +11,5 @@ public interface IDepartmentService
     Task<Result> AddUserToDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default);
     Task<Result> RemoveUserFromDepartmentAsync(int departmentId, int userId, int requesterId, CancellationToken ct = default);
     Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default);
+    Task<Result> SyncDepartmentChatMembershipAsync(int userId, int? oldDepartmentId, int? newDepartmentId, CancellationToken ct = default);
 }

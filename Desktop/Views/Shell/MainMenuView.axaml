@@ -403,7 +403,7 @@
             x:Name="SearchPopup"
             Width="460"
             MaxHeight="540"
-            Margin="0,8,0,0"
+            Margin="82,8,0,0"
             Padding="6"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"

@@ -1,10 +1,12 @@
-﻿using API.Services.Base;
+﻿using API.Hubs;
+using API.Services.Base;
 using Shared.Hubs;
 
 namespace API.Services.Department;
 
 public sealed partial class DepartmentService(MessengerDbContext context, IOptions<MessengerSettings> settings, AppDateTime appDateTime,
-    IHubNotifier hubNotifier, ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
+    IHubNotifier hubNotifier, IOnlineUserService onlineUserService, IHubContext<MessengerHub> hubContext,
+    ICacheService cache, ILogger<DepartmentService> logger) : BaseService<DepartmentService>(context, logger), IDepartmentService
 {
     private readonly MessengerSettings _settings = settings.Value;
     private readonly AppDateTime _appDateTime = appDateTime;
@@ -101,12 +103,17 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             {
                 var oldDeptId = headUser.DepartmentId;
                 headUser.DepartmentId = entity.Id;
-                await SyncDepartmentChatMembershipAsync(headUser.Id, oldDeptId, entity.Id, ct);
+                var sync = await SyncDepartmentChatMembershipAsync(headUser.Id, oldDeptId, entity.Id, ct);
+                if (sync.IsFailure) return sync.As<DepartmentDto>();
+
                 await NotifyUserRoleAsync(headUser.Id, ct);
             }
         }
 
         await SyncHeadsChatMembershipAsync(null, entity.HeadId, ct);
+
+        var headsSave = await SaveChangesAsync(ct);
+        if (headsSave.IsFailure) return headsSave.As<DepartmentDto>();
 
         LogDepartmentCreated(entity.Id, entity.Name);
 
@@ -176,7 +183,9 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             {
                 var oldUserDeptId = headUser.DepartmentId;
                 headUser.DepartmentId = id;
-                await SyncDepartmentChatMembershipAsync(headUser.Id, oldUserDeptId, id, ct);
+                var sync = await SyncDepartmentChatMembershipAsync(headUser.Id, oldUserDeptId, id, ct);
+                if (sync.IsFailure) return sync;
+
                 await NotifyUserRoleAsync(headUser.Id, ct);
             }
         }
@@ -280,10 +289,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         var oldDepartmentId = user.DepartmentId;
         user.DepartmentId = departmentId;
 
-        await SyncDepartmentChatMembershipAsync(userId, oldDepartmentId, departmentId, ct);
-
-        var save = await SaveChangesAsync(ct);
-        if (save.IsFailure) return save;
+        var sync = await SyncDepartmentChatMembershipAsync(userId, oldDepartmentId, departmentId, ct);
+        if (sync.IsFailure) return sync;
 
         await NotifyUserRoleAsync(userId, ct);
         LogUserAddedToDepartment(userId, departmentId);
@@ -311,10 +318,8 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         var oldDepartmentId = user.DepartmentId;
         user.DepartmentId = null;
 
-        await SyncDepartmentChatMembershipAsync(userId, oldDepartmentId, null, ct);
-
-        var save = await SaveChangesAsync(ct);
-        if (save.IsFailure) return save;
+        var sync = await SyncDepartmentChatMembershipAsync(userId, oldDepartmentId, null, ct);
+        if (sync.IsFailure) return sync;
 
         await NotifyUserRoleAsync(userId, ct);
         LogUserRemovedFromDepartment(userId, departmentId);
@@ -324,6 +329,17 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
 
     public async Task<Result<bool>> CanManageDepartmentAsync(int userId, int departmentId, CancellationToken ct = default)
         => Result<bool>.Success(await CanManageDepartmentInternalAsync(userId, departmentId, ct));
+
+    public async Task<Result> SyncDepartmentChatMembershipAsync(int userId, int? oldDepartmentId, int? newDepartmentId, CancellationToken ct = default)
+    {
+        var sync = await BuildDepartmentChatMembershipSyncAsync(userId, oldDepartmentId, newDepartmentId, ct);
+
+        var save = await SaveChangesAsync(ct);
+        if (save.IsFailure) return save;
+
+        await NotifyDepartmentChatMembershipChangedAsync(userId, sync, ct);
+        return Result.Success();
+    }
 
     #region Private
     private async Task NotifyUserRoleAsync(int userId, CancellationToken ct)
@@ -386,10 +402,10 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
         }
     }
 
-    private async Task SyncDepartmentChatMembershipAsync(int userId, int? oldDepartmentId, int? newDepartmentId, CancellationToken ct)
+    private async Task<DepartmentChatSyncResult> BuildDepartmentChatMembershipSyncAsync(int userId, int? oldDepartmentId, int? newDepartmentId, CancellationToken ct)
     {
         if (oldDepartmentId == newDepartmentId)
-            return;
+            return DepartmentChatSyncResult.Empty;
 
         var departmentIds = new[] { oldDepartmentId, newDepartmentId }
             .Where(id => id.HasValue)
@@ -398,38 +414,91 @@ public sealed partial class DepartmentService(MessengerDbContext context, IOptio
             .ToList();
 
         if (departmentIds.Count == 0)
-            return;
+            return DepartmentChatSyncResult.Empty;
 
         var chatMap = await _context.Departments
             .Where(d => departmentIds.Contains(d.Id) && d.ChatId.HasValue)
-            .Select(d => new { d.Id, ChatId = d.ChatId!.Value })
-            .ToDictionaryAsync(x => x.Id, x => x.ChatId, ct);
+            .Select(d => new
+            {
+                d.Id,
+                ChatId = d.ChatId!.Value,
+                ChatName = d.Chat != null ? d.Chat.Name : $"Отдел {d.Name}",
+                ChatType = d.Chat != null ? d.Chat.Type : ChatType.Department,
+                CreatedById = d.Chat != null ? d.Chat.CreatedById : null,
+                Avatar = d.Chat != null ? d.Chat.Avatar : null,
+                ShowHistoryForNewMembers = d.Chat == null || d.Chat.ShowHistoryForNewMembers
+            })
+            .ToDictionaryAsync(x => x.Id, x => x, ct);
 
-        if (oldDepartmentId.HasValue && chatMap.TryGetValue(oldDepartmentId.Value, out var oldChatId))
+        int? removedChatId = null;
+        ChatUpdateEventDto? addedChat = null;
+
+        if (oldDepartmentId.HasValue && chatMap.TryGetValue(oldDepartmentId.Value, out var oldChat))
         {
+            removedChatId = oldChat.ChatId;
             var oldMember = await _context.ChatMembers
-                .FirstOrDefaultAsync(cm => cm.ChatId == oldChatId && cm.UserId == userId, ct);
+                .FirstOrDefaultAsync(cm => cm.ChatId == oldChat.ChatId && cm.UserId == userId, ct);
 
             if (oldMember is not null)
                 _context.ChatMembers.Remove(oldMember);
         }
 
-        if (newDepartmentId.HasValue && chatMap.TryGetValue(newDepartmentId.Value, out var newChatId))
+        if (newDepartmentId.HasValue && chatMap.TryGetValue(newDepartmentId.Value, out var newChat))
         {
             var exists = await _context.ChatMembers
-                .AnyAsync(cm => cm.ChatId == newChatId && cm.UserId == userId, ct);
+                .AnyAsync(cm => cm.ChatId == newChat.ChatId && cm.UserId == userId, ct);
 
             if (!exists)
             {
                 _context.ChatMembers.Add(new ChatMember
                 {
-                    ChatId = newChatId,
+                    ChatId = newChat.ChatId,
                     UserId = userId,
+                    Role = ChatRole.Member,
                     JoinedAt = _appDateTime.UtcNow,
                     NotificationsEnabled = true
                 });
             }
+
+            addedChat = new ChatUpdateEventDto
+            {
+                Id = newChat.ChatId,
+                Name = newChat.ChatName,
+                Type = newChat.ChatType,
+                CreatedById = newChat.CreatedById ?? 0,
+                Avatar = newChat.Avatar,
+                ShowHistoryForNewMembers = newChat.ShowHistoryForNewMembers,
+                CurrentUserRole = ChatRole.Member
+            };
         }
+
+        return new DepartmentChatSyncResult(removedChatId, addedChat);
+    }
+
+    private async Task NotifyDepartmentChatMembershipChangedAsync(int userId, DepartmentChatSyncResult sync, CancellationToken ct)
+    {
+        if (sync.RemovedChatId.HasValue)
+        {
+            cache.InvalidateMembership(userId, sync.RemovedChatId.Value);
+            await _hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatRemoved, sync.RemovedChatId.Value);
+
+            foreach (var connectionId in onlineUserService.GetConnectionIds(userId))
+                await hubContext.Groups.RemoveFromGroupAsync(connectionId, $"chat_{sync.RemovedChatId.Value}", ct);
+        }
+
+        if (sync.AddedChat is not null)
+        {
+            cache.InvalidateMembership(userId, sync.AddedChat.Id);
+            await _hubNotifier.SendToUserAsync(userId, HubMethods.Chat.ChatUpdated, sync.AddedChat);
+
+            foreach (var connectionId in onlineUserService.GetConnectionIds(userId))
+                await hubContext.Groups.AddToGroupAsync(connectionId, $"chat_{sync.AddedChat.Id}", ct);
+        }
+    }
+
+    private sealed record DepartmentChatSyncResult(int? RemovedChatId, ChatUpdateEventDto? AddedChat)
+    {
+        public static DepartmentChatSyncResult Empty { get; } = new(null, null);
     }
 
     private async Task<Result> CheckCanManageAsync(int userId, int departmentId, CancellationToken ct)

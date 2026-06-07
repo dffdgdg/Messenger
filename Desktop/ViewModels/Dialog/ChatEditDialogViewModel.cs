@@ -31,7 +31,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     public bool IsNewChat => _originalChat == null;
     public bool IsDepartmentScopedChat => _originalChat?.Type is ChatType.Department or ChatType.DepartmentHeads;
-    public bool ShowDeleteGroupOption => !IsNewChat && !IsDepartmentScopedChat;
+    public bool CanDeleteGroup => !IsNewChat && !IsDepartmentScopedChat && (_isSystemAdmin || CurrentUserRole == ChatRole.Owner);
+    public bool ShowDeleteGroupOption => CanDeleteGroup;
     public int SelectedUsersCount => AvailableUsers.Count(u => u.IsSelected);
     public int ParticipantsCount => SelectedUsersCount;
     public int AdminsCount => AvailableUsers.Count(u => u.IsSelected && SelectedAdminIds.Contains(u.Id));
@@ -92,6 +93,8 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
         SelectedAdminIds = new ObservableCollection<int>(adminIds);
         CurrentUserRole = _existingMembers?.FirstOrDefault(m => m.UserId == _currentUserId)?.Role ?? ChatRole.Owner;
         OnPropertyChanged(nameof(CurrentUserRoleDisplay));
+        OnPropertyChanged(nameof(CanDeleteGroup));
+        OnPropertyChanged(nameof(ShowDeleteGroupOption));
 
         var users = result.Data.Where(u => u.Id != _currentUserId).OrderBy(u => u.DisplayName ?? u.Username).Select(u => new UserListItemViewModel(u, memberIds.Contains(u.Id))).ToList();
 
@@ -146,7 +149,12 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
 
     partial void OnSearchUserQueryChanged(string value) => ApplyUserFilter();
 
-    partial void OnCurrentUserRoleChanged(ChatRole value) => OnPropertyChanged(nameof(CurrentUserRoleDisplay));
+    partial void OnCurrentUserRoleChanged(ChatRole value)
+    {
+        OnPropertyChanged(nameof(CurrentUserRoleDisplay));
+        OnPropertyChanged(nameof(CanDeleteGroup));
+        OnPropertyChanged(nameof(ShowDeleteGroupOption));
+    }
 
     private void ApplyUserFilter()
     {
@@ -280,6 +288,12 @@ public partial class ChatEditDialogViewModel : DialogBaseViewModel
     {
         if (IsNewChat || _originalChat == null || DeleteAction == null || ShowDialogAction == null)
             return;
+
+        if (!CanDeleteGroup)
+        {
+            ErrorMessage = "Удалить группу может только владелец или тех.админ.";
+            return;
+        }
 
         var name = _originalChat.Name ?? Name;
         var confirmDialog = new ConfirmDialogViewModel("Удаление группы",

@@ -122,7 +122,21 @@ public sealed partial class MessageFileViewModel(
         try
         {
             var state = await stateService.GetStateAsync(File);
-            ApplyState(state);
+            if (_disposed) return;
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                ApplyState(state);
+            }
+            else
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!_disposed)
+                        ApplyState(state);
+                });
+            }
+
         }
         catch (Exception ex)
         {

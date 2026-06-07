@@ -1,70 +1,54 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:chatItem="using:Desktop.ViewModels.Chats"
-			 xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="using:Desktop.Converters"
-			 x:Class="Desktop.Views.Controls.Chat.ChatItemView"
-			 x:DataType="chatItem:ChatListItemViewModel">
+﻿<UserControl
+    x:Class="Desktop.Views.Controls.Chat.ChatItemView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:chatItem="using:Desktop.ViewModels.Chats"
+    xmlns:controls="using:Desktop.Views.Controls"
+    xmlns:conv="using:Desktop.Converters"
+    x:DataType="chatItem:ChatListItemViewModel">
 
-	<Grid Height="52" ColumnDefinitions="Auto,*">
-		<controls:AvatarControl Grid.Column="0"
-								Classes="Medium"
-								Source="{Binding Avatar}"
-								DisplayName="{Binding Name}"
-								FallbackIcon="{StaticResource GroupIcon}"
-								ShowOnlineIndicator="False"
-								VerticalAlignment="Center"/>
+    <Panel>
+        <Border
+            Width="3"
+            Margin="-8,0,0,0"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Stretch"
+            Background="{DynamicResource Accent}"
+            CornerRadius="0,2,2,0"
+            IsVisible="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, FallbackValue=False}" />
 
-		<StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,8,0">
-    <TextBlock Text="{Binding Name}" Classes="ChatName"/>
-    
-    <!-- Превью с именем отправителя (только для групп) -->
-    <TextBlock Classes="ChatPreview">
-        <TextBlock.IsVisible>
-            <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                <Binding Path="LastMessagePreview"
-                         Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
-                <Binding Path="!HideSenderPrefix"/>
-                <Binding Path="LastMessageSenderName"
-                         Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
-            </MultiBinding>
-        </TextBlock.IsVisible>
-        <Run Text="{Binding LastMessageSenderName}"/>
-        <Run Text=": "/>
-        <Run Text="{Binding LastMessagePreview}"/>
-    </TextBlock>
-    
-    <!-- Превью без имени отправителя (диалоги, системные, опросы) -->
-    <TextBlock Classes="ChatPreview"
-               Text="{Binding LastMessagePreview}">
-        <TextBlock.IsVisible>
-            <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                <Binding Path="LastMessagePreview"
-                         Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
-                <Binding Path="HideSenderPrefix"/>
-            </MultiBinding>
-        </TextBlock.IsVisible>
-    </TextBlock>
-    
-    <TextBlock Classes="ChatPreview"
-               Text="{Binding LastMessagePreview}">
-        <TextBlock.IsVisible>
-            <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                <Binding Path="LastMessagePreview"
-                         Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
-                <Binding Path="!HideSenderPrefix"/>
-                <Binding Path="LastMessageSenderName"
-                         Converter="{x:Static StringConverters.IsNullOrEmpty}"/>
-            </MultiBinding>
-        </TextBlock.IsVisible>
-    </TextBlock>
-    
-    <TextBlock Text="Нет сообщений"
-               Foreground="{DynamicResource TextMuted}"
-               FontSize="13"
-               Margin="0,2,0,0"
-               IsVisible="{Binding LastMessagePreview,
-               Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-</StackPanel>
-	</Grid>
+        <Grid
+            Height="52"
+            Margin="4,0,0,0"
+            ColumnDefinitions="Auto,*">
+
+            <controls:AvatarControl
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Classes="Medium"
+                DisplayName="{Binding Name}"
+                FallbackIcon="{StaticResource GroupIcon}"
+                ShowOnlineIndicator="False"
+                Source="{Binding Avatar}" />
+
+            <StackPanel
+                Grid.Column="1"
+                Margin="12,0,8,0"
+                VerticalAlignment="Center">
+
+                <TextBlock Classes="ChatName" Text="{Binding Name}" />
+
+                <TextBlock
+                    Classes="ChatPreview"
+                    IsVisible="{Binding FormattedPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Text="{Binding FormattedPreview}" />
+
+                <TextBlock
+                    Classes="ChatPreview"
+                    Foreground="{DynamicResource TextMuted}"
+                    IsVisible="{Binding FormattedPreview, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                    Text="Нет сообщений" />
+            </StackPanel>
+        </Grid>
+    </Panel>
 </UserControl>

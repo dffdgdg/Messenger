@@ -26,10 +26,33 @@ public partial class ChatListItemViewModel : ObservableObject
     }
     partial void OnAvatarChanged(string? value) =>
         Debug.WriteLine($"[ChatListItem id={Id}] Avatar = '{value}'");
+
+    partial void OnLastMessagePreviewChanged(string? value) =>
+    OnPropertyChanged(nameof(FormattedPreview));
+
+    partial void OnLastMessageSenderNameChanged(string? value) =>
+        OnPropertyChanged(nameof(FormattedPreview));
+
+    partial void OnHideSenderPrefixChanged(bool value) =>
+        OnPropertyChanged(nameof(FormattedPreview));
     public int Id { get; }
     public ChatType Type { get; }
     public int CreatedById { get; }
     public int? ContactUserId { get; set; }
+
+    public string FormattedPreview
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(LastMessagePreview))
+                return string.Empty;
+
+            if (HideSenderPrefix || string.IsNullOrEmpty(LastMessageSenderName))
+                return LastMessagePreview;
+
+            return $"{LastMessageSenderName}: {LastMessagePreview}";
+        }
+    }
 
     [ObservableProperty] public partial string? Name { get; set; }
     [ObservableProperty] public partial DateTime? LastMessageDate { get; set; }

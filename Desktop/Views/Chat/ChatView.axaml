@@ -120,37 +120,48 @@
                 <!--  ── Шапка чата ──  -->
                 <Border
                     Grid.Row="0"
+                    Height="64"
                     Padding="16,0"
+                    Background="{DynamicResource ChatHeaderBg}"
                     BorderBrush="{DynamicResource BorderDefault}"
                     BorderThickness="0,0,0,1"
                     ZIndex="10">
                     <Grid ColumnDefinitions="Auto,*,Auto">
+
                         <StackPanel
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Spacing="2">
-                            <TextBlock
-                                FontSize="18"
-                                FontWeight="SemiBold"
-                                Text="{Binding Chat.Name}" />
-                            <TextBlock
-                                FontSize="12"
-                                Foreground="{DynamicResource TextSecondary}"
-                                IsVisible="{Binding Typing.TypingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                Text="{Binding Typing.TypingText}" />
+                            Orientation="Horizontal"
+                            Spacing="10">
+
+                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                <TextBlock
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Text="{Binding Chat.Name}" />
+                                <TextBlock
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondary}"
+                                    IsVisible="{Binding Typing.TypingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    Text="{Binding Typing.TypingText}" />
+                                <TextBlock
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextMuted}"
+                                    IsVisible="{Binding Typing.TypingText, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                                    Text="{Binding MemberCountText}" />
+                            </StackPanel>
                         </StackPanel>
+
                         <Border
                             Grid.Column="2"
-                            Margin="8"
-                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
                             Background="{DynamicResource PrimaryBG}"
                             BoxShadow="0 4 20 0 #18000000"
                             CornerRadius="4">
-                            <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
                                 <Button
                                     Classes="IconButton"
                                     Command="{Binding StartOrJoinCallCommand}"
-                                    CornerRadius="4,0,0,4"
                                     ToolTip.Tip="{Binding HasActiveCall, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Войти в звонок|Начать звонок'}">
                                     <Path
                                         Width="20"
@@ -161,7 +172,6 @@
                                 </Button>
                                 <ToggleButton
                                     Classes="IconButton"
-                                    CornerRadius="4,0,0,4"
                                     IsChecked="{Binding Search.IsSearchMode}"
                                     ToolTip.Tip="Поиск">
                                     <Path
@@ -173,9 +183,8 @@
                                 </ToggleButton>
                                 <ToggleButton
                                     Classes="IconButton"
-                                    CornerRadius="0"
                                     IsChecked="{Binding InfoPanel.IsInfoPanelOpen}"
-                                    ToolTip.Tip="Информация о канале">
+                                    ToolTip.Tip="Информация о чате">
                                     <Path
                                         Width="20"
                                         Height="20"
@@ -183,10 +192,7 @@
                                         Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                                         Stretch="Uniform" />
                                 </ToggleButton>
-                                <Button
-                                    Classes="IconButton"
-                                    CornerRadius="0,4,4,0"
-                                    ToolTip.Tip="Меню">
+                                <Button Classes="IconButton" ToolTip.Tip="Меню">
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                                             <MenuItem
@@ -207,7 +213,8 @@
                                     <Path
                                         Width="20"
                                         Height="20"
-                                        Margin="10,0,0,0"
+                                        Margin="3,0,0,0"
+                                        HorizontalAlignment="Center"
                                         Data="{StaticResource Options}"
                                         Fill="{DynamicResource TextPrimary}"
                                         Stretch="Uniform" />

@@ -212,7 +212,23 @@ public sealed partial class MessageViewModel : ObservableObject, IDisposable
         if (Files.Count > 0)
         {
             FileViewModels = new(Files.Select(f => new MessageFileViewModel(f, _downloadService, _notificationService, _stateService)));
-            // _ = InitFileStatesAsync();
+            _ = InitFileStatesAsync();
+        }
+    }
+
+    private async Task InitFileStatesAsync()
+    {
+        if (_disposed || _stateService is null || FileViewModels.Count == 0) return;
+
+        try
+        {
+            var fileViewModels = FileViewModels.ToArray();
+            await Task.WhenAll(fileViewModels.Select(vm => vm.InitializeAsync()));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MessageVM] InitFileStatesAsync error: {ex.Message}");
+
         }
     }
 

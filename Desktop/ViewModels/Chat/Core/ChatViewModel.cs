@@ -117,6 +117,29 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public ObservableCollection<MessageViewModel> Messages => MessageManager.Messages;
     public ObservableCollection<LocalFileAttachment> LocalAttachments => Attachments.Attachments;
     public ObservableCollection<UserDto> Members => Context.Members;
+    public string MemberCountText
+    {
+        get
+        {
+            switch (Chat.Type)
+            {
+                case ChatType.Contact: return "";
+                default:
+                    {
+                        var count = Context.Members?.Count ?? 0;
+                        return count switch
+                        {
+                            0 => string.Empty,
+                            1 => "1 участник",
+                            var n when n % 100 is >= 11 and <= 14 => $"{n} участников",
+                            var n when n % 10 == 1 => $"{n} участник",
+                            var n when n % 10 is 2 or 3 or 4 => $"{n} участника",
+                            var n => $"{n} участников"
+                        };
+                    }
+            }
+        }
+    }
 
     public ObservableCollection<UserDto> MembersPreview { get; } = [];
     public ObservableCollection<ChatInfoPanelMediaItem> PhotosItems => InfoPanel.PhotosItems;
@@ -591,13 +614,19 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         ForwardProperties(Context,
             (nameof(ChatContext.Chat), nameof(Chat)),
             (nameof(ChatContext.Members), nameof(Members)),
-            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)));
+            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)),
+            (nameof(ChatContext.Members), nameof(MemberCountText)));
 
         ForwardProperties(Notification,
             (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
             (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
 
-        _membersCollectionHandler = (_, _) => ScheduleRefreshInfoPanelLists();
+        _membersCollectionHandler = (_, _) =>
+        {
+            ScheduleRefreshInfoPanelLists();
+            OnPropertyChanged(nameof(MemberCountText));
+        };
+
         Context.Members.CollectionChanged += _membersCollectionHandler;
 
         foreach (var message in MessageManager.Messages)
@@ -857,7 +886,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (Context.IsDisposed) return;
         RebuildMembersPreview();
     }
-    private readonly HashSet<int> _countedMessageIds = [];
 
     private async Task RefreshCountersAndSectionAsync()
     {

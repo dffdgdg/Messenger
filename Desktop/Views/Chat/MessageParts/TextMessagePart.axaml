@@ -3,7 +3,7 @@
              xmlns:shared="using:Desktop.Views.Controls.Shared"
              xmlns:chat="using:Desktop.Views.Chat"
              xmlns:parts="using:Desktop.Views.Chat.MessageParts.Shared"
-             xmlns:vmChat="using:Desktop.ViewModels.Chat"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
              x:Class="Desktop.Views.Chat.MessageParts.TextMessagePart"
              x:DataType="vmChat:MessageViewModel"
              x:Name="TextPartRoot">

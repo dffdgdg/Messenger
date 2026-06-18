@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Desktop.ViewModels.Chat"
+             xmlns:vm="using:Core.ViewModels.Chat"
              xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="using:Desktop.Converters"
-             xmlns:polls="using:Desktop.ViewModels.Chat.Polls"
+             xmlns:conv="using:Core.Converters"
+             xmlns:polls="using:Core.ViewModels.Chat.Polls"
              x:Class="Desktop.Views.Dialog.PollResultsDialog"
              x:DataType="vm:PollResultsDialogViewModel"
              Width="400">

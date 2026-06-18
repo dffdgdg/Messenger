@@ -36,6 +36,7 @@ public static class DependencyInjection
                 npgsql.MapEnum<SystemEventType>("system_event_type");
                 npgsql.MapEnum<UserStatusType>("user_status_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.UserStatusTypeNameTranslator);
                 npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                npgsql.MaxBatchSize(100);
             });
 
             if (environment.IsDevelopment())
@@ -49,7 +50,8 @@ public static class DependencyInjection
     }
 
 
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
@@ -76,6 +78,9 @@ public static class DependencyInjection
         services.AddScoped<IPollRepository, PollRepository>();
 
         services.AddBundles();
+
+        services.Configure<TurnSettings>(configuration.GetSection(TurnSettings.Section));
+        services.AddSingleton<TurnCredentialService>();
 
         return services;
     }

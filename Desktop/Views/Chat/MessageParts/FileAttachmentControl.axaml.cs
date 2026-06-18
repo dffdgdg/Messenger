@@ -1,5 +1,5 @@
 using Avalonia.Media.Imaging;
-using Desktop.ViewModels.Chat;
+using Core.ViewModels.Chat;
 
 namespace Desktop.Views.Chat;
 

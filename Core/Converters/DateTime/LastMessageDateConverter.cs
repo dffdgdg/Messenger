@@ -1,0 +1,19 @@
+﻿using Core.Converters.Base;
+using System.Globalization;
+
+namespace Core.Converters.DateTime;
+
+public sealed class LastMessageDateConverter : ConverterBase<MessageDto, string>
+{
+    private static readonly DateTimeFormatConverter InnerConverter = new() { Format = DateTimeFormat.Chat };
+
+    protected override string? DefaultValue => string.Empty;
+
+    protected override string ConvertCore(MessageDto message, object? parameter, CultureInfo culture)
+    {
+        if (message.CreatedAt == default)
+            return string.Empty;
+
+        return InnerConverter.Convert(message.CreatedAt, typeof(string), null, culture) as string ?? string.Empty;
+    }
+}

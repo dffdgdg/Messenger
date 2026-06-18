@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls.Documents;
 using Avalonia.Input;
-using Desktop.Infrastructure.Diagnostics;
+using Core.Infrastructure.Diagnostics;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Windows.Input;

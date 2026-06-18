@@ -2,15 +2,12 @@
 
 namespace API.Services.Call;
 
-public partial class CallSessionService(
-    ILogger<CallSessionService> logger,
-    CallRelayService relay) : ICallSessionService
+public partial class CallSessionService(ILogger<CallSessionService> logger, CallRelayService relay) : ICallSessionService
 {
     private readonly ConcurrentDictionary<string, CallSession> _calls = new();
     private readonly ConcurrentDictionary<int, string> _chatCallIndex = new();
 
-    public Task<CallSession?> CreateCallAsync(
-        int chatId, int initiatorId, string initiatorConnectionId, ChatType chatType)
+    public Task<CallSession?> CreateCallAsync(int chatId, int initiatorId, string initiatorConnectionId, ChatType chatType)
     {
         if (_chatCallIndex.ContainsKey(chatId))
         {
@@ -57,9 +54,7 @@ public partial class CallSessionService(
         => _calls.TryGetValue(callId, out var session) ? session : null;
 
     public IEnumerable<CallSession> GetAllSessionsForUser(int userId) =>
-        _calls.Values.Where(s =>
-            s.ActiveParticipants.ContainsKey(userId) ||
-            s.PendingParticipants.ContainsKey(userId));
+        _calls.Values.Where(s => s.ActiveParticipants.ContainsKey(userId) || s.PendingParticipants.ContainsKey(userId));
 
     public CallSession? GetActiveCallInChat(int chatId)
     {
@@ -149,46 +144,38 @@ public partial class CallSessionService(
         return Task.FromResult(duration);
     }
 
-    public CallStateDto ToStateDto(
-        CallSession session,
-        Func<int, string?> avatarResolver,
-        Func<int, string?> nameResolver) => new()
+    public CallStateDto ToStateDto(CallSession session, Func<int, string?> avatarResolver, Func<int, string?> nameResolver) => new()
+    {
+        CallId = session.CallId,
+        ChatId = session.ChatId,
+        Status = session.Status,
+        InitiatorId = session.InitiatorId,
+        StartedAt = session.StartedAt,
+        IsGroupCall = session.IsGroupCall,
+        Mode = session.Mode,
+        ElapsedSeconds = (int)(DateTimeOffset.UtcNow - session.StartedAt).TotalSeconds,
+        Participants = [.. session.ActiveParticipants.Values.Select(p => new CallParticipantDto
         {
-            CallId = session.CallId,
-            ChatId = session.ChatId,
-            Status = session.Status,
-            InitiatorId = session.InitiatorId,
-            StartedAt = session.StartedAt,
-            IsGroupCall = session.IsGroupCall,
-            Mode = session.Mode,
-            ElapsedSeconds = (int)(DateTimeOffset.UtcNow - session.StartedAt).TotalSeconds,
-            Participants = [.. session.ActiveParticipants.Values.Select(p => new CallParticipantDto
-        {
-            UserId      = p.UserId,
-            IsMuted     = p.IsMuted,
-            IsSpeaking  = p.IsSpeaking,
+            UserId = p.UserId,
+            IsMuted = p.IsMuted,
+            IsSpeaking = p.IsSpeaking,
             DisplayName = nameResolver(p.UserId) ?? $"User {p.UserId}",
-            AvatarUrl   = avatarResolver(p.UserId)
+            AvatarUrl = avatarResolver(p.UserId)
         })]
-        };
+    };
 
-    [LoggerMessage(Level = LogLevel.Warning,
-        Message = "Попытка создать звонок в чате {ChatId}, где уже есть активный звонок")]
+    [LoggerMessage(Level = LogLevel.Warning,Message = "Попытка создать звонок в чате {ChatId}, где уже есть активный звонок")]
     private partial void LogCallAlreadyExists(int chatId);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Создан звонок {CallId} в чате {ChatId} инициатором {UserId}")]
+    [LoggerMessage(Level = LogLevel.Information,Message = "Создан звонок {CallId} в чате {ChatId} инициатором {UserId}")]
     private partial void LogCallCreated(string callId, int chatId, int userId);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Пользователь {UserId} присоединился к звонку {CallId}")]
+    [LoggerMessage(Level = LogLevel.Information,Message = "Пользователь {UserId} присоединился к звонку {CallId}")]
     private partial void LogUserJoined(int userId, string callId);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Пользователь {UserId} покинул звонок {CallId}. Активных: {Count}")]
+    [LoggerMessage(Level = LogLevel.Information,Message = "Пользователь {UserId} покинул звонок {CallId}. Активных: {Count}")]
     private partial void LogUserLeft(int userId, string callId, int count);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Звонок {CallId} завершён. Длительность: {Duration}")]
+    [LoggerMessage(Level = LogLevel.Information,Message = "Звонок {CallId} завершён. Длительность: {Duration}")]
     private partial void LogCallEnded(string callId, TimeSpan duration);
 }

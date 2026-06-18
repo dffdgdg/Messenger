@@ -1,11 +1,11 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:controls="using:Desktop.Controls"
-			 xmlns:converters="using:Desktop.Converters"
-			 xmlns:conv="using:Desktop.Converters"
+			 xmlns:converters="using:Core.Converters"
+			 xmlns:conv="using:Core.Converters"
 			 xmlns:shared="using:Desktop.Views.Controls.Shared"
-			 xmlns:vmChat="using:Desktop.ViewModels.Chat"
-			 xmlns:media="using:Desktop.Infrastructure.Media"
+			 xmlns:vmChat="using:Core.ViewModels.Chat"
+			 xmlns:media="using:Core.Infrastructure.Media"
 			 x:Class="Desktop.Views.Chat.FileAttachmentControl"
 			 x:DataType="vmChat:MessageFileViewModel">
 	<Grid>

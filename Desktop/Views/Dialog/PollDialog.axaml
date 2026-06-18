@@ -1,15 +1,40 @@
 <UserControl x:Name="Root"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+             xmlns:vmDialog="using:Core.ViewModels.Dialog"
              x:Class="Desktop.Views.PollDialog"
              x:DataType="vmDialog:PollDialogViewModel">
 
-    <Border Classes="DialogContainer">
+    <Border x:Name="DialogContainer"
+            Background="{DynamicResource SecondaryBG}"
+            Classes="DialogContainer">
         <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
 
-            <!-- Шапка -->
-            <Grid Grid.Row="0"
+            <!-- Компактная шапка -->
+            <Grid x:Name="CompactHeader"
+                  Grid.Row="0"
+                  Height="52"
+                  IsVisible="False"
+                  ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Width="44" Height="44"
+                        Margin="6,0,0,0" VerticalAlignment="Center"
+                        Classes="IconButton"
+                        Click="OnBackButtonClick"
+                        ToolTip.Tip="Закрыть">
+                    <Path Width="18" Height="18"
+                          Data="{StaticResource ChevronLeftIcon}"
+                          Fill="{DynamicResource TextPrimary}" Stretch="Uniform" />
+                </Button>
+                <TextBlock Grid.Column="1" Margin="4,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="16" FontWeight="SemiBold"
+                           Text="Создать опрос" />
+                <Panel Grid.Column="2" Width="44" />
+            </Grid>
+
+            <!-- Обычная шапка -->
+            <Grid x:Name="NormalHeader"
+                  Grid.Row="0"
                   ColumnDefinitions="*,Auto"
                   Margin="24,24,24,16">
                 <TextBlock Grid.Column="0"
@@ -18,10 +43,10 @@
                            VerticalAlignment="Center"/>
             </Grid>
 
-            <!-- Разделитель -->
+            <!-- Разделитель под шапкой -->
             <Border Grid.Row="1" Classes="DialogDivider"/>
 
-            <!-- Тело -->
+            <!-- Тело (скроллируемое) -->
             <ScrollViewer Grid.Row="2"
                           Classes="ThinScrollbar"
                           VerticalScrollBarVisibility="Auto"
@@ -77,10 +102,10 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Разделитель -->
+            <!-- Разделитель над футером -->
             <Border Grid.Row="3" Classes="DialogDivider"/>
 
-            <!-- Футер -->
+            <!-- Футер (жестко внизу) -->
             <StackPanel Grid.Row="4"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"

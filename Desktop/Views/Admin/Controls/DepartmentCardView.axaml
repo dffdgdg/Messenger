@@ -2,9 +2,9 @@
     x:Class="Desktop.Views.Controls.Admin.DepartmentCardView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:conv="using:Desktop.Converters"
+    xmlns:conv="using:Core.Converters"
     xmlns:local="using:Desktop.Views.Controls.Admin"
-    xmlns:vm="using:Desktop.ViewModels"
+    xmlns:vm="using:Core.ViewModels"
     x:DataType="vm:HierarchicalDepartmentViewModel">
 
     <UserControl.Styles>

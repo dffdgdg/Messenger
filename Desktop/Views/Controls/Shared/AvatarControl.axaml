@@ -3,7 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Desktop.Views.Controls"
-    xmlns:media="using:Desktop.Infrastructure.Media"
+    xmlns:media="using:Core.Infrastructure.Media"
     x:Name="Root">
 
     <UserControl.Styles>

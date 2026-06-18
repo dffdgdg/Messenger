@@ -1,31 +1,41 @@
+using Avalonia;
 using Avalonia.Input;
 using Avalonia.Reactive;
-using Desktop.ViewModels;
+using Avalonia.VisualTree;
+using Core.Infrastructure;
+using Core.ViewModels;
 using Desktop.Views.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Desktop.Views;
 
 public partial class ChatsView : UserControl
 {
-    private readonly Grid? _mainGrid;
-    private bool _isDragging;
-    private bool _forceCompactMode;
-    private bool _compactModeWasForced;
-    private bool _hideInfoPanelForWidth;
+    // ── Константы ─────────────────────────────────────────────────────────────
 
     private const double COMPACT_WIDTH = 96;
-    private const double ENTER_COMPACT_THRESHOLD = 120;
-    private const double EXIT_COMPACT_THRESHOLD = 160;
     private const double NORMAL_DEFAULT_WIDTH = 280;
     private const double MIN_WIDTH = COMPACT_WIDTH;
     private const double MAX_WIDTH = 400;
-    private const double FORCE_COMPACT_ENTER_WIDTH = 1020;
-    private const double FORCE_COMPACT_EXIT_WIDTH = 1100;
-    private const double HIDE_INFO_PANEL_ENTER_WIDTH = 820;
-    private const double HIDE_INFO_PANEL_EXIT_WIDTH = 900;
+
+    // Пороги для ручного сплиттера (drag)
+    private const double ENTER_COMPACT_THRESHOLD = 120;
+    private const double EXIT_COMPACT_THRESHOLD = 160;
+
+    // ── Состояние ─────────────────────────────────────────────────────────────
+
+    private bool _isDragging;
+    private IDisposable? _layoutModeSubscription;
+    private IDisposable? _windowBoundsSubscription;
+    private ChatsViewModel? _previousVm;
+
+    // Запоминаем ширину которую пользователь выставил вручную
+    private double _userDefinedWidth = NORMAL_DEFAULT_WIDTH;
 
     private readonly IChatInfoPanelStateStore _chatInfoPanelStateStore;
+
+    // ── IsCompactMode ─────────────────────────────────────────────────────────
 
     public static readonly StyledProperty<bool> IsCompactModeProperty =
         AvaloniaProperty.Register<ChatsView, bool>(nameof(IsCompactMode));
@@ -36,28 +46,43 @@ public partial class ChatsView : UserControl
         set => SetValue(IsCompactModeProperty, value);
     }
 
+    // ── LayoutMode ────────────────────────────────────────────────────────────
+
+    public static readonly DirectProperty<ChatsView, LayoutMode> LayoutModeProperty =
+        AvaloniaProperty.RegisterDirect<ChatsView, LayoutMode>(
+            nameof(LayoutMode), o => o.LayoutMode);
+
+    private LayoutMode _layoutMode;
+    public LayoutMode LayoutMode
+    {
+        get => _layoutMode;
+        private set
+        {
+            if (_layoutMode == value) return;
+            var previous = _layoutMode;
+            SetAndRaise(LayoutModeProperty, ref _layoutMode, value);
+            OnLayoutModeChanged(previous, value);
+        }
+    }
+
+    // ── Конструктор ───────────────────────────────────────────────────────────
+
     public ChatsView()
     {
         InitializeComponent();
 
-        _chatInfoPanelStateStore = App.Current.Services.GetRequiredService<IChatInfoPanelStateStore>();
-        _mainGrid = this.FindControl<Grid>("MainGrid");
+        _chatInfoPanelStateStore = App.Current.Services
+            .GetRequiredService<IChatInfoPanelStateStore>();
 
-        DataContextChanged += ChatsView_DataContextChanged;
-        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => EvaluateResponsiveLayout()));
+        DataContextChanged += OnDataContextChanged;
 
-        if (_mainGrid != null)
+        var mainGrid = this.FindControl<Grid>("MainGrid");
+        if (mainGrid != null)
         {
-            var column = _mainGrid.ColumnDefinitions[0];
+            var column = mainGrid.ColumnDefinitions[0];
             var splitter = this.FindControl<GridSplitter>("GridSplitter");
 
-            if (column != null)
-            {
-                column.MinWidth = MIN_WIDTH;
-                column.MaxWidth = MAX_WIDTH;
-
-                column.PropertyChanged += ChatListColumn_PropertyChanged;
-            }
+            column?.PropertyChanged += ChatListColumn_PropertyChanged;
 
             if (splitter != null)
             {
@@ -67,24 +92,192 @@ public partial class ChatsView : UserControl
         }
     }
 
-    private void ChatsView_DataContextChanged(object? sender, EventArgs e)
+    // ── Visual Tree ───────────────────────────────────────────────────────────
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (DataContext is ChatsViewModel vm)
+        base.OnAttachedToVisualTree(e);
+
+        var window = this.FindAncestorOfType<Window>();
+        if (window is MainWindow mainWindow)
         {
-            vm.PropertyChanged += Vm_PropertyChanged;
-            UpdateInfoPanelVisibility(vm);
+            LayoutMode = mainWindow.LayoutMode;
+
+            _layoutModeSubscription = mainWindow
+                .GetObservable(MainWindow.LayoutModeProperty)
+                .Subscribe(new AnonymousObserver<LayoutMode>(m => LayoutMode = m));
+
+            // Подписка на размер окна — для перерасчёта в Normal/Wide
+            _windowBoundsSubscription = mainWindow
+                .GetObservable(Window.BoundsProperty)
+                .Subscribe(new AnonymousObserver<Rect>(_ =>
+                {
+                    if (LayoutMode is LayoutMode.Normal or LayoutMode.Wide)
+                        OnLayoutModeChanged(LayoutMode, LayoutMode);
+                }));
         }
     }
 
-    private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (DataContext is not ChatsViewModel vm) return;
-        if (e.PropertyName == nameof(ChatsViewModel.CurrentChatViewModel) ||
-            e.PropertyName == nameof(ChatsViewModel.CombinedIsInfoPanelVisible))
+        base.OnDetachedFromVisualTree(e);
+        _layoutModeSubscription?.Dispose();
+        _layoutModeSubscription = null;
+        _windowBoundsSubscription?.Dispose();
+        _windowBoundsSubscription = null;
+    }
+
+    // ── LayoutMode changed ────────────────────────────────────────────────────
+
+    private void OnLayoutModeChanged(LayoutMode previous, LayoutMode current)
+    {
+        var mainGrid = this.FindControl<Grid>("MainGrid");
+        if (mainGrid == null) return;
+
+        var col0 = mainGrid.ColumnDefinitions[0]; // список чатов
+        var col1 = mainGrid.ColumnDefinitions[1]; // сплиттер
+        var col2 = mainGrid.ColumnDefinitions[2]; // область чата
+        var col3 = mainGrid.ColumnDefinitions[3]; // инфопанель
+
+        switch (current)
         {
+            case LayoutMode.UltraCompact:
+                var hasChatOpen = DataContext is ChatsViewModel { CurrentChatViewModel: not null };
+
+                // Список чатов: на весь экран когда чат не открыт, скрыт когда открыт
+                col0.MinWidth = 0;
+                col0.MaxWidth = double.PositiveInfinity;
+                col0.Width = hasChatOpen
+                    ? new GridLength(0)
+                    : new GridLength(1, GridUnitType.Star);
+
+                // Область чата: видна только когда чат открыт
+                col2.Width = hasChatOpen
+                    ? new GridLength(1, GridUnitType.Star)
+                    : new GridLength(0);
+                col2.MinWidth = 0;
+
+                // Сплиттер и инфопанель скрыты
+                col1.Width = new GridLength(0);
+                col3.Width = new GridLength(0);
+
+                IsCompactMode = false;
+                break;
+
+            case LayoutMode.Compact:
+                // Список чатов: всегда виден, 72px
+                col0.MinWidth = COMPACT_WIDTH;
+                col0.MaxWidth = COMPACT_WIDTH;
+                col0.Width = new GridLength(COMPACT_WIDTH);
+
+                // Область чата: всегда видна
+                col2.Width = new GridLength(1, GridUnitType.Star);
+                col2.MinWidth = 0;
+
+                // Сплиттер скрыт, инфопанель скрыта
+                col1.Width = new GridLength(0);
+                col3.Width = new GridLength(0);
+
+                IsCompactMode = true;
+                break;
+
+            case LayoutMode.Normal:
+            case LayoutMode.Wide:
+                col0.MinWidth = MIN_WIDTH;
+                col0.MaxWidth = MAX_WIDTH;
+
+                var targetWidth = _userDefinedWidth;
+                if (targetWidth < EXIT_COMPACT_THRESHOLD)
+                    targetWidth = NORMAL_DEFAULT_WIDTH;
+
+                var windowWidth = this.FindAncestorOfType<Window>()?.Bounds.Width ?? 0;
+                var infoPanelOpen = _chatInfoPanelStateStore.IsOpen;
+                var hasOpenChat = DataContext is ChatsViewModel { CurrentChatViewModel: not null };
+
+                if (infoPanelOpen && hasOpenChat && windowWidth > 0)
+                {
+                    // Инфопанель 320px, чат минимум 380px, список: сначала сжимаем до 96px
+                    var minChatWidth = 380.0;
+                    var compactListWidth = COMPACT_WIDTH;
+
+                    // Если инфопанель + чат + текущий список не влезают — сжимаем список
+                    if (windowWidth < 320 + minChatWidth + targetWidth)
+                        targetWidth = compactListWidth;
+
+                    // Если даже с компактным списком не влезает — сжимаем чат
+                    var remainingForChat = windowWidth - 320 - targetWidth;
+                    if (remainingForChat < minChatWidth)
+                        col2.MinWidth = Math.Max(320, remainingForChat); // чат не меньше 320px
+                    else
+                        col2.MinWidth = minChatWidth;
+                }
+                else
+                {
+                    col2.MinWidth = 0;
+                }
+
+                col0.Width = new GridLength(targetWidth);
+                col2.Width = new GridLength(1, GridUnitType.Star);
+                col1.Width = new GridLength(4);
+                col3.Width = GridLength.Auto;
+
+                IsCompactMode = targetWidth <= ENTER_COMPACT_THRESHOLD;
+                break;
+        }
+
+        if (DataContext is ChatsViewModel vm)
             UpdateInfoPanelVisibility(vm);
+    }
+
+    // ── DataContext ───────────────────────────────────────────────────────────
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_previousVm != null)
+            _previousVm.PropertyChanged -= OnVmPropertyChanged;
+
+        _previousVm = DataContext as ChatsViewModel;
+
+        if (_previousVm != null)
+        {
+            _previousVm.PropertyChanged += OnVmPropertyChanged;
+            UpdateInfoPanelVisibility(_previousVm);
         }
     }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (DataContext is not ChatsViewModel vm) return;
+
+        if (e.PropertyName is nameof(ChatsViewModel.CurrentChatViewModel)
+                           or nameof(ChatsViewModel.CombinedIsInfoPanelVisible))
+        {
+            UpdateInfoPanelVisibility(vm);
+
+            if (LayoutMode == LayoutMode.UltraCompact)
+            {
+                var mainGrid = this.FindControl<Grid>("MainGrid");
+                if (mainGrid == null) return;
+
+                var hasChatOpen = vm.CurrentChatViewModel != null;
+
+                mainGrid.ColumnDefinitions[0].Width = hasChatOpen
+                    ? new GridLength(0)
+                    : new GridLength(1, GridUnitType.Star);
+
+                mainGrid.ColumnDefinitions[2].Width = hasChatOpen
+                    ? new GridLength(1, GridUnitType.Star)
+                    : new GridLength(0);
+            }
+            else if (LayoutMode is LayoutMode.Normal or LayoutMode.Wide)
+            {
+                // Пересчитываем — возможно нужно сжать список под инфопанель
+                OnLayoutModeChanged(LayoutMode, LayoutMode);
+            }
+        }
+    }
+
+    // ── Info Panel ────────────────────────────────────────────────────────────
 
     private void UpdateInfoPanelVisibility(ChatsViewModel vm)
     {
@@ -93,126 +286,91 @@ public partial class ChatsView : UserControl
 
         var isAnyChatSelected = vm.CurrentChatViewModel != null;
         var globalOpen = _chatInfoPanelStateStore.IsOpen;
+        var hideForWidth = LayoutMode is LayoutMode.UltraCompact or LayoutMode.Compact;
 
-        panel.IsVisible = isAnyChatSelected && globalOpen && !_hideInfoPanelForWidth;
+        panel.IsVisible = isAnyChatSelected && globalOpen && !hideForWidth;
     }
 
-    private void EvaluateResponsiveLayout()
-    {
-        var width = Bounds.Width;
-        if (width <= 0)
-            return;
+    // ── GridSplitter (только Normal/Wide) ─────────────────────────────────────
 
-        var nextForceCompact = _forceCompactMode ? width < FORCE_COMPACT_EXIT_WIDTH : width <= FORCE_COMPACT_ENTER_WIDTH;
-
-        var nextHideInfoPanel = _hideInfoPanelForWidth ? width < HIDE_INFO_PANEL_EXIT_WIDTH : width <= HIDE_INFO_PANEL_ENTER_WIDTH;
-
-        var layoutChanged = nextForceCompact != _forceCompactMode || nextHideInfoPanel != _hideInfoPanelForWidth;
-
-        _forceCompactMode = nextForceCompact;
-        _hideInfoPanelForWidth = nextHideInfoPanel;
-
-        if (_forceCompactMode && !IsCompactMode && _mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
-        {
-            column.Width = new GridLength(COMPACT_WIDTH);
-            IsCompactMode = true;
-            _compactModeWasForced = true;
-        }
-        else if (!_forceCompactMode && _compactModeWasForced && _mainGrid?.ColumnDefinitions[0] is ColumnDefinition expandedColumn)
-        {
-            expandedColumn.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
-            IsCompactMode = false;
-            _compactModeWasForced = false;
-
-        }
-
-        if (layoutChanged && DataContext is ChatsViewModel vm)
-        {
-            UpdateInfoPanelVisibility(vm);
-        }
-    }
-
-    private void Splitter_DragStarted(object? sender, VectorEventArgs e) => _isDragging = true;
+    private void Splitter_DragStarted(object? sender, VectorEventArgs e)
+        => _isDragging = true;
 
     private void Splitter_DragCompleted(object? sender, VectorEventArgs e)
     {
         _isDragging = false;
 
-        if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
-        {
-            double currentWidth = column.Width.Value;
+        if (LayoutMode is not (LayoutMode.Normal or LayoutMode.Wide)) return;
 
-            if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
-            {
-                column.Width = new GridLength(COMPACT_WIDTH);
-                IsCompactMode = true;
-                _compactModeWasForced = false;
-            }
-            else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
-            {
-                IsCompactMode = false;
-                _compactModeWasForced = false;
-            }
-            else if (IsCompactMode && currentWidth < EXIT_COMPACT_THRESHOLD)
-            {
-                column.Width = new GridLength(COMPACT_WIDTH);
-            }
+        var mainGrid = this.FindControl<Grid>("MainGrid");
+        if (mainGrid?.ColumnDefinitions[0] is not ColumnDefinition column) return;
+
+        var currentWidth = column.Width.Value;
+
+        if (currentWidth <= ENTER_COMPACT_THRESHOLD)
+        {
+            column.Width = new GridLength(COMPACT_WIDTH);
+            IsCompactMode = true;
+        }
+        else
+        {
+            _userDefinedWidth = currentWidth;
+            IsCompactMode = currentWidth <= ENTER_COMPACT_THRESHOLD;
         }
     }
 
     private void ChatListColumn_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (!_isDragging || sender is not ColumnDefinition column || e.Property != ColumnDefinition.WidthProperty)
-            return;
+        if (!_isDragging) return;
+        if (LayoutMode is not (LayoutMode.Normal or LayoutMode.Wide)) return;
+        if (sender is not ColumnDefinition column) return;
+        if (e.Property != ColumnDefinition.WidthProperty) return;
 
-        double currentWidth = column.Width.Value;
+        var currentWidth = column.Width.Value;
 
         if (currentWidth <= ENTER_COMPACT_THRESHOLD && !IsCompactMode)
-        {
             IsCompactMode = true;
-        }
         else if (currentWidth >= EXIT_COMPACT_THRESHOLD && IsCompactMode)
-        {
             IsCompactMode = false;
-        }
     }
+
+    // ── Кнопки ────────────────────────────────────────────────────────────────
 
     public void ToggleCompactMode()
     {
-        if (_forceCompactMode)
-            return;
+        if (LayoutMode is LayoutMode.UltraCompact or LayoutMode.Compact) return;
 
-        if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
+        var mainGrid = this.FindControl<Grid>("MainGrid");
+        if (mainGrid?.ColumnDefinitions[0] is not ColumnDefinition column) return;
+
+        if (IsCompactMode)
         {
-            if (IsCompactMode)
-            {
-                column.Width = new GridLength(NORMAL_DEFAULT_WIDTH);
-                IsCompactMode = false;
-                _compactModeWasForced = false;
-            }
-            else
-            {
-                column.Width = new GridLength(COMPACT_WIDTH);
-                IsCompactMode = true;
-                _compactModeWasForced = false;
-            }
+            var targetWidth = _userDefinedWidth >= EXIT_COMPACT_THRESHOLD
+                ? _userDefinedWidth
+                : NORMAL_DEFAULT_WIDTH;
+
+            column.Width = new GridLength(targetWidth);
+            IsCompactMode = false;
+        }
+        else
+        {
+            _userDefinedWidth = column.Width.Value;
+            column.Width = new GridLength(COMPACT_WIDTH);
+            IsCompactMode = true;
         }
     }
 
     public void ExpandFromCompact()
     {
-        if (IsCompactMode)
-        {
-            ToggleCompactMode();
-        }
+        if (IsCompactMode) ToggleCompactMode();
     }
 
-    private void OnExpandButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ToggleCompactMode();
+    private void OnExpandButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => ToggleCompactMode();
 
     private void OnSearchButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         ExpandFromCompact();
-
         Dispatcher.UIThread.Post(() =>
         {
             var searchBox = this.FindControl<SearchBox>("SearchTextBox");
@@ -227,19 +385,6 @@ public partial class ChatsView : UserControl
             vm.UserProfileDialog = null;
             e.Handled = true;
         }
-    }
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        if (_mainGrid?.ColumnDefinitions[0] is ColumnDefinition column)
-        {
-            double width = column.Width.Value;
-            IsCompactMode = width <= ENTER_COMPACT_THRESHOLD;
-        }
-
-        EvaluateResponsiveLayout();
     }
 
     private void OnSearchBoxFocused(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

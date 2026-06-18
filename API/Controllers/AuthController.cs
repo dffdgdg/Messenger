@@ -8,7 +8,7 @@ public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtS
     private const string RefreshTokenCookieName = "refresh_token";
 
     [AllowAnonymous]
-    [EnableRateLimiting("login")]
+    //[EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {

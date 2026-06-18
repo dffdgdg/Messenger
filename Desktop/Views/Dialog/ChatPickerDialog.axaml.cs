@@ -1,5 +1,5 @@
 using Avalonia.Input;
-using Desktop.ViewModels.Dialog;
+using Core.ViewModels.Dialog;
 
 namespace Desktop.Views.Dialog;
 

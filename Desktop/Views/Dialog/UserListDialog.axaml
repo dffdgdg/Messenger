@@ -1,127 +1,190 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
-             xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="clr-namespace:Desktop.Converters;assembly=Desktop"
-             xmlns:converters="using:Desktop.Converters"
-             x:Class="Desktop.Views.Dialog.UserListDialog"
-             x:DataType="vmDialog:UserListDialogViewModel">
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vmDialog="using:Core.ViewModels.Dialog"
+    xmlns:controls="using:Desktop.Views.Controls"
+    xmlns:converters="using:Core.Converters"
+    x:Class="Desktop.Views.Dialog.UserListDialog"
+    x:DataType="vmDialog:UserListDialogViewModel">
 
-    <Border Classes="DialogContainer" MinHeight="500">
+    <Border
+        x:Name="DialogContainer"
+        Background="{DynamicResource SecondaryBG}"
+        Classes="DialogContainer">
         <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
 
-            <!-- Шапка -->
-            <Grid Grid.Row="0"
-                  ColumnDefinitions="*,Auto,Auto"
-                  Margin="24,24,24,16">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding Title}"
-                           Classes="DialogTitle Small"
-                           VerticalAlignment="Center"/>
-                <Border Grid.Column="1"
-                        Classes="CountBadge"
-                        VerticalAlignment="Center"
-                        Margin="0,0,8,0"
-                        IsVisible="{Binding IsEditMode}">
-                    <TextBlock Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}"
-                               FontSize="11"
-                               FontWeight="SemiBold"/>
+            <!--  Шапка компактного режима  -->
+            <Grid
+                x:Name="CompactHeader"
+                Grid.Row="0"
+                Height="52"
+                IsVisible="False"
+                ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button
+                    Grid.Column="0"
+                    Width="44"
+                    Height="44"
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    Classes="IconButton"
+                    Command="{Binding CancelCommand}"
+                    ToolTip.Tip="Закрыть">
+                    <Path
+                        Width="18"
+                        Height="18"
+                        Data="{StaticResource ChevronLeftIcon}"
+                        Fill="{DynamicResource TextPrimary}"
+                        Stretch="Uniform" />
+                </Button>
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="4,0,0,0"
+                    VerticalAlignment="Center"
+                    Classes="DialogTitle Small"
+                    Text="{Binding Title}"
+                    TextTrimming="CharacterEllipsis" />
+                <Border
+                    Grid.Column="2"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Classes="CountBadge"
+                    IsVisible="{Binding IsEditMode}">
+                    <TextBlock
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}" />
                 </Border>
-                <Button Grid.Column="2"
-                        Classes="IconButton"
-                        Command="{Binding CancelCommand}"
-                        ToolTip.Tip="Закрыть">
-                    <PathIcon Data="{StaticResource CloseIcon}"
-                              Width="14" Height="14"
-                              Foreground="{DynamicResource TextSecondary}"/>
+                <Panel Grid.Column="3" Width="44" />
+            </Grid>
+
+            <!--  Шапка обычного режима  -->
+            <Grid
+                x:Name="NormalHeader"
+                Grid.Row="0"
+                Margin="24,20,24,16"
+                ColumnDefinitions="*,Auto,Auto">
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Classes="DialogTitle Small"
+                    Text="{Binding Title}" />
+                <Border
+                    Grid.Column="1"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Classes="CountBadge"
+                    IsVisible="{Binding IsEditMode}">
+                    <TextBlock
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Text="{Binding SelectedCount, StringFormat='Выбрано: {0}'}" />
+                </Border>
+                <Button
+                    Grid.Column="2"
+                    Classes="IconButton"
+                    Command="{Binding CancelCommand}"
+                    ToolTip.Tip="Закрыть">
+                    <PathIcon
+                        Width="14"
+                        Height="14"
+                        Data="{StaticResource CloseIcon}"
+                        Foreground="{DynamicResource TextSecondary}" />
                 </Button>
             </Grid>
 
-            <!-- Разделитель верхний -->
-            <Border Grid.Row="1" Classes="DialogDivider"/>
+            <!--  Разделитель верхний  -->
+            <Border Grid.Row="1" Classes="DialogDivider" />
 
-            <!-- Поиск -->
-            <TextBox Grid.Row="2"
-                     Text="{Binding SearchQuery}"
-                     PlaceholderText="Поиск по имени или логину..."
-                     Classes="Input Search"
-                     Margin="24,16,24,12">
+            <!--  Поиск  -->
+            <TextBox
+                Grid.Row="2"
+                Margin="12,12,12,8"
+                Classes="Input Search"
+                PlaceholderText="Поиск по имени или логину..."
+                Text="{Binding SearchQuery}">
                 <TextBox.InnerLeftContent>
-                    <PathIcon Data="{StaticResource SearchIcon}"
-                              Classes="InputIcon"
-                              Margin="12,0,8,0"/>
+                    <PathIcon
+                        Margin="12,0,8,0"
+                        Classes="InputIcon"
+                        Data="{StaticResource SearchIcon}" />
                 </TextBox.InnerLeftContent>
             </TextBox>
 
-            <!-- Список — строка * -->
-            <Border Grid.Row="3"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderDefault}"
-                    CornerRadius="8"
-                    ClipToBounds="True"
-                    Margin="24,0,24,16">
+            <!--  Список  -->
+            <Border
+                Grid.Row="3"
+                Margin="12,0,12,12"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="1"
+                ClipToBounds="True"
+                CornerRadius="8">
                 <Grid>
-                    <!-- Пустое состояние -->
-                    <StackPanel VerticalAlignment="Center"
-                                HorizontalAlignment="Center"
-                                Spacing="12"
-                                Margin="24"
-                                IsVisible="{Binding !FilteredItems.Count}">
-                        <PathIcon Data="{StaticResource PersonIcon}"
-                                  Width="48" Height="48"
-                                  Foreground="{DynamicResource TextMuted}"
-                                  HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding EmptyMessage}"
-                                   Classes="TextSecondary"
-                                   HorizontalAlignment="Center"/>
+                    <!--  Пустое состояние  -->
+                    <StackPanel
+                        Margin="24"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding !FilteredItems.Count}"
+                        Spacing="12">
+                        <PathIcon
+                            Width="48"
+                            Height="48"
+                            HorizontalAlignment="Center"
+                            Data="{StaticResource PersonIcon}"
+                            Foreground="{DynamicResource TextMuted}" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            Classes="TextSecondary"
+                            Text="{Binding EmptyMessage}" />
                     </StackPanel>
 
-                    <!-- Список -->
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  Classes="ThinScrollbar"
-                                  IsVisible="{Binding FilteredItems.Count}">
-                        <ItemsControl ItemsSource="{Binding FilteredItems}" Margin="4">
+                    <!--  Список  -->
+                    <ScrollViewer
+                        Classes="ThinScrollbar"
+                        HorizontalScrollBarVisibility="Disabled"
+                        IsVisible="{Binding FilteredItems.Count}"
+                        VerticalScrollBarVisibility="Auto">
+                        <ItemsControl Margin="4" ItemsSource="{Binding FilteredItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vmDialog:UserListItemViewModel">
-                                    <Border Classes="PickerItem"
-                                            PointerPressed="OnUserItemPressed">
-                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto"
-                                              ColumnSpacing="12">
-
-                                            <CheckBox Grid.Column="0"
-                                                      IsChecked="{Binding IsSelected}"
-                                                      IsEnabled="{Binding $parent[UserControl].DataContext.AllowEdit}"
-                                                      VerticalAlignment="Center"
-                                                      IsVisible="{Binding $parent[UserControl].DataContext.IsEditMode}"/>
-
+                                    <Border Classes="PickerItem" PointerPressed="OnUserItemPressed">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+                                            <CheckBox
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                IsChecked="{Binding IsSelected}"
+                                                IsEnabled="{Binding $parent[UserControl].DataContext.AllowEdit}"
+                                                IsVisible="{Binding $parent[UserControl].DataContext.IsEditMode}" />
                                             <controls:AvatarControl
                                                 Grid.Column="1"
-                                                Size="36"
-                                                Source="{Binding AvatarUrl}"
                                                 DisplayName="{Binding DisplayName}"
                                                 IsOnline="False"
-                                                ShowOnlineIndicator="False"/>
-
-                                            <StackPanel Grid.Column="2"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="2">
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           FontWeight="Medium"
-                                                           FontSize="14"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Username}"
-                                                           FontSize="12"
-                                                           Classes="TextSecondary"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                ShowOnlineIndicator="False"
+                                                Size="36"
+                                                Source="{Binding AvatarUrl}" />
+                                            <StackPanel
+                                                Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
+                                                <TextBlock
+                                                    FontSize="14"
+                                                    FontWeight="Medium"
+                                                    Text="{Binding DisplayName}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    FontSize="12"
+                                                    Classes="TextSecondary"
+                                                    Text="{Binding Username}"
+                                                    TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
-
-                                            <PathIcon Grid.Column="3"
-                                                      Data="{StaticResource CheckmarkIcon}"
-                                                      Width="16" Height="16"
-                                                      Foreground="{DynamicResource AccentBrush}"
-                                                      VerticalAlignment="Center"
-                                                      IsVisible="{Binding IsSelected}"/>
+                                            <PathIcon
+                                                Grid.Column="3"
+                                                Width="16"
+                                                Height="16"
+                                                VerticalAlignment="Center"
+                                                Data="{StaticResource CheckmarkIcon}"
+                                                Foreground="{DynamicResource AccentBrush}"
+                                                IsVisible="{Binding IsSelected}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -131,62 +194,75 @@
                 </Grid>
             </Border>
 
-            <!-- Разделитель нижний -->
-            <Border Grid.Row="4" Classes="DialogDivider"/>
+            <!--  Разделитель нижний  -->
+            <Border Grid.Row="4" Classes="DialogDivider" />
 
-            <!-- Футер -->
-            <Grid Grid.Row="5"
-                  ColumnDefinitions="Auto,*,Auto,Auto"
-                  Margin="24,16,24,24">
+            <!--  Футер  -->
+            <Grid
+                Grid.Row="5"
+                Margin="12,12,12,16"
+                ColumnDefinitions="Auto,*,Auto,Auto">
 
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            Spacing="6"
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding IsEditMode}">
-                    <PathIcon Data="{StaticResource EditIcon}"
-                              Width="14" Height="14"
-                              Foreground="{DynamicResource TextSecondary}"/>
-                    <TextBlock Text="Редактирование"
-                               FontSize="12"
-                               Classes="TextSecondary"/>
+                <StackPanel
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding IsEditMode}"
+                    Orientation="Horizontal"
+                    Spacing="6">
+                    <PathIcon
+                        Width="14"
+                        Height="14"
+                        Data="{StaticResource EditIcon}"
+                        Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock
+                        FontSize="12"
+                        Classes="TextSecondary"
+                        Text="Редактирование" />
                 </StackPanel>
 
-                <Border Grid.Column="1"/>
+                <Border Grid.Column="1" />
 
-                <Button Grid.Column="2"
-                        Content="{Binding IsEditMode,
-                            Converter={converters:Converter Name=BoolToString},
-                            ConverterParameter='Назад|Отмена'}"
-                        Classes="DialogOutline"
-                        Command="{Binding CancelCommand}"
-                        MinWidth="100"
-                        Margin="0,0,12,0"/>
+                <Button
+                    Grid.Column="2"
+                    MinWidth="90"
+                    Margin="0,0,10,0"
+                    Classes="DialogOutline"
+                    Command="{Binding CancelCommand}"
+                    Content="{Binding IsEditMode,
+                        Converter={converters:Converter Name=BoolToString},
+                        ConverterParameter='Назад|Отмена'}" />
 
-                <Panel Grid.Column="3" MinWidth="100">
-                    <Button Classes="DialogAccent"
-                            Command="{Binding BeginEditCommand}"
-                            IsVisible="{Binding ShowEditButton}"
-                            HorizontalAlignment="Stretch">
+                <Panel Grid.Column="3" MinWidth="90">
+                    <Button
+                        HorizontalAlignment="Stretch"
+                        Classes="DialogAccent"
+                        Command="{Binding BeginEditCommand}"
+                        IsVisible="{Binding ShowEditButton}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="{StaticResource EditIcon}"
-                                      Width="14" Height="14"
-                                      Foreground="{DynamicResource TextOnAccent}"/>
-                            <TextBlock Text="{Binding EditButtonText}"
-                                       Foreground="{DynamicResource TextOnAccent}"/>
+                            <PathIcon
+                                Width="14"
+                                Height="14"
+                                Data="{StaticResource EditIcon}"
+                                Foreground="{DynamicResource TextOnAccent}" />
+                            <TextBlock
+                                Foreground="{DynamicResource TextOnAccent}"
+                                Text="{Binding EditButtonText}" />
                         </StackPanel>
                     </Button>
-
-                    <Button Classes="DialogAccent"
-                            Command="{Binding SaveCommand}"
-                            IsVisible="{Binding ShowSaveButton}"
-                            HorizontalAlignment="Stretch">
+                    <Button
+                        HorizontalAlignment="Stretch"
+                        Classes="DialogAccent"
+                        Command="{Binding SaveCommand}"
+                        IsVisible="{Binding ShowSaveButton}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="{StaticResource CheckmarkIcon}"
-                                      Width="14" Height="14"
-                                      Foreground="{DynamicResource TextOnAccent}"/>
-                            <TextBlock Text="Сохранить"
-                                       Foreground="{DynamicResource TextOnAccent}"/>
+                            <PathIcon
+                                Width="14"
+                                Height="14"
+                                Data="{StaticResource CheckmarkIcon}"
+                                Foreground="{DynamicResource TextOnAccent}" />
+                            <TextBlock
+                                Foreground="{DynamicResource TextOnAccent}"
+                                Text="Сохранить" />
                         </StackPanel>
                     </Button>
                 </Panel>

@@ -2,12 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="using:Desktop.Views.Controls.Shared"
              xmlns:parts="using:Desktop.Views.Chat.MessageParts.Shared"
-             xmlns:vmChat="using:Desktop.ViewModels.Chat"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
              x:Class="Desktop.Views.Chat.MessageParts.VoiceMessagePart"
              x:DataType="vmChat:MessageViewModel"
              x:Name="VoiceRoot">
 
     <StackPanel>
+
         <!-- Удалённое состояние -->
         <StackPanel IsVisible="{Binding IsDeleted}">
             <TextBlock Text="{Binding DisplayContent}"
@@ -22,75 +23,111 @@
                 Opacity="0.7"/>
         </StackPanel>
 
-        <!-- Плеер (скрыт при удалении) -->
+        <!-- Плеер -->
         <Border Classes="VoicePlayerContainer"
-                IsVisible="{Binding !IsDeleted}">
-            <StackPanel Spacing="0">
-                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="46, 12, *">
-                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                            Classes="VoicePlayBtn"
-                            Width="46" Height="46"
-                            Command="{Binding PlayVoiceCommand}"
-                            IsVisible="{Binding ShowPlayButton}"
-                            ToolTip.Tip="Воспроизвести">
-                        <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
-                    </Button>
-                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                            Classes="VoicePlayBtn"
-                            Width="46" Height="46"
-                            Command="{Binding PauseVoiceCommand}"
-                            IsVisible="{Binding ShowPauseButton}"
-                            ToolTip.Tip="Пауза">
-                        <PathIcon Data="{StaticResource PauseIcon}" Width="20" Height="20"/>
-                    </Button>
-                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                            Classes="VoicePlayBtn"
-                            Width="46" Height="46"
-                            Command="{Binding PlayVoiceCommand}"
-                            IsVisible="{Binding ShowResumeButton}"
-                            ToolTip.Tip="Продолжить">
-                        <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
-                    </Button>
-                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                            Classes="VoiceLoadingContainer"
-                            Width="46" Height="46"
-                            IsVisible="{Binding IsVoiceLoading}">
-                        <shared:CircularProgress Width="22" Height="22"
-                                                 IsIndeterminate="True"
-                                                 HorizontalAlignment="Center"
-                                                 VerticalAlignment="Center"/>
-                    </Border>
-                    <shared:WaveformView Grid.Row="0" Grid.Column="2"
-                                         Margin="0,0,10,0"
-                                         VerticalAlignment="Center"
-                                         Height="32"
-                                         ClipToBounds="True"
-                                         Background="Transparent"
-                                         Cursor="Hand"
-                                         Waveform="{Binding VoiceWaveform}"
-                                         Progress="{Binding VoicePositionPercent, Mode=OneWay}"
-                                         SeekCommand="{Binding SeekVoiceCommand}"/>
-                    <Grid Grid.Row="1" Grid.Column="2"
-                          Margin="0,2,0,0">
-                        <Border HorizontalAlignment="Left" Classes="VoiceTimeBadge">
-                            <TextBlock Classes="VoiceTime">
-                                <TextBlock.Text>
-                                    <MultiBinding StringFormat="{}{0} / {1}">
-                                        <Binding Path="VoicePositionText"/>
-                                        <Binding Path="VoiceDurationFormatted"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
+                IsVisible="{Binding !IsDeleted}"
+                MinWidth="180">
+            <StackPanel Spacing="4">
+
+                <Grid ColumnDefinitions="46,*"
+                      VerticalAlignment="Center">
+
+                    <!-- Кнопки управления — все в одной ячейке [0,0] -->
+                    <Panel Grid.Column="0"
+                           Width="46"
+                           Height="46"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center">
+
+                        <Button Classes="VoicePlayBtn"
+                                Width="46" Height="46"
+                                Command="{Binding PlayVoiceCommand}"
+                                IsVisible="{Binding ShowPlayButton}"
+                                ToolTip.Tip="Воспроизвести">
+                            <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
+                        </Button>
+
+                        <Button Classes="VoicePlayBtn"
+                                Width="46" Height="46"
+                                Command="{Binding PauseVoiceCommand}"
+                                IsVisible="{Binding ShowPauseButton}"
+                                ToolTip.Tip="Пауза">
+                            <PathIcon Data="{StaticResource PauseIcon}" Width="20" Height="20"/>
+                        </Button>
+
+                        <Button Classes="VoicePlayBtn"
+                                Width="46" Height="46"
+                                Command="{Binding PlayVoiceCommand}"
+                                IsVisible="{Binding ShowResumeButton}"
+                                ToolTip.Tip="Продолжить">
+                            <PathIcon Data="{StaticResource PlayIcon}" Width="20" Height="20"/>
+                        </Button>
+
+                        <Border Classes="VoiceLoadingContainer"
+                                Width="46" Height="46"
+                                IsVisible="{Binding IsVoiceLoading}">
+                            <shared:CircularProgress
+                                Width="22" Height="22"
+                                IsIndeterminate="True"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
                         </Border>
-                        <parts:MessageMetaBlock
-                            HorizontalAlignment="Right"
+                    </Panel>
+
+                    <!-- Правая часть: waveform + нижняя строка -->
+                    <StackPanel Grid.Column="1"
+                                Margin="10,0,0,0"
+                                Spacing="2"
+                                VerticalAlignment="Center">
+
+                        <!-- Waveform -->
+                        <shared:WaveformView
+                            Height="32"
+                            HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
-                            Opacity="0.7"/>
-                    </Grid>
+                            ClipToBounds="True"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            Waveform="{Binding VoiceWaveform}"
+                            Progress="{Binding VoicePositionPercent, Mode=OneWay}"
+                            SeekCommand="{Binding SeekVoiceCommand}"/>
+
+                        <!-- Время + мета -->
+                        <Grid ColumnDefinitions="Auto,*"
+                              VerticalAlignment="Center">
+
+                            <Border Grid.Column="0"
+                                    Classes="VoiceTimeBadge"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center">
+                                <TextBlock Classes="VoiceTime">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0} / {1}">
+                                            <Binding Path="VoicePositionText"/>
+                                            <Binding Path="VoiceDurationFormatted"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </Border>
+
+                            <parts:MessageMetaBlock
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="4,0,0,0"
+                                Opacity="0.7"/>
+                        </Grid>
+
+                    </StackPanel>
                 </Grid>
+
+                <!-- Ошибка -->
                 <TextBlock Text="{Binding VoiceError}"
                            Classes="VoiceError"
-                           IsVisible="{Binding VoiceError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding VoiceError,
+                               Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
             </StackPanel>
         </Border>
     </StackPanel>

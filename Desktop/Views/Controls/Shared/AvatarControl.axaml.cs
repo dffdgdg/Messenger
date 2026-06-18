@@ -1,4 +1,4 @@
-﻿using Desktop.Infrastructure.Media;
+﻿using Core.Infrastructure.Media;
 
 namespace Desktop.Views.Controls;
 

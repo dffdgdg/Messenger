@@ -1,6 +1,6 @@
-using Desktop.ViewModels.Dialog;
+using Core.ViewModels.Dialog;
 
-namespace Desktop.Views;
+namespace Desktop.Views.Dialog;
 
 public partial class UserProfileDialog : UserControl
 {

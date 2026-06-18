@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Desktop.ViewModels.Chat;
+using Core.ViewModels.Chat;
 
 namespace Desktop.Views.Chat;
 

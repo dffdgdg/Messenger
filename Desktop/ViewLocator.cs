@@ -1,5 +1,5 @@
 using Avalonia.Controls.Templates;
-using Desktop.ViewModels;
+using Core.ViewModels;
 
 namespace Desktop;
 

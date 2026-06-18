@@ -34,25 +34,45 @@ public sealed class ChatRepository(MessengerDbContext context) : RepositoryBase<
     public async Task<List<LastMessageProjection>> GetLastMessagesAsync(IEnumerable<int> chatIds, CancellationToken ct = default)
     {
         var ids = chatIds.ToList();
+        if (ids.Count == 0)
+            return [];
 
-        var lastMessageIds = await _context.Messages.Where(m => ids.Contains(m.ChatId) && m.IsDeleted != true).GroupBy(m => m.ChatId).Select(g => g.Max(m => m.Id)).ToListAsync(ct);
+        // Одним запросом получаем ID последних сообщений
+        var lastMessageIds = await _context.Messages
+            .Where(m => ids.Contains(m.ChatId) && m.IsDeleted != true)
+            .GroupBy(m => m.ChatId)
+            .Select(g => g.Max(m => m.Id))
+            .ToListAsync(ct);
 
         if (lastMessageIds.Count == 0)
             return [];
 
-        var userMessages = await _context.UserMessages.Where(m => lastMessageIds.Contains(m.Id)).Select(m => new LastMessageProjection(m.Id, m.ChatId, m.CreatedAt,
-            false, m.SenderId,
-            !string.IsNullOrWhiteSpace(m.Content) ? m.Content : m.ForwardedFromMessage != null ? m.ForwardedFromMessage.Content : null,
-            null, null, m.Sender == null ? null : ((m.Sender.Surname != null ? m.Sender.Surname + " " : "") + (m.Sender.Name != null ? m.Sender.Name + " " : "") +
-                (m.Sender.Midname ?? "")).Trim(),
+        // Одним запросом — UserMessages (без резолва цепочки пересылки)
+        var userMessages = await _context.UserMessages
+            .Where(m => lastMessageIds.Contains(m.Id))
+            .Select(m => new LastMessageProjection(
+                m.Id,
+                m.ChatId,
+                m.CreatedAt,
+                false,
+                m.SenderId,
+                m.Content,  // <-- БЫЛО: m.ForwardedFromMessage != null ? m.ForwardedFromMessage.Content : null
                 null,
-                m.VoiceMessage != null || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.VoiceMessage != null),
-                m.Poll != null || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.Poll != null),
-                m.MessageFiles.Any() || (m.ForwardedFromMessage != null && m.ForwardedFromMessage.MessageFiles.Any())
+                null,
+                m.Sender == null ? null : (
+                    (m.Sender.Surname != null ? m.Sender.Surname + " " : "") +
+                    (m.Sender.Name != null ? m.Sender.Name + " " : "") +
+                    (m.Sender.Midname ?? "")
+                ).Trim(),
+                null,
+                m.VoiceMessage != null,
+                m.Poll != null,
+                m.MessageFiles.Any()
             ))
             .AsNoTracking()
             .ToListAsync(ct);
 
+        // Одним запросом — SystemMessages
         var systemMessages = await _context.SystemMessages
             .Where(m => lastMessageIds.Contains(m.Id))
             .Select(m => new LastMessageProjection(

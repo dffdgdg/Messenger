@@ -223,6 +223,7 @@ public sealed class MessageRepository(MessengerDbContext context)
     {
         var limit = take + 1;
 
+        // Лёгкий запрос — только ID и тип сообщения
         var messageIds = await _context.Messages
             .Where(m => m.ChatId == chatId && m.IsDeleted != true)
             .Where(m => cutoff == null || m.CreatedAt >= cutoff.Value)
@@ -242,7 +243,42 @@ public sealed class MessageRepository(MessengerDbContext context)
         var userIds = messageIds.Where(x => x.IsUser).Select(x => x.Id).ToList();
         var sysIds = messageIds.Where(x => !x.IsUser).Select(x => x.Id).ToList();
 
-        var result = await FetchAndSortMessagesAsync(ids, userIds, sysIds, ct);
+        // Лёгкая загрузка UserMessages — БЕЗ ForwardedFromMessage Includes
+        var result = new List<Message>();
+
+        if (userIds.Count > 0)
+        {
+            var userMessages = await _context.UserMessages
+                .Include(m => m.Sender)
+                .Include(m => m.VoiceMessage)
+                .Include(m => m.MessageFiles)
+                .Include(m => m.Poll)!.ThenInclude(p => p.PollOptions)!.ThenInclude(o => o.PollVotes)
+                .Include(m => m.ReplyToMessage)!.ThenInclude(r => r!.Sender)
+                .Include(m => m.ReplyToMessage)!.ThenInclude(r => r!.VoiceMessage)
+                .Include(m => m.ReplyToMessage)!.ThenInclude(r => r!.MessageFiles)
+                .Include(m => m.ReplyToMessage)!.ThenInclude(r => r!.Poll)
+                // УБРАНЫ: ForwardedFromMessage Includes (4 JOIN'а)
+                .Where(m => userIds.Contains(m.Id))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            result.AddRange(userMessages);
+        }
+
+        if (sysIds.Count > 0)
+        {
+            var sysMessages = await _context.SystemMessages
+                .Include(m => m.Initiator)
+                .Include(m => m.TargetUser)
+                .Where(m => sysIds.Contains(m.Id))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            result.AddRange(sysMessages);
+        }
+
+        var orderMap = ids.Select((id, idx) => (id, idx)).ToDictionary(x => x.id, x => x.idx);
+        result.Sort((a, b) => orderMap[a.Id].CompareTo(orderMap[b.Id]));
 
         return (result, hasOlder);
     }

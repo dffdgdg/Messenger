@@ -1,7 +1,7 @@
 <UserControl x:Name="Root"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+             xmlns:vmDialog="using:Core.ViewModels.Dialog"
              x:Class="Desktop.Views.Dialog.ServerUrlDialogView"
              x:DataType="vmDialog:ServerUrlDialogViewModel">
 

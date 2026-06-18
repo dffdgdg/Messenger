@@ -1,0 +1,18 @@
+﻿global using Avalonia;
+global using Avalonia.Controls;
+global using Avalonia.Data.Converters;
+global using Avalonia.Media;
+global using Avalonia.Threading;
+global using Shared.Dto.Chat;
+global using Shared.Dto.Message;
+global using Shared.Dto.Notification;
+global using Shared.Dto.Poll;
+global using Shared.Dto.ReadReceipt;
+global using Shared.Dto.Search;
+global using Shared.Dto.User;
+global using Shared.Enum;
+global using Shared.Response;
+global using System.Collections.Concurrent;
+global using System.Collections.ObjectModel;
+global using Application = Avalonia.Application;
+global using Button = Avalonia.Controls.Button;

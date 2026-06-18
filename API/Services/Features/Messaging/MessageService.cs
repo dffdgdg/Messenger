@@ -15,6 +15,7 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
     UrlBundle url,
     IReadReceiptService readReceiptService,
     ISystemMessageService systemMessageService,
+    IMemoryCache cache,
     IOptions<MessengerSettings> settings,
     ILogger<MessageService> logger) : BaseService<MessageService>(context, logger), IMessageService
 {
@@ -26,7 +27,7 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
     private readonly MessengerSettings _settings = settings.Value;
     private readonly AppDateTime _appDateTime = chat.Time.AppDateTime;
     private readonly ISystemMessageService _systemMessageService = systemMessageService;
-
+    private readonly IMemoryCache _cache = cache;
     [GeneratedRegex(@"(?<![a-z0-9_])@([a-z0-9_]{3,30})", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex MentionRegex();
 
@@ -201,11 +202,19 @@ public partial class MessageService(MessengerDbContext context, IChatRepository 
         var normalizedTake = Math.Clamp(take, 1, _settings.MaxPageSize);
         var cutoff = await GetHistoryCutoffAsync(chatId, userId);
 
+        var cacheKey = $"latest_msg_{chatId}_{normalizedTake}_{cutoff?.Ticks ?? 0}";
+
+        if (_cache.TryGetValue(cacheKey, out PagedMessagesDto? cached) && cached is not null)
+            return Result<PagedMessagesDto>.Success(cached);
+
         var (messages, hasOlder) = await messageRepository.GetLatestAsync(chatId, normalizedTake, cutoff);
 
         var dtos = messages.OrderBy(m => m.Id).Select(m => m.ToDto(userId, _urlBuilder)).ToList();
+        var result = BuildPagedResult(dtos, hasOlder, hasNewer: false);
 
-        return Result<PagedMessagesDto>.Success(BuildPagedResult(dtos, hasOlder, hasNewer: false));
+        _cache.Set(cacheKey, result, TimeSpan.FromSeconds(1));
+
+        return Result<PagedMessagesDto>.Success(result);
     }
 
     public async Task<Result<PagedMessagesDto>> GetMessagesAroundAsync(int chatId, int messageId, int userId, int count)

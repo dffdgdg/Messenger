@@ -11,7 +11,7 @@ using Avalonia.Reactive;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
-using Desktop.ViewModels.Chat;
+using Core.ViewModels.Chat;
 
 namespace Desktop.Views.Controls;
 

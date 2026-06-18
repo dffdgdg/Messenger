@@ -1,4 +1,5 @@
-﻿using API.Services.Infrastructure.Security;
+﻿using API.Services.Features.Call;
+using API.Services.Infrastructure.Security;
 using Shared.Hubs;
 using SixLabors.ImageSharp;
 using System.Security.Claims;
@@ -508,22 +509,47 @@ public sealed partial class MessengerHub(
     #region Call — Private helpers
     private async Task SendRelayEndpointIfNeededAsync(CallSession session)
     {
-        if (session.Mode != CallMode.ServerMixed) return;
-
-        var configHost = configuration.GetValue<string>("CallSettings:RelayHost");
-
-        var host = !string.IsNullOrWhiteSpace(configHost)
-            ? configHost
-            : Context.GetHttpContext()?.Request.Host.Host ?? "localhost";
-
-        var endpoint = new RelayEndpointInfo
+        // Для ServerMixed — отправляем UDP relay endpoint (существующая логика)
+        if (session.Mode == CallMode.ServerMixed)
         {
-            Host = host,
-            Port = configuration.GetValue("CallSettings:RelayPort", 5276),
-            CallId = session.CallId
-        };
+            var configHost = configuration.GetValue<string>("CallSettings:RelayHost");
+            var host = !string.IsNullOrWhiteSpace(configHost)
+                ? configHost
+                : Context.GetHttpContext()?.Request.Host.Host ?? "localhost";
 
-        await Clients.Caller.SendAsync(HubMethods.Call.RelayEndpoint, endpoint);
+            var endpoint = new RelayEndpointInfo
+            {
+                Host = host,
+                Port = configuration.GetValue("CallSettings:RelayPort", 5276),
+                CallId = session.CallId,
+                Turn = null // TURN не нужен для ServerMixed
+            };
+
+            await Clients.Caller.SendAsync(HubMethods.Call.RelayEndpoint, endpoint);
+            return;
+        }
+
+        // Для PeerToPeer — отправляем TURN credentials (если настроены)
+        if (session.Mode == CallMode.PeerToPeer)
+        {
+            var turnService = scopeFactory.CreateScope()
+                .ServiceProvider
+                .GetRequiredService<TurnCredentialService>();
+
+            var userId = CurrentUserId;
+            var turnCreds = turnService.GenerateCredentials(userId);
+
+            // Отправляем даже если turn == null — клиент знает что делать
+            var endpoint = new RelayEndpointInfo
+            {
+                Host = string.Empty,
+                Port = 0,
+                CallId = session.CallId,
+                Turn = turnCreds
+            };
+
+            await Clients.Caller.SendAsync(HubMethods.Call.RelayEndpoint, endpoint);
+        }
     }
 
     private async Task TerminateCallAsync(string callId, int chatId, CallEndReason reason)

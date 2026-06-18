@@ -40,7 +40,6 @@ public sealed class VoiceCallLoadTestRunner(
         if (options.WarmUpSeconds > 0)
             await WarmUpAsync(clients, cancellationToken);
 
-        // Счётчики сбрасываются после прогрева — измерения начинаются чистыми
         Interlocked.Exchange(ref _sentPackets, 0);
         Interlocked.Exchange(ref _receivedMixedPackets, 0);
         Interlocked.Exchange(ref _sendErrors, 0);
@@ -145,14 +144,10 @@ public sealed class VoiceCallLoadTestRunner(
     private void ValidateOptions()
     {
         if (options.FramesPerSecond > 100)
-            logger.LogWarning(
-                "fps={Fps} очень высокий — сеть или CPU могут стать узким местом.",
-                options.FramesPerSecond);
+            logger.LogWarning("fps={Fps} очень высокий — сеть или CPU могут стать узким местом.", options.FramesPerSecond);
 
         if (options.TotalParticipants > 500)
-            logger.LogWarning(
-                "Создаётся {N} UDP-сокетов — убедитесь, что лимит открытых дескрипторов ОС достаточен.",
-                options.TotalParticipants);
+            logger.LogWarning("Создаётся {N} UDP-сокетов — убедитесь, что лимит открытых дескрипторов ОС достаточен.", options.TotalParticipants);
     }
 
     private async Task<List<CallDescriptor>> CreateCallsAsync()

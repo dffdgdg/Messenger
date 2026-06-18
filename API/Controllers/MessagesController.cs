@@ -6,7 +6,7 @@ namespace API.Controllers;
 public sealed class MessagesController(IMessageService message, ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
-    [EnableRateLimiting("messaging")]
+    //[EnableRateLimiting("messaging")]
     public async Task<IActionResult> CreateMessage([FromBody] CreateMessageRequest request)
         => Map(await message.CreateMessageAsync(GetCurrentUserId(), request));
 

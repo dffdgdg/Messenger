@@ -2,17 +2,16 @@
     x:Class="Desktop.Views.ChatsView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:chat="using:Desktop.ViewModels.Chat"
-    xmlns:chatItem="using:Desktop.ViewModels.Chats"
+    xmlns:chat="using:Core.ViewModels.Chat"
+    xmlns:chatItem="using:Core.ViewModels.Chats"
     xmlns:chatView="using:Desktop.Views.Chat"
     xmlns:conChat="using:Desktop.Views.Controls.Chat"
     xmlns:controls="using:Desktop.Views.Controls"
-    xmlns:conv="using:Desktop.Converters"
-    xmlns:messengerdesktop="using:Desktop"
-    xmlns:search="using:Desktop.ViewModels.ChatList.Search"
+    xmlns:conv="using:Core.Converters"
+    xmlns:search="using:Core.ViewModels.ChatList.Search"
     xmlns:shared="using:Desktop.Views.Controls.Shared"
     xmlns:views="using:Desktop.Views"
-    xmlns:vm="using:Desktop.ViewModels"
+    xmlns:vm="using:Core.ViewModels"
     x:Name="Root"
     x:DataType="vm:ChatsViewModel"
     Background="{DynamicResource PrimaryBG}">
@@ -226,7 +225,7 @@
                 MinWidth="96"
                 MaxWidth="400" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition MinWidth="400" />
+            <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
@@ -242,110 +241,83 @@
             <DockPanel>
 
                 <!--  Заголовок панели  -->
-                <Border
-                    BorderBrush="{DynamicResource BorderDefault}"
-                    BorderThickness="0,0,0,1"
-                    Classes="PanelHeader"
-                    DockPanel.Dock="Top">
-                    <Panel>
-                        <Grid
-                            Height="33"
-                            Margin="0"
-                            ColumnDefinitions="*,Auto"
-                            IsVisible="{Binding !IsCompactMode, ElementName=Root}">
-                            <Panel Grid.Column="0">
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Classes="PanelTitle"
-                                    IsVisible="{Binding !IsSearchMode}"
-                                    Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Чаты|Контакты'}" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Classes="PanelTitle"
-                                    IsVisible="{Binding IsSearchMode}"
-                                    Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToTitle}}" />
-                            </Panel>
+<Border
+    Height="65"
+    BorderBrush="{DynamicResource BorderDefault}"
+    BorderThickness="0,0,0,1"
+    Classes="PanelHeader"
+    DockPanel.Dock="Top">
+    <Panel>
+        <!-- Normal/Wide: полный заголовок с кнопками -->
+        <Grid
+            Height="33"
+            Margin="0"
+            ColumnDefinitions="*,Auto"
+            IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+            <Panel Grid.Column="0">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Classes="PanelTitle"
+                    IsVisible="{Binding !IsSearchMode}"
+                    Text="{Binding IsGroupMode, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Чаты|Контакты'}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Classes="PanelTitle"
+                    IsVisible="{Binding IsSearchMode}"
+                    Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToTitle}}" />
+            </Panel>
 
-                            <Button
-                                Grid.Column="1"
-                                AutomationProperties.Name="Создать новый чат"
-                                Classes="IconButton"
-                                Command="{Binding CreateGroupCommand}"
-                                ToolTip.Tip="Новый чат">
-                                <Button.IsVisible>
-                                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
-                                        <Binding Path="IsGroupMode" />
-                                        <Binding Path="!IsSearchMode" />
-                                    </MultiBinding>
-                                </Button.IsVisible>
-                                <PathIcon
-                                    Width="18"
-                                    Height="18"
-                                    Data="{StaticResource AddIcon}"
-                                    Foreground="{DynamicResource Icon}" />
-                            </Button>
+            <Button
+                Grid.Column="1"
+                AutomationProperties.Name="Создать новый чат"
+                Classes="IconButton"
+                Command="{Binding CreateGroupCommand}"
+                ToolTip.Tip="Новый чат">
+                <Button.IsVisible>
+                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                        <Binding Path="IsGroupMode" />
+                        <Binding Path="!IsSearchMode" />
+                    </MultiBinding>
+                </Button.IsVisible>
+                <PathIcon Width="18" Height="18" Data="{StaticResource AddIcon}" Foreground="{DynamicResource Icon}" />
+            </Button>
 
-                            <Button
-                                Grid.Column="1"
-                                AutomationProperties.Name="Закрыть поиск"
-                                Classes="IconButton"
-                                Command="{Binding CloseSearchCommand}"
-                                IsVisible="{Binding IsSearchMode}"
-                                ToolTip.Tip="Закрыть поиск">
-                                <PathIcon
-                                    Width="16"
-                                    Height="16"
-                                    Data="{StaticResource CloseIcon}"
-                                    Foreground="{DynamicResource Icon}" />
-                            </Button>
-                        </Grid>
+            <Button
+                Grid.Column="1"
+                AutomationProperties.Name="Закрыть поиск"
+                Classes="IconButton"
+                Command="{Binding CloseSearchCommand}"
+                IsVisible="{Binding IsSearchMode}"
+                ToolTip.Tip="Закрыть поиск">
+                <PathIcon Width="16" Height="16" Data="{StaticResource CloseIcon}" Foreground="{DynamicResource Icon}" />
+            </Button>
+        </Grid>
 
-                        <Button
-                            HorizontalAlignment="Center"
-                            AutomationProperties.Name="Развернуть панель чатов"
-                            Classes="IconButton"
-                            Click="OnExpandButtonClick"
-                            IsVisible="{Binding IsCompactMode, ElementName=Root}"
-                            ToolTip.Tip="Развернуть панель">
-                            <PathIcon
-                                Width="20"
-                                Height="20"
-                                Data="{StaticResource MenuIcon}"
-                                Foreground="{DynamicResource Icon}" />
-                        </Button>
-                    </Panel>
-                </Border>
+        <!-- Compact: только иконка поиска -->
+        <Button
+            HorizontalAlignment="Center"
+            AutomationProperties.Name="Открыть поиск"
+            Classes="IconButton"
+            Click="OnSearchButtonClick"
+            IsVisible="{Binding IsCompactMode, ElementName=Root}"
+            ToolTip.Tip="Поиск">
+            <PathIcon Width="20" Height="20" Data="{StaticResource SearchIcon}" Foreground="{DynamicResource Icon}" />
+        </Button>
+    </Panel>
+</Border>
 
                 <!--  Поле поиска  -->
-                <Border
-                    Height="40"
-                    Margin="8,8,8,4"
-                    DockPanel.Dock="Top">
-                    <Panel>
-                        <controls:SearchBox
-                            x:Name="SearchTextBox"
-                            IsVisible="{Binding !IsCompactMode, ElementName=Root}"
-                            SearchFocused="OnSearchBoxFocused"
-                            SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
-                            Watermark="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToWatermark}}" />
-
-                        <Button
-                            Width="40"
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            AutomationProperties.Name="Открыть поиск"
-                            Classes="IconButton CompactSearchButton"
-                            Click="OnSearchButtonClick"
-                            IsVisible="{Binding IsCompactMode, ElementName=Root}"
-                            ToolTip.Tip="Поиск">
-                            <PathIcon
-                                Width="20"
-                                Height="20"
-                                Data="{StaticResource SearchIcon}"
-                                Foreground="{DynamicResource Icon}" />
-                        </Button>
-                    </Panel>
-                </Border>
+<Border
+    Height="40"
+    Margin="8,8,8,4"
+    DockPanel.Dock="Top"
+    IsVisible="{Binding !IsCompactMode, ElementName=Root}">
+    <controls:SearchBox
+        x:Name="SearchTextBox"
+        SearchFocused="OnSearchBoxFocused"
+        SearchText="{Binding SearchManager.SearchQuery, Mode=TwoWay}"
+        Watermark="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToWatermark}}" />
+</Border>
 
                 <!--  Переключатели scope  -->
                 <StackPanel
@@ -814,6 +786,9 @@
             Grid.Column="1"
             Width="4"
             Background="Transparent"
+            IsVisible="{Binding LayoutMode,
+            Converter={conv:Converter Name=LayoutModeToSplitterVisible},
+            ElementName=Root}"
             ResizeBehavior="PreviousAndNext"
             ResizeDirection="Columns" />
 

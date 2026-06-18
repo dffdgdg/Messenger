@@ -1,6 +1,6 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Desktop.ViewModels;
+using Core.ViewModels;
 
 namespace Desktop.Views.Auth;
 

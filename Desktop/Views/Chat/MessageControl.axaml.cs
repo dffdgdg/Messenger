@@ -1,4 +1,7 @@
-using Desktop.ViewModels.Chat;
+using Avalonia.Reactive;
+using Avalonia.VisualTree;
+using Core.Infrastructure;
+using Core.ViewModels.Chat;
 using System.ComponentModel;
 
 namespace Desktop.Views.Chat;
@@ -69,10 +72,35 @@ public partial class MessageControl : UserControl
             _bubbleBorder.Classes.AddRange(newClasses.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         }
     }
+    public static readonly DirectProperty<MessageControl, bool> IsUltraCompactProperty =
+    AvaloniaProperty.RegisterDirect<MessageControl, bool>(
+        nameof(IsUltraCompact), o => o.IsUltraCompact);
+
+    private bool _isUltraCompact;
+    public bool IsUltraCompact
+    {
+        get => _isUltraCompact;
+        private set => SetAndRaise(IsUltraCompactProperty, ref _isUltraCompact, value);
+    }
+
+    private IDisposable? _layoutSub;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        var chatView = this.FindAncestorOfType<ChatView>();
+        if (chatView != null)
+        {
+            IsUltraCompact = chatView.LayoutMode == LayoutMode.UltraCompact;
+            _layoutSub = chatView.GetObservable(ChatView.LayoutModeProperty)
+                .Subscribe(new AnonymousObserver<LayoutMode>(m => IsUltraCompact = m == LayoutMode.UltraCompact));
+        }
+    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        _layoutSub?.Dispose();
         _lastVm?.PropertyChanged -= OnViewModelPropertyChanged;
         _lastVm = null;
 

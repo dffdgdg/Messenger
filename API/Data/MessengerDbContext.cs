@@ -49,7 +49,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.ToTable("chats");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо HasDefaultValueSql с nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.Avatar).HasColumnName("avatar");
@@ -141,7 +141,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.HasIndex(e => e.HeadId, "idx_departments_head_id").IsUnique();
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
@@ -188,7 +188,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
                 .HasFilter("pinned_at IS NOT NULL");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.ChatId).HasColumnName("chat_id");
@@ -321,7 +321,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.ToTable("message_files");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.ContentType)
@@ -344,7 +344,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.HasIndex(e => e.MessageId, "idx_polls_message_id").IsUnique();
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.AllowsMultipleAnswers)
@@ -368,7 +368,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.ToTable("poll_options");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.OptionText)
@@ -394,7 +394,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.HasIndex(e => e.UserId, "idx_poll_votes_user_id");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.OptionId).HasColumnName("option_id");
@@ -445,7 +445,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.HasIndex(e => e.Username, "users_username_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.Avatar).HasColumnName("avatar");
@@ -520,7 +520,7 @@ public partial class MessengerDbContext(DbContextOptions<MessengerDbContext> opt
             entity.HasIndex(e => e.ReplacedByTokenId, "idx_refresh_tokens_replaced_by");
 
             entity.Property(e => e.Id)
-                .ValueGeneratedOnAdd()  // ← вместо nextval
+                .ValueGeneratedOnAdd()
                 .HasColumnName("id");
 
             entity.Property(e => e.UserId).HasColumnName("user_id");

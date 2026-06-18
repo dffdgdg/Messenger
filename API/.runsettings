@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Exclude>
+            <ModulePath>.*migrations.dll$</ModulePath>
+          </Exclude>
+          <Sources>
+            <Exclude>
+              <Source>.*\\Shared\\Dto\\.*</Source>
+              <Source>.*\\Shared\\Enum\\.*</Source>
+              <Source>.*\\Shared\\Response\\.*</Source>
+              <Source>.*\\Shared\\Hubs\\.*</Source>
+              <Source>.*\\Shared\\Helpers\\.*</Source>
+              <Source>.*\\API\\Data\\Migrations\\.*</Source>
+              <Source>.*\\API\\Data\\SeedData\\.*</Source>
+              <Source>.*\\API\\Configuration\\.*</Source>
+              <Source>.*\\API\\Mapping\\.*</Source>
+              <Source>.*Program.cs$</Source>
+            </Exclude>
+          </Sources>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

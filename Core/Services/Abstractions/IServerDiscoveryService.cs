@@ -1,0 +1,6 @@
+﻿namespace Core.Services.Abstractions;
+
+public interface IServerDiscoveryService
+{
+    Task<string?> DiscoverAsync(int timeoutMs = 3000, CancellationToken ct = default);
+}

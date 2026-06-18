@@ -1,0 +1,25 @@
+﻿using SQLite;
+
+namespace Core.Data.Models.Sync;
+
+[Table("chat_sync_state")]
+public class ChatSyncState
+{
+    [PrimaryKey][Column("chat_id")] public int ChatId { get; set; }
+    [Column("oldest_loaded_id")] public int? OldestLoadedId { get; set; }
+    [Column("newest_loaded_id")] public int? NewestLoadedId { get; set; }
+    [Column("has_more_older")] public bool HasMoreOlder { get; set; } = true;
+    [Column("has_more_newer")] public bool HasMoreNewer { get; set; }
+    [Column("last_sync_at")] public long LastSyncAtTicks { get; set; }
+    [Ignore] public DateTime LastSyncAt => new(LastSyncAtTicks, DateTimeKind.Utc);
+
+    public ChatSyncState With(int? oldestLoadedId = null, bool? hasMoreOlder = null, bool? hasMoreNewer = null) => new()
+    {
+        ChatId = ChatId,
+        OldestLoadedId = oldestLoadedId ?? OldestLoadedId,
+        NewestLoadedId = NewestLoadedId,
+        HasMoreOlder = hasMoreOlder ?? HasMoreOlder,
+        HasMoreNewer = hasMoreNewer ?? HasMoreNewer,
+        LastSyncAtTicks = LastSyncAtTicks
+    };
+}

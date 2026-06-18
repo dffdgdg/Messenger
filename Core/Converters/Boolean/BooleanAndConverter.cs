@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+namespace Core.Converters.Boolean;
+
+public sealed class BooleanAndConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        foreach (var value in values)
+        {
+            if (value is bool boolValue && !boolValue)
+                return false;
+        }
+        return true;
+    }
+}

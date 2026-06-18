@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
-             xmlns:chat="using:Desktop.ViewModels.Chat"
+             xmlns:vmDialog="using:Core.ViewModels.Dialog"
+             xmlns:chat="using:Core.ViewModels.Chat"
              xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="using:Desktop.Converters"
+             xmlns:conv="using:Core.Converters"
              x:Class="Desktop.Views.Dialog.SearchFiltersDialog"
              x:DataType="vmDialog:SearchFiltersDialogViewModel">
 

@@ -1,5 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:admin="using:Desktop.ViewModels.Admin"
+             xmlns:admin="using:Core.ViewModels.Admin"
              xmlns:adminCon="using:Desktop.Views.Controls.Admin"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Desktop.Views.Controls.Admin"

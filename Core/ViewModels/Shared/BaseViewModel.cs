@@ -1,0 +1,137 @@
+﻿using System.Diagnostics;
+
+namespace Core.ViewModels;
+
+public abstract partial class BaseViewModel : ObservableObject, IDisposable
+{
+    private CancellationTokenSource? _cts;
+    private bool _disposed;
+    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty] public partial string? ErrorMessage { get; set; }
+    [ObservableProperty] public partial string? SuccessMessage { get; set; }
+
+    // ========== Хуки для подклассов ==========
+    // CommunityToolkit генерирует partial void OnXxxChanged в ЭТОМ классе.
+    // Мы пробрасываем их в виртуальные методы,
+    // чтобы подклассы могли реагировать через override.
+
+    partial void OnIsBusyChanged(bool value) => OnIsBusyUpdated(value);
+
+    partial void OnErrorMessageChanged(string? value) => OnErrorMessageUpdated(value);
+
+    partial void OnSuccessMessageChanged(string? value) => OnSuccessMessageUpdated(value);
+
+    /// <summary>
+    /// Вызывается при изменении IsBusy.
+    /// Переопределите для обновления CanExecute команд.
+    /// </summary>
+    protected virtual void OnIsBusyUpdated(bool value) { }
+
+    /// <summary>
+    /// Вызывается при изменении ErrorMessage.
+    /// Переопределите для взаимоисключения сообщений и т.д.
+    /// </summary>
+    protected virtual void OnErrorMessageUpdated(string? value) { }
+
+    /// <summary>
+    /// Вызывается при изменении SuccessMessage.
+    /// Переопределите для взаимоисключения сообщений и т.д.
+    /// </summary>
+    protected virtual void OnSuccessMessageUpdated(string? value) { }
+
+    protected CancellationToken GetCancellationToken()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
+    }
+
+    protected async Task SafeExecuteAsync(Func<Task> operation, string? successMessage = null, Action? finallyAction = null)
+    {
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            await operation();
+            if (!string.IsNullOrEmpty(successMessage))
+                SuccessMessage = successMessage;
+        }
+        catch (OperationCanceledException)
+        {
+            // Не считаем отмену ошибкой, просто игнорируем.
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            Debug.WriteLine($"Error in {GetType().Name}: {ex}");
+        }
+        finally
+        {
+            IsBusy = false;
+            finallyAction?.Invoke();
+        }
+    }
+
+    protected async Task SafeExecuteAsync(Func<CancellationToken, Task> operation, string? successMessage = null, Action? finallyAction = null)
+    {
+        var ct = GetCancellationToken();
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            await operation(ct);
+            if (!string.IsNullOrEmpty(successMessage) && !ct.IsCancellationRequested)
+                SuccessMessage = successMessage;
+        }
+        catch (OperationCanceledException)
+        {
+            // Не считаем отмену ошибкой, просто игнорируем.
+        }
+        catch (Exception ex)
+        {
+            if (!ct.IsCancellationRequested)
+            {
+                ErrorMessage = ex.Message;
+                Debug.WriteLine($"Error in {GetType().Name}: {ex}");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            finallyAction?.Invoke();
+        }
+    }
+
+    protected static string? GetAbsoluteUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return null;
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        return $"{AppConfig.ApiUrl.TrimEnd('/')}/{url.TrimStart('/')}";
+    }
+
+    [RelayCommand]
+    protected virtual void ClearMessages()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing)
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+        }
+        _disposed = true;
+    }
+}

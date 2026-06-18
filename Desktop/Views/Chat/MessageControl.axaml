@@ -1,12 +1,11 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Desktop.Views.Controls"
-             xmlns:conv="using:Desktop.Converters"
+             xmlns:conv="using:Core.Converters"
              xmlns:local="using:Desktop.Views.Chat"
              xmlns:parts="using:Desktop.Views.Chat.MessageParts"
              xmlns:shared="using:Desktop.Views.Chat.MessageParts.Shared"
-             xmlns:vmChat="using:Desktop.ViewModels.Chat"
-             xmlns:avalonia="https://github.com/avaloniaui"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
              x:Class="Desktop.Views.Chat.MessageControl"
              x:DataType="vmChat:MessageViewModel"
              x:Name="BubbleRoot">
@@ -230,8 +229,9 @@
                 </StackPanel>
 
                 <shared:MessageQuickActions Grid.Column="2"
-                                            ReplyCommand="{Binding ReplyActionCommand}"
-                                            ForwardCommand="{Binding ForwardActionCommand}"/>
+                            ReplyCommand="{Binding ReplyActionCommand}"
+                            ForwardCommand="{Binding ForwardActionCommand}"
+                            IsVisible="{Binding !IsUltraCompact, ElementName=BubbleRoot}" />
             </Grid>
         </Border>
     </StackPanel>

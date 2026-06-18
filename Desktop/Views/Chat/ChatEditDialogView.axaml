@@ -3,21 +3,61 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Desktop.Views.Controls"
-    xmlns:converters="using:Desktop.Converters"
-    xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+    xmlns:converters="using:Core.Converters"
+    xmlns:vmDialog="using:Core.ViewModels.Dialog"
     x:Name="Root"
     x:DataType="vmDialog:ChatEditDialogViewModel">
 
-    <Border Background="{DynamicResource SecondaryBG}" Classes="DialogContainer">
-        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+    <Border
+        x:Name="DialogContainer"
+        Background="{DynamicResource SecondaryBG}"
+        Classes="DialogContainer">
+        <Grid x:Name="RootGrid" RowDefinitions="Auto,Auto,*,Auto,Auto">
 
-            <!--  Шапка: аватар + название  -->
+            <!--  Шапка компактного режима: назад + заголовок  -->
             <Grid
+                x:Name="CompactHeader"
+                Grid.Row="0"
+                Height="52"
+                IsVisible="False"
+                ColumnDefinitions="Auto,*,Auto">
+                <Button
+                    Grid.Column="0"
+                    Width="44"
+                    Height="44"
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    Classes="IconButton"
+                    Click="OnBackButtonClick"
+                    ToolTip.Tip="Закрыть">
+                    <Path
+                        Width="18"
+                        Height="18"
+                        Data="{StaticResource ChevronLeftIcon}"
+                        Fill="{DynamicResource TextPrimary}"
+                        Stretch="Uniform" />
+                </Button>
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="4,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="{Binding Title}"
+                    TextTrimming="CharacterEllipsis" />
+                <Panel Grid.Column="2" Width="44" />
+            </Grid>
+
+            <!--  Шапка обычного режима: аватар + название  -->
+            <Grid
+                x:Name="NormalHeader"
                 Grid.Row="0"
                 Margin="24,24,24,16"
-                ColumnDefinitions="Auto,*">
+                ColumnDefinitions="Auto,*,Auto">
 
+                <!--  Аватар — оригинальный размер 80x80  -->
                 <Panel
+                    Grid.Column="0"
                     Width="80"
                     Height="80"
                     Margin="0,0,16,0"
@@ -72,6 +112,7 @@
                     </Button>
                 </Panel>
 
+                <!--  Название  -->
                 <StackPanel
                     Grid.Column="1"
                     VerticalAlignment="Center"
@@ -94,6 +135,21 @@
                             Text="{Binding Name}" />
                     </StackPanel>
                 </StackPanel>
+
+                <!--  Крестик закрытия диалога  -->
+                <Button
+                    Grid.Column="2"
+                    Classes="IconButton"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Top"
+                    Click="OnBackButtonClick"
+                    ToolTip.Tip="Закрыть">
+                    <PathIcon
+                        Width="14"
+                        Height="14"
+                        Data="{StaticResource CloseIcon}"
+                        Foreground="{DynamicResource TextSecondary}" />
+                </Button>
             </Grid>
 
             <!--  Разделитель  -->
@@ -105,200 +161,283 @@
                 Classes="ThinScrollbar"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="24,16,24,16" Spacing="12">
+                <StackPanel Spacing="10">
 
-                    <TextBlock
-                        Margin="0"
-                        Classes="CategoryHeader"
-                        Text="УПРАВЛЕНИЕ" />
-
-                    <Border Padding="4" Classes="Section">
-                        <StackPanel Spacing="0">
-                            <Button
-                                Padding="12,10"
-                                Classes="MemberItem"
-                                Command="{Binding ManageParticipantsCommand}">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                    <PathIcon
-                                        Width="20"
-                                        Height="20"
-                                        Data="{StaticResource GroupIcon}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Margin="12,0,0,0"
-                                        VerticalAlignment="Center"
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
-                                        Text="Участники" />
-                                    <Border
-                                        Grid.Column="2"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center"
-                                        Classes="CountBadge">
-                                        <TextBlock Text="{Binding ParticipantsCount}" />
-                                    </Border>
-                                    <Path
-                                        Grid.Column="3"
-                                        Width="12"
-                                        Height="12"
-                                        VerticalAlignment="Center"
-                                        Data="{StaticResource ChevronRightIcon}"
-                                        Fill="{DynamicResource TextMuted}"
-                                        Stretch="Uniform" />
-                                </Grid>
-                            </Button>
-
-                            <Border
-                                Height="1"
-                                Margin="40,0,12,0"
-                                Background="{DynamicResource BorderDefault}" />
-
-                            <Button
-                                Padding="12,10"
-                                Classes="MemberItem"
-                                Command="{Binding ManageAdminsCommand}">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                    <PathIcon
-                                        Width="20"
-                                        Height="20"
-                                        Data="{StaticResource ShieldIcon}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Margin="12,0,0,0"
-                                        VerticalAlignment="Center"
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
-                                        Text="Администраторы" />
-                                    <Border
-                                        Grid.Column="2"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center"
-                                        Classes="CountBadge">
-                                        <TextBlock Text="{Binding AdminsCount}" />
-                                    </Border>
-                                    <Path
-                                        Grid.Column="3"
-                                        Width="12"
-                                        Height="12"
-                                        VerticalAlignment="Center"
-                                        Data="{StaticResource ChevronRightIcon}"
-                                        Fill="{DynamicResource TextMuted}"
-                                        Stretch="Uniform" />
-                                </Grid>
-                            </Button>
-                        </StackPanel>
-                    </Border>
-
-                    <!--  Роль  -->
+                    <!--  Аватар в компактном режиме — под тулбаром  -->
                     <Border
-                        Padding="12,8"
-                        Background="{DynamicResource ThirdBG}"
-                        BorderBrush="{DynamicResource BorderDefault}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <PathIcon
-                                Width="16"
-                                Height="16"
-                                Data="{StaticResource UserRoleIcon}" />
-                            <TextBlock
+                        x:Name="CompactAvatarSection"
+                        Padding="16,16,16,4"
+                        IsVisible="False">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Panel
+                                Grid.Column="0"
+                                Width="56"
+                                Height="56"
+                                Margin="0,0,16,0"
+                                Classes="AvatarEditContainer">
+                                <controls:AvatarControl
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Classes="Large"
+                                    FallbackIcon="{StaticResource GroupIcon}"
+                                    ImageBitmap="{Binding AvatarPreview}"
+                                    PlaceholderBackground="{DynamicResource SurfaceVariant}"
+                                    PlaceholderForeground="White"
+                                    ShowOnlineIndicator="False" />
+                                <Button
+                                    Width="56"
+                                    Height="56"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Classes="AvatarEditOverlay"
+                                    Command="{Binding SelectAvatarCommand}"
+                                    CornerRadius="28"
+                                    ToolTip.Tip="Изменить аватар">
+                                    <Border
+                                        Width="56"
+                                        Height="56"
+                                        Background="#66000000"
+                                        Classes="AvatarOverlay"
+                                        CornerRadius="28">
+                                        <PathIcon
+                                            Width="18"
+                                            Height="18"
+                                            Data="{StaticResource CameraIcon}"
+                                            Foreground="White" />
+                                    </Border>
+                                </Button>
+                                <Button
+                                    Width="22"
+                                    Height="22"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Classes="AvatarDeleteBadge"
+                                    Command="{Binding ClearAvatarCommand}"
+                                    CornerRadius="11"
+                                    IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                    ToolTip.Tip="Удалить аватар">
+                                    <Path
+                                        Width="8"
+                                        Height="8"
+                                        Data="{StaticResource CloseIcon}"
+                                        Fill="White"
+                                        Stretch="Uniform" />
+                                </Button>
+                            </Panel>
+                            <StackPanel
                                 Grid.Column="1"
-                                Margin="10,0,0,0"
                                 VerticalAlignment="Center"
-                                FontSize="13"
-                                Foreground="{DynamicResource TextSecondary}"
-                                Text="Ваша роль" />
-                            <Border
-                                Grid.Column="2"
-                                Padding="10,3"
-                                Background="{DynamicResource AccentMuted}"
-                                CornerRadius="6">
+                                Spacing="4">
                                 <TextBlock
                                     FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource Accent}"
-                                    Text="{Binding CurrentUserRoleDisplay}" />
-                            </Border>
+                                    FontWeight="DemiBold"
+                                    Foreground="{DynamicResource TextSecondary}"
+                                    Text="Название группы" />
+                                <TextBox
+                                    Classes="Input"
+                                    IsEnabled="{Binding CanEditChatSettings}"
+                                    MaxLength="100"
+                                    PlaceholderText="Введите название..."
+                                    Text="{Binding Name}" />
+                            </StackPanel>
                         </Grid>
                     </Border>
 
-                    <!--  Настройки  -->
-                    <StackPanel IsVisible="{Binding ShowDeleteGroupOption}" Spacing="12">
+                    <StackPanel Margin="24,12,24,12" Spacing="12">
+
                         <TextBlock
-                            Margin="0,8,0,0"
+                            Margin="0"
                             Classes="CategoryHeader"
-                            Text="НАСТРОЙКИ" />
+                            Text="УПРАВЛЕНИЕ" />
+
                         <Border Padding="4" Classes="Section">
-                            <Border Padding="12,10" CornerRadius="8">
+                            <StackPanel Spacing="0">
+                                <Button
+                                    Padding="12,10"
+                                    Classes="MemberItem"
+                                    Command="{Binding ManageParticipantsCommand}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                        <PathIcon
+                                            Width="20"
+                                            Height="20"
+                                            Data="{StaticResource GroupIcon}" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Text="Участники" />
+                                        <Border
+                                            Grid.Column="2"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Classes="CountBadge">
+                                            <TextBlock Text="{Binding ParticipantsCount}" />
+                                        </Border>
+                                        <Path
+                                            Grid.Column="3"
+                                            Width="12"
+                                            Height="12"
+                                            VerticalAlignment="Center"
+                                            Data="{StaticResource ChevronRightIcon}"
+                                            Fill="{DynamicResource TextMuted}"
+                                            Stretch="Uniform" />
+                                    </Grid>
+                                </Button>
+
+                                <Border
+                                    Height="1"
+                                    Margin="40,0,12,0"
+                                    Background="{DynamicResource BorderDefault}" />
+
+                                <Button
+                                    Padding="12,10"
+                                    Classes="MemberItem"
+                                    Command="{Binding ManageAdminsCommand}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                        <PathIcon
+                                            Width="20"
+                                            Height="20"
+                                            Data="{StaticResource ShieldIcon}" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Text="Администраторы" />
+                                        <Border
+                                            Grid.Column="2"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Classes="CountBadge">
+                                            <TextBlock Text="{Binding AdminsCount}" />
+                                        </Border>
+                                        <Path
+                                            Grid.Column="3"
+                                            Width="12"
+                                            Height="12"
+                                            VerticalAlignment="Center"
+                                            Data="{StaticResource ChevronRightIcon}"
+                                            Fill="{DynamicResource TextMuted}"
+                                            Stretch="Uniform" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!--  Роль  -->
+                        <Border
+                            Padding="12,8"
+                            Background="{DynamicResource ThirdBG}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <PathIcon
+                                    Width="16"
+                                    Height="16"
+                                    Data="{StaticResource UserRoleIcon}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="{DynamicResource TextSecondary}"
+                                    Text="Ваша роль" />
+                                <Border
+                                    Grid.Column="2"
+                                    Padding="10,3"
+                                    Background="{DynamicResource AccentMuted}"
+                                    CornerRadius="6">
+                                    <TextBlock
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Accent}"
+                                        Text="{Binding CurrentUserRoleDisplay}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!--  Настройки  -->
+                        <StackPanel IsVisible="{Binding ShowDeleteGroupOption}" Spacing="12">
+                            <TextBlock
+                                Margin="0,8,0,0"
+                                Classes="CategoryHeader"
+                                Text="НАСТРОЙКИ" />
+                            <Border Padding="4" Classes="Section">
+                                <Border Padding="12,10" CornerRadius="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon
+                                            Width="20"
+                                            Height="20"
+                                            Data="{StaticResource HistoryIcon}" />
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="12,0,12,0"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                            <TextBlock
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                Text="История для новых участников" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            IsChecked="{Binding ShowHistoryForNewMembers}"
+                                            IsEnabled="{Binding CanManageParticipants}"
+                                            OffContent=""
+                                            OnContent="" />
+                                    </Grid>
+                                </Border>
+                            </Border>
+                        </StackPanel>
+
+                        <!--  Удалить группу  -->
+                        <Border
+                            Padding="4"
+                            Background="{DynamicResource ThirdBG}"
+                            BorderBrush="{DynamicResource DangerBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            IsVisible="{Binding ShowDeleteGroupOption}">
+                            <Button
+                                Padding="12,10"
+                                Classes="MemberItem"
+                                Command="{Binding DeleteGroupCommand}">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <PathIcon
                                         Width="20"
                                         Height="20"
-                                        Data="{StaticResource HistoryIcon}" />
+                                        Data="{StaticResource DeleteIcon}"
+                                        Foreground="{DynamicResource DangerBrush}" />
                                     <StackPanel
                                         Grid.Column="1"
-                                        Margin="12,0,12,0"
+                                        Margin="12,0,0,0"
                                         VerticalAlignment="Center"
                                         Spacing="2">
                                         <TextBlock
                                             FontSize="14"
                                             FontWeight="SemiBold"
-                                            Text="История для новых участников" />
+                                            Foreground="{DynamicResource DangerBrush}"
+                                            Text="Удалить группу" />
                                     </StackPanel>
-                                    <ToggleSwitch
+                                    <Path
                                         Grid.Column="2"
+                                        Width="12"
+                                        Height="12"
                                         VerticalAlignment="Center"
-                                        IsChecked="{Binding ShowHistoryForNewMembers}"
-                                        IsEnabled="{Binding CanManageParticipants}"
-                                        OffContent=""
-                                        OnContent="" />
+                                        Data="{StaticResource ChevronRightIcon}"
+                                        Fill="{DynamicResource DangerBrush}"
+                                        Opacity="0.6"
+                                        Stretch="Uniform" />
                                 </Grid>
-                            </Border>
+                            </Button>
                         </Border>
+
                     </StackPanel>
-
-                    <!--  Удалить группу  -->
-                    <Border
-                        Padding="4"
-                        Background="{DynamicResource ThirdBG}"
-                        BorderBrush="{DynamicResource DangerBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="12"
-                        IsVisible="{Binding ShowDeleteGroupOption}">
-                        <Button
-                            Padding="12,10"
-                            Classes="MemberItem"
-                            Command="{Binding DeleteGroupCommand}">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <PathIcon
-                                    Width="20"
-                                    Height="20"
-                                    Data="{StaticResource DeleteIcon}"
-                                    Foreground="{DynamicResource DangerBrush}" />
-                                <StackPanel
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    VerticalAlignment="Center"
-                                    Spacing="2">
-                                    <TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource DangerBrush}"
-                                        Text="Удалить группу" />
-                                </StackPanel>
-                                <Path
-                                    Grid.Column="2"
-                                    Width="12"
-                                    Height="12"
-                                    VerticalAlignment="Center"
-                                    Data="{StaticResource ChevronRightIcon}"
-                                    Fill="{DynamicResource DangerBrush}"
-                                    Opacity="0.6"
-                                    Stretch="Uniform" />
-                            </Grid>
-                        </Button>
-                    </Border>
-
                 </StackPanel>
             </ScrollViewer>
 

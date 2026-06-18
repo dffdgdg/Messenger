@@ -2,9 +2,9 @@
     x:Class="Desktop.Views.Controls.Chat.ChatItemView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:chatItem="using:Desktop.ViewModels.Chats"
+    xmlns:chatItem="using:Core.ViewModels.Chats"
     xmlns:controls="using:Desktop.Views.Controls"
-    xmlns:conv="using:Desktop.Converters"
+    xmlns:conv="using:Core.Converters"
     x:DataType="chatItem:ChatListItemViewModel">
 
     <Panel>

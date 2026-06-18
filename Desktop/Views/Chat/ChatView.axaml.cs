@@ -1,8 +1,10 @@
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Reactive;
 using Avalonia.VisualTree;
-using Desktop.ViewModels.Chat;
+using Core.Infrastructure;
+using Core.ViewModels.Chat;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -56,6 +58,18 @@ public partial class ChatView : UserControl
 
     private DispatcherTimer? _visibilityTimer;
     private DispatcherTimer? _saveScrollStateTimer;
+    public static readonly DirectProperty<ChatView, LayoutMode> LayoutModeProperty =
+    AvaloniaProperty.RegisterDirect<ChatView, LayoutMode>(
+        nameof(LayoutMode), o => o.LayoutMode);
+
+    private LayoutMode _layoutMode;
+    public LayoutMode LayoutMode
+    {
+        get => _layoutMode;
+        private set => SetAndRaise(LayoutModeProperty, ref _layoutMode, value);
+    }
+
+    private IDisposable? _layoutModeSubscription;
 
     public ChatView()
     {
@@ -63,6 +77,7 @@ public partial class ChatView : UserControl
         _settingsService = App.Current.Services.GetService<ISettingsService>();
         DataContextChanged += OnDataContextChanged;
     }
+
     private readonly SemaphoreSlim _olderLoadSemaphore = new(1, 1);
     private readonly SemaphoreSlim _newerLoadSemaphore = new(1, 1);
 
@@ -77,25 +92,19 @@ public partial class ChatView : UserControl
 
         try
         {
-            // 1. Запоминаем высоту контента ДО загрузки
             double extentBefore = _scrollViewer.Extent.Height;
             double offsetBefore = _scrollViewer.Offset.Y;
 
-            // 2. Загружаем старые сообщения (InsertRange в начало)
             await _viewModel.LoadOlderMessagesCommand.ExecuteAsync(null);
 
-            // 3. Ждем завершения layout pass
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
 
             if (_scrollViewer is null) return;
 
-            // 4. Вычисляем насколько вырос контент
             double extentAfter = _scrollViewer.Extent.Height;
             double extentDelta = extentAfter - extentBefore;
 
-            // 5. Сдвигаем offset вниз на эту разницу
-            // Это компенсирует добавление элементов в начало
             if (extentDelta > 0.5)
             {
                 double newOffset = offsetBefore + extentDelta;
@@ -114,8 +123,6 @@ public partial class ChatView : UserControl
         {
             _viewModel.IsLoadingOlderMessages = false;
 
-            // КРИТИЧЕСКИ ВАЖНО: сбрасываем флаг через Background приоритет
-            // Это гарантирует, что ScrollChanged от ручного сдвига offset будет проигнорирован
             Dispatcher.UIThread.Post(() => _suppressPositionTracking = false, DispatcherPriority.Background);
 
             _olderLoadSemaphore.Release();
@@ -814,13 +821,28 @@ public partial class ChatView : UserControl
         Cleanup();
         base.OnUnloaded(e);
     }
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        var window = this.FindAncestorOfType<Window>();
+        if (window is MainWindow mainWindow)
+        {
+            LayoutMode = mainWindow.LayoutMode;
+            _layoutModeSubscription = mainWindow
+                .GetObservable(MainWindow.LayoutModeProperty)
+                .Subscribe(new AnonymousObserver<LayoutMode>(m => LayoutMode = m));
+        }
+    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        base.OnDetachedFromVisualTree(e);
+        _layoutModeSubscription?.Dispose();
+
         if (DataContext is ChatViewModel)
             DataContext = null;
         Cleanup();
-        base.OnDetachedFromVisualTree(e);
     }
 
     private void Cleanup()

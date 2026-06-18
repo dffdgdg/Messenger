@@ -34,7 +34,7 @@ builder.Services.Configure<JwtSettings>(
 
 builder.Services
     .AddMessengerDatabase(builder.Configuration, builder.Environment)
-    .AddInfrastructureServices()
+    .AddInfrastructureServices(builder.Configuration)
     .AddBusinessServices()
     .AddMessengerJson(builder.Environment)
     .AddMessengerAuth(builder.Configuration)
@@ -144,6 +144,8 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .SetIsOriginAllowed(_ => true)
               .AllowCredentials()));
+
+builder.Services.Configure<TurnSettings>(builder.Configuration.GetSection(TurnSettings.Section));
 
 var app = builder.Build();
 

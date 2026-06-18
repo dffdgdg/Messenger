@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmChat="using:Desktop.ViewModels.Chat"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
              xmlns:parts="using:Desktop.Views.Chat.MessageParts"
              x:Class="Desktop.Views.Chat.MessageParts.SystemMessagePart"
              x:DataType="vmChat:MessageViewModel">

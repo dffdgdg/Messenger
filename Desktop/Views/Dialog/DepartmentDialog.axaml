@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vmDialog="using:Desktop.ViewModels.Dialog"
+             xmlns:vmDialog="using:Core.ViewModels.Dialog"
              xmlns:department="using:Shared.Dto.Department"
              x:Class="Desktop.Views.DepartmentDialog"
              x:DataType="vmDialog:DepartmentDialogViewModel">

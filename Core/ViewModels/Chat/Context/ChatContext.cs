@@ -1,9 +1,7 @@
 ﻿using Core.Data.Repositories.Abstractions;
-using Core.Services.Abstractions;
 using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Navigation;
 using Core.ViewModels.ChatList.Factories;
-using System.Diagnostics;
 
 namespace Core.ViewModels.Chat.Context;
 

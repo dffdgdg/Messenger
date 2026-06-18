@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Core.Services.Features.Media.Audio;
+﻿using Core.Services.Features.Media.Audio;
 
 namespace Core.ViewModels.Chat;
 

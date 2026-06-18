@@ -176,8 +176,8 @@
                             <StackPanel Orientation="Horizontal" Spacing="2">
                                 <Button
                                     Classes="IconButton"
-                                    Command="{Binding StartOrJoinCallCommand}"
-                                    ToolTip.Tip="{Binding HasActiveCall,
+                                    Command="{Binding Call.StartOrJoinCallCommand}"
+                                    ToolTip.Tip="{Binding Call.HasActiveCall,
                                     Converter={converters:Converter Name=BoolToString},
                                     ConverterParameter='Войти в звонок|Начать звонок'}">
                                     <Path
@@ -251,7 +251,7 @@
                         BorderBrush="{DynamicResource BorderDefault}"
                         BorderThickness="0,0,0,1"
                         Classes="PinnedBanner"
-                        IsVisible="{Binding IsPinnedBannerVisible}">
+                        IsVisible="{Binding Pinned.IsPinnedBannerVisible}">
                         <Button
                             Padding="0"
                             HorizontalAlignment="Stretch"
@@ -278,20 +278,20 @@
                                         FontSize="12"
                                         Foreground="{DynamicResource TextSecondary}"
                                         MaxLines="1"
-                                        Text="{Binding PinnedBannerPreviewText}"
+                                        Text="{Binding Pinned.PinnedBannerPreviewText}"
                                         TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                                 <Border
                                     Grid.Column="2"
                                     Margin="8,0,0,0"
                                     Classes="CountBadge"
-                                    IsVisible="{Binding HasMultiplePinned}">
+                                    IsVisible="{Binding Pinned.HasMultiplePinned}">
                                     <TextBlock
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         FontSize="12"
                                         Foreground="{DynamicResource TextMuted}"
-                                        Text="{Binding PinnedCount}" />
+                                        Text="{Binding Pinned.PinnedCount}"/>
                                 </Border>
                             </Grid>
                         </Button>
@@ -301,7 +301,7 @@
                         Background="{DynamicResource AccentMuted}"
                         BorderBrush="{DynamicResource BorderDefault}"
                         BorderThickness="0,0,0,1"
-                        IsVisible="{Binding HasActiveCall}">
+                        IsVisible="{Binding Call.HasActiveCall}">
                         <Grid Margin="16,8" ColumnDefinitions="Auto,*,Auto">
                             <StackPanel
                                 Grid.Column="1"
@@ -311,11 +311,11 @@
                                     FontSize="13"
                                     FontWeight="SemiBold"
                                     Foreground="{DynamicResource Accent}"
-                                    Text="{Binding ActiveCallBannerText}" />
+                                    Text="{Binding Call.ActiveCallBannerText}" />
                                 <TextBlock
                                     FontSize="11"
                                     Foreground="{DynamicResource TextSecondary}"
-                                    Text="{Binding IsInActiveCall,
+                                    Text="{Binding Call.IsInActiveCall,
                                     Converter={converters:Converter Name=BoolToString},
                                     ConverterParameter='Вы участвуете · нажмите чтобы вернуться|Нажмите чтобы войти'}" />
                             </StackPanel>
@@ -323,8 +323,8 @@
                                 Grid.Column="2"
                                 Padding="12,6"
                                 Classes="DialogAccent"
-                                Command="{Binding StartOrJoinCallCommand}"
-                                Content="{Binding IsInActiveCall,
+                                Command="{Binding Call.StartOrJoinCallCommand}"
+                                Content="{Binding Call.IsInActiveCall,
                                 Converter={converters:Converter Name=BoolToString},
                                 ConverterParameter='Открыть|Войти'}"
                                 FontSize="12" />

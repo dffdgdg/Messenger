@@ -2,11 +2,8 @@
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class MessageFileViewModel(
-    MessageFileDto file,
-    IFileDownloadService? downloadService = null,
-    INotificationService? notificationService = null,
-    IFileDownloadStateService? stateService = null)
+public sealed partial class MessageFileViewModel(MessageFileDto file, IFileDownloadService? downloadService = null,
+    INotificationService? notificationService = null, IFileDownloadStateService? stateService = null)
     : ObservableObject, IDisposable
 {
     private const int MaxDisplayFileNameLength = 18;
@@ -27,18 +24,13 @@ public sealed partial class MessageFileViewModel(
 
     public MessageFileDto File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
-    // ── Изображения ────────────────────────────────────────────────
     [ObservableProperty] public partial double ImageWidth { get; set; } = double.NaN;
     [ObservableProperty] public partial double ImageHeight { get; set; } = double.NaN;
     [ObservableProperty] public partial bool IsImageLoaded { get; set; }
-
-    // ── Скачивание ──────────────────────────────────────────────────
     [ObservableProperty] public partial bool IsDownloading { get; set; }
     [ObservableProperty] public partial double DownloadProgress { get; set; }
     [ObservableProperty] public partial string? ErrorMessage { get; set; }
     [ObservableProperty] public partial bool HasError { get; set; }
-
-    // ── Состояние скачанного файла ──────────────────────────────────
     [ObservableProperty] public partial FileDownloadStatus DownloadStatus { get; set; } = FileDownloadStatus.NotDownloaded;
     [ObservableProperty] public partial string? DownloadedFilePath { get; set; }
 
@@ -56,8 +48,6 @@ public sealed partial class MessageFileViewModel(
         FileDownloadStatus.Missing => "Скачать снова",
         _ => "Скачать"
     };
-
-    // ── Мета ────────────────────────────────────────────────────────
     public int Id => File.Id;
     public string FileName => File.FileName;
     public string DisplayFileName => FormatDisplayFileName(FileName, MaxDisplayFileNameLength);
@@ -97,7 +87,6 @@ public sealed partial class MessageFileViewModel(
 
     public string FileSizeFormatted => FormatFileSize(File.FileSize);
 
-    // ── Состояние (старый enum для совместимости) ────────────────────
     public DownloadState State => (IsDownloading, DownloadStatus, HasError) switch
     {
         (true, _, _) => DownloadState.Downloading,
@@ -105,10 +94,6 @@ public sealed partial class MessageFileViewModel(
         (_, _, true) => DownloadState.Failed,
         _ => DownloadState.NotStarted
     };
-
-    // ────────────────────────────────────────────────────────────────
-    // Инициализация состояния из БД
-    // ────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Вызвать один раз после создания VM.
@@ -155,13 +140,6 @@ public sealed partial class MessageFileViewModel(
         OnPropertyChanged(nameof(State));
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // Команды
-    // ────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Универсальная кнопка: Скачать / Открыть / Обновить / Скачать снова.
-    /// </summary>
     [RelayCommand]
     private async Task ExecuteActionAsync()
     {
@@ -179,7 +157,6 @@ public sealed partial class MessageFileViewModel(
         }
     }
 
-    /// <summary>Кнопка «Скачать» (старый биндинг в XAML).</summary>
     [RelayCommand]
     private async Task DownloadAsync() => await DownloadInternalAsync();
 
@@ -230,10 +207,6 @@ public sealed partial class MessageFileViewModel(
         ErrorMessage = null;
         _ = DownloadInternalAsync();
     }
-
-    // ────────────────────────────────────────────────────────────────
-    // Внутренняя логика скачивания
-    // ────────────────────────────────────────────────────────────────
 
     private async Task DownloadInternalAsync()
     {

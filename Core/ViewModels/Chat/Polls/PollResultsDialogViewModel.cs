@@ -11,10 +11,7 @@ public sealed partial class PollResultsDialogViewModel : DialogBaseViewModel
     [ObservableProperty] public partial bool IsAnonymous { get; set; }
     [ObservableProperty] public partial int TotalVotes { get; set; }
 
-    public PollResultsDialogViewModel(
-        PollDto poll,
-        ObservableCollection<UserDto> chatMembers,
-        IApiClientService apiClient)
+    public PollResultsDialogViewModel(PollDto poll, ObservableCollection<UserDto> chatMembers, IApiClientService apiClient)
     {
         _apiClient = apiClient;
         _chatMembers = chatMembers;
@@ -36,10 +33,7 @@ public sealed partial class PollResultsDialogViewModel : DialogBaseViewModel
     {
         if (IsAnonymous) return;
 
-        var allUserIds = Options
-            .SelectMany(o => o.VoterIds)
-            .Distinct()
-            .ToList();
+        var allUserIds = Options.SelectMany(o => o.VoterIds).Distinct().ToList();
 
         if (allUserIds.Count == 0)
         {

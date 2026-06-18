@@ -228,12 +228,15 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         {
             var callService = _sp.GetRequiredService<ICallService>();
 
-            var joinErrorTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var joinErrorTcs = new TaskCompletionSource<string>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
             void OnError(string msg) => joinErrorTcs.TrySetResult(msg);
             _callHub.CallError += OnError;
 
             CallStateDto? receivedState = null;
-            var stateTcs = new TaskCompletionSource<CallStateDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var stateTcs = new TaskCompletionSource<CallStateDto>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
 
             void OnStateUpdated(CallStateDto s)
             {
@@ -245,20 +248,18 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
 
             var joinTask = callService.JoinCallAsync(invite.CallId, invite.ChatId);
             var completedJoinOrError = await Task.WhenAny(joinTask, joinErrorTcs.Task);
-
             if (completedJoinOrError == joinErrorTcs.Task)
             {
                 _callHub.CallError -= OnError;
                 _callHub.CallStateUpdated -= OnStateUpdated;
-                Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {joinErrorTcs.Task.Result}");
+                var errorMsg = await joinErrorTcs.Task;
+                Debug.WriteLine($"[MainMenuViewModel] JoinCall вернул ошибку: {errorMsg}");
                 return;
             }
-
             await joinTask;
             _callHub.CallError -= OnError;
 
             using var cts = new CancellationTokenSource(3000);
-
             try
             {
                 receivedState = await stateTcs.Task.WaitAsync(cts.Token);
@@ -316,7 +317,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         }
 
         var callService = _sp.GetRequiredService<ICallService>();
-        var audioService = _sp.GetRequiredService<CallAudioService>();
+        var audioService = _sp.GetRequiredService<ICallAudioService>();
         var callVm = new CallViewModel(callService, _callHub, _activeCallStore, audioService);
         callVm.Initialize(state, chatName, isGroupCall, _auth.Session.UserId ?? 0);
 
@@ -553,6 +554,7 @@ public partial class MainMenuViewModel : BaseViewModel, IChatNavigator
         _deptVm.ShowRemoveConfirmAction = async member =>
         {
             var dlg = new ConfirmDialogViewModel("Удаление из отдела", $"Вы уверены, что хотите удалить {member.DisplayName} из отдела?", "Удалить", "Отмена");
+
             await _mainWindowVm.ShowDialogAsync(dlg);
             return await dlg.Result;
         };

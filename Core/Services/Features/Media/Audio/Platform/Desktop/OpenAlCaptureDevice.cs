@@ -1,14 +1,11 @@
-﻿#if !ANDROID 
+﻿#if !ANDROID
 using Core.Services.Features.Media.Abstractions;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace Core.Services.Features.Media.Audio.Platform.Desktop;
 
-/// <summary>OpenAL Soft capture — работает на Windows, Linux, macOS.</summary>
-public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
+public sealed class OpenAlCaptureDevice : IAudioCaptureDevice, IAsyncDisposable
 {
-    // ALC_FORMAT_MONO16 = 0x1101, ALC_CAPTURE_SAMPLES = 0x312
     private const int AlcFormatMono16 = 0x1101;
     private const int AlcCaptureSamples = 0x312;
 
@@ -26,7 +23,6 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
     {
         if (_device != 0) return Task.CompletedTask;
 
-        // Буфер на 500ms
         _device = OpenAlNative.CaptureOpenDevice(
             null, (uint)sampleRate, AlcFormatMono16, sampleRate / 2);
 
@@ -36,13 +32,16 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
             return Task.CompletedTask;
         }
 
-        // Размер чанка — 20ms для звонков, 32ms для записи голосовых
-        _chunkSamples = sampleRate / 50; // 20ms
+        _chunkSamples = sampleRate / 50;
 
         OpenAlNative.CaptureStart(_device);
 
+        var oldCts = _cts;
+        oldCts?.Cancel();
+        oldCts?.Dispose();
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _captureTask = Task.Run(() => CaptureLoop(_cts.Token), ct);
+        _captureTask = Task.Run(() => CaptureLoop(_cts.Token), _cts.Token);
 
         Debug.WriteLine($"[OpenAlCapture] Started, sampleRate={sampleRate}");
         return Task.CompletedTask;
@@ -50,14 +49,18 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
 
     public async Task StopAsync()
     {
-        _cts?.Cancel();
+        var cts = _cts;
+        cts?.Cancel();
 
         if (_captureTask != null)
         {
             try { await _captureTask.WaitAsync(TimeSpan.FromSeconds(1)); }
-            catch { }
+            catch { /* таймаут или отмена — ожидаемо */ }
             _captureTask = null;
         }
+
+        cts?.Dispose();
+        if (ReferenceEquals(cts, _cts)) _cts = null;
 
         CloseDevice();
         Debug.WriteLine("[OpenAlCapture] Stopped");
@@ -79,7 +82,6 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
                         OpenAlNative.CaptureSamples(_device, (nint)ptr, _chunkSamples);
                 }
 
-                // Копируем перед передачей — обработчик может держать массив дольше
                 var copy = new short[_chunkSamples];
                 buffer.AsSpan().CopyTo(copy);
                 SamplesAvailable?.Invoke(this, copy);
@@ -95,8 +97,7 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
     {
         try
         {
-            var test = OpenAlNative.CaptureOpenDevice(
-                null, 16000, AlcFormatMono16, 8000);
+            var test = OpenAlNative.CaptureOpenDevice(null, 16000, AlcFormatMono16, 8000);
             if (test == 0) return false;
             OpenAlNative.CaptureCloseDevice(test);
             return true;
@@ -112,12 +113,20 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice
         _device = 0;
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        await StopAsync();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         _cts?.Cancel();
         _cts?.Dispose();
+        _cts = null;
         CloseDevice();
     }
 }

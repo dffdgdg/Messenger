@@ -11,7 +11,7 @@
 
 <img src="Assets/Screenshots/Dialog.jpg" width="700" alt="Главный экран приложения">
 
-**Готовое решение для внутренней коммуникации в компании.** Обмен сообщениями, файлами и голосовыми заметками, управление отделами и ролями в реальном времени.
+Обмен сообщениями, файлами и голосовыми заметками, управление отделами и ролями в реальном времени.
 
 </div>
 
@@ -25,11 +25,11 @@
 - **Shared:** Общие DTO, перечисления и контракты данных.
 
 ### Ключевые особенности
-- **Безопасность:** JWT с ротацией токенов (FamilyId), BCrypt паролей, Rate Limiting, разграничение уровней доступа.
+- **Безопасность:** JWT с ротацией токенов (FamilyId, обнаружение повторного использования), BCrypt паролей, Rate Limiting, флаговые роли с разграничением доступа.
 - **Real-time:** Мгновенные уведомления, статусы набора текста, прочтения, онлайн/офлайн через SignalR.
-- **Кэширование:** Быстрый офлайн-доступ к истории чатов через SQLite. Поиск — через серверный API.
-- **Голосовые звонки:** P2P аудио через прямой UDP, кодек Opus, сигнализация через SignalR.
-- **Файлы:** Отправка файлов, автоконвертация аватаров в WebP.
+- **Кэширование:** Быстрый офлайн-доступ к истории чатов через SQLite (последние 200 сообщений на чат). Поиск — через серверный API.
+- **Голосовые звонки:** WebRTC (P2P DataChannel), кодек Opus, сигнализация через SignalR, поддержка TURN-сервера.
+- **Файлы:** Отправка файлов до 300MB, автоконвертация аватаров в WebP.
 - **Голосовые сообщения:** Запись и воспроизведение с визуализацией формы волны.
 
 ---
@@ -38,19 +38,20 @@
 
 ### Коммуникация
 - Личные диалоги и групповые чаты
-- Голосовые звонки (P2P UDP, Opus, шумоподавление)
+- Голосовые звонки (WebRTC P2P, Opus, шумоподавление)
 - Опросы с анонимным и множественным голосованием
-- Ответы на сообщения (Quote) и пересылка (Forward)
+- Ответы на сообщения (Quote) и пересылка (Forward) с разрешением цепочки до корневого сообщения
 - Редактирование и удаление сообщений (soft-delete)
 - Голосовые сообщения с формой волны
 - Индикаторы прочтения (Read Receipts) и статус «печатает…»
-- Закрепление сообщений
-- Настройка уведомлений (мут чата)
+- Закрепление сообщений с системными уведомлениями
+- Настройка уведомлений (мут чата, mention-уведомления)
 
 ### Организация
 - Иерархические отделы (дерево без циклов, BFS-проверка)
-- Ролевая модель: Пользователь / Руководитель отдела / Администратор
+- Ролевая модель: Пользователь / Руководитель отдела / Администратор (флаговые роли)
 - Управление составом отделов и назначением руководителей
+- Автоматическая синхронизация членства в чатах отделов и чате руководителей
 - Глобальный поиск по всем чатам и сообщениям с фильтрами и подсветкой совпадений
 
 ### Клиент
@@ -78,6 +79,7 @@
 | **ORM (Client)** | sqlite-net-pcl | 1.9.172 |
 | **База данных** | PostgreSQL | 16 |
 | **Аудио** | PortAudio + Opus (Concentus) | — |
+| **WebRTC** | SIPSorcery.WebRTC | — |
 | **Security** | JwtBearer, BCrypt.Net-Next | 10.0 / 4.1.0 |
 | **Images** | SixLabors.ImageSharp | 3.2.0 |
 
@@ -93,7 +95,7 @@
 │   │                           #       Notification, Department, Search,
 │   │                           #       ReadReceipt, Call, Online
 │   ├── 📂 Enum/                # ChatType, ChatRole, Theme, UserRole,
-│   │                           #   SystemEventType, CallStatus, UserStatusType
+│   │                           #   SystemEventType, CallStatus, UserStatusType, CallMode
 │   ├── 📂 Helpers/             # SystemEventMeta
 │   ├── 📂 Hubs/                # HubMethods (константы имён SignalR-методов)
 │   └── 📂 Response/            # ApiResponse<T>, ApiResponseHelper
@@ -102,7 +104,7 @@
 │   ├── 📂 Controllers/         # REST API эндпоинты
 │   │   ├── BaseController      # Map(Result<T>) → HTTP-статус
 │   │   ├── AuthController      # Login, Refresh, Revoke
-│   │   ├── ChatsController     # CRUD чатов, участники, роли
+│   │   ├── ChatsController     # CRUD чатов, участники, роли, аватары
 │   │   ├── MessagesController  # Сообщения, поиск, пагинация, pin
 │   │   ├── PollsController     # Опросы и голосование
 │   │   └── ...                 # Users, Departments, Admin, Files,
@@ -111,16 +113,23 @@
 │   ├── 📂 Data/                # EF Core сущности + MessengerDbContext
 │   │   └── 📂 SeedData/        # DataSeeder (users.json)
 │   ├── 📂 Services/
-│   │   ├── 📂 Core/Auth/       # AuthService, TokenService
-│   │   ├── 📂 Features/        # Chat, Messaging, Department,
-│   │   │                       #   ReadReceipt, User, Call
+│   │   ├── 📂 Auth/            # AuthService (partial, флаговые роли, лимит 5 сессий), TokenService
+│   │   ├── 📂 Chat/            # ChatService, ChatMemberService, NotificationService,
+│   │   │                       #   SystemMessageService, SystemMessageFormatter
+│   │   ├── 📂 Messaging/       # MessageService (partial, @mentions, кэш 1с),
+│   │   │                       #   FileService, PollService
+│   │   ├── 📂 Department/      # DepartmentService (автосинхронизация чатов)
+│   │   ├── 📂 ReadReceipt/     # ReadReceiptService
+│   │   ├── 📂 User/            # UserService, AdminService
+│   │   ├── 📂 Call/            # CallSessionService, CallMixerService,
+│   │   │                       #   CallRelayService, TurnCredentialService
 │   │   └── 📂 Infrastructure/  # CacheService, AccessControlService,
 │   │                           #   HubNotifier, OnlineUserService,
-│   │                           #   UdpDiscoveryService, Bundles
-│   ├── 📂 Repositories/        # Abstractions + Implementations
+│   │                           #   UdpDiscoveryService, Bundles, UserStatusService
+│   ├── 📂 Repositories/        # Abstractions + Implementations + Projections
 │   ├── 📂 Mapping/             # Ручной маппинг сущностей → DTO
 │   ├── 📂 Middleware/          # ExceptionHandling, MissingFileCleanup
-│   ├── 📂 Configuration/       # DI, Swagger, JWT, RateLimit, StaticFiles
+│   ├── 📂 Configuration/       # DI, Swagger, JWT, TurnSettings, RateLimit, StaticFiles
 │   └── 📄 Dockerfile
 │
 ├── 📂 Desktop/                 # Клиент (Avalonia UI)
@@ -141,12 +150,13 @@
 │   │   │                       #   AuthManager, SessionStore, CookieStorage
 │   │   ├── 📂 Features/        # CallService, CallAudioService,
 │   │   │                       #   CallHubConnection, NoiseReducer,
+│   │   │                       #   WebRtcManager, WebRtcPeerConnection,
 │   │   │                       #   AudioPlayerService, AudioRecorderService,
 │   │   │                       #   FileDownloadService
 │   │   └── 📂 Platform/        # NavigationService, DialogService,
 │   │                           #   ThemeService, SettingsService,
 │   │                           #   ServerDiscoveryService, NotificationService
-│   ├── 📂 Data/                # Локальный кэш (SQLite, схема v3)
+│   ├── 📂 Data/                # Локальный кэш (SQLite, схема v2)
 │   │   ├── LocalDatabase       # WAL, индексы, миграции
 │   │   └── 📂 Repositories/    # LocalCacheService,
 │   │                           #   ChatCacheRepository,
@@ -210,9 +220,11 @@ docker compose logs -f messenger-api
 
 ### Backend
 - **Result Pattern:** Сервисы возвращают `Result<T>` вместо исключений. `BaseController.Map()` автоматически транслирует результат в HTTP-статус и `ApiResponse<T>`.
-- **Access Control:** `AccessControlService` проверяет права (Owner/Admin/Member) с двойным кэшем (MemoryCache + per-request).
-- **Caching:** `IMemoryCache` для списков чатов (TTL 5 мин) и состава участников (TTL 10 мин) с явной инвалидацией.
-- **Rate Limiting:** Sliding Window Policy для Login (5/мин), Upload (10/мин), Search (15/мин), Messaging (30/мин).
+- **Partial классы с source-генерированными логгерами:** `AuthService`, `MessageService`, `NotificationService`, `ChatMemberService` и др. используют `[LoggerMessage]` для высокопроизводительного structured logging.
+- **Флаговые роли:** `UserRole` — `[Flags]` enum (User=0, Head=1, Admin=2). Пользователь может быть одновременно Admin и Head. `IsSystemAdmin()` bypass для проверок прав.
+- **Access Control:** `AccessControlService` проверяет права (Owner/Admin/Member) с двойным кэшем (MemoryCache + per-request словарь).
+- **Caching:** `CacheService` для списков чатов (TTL 5 мин, sliding 2 мин) и состава участников (TTL 10 мин, sliding 3 мин) с явной инвалидацией. `MessageService` кэширует `GetLatestMessagesAsync` на 1 секунду.
+- **Rate Limiting:** Sliding Window Policy для Login (5/мин), Upload (10/мин), Search (15/мин), Messaging (30/мин — закомментирован).
 - **SignalR:** Единый `MessengerHub` (`/chatHub`) с рассылкой через `HubNotifier`. Группы: `chat_{id}` и `user_{id}`.
 
 ### Frontend (MVVM)
@@ -222,8 +234,9 @@ docker compose logs -f messenger-api
 - **Единое SignalR-соединение:** `GlobalHubConnection` — одно WebSocket-соединение на всё приложение. Фильтрация событий по чату через `ChatHubSubscriber`.
 
 ### Голосовые звонки
-- **P2P UDP:** Аудио передаётся напрямую между клиентами, сервер аудио не обрабатывает.
-- **Сигнализация:** Обмен UDP-эндпоинтами через SignalR (`WebRtcSignalDto`, тип `udp-endpoint`). Выбор лучшего эндпоинта по совпадению подсети.
+- **WebRTC P2P:** Аудио передаётся через DataChannel между клиентами. Сервер участвует только в сигнализации и предоставлении TURN-конфигурации.
+- **Сигнализация:** Обмен offer/answer/ICE-кандидатами через SignalR (`SignalDto`, типы `webrtc-offer`, `webrtc-answer`, `webrtc-ice`).
+- **TURN:** Сервер присылает `RelayEndpointInfo.Turn` с временными credentials (RFC 8489). Если TURN не настроен — UDP relay игнорируется.
 - **Аудиостек:** PortAudio (48kHz/моно/20ms) + Opus 32kbps + адаптивный VAD + спектральное шумоподавление (Wiener Filter).
 
 ---
@@ -276,11 +289,13 @@ docker compose logs -f messenger-api
 | `/api/chats/user/{userId}` | GET | Список чатов пользователя |
 | `/api/chats` | POST | Создать чат |
 | `/api/chats/{id}/members` | GET | Участники чата |
+| `/api/chats/{chatId}/avatar` | POST / DELETE | Загрузка / удаление аватара чата |
 | `/api/messages` | POST | Отправить сообщение |
 | `/api/messages/{id}` | PUT | Редактировать сообщение |
 | `/api/messages/{id}` | DELETE | Удалить (soft-delete) |
 | `/api/messages/chat/{chatId}/latest` | GET | Последние сообщения |
 | `/api/messages/chat/{chatId}/around/{messageId}` | GET | Сообщения вокруг якорного |
+| `/api/messages/chat/{chatId}/search` | POST | Поиск по чату |
 | `/api/messages/user/{userId}/search` | POST | Глобальный поиск |
 
 #### Пользователи и администрирование
@@ -288,14 +303,18 @@ docker compose logs -f messenger-api
 |---|---|---|
 | `/api/users/{id}` | GET | Профиль пользователя |
 | `/api/users/{id}/avatar` | POST | Загрузка аватара |
-| `/api/users/{id}/status` | PUT | Установить статус |
+| `/api/users/status/batch` | POST | Статусы списка пользователей |
+| `/api/status` | POST | Установить свой статус |
+| `/api/status/current` | GET | Свой текущий статус |
+| `/api/notifications/chat/mute` | POST | Мут чата |
+| `/api/notifications/settings` | GET | Все настройки уведомлений |
 | `/api/admin/users` | GET | Все пользователи (Admin) |
 | `/api/admin/users/{id}/toggle-ban` | POST | Бан/разбан (Admin) |
 
 #### SignalR
 Подключение: `{server}/chatHub?access_token={jwt}`
 
-Ключевые события сервера → клиент: `ReceiveMessage`, `MessageUpdated`, `MessageDeleted`, `UserOnline`, `UserOffline`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`, `ChatUpdated`, `ChatRemoved`, `PollUpdated`, `IncomingCall`, `CallStateUpdated`, `CallEnded`
+Ключевые события сервера → клиент: `ReceiveMessageDto`, `MessageUpdated`, `MessageDeleted`, `UserOnline`, `UserOffline`, `UserStatusChanged`, `UserTyping`, `MessageRead`, `UnreadCountUpdated`, `ChatUpdated`, `ChatRemoved`, `ReceivePollUpdate`, `ReceiveNotification`, `UserRoleUpdated`, `UserPermissionsChanged`, `IncomingCall`, `CallStateUpdated`, `CallEnded`, `ReceiveSignal`, `RelayEndpoint`
 
 ---
 
@@ -306,7 +325,10 @@ docker compose logs -f messenger-api
 | **Result Pattern** | Обработка ошибок без исключений: `Result<T>.Success()` / `Result.NotFound()` / `Result.Forbidden()` и т.д. |
 | **Soft Delete** | Удаление помечается флагом `is_deleted=true`, запись остаётся в БД |
 | **FamilyId** | Группа связанных Refresh-токенов одной сессии для обнаружения повторного использования |
+| **Флаговые роли** | `[Flags] enum UserRole` — пользователь может одновременно быть Admin и Head |
 | **Handler Composition** | Декомпозиция `ChatViewModel` на независимые `ChatFeatureHandler`-классы |
 | **Stale-While-Revalidate** | Мгновенный показ кэша из SQLite + фоновое обновление с сервера |
-| **P2P UDP** | Прямая передача аудио между клиентами без участия сервера |
+| **Бандлы (Bundles)** | Группировка зависимостей (TimeBundle, CacheBundle, ChatBundle и др.) для упрощения DI в сервисах |
+| **WebRTC DataChannel** | P2P канал передачи аудио между клиентами без участия сервера |
+| **TURN** | Сервер ретрансляции трафика для клиентов за NAT (RFC 8489, временные credentials) |
 | **VAD** | Voice Activity Detection — определение наличия речи для подавления тишины перед отправкой |

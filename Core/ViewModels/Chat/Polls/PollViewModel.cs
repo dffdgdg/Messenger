@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using Core.Services.Abstractions;
 using System.ComponentModel;
 
 namespace Core.ViewModels.Chat;
@@ -108,8 +106,7 @@ public partial class PollViewModel : BaseViewModel
     {
         await SafeExecuteAsync(async () =>
         {
-            var result = await _apiClient.PostAsync<object, PollDto>(
-                ApiEndpoints.Polls.Close(PollId), new { });
+            var result = await _apiClient.PostAsync<object, PollDto>(ApiEndpoints.Polls.Close(PollId), new { });
 
             if (result is { Success: true, Data: not null })
             {

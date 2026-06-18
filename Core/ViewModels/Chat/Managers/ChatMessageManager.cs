@@ -1,8 +1,6 @@
 using Core.Data.Models.Sync;
 using Core.Data.Repositories.Abstractions;
 using Core.Infrastructure;
-using Core.Infrastructure.Configuration;
-using Core.Services.Abstractions;
 using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Commands;
 using Core.ViewModels.Chat.Context;
@@ -13,10 +11,7 @@ using System.Windows.Input;
 
 namespace Core.ViewModels.Chat.Managers;
 
-public sealed class ChatMessageManager(
-    ChatContext context,
-    MediaServices media,
-    ChatCommands? chatCommands = null,
+public sealed class ChatMessageManager(ChatContext context, MediaServices media, ChatCommands? chatCommands = null,
     ICommand? mentionClickCommand = null) : IAsyncDisposable
 {
     private readonly IApiClientService _apiClient = context.Api;

@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<EnableDefaultContentItems>true</EnableDefaultContentItems>
-		<OutputType Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">Exe</OutputType>
-		<OutputType Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">WinExe</OutputType>
+		<OutputType>WinExe</OutputType>
 
 		<TargetFrameworks>net10.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
@@ -11,7 +10,6 @@
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm64</RuntimeIdentifiers>
 		<UseRidGraph>true</UseRidGraph>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
@@ -20,24 +18,12 @@
 		<AssemblyTitle></AssemblyTitle>
 		<ImplicitUsings>enable</ImplicitUsings>
 
-		<PlatformTarget Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">x64</PlatformTarget>
+		<PlatformTarget>x64</PlatformTarget>
 
 		<GenerateDocumentationFile>False</GenerateDocumentationFile>
-
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">26</SupportedOSPlatformVersion>
-		<ApplicationTitle Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">ВнутрьСеть</ApplicationTitle>
-		<ApplicationId Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">com.vnutrset.app</ApplicationId>
-		<ApplicationDisplayVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">1.0</ApplicationDisplayVersion>
-		<ApplicationVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">1</ApplicationVersion>
 	</PropertyGroup>
 
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<PackageReference Include="Avalonia.Android" Version="12.0.4" />
-		<AndroidNativeLibrary Include="Platform\Android\Native\arm64-v8a\*.so" Abi="arm64-v8a" />
-		<AndroidNativeLibrary Include="Platform\Android\Native\armeabi-v7a\*.so" Abi="armeabi-v7a" />
-	</ItemGroup>
-
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+	<ItemGroup>
 		<PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
 		<PackageReference Include="Avalonia.X11" Version="12.0.4" />
 		<PackageReference Include="Silk.NET.OpenAL" Version="2.23.0" />
@@ -149,12 +135,7 @@
 		<Folder Include="Views\Controls\Admin\" />
 	</ItemGroup>
 
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<AndroidManifest Include="Properties\AndroidManifest.xml" />
-		<AndroidResource Include="Resources\**\*.xml" />
-	</ItemGroup>
-
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+	<ItemGroup>
 		<None Update="appsettings.Wsl.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -170,13 +151,9 @@
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(OS)' != 'Windows_NT' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
 		<BaseOutputPath>/tmp/MessengerDesktop/bin/</BaseOutputPath>
 		<BaseIntermediateOutputPath>/tmp/MessengerDesktop/obj/</BaseIntermediateOutputPath>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
-	  <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
 	</PropertyGroup>
 
 	<Target Name="CopyToWindowsOutput" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">

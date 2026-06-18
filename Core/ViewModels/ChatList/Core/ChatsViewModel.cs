@@ -1,11 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Core.Data.Repositories.Abstractions;
-using Core.Infrastructure.Configuration;
+﻿using Core.Data.Repositories.Abstractions;
 using Core.Infrastructure.Diagnostics;
 using Core.Infrastructure.Helpers;
 using Core.Infrastructure.Media;
-using Core.Services.Abstractions;
 using Core.ViewModels.Chat;
 using Core.ViewModels.ChatList.Factories;
 using Core.ViewModels.Chats;

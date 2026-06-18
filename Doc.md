@@ -1,4 +1,3 @@
-```markdown
 # Документация проекта ВнутрьСеть
 
 > **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite
@@ -1237,36 +1236,36 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|
 | `ApiClientService` | HTTP + авто-рефреш при 401. Cookie прикрепляются автоматически через `CookieContainer` |
 | `GlobalHubConnection` | SignalR `/chatHub`, 15+ событий. Retry при 503. События `ChatRemoved`, `ChatUpdated` (через `ChatUpdateEventDto`) |
-| `CallHubConnection` | SignalR `/chatHub`, 12 событий. Retry при 503 |
-
-# 15. DESKTOP — СЕРВИСЫ (Call)
 
 ## Звонки (`Desktop/Services/Features/Call/`)
 
+### Архитектура звонков
+Звонки построены на **WebRTC** (библиотека SIPSorcery) для peer-to-peer аудио с резервным использованием **TURN-сервера** для обхода NAT. Для групповых звонков используется серверный микшер (`ServerMixed` режим). SignalR используется только для сигнализации (offer/answer/ICE). Данные аудио передаются через WebRTC DataChannel "audio", закодированные в Opus.
+
 | Сервис | Назначение |
 |---|---|
-| `CallService` | Оркестратор WebRTC-звонков. При старте/принятии звонка создаёт `WebRtcManager`. Аудио через `ICallAudioService` (Opus → DataChannel). Поддерживает TURN-сервер через `RelayEndpointInfo.Turn` (если `Turn == null`, UDP relay игнорируется). |
-| `CallAudioService` | PortAudio 48kHz/моно/20ms. Opus 32kbps, VBR, VOIP-режим, complexity=5. VAD адаптивный: noiseFloor обновляется α=0.005, порог = max(0.008, noiseFloor×2.5). Hold 1200ms, debounce 150ms. Принимает Opus-пакеты от WebRTC через `ReceiveEncodedAudio`. |
-| `WebRtcManager` | Управление WebRTC peer connections. Создаёт DataChannel "audio" для передачи Opus. Обрабатывает offer/answer/ICE. Методы: `InitiateAsync(peerId)`, `SendAudioToAll(opusData)`, `HandleSignalAsync(SignalDto)`. |
-| `WebRtcPeerConnection` | Обёртка над `RTCPeerConnection`. События: `OnIceCandidate`, `OnDataChannel`, `OnConnectionStateChanged`. Поддержка TURN-серверов через `IceServerConfig`. |
-| `IceServerConfig` | Конфигурация ICE-серверов. Статический метод `FromRelayEndpoint(RelayEndpointInfo)` — парсит TURN-credentials. |
-| `NoiseReducer` | FFT → Wiener Filter → Gate. Decision-Directed SNR α=0.96. |
-| `CallHubConnection` | SignalR-соединение к /chatHub. Используется для сигнализации: передача WebRTC offer/answer/ICE через `SendSignalAsync`. Подписывается на `RelayEndpoint` для получения TURN-конфигурации. |
+| `CallService` | Оркестратор WebRTC-звонков. При старте/принятии звонка создаёт `WebRtcManager`. Поддерживает TURN через `IceServerConfig` (`_pendingIceConfig`). Аудио через `ICallAudioService`. Определяет, кто инициирует WebRTC-соединение: если `myUserId > peerId`, создаётся offer. События: `CallStarted`, `CallEnded`, `MuteChanged`, `ParticipantSpeakingChanged` |
+| `CallAudioService` | Работа с PortAudio через OpenAL (48kHz/моно/20ms кадры). Кодирование/декодирование Opus (Concentus): 32kbps, VBR, VOIP-режим, complexity=2. VAD с адаптивным порогом (noiseFloor α=0.005, порог = max(0.008, noiseFloor×2.5), hold 1200ms, debounce 150ms). Шумоподавление через `NoiseReducer`. Два режима микширования: PeerToPeer (миксует все `_playbackQueues`) и ServerMixed (один поток из `_serverMixedPlaybackQueue`). Принимает Opus-пакеты через `ReceiveEncodedAudio` и `ReceiveMixedAudio` |
+| `WebRtcManager` | Управление WebRTC peer connections. `ConcurrentDictionary<int, WebRtcPeerConnection>`. Методы: `InitiateAsync(peerId)` — создаёт offer, `HandleSignalAsync(SignalDto)` — обрабатывает offer/answer/ice, `SendAudioToAll(opusData)` — рассылает аудио через DataChannel, `RemovePeerAsync`. События: `PeerReady`, `AudioReceived`, `SignalingReady` |
+| `WebRtcPeerConnection` | Обёртка над `RTCPeerConnection` (SIPSorcery.Net). Создаёт DataChannel "audio" (неупорядоченный, без ретрансмитов). `IceServerConfig`: приоритет TURN-credentials, fallback на Google STUN. ICE gathering с таймаутом 8 сек. События: `Ready`, `AudioReceived`, `SignalingMessageReady`. **Платформенная адаптация:** `#if !ANDROID` — SIPSorcery.Net; `#else` — заглушка |
+| `IceServerConfig` | Конфигурация ICE-серверов: `StunUrls`, `Turn` (с `Urls`, `Username`, `Credential`, `ExpiresAt`), `TurnOnly`. Статический метод `FromRelayEndpoint(RelayEndpointInfo)`: если есть TURN-credentials — использует их, иначе Google STUN. Проверяет `ExpiresAt` для TURN |
+| `NoiseReducer` | FFT → Wiener Filter → Gate. Decision-Directed SNR α=0.96 |
+| `CallHubConnection` | SignalR `/chatHub`, 12 событий + 10 методов. Retry при 503. Автопереподключение. `SafeInvokeAsync` с проверкой `IsConnected`. События: `IncomingCall`, `CallStateUpdated`, `CallEnded`, `SignalReceived`, `RelayEndpoint`, `ActiveCallStarted/Updated/Ended`, `ParticipantJoined/Left/MuteChanged/SpeakingChanged`, `CallMessageReceived`, `CallError` |
 | `ActiveCallStore` | ObservableObject: `ActiveCall`, `IsCallUiOpen`, `IsInCall` |
 
 ### Поток звонка (WebRTC)
+
+```
 CallService.StartCallAsync(chatId)
   → CallAudioService.Start()
   → CallHubConnection.InitiateCallAsync(chatId)
   → сервер: CallSessionService.CreateCallAsync()
-            → рассылка IncomingCall + RelayEndpoint (с TURN если настроен)
+            → рассылка IncomingCall + RelayEndpoint
 
 Принятие → CallService.JoinCallAsync(callId, chatId)
-  → WebRtcManager() — создаётся с _pendingIceConfig если TURN был получен раньше
+  → WebRtcManager() — с _pendingIceConfig если был получен ранее
   → CallAudioService.Start()
   → CallHubConnection.JoinCallAsync(callId)
-  → сервер: CallSession.Status = Active
-  → рассылка CallStateUpdated всем участникам
 
 WebRTC установка соединения:
   → OnCallStateUpdated: для каждого участника где myUserId > peerId → InitiateAsync
@@ -1286,24 +1285,58 @@ WebRTC установка соединения:
   → LeaveCallAsync / CancelCallAsync / OnCallEndedRemotely
   → WebRtcManager.DisposeAsync() — закрытие всех peer connections
   → CallAudioService.Stop()
+```
 
-### AudioRecordingState (`Desktop/Services/Features/Media/Audio/`)
-Enum: `Idle`, `Recording`, `Sending`, `Error`
+### Поток звонка (ServerMixed UDP)
 
-### PortAudioLifetime
-Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureInitialized()`, `IsAvailable`.
+```
+При инициализации группового звонка:
+  → сервер устанавливает CallSession.Mode = ServerMixed
+  → вызывает CallRelayService.RegisterCall + AddParticipant
+  → отправляет RelayEndpoint (RelayEndpointInfo)
+  → CallService.OnRelayEndpointReceived → _pendingIceConfig если TURN != null
 
-### WavData
-Загружает 16-битный PCM WAV из потока. `short[] Samples`, `Duration`, `SampleRate`.
+Аудио (клиент → сервер):
+  CallService.SendAudioToRelay(userId, opusData)
+      → пакет: [callIdLen(1) | callId(UTF8) | userId(4) | seq(4) | opusData]
+      → UdpClient.Send на _relayEndpoint
+
+Серверный relay (CallRelayService):
+  → ReceiveLoop → ProcessPacket
+      → валидация участника через CallSessionService
+      → запись эндпоинта, обновление участника
+      → CallMixerService.ReceiveAudio(callId, userId, opusData)
+  CallMixerService каждые 20ms:
+      → микширует все последние кадры (исключая говорящего)
+      → нормализация громкости
+      → кодирование в Opus
+      → CallRelayService.SendMixedAudio для каждого участника
+
+Аудио (сервер → клиент):
+  CallRelayService.SendMixedAudio(userId, opusData)
+      → пакет: [seq(4) | opusData]
+      → отправка на сохранённый IPEndPoint участника
+  Клиент: ProcessUdpPacket → CallAudioService.ReceiveMixedAudio(opusData)
+```
+
+---
 
 ## Медиа (`Desktop/Services/Features/Media/`)
 
 | Сервис | Назначение |
 |---|---|
 | `AudioPlayerService` | WAV через PortAudio. Play/Pause/Resume/Stop/Seek |
-| `AudioRecorderService` | 16kHz/моно/16-bit PCM, WAV + Waveform (100 баров) |
+| `AudioRecorderService` | Запись голосовых сообщений: 16kHz/моно/16-bit PCM, WAV + Waveform (100 баров). Реализация через `IAudioCaptureDevice` с событием `SamplesAvailable` |
 | `FileDownloadService` | Скачивание + прогресс, открытие через OS |
 | `FileDownloadStateService` | Состояние скачанных файлов, взаимодействует с `IDownloadedFileRepository` |
+
+### Инфраструктура аудио
+
+| Класс | Назначение |
+|---|---|
+| `PortAudioLifetime` | Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureInitialized()`, `IsAvailable` |
+| `WavData` | Загружает 16-битный PCM WAV из потока. `short[] Samples`, `Duration`, `SampleRate` |
+| `AudioRecordingState` | Enum: `Idle`, `Recording`, `Sending`, `Error` |
 
 ## Platform (`Desktop/Services/Platform/`)
 
@@ -1322,6 +1355,7 @@ Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureIniti
 
 ---
 
+
 # 16. DESKTOP — АБСТРАКЦИИ (`Desktop/Services/Abstractions/`)
 
 | Интерфейс | Ключевые члены |
@@ -1331,8 +1365,10 @@ Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureIniti
 | `IAudioRecorderService` | `StartAsync`, `StopAsync → AudioRecordingResult?`, `CancelAsync` |
 | `IAuthManager` | `LoginAsync`, `LogoutAsync`, `TryRefreshTokenAsync`, `WaitForInitializationAsync` |
 | `IAuthService` (клиент) | `LoginAsync(username, password)`, `RefreshTokenAsync(accessToken, refreshToken?=null)` |
-| `ICallHubConnection` | 10 методов + 12 событий (включая `RelayEndpoint`) |
-| `ICallService` | `StartCallAsync`, `JoinCallAsync`, `LeaveCallAsync`, `ToggleMuteAsync`, события |
+| `ICallHubConnection` | Методы: `ConnectAsync`, `DisconnectAsync`, `InitiateCallAsync(chatId)`, `JoinCallAsync(callId)`, `LeaveCallAsync(callId)`, `DeclineCallAsync(callId)`, `CancelCallAsync(callId)`, `SendSignalAsync(SignalDto)`, `SendCallMessageAsync(callId, text)`, `ToggleMuteAsync(callId, isMuted)`, `ToggleSpeakingAsync(callId, isSpeaking)`, `GetCallStateAsync(chatId) → CallStateDto?`. События: `IncomingCall`, `CallStateUpdated`, `CallEnded`, `SignalReceived`, `CallParticipantJoined`, `CallParticipantLeft`, `ParticipantMuteChanged`, `ParticipantSpeakingChanged`, `ActiveCallStarted`, `ActiveCallUpdated`, `ActiveCallEnded`, `CallError`, `CallMessageReceived`, `RelayEndpoint`. Свойство: `IsConnected` |
+| `ICallService` | `StartCallAsync(chatId)`, `JoinCallAsync(callId, chatId)`, `LeaveCallAsync()`, `DeclineCallAsync(callId)`, `CancelCallAsync()`, `ToggleMuteAsync()`. События: `CallStarted`, `CallEnded`, `MuteChanged(bool)`, `ParticipantSpeakingChanged(int userId, bool isSpeaking)`. Свойства: `IsInCall`, `IsMuted`, `ActiveCallId`, `ActiveChatId` |
+| `ICallAudioService` | `Start()`, `Stop()`, `SetMuted(bool)`, `SetMode(CallMode)`, `AddParticipant(int userId)`, `RemoveParticipant(int userId)`, `ReceiveEncodedAudio(int fromUserId, byte[] opusData, int length)`, `ReceiveMixedAudio(byte[] opusData)`. События: `OnEncodedFrame(Action<byte[], int>)`, `SpeakingStateChanged(Action<bool>)`. Свойства: `IsRunning`, `IsMuted`, `HasParticipant(int)`, `NoiseSuppressionEnabled` |
+| `IAudioCaptureDevice` | `StartAsync(int sampleRate, CancellationToken ct)`, `StopAsync()`, `IsAvailable`, событие `SamplesAvailable(short[])` |
 | `IDialogService` | `ShowAsync<T>`, `CloseAsync`, `CloseAllAsync` |
 | `IFileDownloadService` | `DownloadFileAsync(progress?)`, `OpenFileAsync`, `OpenFolderAsync` |
 | `IFileDownloadStateService` | `GetStateAsync(MessageFileDto)`, `RegisterDownloadAsync`, `ResetAsync` |
@@ -1379,48 +1415,128 @@ Singleton, владеет `PortAudio.Initialize()` / `Terminate()`. `EnsureIniti
 
 ## Chat Core (`Desktop/ViewModels/Chat/`)
 
+### ChatViewModel (`Core/ChatViewModel.cs`)
+**Основной координатор чата.** Содержит публичные свойства-обработчики, вынесенные в отдельные классы для управления конкретными аспектами чата. Свойства пробрасываются автоматически через `ChatPropertyRelay`, который подписывается на `PropertyChanged` дочерних компонентов и вызывает `OnPropertyChanged` на `ChatViewModel`.
+
+**Обработчики:**
+- **`Composer` (`ChatComposer`)** — логика поля ввода: текст, эмодзи, упоминания (@username), отправка сообщений
+- **`Scroll` (`ChatScrollCoordinator`)** — координация скролла и отметки прочитанными
+- **`Permissions` (`ChatPermissionsManager`)** — расчёт прав: `CanEditGroupChat`, `CanLeaveChat`, `CanLeaveChatVisible`
+- **`Sections` (`ChatSectionManager`)** — счётчики и загрузка контента для секций инфо-панели (фото, файлы, опросы)
+- **`Pinned` (`ChatPinnedHandler`)** — управление закреплёнными сообщениями, баннер с превью
+- **`Call` (`ChatCallHandler`)** — состояние активного звонка в чате, баннер, команда `StartOrJoinCall`
+- Остальные: `MessageManager`, `Attachments`, `MemberLoader`, `EditDelete`, `Reply`, `Forward`, `Typing`, `Voice`, `InfoPanel`, `Search`, `Notification`
+
+**Ключевые вычисляемые свойства:**
+- `HasContactInfoMediaSection` / `HasGroupInfoMediaSection` — видимость секций в инфо-панели
+- `MemberCountText` — строка с количеством участников и онлайн-статусом
+- `ShowSendMessageButton`, `ShowVoiceMessageButton`, `CanSendMessageNow` — управление кнопками отправки (делегировано в `Composer`)
+- `ShowScrollToBottom` — кнопка прокрутки вниз
+
 ### ChatContext (`Context/ChatContext.cs`)
-Центральный объект, содержит все зависимости для `ChatViewModel`. События скролла: `ScrollToMessageRequested`, `ScrollToIndexRequested`, `ScrollToBottomRequested`. Хранит `CurrentUserRole`, `IsSystemAdmin`, список участников. `IDisposable` с токеном отмены.
+Центральный объект с зависимостями. Хранит `CurrentUserRole`, `IsSystemAdmin`, `Members`, `Chat`. Предоставляет события скролла и `RequestRefreshCounters`.
 
 ### ChatCommands (`Commands/ChatCommands.cs`)
-Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, Forward, ShowPollResults и др.), разделяемый между всеми `MessageViewModel` через `ChatMessageManager`.
+Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, Forward, ShowPollResults), разделяемый между `MessageViewModel`.
 
 ### ChatFeatureHandler (`Shared/ChatFeatureHandler.cs`)
-Базовый класс для обработчиков фич. Содержит ссылку на `ChatContext`, виртуальный `DisposeManaged`.
+Базовый класс для обработчиков фич с виртуальным `DisposeManaged`.
 
-### IChatNavigator (`Navigation/IChatNavigator.cs`)
-Показать диалог опроса, редактирования группы, перейти в чат по пересылке, открыть профиль, открыть интерфейс звонка.
+### ChatPropertyRelay (`Relay/ChatPropertyRelay.cs`)
+Автоматическое пробрасывание свойств от дочерних компонентов к `ChatViewModel`. Поддерживает:
+- `Forward(source, mappings)` — проброс скалярных свойств (подписка на `PropertyChanged`)
+- `ForwardCollection(collection, callback)` — реакция на `CollectionChanged`
 
-### ChatViewModel (`Core/ChatViewModel.cs`)
-**Строк: ~1518.** Основная логика чата: инициализация, загрузка сообщений, управление правами. Принимает `targetMessageId` для начальной навигации. Обрабатывает `ChatUpdatedEvent`.
-Состоит из обработчиков: `MessageManager`, `Attachments`, `MemberLoader`, `EditDelete`, `Reply`, `Forward`, `Typing`, `Voice`, `InfoPanel`, `Search`, `Notification`.
+### ChatComposer (`Composer/ChatComposer.cs`)
+Управление текстовым вводом и отправкой сообщений. Обрабатывает:
+- Состояния отправки (текст, вложения, пересылка)
+- Упоминания (`@username`): анализ текста, показ подсказок, навигация по списку (стрелки, Enter, Escape)
+- Вставку эмодзи
+- Отправку с прикреплёнными файлами
+
+### ChatScrollCoordinator (`Scroll/ChatScrollCoordinator.cs`)
+Координация скролла и прочтения. Обрабатывает:
+- Отметку сообщений прочитанными при скролле (`OnMessageVisibleAsync`)
+- Пакетную отметку чата прочитанным (`MarkMessagesAsReadAsync`) с учётом кулдауна
+- Сброс счётчика непрочитанных
+
+### ChatPermissionsManager (`Permissions/ChatPermissionsManager.cs`)
+Расчёт прав для чата. Обновляет `CanEditGroupChat`, `CanLeaveChat`, `CanLeaveChatVisible`. Учитывает тип чата (контакт/группа/отдел), роль участника и системную роль администратора.
+
+### ChatSectionManager (`Sections/ChatSectionManager.cs`)
+Загрузка и обновление контента секций информационной панели:
+- Фото (`PhotosItems`, `PhotosCount`, `HasPhotos`)
+- Файлы (`FilesItems`, `FilesCount`, `HasFiles`)
+- Опросы (`PollMessages`, `PollsCount`, `HasPolls`)
+- Автоматическое обновление счётчиков через API при открытии секции
+- `RefreshCountsAsync` для обновления всех счётчиков
+
+### ChatPinnedHandler (`Features/Pinned/ChatPinnedHandler.cs`)
+Управление закреплёнными сообщениями:
+- Загрузка при инициализации (`LoadInitialAsync`)
+- Обновление при изменении состояния пина
+- `PinnedBannerMessage` — отображаемое в банере сообщение
+- `PinnedBannerPreviewText` — формат "Имя: превью"
+- `PinnedMessages` — коллекция для отображения в секции
+
+### ChatCallHandler (`Features/Call/ChatCallHandler.cs`)
+Логика звонков в интерфейсе чата:
+- Подписка на события `ICallHubConnection` и `ICallService`
+- Свойства: `HasActiveCall`, `IsInActiveCall`, `ActiveCallParticipantsCount`, `ActiveCallBannerText`
+- Команда `StartOrJoinCallAsync`: если уже в звонке этого чата — открывает UI; иначе выходит из текущего, присоединяется к активному или начинает новый
+- `InitAsync(ct)` — проверка состояния звонка при открытии чата
 
 ### ChatMessageManager (`Managers/ChatMessageManager.cs`)
-**Строк: ~630.** Загрузка сообщений (кэш → сервер). `LoadAroundCoreAsync`. При получении сообщения вызывает `ctx.RequestRefreshCounters?.Invoke()`.
+Загрузка и управление сообщениями:
+- Кэширование в SQLite + загрузка с сервера
+- `LoadAroundCoreAsync` — смешанная загрузка до и после
+- При получении новых сообщений вызывает `RequestRefreshCounters`
 
 ### ChatHubSubscriber (`Core/ChatHubSubscriber.cs`)
 Подписки на SignalR события для чата.
 
 ### MessageViewModel (`Messages/MessageViewModel.cs`)
-**Строк: ~569.** Представление сообщения: файлы, голос, опросы. `SystemMessageTime` для системных сообщений. Создаёт `PollViewModel` с проверкой userId.
+Представление сообщения: файлы, голос, опросы. `SystemMessageTime` для системных сообщений. Создаёт `PollViewModel`.
 
 ### Вспомогательные модели
-- `LocalFileAttachment` (`Managers/`) — локальное вложение перед отправкой: `MemoryStream`, `Thumbnail`, форматированный размер
+- `LocalFileAttachment` (`Managers/`) — локальное вложение: `MemoryStream`, `Thumbnail`, форматированный размер
 - `MessageGroupPosition` (`Messages/`) — enum `Alone, First, Middle, Last` для радиуса пузырей
 - `ChatInfoPanelItems` (`Context/`) — `ChatInfoPanelMediaItem`, `ChatInfoPanelFileItem`
+
+---
+
+## Call ViewModel (`Desktop/ViewModels/Call/CallViewModel.cs`)
+
+### CallViewModel
+Реализует `IActiveCall`. Управляет UI звонка.
+
+**Свойства:** `CallId`, `ChatId`, `ChatName`, `IsMuted`, `IsGroupCall`, `DurationText` (таймер каждую секунду), `IsChatPanelOpen`, `SidePanelMode` (`CallSidePanelMode` — Chat или Participants), `MessageInput`, `UnreadChatCount`, `NoiseSuppressionEnabled` (прокси на `ICallAudioService`).
+
+**Коллекции:**
+- `Participants` (`ObservableCollection<CallParticipantViewModel>`) — адаптивная сетка (1/2/3 колонки в зависимости от числа участников)
+- `ChatMessages` (`ObservableCollection<CallChatMessageViewModel>`)
+
+**Команды:** `ToggleMute`, `LeaveCall`, `CloseUi`, `ToggleChatPanel`, `OpenParticipantsPanel`, `SendChatMessage`, `InsertEmoji`
+
+**События:**
+- Hub: `CallParticipantJoined`, `CallParticipantLeft`, `ParticipantMuteChanged`, `CallEnded`, `ActiveCallUpdated`, `CallMessageReceived`
+- Сервис: `ParticipantSpeakingChanged`, `MuteChanged`, `SpeakingStateChanged`
+
+**Логика:**
+- При сворачивании чата накапливает `UnreadChatCount`
+- Адаптивный размер аватара в зависимости от числа участников
+- Локальный индикатор речи через `_audioService.SpeakingStateChanged`
 
 ---
 
 ## ChatList (`Desktop/ViewModels/ChatList/`)
 
 ### ChatsViewModel (`Core/ChatsViewModel.cs`)
-**Строк: ~686.**
 - `IsChatMatchingCurrentTab`: `type is not ChatType.Contact` для групп
 - `UpdateChatMeta` — обновляет только метаданные чата
 - Отложенная прокрутка: `_pendingScrollToMessageId` — если чат уже открыт, вызывает `ScrollToMessageAsync` немедленно; иначе передаёт id в конструктор `ChatViewModel`
 
 ### MainMenuViewModel (`Shell/MainMenuViewModel.cs`)
-**Строк: ~840.**
 - Группы/контакты: `chat.Type is not ChatType.Contact`
 - Управление жизненным циклом CallHub при инициализации и переподключении
 
@@ -1440,7 +1556,7 @@ Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, F
 
 ## Отправка сообщения
 ```
-ChatViewModel.SendMessage()
+ChatComposer.SendMessageAsync()
   → загрузка файлов (FileService)
   → POST /api/messages (CreateMessageRequest)
   → MessageService.CreateMessageAsync()
@@ -1597,11 +1713,14 @@ ChatMemberService.UpdateRoleAsync(chatId, userId, newRole, updatedByUserId)
 - При подгрузке старых сообщений: сохранение якорного сообщения → корректировка смещения скролла
 - Центрирование при программном скролле к сообщению: `ScrollIntoView` → отложенный `TransformToVisual` → `ScrollViewer.Offset`. До трёх повторных попыток если контейнер не готов. При флаге `highlight` — `IsHighlighted` на `AppConstants.HighlightDurationMs` мс
 - `ShouldDeferScrollRequest(isExplicitMessageNavigation)`: явная навигация (включая `HasInitialMessageTarget`) не блокируется; обычная инициализация откладывается до восстановления состояния скролла
+- Баннеры и кнопки звонков используют свойства `Call.HasActiveCall`, `Call.IsInActiveCall`, `Call.ActiveCallBannerText`
+- Баннер закреплённых сообщений использует `Pinned.IsPinnedBannerVisible`, `Pinned.PinnedBannerPreviewText`, `Pinned.HasMultiplePinned`, `Pinned.PinnedCount`
 
 ## 20.4 Информационная панель чата (`Views/Chat/ChatInfoPanel.axaml.cs`)
 - Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`
 - Секции «Медиа» и «Опросы» скрываются при нулевых счётчиках
 - `LastSeen` для контакта и участников через `MultiBinding` с `LastSeenTextConverter`
+- Закреплённые сообщения используют `Pinned.PinnedMessages` и `Pinned.PinnedCount`
 
 ## 20.5 Сообщения
 - Опросы: `PollMessagePart.axaml` с `ItemsControl` + `FractionToGridLengthConverter`
@@ -1635,5 +1754,3 @@ ChatMemberService.UpdateRoleAsync(chatId, userId, newRole, updatedByUserId)
 | `MessageBodyTemplateSelector` | `IsDeleted` → удалённое; `HasPoll` → опрос; `ShowVoiceMessage` → голосовое; иначе → текст |
 | `MessageContentTemplateSelector` | Для пересланных: `OriginalIsVoiceMessage`, `OriginalHasPoll` |
 | `MessagePartSelector` | Аналогично, для встроенного контента |
-
----

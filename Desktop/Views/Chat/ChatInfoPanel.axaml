@@ -382,7 +382,7 @@
                                     <Button
                                         Margin="3,0"
                                         Classes="ActionButton"
-                                        Command="{Binding StartOrJoinCallCommand}">
+                                        Command="{Binding Call.StartOrJoinCallCommand}">
                                         <StackPanel VerticalAlignment="Center" Spacing="5">
                                             <PathIcon HorizontalAlignment="Center" Data="{StaticResource Call}" />
                                             <TextBlock HorizontalAlignment="Center" Text="Звонок" />
@@ -532,7 +532,7 @@
                                 <Button
                                     Classes="InfoRow"
                                     Command="{Binding OpenPinnedSectionCommand}"
-                                    IsVisible="{Binding PinnedCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                                    IsVisible="{Binding Pinned.PinnedCount, Converter={conv:Converter Name=GreaterThanZero}}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <PathIcon
                                             Width="18"
@@ -549,7 +549,7 @@
                                                 HorizontalAlignment="Center"
                                                 FontSize="12"
                                                 Foreground="{DynamicResource TextMuted}"
-                                                Text="{Binding PinnedCount}" />
+                                                Text="{Binding Pinned.PinnedCount}" />
                                         </Border>
                                     </Grid>
                                 </Button>
@@ -883,7 +883,8 @@
                             </StackPanel>
 
                             <StackPanel IsVisible="{Binding ShowPinnedSection}" Spacing="4">
-                                <ItemsControl ItemsSource="{Binding PinnedMessages}" Tag="{Binding OpenInfoSectionMessageCommand}">
+                                <ItemsControl ItemsSource="{Binding Pinned.PinnedMessages}" 
+                                              Tag="{Binding OpenInfoSectionMessageCommand}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:MessageViewModel">
                                             <Button
@@ -931,7 +932,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Classes="EmptyState" IsVisible="{Binding !PinnedMessages.Count}">
+                                <StackPanel Classes="EmptyState" IsVisible="{Binding !Pinned.PinnedMessages.Count}">
                                     <PathIcon
                                         Width="32"
                                         Height="32"

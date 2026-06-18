@@ -10,7 +10,6 @@ public sealed class OpenAlLifetime : IDisposable
     private bool _initialized;
     private bool _disposed;
 
-    // Держим контексты живыми — нужны всем аудио сервисам
     private ALContext? _alc;
     private unsafe Device* _device;
     private unsafe Context* _context;

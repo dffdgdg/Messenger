@@ -1,24 +1,21 @@
 ﻿using Avalonia.Input;
-using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Core.Infrastructure.Configuration;
 using Core.Infrastructure.Media;
 using Core.Services.Features.Media.Files;
-using Core.Services.UI;
 using Core.ViewModels.Chat.Commands;
+using Core.ViewModels.Chat.Composer;
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Core;
+using Core.ViewModels.Chat.Features.Call;
 using Core.ViewModels.Chat.Features.Media;
+using Core.ViewModels.Chat.Features.Pinned;
 using Core.ViewModels.Chat.Managers;
 using Core.ViewModels.Chat.Navigation;
+using Core.ViewModels.Chat.Permissions;
+using Core.ViewModels.Chat.Relay;
+using Core.ViewModels.Chat.Scroll;
 using Core.ViewModels.ChatList.Factories;
 using Core.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Dto.Call;
-using Shared.DTO.Message;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat;
@@ -26,40 +23,18 @@ namespace Core.ViewModels.Chat;
 public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 {
     public enum InfoSectionType { None, Photos, Files, Polls, Members, Pinned }
-    private readonly List<(INotifyPropertyChanged Source, PropertyChangedEventHandler Handler)> _propertyForwardingHandlers = [];
-    private NotifyCollectionChangedEventHandler? _membersCollectionHandler;
-    private NotifyCollectionChangedEventHandler? _messagesCollectionHandler;
-    private NotifyCollectionChangedEventHandler? _filteredMembersCollectionHandler;
-    private NotifyCollectionChangedEventHandler? _filteredPollsCollectionHandler;
-    private NotifyCollectionChangedEventHandler? _attachmentsCollectionHandler;
-    private readonly HashSet<MessageViewModel> _infoPanelTrackedMessages = [];
-    private CancellationTokenSource? _refreshDebounce;
-    private Action<MessageViewModel, bool>? _contextScrollToMessage;
-    private Action<int, bool>? _contextScrollToIndex;
-    private Action? _contextScrollToBottom;
 
-    private static readonly Dictionary<InfoSectionType, string> InfoSectionTitles = new()
-    {
-        [InfoSectionType.Photos] = "Медиа",
-        [InfoSectionType.Files] = "Документы",
-        [InfoSectionType.Polls] = "Опросы",
-        [InfoSectionType.Members] = "Участники",
-        [InfoSectionType.Pinned] = "Закреплённые сообщения"
-    };
-
-    #region Зависимости и хэндлеры
-
-    private readonly IFileDownloadService _fileDownloadService;
-    private readonly IFileDownloadStateService? _fileDownloadStateService;
-    private readonly INotificationService _notificationService;
-    private readonly IAudioPlayerService _audioPlayerService;
+    #region Дочерние компоненты
 
     public ChatContext Context { get; }
     public ChatsViewModel Parent { get; }
-
     public ChatMessageManager MessageManager { get; }
     public ChatAttachmentManager Attachments { get; }
     public ChatMemberLoader MemberLoader { get; }
+    public ChatComposer Composer { get; }
+    public ChatScrollCoordinator Scroll { get; }
+    public ChatPermissionsManager Permissions { get; }
+    public ChatSectionManager Sections { get; }
     public ChatEditDeleteHandler EditDelete { get; }
     public ChatReplyHandler Reply { get; }
     public ChatForwardHandler Forward { get; }
@@ -68,39 +43,100 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public ChatInfoPanelHandler InfoPanel { get; }
     public ChatSearchHandler Search { get; }
     public ChatNotificationHandler Notification { get; }
-
-    private readonly IChatNavigator _navigator;
-    private readonly ChatHubSubscriber _hubSubscriber;
-    private readonly TaskCompletionSource _initTcs = new();
-    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
-    private int _composerCaretIndex;
-    private readonly ICallService _callService;
-    private readonly ICallHubConnection _callHub;
-    private readonly IAudioRecorderService _audioRecorderService;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
-    public partial bool HasActiveCall { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActiveCallBannerText))]
-    public partial int ActiveCallParticipantsCount { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsInActiveCall { get; set; }
-
-    public string ActiveCallBannerText => ActiveCallParticipantsCount > 0 ? $"Идёт звонок · {ActiveCallParticipantsCount} участн." : "Идёт звонок";
+    public ChatPinnedHandler Pinned { get; }
+    public ChatCallHandler Call { get; }
 
     #endregion
 
-    #region Проксированные коллекции и свойства
-    [RelayCommand]
-    public void LoadMorePhotos()
+    #region Приватные поля
+
+    private readonly IChatNavigator _navigator;
+    private readonly ChatHubSubscriber _hubSubscriber;
+    private readonly ChatPropertyRelay _relay;
+    private readonly TaskCompletionSource _initTcs = new();
+    private readonly int? _targetMessageId;
+    private readonly IFileDownloadService _fileDownloadService;
+    private readonly IFileDownloadStateService? _fileDownloadStateService;
+    private readonly INotificationService _notificationService;
+    private readonly IAudioPlayerService _audioPlayerService;
+    private readonly IAudioRecorderService _audioRecorderService;
+
+    #endregion
+
+    #region Observable свойства
+
+    public string NewMessage
     {
-        InfoPanel.LoadMorePhotos();
-        OnPropertyChanged(nameof(PhotosCount));
-        OnPropertyChanged(nameof(PhotosItems));
+        get => Composer.NewMessage;
+        set
+        {
+            if (Composer.NewMessage != value)
+            {
+                Composer.NewMessage = value;
+                OnPropertyChanged(nameof(NewMessage));
+            }
+        }
     }
+
+    [ObservableProperty] public partial bool IsInitialLoading { get; set; } = true;
+    [ObservableProperty] public partial bool IsLoadingOlderMessages { get; set; }
+    [ObservableProperty] public partial bool IsLoadingNewerMessages { get; set; }
+    [ObservableProperty] public partial bool HasNewMessages { get; set; }
+    [ObservableProperty] public partial bool IsScrolledToBottom { get; set; } = true;
+    [ObservableProperty] public partial int UnreadCount { get; set; }
+    [ObservableProperty] public partial bool IsInfoSectionOpen { get; set; }
+    [ObservableProperty] public partial string InfoSectionTitle { get; set; } = string.Empty;
+    [ObservableProperty] public partial InfoSectionType CurrentInfoSection { get; set; }
+    [ObservableProperty] public partial int UserId { get; set; }
+    [ObservableProperty] public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
+
+    #endregion
+
+    #region Делегированные свойства (Composer)
+
+    public bool CanSendMessageNow => Composer.CanSendMessageNow;
+    public bool ShowSendMessageButton => Composer.ShowSendMessageButton;
+    public bool ShowVoiceMessageButton => Composer.ShowVoiceMessageButton;
+    public bool IsMultiLine => Composer.IsMultiLine;
+    public bool IsMentionSuggestionsOpen
+    {
+        get => Composer.IsMentionSuggestionsOpen;
+        set => Composer.IsMentionSuggestionsOpen = value;
+    }
+    public int MentionSelectedIndex
+    {
+        get => Composer.MentionSelectedIndex;
+        set => Composer.MentionSelectedIndex = value;
+    }
+    public ObservableCollection<UserDto> MentionSuggestions => Composer.MentionSuggestions;
+    public List<string> PopularEmojis => Composer.PopularEmojis;
+
+    #endregion
+
+    #region Делегированные свойства (Sections)
+
+    public int PhotosCount => Sections.PhotosCount;
+    public int FilesCount => Sections.FilesCount;
+    public int PollsCount => Sections.PollsCount;
+    public bool HasPhotos => Sections.HasPhotos;
+    public bool HasFiles => Sections.HasFiles;
+    public bool HasPolls => Sections.HasPolls;
+    public ObservableCollection<ChatInfoPanelMediaItem> PhotosItems => Sections.PhotosItems;
+    public ObservableCollection<ChatInfoPanelFileItem> FilesItems => Sections.FilesItems;
+    public ObservableCollection<MessageViewModel> PollMessages => Sections.PollMessages;
+
+    #endregion
+
+    #region Делегированные свойства (Permissions)
+
+    public bool CanEditGroupChat => Permissions.CanEditGroupChat;
+    public bool CanLeaveChat => Permissions.CanLeaveChat;
+    public bool CanLeaveChatVisible => Permissions.CanLeaveChatVisible;
+
+    #endregion
+
+    #region Делегированные свойства (InfoPanel)
+
     public bool HasMorePhotos => InfoPanel.HasMorePhotos;
     public string RemainingPhotosText => InfoPanel.RemainingPhotosText;
     public string MemberSearchQuery
@@ -108,27 +144,66 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         get => InfoPanel.MemberSearchQuery;
         set => InfoPanel.MemberSearchQuery = value;
     }
-
     public string PollSearchQuery
     {
         get => InfoPanel.PollSearchQuery;
         set => InfoPanel.PollSearchQuery = value;
     }
-
     public ObservableCollection<MessageViewModel> FilteredPolls => InfoPanel.FilteredPolls;
     public ObservableCollection<UserDto> FilteredMembers => InfoPanel.FilteredMembers;
-    public ObservableCollection<MessageViewModel> Messages => MessageManager.Messages;
-    public ObservableCollection<LocalFileAttachment> LocalAttachments => Attachments.Attachments;
-    public ObservableCollection<UserDto> Members => Context.Members;
+    public string InfoPanelTitle => InfoPanel.InfoPanelTitle;
+    public string InfoPanelSubtitle => InfoPanel.InfoPanelSubtitle;
+    public string? ContactAvatar => InfoPanel.ContactAvatar;
+    public string? ContactDisplayName => InfoPanel.ContactDisplayName;
+    public string? ContactUsername => InfoPanel.ContactUsername;
+    public string? ContactDepartment => InfoPanel.ContactDepartment;
+    public string? ContactLastSeen => InfoPanel.ContactLastSeen;
+    public bool IsContactOnline => InfoPanel.IsContactOnline;
+    public bool IsGroupChat => InfoPanel.IsGroupChat;
+    public bool IsContactChat => InfoPanel.IsContactChat;
+    public bool IsDepartmentChat => Chat?.Type == ChatType.Department;
+    public bool IsDepartmentHeadsChat => Chat?.Type == ChatType.DepartmentHeads;
+    public bool IsDepartmentScopedChat => IsDepartmentChat || IsDepartmentHeadsChat;
+
+    #endregion
+
+    #region Делегированные свойства (Pinned, Typing, etc.)
+
+    public bool HasMultiplePinned => Pinned.HasMultiplePinned;
+    public int PinnedCount => Pinned.PinnedCount;
+    public string TypingText => Typing.TypingText;
+    public bool IsEditMode => EditDelete.IsEditMode;
+    public bool IsReplyMode => Reply.IsReplyMode;
+    public bool IsForwardMode => Forward.IsForwardMode;
+    public bool IsVoiceRecording => Voice.IsVoiceRecording;
+    public bool IsLoadingMuteState => Notification.IsLoadingMuteState;
+    public bool HasMoreNewer => MessageManager.HasMoreNewer;
+    public bool HasMoreOlder => MessageManager.HasMoreOlder;
+    public bool ShowScrollToBottom => !IsScrolledToBottom;
+
+    #endregion
+
+    #region Вычисляемые свойства
+
+    public bool HasContactInfoMediaSection =>
+        HasPhotos || HasFiles || Pinned.HasPinnedMessages;
+
+    public bool HasGroupInfoMediaSection =>
+        HasPhotos || HasFiles || Pinned.HasPinnedMessages || HasPolls;
+
+    public bool ShowPinnedSection => CurrentInfoSection == InfoSectionType.Pinned;
+    public bool ShowPhotosSection => CurrentInfoSection == InfoSectionType.Photos;
+    public bool ShowFilesSection => CurrentInfoSection == InfoSectionType.Files;
+    public bool ShowPollsSection => CurrentInfoSection == InfoSectionType.Polls;
+    public bool ShowMembersSection => CurrentInfoSection == InfoSectionType.Members;
+
     public string MemberCountText
     {
         get
         {
             if (Chat?.Type == ChatType.Contact)
             {
-                if (IsContactOnline)
-                    return "в сети";
-
+                if (IsContactOnline) return "в сети";
                 return ContactLastSeen ?? string.Empty;
             }
 
@@ -145,51 +220,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Делегат для возврата к списку чатов (UltraCompact).
-    /// Устанавливается фабрикой при создании.
-    /// </summary>
-    public Action? RequestGoBackToList { get; set; }
+    #endregion
 
-    [RelayCommand]
-    private void GoBackToList() => RequestGoBackToList?.Invoke();
+    #region Проксированные коллекции
 
+    public ObservableCollection<MessageViewModel> Messages => MessageManager.Messages;
+    public ObservableCollection<LocalFileAttachment> LocalAttachments => Attachments.Attachments;
+    public ObservableCollection<UserDto> Members => Context.Members;
     public ObservableCollection<UserDto> MembersPreview { get; } = [];
-    public ObservableCollection<ChatInfoPanelMediaItem> PhotosItems => InfoPanel.PhotosItems;
-    public ObservableCollection<ChatInfoPanelFileItem> FilesItems { get; } = [];
-    public ObservableCollection<MessageViewModel> PollMessages { get; } = [];
-    public ObservableCollection<UserDto> MentionSuggestions { get; } = [];
-
-    public string InfoPanelTitle => InfoPanel.InfoPanelTitle;
-    public string InfoPanelSubtitle => InfoPanel.InfoPanelSubtitle;
-    public string? ContactAvatar => InfoPanel.ContactAvatar;
-    public string? ContactDisplayName => InfoPanel.ContactDisplayName;
-    public string? ContactUsername => InfoPanel.ContactUsername;
-    public string? ContactDepartment => InfoPanel.ContactDepartment;
-    public string? ContactLastSeen => InfoPanel.ContactLastSeen;
-    public bool IsContactOnline => InfoPanel.IsContactOnline;
-    public bool IsGroupChat => InfoPanel.IsGroupChat;
-    public bool IsDepartmentChat => Chat?.Type == ChatType.Department;
-    public bool IsDepartmentHeadsChat => Chat?.Type == ChatType.DepartmentHeads;
-    public bool IsDepartmentScopedChat => IsDepartmentChat || IsDepartmentHeadsChat;
-    public bool CanEditGroupChat { get; private set; }
-    public bool CanLeaveChatVisible => IsGroupChat && CanLeaveChat;
-    public bool CanLeaveChat { get; private set; } = true;
-    public bool IsContactChat => InfoPanel.IsContactChat;
-    public bool HasMultiplePinned => PinnedMessages.Count > 1;
-    public string TypingText => Typing.TypingText;
-    public bool IsEditMode => EditDelete.IsEditMode;
-    public bool IsReplyMode => Reply.IsReplyMode;
-    public bool IsForwardMode => Forward.IsForwardMode;
-    public bool IsVoiceRecording => Voice.IsVoiceRecording;
-    public bool IsLoadingMuteState => Notification.IsLoadingMuteState;
-    public bool HasMoreNewer => MessageManager.HasMoreNewer;
-    public bool HasMoreOlder => MessageManager.HasMoreOlder;
-    public bool ShowScrollToBottom => !IsScrolledToBottom;
-    public bool IsMultiLine => !string.IsNullOrEmpty(NewMessage) && NewMessage.Contains('\n');
-    public bool CanSendMessageNow => !string.IsNullOrWhiteSpace(NewMessage) || LocalAttachments.Count > 0 || Forward.ForwardingMessage != null;
-    public bool ShowSendMessageButton => CanSendMessageNow && !EditDelete.IsEditMode;
-    public bool ShowVoiceMessageButton => !CanSendMessageNow && !EditDelete.IsEditMode;
 
     public ChatDto? Chat
     {
@@ -209,13 +247,9 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         set
         {
             if (InfoPanel.IsInfoPanelOpen == value) return;
-
             InfoPanel.IsInfoPanelOpen = value;
-
-            if (value)
-                RefreshInfoPanelLists();
-            else
-                OpenInfoSection(InfoSectionType.None);
+            if (value) RefreshInfoPanelLists();
+            else OpenInfoSection(InfoSectionType.None);
         }
     }
 
@@ -229,74 +263,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         }
     }
 
-    #endregion
-
-    #region Observable properties
-
-    public ObservableCollection<MessageViewModel> PinnedMessages { get; } = [];
-    public int PinnedCount => PinnedMessages.Count;
-    public bool HasPhotos => PhotosCount > 0;
-    public bool HasFiles => FilesCount > 0;
-    public bool HasPolls => PollsCount > 0;
-    public bool HasPinnedMessages => PinnedCount > 0;
-    public bool HasContactInfoMediaSection => HasPhotos || HasFiles || HasPinnedMessages;
-    public bool HasGroupInfoMediaSection => HasPhotos || HasFiles || HasPinnedMessages || HasPolls;
-    [RelayCommand]
-    private async Task ToggleMute()
-    => await Notification.ToggleCommand.ExecuteAsync(null);
-
-    public bool ShowPinnedSection => CurrentInfoSection == InfoSectionType.Pinned;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPinnedBannerVisible))]
-    [NotifyPropertyChangedFor(nameof(PinnedBannerPreviewText))]
-    public partial MessageViewModel? PinnedBannerMessage { get; set; }
-
-    public bool IsPinnedBannerVisible => PinnedBannerMessage != null;
-
-    [ObservableProperty] public partial string NewMessage { get; set; } = string.Empty;
-    [ObservableProperty] public partial bool IsMentionSuggestionsOpen { get; set; }
-    [ObservableProperty] public partial int MentionSelectedIndex { get; set; } = -1;
-    [ObservableProperty] public partial bool IsInitialLoading { get; set; } = true;
-    [ObservableProperty] public partial bool IsLoadingOlderMessages { get; set; }
-    [ObservableProperty] public partial bool IsLoadingNewerMessages { get; set; }
-    [ObservableProperty] public partial bool HasNewMessages { get; set; }
-    [ObservableProperty] public partial bool IsScrolledToBottom { get; set; } = true;
-    [ObservableProperty] public partial int UnreadCount { get; set; }
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPhotos))]
-    [NotifyPropertyChangedFor(nameof(HasContactInfoMediaSection))]
-    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
-    public partial int PhotosCount { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasFiles))]
-    [NotifyPropertyChangedFor(nameof(HasContactInfoMediaSection))]
-    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
-    public partial int FilesCount { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPolls))]
-    [NotifyPropertyChangedFor(nameof(HasGroupInfoMediaSection))]
-    public partial int PollsCount { get; set; }
-
-    [ObservableProperty] public partial int UserId { get; set; }
-    [ObservableProperty] public partial UserProfileDialogViewModel? UserProfileDialog { get; set; }
-    [ObservableProperty] public partial bool IsInfoSectionOpen { get; set; }
-    [ObservableProperty] public partial string InfoSectionTitle { get; set; } = string.Empty;
-    [ObservableProperty] public partial InfoSectionType CurrentInfoSection { get; set; }
-
-    public bool ShowPhotosSection => CurrentInfoSection == InfoSectionType.Photos;
-    public bool ShowFilesSection => CurrentInfoSection == InfoSectionType.Files;
-    public bool ShowPollsSection => CurrentInfoSection == InfoSectionType.Polls;
-    public bool ShowMembersSection => CurrentInfoSection == InfoSectionType.Members;
-
-    public List<string> PopularEmojis { get; } =
-    [
-        "😀","😂","😍","🥰","😊","😎","🤔","😅","😭","😤",
-        "❤","👍","👎","🎉","🔥","✨","💯","🙏","👏","🤝",
-        "💪","🎁","📱","💻","🎮","🎵","📷","🌟","⭐","🌈","☀️","🌙"
-    ];
+    public bool HasInitialMessageTarget => _targetMessageId.HasValue;
+    public Action? RequestGoBackToList { get; set; }
 
     #endregion
 
@@ -307,43 +275,14 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public event Action? ScrollToBottomRequested;
 
     #endregion
-    partial void OnPinnedBannerMessageChanged(MessageViewModel? oldValue, MessageViewModel? newValue)
-    {
-        if (oldValue != null)
-            oldValue.PropertyChanged -= OnPinnedBannerMessagePropertyChanged;
 
-        if (newValue != null)
-            newValue.PropertyChanged += OnPinnedBannerMessagePropertyChanged;
-    }
-
-    private void OnPinnedBannerMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(MessageViewModel.ContentPreview) or nameof(MessageViewModel.SenderName) or nameof(MessageViewModel.Content))
-        {
-            OnPropertyChanged(nameof(PinnedBannerPreviewText));
-        }
-    }
-    public string PinnedBannerPreviewText
-    {
-        get
-        {
-            var msg = PinnedBannerMessage;
-            if (msg == null) return string.Empty;
-            if (string.IsNullOrWhiteSpace(msg.SenderName))
-                return msg.ContentPreview;
-            return $"{msg.SenderName}: {msg.ContentPreview}";
-        }
-    }
-    #region Init
-    private readonly int? _targetMessageId;
-    public bool HasInitialMessageTarget => _targetMessageId.HasValue;
+    #region Constructor
 
     public ChatViewModel(ChatDto initialChat, ChatsViewModel parent, IChatNavigator navigator,
         ChatViewModelDependencies dependencies, int? targetMessageId = null)
     {
         Parent = parent ?? throw new ArgumentNullException(nameof(parent));
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
-
         ArgumentNullException.ThrowIfNull(dependencies);
         ArgumentNullException.ThrowIfNull(initialChat);
 
@@ -353,30 +292,25 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _audioPlayerService = dependencies.AudioPlayer;
         _audioRecorderService = dependencies.AudioRecorder;
 
-        var currentUserId = dependencies.AuthManager.Session.UserId ?? throw new InvalidOperationException("Пользователь не авторизован");
+        var currentUserId = dependencies.AuthManager.Session.UserId
+            ?? throw new InvalidOperationException("Пользователь не авторизован");
 
         UserId = currentUserId;
         _targetMessageId = targetMessageId;
 
-        var chatId = initialChat.Id;
-
-        Context = new ChatContext(chatId, currentUserId, dependencies.Core, dependencies.Media, dependencies.Cache)
+        Context = new ChatContext(initialChat.Id, currentUserId, dependencies.Core, dependencies.Media, dependencies.Cache)
         {
             Chat = initialChat,
-            Navigator = navigator
+            Navigator = navigator,
+            IsSystemAdmin = dependencies.AuthManager.Session.IsAdmin
         };
 
-        _contextScrollToMessage = (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
-        _contextScrollToIndex = (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
-        _contextScrollToBottom = () => ScrollToBottomRequested?.Invoke();
+        Context.ScrollToMessageRequested += (msg, hl) => ScrollToMessageRequested?.Invoke(msg, hl);
+        Context.ScrollToIndexRequested += (idx, hl) => ScrollToIndexRequested?.Invoke(idx, hl);
+        Context.ScrollToBottomRequested += () => ScrollToBottomRequested?.Invoke();
+        Context.RequestRefreshCounters = () => _ = Sections.RefreshCountsAsync();
 
-        Context.IsSystemAdmin = dependencies.AuthManager.Session.IsAdmin;
-        Context.ScrollToMessageRequested += _contextScrollToMessage;
-        Context.ScrollToIndexRequested += _contextScrollToIndex;
-        Context.ScrollToBottomRequested += _contextScrollToBottom;
-        Context.RequestRefreshCounters = () => _ = RefreshCountersAndSectionAsync();
-
-        dependencies.GlobalHub.SetCurrentChat(chatId);
+        dependencies.GlobalHub.SetCurrentChat(initialChat.Id);
 
         var chatCommands = new ChatCommands
         {
@@ -384,16 +318,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ShowPollResults = new AsyncRelayCommand<PollViewModel>(async vm =>
             {
                 if (vm?.CurrentPollDto == null) return;
-                var dialog = new PollResultsDialogViewModel(vm.CurrentPollDto, Context.Members, Context.Api);
+                var dialog = new PollResultsDialogViewModel(
+                    vm.CurrentPollDto, Context.Members, Context.Api);
                 await Context.Dialogs.ShowAsync(dialog);
                 await dialog.TriggerInitializeAsync();
             })
         };
 
         MessageManager = new ChatMessageManager(Context, dependencies.Media, chatCommands, OpenMentionProfileCommand);
-
-        Attachments = new ChatAttachmentManager(chatId, dependencies.ApiClient, dependencies.PlatformService);
-        MemberLoader = new ChatMemberLoader(chatId, currentUserId, dependencies.ApiClient);
+        Attachments = new ChatAttachmentManager(initialChat.Id, dependencies.ApiClient, dependencies.PlatformService);
+        MemberLoader = new ChatMemberLoader(initialChat.Id, currentUserId, dependencies.ApiClient);
 
         EditDelete = new ChatEditDeleteHandler(Context);
         Reply = new ChatReplyHandler(Context, MessageManager);
@@ -404,6 +338,40 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         Search = new ChatSearchHandler(Context, MessageManager);
         Notification = new ChatNotificationHandler(Context);
 
+        Pinned = new ChatPinnedHandler(Context, dependencies.FileDownloadService, dependencies.FileDownloadStateService,
+            dependencies.AudioPlayer, dependencies.NotificationService);
+
+        Call = new ChatCallHandler(Context, dependencies.CallService, dependencies.CallHub,
+            openCallUi: () => { Parent.OpenCallUi(); return Task.CompletedTask; },
+            showCallView: (state, name, isGroup) =>
+            {
+                Parent.ShowCallView(state, name, isGroup);
+                return Task.CompletedTask;
+            });
+
+        Composer = new ChatComposer(Context, Attachments, Reply, Forward, EditDelete, MessageManager);
+        Composer.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ChatComposer.NewMessage))
+            {
+                Typing.NotifyTextChanged(Composer.NewMessage);
+                OnPropertyChanged(nameof(NewMessage));
+                OnPropertyChanged(nameof(IsMultiLine));
+            }
+        };
+        Composer.ComposerStateChanged += () =>
+        {
+            OnPropertyChanged(nameof(CanSendMessageNow));
+            OnPropertyChanged(nameof(ShowSendMessageButton));
+            OnPropertyChanged(nameof(ShowVoiceMessageButton));
+            OnPropertyChanged(nameof(IsMultiLine));
+        };
+
+        Scroll = new ChatScrollCoordinator(Context, MessageManager);
+        Permissions = new ChatPermissionsManager(Context, dependencies.DialogService);
+        Sections = new ChatSectionManager(Context, InfoPanel, MessageManager, _fileDownloadService, _fileDownloadStateService,
+            _notificationService, currentUserId);
+
         chatCommands.Edit = EditDelete.StartEditCommand;
         chatCommands.Copy = EditDelete.CopyMessageTextCommand;
         chatCommands.Delete = EditDelete.DeleteMessageCommand;
@@ -412,43 +380,140 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         chatCommands.ScrollToReply = Reply.ScrollToReplyOriginalCommand;
         chatCommands.Forward = Forward.StartForwardCommand;
 
+        _relay = BuildPropertyRelay();
+
         _hubSubscriber = new ChatHubSubscriber(Context, MessageManager, count => UnreadCount = count, OnHubReconnectedAsync);
         _hubSubscriber.Subscribe();
-        SubscribePropertyForwarding();
+
         Context.Hub.ChatUpdated += OnChatUpdated;
         Context.Hub.UserRoleUpdated += OnUserRoleUpdated;
 
-        _callService = dependencies.CallService;
-        _callHub = dependencies.CallHub;
-
-        SubscribeCallEvents();
         _ = InitializeAsync();
     }
 
-    private void OnUserRoleUpdated(UserRole role) => Dispatcher.UIThread.Post(() =>
-    {
-        if (Context.IsDisposed) return;
-        Context.IsSystemAdmin = role.HasFlag(UserRole.Admin);
-        RefreshChatPermissions();
+    #endregion
 
-        if (!CanEditGroupChat)
+    #region Property Relay
+
+    private ChatPropertyRelay BuildPropertyRelay()
+    {
+        var relay = new ChatPropertyRelay(OnPropertyChanged);
+
+        relay.Forward(Composer,
+            (nameof(ChatComposer.IsMentionSuggestionsOpen), nameof(IsMentionSuggestionsOpen)),
+            (nameof(ChatComposer.MentionSelectedIndex), nameof(MentionSelectedIndex)));
+
+        relay.Forward(Sections,
+            (nameof(ChatSectionManager.PhotosCount), nameof(PhotosCount)),
+            (nameof(ChatSectionManager.FilesCount), nameof(FilesCount)),
+            (nameof(ChatSectionManager.PollsCount), nameof(PollsCount)),
+            (nameof(ChatSectionManager.HasPhotos), nameof(HasPhotos)),
+            (nameof(ChatSectionManager.HasFiles), nameof(HasFiles)),
+            (nameof(ChatSectionManager.HasPolls), nameof(HasPolls)));
+
+        relay.Forward(Permissions,
+            (nameof(ChatPermissionsManager.CanEditGroupChat), nameof(CanEditGroupChat)),
+            (nameof(ChatPermissionsManager.CanLeaveChat), nameof(CanLeaveChat)),
+            (nameof(ChatPermissionsManager.CanLeaveChatVisible), nameof(CanLeaveChatVisible)));
+
+        relay.Forward(InfoPanel,
+            (nameof(ChatInfoPanelHandler.IsInfoPanelOpen), nameof(IsInfoPanelOpen)),
+            (nameof(ChatInfoPanelHandler.IsGroupChat), nameof(IsGroupChat)),
+            (nameof(ChatInfoPanelHandler.IsContactChat), nameof(IsContactChat)),
+            (nameof(ChatInfoPanelHandler.InfoPanelTitle), nameof(InfoPanelTitle)),
+            (nameof(ChatInfoPanelHandler.InfoPanelSubtitle), nameof(InfoPanelSubtitle)),
+            (nameof(ChatInfoPanelHandler.ContactAvatar), nameof(ContactAvatar)),
+            (nameof(ChatInfoPanelHandler.ContactDisplayName), nameof(ContactDisplayName)),
+            (nameof(ChatInfoPanelHandler.ContactUsername), nameof(ContactUsername)),
+            (nameof(ChatInfoPanelHandler.ContactDepartment), nameof(ContactDepartment)),
+            (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(ContactLastSeen)),
+            (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(IsContactOnline)),
+            (nameof(ChatInfoPanelHandler.MemberSearchQuery), nameof(MemberSearchQuery)),
+            (nameof(ChatInfoPanelHandler.PollSearchQuery), nameof(PollSearchQuery)),
+            (nameof(ChatInfoPanelHandler.HasMorePhotos), nameof(HasMorePhotos)),
+            (nameof(ChatInfoPanelHandler.RemainingPhotosText), nameof(RemainingPhotosText)),
+            (nameof(ChatInfoPanelHandler.IsGroupChat), nameof(CanLeaveChatVisible)));
+
+        relay.Forward(Pinned,
+            (nameof(ChatPinnedHandler.HasPinnedMessages), nameof(HasContactInfoMediaSection)),
+            (nameof(ChatPinnedHandler.HasPinnedMessages), nameof(HasGroupInfoMediaSection)),
+            (nameof(ChatPinnedHandler.PinnedCount), nameof(PinnedCount)),
+            (nameof(ChatPinnedHandler.HasMultiplePinned), nameof(HasMultiplePinned)));
+
+        relay.Forward(Typing,
+            (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
+
+        relay.Forward(EditDelete,
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)),
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowSendMessageButton)),
+            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowVoiceMessageButton)));
+
+        relay.Forward(Reply,
+            (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
+
+        relay.Forward(Forward,
+            (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)),
+            (nameof(ChatForwardHandler.ForwardingMessage), nameof(CanSendMessageNow)),
+            (nameof(ChatForwardHandler.ForwardingMessage), nameof(ShowSendMessageButton)));
+
+        relay.Forward(Search,
+            (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
+
+        relay.Forward(Voice,
+            (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
+
+        relay.Forward(Notification,
+            (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
+            (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
+
+        relay.Forward(Context,
+            (nameof(ChatContext.Chat), nameof(Chat)),
+            (nameof(ChatContext.Members), nameof(Members)),
+            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)),
+            (nameof(ChatContext.Members), nameof(MemberCountText)));
+
+        relay.Forward(Call,
+            (nameof(ChatCallHandler.HasActiveCall), nameof(ChatCallHandler.HasActiveCall)),
+            (nameof(ChatCallHandler.ActiveCallParticipantsCount), nameof(ChatCallHandler.ActiveCallParticipantsCount)),
+            (nameof(ChatCallHandler.ActiveCallBannerText), nameof(ChatCallHandler.ActiveCallBannerText)),
+            (nameof(ChatCallHandler.IsInActiveCall), nameof(ChatCallHandler.IsInActiveCall)));
+
+        relay.ForwardCollection(Context.Members, () =>
         {
-            var dialogService = AppConfig.Services.GetRequiredService<IDialogService>();
-            if (dialogService.CurrentDialog is ChatEditDialogViewModel editDialog)
-                editDialog.ForceCloseDueToRoleChange();
-        }
-    });
+            ScheduleRefreshInfoPanelLists();
+            OnPropertyChanged(nameof(MemberCountText));
+        });
+
+        relay.ForwardCollection(MessageManager.Messages, ScheduleRefreshInfoPanelLists);
+
+        relay.ForwardCollection(InfoPanel.FilteredMembers, nameof(FilteredMembers));
+
+        relay.ForwardCollection(InfoPanel.FilteredPolls, nameof(FilteredPolls));
+
+        relay.ForwardCollection(Attachments.Attachments, () =>
+        {
+            OnPropertyChanged(nameof(CanSendMessageNow));
+            OnPropertyChanged(nameof(ShowSendMessageButton));
+            OnPropertyChanged(nameof(ShowVoiceMessageButton));
+        });
+
+        return relay;
+    }
+
+    #endregion
+
+    #region Initialization
 
     private async Task InitializeAsync()
     {
         var sw = Stopwatch.StartNew();
-
         try
         {
             IsInitialLoading = true;
             Debug.WriteLine($"[ChatVM] Init start chat={Context.ChatId}");
 
-            var chatTask = Context.Api.GetAsync<ChatDto>(ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
+            var chatTask = Context.Api.GetAsync<ChatDto>(
+                ApiEndpoints.Chats.ById(Context.ChatId), Context.LifetimeToken);
             var readInfoTask = Context.Hub.GetReadInfoAsync(Context.ChatId);
             var notificationTask = Notification.LoadSettingsAsync(Context.LifetimeToken);
 
@@ -465,45 +530,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
                 throw new HttpRequestException($"Не удалось загрузить чат: {chatResult.Error}");
             }
 
-
-            CallStateDto? callState = null;
-            try
-            {
-                if (_callHub.IsConnected)
-                {
-                    callState = await _callHub.GetCallStateAsync(Context.ChatId);
-                }
-                else
-                {
-                    try
-                    {
-                        var deadline = DateTime.UtcNow.AddSeconds(3);
-                        while (!_callHub.IsConnected && DateTime.UtcNow < deadline)
-                            await Task.Delay(100, Context.LifetimeToken);
-
-                        if (_callHub.IsConnected)
-                            callState = await _callHub.GetCallStateAsync(Context.ChatId);
-                    }
-                    catch (OperationCanceledException) { /* отменено */ }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatVM] GetCallState failed ({ex.GetType().Name}): {ex.Message}");
-            }
-
-            if (callState != null)
-            {
-                _chatActiveCallId = callState.CallId;
-                HasActiveCall = true;
-                ActiveCallParticipantsCount = callState.Participants.Count;
-                IsInActiveCall = _callService.ActiveChatId == Context.ChatId;
-            }
-
+            await Call.InitAsync(Context.LifetimeToken);
             MessageManager.SetReadInfo(readInfoTask.Result);
 
             var membersTask = MemberLoader.LoadMembersAsync(Context.Chat, Context.LifetimeToken);
-            var pinnedTask = LoadPinnedAsync(Context.LifetimeToken);
+            var pinnedTask = Pinned.LoadInitialAsync(Context.LifetimeToken);
             var countsTask = Context.Api.GetAsync<ChatCountsDto>(ApiEndpoints.Messages.Counts(Context.ChatId), Context.LifetimeToken);
 
             await Task.WhenAll(membersTask, pinnedTask, countsTask);
@@ -511,9 +542,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var countsResult = countsTask.Result;
             if (countsResult is { Success: true, Data: not null })
             {
-                PhotosCount = countsResult.Data.MediaCount;
-                FilesCount = countsResult.Data.FilesCount;
-                PollsCount = countsResult.Data.PollsCount;
+                Sections.ApplyCounts(countsResult.Data);
             }
             else
             {
@@ -521,7 +550,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             }
 
             Context.Members = membersTask.Result;
-            RefreshChatPermissions();
+            Permissions.Refresh();
 
             if (InfoPanel.IsContactChat)
                 await InfoPanel.LoadContactUserAsync();
@@ -531,24 +560,16 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             var scrollToIndex = await MessageManager.LoadInitialMessagesAsync(_targetMessageId, Context.LifetimeToken);
 
             if (_targetMessageId.HasValue && scrollToIndex.HasValue)
-            {
                 Context.RequestScrollToIndex(scrollToIndex.Value, highlight: true);
-            }
             else if (scrollToIndex.HasValue && scrollToIndex < Messages.Count - 1)
-            {
                 Context.RequestScrollToIndex(scrollToIndex.Value, highlight: true);
-            }
             else
-            {
                 Context.RequestScrollToBottom();
-            }
 
             RefreshInfoPanelLists();
-
-            var audioRecorder = _audioRecorderService;
-            Voice.Initialize(audioRecorder);
-
+            Voice.Initialize(_audioRecorderService);
             InfoPanel.Subscribe();
+
             Debug.WriteLine($"[ChatVM] Init done chat={Context.ChatId} за {sw.ElapsedMilliseconds}ms");
             _initTcs.TrySetResult();
         }
@@ -572,223 +593,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Проброс свойств (Property Forwarding)
-
-    private void ForwardProperties(INotifyPropertyChanged source, params (string sourceProp, string targetProp)[] mappings)
-    {
-        var lookup = mappings.GroupBy(m => m.sourceProp).ToDictionary(g => g.Key, g => g.Select(x => x.targetProp).ToArray());
-
-        void handler(object? _, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != null && lookup.TryGetValue(e.PropertyName, out var targets))
-            {
-                foreach (var target in targets)
-                {
-                    OnPropertyChanged(target);
-                }
-            }
-        }
-
-        source.PropertyChanged += handler;
-        _propertyForwardingHandlers.Add((source, handler));
-    }
-
-    private void SubscribePropertyForwarding()
-    {
-        ForwardProperties(Typing, (nameof(ChatTypingHandler.TypingText), nameof(TypingText)));
-        ForwardProperties(EditDelete,
-            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(IsEditMode)),
-            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowSendMessageButton)),
-            (nameof(ChatEditDeleteHandler.IsEditMode), nameof(ShowVoiceMessageButton)));
-        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
-        ForwardProperties(Reply, (nameof(ChatReplyHandler.IsReplyMode), nameof(IsReplyMode)));
-        ForwardProperties(Forward,
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(IsForwardMode)),
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(CanSendMessageNow)),
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(ShowSendMessageButton)),
-            (nameof(ChatForwardHandler.IsForwardMode), nameof(ShowVoiceMessageButton)));
-        ForwardProperties(Search, (nameof(ChatSearchHandler.IsSearchMode), nameof(IsSearchMode)));
-        ForwardProperties(Voice, (nameof(ChatVoiceHandler.IsVoiceRecording), nameof(IsVoiceRecording)));
-
-        ForwardProperties(InfoPanel,
-            (nameof(ChatInfoPanelHandler.IsInfoPanelOpen), nameof(IsInfoPanelOpen)),
-            (nameof(ChatInfoPanelHandler.IsGroupChat), nameof(IsGroupChat)),
-            (nameof(ChatInfoPanelHandler.IsContactChat), nameof(IsContactChat)),
-            (nameof(ChatInfoPanelHandler.InfoPanelTitle), nameof(InfoPanelTitle)),
-            (nameof(ChatInfoPanelHandler.InfoPanelSubtitle), nameof(InfoPanelSubtitle)),
-            (nameof(ChatInfoPanelHandler.ContactAvatar), nameof(ContactAvatar)),
-            (nameof(ChatInfoPanelHandler.ContactDisplayName), nameof(ContactDisplayName)),
-            (nameof(ChatInfoPanelHandler.ContactUsername), nameof(ContactUsername)),
-            (nameof(ChatInfoPanelHandler.ContactDepartment), nameof(ContactDepartment)),
-            (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(ContactLastSeen)),
-            (nameof(ChatInfoPanelHandler.ContactLastSeen), nameof(MemberCountText)),
-            (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(IsContactOnline)),
-            (nameof(ChatInfoPanelHandler.IsContactOnline), nameof(MemberCountText)),
-            (nameof(ChatInfoPanelHandler.MemberSearchQuery), nameof(MemberSearchQuery)),
-            (nameof(ChatInfoPanelHandler.PollSearchQuery), nameof(PollSearchQuery)),
-            (nameof(ChatInfoPanelHandler.HasMorePhotos), nameof(HasMorePhotos)),
-            (nameof(ChatInfoPanelHandler.RemainingPhotosText), nameof(RemainingPhotosText)),
-            (nameof(ChatInfoPanelHandler.IsGroupChat), nameof(CanLeaveChatVisible)));
-
-        ForwardProperties(Context,
-            (nameof(ChatContext.Chat), nameof(Chat)),
-            (nameof(ChatContext.Members), nameof(Members)),
-            (nameof(ChatContext.Members), nameof(InfoPanelSubtitle)),
-            (nameof(ChatContext.Members), nameof(MemberCountText)));
-
-        ForwardProperties(Notification,
-            (nameof(ChatNotificationHandler.IsLoadingMuteState), nameof(IsLoadingMuteState)),
-            (nameof(ChatNotificationHandler.IsNotificationEnabled), nameof(IsChatNotificationsEnabled)));
-
-        _membersCollectionHandler = (_, _) =>
-        {
-            ScheduleRefreshInfoPanelLists();
-            OnPropertyChanged(nameof(MemberCountText));
-        };
-
-        Context.Members.CollectionChanged += _membersCollectionHandler;
-
-        foreach (var message in MessageManager.Messages)
-            TrackInfoPanelMessage(message);
-
-        _messagesCollectionHandler = OnMessagesCollectionChanged;
-        MessageManager.Messages.CollectionChanged += _messagesCollectionHandler;
-
-        _filteredMembersCollectionHandler = (_, _) => OnPropertyChanged(nameof(FilteredMembers));
-        InfoPanel.FilteredMembers.CollectionChanged += _filteredMembersCollectionHandler;
-
-        _filteredPollsCollectionHandler = (_, _) => OnPropertyChanged(nameof(FilteredPolls));
-        InfoPanel.FilteredPolls.CollectionChanged += _filteredPollsCollectionHandler;
-
-        _attachmentsCollectionHandler = (_, _) => NotifyComposerActionStateChanged();
-        LocalAttachments.CollectionChanged += _attachmentsCollectionHandler;
-
-        Context.MessagePinStateChanged += OnMessagePinStateChanged;
-    }
-
-    private void UnsubscribePropertyForwarding()
-    {
-        foreach (var (source, handler) in _propertyForwardingHandlers)
-            source.PropertyChanged -= handler;
-        _propertyForwardingHandlers.Clear();
-
-        if (_membersCollectionHandler != null)
-        {
-            Context.Members.CollectionChanged -= _membersCollectionHandler;
-            _membersCollectionHandler = null;
-        }
-
-        if (_messagesCollectionHandler != null)
-        {
-            MessageManager.Messages.CollectionChanged -= _messagesCollectionHandler;
-            _messagesCollectionHandler = null;
-        }
-
-        foreach (var message in _infoPanelTrackedMessages.ToList())
-            UntrackInfoPanelMessage(message);
-        _infoPanelTrackedMessages.Clear();
-
-        if (_filteredMembersCollectionHandler != null)
-        {
-            InfoPanel.FilteredMembers.CollectionChanged -= _filteredMembersCollectionHandler;
-            _filteredMembersCollectionHandler = null;
-        }
-
-        if (_filteredPollsCollectionHandler != null)
-        {
-            InfoPanel.FilteredPolls.CollectionChanged -= _filteredPollsCollectionHandler;
-            _filteredPollsCollectionHandler = null;
-        }
-
-        if (_attachmentsCollectionHandler != null)
-        {
-            LocalAttachments.CollectionChanged -= _attachmentsCollectionHandler;
-            _attachmentsCollectionHandler = null;
-        }
-
-        Context.MessagePinStateChanged -= OnMessagePinStateChanged;
-    }
-    private void SubscribeCallEvents()
-    {
-        _callHub.ActiveCallStarted += OnActiveCallStarted;
-        _callHub.ActiveCallUpdated += OnActiveCallUpdated;
-        _callHub.ActiveCallEnded += OnActiveCallEnded;
-        _callHub.IncomingCall += OnIncomingCall;
-
-        _callService.CallStarted += OnCallStarted;
-        _callService.CallEnded += OnCallEnded;
-    }
-
-    private void UnsubscribeCallEvents()
-    {
-        _callHub.ActiveCallStarted -= OnActiveCallStarted;
-        _callHub.ActiveCallUpdated -= OnActiveCallUpdated;
-        _callHub.ActiveCallEnded -= OnActiveCallEnded;
-        _callHub.IncomingCall -= OnIncomingCall;
-
-        _callService.CallStarted -= OnCallStarted;
-        _callService.CallEnded -= OnCallEnded;
-    }
-    private string? _chatActiveCallId;
-
-    private void OnActiveCallStarted(CallStateDto state)
-    {
-        if (state.ChatId != Context.ChatId) return;
-        Dispatcher.UIThread.Post(() =>
-        {
-            _chatActiveCallId = state.CallId;
-            HasActiveCall = true;
-            ActiveCallParticipantsCount = state.Participants.Count;
-        });
-    }
-
-    private void OnActiveCallUpdated(CallStateDto state)
-    {
-        if (state.ChatId != Context.ChatId) return;
-        Dispatcher.UIThread.Post(() => ActiveCallParticipantsCount = state.Participants.Count);
-    }
-
-    private void OnActiveCallEnded(string callId) => Dispatcher.UIThread.Post(() =>
-    {
-        if (_chatActiveCallId != null && _chatActiveCallId != callId) return;
-        _chatActiveCallId = null;
-        HasActiveCall = false;
-        ActiveCallParticipantsCount = 0;
-        IsInActiveCall = false;
-    });
-
-    private void OnIncomingCall(CallInviteDto invite)
-    {
-        if (invite.ChatId != Context.ChatId) return;
-        Dispatcher.UIThread.Post(() =>
-        {
-            _chatActiveCallId = invite.CallId;
-            HasActiveCall = true;
-            ActiveCallParticipantsCount = invite.ActiveParticipantsCount;
-        });
-    }
-
-    private void OnCallStarted() => Dispatcher.UIThread.Post(() => IsInActiveCall = true);
-
-    private void OnCallEnded() => Dispatcher.UIThread.Post(() => IsInActiveCall = false);
-    #endregion
-
-    #region Перехватчики изменений (Partial hooks)
-
-    partial void OnNewMessageChanged(string value)
-    {
-        Typing.NotifyTextChanged(value);
-        _composerCaretIndex = Math.Clamp(_composerCaretIndex, 0, value?.Length ?? 0);
-        UpdateMentionSuggestions(value, _composerCaretIndex);
-        NotifyComposerActionStateChanged();
-    }
-
-    private void NotifyComposerActionStateChanged()
-    {
-        OnPropertyChanged(nameof(CanSendMessageNow));
-        OnPropertyChanged(nameof(ShowSendMessageButton));
-        OnPropertyChanged(nameof(ShowVoiceMessageButton));
-    }
+    #region Partial hooks
 
     partial void OnIsScrolledToBottomChanged(bool value)
     {
@@ -798,7 +603,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
         HasNewMessages = false;
         UnreadCount = 0;
-        _ = MarkMessagesAsReadAsync();
+        _ = Scroll.MarkMessagesAsReadAsync();
     }
 
     partial void OnCurrentInfoSectionChanged(InfoSectionType value)
@@ -812,344 +617,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
-    #region Helpers
-
-    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (e.Action == NotifyCollectionChangedAction.Reset)
-        {
-            foreach (var message in _infoPanelTrackedMessages.ToList())
-                UntrackInfoPanelMessage(message);
-
-            foreach (var message in MessageManager.Messages)
-                TrackInfoPanelMessage(message);
-        }
-        else
-        {
-            if (e.OldItems != null)
-            {
-                foreach (MessageViewModel message in e.OldItems)
-                    UntrackInfoPanelMessage(message);
-            }
-
-            if (e.NewItems != null)
-            {
-                foreach (MessageViewModel message in e.NewItems)
-                    TrackInfoPanelMessage(message);
-            }
-        }
-
-        RefreshInfoPanelCountersAndLists();
-    }
-
-    private void TrackInfoPanelMessage(MessageViewModel message)
-    {
-        if (!_infoPanelTrackedMessages.Add(message)) return;
-        message.PropertyChanged += OnInfoPanelMessagePropertyChanged;
-    }
-
-    private void UntrackInfoPanelMessage(MessageViewModel message)
-    {
-        if (!_infoPanelTrackedMessages.Remove(message)) return;
-        message.PropertyChanged -= OnInfoPanelMessagePropertyChanged;
-    }
-
-    private void OnInfoPanelMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(MessageViewModel.IsContinuation)
-            or nameof(MessageViewModel.HasNextFromSame)
-            or nameof(MessageViewModel.GroupPosition)
-            or nameof(MessageViewModel.BubbleClasses)
-            or nameof(MessageViewModel.ShowSenderName)
-            or nameof(MessageViewModel.IsHighlighted)
-            or nameof(MessageViewModel.IsUnread)
-            or nameof(MessageViewModel.IsRead))
-        {
-            return;
-        }
-
-        if (e.PropertyName is nameof(MessageViewModel.IsDeleted)
-            or nameof(MessageViewModel.Poll)
-            or nameof(MessageViewModel.HasPoll)
-            or nameof(MessageViewModel.Content)
-            or nameof(MessageViewModel.HasFiles)
-            or nameof(MessageViewModel.HasImages))
-        {
-            RefreshInfoPanelCountersAndLists();
-        }
-    }
-
-    private void RefreshInfoPanelCountersAndLists() => ScheduleRefreshInfoPanelLists();
-
-    private void ScheduleRefreshInfoPanelLists()
-    {
-        _refreshDebounce?.Cancel();
-        _refreshDebounce?.Dispose();
-        _refreshDebounce = new CancellationTokenSource();
-        var token = _refreshDebounce.Token;
-
-        Dispatcher.UIThread.Post(async () =>
-        {
-            try
-            {
-                await Task.Delay(150, token);
-                if (!token.IsCancellationRequested)
-                    RefreshInfoPanelLists();
-            }
-            catch (OperationCanceledException) { /* Ожидаемая отмена */ }
-        });
-    }
-
-    private void RefreshInfoPanelLists()
-    {
-        if (Context.IsDisposed) return;
-        RebuildMembersPreview();
-    }
-
-    private async Task RefreshCountersAndSectionAsync()
-    {
-        if (Context.IsDisposed) return;
-        try
-        {
-            var result = await Context.Api.GetAsync<ChatCountsDto>(
-                ApiEndpoints.Messages.Counts(Context.ChatId), Context.LifetimeToken);
-
-            if (result is not { Success: true, Data: not null }) return;
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Context.IsDisposed) return;
-                PhotosCount = result.Data.MediaCount;
-                FilesCount = result.Data.FilesCount;
-                PollsCount = result.Data.PollsCount;
-
-                // Если секция открыта — обновляем её содержимое
-                if (IsInfoSectionOpen)
-                {
-                    switch (CurrentInfoSection)
-                    {
-                        case InfoSectionType.Photos: _ = LoadInfoPanelPhotosAsync(); break;
-                        case InfoSectionType.Files: _ = LoadInfoPanelFilesAsync(); break;
-                        case InfoSectionType.Polls: _ = LoadInfoPanelPollsAsync(); break;
-                    }
-                }
-            });
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] RefreshCounters error: {ex.Message}");
-        }
-    }
-    private async Task LoadInfoPanelPhotosAsync()
-    {
-        if (Context.IsDisposed) return;
-        try
-        {
-            var query = new SearchMessagesQueryDto { HasFiles = true, PageSize = 50, OldestFirst = false };
-            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
-                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
-
-            if (result is not { Success: true, Data: not null }) return;
-
-            var photos = result.Data.Messages
-                .SelectMany(m => (m.Files ?? [])
-                    .Where(IsInfoPanelPhoto)
-                    .Select(f => new ChatInfoPanelMediaItem(CreateTempMessageViewModel(m), f)))
-                .OrderByDescending(x => x.CreatedAt)
-                .ToList();
-
-            InfoPanel.SetPhotos(photos);
-            OnPropertyChanged(nameof(PhotosItems));
-            OnPropertyChanged(nameof(HasMorePhotos));
-            OnPropertyChanged(nameof(RemainingPhotosText));
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadPhotos error: {ex.Message}"); }
-    }
-
-    private async Task LoadInfoPanelFilesAsync()
-    {
-        if (Context.IsDisposed) return;
-        try
-        {
-            var query = new SearchMessagesQueryDto { HasFiles = true, PageSize = 50, OldestFirst = false };
-            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
-                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
-
-            if (result is not { Success: true, Data: not null }) return;
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Context.IsDisposed) return;
-                FilesItems.Clear();
-
-                var files = result.Data.Messages
-                    .SelectMany(m => (m.Files ?? []).Where(f => !IsInfoPanelPhoto(f))
-                    .Select(f => new ChatInfoPanelFileItem(CreateTempMessageViewModel(m), f))).OrderByDescending(x => x.CreatedAt);
-
-                foreach (var file in files)
-                    FilesItems.Add(file);
-
-                OnPropertyChanged(nameof(FilesItems));
-            });
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadFiles error: {ex.Message}"); }
-    }
-
-    private async Task LoadInfoPanelPollsAsync()
-    {
-        if (Context.IsDisposed) return;
-        try
-        {
-            var query = new SearchMessagesQueryDto { HasPoll = true, PageSize = 50, OldestFirst = false };
-            var result = await Context.Api.PostAsync<SearchMessagesQueryDto, SearchMessagesResponseDto>(
-                ApiEndpoints.Messages.ChatSearch(Context.ChatId), query, Context.LifetimeToken);
-
-            if (result is not { Success: true, Data: not null }) return;
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Context.IsDisposed) return;
-
-                foreach (var old in PollMessages)
-                {
-                    if (MessageManager.Messages.All(m => m.Id != old.Id))
-                        old.Dispose();
-                }
-                PollMessages.Clear();
-
-                foreach (var dto in result.Data.Messages.OrderByDescending(m => m.CreatedAt))
-                {
-                    var existing = MessageManager.Messages.FirstOrDefault(m => m.Id == dto.Id);
-                    PollMessages.Add(existing ?? CreateTempMessageViewModel(dto));
-                }
-
-                InfoPanel.SetPolls(PollMessages);
-                OnPropertyChanged(nameof(FilteredPolls));
-            });
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadPolls error: {ex.Message}"); }
-    }
-
-    private MessageViewModel CreateTempMessageViewModel(MessageDto dto)
-        => new(dto, _fileDownloadService, _notificationService, null, Context.Api,
-            currentUserId: UserId, stateService: _fileDownloadStateService);
-
-    private static bool IsInfoPanelPhoto(MessageFileDto file)
-        => file.PreviewType == "image" && !string.IsNullOrWhiteSpace(file.Url);
-
-    private void RebuildMembersPreview()
-    {
-        MembersPreview.Clear();
-
-        foreach (var member in Context.Members.OrderByDescending(m => m.IsOnline)
-            .ThenBy(m => m.DisplayName ?? m.Username ?? string.Empty, StringComparer.OrdinalIgnoreCase).Take(5))
-        {
-
-            MembersPreview.Add(member);
-        }
-    }
-
-    #endregion
-
-    [RelayCommand]
-    private async Task StartOrJoinCallAsync()
-    {
-        if (Context.IsDisposed) return;
-
-        await SafeExecuteAsync(async _ =>
-        {
-            if (_callService.IsInCall && _callService.ActiveChatId == Context.ChatId)
-            {
-                Parent.OpenCallUi();
-                return;
-            }
-
-            if (_callService.IsInCall)
-                await _callService.LeaveCallAsync();
-
-            if (HasActiveCall)
-            {
-                var state = await _callHub.GetCallStateAsync(Context.ChatId);
-                if (state == null) return;
-
-                await _callService.JoinCallAsync(state.CallId, Context.ChatId);
-
-                await Task.Delay(200, _);
-
-                var freshState = await _callHub.GetCallStateAsync(Context.ChatId);
-
-                var chatName = Context.Chat?.Name ?? string.Empty;
-                Parent.ShowCallView(freshState ?? state, chatName, state.IsGroupCall);
-            }
-            else
-            {
-                await _callService.StartCallAsync(Context.ChatId);
-            }
-        });
-    }
-
-    #region Messages
-
-    private async Task LoadPinnedAsync(CancellationToken ct)
-    {
-        try
-        {
-            var result = await Context.Api.GetAsync<List<MessageDto>>(ApiEndpoints.Messages.PinnedForChat(Context.ChatId), ct);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Context.IsDisposed) return;
-
-                var data = result is { Success: true, Data.Count: > 0 } ? result.Data : [];
-
-                RebuildPinnedMessages(data);
-            });
-        }
-        catch (OperationCanceledException) { /* Ожидаемая отмена */ }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] Ошибка загрузки закреплённых: {ex.Message}");
-        }
-    }
-
-    private void RebuildPinnedMessages(List<MessageDto> dtos)
-    {
-        PinnedBannerMessage?.Dispose();
-        PinnedBannerMessage = null;
-
-        foreach (var old in PinnedMessages) old.Dispose();
-        PinnedMessages.Clear();
-
-        foreach (var dto in dtos)
-            PinnedMessages.Add(CreatePinnedMessageViewModel(dto));
-
-        PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;
-
-        NotifyPinnedSummaryChanged();
-    }
-
-    private void NotifyPinnedSummaryChanged()
-    {
-        OnPropertyChanged(nameof(PinnedCount));
-        OnPropertyChanged(nameof(HasPinnedMessages));
-        OnPropertyChanged(nameof(HasContactInfoMediaSection));
-        OnPropertyChanged(nameof(HasGroupInfoMediaSection));
-        OnPropertyChanged(nameof(HasMultiplePinned));
-        OnPropertyChanged(nameof(HasMultiplePinned));
-    }
-
-
-    private MessageViewModel CreatePinnedMessageViewModel(MessageDto dto)
-        => new(dto, _fileDownloadService, _notificationService, _audioPlayerService, Context.Api,
-           currentUserId: UserId, stateService: Context.FileDownloadState);
-
-    [RelayCommand]
-    private async Task CopyUsername()
-        => await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
+    #region Commands
 
     [RelayCommand]
     private async Task SendMessage()
@@ -1162,152 +630,31 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             return;
         }
 
-        var forwarding = Forward.ForwardingMessage;
-        var hasForward = forwarding != null;
-        var hasText = !string.IsNullOrWhiteSpace(NewMessage);
-        var hasAttachments = LocalAttachments.Count > 0;
-
-        if (!hasText && !hasAttachments && !hasForward) return;
-
-        await SafeExecuteAsync(async ct =>
-        {
-            var files = await Attachments.UploadAllAsync(ct);
-
-            var content = NewMessage;
-            if (hasForward && string.IsNullOrWhiteSpace(content))
-                content = forwarding!.Content;
-
-            List<MessageFileDto>? forwardFiles = null;
-            if (hasForward && files.Count == 0 && forwarding!.Files is { Count: > 0 })
-                forwardFiles = forwarding.Files;
-
-            var request = new CreateMessageRequest
-            {
-                ChatId = Context.ChatId,
-                Content = content,
-                ReplyToMessageId = Reply.ReplyingToMessage?.Id,
-                ForwardedFromMessageId = forwarding?.Id,
-                Files = files.Count > 0 ? files : forwardFiles
-            };
-
-            var result = await Context.Api.PostAsync<CreateMessageRequest, MessageDto>(ApiEndpoints.Messages.Create, request, ct);
-
-            if (result.Success && result.Data != null)
-            {
-                NewMessage = string.Empty;
-                Attachments.Clear();
-                Reply.CancelReply();
-                Forward.CancelForward();
-                NotifyComposerActionStateChanged();
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    MessageManager.AddReceivedMessage(result.Data);
-                    Context.RequestScrollToBottom();
-                });
-            }
-            else
-            {
-                ErrorMessage = $"Не удалось отправить сообщение: {result.Error}";
-            }
-        });
+        await Composer.SendMessageAsync();
     }
 
     [RelayCommand]
     private async Task LoadOlderMessages()
     {
         if (Context.IsDisposed || MessageManager.IsLoading) return;
-
-        try
-        {
-            IsLoadingOlderMessages = true;
-            await MessageManager.LoadOlderMessagesAsync(Context.LifetimeToken);
-        }
+        IsLoadingOlderMessages = true;
+        try { await MessageManager.LoadOlderMessagesAsync(Context.LifetimeToken); }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] LoadOlderMessages error: {ex.Message}");
-        }
-        // НЕ сбрасываем IsLoadingOlderMessages здесь — View сбросит после
-        // восстановления позиции скролла
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadOlderMessages error: {ex.Message}"); }
     }
 
     [RelayCommand]
     private async Task LoadNewerMessages()
     {
-        if (Context.IsDisposed || MessageManager.IsLoading || !MessageManager.HasMoreNewer)
-            return;
-
-        try
-        {
-            IsLoadingNewerMessages = true;
-            await MessageManager.LoadNewerMessagesAsync(Context.LifetimeToken);
-        }
+        if (Context.IsDisposed || MessageManager.IsLoading || !MessageManager.HasMoreNewer) return;
+        IsLoadingNewerMessages = true;
+        try { await MessageManager.LoadNewerMessagesAsync(Context.LifetimeToken); }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] LoadNewerMessages error: {ex.Message}");
-        }
-        // View сбросит IsLoadingNewerMessages
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] LoadNewerMessages error: {ex.Message}"); }
     }
-
-    #endregion
-
-    #region UI и Вложения
 
     [RelayCommand]
     private void ToggleInfoPanel() => IsInfoPanelOpen = !IsInfoPanelOpen;
-
-    private void OpenInfoSection(InfoSectionType section)
-    {
-        if (section == InfoSectionType.None)
-        {
-            IsInfoSectionOpen = false;
-            CurrentInfoSection = InfoSectionType.None;
-            InfoSectionTitle = string.Empty;
-            InfoPanel.SetPhotos([]);
-            FilesItems.Clear();
-            PollMessages.Clear();
-            InfoPanel.SetPolls(PollMessages);
-            RebuildMembersPreview();
-            return;
-        }
-
-        CurrentInfoSection = section;
-        InfoSectionTitle = InfoSectionTitles.GetValueOrDefault(section, string.Empty);
-        IsInfoSectionOpen = true;
-
-        switch (section)
-        {
-            case InfoSectionType.Photos: _ = LoadInfoPanelPhotosAsync(); break;
-            case InfoSectionType.Files: _ = LoadInfoPanelFilesAsync(); break;
-            case InfoSectionType.Polls:
-                _ = LoadInfoPanelPollsAsync();
-                InfoPanel.OnPollsSectionOpened(PollMessages);
-                break;
-            case InfoSectionType.Members:
-                RebuildMembersPreview();
-                InfoPanel.OnMembersSectionOpened();
-                break;
-        }
-    }
-
-    [RelayCommand]
-    private async Task OpenPinnedSection()
-    {
-        if (!IsInfoPanelOpen)
-            IsInfoPanelOpen = true;
-
-        OpenInfoSection(InfoSectionType.Pinned);
-        await LoadPinnedAsync(Context.LifetimeToken);
-    }
-
-    [RelayCommand]
-    private async Task ScrollToPinnedMessage()
-    {
-        if (PinnedBannerMessage == null) return;
-        await Search.ScrollToMessageAsync(PinnedBannerMessage.Id);
-    }
 
     [RelayCommand]
     private void OpenPhotosSection() => OpenInfoSection(InfoSectionType.Photos);
@@ -1316,21 +663,28 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private void OpenFilesSection() => OpenInfoSection(InfoSectionType.Files);
 
     [RelayCommand]
-    private void OpenPollsSection()
-    {
-        OpenInfoSection(InfoSectionType.Polls);
-        InfoPanel.OnPollsSectionOpened(PollMessages);
-    }
+    private void OpenPollsSection() => OpenInfoSection(InfoSectionType.Polls);
 
     [RelayCommand]
-    private void OpenMembersSection()
-    {
-        OpenInfoSection(InfoSectionType.Members);
-        InfoPanel.OnMembersSectionOpened();
-    }
+    private void OpenMembersSection() => OpenInfoSection(InfoSectionType.Members);
 
     [RelayCommand]
     private void CloseInfoSection() => OpenInfoSection(InfoSectionType.None);
+
+    [RelayCommand]
+    private async Task OpenPinnedSection()
+    {
+        if (!IsInfoPanelOpen) IsInfoPanelOpen = true;
+        OpenInfoSection(InfoSectionType.Pinned);
+        await Pinned.ReloadAsync(Context.LifetimeToken);
+    }
+
+    [RelayCommand]
+    private async Task ScrollToPinnedMessage()
+    {
+        if (Pinned.PinnedBannerMessage == null) return;
+        await Search.ScrollToMessageAsync(Pinned.PinnedBannerMessage.Id);
+    }
 
     [RelayCommand]
     private async Task OpenInfoSectionMessageAsync(MessageViewModel? message)
@@ -1353,66 +707,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     {
         HasNewMessages = false;
         IsScrolledToBottom = true;
-        await MarkMessagesAsReadAsync();
+        await Scroll.MarkMessagesAsReadAsync();
     }
 
     [RelayCommand]
     private void RemoveAttachment(LocalFileAttachment attachment) => Attachments.Remove(attachment);
 
     [RelayCommand]
-    private void InsertEmoji(string emoji) => NewMessage += emoji;
+    private void InsertEmoji(string emoji) => Composer.InsertEmoji(emoji);
 
     [RelayCommand]
-    private void SelectMention(UserDto? user)
-    {
-        if (user is null || string.IsNullOrWhiteSpace(user.Username)) return;
-
-        var text = NewMessage ?? string.Empty;
-        var caret = Math.Clamp(_composerCaretIndex, 0, text.Length);
-        if (!TryFindMentionToken(text, caret, out var start, out _)) return;
-
-        var prefix = text[..start];
-        var suffix = caret < text.Length ? text[caret..] : string.Empty;
-        NewMessage = $"{prefix}@{user.Username} {suffix}";
-        _composerCaretIndex = (prefix + "@" + user.Username + " ").Length;
-        IsMentionSuggestionsOpen = false;
-        MentionSelectedIndex = -1;
-    }
-
-    public bool HandleMentionNavigationKey(Key key)
-    {
-        if (!IsMentionSuggestionsOpen || MentionSuggestions.Count == 0) return false;
-
-        if (key == Key.Down) { MentionSelectedIndex = NextMentionIndex(MentionSelectedIndex); return true; }
-        if (key == Key.Up) { MentionSelectedIndex = PrevMentionIndex(MentionSelectedIndex); return true; }
-        if (key == Key.Enter) return TryConfirmMentionSelection();
-        if (key == Key.Escape)
-        {
-            IsMentionSuggestionsOpen = false;
-            MentionSelectedIndex = -1;
-            return true;
-        }
-
-        return false;
-    }
-
-    private int NextMentionIndex(int current) => current < MentionSuggestions.Count - 1 ? current + 1 : 0;
-    private int PrevMentionIndex(int current) => current > 0 ? current - 1 : MentionSuggestions.Count - 1;
-
-    private bool TryConfirmMentionSelection()
-    {
-        if (MentionSelectedIndex < 0 || MentionSelectedIndex >= MentionSuggestions.Count)
-            return false;
-
-        SelectMention(MentionSuggestions[MentionSelectedIndex]);
-        return true;
-    }
-
-    public void OnComposerSelectionChanged(int caretIndex)
-    {
-        _composerCaretIndex = caretIndex;
-        UpdateMentionSuggestions(NewMessage, caretIndex);
-    }
+    private void SelectMention(UserDto? user) => Composer.SelectMention(user);
 
     [RelayCommand]
     private async Task AttachFile()
@@ -1421,55 +726,19 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ErrorMessage = "Не удалось выбрать файлы";
     }
 
-    #endregion
+    [RelayCommand]
+    private void GoBackToList() => RequestGoBackToList?.Invoke();
 
-    #region Mentions
-
-    private void UpdateMentionSuggestions(string? text, int caretIndex)
+    [RelayCommand]
+    private void LoadMorePhotos()
     {
-        var source = Context.Members.Where(m => m.Id != Context.CurrentUserId && !string.IsNullOrWhiteSpace(m.Username)).ToList();
-
-        if (!TryFindMentionToken(text ?? string.Empty, caretIndex, out _, out var token))
-        {
-            MentionSuggestions.Clear();
-            IsMentionSuggestionsOpen = false;
-            MentionSelectedIndex = -1;
-            return;
-        }
-
-        var filtered = source.Where(m => m.Username!.Contains(token, StringComparison.OrdinalIgnoreCase)).OrderBy(m => m.Username!.StartsWith(token, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(m => m.Username).Take(7).ToList();
-
-        MentionSuggestions.Clear();
-        foreach (var member in filtered)
-            MentionSuggestions.Add(member);
-
-        IsMentionSuggestionsOpen = MentionSuggestions.Count > 0;
-        MentionSelectedIndex = IsMentionSuggestionsOpen ? 0 : -1;
+        InfoPanel.LoadMorePhotos();
+        OnPropertyChanged(nameof(PhotosCount));
+        OnPropertyChanged(nameof(PhotosItems));
     }
 
-    private static bool TryFindMentionToken(string text, int caretIndex, out int tokenStart, out string token)
-    {
-        tokenStart = -1;
-        token = string.Empty;
-
-        if (string.IsNullOrEmpty(text) || caretIndex < 0 || caretIndex > text.Length)
-            return false;
-
-        var i = caretIndex - 1;
-        while (i >= 0 && !char.IsWhiteSpace(text[i])) i--;
-
-        tokenStart = i + 1;
-        if (tokenStart >= text.Length || text[tokenStart] != '@') return false;
-        if (caretIndex <= tokenStart) return false;
-
-        token = text.Substring(tokenStart + 1, caretIndex - tokenStart - 1);
-        return token.All(c => char.IsLetterOrDigit(c) || c == '_');
-    }
-
-    #endregion
-
-    #region Navigation
+    [RelayCommand]
+    private Task StartOrJoinCallAsync() => Call.StartOrJoinCallCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task OpenCreatePoll()
@@ -1483,7 +752,7 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         await _navigator.ShowEditGroupDialogAsync(Context.Chat, updatedChat =>
         {
             Context.Chat = updatedChat;
-            RefreshChatPermissions();
+            Permissions.Refresh();
             Parent.UpdateChatInList(updatedChat);
             _ = InfoPanel.ReloadMembersAfterEditAsync();
         });
@@ -1497,7 +766,6 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     private async Task OpenMentionProfile(string? mention)
     {
         if (string.IsNullOrWhiteSpace(mention)) return;
-
         var normalizedUsername = mention.Trim().TrimStart('@');
         if (string.IsNullOrWhiteSpace(normalizedUsername)) return;
 
@@ -1515,15 +783,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             ErrorMessage = "Владелец чата не может покинуть чат";
             return;
         }
-        var confirmDialog = new ConfirmDialogViewModel(
-            "Покинуть группу",
-            "Вы уверены, что хотите покинуть группу?",
-            "Покинуть",
-            "Отмена");
-        await Parent.Parent.ShowDialogAsync(confirmDialog);
 
-        if (!await confirmDialog.Result)
-            return;
+        var confirmDialog = new ConfirmDialogViewModel("Покинуть группу", "Вы уверены, что хотите покинуть группу?", "Покинуть", "Отмена");
+
+        await Parent.Parent.ShowDialogAsync(confirmDialog);
+        if (!await confirmDialog.Result) return;
 
         await SafeExecuteAsync(async ct =>
         {
@@ -1542,129 +806,159 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         });
     }
 
-    private void RefreshChatPermissions()
+    [RelayCommand]
+    private async Task CopyUsername()
+        => await InfoPanel.CopyUsernameCommand.ExecuteAsync(null);
+
+    [RelayCommand]
+    private async Task ToggleMute()
+        => await Notification.ToggleCommand.ExecuteAsync(null);
+
+    #endregion
+
+    #region UI Helpers
+
+    public bool HandleMentionNavigationKey(Key key) => Composer.HandleNavigationKey(key);
+    public void OnComposerSelectionChanged(int caretIndex) => Composer.OnCaretChanged(caretIndex);
+
+    private static readonly Dictionary<InfoSectionType, string> InfoSectionTitles = new()
     {
-        if (Context.Chat == null)
+        [InfoSectionType.Photos] = "Медиа",
+        [InfoSectionType.Files] = "Документы",
+        [InfoSectionType.Polls] = "Опросы",
+        [InfoSectionType.Members] = "Участники",
+        [InfoSectionType.Pinned] = "Закреплённые сообщения"
+    };
+
+    private void OpenInfoSection(InfoSectionType section)
+    {
+        if (section == InfoSectionType.None)
         {
-            CanLeaveChat = false;
-            CanEditGroupChat = false;
-            OnPropertyChanged(nameof(CanLeaveChat));
-            OnPropertyChanged(nameof(CanEditGroupChat));
-            OnPropertyChanged(nameof(CanLeaveChatVisible));
+            IsInfoSectionOpen = false;
+            CurrentInfoSection = InfoSectionType.None;
+            InfoSectionTitle = string.Empty;
+            Sections.ClearAll();
+            RebuildMembersPreview();
             return;
         }
 
-        CanLeaveChat = !IsDepartmentScopedChat
-            && (!InfoPanel.IsGroupChat || Context.Chat.CreatedById != Context.CurrentUserId);
+        CurrentInfoSection = section;
+        InfoSectionTitle = InfoSectionTitles.GetValueOrDefault(section, string.Empty);
+        IsInfoSectionOpen = true;
 
-        if (!InfoPanel.IsGroupChat)
+        switch (section)
         {
-            CanEditGroupChat = false;
-            OnPropertyChanged(nameof(CanLeaveChat));
-            OnPropertyChanged(nameof(CanEditGroupChat));
-            OnPropertyChanged(nameof(CanLeaveChatVisible));
-            return;
-        }
-
-        CanEditGroupChat = Context.IsSystemAdmin
-            || Context.Chat.CreatedById == Context.CurrentUserId
-            || Context.CurrentUserRole is ChatRole.Admin or ChatRole.Owner;
-
-        OnPropertyChanged(nameof(CanLeaveChat));
-        OnPropertyChanged(nameof(CanEditGroupChat));
-        OnPropertyChanged(nameof(CanLeaveChatVisible));
-    }
-
-
-    private void OnMessagePinStateChanged(MessageDto dto)
-    {
-        Debug.WriteLine($"[ChatVM] OnMessagePinStateChanged: id={dto.Id} IsPinned={dto.IsPinned}");
-        Dispatcher.UIThread.Post(() => HandlePinStateChanged(dto));
-    }
-
-    private void HandlePinStateChanged(MessageDto dto)
-    {
-        Debug.WriteLine($"[ChatVM] HandlePinStateChanged: id={dto.Id} IsPinned={dto.IsPinned} disposed={Context.IsDisposed}");
-        if (Context.IsDisposed) return;
-
-        if (!dto.IsPinned)
-        {
-            Debug.WriteLine($"[ChatVM] RemovePinnedMessage: id={dto.Id}");
-            RemovePinnedMessage(dto.Id);
-            return;
-        }
-
-        Debug.WriteLine($"[ChatVM] AddOrUpdatePinnedMessage: id={dto.Id}");
-        AddOrUpdatePinnedMessage(dto);
-    }
-
-    private void RemovePinnedMessage(int messageId)
-    {
-        var toRemove = PinnedMessages.FirstOrDefault(m => m.Id == messageId);
-        if (toRemove != null)
-        {
-            bool wasBanner = PinnedBannerMessage?.Id == messageId;
-            PinnedMessages.Remove(toRemove);
-            toRemove.Dispose();
-
-            if (wasBanner)
-                PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;
-
-            NotifyPinnedSummaryChanged();
+            case InfoSectionType.Photos: _ = Sections.LoadPhotosAsync(); break;
+            case InfoSectionType.Files: _ = Sections.LoadFilesAsync(); break;
+            case InfoSectionType.Polls:
+                _ = Sections.LoadPollsAsync();
+                InfoPanel.OnPollsSectionOpened(Sections.PollMessages);
+                break;
+            case InfoSectionType.Members:
+                RebuildMembersPreview();
+                InfoPanel.OnMembersSectionOpened();
+                break;
         }
     }
 
-    private void AddOrUpdatePinnedMessage(MessageDto dto)
+    private void RebuildMembersPreview()
     {
-        var existing = PinnedMessages.FirstOrDefault(m => m.Id == dto.Id);
-        if (existing != null)
+        MembersPreview.Clear();
+        foreach (var member in Context.Members.OrderByDescending(m => m.IsOnline)
+            .ThenBy(m => m.DisplayName ?? m.Username ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .Take(5))
         {
-            existing.ApplyUpdate(dto);
+            MembersPreview.Add(member);
         }
-        else
-        {
-            var vm = CreatePinnedMessageViewModel(dto);
-            PinnedMessages.Insert(0, vm);
-            NotifyPinnedSummaryChanged();
-        }
-
-        PinnedBannerMessage = PinnedMessages.Count > 0 ? PinnedMessages[0] : null;
     }
 
     #endregion
 
-    #region Reading and Scrolling
+    #region Scroll & Reading
     public void RequestScrollToBottom() => Context.RequestScrollToBottom();
-
-    public async Task OnMessageVisibleAsync(MessageViewModel message)
-    {
-        if (Context.IsDisposed) return;
-        if (!message.IsUnread || message.SenderId == Context.CurrentUserId) return;
-
-        message.IsUnread = false;
-        MessageManager.MarkAsReadLocally(message.Id);
-        await Context.Hub.MarkMessageAsReadAsync(Context.ChatId, message.Id);
-    }
-
-    public async Task MarkMessagesAsReadAsync()
-    {
-        if (Context.IsDisposed) return;
-
-        var now = DateTime.UtcNow;
-        if ((now - _lastMarkAsReadTime).TotalSeconds < AppConstants.MarkAsReadCooldownSeconds)
-            return;
-
-        _lastMarkAsReadTime = now;
-        await Context.Hub.MarkChatAsReadAsync(Context.ChatId);
-    }
-
-    public Task OnMessagesVisibleAsync() => MarkMessagesAsReadAsync();
-
+    public Task OnMessageVisibleAsync(MessageViewModel message) => Scroll.OnMessageVisibleAsync(message);
+    public Task MarkMessagesAsReadAsync() => Scroll.MarkMessagesAsReadAsync();
+    public Task OnMessagesVisibleAsync() => Scroll.MarkMessagesAsReadAsync();
     public Task ScrollToMessageAsync(int messageId) => Search.ScrollToMessageAsync(messageId);
     public void ScrollToMessageFromSearch(MessageViewModel message) => Context.RequestScrollToMessage(message, true);
     public void ScrollToIndexFromSearch(int index) => Context.RequestScrollToIndex(index, true);
     public void ScrollToMessageSilent(MessageViewModel message) => Context.RequestScrollToMessage(message, false);
     public void ScrollToIndexSilent(int index) => Context.RequestScrollToIndex(index, false);
+
+    #endregion
+
+    #region Chat Updates
+
+    private void OnUserRoleUpdated(UserRole role) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Context.IsDisposed) return;
+        Context.IsSystemAdmin = role.HasFlag(UserRole.Admin);
+        Permissions.Refresh();
+    });
+
+    private void OnChatUpdated(ChatUpdateEventDto update)
+    {
+        if (update.Id != Context.ChatId || Context.IsDisposed) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Context.IsDisposed) return;
+
+            var oldAvatar = Context.Chat?.Avatar;
+
+            if (Context.Chat != null)
+            {
+                Context.Chat.Name = update.Name;
+                Context.Chat.ShowHistoryForNewMembers = update.ShowHistoryForNewMembers;
+                Context.Chat.Type = update.Type;
+            }
+
+            if (update.CurrentUserRole.HasValue)
+            {
+                var oldRole = Context.CurrentUserRole;
+                Context.CurrentUserRole = update.CurrentUserRole.Value;
+                Permissions.Refresh();
+            }
+
+            if (oldAvatar != update.Avatar)
+            {
+                if (!string.IsNullOrEmpty(oldAvatar))
+                {
+                    try
+                    {
+                        AppConfig.Services
+                            .GetRequiredService<AuthenticatedImageLoader>()
+                            .InvalidateByRelativePath(oldAvatar);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ChatVM] Avatar invalidate error: {ex.Message}");
+                    }
+                }
+                Context.Chat ??= new ChatDto();
+                Context.Chat.Avatar = update.Avatar;
+            }
+
+            OnPropertyChanged(nameof(Chat));
+            OnPropertyChanged(nameof(CanEditGroupChat));
+            OnPropertyChanged(nameof(CanLeaveChat));
+            OnPropertyChanged(nameof(CanLeaveChatVisible));
+        });
+    }
+
+    public void OnGlobalRoleChanged(UserRole role) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Context.IsDisposed) return;
+        Context.IsSystemAdmin = role == UserRole.Admin;
+        Permissions.Refresh();
+    });
+
+    public void ApplyChatRoleUpdate(ChatRole newRole) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Context.IsDisposed) return;
+        Context.CurrentUserRole = newRole;
+        Permissions.Refresh();
+    });
 
     #endregion
 
@@ -1694,14 +988,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
             if (chatResult is { Success: true, Data: not null })
             {
                 Context.Chat = chatResult.Data;
-                RefreshChatPermissions();
+                Permissions.Refresh();
             }
-
 
             await InfoPanel.ReloadMembersAfterEditAsync();
             RefreshInfoPanelLists();
         }
-        catch (OperationCanceledException) { /* Отменено */ }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ChatVM] Не удалось обновить инфопанель: {ex.Message}");
@@ -1710,7 +1003,40 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
 
     #endregion
 
+    #region Refresh helpers
+
+    private CancellationTokenSource? _refreshDebounce;
+
+    private void RefreshInfoPanelLists()
+    {
+        if (Context.IsDisposed) return;
+        RebuildMembersPreview();
+    }
+
+    private void ScheduleRefreshInfoPanelLists()
+    {
+        _refreshDebounce?.Cancel();
+        _refreshDebounce?.Dispose();
+        _refreshDebounce = new CancellationTokenSource();
+        var token = _refreshDebounce.Token;
+
+        Dispatcher.UIThread.Post(async () =>
+        {
+            try
+            {
+                await Task.Delay(150, token);
+                if (!token.IsCancellationRequested)
+                    RefreshInfoPanelLists();
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    #endregion
+
     #region Dispose
+
+    private int _disposeStartedFlag;
 
     private void DisposeCore()
     {
@@ -1718,16 +1044,8 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (Context.IsDisposed) return;
 
         DisposeCommonResources();
-
-        try
-        {
-            _ = MessageManager.DisposeAsync().AsTask().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ChatVM] MessageManager dispose error: {ex.Message}");
-        }
-
+        try { _ = MessageManager.DisposeAsync().AsTask().ConfigureAwait(false); }
+        catch (Exception ex) { Debug.WriteLine($"[ChatVM] MessageManager dispose error: {ex.Message}"); }
         Context.Dispose();
     }
 
@@ -1736,15 +1054,12 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         if (disposing)
         {
             if (Interlocked.CompareExchange(ref _disposeStartedFlag, 1, 0) != 0) return;
-
             DisposeCommonResources();
-
             _ = MessageManager.DisposeAsync().AsTask().ContinueWith(t =>
             {
                 if (t.IsFaulted)
                     Debug.WriteLine($"[ChatVM] MessageManager async dispose error: {t.Exception}");
             });
-
             Context.Dispose();
         }
         base.Dispose(disposing);
@@ -1753,16 +1068,11 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.CompareExchange(ref _disposeStartedFlag, 1, 0) != 0) return;
-
         DisposeCommonResources();
-
         await MessageManager.DisposeAsync();
-
         Context.Dispose();
         GC.SuppressFinalize(this);
     }
-
-    private int _disposeStartedFlag;
 
     private void DisposeCommonResources()
     {
@@ -1770,24 +1080,17 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         _refreshDebounce?.Dispose();
         _refreshDebounce = null;
 
-        UnsubscribePropertyForwarding();
-        UnsubscribeCallEvents();
-
-        if (_contextScrollToMessage != null)
-        {
-            Context.ScrollToMessageRequested -= _contextScrollToMessage;
-            Context.ScrollToIndexRequested -= _contextScrollToIndex;
-            Context.ScrollToBottomRequested -= _contextScrollToBottom;
-            _contextScrollToMessage = null;
-            _contextScrollToIndex = null;
-            _contextScrollToBottom = null;
-        }
-
+        _relay.Dispose();
         _hubSubscriber.Dispose();
         Context.Hub.SetCurrentChat(null);
         Context.Hub.ChatUpdated -= OnChatUpdated;
         Context.Hub.UserRoleUpdated -= OnUserRoleUpdated;
 
+        Composer.Dispose();
+        Permissions.Dispose();
+        Sections.Dispose();
+
+        Call.Dispose();
         EditDelete.Dispose();
         Reply.Dispose();
         Forward.Dispose();
@@ -1798,113 +1101,13 @@ public sealed partial class ChatViewModel : BaseViewModel, IAsyncDisposable
         InfoPanel.Dispose();
         Search.Dispose();
         Notification.Dispose();
+        Pinned.Dispose();
         Attachments.Dispose();
 
-        PinnedBannerMessage = null;
-
-        foreach (var msg in PinnedMessages) msg.Dispose();
-        PinnedMessages.Clear();
-
-        foreach (var msg in PollMessages)
-        {
-            if (MessageManager.Messages.All(m => m.Id != msg.Id))
-                msg.Dispose();
-        }
-        PollMessages.Clear();
-
+        MembersPreview.Clear();
         PhotosItems.Clear();
         FilesItems.Clear();
-        MembersPreview.Clear();
     }
 
-    public void OnGlobalRoleChanged(UserRole role) => Dispatcher.UIThread.Post(() =>
-    {
-        if (Context.IsDisposed) return;
-        Context.IsSystemAdmin = role == UserRole.Admin;
-        RefreshChatPermissions();
-    });
-
-    /// <summary>
-    /// Вызывается из ChatsViewModel при получении ChatUpdated с новой ролью.
-    /// Не дублирует логику OnChatUpdated — тот обрабатывает событие напрямую из хаба.
-    /// Этот метод нужен только если ChatViewModel не подписан на хаб (не активен).
-    /// </summary>
-    public void ApplyChatRoleUpdate(ChatRole newRole)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (Context.IsDisposed) return;
-            Context.CurrentUserRole = newRole;
-            RefreshChatPermissions();
-        });
-    }
-
-    private void OnChatUpdated(ChatUpdateEventDto update)
-    {
-        if (update.Id != Context.ChatId || Context.IsDisposed) return;
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (Context.IsDisposed) return;
-
-            var oldAvatar = Context.Chat?.Avatar;
-
-            if (Context.Chat != null)
-            {
-                Context.Chat.Name = update.Name;
-                Context.Chat.ShowHistoryForNewMembers = update.ShowHistoryForNewMembers;
-                Context.Chat.Type = update.Type;
-            }
-
-            if (update.CurrentUserRole.HasValue)
-            {
-                var oldRole = Context.CurrentUserRole;
-                Context.CurrentUserRole = update.CurrentUserRole.Value;
-                if (oldRole is ChatRole.Admin or ChatRole.Owner && Context.CurrentUserRole == ChatRole.Member)
-                {
-                    Debug.WriteLine($"[ChatVM] Role downgraded, checking dialog...");
-                    var dialogService = AppConfig.Services.GetRequiredService<IDialogService>();
-                    var currentDialog = dialogService.CurrentDialog;
-                    Debug.WriteLine($"[ChatVM] CurrentDialog: {currentDialog?.GetType().Name ?? "null"}");
-
-
-                    if (currentDialog is ChatEditDialogViewModel editDialog)
-                    {
-                        Debug.WriteLine($"[ChatVM] Found ChatEditDialog, closing...");
-                        editDialog.ForceCloseDueToRoleChange();
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[ChatVM] Dialog is not ChatEditDialogViewModel!");
-                    }
-                }
-            }
-
-            if (oldAvatar != update.Avatar)
-            {
-                if (!string.IsNullOrEmpty(oldAvatar))
-                {
-                    try
-                    {
-                        AppConfig.Services
-                            .GetRequiredService<AuthenticatedImageLoader>()
-                            .InvalidateByRelativePath(oldAvatar);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[ChatVM] Avatar invalidate error: {ex.Message}");
-                    }
-                }
-
-                Context.Chat?.Avatar = update.Avatar;
-            }
-
-            OnPropertyChanged(nameof(Chat));
-            RefreshChatPermissions();
-            OnPropertyChanged(nameof(CanEditGroupChat));
-            OnPropertyChanged(nameof(CanLeaveChat));
-            OnPropertyChanged(nameof(CanLeaveChatVisible));
-        });
-    }
     #endregion
 }

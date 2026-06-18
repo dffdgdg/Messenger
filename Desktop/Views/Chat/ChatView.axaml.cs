@@ -84,7 +84,7 @@ public partial class ChatView : UserControl
     private async Task LoadOlderMessagesAsync()
     {
         if (_viewModel is null || _scrollViewer is null || _messagesList is null) return;
-        if (!_olderLoadSemaphore.Wait(0)) return;
+        if (!await _olderLoadSemaphore.WaitAsync(0)) return;
 
         _lastOlderTrigger = DateTime.UtcNow;
         _suppressPositionTracking = true;
@@ -122,12 +122,13 @@ public partial class ChatView : UserControl
         finally
         {
             _viewModel.IsLoadingOlderMessages = false;
-
-            Dispatcher.UIThread.Post(() => _suppressPositionTracking = false, DispatcherPriority.Background);
-
+            Dispatcher.UIThread.Post(
+                () => _suppressPositionTracking = false,
+                DispatcherPriority.Background);
             _olderLoadSemaphore.Release();
         }
     }
+
 
     private void HandleScrollPosition()
     {
@@ -199,7 +200,7 @@ public partial class ChatView : UserControl
     private async Task LoadNewerMessagesAsync()
     {
         if (_viewModel is null) return;
-        if (!_newerLoadSemaphore.Wait(0)) return;
+        if (!await _newerLoadSemaphore.WaitAsync(0)) return;
 
         _lastNewerTrigger = DateTime.UtcNow;
         _viewModel.IsLoadingNewerMessages = true;
@@ -217,7 +218,8 @@ public partial class ChatView : UserControl
         finally
         {
             _lastNewerTrigger = DateTime.UtcNow;
-            _viewModel?.IsLoadingNewerMessages = false;
+            if (_viewModel is not null)
+                _viewModel.IsLoadingNewerMessages = false;
             _newerLoadSemaphore.Release();
         }
     }

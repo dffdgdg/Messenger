@@ -1,6 +1,13 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using API.Application.Configuration;
+using API.Application.Services.Abstractions;
+using API.Domain.Common;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using Shared.Dto.Auth;
 
-namespace API.Controllers;
+namespace API.Web.Controllers;
 
 public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtSettings,
     ILogger<AuthController> logger) : BaseController<AuthController>(logger)
@@ -8,7 +15,7 @@ public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtS
     private const string RefreshTokenCookieName = "refresh_token";
 
     [AllowAnonymous]
-    //[EnableRateLimiting("login")]
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {

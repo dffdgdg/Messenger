@@ -1,4 +1,8 @@
-﻿namespace API.Controllers;
+﻿using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.User;
+
+namespace API.Web.Controllers;
 
 public sealed class UsersController(IUserService user, ILogger<UsersController> logger) : BaseController<UsersController>(logger)
 {

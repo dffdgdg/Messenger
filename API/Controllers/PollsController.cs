@@ -1,4 +1,8 @@
-namespace API.Controllers;
+using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Poll;
+
+namespace API.Web.Controllers;
 
 public sealed class PollsController(IPollService poll, ILogger<PollsController> logger) : BaseController<PollsController>(logger)
 {

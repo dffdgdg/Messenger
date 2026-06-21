@@ -1,10 +1,21 @@
-﻿using API.Services.Features.Call;
-using API.Services.Infrastructure.Security;
+﻿using API.Application.Services.Abstractions;
+using API.Application.Services.Features.Call;
+using API.Domain.Common;
+using API.Domain.Entities;
+using API.Infrastructure.Database;
+using API.Web.Common;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Shared.Dto.Call;
+using Shared.Dto.ReadReceipt;
+using Shared.Enum;
 using Shared.Hubs;
 using SixLabors.ImageSharp;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 
-namespace API.Hubs;
+namespace API.Web.Hubs;
 
 [Authorize]
 public sealed partial class MessengerHub(

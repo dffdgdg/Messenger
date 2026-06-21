@@ -7,23 +7,56 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
+	<ItemGroup>
+	  <AvaloniaXaml Remove="Assets\Icons.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Base\Animations.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Base\MainStyle.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\MessageStyles.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Themes\Colored.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Themes\DarkTheme.axaml" />
+	  <AvaloniaXaml Remove="Assets\Styles\Themes\LightTheme.axaml" />
+	</ItemGroup>
+	<ItemGroup>
+	  <AvaloniaResource Include="Assets\avalonia-logo.ico" />
+	  <AvaloniaResource Include="Assets\Fonts\NotoColorEmoji.ttf" />
+	  <AvaloniaResource Include="Assets\Icons.axaml" />
+	  <AvaloniaResource Include="Assets\Images\default-avatar.webp" />
+	  <AvaloniaResource Include="Assets\Images\Logo.png" />
+	  <AvaloniaResource Include="Assets\Images\Logo.svg" />
+	  <AvaloniaResource Include="Assets\Images\LogoCircle.svg" />
+	  <AvaloniaResource Include="Assets\logo-circle.ico" />
+	  <AvaloniaResource Include="Assets\Styles\Base\Animations.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	  <AvaloniaResource Include="Assets\Styles\Base\MainStyle.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	  <AvaloniaResource Include="Assets\Styles\MessageStyles.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	  <AvaloniaResource Include="Assets\Styles\Themes\Colored.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	  <AvaloniaResource Include="Assets\Styles\Themes\DarkTheme.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	  <AvaloniaResource Include="Assets\Styles\Themes\LightTheme.axaml">
+	    <SubType>Designer</SubType>
+	  </AvaloniaResource>
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Assets\logo.ico" />
+	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Avalonia только как библиотека типов, без рендерера -->
-		<PackageReference Include="Avalonia" Version="12.0.4" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
-		<PackageReference Include="Silk.NET.OpenAL" Version="2.23.0" />
-		<PackageReference Include="Silk.NET.OpenAL.Extensions.Creative" Version="2.23.0" />
-		<PackageReference Include="Silk.NET.OpenAL.Soft.Native" Version="1.23.1" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
-		<PackageReference Include="Tmds.DBus.Protocol" Version="0.94.2" />
-		<PackageReference Include="SIPSorcery" Version="10.0.10" />
-		<PackageReference Include="Concentus" Version="2.2.2" />
+		<PackageReference Include="Avalonia" />
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+		<PackageReference Include="sqlite-net-pcl" />
+		<PackageReference Include="SQLitePCLRaw.bundle_green" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -35,5 +68,13 @@
 	  <Using Include="CommunityToolkit.Mvvm.Input" />
 	  <Using Include="Core.Infrastructure.Configuration" />
 	  <Using Include="Core.Services.Abstractions" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Assets\Images\Avatars\" />
+	  <Folder Include="Assets\Images\Icons\" />
+	  <Folder Include="Assets\Images\Illustrations\" />
+	  <Folder Include="Views\Chat\Poll\" />
+	  <Folder Include="Views\Controls\Admin\" />
 	</ItemGroup>
 </Project>

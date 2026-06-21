@@ -1,4 +1,6 @@
-﻿namespace API.Common;
+﻿using API.Application.Services.Abstractions;
+
+namespace API.Web.Common;
 
 public static class UrlHelpers
 {

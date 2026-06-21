@@ -1,4 +1,9 @@
-namespace API.Controllers;
+using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Department;
+
+namespace API.Web.Controllers;
 
 [ApiController]
 [Route("api/departments")]

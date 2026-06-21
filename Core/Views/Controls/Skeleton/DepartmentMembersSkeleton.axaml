@@ -1,0 +1,359 @@
+<UserControl
+    x:Class="Core.Views.Controls.Skeleton.DepartmentMembersSkeleton"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer Padding="0,24" Classes="ThinScrollbar">
+        <StackPanel
+            MaxWidth="1000"
+            HorizontalAlignment="Stretch"
+            Spacing="24">
+            <Border
+                MaxWidth="850"
+                HorizontalAlignment="Center"
+                Classes="Section">
+                <StackPanel Spacing="20">
+
+                    <!--  Заголовок секции  -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="10">
+                            <Border
+                                Width="18"
+                                Height="18"
+                                Classes="Skeleton"
+                                CornerRadius="4" />
+                            <Border
+                                Width="140"
+                                Height="20"
+                                Classes="Skeleton"
+                                CornerRadius="6" />
+                            <Border
+                                Width="32"
+                                Height="18"
+                                Classes="Skeleton"
+                                CornerRadius="5" />
+                        </StackPanel>
+                        <Border
+                            Grid.Column="1"
+                            Width="260"
+                            Height="38"
+                            Classes="Skeleton"
+                            CornerRadius="8" />
+                    </Grid>
+
+                    <!--  Карточки сотрудников  -->
+                    <StackPanel Spacing="4">
+
+                        <!--  1  -->
+                        <Border
+                            Padding="12,10"
+                            Background="{DynamicResource ItemBgBrush}"
+                            CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Classes="Skeleton"
+                                    CornerRadius="20" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <Border
+                                        Width="180"
+                                        Height="14"
+                                        Classes="Skeleton"
+                                        CornerRadius="5" />
+                                    <Border
+                                        Width="120"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <Border
+                                        Width="8"
+                                        Height="8"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                    <Border
+                                        Width="60"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="3"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!--  2  -->
+                        <Border
+                            Padding="12,10"
+                            Background="{DynamicResource ItemBgBrush}"
+                            CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Classes="Skeleton"
+                                    CornerRadius="20" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <Border
+                                        Width="150"
+                                        Height="14"
+                                        Classes="Skeleton"
+                                        CornerRadius="5" />
+                                    <Border
+                                        Width="100"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <Border
+                                        Width="8"
+                                        Height="8"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                    <Border
+                                        Width="50"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="3"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!--  3  -->
+                        <Border
+                            Padding="12,10"
+                            Background="{DynamicResource ItemBgBrush}"
+                            CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Classes="Skeleton"
+                                    CornerRadius="20" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <Border
+                                        Width="200"
+                                        Height="14"
+                                        Classes="Skeleton"
+                                        CornerRadius="5" />
+                                    <Border
+                                        Width="130"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <Border
+                                        Width="8"
+                                        Height="8"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                    <Border
+                                        Width="65"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="3"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!--  4  -->
+                        <Border
+                            Padding="12,10"
+                            Background="{DynamicResource ItemBgBrush}"
+                            CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Classes="Skeleton"
+                                    CornerRadius="20" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <Border
+                                        Width="160"
+                                        Height="14"
+                                        Classes="Skeleton"
+                                        CornerRadius="5" />
+                                    <Border
+                                        Width="110"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <Border
+                                        Width="8"
+                                        Height="8"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                    <Border
+                                        Width="55"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="3"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!--  5  -->
+                        <Border
+                            Padding="12,10"
+                            Background="{DynamicResource ItemBgBrush}"
+                            CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="16">
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Classes="Skeleton"
+                                    CornerRadius="20" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <Border
+                                        Width="140"
+                                        Height="14"
+                                        Classes="Skeleton"
+                                        CornerRadius="5" />
+                                    <Border
+                                        Width="95"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <Border
+                                        Width="8"
+                                        Height="8"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                    <Border
+                                        Width="45"
+                                        Height="12"
+                                        Classes="Skeleton"
+                                        CornerRadius="4" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="3"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                    <Border
+                                        Width="28"
+                                        Height="28"
+                                        Classes="Skeleton"
+                                        CornerRadius="6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

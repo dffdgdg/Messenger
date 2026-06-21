@@ -1,4 +1,6 @@
-﻿namespace API.Tests.Helpers;
+﻿using API.Common.Patterns;
+
+namespace API.Tests.Helpers;
 
 public static class ResultFactory
 {

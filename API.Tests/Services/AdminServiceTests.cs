@@ -1,4 +1,5 @@
-﻿using API.Configuration;
+﻿using API.Common.Patterns;
+using API.Configuration;
 using API.Data;
 using API.Hubs;
 using API.Repositories.Abstarctions;

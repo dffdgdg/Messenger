@@ -1,4 +1,4 @@
 ﻿namespace Shared.Enum;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum Theme { light, dark, system }
+public enum Theme { light, dark, system, colored }

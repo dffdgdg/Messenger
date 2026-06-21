@@ -1,5 +1,4 @@
-﻿using Core.Services.Abstractions;
-using Core.Services.Features.Call;
+﻿using Core.Services.Features.Call;
 using Core.Services.Features.Call.WebRtc;
 using Microsoft.Extensions.Logging;
 using Shared.Dto.Call;
@@ -12,6 +11,7 @@ public sealed partial class CallService : ICallService
     private readonly ISessionStore _session;
     private readonly ICallAudioService _audio;
     private readonly ILogger<CallService> _logger;
+    private readonly IWebRtcPeerConnectionFactory _peerFactory;
 
     private string? _activeCallId;
     private int? _activeChatId;
@@ -29,16 +29,14 @@ public sealed partial class CallService : ICallService
     public string? ActiveCallId => _activeCallId;
     public int? ActiveChatId => _activeChatId;
 
-    public CallService(
-        ICallHubConnection hub,
-        ISessionStore session,
-        ICallAudioService audio,
-        ILogger<CallService> logger)
+    public CallService(ICallHubConnection hub, ISessionStore session, ICallAudioService audio,
+        ILogger<CallService> logger, IWebRtcPeerConnectionFactory peerFactory)
     {
         _hub = hub;
         _session = session;
         _audio = audio;
         _logger = logger;
+        _peerFactory = peerFactory;
 
         SubscribeHubEvents();
     }
@@ -74,10 +72,7 @@ public sealed partial class CallService : ICallService
         _activeChatId = chatId;
         _pendingIceConfig = null;
 
-        _webRtc = new WebRtcManager(
-            _session.UserId ?? 0,
-            callId,
-            _logger);
+        _webRtc = new WebRtcManager(_session.UserId ?? 0, callId, _logger, _peerFactory, _pendingIceConfig);
 
         _webRtc.PeerReady += OnPeerReady;
         _webRtc.AudioReceived += OnWebRtcAudioReceived;
@@ -217,11 +212,7 @@ public sealed partial class CallService : ICallService
 
         if (_webRtc == null)
         {
-            _webRtc = new WebRtcManager(
-                _session.UserId ?? 0,
-                state.CallId,
-                _logger,
-                _pendingIceConfig);
+            _webRtc = new WebRtcManager(_session.UserId ?? 0, state.CallId, _logger, _peerFactory, _pendingIceConfig);
 
             _pendingIceConfig = null;
 

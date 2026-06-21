@@ -1,6 +1,4 @@
-﻿#if !ANDROID
-using Core.Services.Abstractions;
-using Core.Services.Features.Media.Abstractions;
+﻿using Core.Services.Features.Media.Abstractions;
 using System.Diagnostics;
 using IOStream = System.IO.Stream;
 
@@ -229,4 +227,3 @@ public sealed class AudioPlayerService(IAudioPlaybackDevice playback) : IAudioPl
         _pauseGate.Dispose();
     }
 }
-#endif

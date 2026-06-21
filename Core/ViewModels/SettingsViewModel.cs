@@ -1,6 +1,5 @@
 ﻿using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Core.Services.Abstractions;
 using AppTheme = Shared.Enum.Theme;
 
 namespace Core.ViewModels;
@@ -20,20 +19,45 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] public partial AppTheme SelectedTheme { get; set; }
     [ObservableProperty] public partial bool NotificationsEnabled { get; set; } = true;
     [ObservableProperty] public partial bool CanBeFoundInSearch { get; set; } = true;
-
-    public SettingsViewModel(MainMenuViewModel mainMenuViewModel, IApiClientService apiClient,
-        ICacheMaintenanceService cacheMaintenanceService, ISettingsService settingsService, IThemeService themeService)
+    public AccentPickerViewModel AccentPicker { get; }
+    public SettingsViewModel(
+        MainMenuViewModel mainMenuViewModel,
+        IApiClientService apiClient,
+        ICacheMaintenanceService cacheMaintenanceService,
+        ISettingsService settingsService,
+        IThemeService themeService)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _cacheMaintenanceService = cacheMaintenanceService ?? throw new ArgumentNullException(nameof(cacheMaintenanceService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _userId = mainMenuViewModel?.UserId ?? throw new ArgumentNullException(nameof(mainMenuViewModel));
-
+        AccentPicker = new AccentPickerViewModel(themeService);
         _autoSaveTimer = new Timer(async _ => await SaveSettingsAsync(), null, Timeout.Infinite, Timeout.Infinite);
         SelectedTheme = GetCurrentAppTheme();
 
         _ = LoadSettingsAsync();
+    }
+
+    partial void OnSelectedThemeChanged(Theme value)
+    {
+        if (_isSaving || !_isLoaded) return;
+
+        _themeService.SaveTheme(value);
+
+        if (value == Theme.colored)
+        {
+            // ThemeService сам вызовет ApplyBaseTheme(colored) внутри ApplyColoredTheme
+            _themeService.ApplyColoredTheme(_themeService.CurrentAccent);
+        }
+        else
+        {
+            // ThemeService сам вызовет ApplyBaseTheme(value) → RestoreFromDictionary
+            // НЕ вызываем ApplyTheme(value) отдельно — это дублирование
+            _themeService.SwitchTheme(value);
+        }
+
+        ScheduleAutoSave();
     }
 
     private static AppTheme GetCurrentAppTheme()
@@ -116,15 +140,15 @@ public partial class SettingsViewModel : BaseViewModel
         }
     }
 
-    private static void ApplyTheme(AppTheme theme)
+    private static void ApplyTheme(Theme theme)
     {
         if (Application.Current == null) return;
-
         Application.Current.RequestedThemeVariant = theme switch
         {
-            AppTheme.dark => ThemeVariant.Dark,
-            AppTheme.light => ThemeVariant.Light,
-            AppTheme.system => ThemeVariant.Default,
+            Theme.dark => ThemeVariant.Dark,
+            Theme.light => ThemeVariant.Light,
+            Theme.colored => ThemeVariant.Dark,
+            Theme.system => ThemeVariant.Default,
             _ => ThemeVariant.Default
         };
     }
@@ -134,14 +158,6 @@ public partial class SettingsViewModel : BaseViewModel
         if (_isSaving || !_isLoaded) return;
         _hasPendingChanges = true;
         _autoSaveTimer.Change(800, Timeout.Infinite);
-    }
-
-    partial void OnSelectedThemeChanged(AppTheme value)
-    {
-        if (_isSaving || !_isLoaded) return;
-        ApplyTheme(value);
-        _themeService.SaveTheme(value);
-        ScheduleAutoSave();
     }
 
     partial void OnNotificationsEnabledChanged(bool value) => ScheduleAutoSave();

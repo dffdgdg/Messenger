@@ -1,0 +1,650 @@
+<UserControl
+    x:Class="Core.Views.MainMenuView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:chat="using:Core.ViewModels.Chat"
+    xmlns:chatItem="using:Core.ViewModels.Chats"
+    xmlns:controls="using:Core.Views.Controls"
+    xmlns:conv="using:Core.Converters"
+    xmlns:search="using:Core.ViewModels.ChatList.Search"
+    xmlns:sys="using:System"
+    xmlns:vm="using:Core.ViewModels"
+    x:Name="Root"
+    x:DataType="vm:MainMenuViewModel"
+    Background="{DynamicResource PrimaryBG}">
+
+    <UserControl.Resources>
+        <sys:Int32 x:Key="Index0">0</sys:Int32>
+        <sys:Int32 x:Key="Index1">1</sys:Int32>
+        <sys:Int32 x:Key="Index2">2</sys:Int32>
+        <sys:Int32 x:Key="Index3">3</sys:Int32>
+        <sys:Int32 x:Key="Index4">4</sys:Int32>
+        <sys:Int32 x:Key="Index5">5</sys:Int32>
+        <sys:Int32 x:Key="Index6">6</sys:Int32>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="RadioButton.NavButton:pointerover, RadioButton.IconButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:pointerover /template/ TextBlock#NavLabel, RadioButton.IconButton:pointerover /template/ TextBlock#NavLabel">
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:checked, RadioButton.IconButton:checked">
+            <Setter Property="Background" Value="{DynamicResource Accent}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:checked /template/ Border#ActiveIndicator, RadioButton.IconButton:checked /template/ Border#ActiveIndicator">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="RenderTransform" Value="scaleY(1)" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:checked /template/ TextBlock#NavLabel, RadioButton.IconButton:checked /template/ TextBlock#NavLabel">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:pressed, RadioButton.IconButton:pressed">
+            <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:pressed /template/ Path#NavIcon, RadioButton.IconButton:pressed /template/ Path#NavIcon">
+            <Setter Property="RenderTransform" Value="scale(0.9)" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:disabled, RadioButton.IconButton:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+        <Style Selector="RadioButton.NavButton:focus-visible /template/ Border#ButtonBody, RadioButton.IconButton:focus-visible /template/ Border#ButtonBody">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Button.SearchResultItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+        <Style Selector="Button.SearchResultItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Button.SearchResultItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderHover}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="TextBlock.SearchGroupLabel">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="Margin" Value="8,6,8,2" />
+        </Style>
+        <Style Selector="FlyoutPresenter.StatusMenuFlyout">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <Style Selector="Button.StatusMenuItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="Button.StatusMenuItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{Binding WindowLayoutMode,
+                Converter={conv:Converter Name=LayoutModeToNavColumnWidth},
+                ElementName=Root}" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  Боковая навигация (Normal/Wide)  -->
+        <DockPanel
+            Grid.Row="0"
+            Grid.Column="0"
+            Margin="5,0,5,0"
+            IsVisible="{Binding WindowLayoutMode,
+                Converter={conv:Converter Name=LayoutModeToSideNavVisible},
+                ElementName=Root}"
+            LastChildFill="False">
+
+            <StackPanel
+                Margin="0,5,0,10"
+                HorizontalAlignment="Center"
+                DockPanel.Dock="Top"
+                Spacing="2">
+                <RadioButton
+                    Classes="NavButton"
+                    Command="{Binding SetItemCommand}"
+                    CommandParameter="{StaticResource Index1}"
+                    Content="Чаты"
+                    GroupName="MainNav"
+                    IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=1}"
+                    Tag="{DynamicResource ChatsIcon}"
+                    ToolTip.Tip="Чаты" />
+                <RadioButton
+                    Classes="NavButton"
+                    Command="{Binding SetItemCommand}"
+                    CommandParameter="{StaticResource Index5}"
+                    Content="Контакты"
+                    GroupName="MainNav"
+                    IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=5}"
+                    Tag="{DynamicResource ContactsIcon}"
+                    ToolTip.Tip="Контакты" />
+                <RadioButton
+                    Classes="NavButton"
+                    Command="{Binding SetItemCommand}"
+                    CommandParameter="{StaticResource Index6}"
+                    Content="Отдел"
+                    GroupName="MainNav"
+                    IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=6}"
+                    IsVisible="{Binding IsDepartmentSectionVisible}"
+                    Tag="{DynamicResource OrganizationIcon}"
+                    ToolTip.Tip="Управление отделом" />
+            </StackPanel>
+
+            <!--  Баннер звонка  -->
+            <Border
+                Width="72"
+                Margin="0,0,0,10"
+                Background="{DynamicResource ThirdBG}"
+                BorderBrush="{DynamicResource Accent}"
+                BorderThickness="1"
+                ClipToBounds="True"
+                CornerRadius="14"
+                DockPanel.Dock="Bottom"
+                IsVisible="{Binding CallBanner.Store.IsInCall}">
+                <Border.BoxShadow>
+                    <BoxShadows>0 4 12 #2090EC40</BoxShadows>
+                </Border.BoxShadow>
+                <StackPanel Spacing="0">
+                    <Button
+                        Padding="0,10,0,8"
+                        HorizontalAlignment="Stretch"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding CallBanner.ToggleCallUiCommand}"
+                        CornerRadius="14,14,0,0"
+                        Cursor="Hand"
+                        ToolTip.Tip="Открыть управление звонком">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+                            </Style>
+                        </Button.Styles>
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <controls:AvatarControl
+                                Width="32"
+                                Height="32"
+                                Classes="Medium"
+                                DisplayName="{Binding CallBanner.ChatName}"
+                                FallbackIcon="{StaticResource GroupIcon}"
+                                ShowOnlineIndicator="False" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="11"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource Accent}"
+                                Text="{Binding CallBanner.DurationText}" />
+                        </StackPanel>
+                    </Button>
+                    <Border Height="1" Margin="8,0" Background="{DynamicResource BorderDefault}" />
+                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                        <Button
+                            Classes="IconButton Small"
+                            Classes.Active="{Binding CallBanner.IsMuted}"
+                            Command="{Binding CallBanner.ToggleMuteCommand}"
+                            ToolTip.Tip="{Binding CallBanner.IsMuted, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Включить микрофон|Выключить микрофон'}">
+                            <Button.Styles>
+                                <Style Selector="Button.Active /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
+                                </Style>
+                                <Style Selector="Button.Active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource DangerHoverBrush}" />
+                                </Style>
+                                <Style Selector="Button.Active TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                                </Style>
+                            </Button.Styles>
+                            <Path
+                                Margin="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="{Binding CallBanner.IsMuted, Converter={conv:Converter Name=BoolToGeometry}, ConverterParameter='M3.28 2.22a.75.75 0 1 0-1.06 1.06L8 9.06V12a4 4 0 0 0 6.248 3.309l1.146 1.146A5.227 5.227 0 0 1 12.25 17.5h-.5l-.216-.004A5.25 5.25 0 0 1 6.5 12.25v-.5l-.007-.102A.75.75 0 0 0 5 11.75v.5l.004.236a6.75 6.75 0 0 0 6.246 6.496v2.268l.007.102a.75.75 0 0 0 1.493-.102l.001-2.268a6.718 6.718 0 0 0 3.712-1.458l4.256 4.256a.75.75 0 0 0 1.061-1.06L3.28 2.22ZM17.196 14.014l1.146 1.146A6.725 6.725 0 0 0 19 12.25v-.5l-.007-.102a.75.75 0 0 0-1.493.102v.5l-.004.216a5.233 5.233 0 0 1-.3 1.548ZM8.138 4.956l7.792 7.792c.046-.242.07-.492.07-.748V6a4 4 0 0 0-7.862-1.044Z|M18.25 11a.75.75 0 0 1 .743.648l.007.102v.5a6.75 6.75 0 0 1-6.249 6.732l-.001 2.268a.75.75 0 0 1-1.493.102l-.007-.102v-2.268a6.75 6.75 0 0 1-6.246-6.496L5 12.25v-.5a.75.75 0 0 1 1.493-.102l.007.102v.5a5.25 5.25 0 0 0 5.034 5.246l.216.004h.5a5.25 5.25 0 0 0 5.246-5.034l.004-.216v-.5a.75.75 0 0 1 .75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z'}"
+                                Fill="{DynamicResource TextPrimary}"
+                                Stretch="Uniform" />
+                        </Button>
+                        <Button
+                            Classes="IconButton Small Danger"
+                            Command="{Binding CallBanner.LeaveCallCommand}"
+                            Foreground="{DynamicResource TextPrimary}"
+                            ToolTip.Tip="Завершить звонок">
+                            <Button.Styles>
+                                <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource DangerBrush}" />
+                                </Style>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource DangerHoverBrush}" />
+                                </Style>
+                                <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource DangerPressedBrush}" />
+                                </Style>
+                            </Button.Styles>
+                            <Path
+                                Margin="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="{StaticResource DeclineCallIcon}"
+                                Fill="{DynamicResource DangerBrush}"
+                                Stretch="Uniform" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <StackPanel
+                Margin="0,0,0,10"
+                HorizontalAlignment="Center"
+                DockPanel.Dock="Bottom"
+                Spacing="2">
+                <Grid HorizontalAlignment="Center">
+                    <RadioButton
+                        Classes="NavButton"
+                        Command="{Binding SetItemCommand}"
+                        CommandParameter="{StaticResource Index3}"
+                        Content="Профиль"
+                        GroupName="MainNav"
+                        IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=3}"
+                        Tag="{DynamicResource ProfileIcon}"
+                        ToolTip.Tip="Мой профиль (правый клик — статус)">
+                        <RadioButton.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Online" Header="В сети">
+                                    <MenuItem.Icon>
+                                        <Ellipse Width="10" Height="10" Fill="#43A047" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Away" Header="Отошёл">
+                                    <MenuItem.Icon>
+                                        <Ellipse Width="10" Height="10" Fill="#FFA000" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Busy" Header="Занят">
+                                    <MenuItem.Icon>
+                                        <Ellipse Width="10" Height="10" Fill="#E53935" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="DnD" Header="Не беспокоить">
+                                    <MenuItem.Icon>
+                                        <Ellipse Width="10" Height="10" Fill="#9C27B0" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Busy15m" Header="Занят на 15 минут" />
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Busy30m" Header="Занят на 30 минут" />
+                                <MenuItem Command="{Binding SetStatusCommand}" CommandParameter="Busy1h" Header="Занят на 1 час" />
+                            </ContextMenu>
+                        </RadioButton.ContextMenu>
+                    </RadioButton>
+                    <Ellipse
+                        Width="14"
+                        Height="14"
+                        Margin="18,8,0,23"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Fill="{Binding CurrentStatusColor}"
+                        IsHitTestVisible="False"
+                        Stroke="White"
+                        StrokeThickness="1.5" />
+                </Grid>
+                <RadioButton
+                    Classes="NavButton"
+                    Command="{Binding SetItemCommand}"
+                    CommandParameter="{StaticResource Index0}"
+                    Content="Настройки"
+                    GroupName="MainNav"
+                    IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=0}"
+                    Tag="{DynamicResource SettingsIcon}"
+                    ToolTip.Tip="Настройки приложения" />
+                <RadioButton
+                    Classes="NavButton"
+                    Command="{Binding SetItemCommand}"
+                    CommandParameter="{StaticResource Index4}"
+                    Content="Админ"
+                    GroupName="MainNav"
+                    IsChecked="{Binding SelectedMenuIndex, Mode=OneWay, Converter={conv:Converter Name=Equality}, ConverterParameter=4}"
+                    IsVisible="{Binding IsAdminSectionVisible}"
+                    Tag="{DynamicResource AdminIcon}"
+                    ToolTip.Tip="Панель администратора" />
+            </StackPanel>
+        </DockPanel>
+
+        <!--  Контент Normal/Wide  -->
+        <Border
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            Grid.Column="1"
+            Margin="0,8,9,9"
+            Background="{DynamicResource SecondaryBG}"
+            CornerRadius="7"
+            IsVisible="{Binding WindowLayoutMode,
+                Converter={conv:Converter Name=LayoutModeToSideNavVisible},
+                ElementName=Root}">
+            <ContentControl Content="{Binding CurrentMenuViewModel}" />
+        </Border>
+
+        <!--  Контент UltraCompact/Compact  -->
+        <Border
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Background="{DynamicResource SecondaryBG}"
+            IsVisible="{Binding WindowLayoutMode,
+                Converter={conv:Converter Name=LayoutModeToBottomNavVisible},
+                ElementName=Root}">
+            <ContentControl Content="{Binding CurrentMenuViewModel}" />
+        </Border>
+
+        <!--  SearchPopup — только Normal/Wide  -->
+        <Border
+            x:Name="SearchPopup"
+            MaxHeight="540"
+            Padding="6"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Background="{DynamicResource SecondaryBG}"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="1"
+            CornerRadius="10"
+            ZIndex="500">
+            <Border.IsVisible>
+                <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                    <Binding Path="SearchManager.IsSearchMode" />
+                    <Binding
+                        Converter="{conv:Converter Name=LayoutModeToSideNavVisible}"
+                        ElementName="Root"
+                        Path="WindowLayoutMode" />
+                </MultiBinding>
+            </Border.IsVisible>
+            <StackPanel>
+                <Grid Margin="4,4,4,6" ColumnDefinitions="*,Auto">
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="6">
+                        <ToggleButton
+                            Classes="SwitchSmall"
+                            Command="{Binding SetSearchScopeCommand}"
+                            CommandParameter="{x:Static chat:SearchScopeMode.All}"
+                            IsChecked="{Binding SearchManager.IsAllScope}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <PathIcon Width="11" Height="11" Data="{StaticResource SearchIcon}" />
+                                <TextBlock Text="Все" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton
+                            Classes="SwitchSmall"
+                            Command="{Binding SetSearchScopeCommand}"
+                            CommandParameter="{x:Static chat:SearchScopeMode.Chats}"
+                            IsChecked="{Binding SearchManager.IsChatsScope}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <PathIcon Width="11" Height="11" Data="{StaticResource ChatsIcon}" />
+                                <TextBlock Text="Чаты" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton
+                            Classes="SwitchSmall"
+                            Command="{Binding SetSearchScopeCommand}"
+                            CommandParameter="{x:Static chat:SearchScopeMode.Contacts}"
+                            IsChecked="{Binding SearchManager.IsContactsScope}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <PathIcon Width="11" Height="11" Data="{StaticResource ContactsIcon}" />
+                                <TextBlock Text="Контакты" />
+                            </StackPanel>
+                        </ToggleButton>
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Classes="IconButton Small"
+                        Command="{Binding OpenSearchFiltersCommand}"
+                        ToolTip.Tip="Фильтры">
+                        <Panel>
+                            <PathIcon
+                                Width="13"
+                                Height="13"
+                                Data="{StaticResource FilterIcon}"
+                                Foreground="{DynamicResource Icon}" />
+                            <Ellipse
+                                Width="6"
+                                Height="6"
+                                Margin="0,-2,-2,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Fill="{DynamicResource Accent}"
+                                IsVisible="{Binding SearchManager.HasActiveFilters}" />
+                        </Panel>
+                    </Button>
+                </Grid>
+                <Border
+                    Height="1"
+                    Margin="4,0,4,6"
+                    Background="{DynamicResource BorderDefault}" />
+                <StackPanel
+                    Margin="0,4,0,8"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding SearchManager.IsSearching}"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <PathIcon
+                        Width="14"
+                        Height="14"
+                        Data="{StaticResource SearchIcon}"
+                        Foreground="{DynamicResource TextMuted}" />
+                    <TextBlock Classes="SearchGroupLabel" Text="Поиск..." />
+                </StackPanel>
+                <ScrollViewer
+                    MaxHeight="380"
+                    Classes="ThinScrollbar"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="2">
+                        <StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
+                            <TextBlock Classes="SearchGroupLabel" Text="ЧАТЫ" />
+                            <ItemsControl ItemsSource="{Binding SearchManager.ChatResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
+                                        <Button
+                                            Classes="SearchResultItem"
+                                            Command="{Binding $parent[UserControl].((vm:MainMenuViewModel)DataContext).OpenSearchedChatCommand}"
+                                            CommandParameter="{Binding}">
+                                            <Grid Margin="2,2" ColumnDefinitions="Auto,*">
+                                                <controls:AvatarControl
+                                                    Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Classes="Small"
+                                                    DisplayName="{Binding Name}"
+                                                    FallbackIcon="{StaticResource GroupIcon}"
+                                                    ShowOnlineIndicator="False"
+                                                    Source="{Binding Avatar}" />
+                                                <StackPanel
+                                                    Grid.Column="1"
+                                                    Margin="10,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="2">
+                                                    <TextBlock
+                                                        FontSize="14"
+                                                        FontWeight="SemiBold"
+                                                        MaxLines="1"
+                                                        Text="{Binding Name}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock
+                                                        FontSize="12"
+                                                        Foreground="{DynamicResource TextMuted}"
+                                                        IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                        MaxLines="1"
+                                                        Text="{Binding LastMessagePreview}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <Border Height="1" Margin="8,4" Background="{DynamicResource BorderDefault}">
+                            <Border.IsVisible>
+                                <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                                    <Binding Path="SearchManager.HasChatResults" />
+                                    <Binding Path="SearchManager.HasMessageResults" />
+                                </MultiBinding>
+                            </Border.IsVisible>
+                        </Border>
+                        <StackPanel IsVisible="{Binding SearchManager.HasMessageResults}">
+                            <Grid Margin="0,0,4,0" ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Classes="SearchGroupLabel" Text="СООБЩЕНИЯ" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="0,6,0,2"
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource TextMuted}"
+                                    Text="{Binding SearchManager.TotalMessagesText}" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SearchManager.MessageResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="search:SearchMessageResultViewModel">
+                                        <Button
+                                            Classes="SearchResultItem"
+                                            Command="{Binding $parent[UserControl].((vm:MainMenuViewModel)DataContext).OpenSearchResultCommand}"
+                                            CommandParameter="{Binding Source}">
+                                            <Grid Margin="2,2" ColumnDefinitions="Auto,*,Auto">
+                                                <controls:AvatarControl
+                                                    Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Classes="Small"
+                                                    DisplayName="{Binding ChatName}"
+                                                    FallbackIcon="{StaticResource GroupIcon}"
+                                                    ShowOnlineIndicator="False"
+                                                    Source="{Binding ChatAvatar}" />
+                                                <StackPanel
+                                                    Grid.Column="1"
+                                                    Margin="10,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="3">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock
+                                                            FontSize="13"
+                                                            FontWeight="SemiBold"
+                                                            MaxLines="1"
+                                                            Text="{Binding ChatName}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            FontSize="13"
+                                                            Foreground="{DynamicResource TextMuted}"
+                                                            IsVisible="{Binding SenderName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                            Text="·" />
+                                                        <TextBlock
+                                                            FontSize="13"
+                                                            Foreground="{DynamicResource Accent}"
+                                                            IsVisible="{Binding SenderName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                            MaxLines="1"
+                                                            Text="{Binding SenderName}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock
+                                                        FontSize="12"
+                                                        Foreground="{DynamicResource TextSecondary}"
+                                                        IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                        MaxLines="2"
+                                                        Text="{Binding Preview}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock
+                                                    Grid.Column="2"
+                                                    Margin="0,2,0,0"
+                                                    VerticalAlignment="Top"
+                                                    FontSize="11"
+                                                    Foreground="{DynamicResource TextMuted}"
+                                                    Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Margin="0,20" HorizontalAlignment="Center" Spacing="10">
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                                    <Binding Path="!SearchManager.IsSearching" />
+                                    <Binding Path="!SearchManager.HasResults" />
+                                    <Binding Path="SearchManager.IsSearchMode" />
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <PathIcon
+                                Width="32"
+                                Height="32"
+                                HorizontalAlignment="Center"
+                                Data="{StaticResource SearchIcon}"
+                                Foreground="{DynamicResource TextMuted}"
+                                Opacity="0.4" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{DynamicResource TextMuted}"
+                                IsVisible="{Binding SearchManager.SearchQuery, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+                                Введите запрос для поиска
+                            </TextBlock>
+                            <StackPanel
+                                HorizontalAlignment="Center"
+                                IsVisible="{Binding SearchManager.SearchQuery, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Spacing="4">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="{DynamicResource TextMuted}"
+                                    Text="Ничего не найдено" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource TextMuted}"
+                                    Opacity="0.7"
+                                    Text="Попробуйте изменить запрос или фильтры" />
+                            </StackPanel>
+                        </StackPanel>
+                        <Button
+                            Margin="0,4,0,4"
+                            Padding="16,8"
+                            HorizontalAlignment="Center"
+                            Classes="DialogOutline"
+                            Command="{Binding LoadMoreSearchResultsCommand}"
+                            IsVisible="{Binding SearchManager.HasMoreMessages}">
+                            Показать ещё результаты
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

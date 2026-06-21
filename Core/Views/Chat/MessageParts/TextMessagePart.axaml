@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:Core.Views.Controls.Shared"
+             xmlns:chat="using:Core.Views.Chat"
+             xmlns:parts="using:Core.Views.Chat.MessageParts.Shared"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
+             x:Class="Core.Views.Chat.MessageParts.TextMessagePart"
+             x:DataType="vmChat:MessageViewModel"
+             x:Name="TextPartRoot">
+
+    <StackPanel>
+        <StackPanel IsVisible="{Binding IsDeleted}">
+            <TextBlock Text="{Binding DisplayContent}"
+                       FontStyle="Italic"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       FontSize="15"
+                       LineHeight="22"/>
+            <parts:MessageMetaBlock
+                HorizontalAlignment="Right"
+                Margin="0,-2,0,0"
+                Opacity="0.7"/>
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding !IsDeleted}">
+            <StackPanel IsVisible="{Binding HasTextContent}">
+                <shared:RichMessageTextBlock
+                    FontSize="15"
+                    LineHeight="22"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Top"
+                    RawText="{Binding DisplayContent}"
+                    MentionClickCommand="{Binding MentionClickCommand}"/>
+                <parts:MessageMetaBlock
+                    HorizontalAlignment="Right"
+                    Margin="0,-2,0,0"
+                    Opacity="0.7"/>
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding FileViewModels}"
+                          IsVisible="{Binding ShowNonVoiceFiles}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmChat:MessageFileViewModel">
+                        <chat:FileAttachmentControl/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <parts:MessageMetaBlock HorizontalAlignment="Right"
+                                    Margin="0,4,0,0" Opacity="0.7"
+                                    IsVisible="{Binding ShowFilesOnlyMeta}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

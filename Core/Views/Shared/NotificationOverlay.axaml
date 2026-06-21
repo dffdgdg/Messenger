@@ -1,0 +1,243 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Core.ViewModels"
+             x:Class="Core.Views.Controls.NotificationOverlay"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Styles>
+        <!-- ── Кликабельная область уведомления ── -->
+        <Style Selector="Button.NotificationBody">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="CornerRadius" Value="16,0,0,16"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.NotificationBody /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="16,0,0,16"/>
+        </Style>
+
+        <Style Selector="Button.NotificationBody:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}"/>
+        </Style>
+
+        <Style Selector="Button.NotificationBody:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderHover}"/>
+        </Style>
+
+        <!-- ── Кнопка закрытия уведомления ── -->
+        <Style Selector="Button.NotificationClose">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+            <Setter Property="ZIndex" Value="100"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                    <TransformOperationsTransition Property="RenderTransform"
+                                                   Duration="0:0:0.12"
+                                                   Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.NotificationClose /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+
+        <Style Selector="Button.NotificationClose:pointerover">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+
+        <Style Selector="Button.NotificationClose:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerBgBrush}"/>
+        </Style>
+
+        <Style Selector="Button.NotificationClose:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+        </Style>
+
+        <Style Selector="Button.NotificationClose:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.92)"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+
+        <Style Selector="Button.NotificationClose:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerBorderBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ItemsControl ItemsSource="{Binding ActiveNotifications}"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Margin="0,60,20,0"
+                  ZIndex="9500">
+
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Vertical" Spacing="10"/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <!-- Анимационная обёртка -->
+                <Border Classes="NotificationCard"
+                        IsVisible="{Binding IsVisible}"
+                        Width="360"
+                        IsHitTestVisible="True"
+                        RenderTransformOrigin="1,0.5">
+
+                    <Border.Styles>
+                        <Style Selector="Border.NotificationCard">
+                            <Setter Property="Opacity" Value="0"/>
+                            <Setter Property="RenderTransform" Value="translateX(24px) scale(0.96)"/>
+                        </Style>
+                        <Style Selector="Border.NotificationCard[IsVisible=true]">
+                            <Setter Property="Opacity" Value="1"/>
+                            <Setter Property="RenderTransform" Value="translateX(0) scale(1)"/>
+                        </Style>
+                    </Border.Styles>
+
+                    <Border.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="Opacity"
+                                              Duration="0:0:0.3"
+                                              Easing="CubicEaseOut"/>
+                            <TransformOperationsTransition Property="RenderTransform"
+                                                           Duration="0:0:0.4"
+                                                           Easing="BackEaseOut"/>
+                        </Transitions>
+                    </Border.Transitions>
+
+                    <!-- Карточка -->
+                    <Border Background="{DynamicResource SecondaryBG}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            BoxShadow="{DynamicResource DialogShadow}"
+                            ClipToBounds="True">
+
+                        <Grid RowDefinitions="Auto,3">
+
+                            <!-- ── Строка контента ── -->
+                            <Grid Grid.Row="0"
+                                  ColumnDefinitions="*,Auto">
+
+                                <!-- Кликабельная область -->
+                                <Button Grid.Column="0"
+                                        Classes="NotificationBody"
+                                        Command="{Binding ActivateCommand}"
+                                        Padding="14,14,8,14">
+
+                                    <Grid ColumnDefinitions="Auto,*">
+
+                                        <!-- Иконка типа -->
+                                        <Border Grid.Column="0"
+                                                Background="{Binding AccentHex}"
+                                                Width="36"
+                                                Height="36"
+                                                CornerRadius="11"
+                                                Margin="0,0,12,0"
+                                                VerticalAlignment="Top">
+                                            <TextBlock Text="{Binding IconGlyph}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextOnAccent}"
+                                                       FontWeight="Bold"
+                                                       FontSize="15"/>
+                                        </Border>
+
+                                        <!-- Текст -->
+                                        <StackPanel Grid.Column="1"
+                                                    Spacing="3"
+                                                    VerticalAlignment="Center">
+
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxLines="1"/>
+
+                                            <TextBlock Text="{Binding Message}"
+                                                       Classes="SectionItemDesc"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="17"
+                                                       MaxLines="2"/>
+
+                                            <!-- Бейдж «Открыть» -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        IsVisible="{Binding IsClickable}"
+                                                        Margin="0,5,0,0">
+                                                <Border Background="{Binding AccentHex}"
+                                                        Opacity="0.15"
+                                                        CornerRadius="4"
+                                                        Padding="6,2">
+                                                    <TextBlock Text="Открыть →"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{Binding AccentHex}"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Кнопка закрытия с ZIndex -->
+                                <Button Grid.Column="1"
+                                        Classes="NotificationClose"
+                                        Command="{Binding CloseCommand}"
+                                        Margin="0,10,10,0"
+                                        VerticalAlignment="Top"
+                                        ZIndex="10">  <!-- Добавлен ZIndex -->
+                                    <PathIcon Width="9"
+                                              Height="9"
+                                              Foreground="{DynamicResource TextMuted}"
+                                              Data="{StaticResource CloseIcon}"/>
+                                </Button>
+
+                            </Grid>
+
+                            <!-- ── Прогресс-бар таймера ── -->
+                            <Border Grid.Row="1"
+                                    Background="{Binding AccentHex}"
+                                    Opacity="0.45"
+                                    Height="3"
+                                    Width="{Binding ProgressWidth}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Stretch">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Width"
+                                                          Duration="0:0:0.1"
+                                                          Easing="LinearEasing"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                            </Border>
+
+                        </Grid>
+                    </Border>
+                </Border>
+
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

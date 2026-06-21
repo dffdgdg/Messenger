@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace API.Configuration;
+namespace API.Web.Configuration;
 
 public static class RateLimitKey
 {

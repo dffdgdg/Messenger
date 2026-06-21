@@ -1,5 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
 	<uses-permission android:name="android.permission.INTERNET" />
-	<application android:label="Mobile" android:icon="@drawable/Icon" />
+	<!-- Дополнительные разрешения -->
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.RECORD_AUDIO" />
+	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+	<uses-permission android:name="android.permission.CAMERA" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.VIBRATE" />
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<application android:label="ВнутрьСеть" 
+				 android:icon="@drawable/icon"
+				 android:allowBackup="true" 
+				 android:supportsRtl="true" 
+				 android:name=".AndroidApp"
+				 android:theme="@style/MyTheme.NoActionBar" 
+				 android:usesCleartextTraffic="true">
+		<!-- Для работы с локальным сервером -->
+		<uses-library android:name="org.apache.http.legacy" android:required="false" />
+	</application>
 </manifest>

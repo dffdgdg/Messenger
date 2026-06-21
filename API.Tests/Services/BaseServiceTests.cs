@@ -1,4 +1,5 @@
-﻿using API.Data;
+﻿using API.Common.Patterns;
+using API.Data;
 using API.Services.Base;
 using API.Tests.Helpers;
 using FluentAssertions;

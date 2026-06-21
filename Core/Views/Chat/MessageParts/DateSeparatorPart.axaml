@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
+             x:Class="Core.Views.Chat.MessageParts.DateSeparatorPart"
+             x:DataType="vmChat:MessageViewModel">
+
+    <!-- Разделитель дат с линиями по всей ширине -->
+    <Grid IsVisible="{Binding ShowDateSeparator}"
+          Margin="0,16,0,12"
+          ColumnDefinitions="*,Auto,*">
+        
+        <!-- Левая линия -->
+        <Border Grid.Column="0"
+                Height="1"
+                Background="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center"
+                Margin="0,0,12,0"/>
+        
+        <!-- Текст даты -->
+        <Border Grid.Column="1"
+                Background="{DynamicResource SecondaryBG}"
+                CornerRadius="10"
+                Padding="12,4"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center">
+            <TextBlock Text="{Binding DateSeparatorText}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextSecondary}"
+                       HorizontalAlignment="Center"/>
+        </Border>
+        
+        <!-- Правая линия -->
+        <Border Grid.Column="2"
+                Height="1"
+                Background="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center"
+                Margin="12,0,0,0"/>
+    </Grid>
+</UserControl>

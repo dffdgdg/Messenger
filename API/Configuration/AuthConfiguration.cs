@@ -1,8 +1,10 @@
-﻿using API.Services.Core.Auth;
+﻿using API.Application.Services.Core.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Shared.Enum;
 using System.Security.Claims;
 
-namespace API.Configuration;
+namespace API.Web.Configuration;
 
 public static class AuthConfiguration
 {
@@ -11,8 +13,7 @@ public static class AuthConfiguration
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.TokenValidationParameters =
-                    TokenService.CreateValidationParameters(configuration);
+                options.TokenValidationParameters = TokenService.CreateValidationParameters(configuration);
 
                 options.RequireHttpsMetadata = false;
 

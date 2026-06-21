@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Messenger.LoadTests.VoiceCalls;
+using API.Application.Services.Abstractions;
+using API.Application.Services.Features.Call;
 
 var options = VoiceCallLoadTestOptions.Parse(args);
 if (options.ShowHelp)

@@ -1,4 +1,8 @@
-﻿namespace API.Controllers;
+﻿using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Chat;
+
+namespace API.Web.Controllers;
 
 public sealed class NotificationsController(INotificationService notification, ILogger<NotificationsController> logger) : BaseController<NotificationsController>(logger)
 {

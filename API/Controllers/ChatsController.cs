@@ -1,4 +1,9 @@
-﻿namespace API.Controllers;
+﻿using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Chat;
+using Shared.Enum;
+
+namespace API.Web.Controllers;
 
 public sealed class ChatsController(IChatService chat, IChatMemberService member, ILogger<ChatsController> logger) : BaseController<ChatsController>(logger)
 {

@@ -1,4 +1,5 @@
-﻿using API.Configuration;
+﻿using API.Common.Patterns;
+using API.Configuration;
 using API.Controllers;
 using API.Tests.Helpers;
 using FluentAssertions;

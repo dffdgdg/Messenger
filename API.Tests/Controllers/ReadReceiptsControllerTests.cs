@@ -1,4 +1,5 @@
-﻿using API.Controllers;
+﻿using API.Common.Patterns;
+using API.Controllers;
 using API.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

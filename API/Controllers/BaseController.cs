@@ -1,6 +1,9 @@
-﻿using System.Security.Claims;
+﻿using API.Domain.Common;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Response;
+using System.Security.Claims;
 
-namespace API.Controllers;
+namespace API.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

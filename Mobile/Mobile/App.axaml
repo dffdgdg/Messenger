@@ -1,15 +1,40 @@
-<Application xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="using:Mobile"
-             x:Class="Mobile.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+<Application
+    x:Class="Mobile.App"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:Core.Converters"
+    xmlns:local="using:Mobile"
+    RequestedThemeVariant="Default">
 
     <Application.DataTemplates>
-        <local:ViewLocator/>
+        <local:ViewLocator />
     </Application.DataTemplates>
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Core/Assets/Styles/Base/Animations.axaml" />
+        <StyleInclude Source="avares://Core/Assets/Styles/Base/MainStyle.axaml" />
+        <StyleInclude Source="avares://Core/Assets/Styles/MessageStyles.axaml" />
     </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <converters:ConverterLocator x:Key="Converters" />
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://Core/Assets/Icons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key='Dark'>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://Core/Assets/Styles/Themes/DarkTheme.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key='Light'>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://Core/Assets/Styles/Themes/LightTheme.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

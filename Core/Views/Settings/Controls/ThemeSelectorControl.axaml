@@ -1,0 +1,332 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Core.ViewModels"
+             xmlns:controls="using:Core.Views.Controls"
+             x:Class="Core.Views.Controls.ThemeSelectorControl"
+             x:Name="Root">
+
+    <UserControl.Styles>
+
+        <Style Selector="RadioButton.ThemeCard">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Spacing="7">
+                        <!-- Карточка-превью -->
+                        <Border x:Name="CardBorder"
+                                BorderThickness="2"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                CornerRadius="10"
+                                ClipToBounds="True"
+                                Height="96">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                                </Transitions>
+                            </Border.Transitions>
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              HorizontalContentAlignment="Stretch"
+                                              VerticalContentAlignment="Stretch"/>
+                        </Border>
+
+                        <!-- Радио + подпись -->
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Spacing="5">
+                            <Panel Width="14" Height="14" VerticalAlignment="Center">
+                                <Ellipse x:Name="OuterCircle"
+                                         Stroke="{DynamicResource BorderHover}"
+                                         StrokeThickness="1.5"
+                                         Fill="Transparent">
+                                    <Ellipse.Transitions>
+                                        <Transitions>
+                                            <BrushTransition Property="Stroke" Duration="0:0:0.15"/>
+                                            <BrushTransition Property="Fill" Duration="0:0:0.15"/>
+                                        </Transitions>
+                                    </Ellipse.Transitions>
+                                </Ellipse>
+                                <Ellipse x:Name="InnerDot"
+                                         Fill="White"
+                                         Width="5" Height="5"
+                                         Opacity="0">
+                                    <Ellipse.Transitions>
+                                        <Transitions>
+                                            <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                                        </Transitions>
+                                    </Ellipse.Transitions>
+                                </Ellipse>
+                            </Panel>
+                            <TextBlock x:Name="Label"
+                                       Text="{TemplateBinding Tag}"
+                                       FontSize="12"
+                                       FontWeight="Medium"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}">
+                                <TextBlock.Transitions>
+                                    <Transitions>
+                                        <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                                    </Transitions>
+                                </TextBlock.Transitions>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="RadioButton.ThemeCard:pointerover /template/ Border#CardBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeCard:checked /template/ Border#CardBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeCard:checked /template/ Ellipse#OuterCircle">
+            <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeCard:checked /template/ Ellipse#InnerDot">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeCard:checked /template/ TextBlock#Label">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+    </UserControl.Styles>
+
+    <StackPanel Spacing="14">
+
+        <!-- Превью тем — UniformGrid через Grid с равными * колонками -->
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+
+            <!-- СВЕТЛАЯ -->
+            <RadioButton Grid.Column="0"
+                         Classes="ThemeCard"
+                         GroupName="Theme"
+                         Tag="Светлая"
+                         IsChecked="{Binding IsLightSelected, ElementName=Root, Mode=TwoWay}">
+                <!-- Превью: белый фон, три строки: хедер + сообщения + composer -->
+                <Grid RowDefinitions="14,*,20" Background="#F0F2F5">
+                    <!-- Хедер -->
+                    <Border Grid.Row="0" Background="#E4E8F0"/>
+
+                    <!-- Сообщения -->
+                    <StackPanel Grid.Row="1" Spacing="5"
+                                VerticalAlignment="Bottom"
+                                Margin="10,6,10,6">
+                        <Border Height="9" Width="70" Background="#DDE1EA"
+                                CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="9" Width="52" Background="#DDE1EA"
+                                CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <!-- Своё — акцент -->
+                        <Border Height="9" Width="60" CornerRadius="5,5,2,5"
+                                HorizontalAlignment="Right">
+                            <Border.Background>
+                                <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"
+                                                 Opacity="0.22"/>
+                            </Border.Background>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Composer -->
+                    <Border Grid.Row="2" Background="#E8ECF3"
+                            Margin="8,0,8,5" CornerRadius="10">
+                        <Grid ColumnDefinitions="*,Auto"
+                              Margin="10,0" VerticalAlignment="Center">
+                            <Border Height="4" Width="32" Background="#CDD2DE"
+                                    CornerRadius="2" HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"/>
+                            <Ellipse Grid.Column="1" Width="11" Height="11">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </RadioButton>
+
+            <!-- ТЁМНАЯ -->
+            <RadioButton Grid.Column="1"
+                         Classes="ThemeCard"
+                         GroupName="Theme"
+                         Tag="Тёмная"
+                         IsChecked="{Binding IsDarkSelected, ElementName=Root, Mode=TwoWay}">
+                <Grid RowDefinitions="14,*,20" Background="#12121A">
+                    <Border Grid.Row="0" Background="#0F0F17"/>
+
+                    <StackPanel Grid.Row="1" Spacing="5"
+                                VerticalAlignment="Bottom"
+                                Margin="10,6,10,6">
+                        <Border Height="9" Width="70" Background="#1E1E2C"
+                                CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="9" Width="52" Background="#1E1E2C"
+                                CornerRadius="5,5,5,2" HorizontalAlignment="Left"/>
+                        <Border Height="9" Width="60" CornerRadius="5,5,2,5"
+                                HorizontalAlignment="Right">
+                            <Border.Background>
+                                <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"
+                                                 Opacity="0.38"/>
+                            </Border.Background>
+                        </Border>
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Background="#1A1A26"
+                            Margin="8,0,8,5" CornerRadius="10">
+                        <Grid ColumnDefinitions="*,Auto"
+                              Margin="10,0" VerticalAlignment="Center">
+                            <Border Height="4" Width="32" Background="#26263A"
+                                    CornerRadius="2" HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"/>
+                            <Ellipse Grid.Column="1" Width="11" Height="11">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </RadioButton>
+
+            <!-- СИСТЕМНАЯ — левая половина светлая, правая тёмная -->
+            <RadioButton Grid.Column="2"
+                         Classes="ThemeCard"
+                         GroupName="Theme"
+                         Tag="Системная"
+                         IsChecked="{Binding IsSystemSelected, ElementName=Root, Mode=TwoWay}">
+                <Grid ColumnDefinitions="*,*" ClipToBounds="True">
+
+                    <!-- Светлая половина -->
+                    <Grid Grid.Column="0" RowDefinitions="14,*,20"
+                          Background="#F0F2F5" ClipToBounds="True">
+                        <Border Grid.Row="0" Background="#E4E8F0"/>
+                        <StackPanel Grid.Row="1" Spacing="5"
+                                    VerticalAlignment="Bottom"
+                                    Margin="8,6,4,6">
+                            <Border Height="8" Background="#DDE1EA"
+                                    CornerRadius="4,4,4,1"/>
+                            <Border Height="8" Width="36" Background="#DDE1EA"
+                                    CornerRadius="4,4,4,1" HorizontalAlignment="Left"/>
+                            <Border Height="8" Opacity="0"/>
+                        </StackPanel>
+                        <Border Grid.Row="2" Background="#E8ECF3"
+                                Margin="6,0,2,5" CornerRadius="8,0,0,8">
+                            <Border Height="4" Width="24" Background="#CDD2DE"
+                                    CornerRadius="2" HorizontalAlignment="Left"
+                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Разделитель -->
+                    <Border Grid.Column="0" Width="1" Background="#20000000"
+                            HorizontalAlignment="Right" ZIndex="5"/>
+
+                    <!-- Тёмная половина -->
+                    <Grid Grid.Column="1" RowDefinitions="14,*,20"
+                          Background="#12121A" ClipToBounds="True">
+                        <Border Grid.Row="0" Background="#0F0F17"/>
+                        <StackPanel Grid.Row="1" Spacing="5"
+                                    VerticalAlignment="Bottom"
+                                    Margin="4,6,8,6">
+                            <Border Height="8" Opacity="0"/>
+                            <Border Height="8" Opacity="0"/>
+                            <Border Height="8" Width="36" CornerRadius="4,4,1,4"
+                                    HorizontalAlignment="Right">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"
+                                                     Opacity="0.38"/>
+                                </Border.Background>
+                            </Border>
+                        </StackPanel>
+                        <Border Grid.Row="2" Background="#1A1A26"
+                                Margin="2,0,6,5" CornerRadius="0,8,8,0">
+                            <Ellipse Width="11" Height="11"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,8,0">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </Border>
+                    </Grid>
+
+                </Grid>
+            </RadioButton>
+
+            <!-- ЦВЕТНАЯ — та же структура хедер/сообщения/composer -->
+            <RadioButton Grid.Column="3"
+                         Classes="ThemeCard"
+                         GroupName="Theme"
+                         Tag="Цветная"
+                         IsChecked="{Binding IsColoredSelected, ElementName=Root, Mode=TwoWay}">
+                <Grid RowDefinitions="14,*,20" ClipToBounds="True">
+                    <Grid.Background>
+                        <SolidColorBrush Color="{Binding ColoredBgColor, ElementName=Root}"/>
+                    </Grid.Background>
+
+                    <!-- Хедер -->
+                    <Border Grid.Row="0">
+                        <Border.Background>
+                            <SolidColorBrush Color="{Binding ColoredBg2Color, ElementName=Root}"/>
+                        </Border.Background>
+                    </Border>
+
+                    <!-- Сообщения -->
+                    <StackPanel Grid.Row="1" Spacing="5"
+                                VerticalAlignment="Bottom"
+                                Margin="10,6,10,6">
+                        <Border Height="9" Width="70" CornerRadius="5,5,5,2"
+                                HorizontalAlignment="Left"
+                                Background="#FFFFFF" Opacity="0.10"/>
+                        <Border Height="9" Width="52" CornerRadius="5,5,5,2"
+                                HorizontalAlignment="Left"
+                                Background="#FFFFFF" Opacity="0.10"/>
+                        <!-- Своё — акцент -->
+                        <Border Height="9" Width="60" CornerRadius="5,5,2,5"
+                                HorizontalAlignment="Right">
+                            <Border.Background>
+                                <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"
+                                                 Opacity="0.75"/>
+                            </Border.Background>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Composer -->
+                    <Border Grid.Row="2" Margin="8,0,8,5" CornerRadius="10">
+                        <Border.Background>
+                            <SolidColorBrush Color="{Binding ColoredBg2Color, ElementName=Root}"/>
+                        </Border.Background>
+                        <Grid ColumnDefinitions="*,Auto"
+                              Margin="10,0" VerticalAlignment="Center">
+                            <Border Height="4" Width="32" Background="#FFFFFF"
+                                    Opacity="0.18" CornerRadius="2"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <Ellipse Grid.Column="1" Width="11" Height="11">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding PreviewAccentColor, ElementName=Root}"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </RadioButton>
+
+        </Grid>
+
+        <!-- Разделитель -->
+        <Border Height="1"
+                Background="{DynamicResource BorderDefault}"
+                Margin="0,0"/>
+
+        <!-- Акцент-пикер -->
+        <controls:AccentSelectorControl
+            DataContext="{Binding AccentPicker, ElementName=Root}"
+            IsVisible="{Binding AccentPicker, ElementName=Root,
+                        Converter={x:Static ObjectConverters.IsNotNull}}"/>
+
+    </StackPanel>
+</UserControl>

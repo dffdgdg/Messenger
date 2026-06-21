@@ -1,21 +1,36 @@
-﻿using Android.App;
-using Android.Content.PM;
-using Avalonia;
+﻿using Android.Content.PM;
+using Android.Util;
 using Avalonia.Android;
 
-namespace Android
+namespace Mobile.Android;
+
+[Activity(Label = "ВнутрьСеть", Theme = "@style/MyTheme.NoActionBar", Icon = "@drawable/icon", MainLauncher = true,
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
+public class MainActivity : AvaloniaMainActivity
 {
-    [Activity(
-        Label = "Mobile.Android",
-        Theme = "@style/MyTheme.NoActionBar",
-        Icon = "@drawable/icon",
-        MainLauncher = true,
-        ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
-    public class MainActivity : AvaloniaMainActivity<App>
+    protected override void OnCreate(Bundle? savedInstanceState)
     {
-        protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
+        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
         {
-            return base.CustomizeAppBuilder(builder).WithInterFont();
+            var ex = args.ExceptionObject as Exception;
+            Log.Error("VNUTRSET", $"UnhandledException: {ex}");
+        };
+
+        TaskScheduler.UnobservedTaskException += (sender, args) =>
+        {
+            Log.Error("VNUTRSET", $"UnobservedTask: {args.Exception}");
+            args.SetObserved();
+        };
+
+        try
+        {
+            base.OnCreate(savedInstanceState);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("VNUTRSET", $"OnCreate FAILED: {ex}");
+            Log.Error("VNUTRSET", $"Inner: {ex.InnerException}");
+            throw;
         }
     }
 }

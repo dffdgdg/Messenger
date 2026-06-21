@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using API.Common.Patterns;
 using API.Data;
 using API.Hubs;
 using API.Services.Abstractions;

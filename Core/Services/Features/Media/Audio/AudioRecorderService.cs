@@ -1,5 +1,4 @@
-﻿#if !ANDROID
-using Core.Services.Features.Media.Abstractions;
+﻿using Core.Services.Features.Media.Abstractions;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using IOBinaryWriter = System.IO.BinaryWriter;
@@ -181,4 +180,3 @@ public sealed class AudioRecorderService : IAudioRecorderService, IAsyncDisposab
         lock (_lock) { CleanupBuffers(); }
     }
 }
-#endif

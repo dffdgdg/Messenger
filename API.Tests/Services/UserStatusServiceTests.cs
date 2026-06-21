@@ -1,4 +1,5 @@
-﻿using API.Data;
+﻿using API.Common.Patterns;
+using API.Data;
 using API.Hubs;
 using API.Services.Infrastructure;
 using API.Tests.Helpers;

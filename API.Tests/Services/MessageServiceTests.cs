@@ -1,4 +1,5 @@
-﻿using API.Configuration;
+﻿using API.Common.Patterns;
+using API.Configuration;
 using API.Repositories.Abstarctions;
 using API.Services.Infrastructure.Bundles;
 using API.Services.Messaging;

@@ -1,93 +1,53 @@
-﻿using API.Data.SeedData;
-using API.Repositories.Abstarctions;
-using API.Repositories.Implementations;
-using API.Services.Auth;
-using API.Services.Call;
-using API.Services.Chat;
-using API.Services.Core.Auth;
-using API.Services.Department;
-using API.Services.Features.Call;
-using API.Services.Features.Chat;
-using API.Services.Infrastructure;
-using API.Services.Infrastructure.Bundles;
-using API.Services.Infrastructure.Database;
-using API.Services.Infrastructure.Network;
-using API.Services.Infrastructure.Status;
-using API.Services.Messaging;
-using API.Services.ReadReceipt;
-using API.Services.User;
+﻿using API.Application.Bundles;
+using API.Application.Services.Abstractions;
+using API.Application.Services.Features.Call;
+using API.Domain.Common;
+using API.Web.Hubs;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using API.Application;
+using API.Infrastructure;
 
-namespace API.Configuration;
+namespace API.Web.Configuration;
 
 public static class DependencyInjection
 {
-    /// <summary>
-    /// Регистрация DbContext
-    /// </summary>
-    public static IServiceCollection AddMessengerDatabase(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
+    public static IServiceCollection AddMessengerDatabase(this IServiceCollection services,IConfiguration configuration,IWebHostEnvironment environment)
     {
-        services.AddDbContext<MessengerDbContext>(options =>
-        {
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), npgsql =>
-            {
-                npgsql.MapEnum<Theme>("theme");
-                npgsql.MapEnum<ChatRole>("chat_role", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatRoleNameTranslator);
-                npgsql.MapEnum<ChatType>("chat_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.ChatTypeNameTranslator);
-                npgsql.MapEnum<SystemEventType>("system_event_type");
-                npgsql.MapEnum<UserStatusType>("user_status_type", nameTranslator: (Npgsql.INpgsqlNameTranslator?)EnumTypeMappings.UserStatusTypeNameTranslator);
-                npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                npgsql.MaxBatchSize(100);
-            });
-
-            if (environment.IsDevelopment())
-            {
-                options.EnableSensitiveDataLogging();
-                options.EnableDetailedErrors();
-            }
-        });
-
+        // Делегируем в Infrastructure
+        services.AddInfrastructure(configuration, environment);
         return services;
     }
 
-
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services,
+    public static IServiceCollection AddInfrastructureServices(
+        this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddMemoryCache();
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<AppDateTime>();
-        services.AddSingleton<CallMixerService>();
-        services.AddSingleton<CallRelayService>();
-        services.AddHostedService(sp => sp.GetRequiredService<CallRelayService>());
-        services.AddSingleton<ICallSessionService, CallSessionService>();
-        services.AddSingleton<IOnlineUserService, OnlineUserService>();
-        services.AddScoped<DataSeeder>();
-        services.AddScoped<ICacheService, CacheService>();
-        services.AddScoped<IAccessControlService, AccessControlService>();
-        services.AddScoped<IFileService, FileService>();
-        services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IHubNotifier, HubNotifier>();
-        services.AddScoped<IUrlBuilder, HttpUrlBuilder>();
 
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-        services.AddScoped<IChatRepository, ChatRepository>();
-        services.AddScoped<IMessageRepository, MessageRepository>();
-        services.AddScoped<IReadReceiptRepository, ReadReceiptRepository>();
-        services.AddScoped<IPollRepository, PollRepository>();
+        // Web-специфика: HubNotifier регистрируется здесь,
+        // потому что зависит от IHubContext<MessengerHub>
+        services.AddScoped<IHubNotifier, HubNotifier>();
 
         services.AddBundles();
 
-        services.Configure<TurnSettings>(configuration.GetSection(TurnSettings.Section));
+        services.Configure<TurnSettings>(
+            configuration.GetSection(TurnSettings.Section));
         services.AddSingleton<TurnCredentialService>();
 
         return services;
     }
 
-    /// <summary>
-    /// Регистрация универсальных бандлов
-    /// </summary>
+    public static IServiceCollection AddBusinessServices(
+        this IServiceCollection services)
+    {
+        // Делегируем в Application
+        services.AddApplication();
+        return services;
+    }
+
     private static IServiceCollection AddBundles(this IServiceCollection services)
     {
         services.AddScoped<TimeBundle>();
@@ -101,45 +61,21 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>
-    /// Бизнес-сервисы
-    /// </summary>
-    public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+    public static IServiceCollection AddMessengerJson(
+        this IServiceCollection services,
+        IWebHostEnvironment environment)
     {
-        services.AddScoped<IAuthService, AuthService>();
-
-        services.AddScoped<IUserService, UserService>();
-        services.AddScoped<IAdminService, AdminService>();
-        services.AddScoped<IUserStatusService, UserStatusService>();
-        services.AddHostedService<StatusCleanupHostedService>();
-
-        services.AddScoped<IChatService, ChatService>();
-        services.AddScoped<IChatMemberService, ChatMemberService>();
-        services.AddScoped<ISystemMessageService, SystemMessageService>();
-        services.AddScoped<INotificationService, NotificationService>();
-
-        services.AddScoped<IMessageService, MessageService>();
-        services.AddScoped<IPollService, PollService>();
-        services.AddScoped<IReadReceiptService, ReadReceiptService>();
-
-        services.AddScoped<IDepartmentService, DepartmentService>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Конфигурация JSON-сериализации
-    /// </summary>
-    public static IServiceCollection AddMessengerJson(this IServiceCollection services, IWebHostEnvironment environment)
-    {
-        void configureJson(System.Text.Json.JsonSerializerOptions options)
+        void configureJson(JsonSerializerOptions options)
         {
-            options.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
             options.WriteIndented = environment.IsDevelopment();
         }
 
-        services.ConfigureHttpJsonOptions(options => configureJson(options.SerializerOptions));
-        services.AddControllers().AddJsonOptions(options => configureJson(options.JsonSerializerOptions));
+        services.ConfigureHttpJsonOptions(
+            options => configureJson(options.SerializerOptions));
+        services.AddControllers()
+            .AddJsonOptions(
+                options => configureJson(options.JsonSerializerOptions));
 
         return services;
     }

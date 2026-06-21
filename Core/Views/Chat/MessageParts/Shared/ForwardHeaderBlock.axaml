@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmChat="using:Core.ViewModels.Chat"
+             x:Class="Core.Views.Chat.MessageParts.Shared.ForwardHeaderBlock"
+             x:DataType="vmChat:MessageViewModel">
+
+    <StackPanel Orientation="Horizontal"
+                Spacing="4"
+                IsVisible="{Binding HasForward}"
+                Margin="0,0,0,4">
+        <TextBlock Text="Переслано от"
+                   FontSize="12"
+                   FontStyle="Italic"
+                   Foreground="{DynamicResource TextMuted}"/>
+        <Button
+                Command="{Binding Commands.OpenProfile}"
+                CommandParameter="{Binding ForwardedFromSenderId}"
+                IsVisible="{Binding CanOpenForwardSenderProfile}"
+                Padding="0"
+                Background="Transparent"
+                BorderThickness="0"
+                MinHeight="0"
+                VerticalAlignment="Center">
+            <TextBlock Text="{Binding ForwardedFromSenderName}"
+                       FontSize="12"
+                       FontStyle="Italic"
+                       Foreground="{DynamicResource AccentBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="1"/>
+        </Button>
+        <TextBlock Text="{Binding ForwardedFromSenderName}"
+                   IsVisible="{Binding !CanOpenForwardSenderProfile}"
+                   FontSize="12"
+                   FontStyle="Italic"
+                   Foreground="{DynamicResource TextMuted}"
+                   TextTrimming="CharacterEllipsis"
+                   MaxLines="1"/>
+    </StackPanel>
+
+</UserControl>

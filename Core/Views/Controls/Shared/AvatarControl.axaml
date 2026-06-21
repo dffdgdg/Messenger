@@ -1,0 +1,90 @@
+<UserControl
+    x:Class="Core.Views.Controls.AvatarControl"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Core.Views.Controls"
+    xmlns:media="using:Core.Infrastructure.Media"
+    x:Name="Root">
+
+    <UserControl.Styles>
+        <Style Selector="controls|AvatarControl.Small">
+            <Setter Property="Size" Value="32" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="IconSize" Value="14" />
+        </Style>
+        <Style Selector="controls|AvatarControl.Medium">
+            <Setter Property="Size" Value="40" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="IconSize" Value="18" />
+        </Style>
+        <Style Selector="controls|AvatarControl.Large">
+            <Setter Property="Size" Value="56" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="IconSize" Value="24" />
+        </Style>
+        <Style Selector="controls|AvatarControl.XLarge">
+            <Setter Property="Size" Value="80" />
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="IconSize" Value="32" />
+        </Style>
+        <Style Selector="controls|AvatarControl.XXLarge">
+            <Setter Property="Size" Value="100" />
+            <Setter Property="FontSize" Value="36" />
+            <Setter Property="IconSize" Value="40" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel Width="{Binding Size, ElementName=Root}" Height="{Binding Size, ElementName=Root}">
+
+        <Border
+            x:Name="AvatarBorder"
+            Background="{Binding PlaceholderBackground, ElementName=Root}"
+            ClipToBounds="True">
+
+            <Panel>
+                <Image
+                    IsVisible="{Binding HasBitmapImage, ElementName=Root}"
+                    Source="{Binding ImageBitmap, ElementName=Root}"
+                    Stretch="UniformToFill" />
+                <Panel IsVisible="{Binding HasImage, ElementName=Root}">
+                    <Image
+                        x:Name="AvatarImage"
+                        media:RemoteImage.Source="{Binding ImageSource, ElementName=Root}"
+                        Stretch="UniformToFill" />
+                </Panel>
+
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="{Binding FontSize, ElementName=Root}"
+                    FontWeight="SemiBold"
+                    Foreground="{Binding PlaceholderForeground, ElementName=Root}"
+                    IsVisible="{Binding ShowInitials, ElementName=Root}"
+                    Text="{Binding Initials, ElementName=Root}" />
+
+                <PathIcon
+                    Width="{Binding IconSize, ElementName=Root}"
+                    Height="{Binding IconSize, ElementName=Root}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Data="{Binding IconData, ElementName=Root}"
+                    Foreground="{Binding PlaceholderForeground, ElementName=Root}"
+                    IsVisible="{Binding ShowIcon, ElementName=Root}" />
+            </Panel>
+        </Border>
+
+        <Border
+            x:Name="OnlineIndicator"
+            Width="{Binding OnlineIndicatorSize, ElementName=Root}"
+            Height="{Binding OnlineIndicatorSize, ElementName=Root}"
+            Margin="0,0,-1,-1"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Background="{Binding OnlineIndicatorBackground, ElementName=Root}"
+            BorderBrush="{DynamicResource OnlineIndicatorBorder}"
+            BorderThickness="2"
+            CornerRadius="{Binding OnlineIndicatorCornerRadius, ElementName=Root}"
+            IsVisible="{Binding ShowOnlineStatus, ElementName=Root}"
+            ToolTip.Tip="{Binding StatusTooltip, ElementName=Root}" />
+    </Panel>
+</UserControl>

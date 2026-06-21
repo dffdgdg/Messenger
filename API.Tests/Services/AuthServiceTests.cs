@@ -1,5 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using API.Common.Patterns;
 using API.Configuration;
 using API.Data;
 using API.Repositories.Abstarctions;

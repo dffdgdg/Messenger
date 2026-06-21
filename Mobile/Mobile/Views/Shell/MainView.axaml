@@ -1,0 +1,123 @@
+<UserControl
+    x:Class="Mobile.Views.MainView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:auth="using:Mobile.Views.Auth"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:call="using:Core.ViewModels.Call"
+    xmlns:callView="using:Core.Views.Call"
+    xmlns:chat="using:Core.Views.Chat"
+    xmlns:controls="using:Core.Views.Controls"
+    xmlns:conv="using:Core.Converters"
+    xmlns:department="using:Core.Views.Department"
+    xmlns:dialog="using:Core.Views.Dialog"
+    xmlns:dialogs="using:Core.Views.Dialogs"
+    xmlns:views="using:Core.Views"
+    xmlns:vm="using:Core.ViewModels"
+    xmlns:vmChat="using:Core.ViewModels.Chat"
+    xmlns:vmDepartment="using:Core.ViewModels.Department"
+    xmlns:vmDialog="using:Core.ViewModels.Dialog"
+    x:Name="MainViewRoot"
+    x:DataType="vm:MainWindowViewModel"
+    Background="{DynamicResource PrimaryBG}">
+
+    <Panel>
+
+        <!-- Основной контент -->
+        <ContentControl Content="{Binding CurrentViewModel}">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:LoginViewModel">
+                    <auth:LoginView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:MainMenuViewModel">
+                    <views:MainMenuView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ChatsViewModel">
+                    <views:ChatsView />
+                </DataTemplate>
+                <DataTemplate DataType="vmChat:ChatViewModel">
+                    <chat:ChatView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:AdminViewModel">
+                    <views:AdminView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ProfileViewModel">
+                    <views:ProfileView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:SettingsViewModel">
+                    <views:SettingsView />
+                </DataTemplate>
+                <DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
+                    <department:DepartmentManagementView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- Call UI — поверх контента -->
+        <Border
+            Margin="8,56,8,8"
+            ClipToBounds="True"
+            CornerRadius="12"
+            IsVisible="{Binding ActiveCallStore.IsCallUiOpen}"
+            ZIndex="1001">
+            <ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="call:CallViewModel">
+                        <callView:CallView />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
+
+        <!-- Уведомления -->
+        <controls:NotificationOverlay ZIndex="9000" />
+
+        <!-- Dialog overlay -->
+        <Border
+            x:Name="DialogOverlay"
+            Background="#80000000"
+            IsVisible="{Binding IsDialogVisible}"
+            ZIndex="10000" />
+
+        <!-- Dialog wrapper — адаптивный -->
+        <Border
+            x:Name="DialogWrapper"
+            Margin="0,48,0,0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            IsVisible="{Binding IsDialogVisible}"
+            ZIndex="10001">
+            <ContentControl
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Content="{Binding CurrentDialog}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vmDialog:ServerUrlDialogViewModel">
+                        <dialog:ServerUrlDialogView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
+                        <dialog:UserProfileDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
+                        <dialogs:ConfirmDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
+                        <views:PollDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
+                        <views:ChatEditDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
+                        <views:UserEditDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
+                        <views:DepartmentDialog />
+                    </DataTemplate>
+                    <DataTemplate DataType="vmChat:PollResultsDialogViewModel">
+                        <dialog:PollResultsDialog />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
+
+    </Panel>
+</UserControl>

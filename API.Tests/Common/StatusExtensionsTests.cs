@@ -1,4 +1,4 @@
-﻿using API.Common;
+﻿using API.Common.Http;
 using FluentAssertions;
 using Xunit;
 

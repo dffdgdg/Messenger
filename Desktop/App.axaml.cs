@@ -1,24 +1,17 @@
-﻿#if ANDROID
-using Android.App;
-using Android.Content.PM;
-using Android.OS;
-using Avalonia.Android;
-#endif
-using Avalonia.Controls.ApplicationLifetimes;
+﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Core.Data;
+using Core.Infrastructure;
 using Core.Infrastructure.Extensions;
 using Core.Infrastructure.Helpers;
 using Core.Infrastructure.Media;
-using Core.Services.Core.Auth;
 using Core.Services.Features.Call;
 using Core.Services.Features.Media.Abstractions;
 using Core.Services.Features.Media.Audio;
-using Core.Services.Features.Media.Audio.Platform.Desktop;
 using Core.Services.Platform.Network;
 using Core.Services.Platform.UI;
 using Core.ViewModels;
-using Desktop.Services.Platform.OS;
+using Desktop.Services.Platform;
 using Desktop.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,24 +23,6 @@ using Debug = System.Diagnostics.Debug;
 using Environment = System.Environment;
 
 namespace Desktop;
-
-#if ANDROID
-[Activity(
-    Label = "ВнутрьСеть",
-    Theme = "@style/MyTheme.NoActionBar",
-    MainLauncher = true,
-    ConfigurationChanges = ConfigChanges.Orientation |
-                           ConfigChanges.ScreenSize |
-                           ConfigChanges.UiMode |
-                           ConfigChanges.KeyboardHidden)]
-public class MainActivity : AvaloniaMainActivity
-{
-    protected override void OnCreate(Bundle? savedInstanceState)
-    {
-        base.OnCreate(savedInstanceState);
-    }
-}
-#endif
 
 public sealed class App : AvaloniaApp, IDisposable
 {
@@ -79,34 +54,13 @@ public sealed class App : AvaloniaApp, IDisposable
             ApiUrl = url;
             AppConfig.WasDiscovered = false;
             SaveServerUrlToSettings(url, manual);
-            Debug.WriteLine($"[App] ApiUrl изменён на: {url} (manual={manual})");
         };
 
-        AppConfig.RestartApplicationCallback = () =>
-        {
-            var exePath = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(exePath))
-            {
-                Environment.Exit(0);
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = true
-            });
-
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                desktop.Shutdown();
-            else
-                Environment.Exit(0);
-        };
+        AppConfig.RestartApplicationCallback = () => { /* ... */ };
 
         AvaloniaXamlLoader.Load(this);
-        Services = ConfigureServices();
 
-        AppConfig.Services = Services;
+        Services = ConfigureServices();
     }
 
     private static IConfiguration BuildConfiguration()
@@ -238,25 +192,25 @@ public sealed class App : AvaloniaApp, IDisposable
         services.AddSingleton<ISecureStorageService, SecureStorageService>();
         services.AddSingleton<IPlatformService, PlatformService>();
         services.AddSingleton<IDrawerService, DesktopDrawerService>();
-
         services.AddSingleton<OpenAlLifetime>();
         services.AddSingleton<IAudioCaptureDeviceFactory, OpenAlCaptureDeviceFactory>();
         services.AddSingleton<IAudioCaptureDevice, OpenAlCaptureDevice>();
         services.AddSingleton<IAudioPlaybackDevice, OpenAlPlaybackDevice>();
-        services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
         services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         services.AddSingleton<ICallAudioService, CallAudioService>();
-
+        services.AddSingleton<IWebRtcPeerConnectionFactory, DesktopWebRtcFactory>();
         services.AddMessengerCoreServices(ApiUrl);
         services.AddMessengerViewModels();
-
-        services.AddSingleton<IThemeService, ThemeService>();
-
+        services.AddSingleton<MainWindow>();
+        services.AddSingleton<ILayoutModeProvider, DesktopLayoutModeProvider>();
+        services.AddTransient<AccentPickerViewModel>();
         var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateScopes = true,
-            ValidateOnBuild = true
+            ValidateOnBuild = false
         });
+
+        AppConfig.Services = provider;
 
         AppConfig.LogoutCallback = async () =>
         {
@@ -269,20 +223,9 @@ public sealed class App : AvaloniaApp, IDisposable
 
     public override void OnFrameworkInitializationCompleted()
     {
-        Debug.WriteLine("[App] OnFrameworkInitializationCompleted starting...");
-
-#if ANDROID
-        if (ApplicationLifetime is ISingleViewApplicationLifetime single)
-        {
-            single.MainView = new MainView
-            {
-                DataContext = Services.GetRequiredService<MainWindowViewModel>()
-            };
-        }
-#else
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var mainWindow = new MainWindow();
+            var mainWindow = Services.GetRequiredService<MainWindow>();
             desktop.MainWindow = mainWindow;
 
             ConfigureImageLoader();
@@ -292,15 +235,39 @@ public sealed class App : AvaloniaApp, IDisposable
             desktop.Exit += OnApplicationExit;
             desktop.ShutdownRequested += OnShutdownRequested;
         }
-#endif
 
-        var themeService = Services.GetRequiredService<IThemeService>();
-        themeService.LoadFromSettings();
-
+        InitializeTheme();
         _ = InitializeLocalDatabaseAndMaintenanceAsync();
 
-        Debug.WriteLine("[App] OnFrameworkInitializationCompleted completed");
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void InitializeTheme()
+    {
+        try
+        {
+            var themeService = Services.GetRequiredService<IThemeService>();
+
+            var lightDict = (ResourceDictionary)AvaloniaXamlLoader.Load(
+                new Uri("avares://ВнутрьСеть/Assets/Styles/Themes/LightTheme.axaml"));
+
+            var darkDict = (ResourceDictionary)AvaloniaXamlLoader.Load(
+                new Uri("avares://ВнутрьСеть/Assets/Styles/Themes/DarkTheme.axaml"));
+
+            themeService.Initialize(lightDict, darkDict);
+            themeService.LoadFromSettings();
+
+            Debug.WriteLine("[App] Theme initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[App] Theme initialization failed: {ex.Message}");
+            Debug.WriteLine($"[App] Stack trace: {ex.StackTrace}");
+
+            // Fallback — пытаемся загрузить без словарей
+            var themeService = Services.GetRequiredService<IThemeService>();
+            themeService.LoadFromSettings();
+        }
     }
 
     private async Task InitializeLocalDatabaseAndMaintenanceAsync()

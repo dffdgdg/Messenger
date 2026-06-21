@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-android</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<OutputType>Exe</OutputType>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<ApplicationTitle>ВнутрьСеть</ApplicationTitle>
+		<ApplicationId>com.CompanyName.Mobile</ApplicationId>
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<DirectoryPackagesPropsPath>$(MSBuildThisFileDirectory)..\..\..\Directory.Packages.props</DirectoryPackagesPropsPath>
+
+		<!-- 🟢 DEBUG: быстрое развёртывание -->
+		<EmbedAssembliesIntoApk Condition="'$(Configuration)' == 'Debug'">false</EmbedAssembliesIntoApk>
+		<EmbedAssembliesIntoApk Condition="'$(Configuration)' == 'Release'">true</EmbedAssembliesIntoApk>
+
+		<AndroidUseSharedRuntime Condition="'$(Configuration)' == 'Debug'">true</AndroidUseSharedRuntime>
+		<AndroidUseSharedRuntime Condition="'$(Configuration)' == 'Release'">false</AndroidUseSharedRuntime>
+
+		<AndroidFastDeploymentType Condition="'$(Configuration)' == 'Debug'">Assemblies</AndroidFastDeploymentType>
+
+		<!-- Ускорение линковки -->
+		<AndroidLinkMode Condition="'$(Configuration)' == 'Debug'">None</AndroidLinkMode>
+		<AndroidLinkMode Condition="'$(Configuration)' == 'Release'">SdkOnly</AndroidLinkMode>
+
+		<!-- AOT только для Release -->
+		<AndroidEnableProfiledAot Condition="'$(Configuration)' == 'Release'">true</AndroidEnableProfiledAot>
+		<AndroidEnableProfiledAot Condition="'$(Configuration)' == 'Debug'">false</AndroidEnableProfiledAot>
+
+		<!-- APK per ABI только в Release -->
+		<AndroidCreatePackagePerAbi Condition="'$(Configuration)' == 'Release'">true</AndroidCreatePackagePerAbi>
+		<AndroidCreatePackagePerAbi Condition="'$(Configuration)' == 'Debug'">false</AndroidCreatePackagePerAbi>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Android" />
+		<PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Mobile\Mobile.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AndroidResource Include="Resources\drawable\icon.png" />
+		<AndroidResource Include="Resources\drawable\splash_screen.xml" />
+		<AndroidResource Include="Resources\values\*.xml" />
+	</ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
+﻿using Shared.Response;
+using System.Text.Json;
 
-namespace API.Middleware;
+namespace API.Web.Middleware;
 
 public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IWebHostEnvironment env)
 {

@@ -3,15 +3,10 @@ using Shared.Dto.Call;
 
 namespace Core.Services.Features.Call.WebRtc;
 
-public sealed class WebRtcManager(
-    int localUserId,
-    string callId,
-    ILogger logger,
+public sealed class WebRtcManager(int localUserId, string callId, ILogger logger, IWebRtcPeerConnectionFactory peerFactory,
     IceServerConfig? iceConfig = null) : IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<int, WebRtcPeerConnection> _peers = new();
-
-    private IceServerConfig? _iceConfig = iceConfig;
+    private readonly ConcurrentDictionary<int, IWebRtcPeerConnection> _peers = new();
 
     public event Action<int>? PeerReady;
     public event Action<int, byte[]>? AudioReceived;
@@ -81,10 +76,7 @@ public sealed class WebRtcManager(
     /// <summary>
     /// Обновить ICE конфигурацию — применится к следующим создаваемым peer-ам.
     /// </summary>
-    public void UpdateIceConfig(IceServerConfig newConfig)
-    {
-        _iceConfig = newConfig;
-    }
+    public void UpdateIceConfig(IceServerConfig newConfig) => iceConfig = newConfig;
 
     private async Task HandleOfferAsync(int peerId, string sdpOffer, CancellationToken ct)
     {
@@ -106,9 +98,9 @@ public sealed class WebRtcManager(
         });
     }
 
-    private WebRtcPeerConnection CreatePeer(int peerId)
+    private IWebRtcPeerConnection CreatePeer(int peerId)
     {
-        var peer = new WebRtcPeerConnection(peerId, logger, _iceConfig);
+        var peer = peerFactory.Create(peerId, iceConfig);
 
         peer.Ready += id => PeerReady?.Invoke(id);
         peer.AudioReceived += (id, data) => AudioReceived?.Invoke(id, data);

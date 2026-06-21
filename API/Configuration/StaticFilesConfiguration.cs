@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 
-namespace API.Configuration;
+namespace API.Web.Configuration;
 
 public static class StaticFilesConfiguration
 {

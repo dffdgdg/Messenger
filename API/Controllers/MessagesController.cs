@@ -1,12 +1,17 @@
 ﻿using Shared.DTO.Message;
 using Microsoft.AspNetCore.RateLimiting;
+using API.Application.Services.Abstractions;
+using API.Domain.Common;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Message;
+using Shared.Dto.Search;
 
-namespace API.Controllers;
+namespace API.Web.Controllers;
 
 public sealed class MessagesController(IMessageService message, ILogger<MessagesController> logger) : BaseController<MessagesController>(logger)
 {
     [HttpPost]
-    //[EnableRateLimiting("messaging")]
+    [EnableRateLimiting("messaging")]
     public async Task<IActionResult> CreateMessage([FromBody] CreateMessageRequest request)
         => Map(await message.CreateMessageAsync(GetCurrentUserId(), request));
 

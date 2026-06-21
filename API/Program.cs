@@ -1,9 +1,13 @@
-﻿using API.Data.SeedData;
-using API.Hubs;
-using API.Middleware;
-using API.Services;
+﻿using API.Application.Configuration;
+using API.Infrastructure.Database;
+using API.Infrastructure.Database.SeedData;
+using API.Infrastructure.Network;
+using API.Web.Configuration;
+using API.Web.Hubs;
+using API.Web.Middleware;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);

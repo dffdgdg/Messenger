@@ -1,4 +1,7 @@
-﻿namespace API.Middleware;
+﻿using API.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
+
+namespace API.Web.Middleware;
 
 public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {

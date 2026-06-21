@@ -1,4 +1,10 @@
-﻿namespace API.Controllers;
+﻿using API.Application.Services.Abstractions;
+using API.Web.Common;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.Online;
+
+namespace API.Web.Controllers;
 
 [ApiController]
 [Route("api/status")]

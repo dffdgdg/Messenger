@@ -1,4 +1,4 @@
-﻿namespace API.Common;
+﻿namespace API.Web.Common;
 
 public static class StatusExtensions
 {

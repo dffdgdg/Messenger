@@ -1,4 +1,8 @@
-﻿namespace API.Controllers;
+﻿using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Shared.Dto.ReadReceipt;
+
+namespace API.Web.Controllers;
 
 public sealed class ReadReceiptsController(IReadReceiptService receipt, ILogger<ReadReceiptsController> logger) : BaseController<ReadReceiptsController>(logger)
 {

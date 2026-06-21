@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 using Core.Infrastructure;
 using Core.ViewModels;
 using Core.ViewModels.Chat;
+using Core.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 
@@ -37,11 +38,8 @@ public partial class MainWindow : Window
     private bool _compactSearchOpen;
     private bool _compactSearchVmSubscribed;
 
-    // ── LayoutMode ────────────────────────────────────────────────────────────
-
     public static readonly DirectProperty<MainWindow, LayoutMode> LayoutModeProperty =
-        AvaloniaProperty.RegisterDirect<MainWindow, LayoutMode>(
-            nameof(LayoutMode), o => o.LayoutMode);
+        AvaloniaProperty.RegisterDirect<MainWindow, LayoutMode>(nameof(LayoutMode), o => o.LayoutMode);
 
     private LayoutMode _layoutMode = LayoutMode.Normal;
     public LayoutMode LayoutMode
@@ -51,8 +49,7 @@ public partial class MainWindow : Window
     }
 
     public static readonly DirectProperty<MainWindow, bool> IsCompactModeProperty =
-        AvaloniaProperty.RegisterDirect<MainWindow, bool>(
-            nameof(IsCompactMode), o => o.IsCompactMode);
+        AvaloniaProperty.RegisterDirect<MainWindow, bool>(nameof(IsCompactMode), o => o.IsCompactMode);
 
     private bool _isCompactMode;
     public bool IsCompactMode
@@ -61,31 +58,22 @@ public partial class MainWindow : Window
         private set => SetAndRaise(IsCompactModeProperty, ref _isCompactMode, value);
     }
 
-    // ── Конструктор ───────────────────────────────────────────────────────────
-
     public MainWindow()
     {
         InitializeComponent();
 
+        _platformService = AppConfig.Services.GetRequiredService<IPlatformService>();
+        _dialogService = AppConfig.Services.GetRequiredService<IDialogService>();
+        _notificationService = AppConfig.Services.GetRequiredService<INotificationService>();
+
         SubscribeSearchBox();
-
-        _platformService = App.Current.Services.GetRequiredService<IPlatformService>();
-        _dialogService = App.Current.Services.GetRequiredService<IDialogService>();
-        _notificationService = App.Current.Services.GetRequiredService<INotificationService>();
-
         _platformService.Initialize(this);
         _notificationService.Initialize();
-
         _dialogService.OnDialogAnimationRequested += OnDialogAnimationRequested;
-
-        // Убрали подписку на IsVisibleProperty — теперь адаптация вызывается
-        // из PlayOpenAnimationAsync после того как диалог уже установлен
 
         UpdateWindowPadding();
         UpdateLayoutMode();
     }
-
-    // ── Размер окна ───────────────────────────────────────────────────────────
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
@@ -105,16 +93,12 @@ public partial class MainWindow : Window
     {
         var w = Bounds.Width;
 
-        var mode = w < UltraCompactThreshold ? LayoutMode.UltraCompact
-                 : w < CompactThreshold ? LayoutMode.Compact
-                 : w < WideThreshold ? LayoutMode.Normal
-                 : LayoutMode.Wide;
+        var mode = w < UltraCompactThreshold ? LayoutMode.UltraCompact : w < CompactThreshold ? LayoutMode.Compact
+                 : w < WideThreshold ? LayoutMode.Normal : LayoutMode.Wide;
 
         LayoutMode = mode;
         IsCompactMode = mode is LayoutMode.UltraCompact or LayoutMode.Compact;
     }
-
-    // ── Прокидываем LayoutMode в MainMenuView ────────────────────────────────
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -139,12 +123,7 @@ public partial class MainWindow : Window
     }
 
     private void PushLayoutModeToMainMenu()
-    {
-        var menuView = this.FindDescendantOfType<MainMenuView>();
-        menuView?.WindowLayoutMode = LayoutMode;
-    }
-
-    // ── Адаптация диалога под LayoutMode ─────────────────────────────────────
+        => this.FindDescendantOfType<MainMenuView>()?.WindowLayoutMode = LayoutMode;
 
     private void AdaptDialogToLayoutMode(LayoutMode mode)
     {
@@ -166,14 +145,12 @@ public partial class MainWindow : Window
         }
         else
         {
-            // Возвращаем нормальный режим — враппер центрирован, overlay активен
             DialogAnimWrapper.Margin = new Thickness(0, 56, 0, 24);
             DialogAnimWrapper.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
             DialogAnimWrapper.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
             DialogAnimWrapper.MaxWidth = double.PositiveInfinity;
             DialogAnimWrapper.MaxHeight = double.PositiveInfinity;
 
-            // Восстанавливаем overlay если диалог открыт
             if (vm.IsDialogVisible)
             {
                 DialogOverlay.IsHitTestVisible = true;
@@ -182,9 +159,6 @@ public partial class MainWindow : Window
             }
         }
     }
-
-
-    // ── Drawer ────────────────────────────────────────────────────────────────
 
     private void OnHamburgerButtonClick(object? sender, RoutedEventArgs e)
         => ToggleDrawer();
@@ -233,8 +207,6 @@ public partial class MainWindow : Window
         CloseDrawer();
         e.Handled = true;
     }
-
-    // ── Компактный поиск ──────────────────────────────────────────────────────
 
     private void OnCompactSearchButtonClick(object? sender, RoutedEventArgs e)
     {
@@ -289,14 +261,11 @@ public partial class MainWindow : Window
         _compactSearchVmSubscribed = false;
     }
 
-    private void OnCompactSearchManagerPropertyChanged(
-        object? sender,
-        System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnCompactSearchManagerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(GlobalSearchManager.IsSearchMode)) return;
 
-        if (DataContext is MainWindowViewModel { CurrentViewModel: MainMenuViewModel menu }
-            && !menu.SearchManager.IsSearchMode)
+        if (DataContext is MainWindowViewModel { CurrentViewModel: MainMenuViewModel menu } && !menu.SearchManager.IsSearchMode)
         {
             _compactSearchOpen = false;
             CompactSearchOverlay.IsVisible = false;
@@ -307,10 +276,8 @@ public partial class MainWindow : Window
 
     private void OnCompactSearchScrimPressed(object? sender, PointerPressedEventArgs e)
     {
-        var hitPanel = (e.Source as Avalonia.Visual)
-            ?.GetSelfAndVisualAncestors()
-            .Any(v => ReferenceEquals(v, CompactSearchPanel))
-            ?? false;
+        var hitPanel = (e.Source as Avalonia.Visual) ?.GetSelfAndVisualAncestors()
+            .Any(v => ReferenceEquals(v, CompactSearchPanel)) ?? false;
 
         if (!hitPanel)
         {
@@ -318,8 +285,6 @@ public partial class MainWindow : Window
             e.Handled = true;
         }
     }
-
-    // ── Поисковая строка (Normal/Wide) ────────────────────────────────────────
 
     private void SubscribeSearchBox()
     {
@@ -343,8 +308,6 @@ public partial class MainWindow : Window
             CloseDrawer();
         }
     }
-
-    // ── Pointer events ────────────────────────────────────────────────────────
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -372,12 +335,8 @@ public partial class MainWindow : Window
         }
     }
 
-    // ── Titlebar / padding ────────────────────────────────────────────────────
-
-    private void UpdateWindowPadding() =>
-        Padding = WindowState == WindowState.Maximized
-            ? new Thickness(MaximizedPadding)
-            : default;
+    private void UpdateWindowPadding()
+        => Padding = WindowState == WindowState.Maximized ? new Thickness(MaximizedPadding) : default;
 
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -387,8 +346,6 @@ public partial class MainWindow : Window
             e.Handled = true;
         }
     }
-
-    // ── Диалоги ───────────────────────────────────────────────────────────────
 
     private void OnDialogAnimationRequested(bool isOpening)
     {

@@ -1,0 +1,279 @@
+<UserControl
+    x:Class="Mobile.Views.Auth.LoginView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Core.ViewModels"
+    x:DataType="vm:LoginViewModel">
+
+    <UserControl.Styles>
+
+        <Style Selector="Border.MessageSuccess">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,11" />
+            <Setter Property="Background" Value="{DynamicResource SuccessBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.MessageError">
+            <Setter Property="CornerRadius"    Value="10" />
+            <Setter Property="Padding"         Value="14,11" />
+            <Setter Property="Background"      Value="{DynamicResource DangerBgBrush}" />
+            <Setter Property="BorderBrush"     Value="{DynamicResource DangerBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="CheckBox.RememberMe">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+            <Setter Property="FontSize"   Value="14" />
+            <Setter Property="Cursor"     Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.ServerButton">
+            <Setter Property="Background"      Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor"          Value="Hand" />
+            <Setter Property="Opacity"         Value="0.55" />
+            <Setter Property="Padding"         Value="10" />
+        </Style>
+        <Style Selector="Button.ServerButton:pointerover">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.ServerButton:disabled">
+            <Setter Property="Opacity" Value="0.2" />
+        </Style>
+
+        <Style Selector="TextBlock.FieldLabel">
+            <Setter Property="FontSize"   Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+
+        <Style Selector="TextBox.Input">
+            <Setter Property="Height"       Value="50" />
+            <Setter Property="FontSize"     Value="15" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding"      Value="16,0" />
+        </Style>
+
+        <Style Selector="Button.LoginBtn">
+            <Setter Property="Height"                     Value="52" />
+            <Setter Property="FontSize"                   Value="16" />
+            <Setter Property="FontWeight"                 Value="SemiBold" />
+            <Setter Property="CornerRadius"               Value="12" />
+            <Setter Property="HorizontalAlignment"        Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Background"                 Value="{DynamicResource Accent}" />
+            <Setter Property="Foreground"                 Value="White" />
+            <Setter Property="BorderThickness"            Value="0" />
+            <Setter Property="Cursor"                     Value="Hand" />
+        </Style>
+        <Style Selector="Button.LoginBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.88" />
+        </Style>
+        <Style Selector="Button.LoginBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.72" />
+        </Style>
+        <Style Selector="Button.LoginBtn:disabled /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="*, Auto">
+
+        <!-- Фон — просто цвет приложения, никаких градиентов -->
+        <Border
+            Grid.RowSpan="2"
+            Background="{DynamicResource ApplicationBackground}" />
+
+        <!-- ScrollViewer — чтобы форма не уходила под клавиатуру -->
+        <ScrollViewer
+            Grid.Row="0"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto">
+
+            <StackPanel
+                Margin="24,0"
+                VerticalAlignment="Center"
+                Spacing="0">
+
+                <!-- ── Верхний отступ (status bar) ── -->
+                <Border Height="56" />
+
+                <!-- ── Логотип ── -->
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Spacing="16"
+                    Margin="0,0,0,48">
+
+                    <Border
+                        Width="80" Height="80"
+                        HorizontalAlignment="Center"
+                        CornerRadius="22"
+                        Background="{DynamicResource Accent}">
+                        <Path
+                            Width="44" Height="44"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource LogoIcon}"
+                            Fill="White"
+                            Stretch="Uniform" />
+                    </Border>
+
+                    <StackPanel HorizontalAlignment="Center" Spacing="6">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="26"
+                            FontWeight="Bold"
+                            Text="ВнутрьСеть" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{DynamicResource TextSecondary}"
+                            Text="Войдите в свой аккаунт" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ── Ошибка ── -->
+                <Border
+                    Classes="MessageError"
+                    Margin="0,0,0,16"
+                    IsVisible="{Binding ErrorMessage,
+                    Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock
+                        FontSize="13"
+                        Foreground="{DynamicResource ErrorBrush}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap" />
+                </Border>
+
+                <!-- ── Успех ── -->
+                <Border
+                    Classes="MessageSuccess"
+                    Margin="0,0,0,16"
+                    IsVisible="{Binding SuccessMessage,
+                    Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock
+                        FontSize="13"
+                        Foreground="{DynamicResource SuccessBrush}"
+                        Text="{Binding SuccessMessage}"
+                        TextWrapping="Wrap" />
+                </Border>
+
+                <!-- ── Поля ввода ── -->
+                <StackPanel
+                    IsEnabled="{Binding !IsBusy}"
+                    Spacing="12"
+                    Margin="0,0,0,20">
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="FieldLabel" Text="Логин" />
+                        <TextBox
+                            Classes="Input"
+                            PlaceholderText="Введите логин"
+                            Text="{Binding Username}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="FieldLabel" Text="Пароль" />
+                        <TextBox
+                            x:Name="PasswordBox"
+                            Classes="Input"
+                            PasswordChar="•"
+                            PlaceholderText="Введите пароль"
+                            Text="{Binding Password}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ── Запомнить / Сервер ── -->
+                <Grid
+                    ColumnDefinitions="*, Auto"
+                    Margin="0,0,0,32">
+
+                    <CheckBox
+                        Grid.Column="0"
+                        Classes="RememberMe"
+                        Content="Запомнить меня"
+                        IsChecked="{Binding RememberMe}"
+                        IsEnabled="{Binding !IsBusy}" />
+
+                    <Button
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Classes="ServerButton"
+                        Command="{Binding SetServerUrlCommand}"
+                        IsEnabled="{Binding !IsBusy}"
+                        ToolTip.Placement="Bottom"
+                        ToolTip.Tip="{Binding ServerUrl,
+                        FallbackValue='Сервер не задан'}">
+                        <Path
+                            Width="20" Height="20"
+                            Data="{StaticResource SettingsIcon}"
+                            Fill="{DynamicResource TextSecondary}"
+                            Stretch="Uniform" />
+                    </Button>
+                </Grid>
+
+                <!-- ── Кнопка входа ── -->
+                <Button
+                    Classes="LoginBtn"
+                    Command="{Binding LoginCommand}">
+                    <Panel>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding !IsBusy}"
+                            Text="Войти" />
+
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding IsBusy}"
+                            Orientation="Horizontal"
+                            Spacing="10">
+                            <ProgressBar
+                                Width="20" Height="20"
+                                Classes="Circular"
+                                Foreground="White"
+                                IsIndeterminate="True" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="15"
+                                Text="Вход..." />
+                        </StackPanel>
+                    </Panel>
+                </Button>
+
+                <!-- safe-area под home indicator -->
+                <Border Height="34" />
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ── Оверлей инициализации ── -->
+        <Border
+            Grid.RowSpan="2"
+            Background="#99000000"
+            IsHitTestVisible="{Binding IsInitializing}"
+            IsVisible="{Binding IsInitializing}">
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="16">
+                <ProgressBar
+                    Width="36" Height="36"
+                    HorizontalAlignment="Center"
+                    Classes="Circular"
+                    Foreground="{DynamicResource Accent}"
+                    IsIndeterminate="True" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="15"
+                    Foreground="White"
+                    Text="Подключение..." />
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</UserControl>

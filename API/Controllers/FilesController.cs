@@ -1,6 +1,12 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using API.Application.Configuration;
+using API.Application.Services.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using Shared.Dto.Message;
+using Shared.Response;
 
-namespace API.Controllers;
+namespace API.Web.Controllers;
 
 public sealed class FilesController(IFileService fileService, IOptions<MessengerSettings> settings, ILogger<FilesController> logger) : BaseController<FilesController>(logger)
 {

@@ -1,0 +1,237 @@
+﻿using API.Application.Bundles;
+using API.Application.Mapping;
+using API.Application.Services.Abstractions;
+using API.Application.Services.Base;
+using API.Domain.Common;
+using API.Domain.Entities;
+using API.Domain.Repositories;
+using Microsoft.Extensions.Logging;
+using Shared.Dto.Message;
+using Shared.Dto.Poll;
+using Shared.Hubs;
+
+namespace API.Application.Services.Features.Messaging;
+
+public partial class PollService(
+    IUnitOfWork unitOfWork,
+    IPollRepository pollRepository,
+    IMessageRepository messageRepository,
+    IAccessControlService accessControl,
+    IHubNotifier hubNotifier,
+    IUrlBuilder urlBuilder,
+    TimeBundle time,
+    ILogger<PollService> logger)
+    : BaseService<PollService>(unitOfWork, logger), IPollService
+{
+    private readonly AppDateTime _appDateTime = time.AppDateTime;
+
+    public async Task<Result<PollDto>> GetPollAsync(int pollId, int userId)
+    {
+        var poll = await pollRepository.FindByIdWithDetailsAsync(pollId);
+
+        if (poll is null)
+            return Result<PollDto>.NotFound($"Опрос с ID {pollId} не найден");
+
+        var access = await accessControl.EnsureMemberOfAsync(userId, poll.Message!.ChatId);
+        if (access.IsFailure) return access.As<PollDto>();
+
+        return Result<PollDto>.Success(poll.ToDto(userId));
+    }
+
+    public async Task<Result<MessageDto>> CreatePollAsync(CreatePollDto dto, int createdByUserId)
+    {
+        var access = await accessControl.EnsureMemberOfAsync(createdByUserId, dto.ChatId);
+        if (access.IsFailure) return access.As<MessageDto>();
+
+        if (string.IsNullOrWhiteSpace(dto.Question))
+            return Result<MessageDto>.Failure("Вопрос опроса обязателен");
+
+        if (dto.Options.Count < 2)
+            return Result<MessageDto>.Failure("Опрос должен содержать минимум 2 варианта");
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var message = new UserMessage
+            {
+                ChatId = dto.ChatId,
+                SenderId = createdByUserId,
+                Content = dto.Question.Trim()
+            };
+
+            messageRepository.Add(message);
+            await _unitOfWork.SaveChangesAsync();
+
+            var poll = new Poll
+            {
+                MessageId = message.Id,
+                IsAnonymous = dto.IsAnonymous,
+                AllowsMultipleAnswers = dto.AllowsMultipleAnswers
+            };
+
+            pollRepository.Add(poll);
+            await _unitOfWork.SaveChangesAsync();
+
+            for (var i = 0; i < dto.Options.Count; i++)
+            {
+                var opt = dto.Options[i];
+                pollRepository.AddOption(new PollOption
+                {
+                    PollId = poll.Id,
+                    OptionText = opt.Text.Trim(),
+                    Position = opt.Position > 0 ? opt.Position : i
+                });
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var createdMessage = await messageRepository.FindUserMessageWithIncludesAsync(message.Id);
+
+            if (createdMessage is null)
+                return Result<MessageDto>.Internal("Не удалось загрузить созданное сообщение");
+
+            var messageDto = createdMessage.ToDto(createdByUserId, urlBuilder);
+
+            await hubNotifier.SendToChatAsync(dto.ChatId, HubMethods.Chat.ReceiveMessage, messageDto);
+
+            LogPollCreated(dto.ChatId);
+
+            return Result<MessageDto>.Success(messageDto);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании опроса в чате {ChatId}", dto.ChatId);
+
+            return Result<MessageDto>.Internal("Не удалось создать опрос");
+        }
+    }
+
+    public async Task<Result<PollDto>> VoteAsync(PollVoteDto voteDto)
+    {
+        var poll = await pollRepository.FindByIdWithDetailsAsync(voteDto.PollId);
+
+        if (poll is null)
+            return Result<PollDto>.NotFound($"Опрос {voteDto.PollId} не найден");
+
+        var access = await accessControl.EnsureMemberOfAsync(voteDto.UserId, poll.Message!.ChatId);
+        if (access.IsFailure) return access.As<PollDto>();
+
+        if (poll.ClosesAt.HasValue && poll.ClosesAt < _appDateTime.UtcNow)
+            return Result<PollDto>.Failure("Опрос уже закрыт.");
+
+        var optionIds = ResolveOptionIds(voteDto);
+
+        var validOptionIds = poll.PollOptions.Select(o => o.Id).ToHashSet();
+        var invalidIds = optionIds.Where(id => !validOptionIds.Contains(id)).ToList();
+        if (invalidIds.Count > 0)
+            return Result<PollDto>.Failure($"Невалидные варианты: {string.Join(", ", invalidIds)}");
+
+        var oldVotes = await pollRepository.GetUserVotesAsync(voteDto.PollId, voteDto.UserId);
+        pollRepository.RemoveVotes(oldVotes);
+
+        foreach (var optionId in optionIds)
+        {
+            pollRepository.AddVote(new PollVote
+            {
+                PollId = voteDto.PollId,
+                OptionId = optionId,
+                UserId = voteDto.UserId
+            });
+        }
+
+        var save = await SaveChangesAsync();
+        if (save.IsFailure) return save.As<PollDto>();
+
+        var updatedPollResult = await GetPollAsync(voteDto.PollId, voteDto.UserId);
+        if (updatedPollResult.IsFailure) return updatedPollResult;
+
+        await BroadcastPollUpdateAsync(poll.MessageId, updatedPollResult.Value!);
+
+        LogUserVoted(voteDto.UserId, voteDto.PollId);
+
+        return updatedPollResult;
+    }
+
+    public async Task<Result<PollDto>> ClosePollAsync(int pollId, int userId)
+    {
+        var poll = await pollRepository.FindByIdWithDetailsAsync(pollId);
+
+        if (poll is null)
+            return Result<PollDto>.NotFound($"Опрос {pollId} не найден");
+
+        if (poll.ClosesAt.HasValue && poll.ClosesAt < _appDateTime.UtcNow)
+            return Result<PollDto>.Failure("Опрос уже закрыт");
+
+        var message = poll.Message;
+        if (message is null)
+            return Result<PollDto>.Failure("Связанное сообщение не найдено");
+
+        var isAuthor = message.SenderId == userId;
+        var isAdminOrOwner = await accessControl.IsAdminAsync(userId, message.ChatId)
+                          || await accessControl.IsOwnerAsync(userId, message.ChatId);
+
+        if (!isAuthor && !isAdminOrOwner)
+            return Result<PollDto>.Failure("Недостаточно прав для закрытия опроса");
+
+        await pollRepository.CloseAsync(pollId, _appDateTime.UtcNow, ct: default);
+
+        var updatedPollResult = await GetPollAsync(pollId, userId);
+        if (updatedPollResult.IsFailure) return updatedPollResult;
+
+        await BroadcastPollUpdateAsync(poll.MessageId, updatedPollResult.Value!);
+
+        LogPollClosed(pollId, userId);
+
+        return updatedPollResult;
+    }
+
+    #region Private
+
+    private static List<int> ResolveOptionIds(PollVoteDto voteDto)
+    {
+        if (voteDto.OptionIds?.Count > 0)
+            return voteDto.OptionIds;
+
+        if (voteDto.OptionId.HasValue)
+            return [voteDto.OptionId.Value];
+
+        return [];
+    }
+
+    private async Task BroadcastPollUpdateAsync(int messageId, PollDto updatedPoll)
+    {
+        var broadcastPoll = new PollDto
+        {
+            Id = updatedPoll.Id,
+            MessageId = updatedPoll.MessageId,
+            IsAnonymous = updatedPoll.IsAnonymous,
+            AllowsMultipleAnswers = updatedPoll.AllowsMultipleAnswers,
+            ClosesAt = updatedPoll.ClosesAt,
+            Options = updatedPoll.Options,
+            SelectedOptionIds = [],
+            CanVote = !updatedPoll.ClosesAt.HasValue || updatedPoll.ClosesAt > _appDateTime.UtcNow
+        };
+
+        var affectedChatIds = await messageRepository.GetForwardedToChatIdsAsync(messageId);
+
+        foreach (var chatId in affectedChatIds)
+            await hubNotifier.SendToChatAsync(chatId, HubMethods.Chat.PollUpdated, broadcastPoll);
+    }
+
+    #endregion
+
+    #region Log
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Опрос {PollId} досрочно закрыт пользователем {UserId}")]
+    private partial void LogPollClosed(int pollId, int userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Опрос создан в чате {ChatId}")]
+    private partial void LogPollCreated(int chatId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Пользователь {UserId} проголосовал в опросе {PollId}")]
+    private partial void LogUserVoted(int userId, int pollId);
+
+    #endregion
+}

@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using API.Common.Patterns;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Response;
 

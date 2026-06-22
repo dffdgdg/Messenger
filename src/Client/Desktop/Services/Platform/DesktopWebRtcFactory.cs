@@ -1,7 +1,7 @@
 ﻿using Core.Services.Features.Call.WebRtc;
 using Microsoft.Extensions.Logging;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public class DesktopWebRtcFactory(ILogger<WebRtcPeerConnection> logger) : IWebRtcPeerConnectionFactory
 {

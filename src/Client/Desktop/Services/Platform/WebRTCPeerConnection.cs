@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using SIPSorcery.Net;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class WebRtcPeerConnection : IWebRtcPeerConnection
 {

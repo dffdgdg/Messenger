@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Desktop.Views;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class DesktopDrawerService : IDrawerService
 {

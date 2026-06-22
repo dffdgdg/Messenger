@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace Desktop;
+namespace Desktop.Shared;
 
 internal sealed class Program
 {

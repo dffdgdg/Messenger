@@ -1,7 +1,7 @@
 ﻿using Core.Infrastructure;
 using Desktop.Views;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public class DesktopLayoutModeProvider(MainWindow window) : ILayoutModeProvider
 {

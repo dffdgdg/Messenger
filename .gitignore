@@ -368,3 +368,5 @@ MessengerDesktop.rar
 API/.env
 ПЗ.docx
 src/Server/API/.env
+.env
+src/Server/API/init.sql

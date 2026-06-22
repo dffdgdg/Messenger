@@ -1,7 +1,7 @@
 using Avalonia.Controls.Templates;
 using Core.ViewModels;
 
-namespace Desktop;
+namespace Desktop.Shared;
 
 public class ViewLocator : IDataTemplate
 {

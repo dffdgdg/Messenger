@@ -11,7 +11,7 @@ using Core.Services.Features.Media.Audio;
 using Core.Services.Platform.Network;
 using Core.Services.Platform.UI;
 using Core.ViewModels;
-using Desktop.Services.Platform;
+using Desktop.Shared.Services.Platform;
 using Desktop.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +22,7 @@ using AvaloniaApp = Avalonia.Application;
 using Debug = System.Diagnostics.Debug;
 using Environment = System.Environment;
 
-namespace Desktop;
+namespace Desktop.Shared;
 
 public sealed class App : AvaloniaApp, IDisposable
 {

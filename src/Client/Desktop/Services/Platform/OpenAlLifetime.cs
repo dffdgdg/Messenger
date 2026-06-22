@@ -1,7 +1,7 @@
 ﻿using Silk.NET.OpenAL;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class OpenAlLifetime : IDisposable
 {

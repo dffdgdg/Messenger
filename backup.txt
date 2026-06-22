@@ -1,8 +1,0 @@
-& "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" `
->>   -U postgres `
->>   -d MessengerDB `
->>   --encoding=UTF8 `
->>   --format=plain `
->>   --no-owner `
->>   --no-privileges `
->>   -f init.sql

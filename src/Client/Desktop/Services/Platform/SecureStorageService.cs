@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Core.Infrastructure.Helpers;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class SecureStorageService : ISecureStorageService, IDisposable
 {

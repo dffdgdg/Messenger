@@ -6,7 +6,7 @@ using Silk.NET.OpenAL;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class CallAudioService : ICallAudioService
 {

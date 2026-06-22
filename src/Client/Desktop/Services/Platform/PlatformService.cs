@@ -3,7 +3,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public class PlatformService : IPlatformService
 {

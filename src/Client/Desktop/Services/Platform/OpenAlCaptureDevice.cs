@@ -1,7 +1,7 @@
 ﻿using Core.Services.Features.Media.Abstractions;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public sealed class OpenAlCaptureDevice : IAudioCaptureDevice, IAsyncDisposable
 {

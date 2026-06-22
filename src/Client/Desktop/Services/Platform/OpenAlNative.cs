@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 public static class OpenAlNative
 {

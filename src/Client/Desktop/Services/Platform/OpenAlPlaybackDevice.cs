@@ -2,7 +2,7 @@
 using Silk.NET.OpenAL;
 using System.Diagnostics;
 
-namespace Desktop.Services.Platform;
+namespace Desktop.Shared.Services.Platform;
 
 /// <summary>OpenAL Soft playback через Source + streaming buffers.</summary>
 public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
@@ -51,7 +51,6 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
 
         _sourceCreated = true;
 
-        // Кладём все буферы в пул свободных — не в очередь OpenAL
         lock (_queueLock)
         {
             foreach (var buf in _ringBuffers)
@@ -69,7 +68,6 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
     {
         lock (_queueLock)
         {
-            // Не накапливаем больше ~500ms
             if (_queue.Count < 25)
                 _queue.Enqueue(samples);
         }
@@ -77,10 +75,8 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
 
     public void Flush()
     {
-        // Очищаем программную очередь
         lock (_queueLock) { _queue.Clear(); }
 
-        // Останавливаем source и забираем буферы из OpenAL обратно в пул
         if (!_sourceCreated) return;
 
         _al.SourceStop(_source);
@@ -109,14 +105,30 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
 
     public async Task ReleaseAsync()
     {
-        _cts?.Cancel();
+        if (_cts is not null)
+        {
+            await _cts.CancelAsync();
+        }
 
         if (_feedTask != null)
         {
-            try { await _feedTask.WaitAsync(TimeSpan.FromSeconds(1)); }
-            catch { }
-            _feedTask = null;
+            try
+            {
+                await _feedTask;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[OpenAlPlayback] FeedLoop faulted: {ex}");
+            }
+            finally
+            {
+                _feedTask = null;
+            }
         }
+
+        _cts?.Dispose();
+        _cts = null;
 
         if (_sourceCreated)
         {
@@ -184,8 +196,7 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
                 unsafe
                 {
                     fixed (short* ptr = chunk)
-                        _al.BufferData(freeBuf, _format,
-                            ptr, chunk.Length * sizeof(short), _sampleRate);
+                        _al.BufferData(freeBuf, _format, ptr, chunk.Length * sizeof(short), _sampleRate);
                 }
 
                 unsafe { _al.SourceQueueBuffers(_source, 1, &freeBuf); }
@@ -204,9 +215,11 @@ public sealed class OpenAlPlaybackDevice : IAudioPlaybackDevice
                 }
             }
 
-            Thread.Sleep(5);
+            try { Task.Delay(5, ct).Wait(ct); }
+            catch (OperationCanceledException) { break; }
         }
     }
+
     private void UnqueueAll()
     {
         _al.GetSourceProperty(_source, GetSourceInteger.BuffersProcessed, out int p);

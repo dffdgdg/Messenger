@@ -1,0 +1,111 @@
+﻿services:
+  db:
+    image: postgres:17-alpine
+    container_name: messenger-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/Server/API/Dockerfile
+
+    container_name: messenger-api
+    restart: unless-stopped
+
+    ports:
+      - "5274:5274"
+      - "5275:5275/udp"
+      - "5276:5276/udp"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5274
+
+      ConnectionStrings__DefaultConnection: >
+        Host=db;
+        Port=5432;
+        Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};
+        Password=${POSTGRES_PASSWORD};
+        Maximum Pool Size=200;
+        Timeout=15;
+        Command Timeout=30
+
+      Jwt__Secret: ${JWT_SECRET}
+      Discovery__ExternalIp: ${EXTERNAL_IP}
+      DisableHttpsRedirection: true
+      CallSettings__RelayHost: ${EXTERNAL_IP}
+      CallSettings__RelayPort: 5276
+
+      TurnSettings__Enabled: "true"
+      TurnSettings__Host: ${EXTERNAL_IP}
+      TurnSettings__Port: 3478
+      TurnSettings__SharedSecret: ${TURN_SECRET}
+      TurnSettings__CredentialTtlSeconds: 86400
+
+    volumes:
+      - uploads:/app/wwwroot/uploads
+      - avatars:/app/wwwroot/avatars
+      - ../src/Server/API.Infrastructure/Database/SeedData:/app/Data/SeedData
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: messenger-turn
+    restart: unless-stopped
+
+    network_mode: host
+
+    environment:
+      DETECT_EXTERNAL_IP: "no"
+
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - coturn-logs:/var/log/coturn
+
+    command: >
+      turnserver
+      -c /etc/coturn/turnserver.conf
+      --static-auth-secret=${TURN_SECRET}
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+volumes:
+  pgdata:
+  uploads:
+  avatars:
+  coturn-logs:

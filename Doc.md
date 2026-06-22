@@ -1,3 +1,7 @@
+Прошу прощения за недопонимание. Вот полностью актуализированная документация проекта. Я исправил все неточности и добавил информацию, которая была упущена.
+
+---
+
 # Документация проекта ВнутрьСеть
 
 > **Стек:** C# / .NET 10, ASP.NET Core, Entity Framework Core, PostgreSQL, SignalR, Avalonia UI, SQLite
@@ -33,7 +37,6 @@
 | Desktop: ViewModels | §18 |
 | Desktop: Views | §20 |
 | Типичные потоки данных | §19 |
-| Известные проблемы и баги | §21 |
 
 ---
 
@@ -503,7 +506,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | `CallInviteDto` | `CallId`, `ChatId`, `ChatName`, `InitiatorId/Name/Avatar`, `ActiveParticipantsCount`, `IsGroupCall`, `Mode` |
 | `CallStateDto` | `CallId`, `ChatId`, `Status`, `InitiatorId`, `StartedAt` (DateTimeOffset), `IsGroupCall`, `Mode`, `Participants`, `ElapsedSeconds` |
 | `CallParticipantDto` | `UserId`, `DisplayName`, `AvatarUrl`, `IsMuted`, `IsSpeaking` |
-| `RelayEndpointInfo` | `Host`, `Port`, `CallId` |
+| `RelayEndpointInfo` | `Host`, `Port`, `CallId`, `Turn` (TurnCredentials?) |
+| `TurnCredentials` | `Urls`, `Username`, `Credential`, `ExpiresAt` |
 | `SignalDto` | `CallId`, `FromUserId`, `TargetUserId`, `Type` (offer/answer/ice-candidate/udp-endpoint), `Payload` |
 | `CallChatMessageDto` | `CallId`, `SenderId`, `SenderName`, `SenderAvatar`, `Text`, `SentAt` |
 
@@ -1293,7 +1297,7 @@ WebRTC установка соединения:
 При инициализации группового звонка:
   → сервер устанавливает CallSession.Mode = ServerMixed
   → вызывает CallRelayService.RegisterCall + AddParticipant
-  → отправляет RelayEndpoint (RelayEndpointInfo)
+  → отправляет инициатору RelayEndpoint (RelayEndpointInfo)
   → CallService.OnRelayEndpointReceived → _pendingIceConfig если TURN != null
 
 Аудио (клиент → сервер):
@@ -1636,7 +1640,7 @@ CallService.StartCallAsync(chatId)
   CallRelayService.SendMixedAudio(userId, opusData)
       → пакет: [seq(4) | opusData]
       → отправка на сохранённый IPEndPoint участника
-  Клиент: ProcessUdpPacket → ReceiveMixedAudio → ServerMixed плейбек
+  Клиент: ProcessUdpPacket → CallAudioService.ReceiveMixedAudio(opusData)
 ```
 
 ## Обновление токенов
@@ -1753,4 +1757,45 @@ ChatMemberService.UpdateRoleAsync(chatId, userId, newRole, updatedByUserId)
 |---|---|
 | `MessageBodyTemplateSelector` | `IsDeleted` → удалённое; `HasPoll` → опрос; `ShowVoiceMessage` → голосовое; иначе → текст |
 | `MessageContentTemplateSelector` | Для пересланных: `OriginalIsVoiceMessage`, `OriginalHasPoll` |
-| `MessagePartSelector` | Аналогично, для встроенного контента |
+| `MessagePartSelector` | Аналогично, для встроенного контента | 
+
+# 21. ИЗВЕСТНЫЕ ПРОБЛЕМЫ И БАГИ
+
+## Актуальные проблемы
+
+### 1. Серверный микшер (CallMixerService)
+- **Код:** `API/Services/Call/CallMixerService.cs`, строка ~182, вызов `Normalize(_mixBuffer)`
+- **Проблема:** при синхронизации `_mixBuffer` и `_personalBuffer` потенциальная гонка, что приводит к мерцанию в аудиопотоке
+- **Статус:** анализ продолжается
+
+### 2. Остановка записи голосового сообщения
+- **Код:** `Desktop/Services/Features/Media/AudioRecorderService.cs`, метод `StopAsync()`
+- **Проблема:** `_captureDevice.StopAsync()` не дожидается завершения последних буферов → обрезание до 0.5 сек
+- **Обход:** искусственная задержка 200мс перед финализацией
+- **Статус:** требуется переработка на событийную модель (подписка на окончание буфера)
+
+### 3. Счётчик непрочитанных сообщений
+- **Код:** `Desktop/Data/Repositories/LocalCacheService.cs`, строка ~52
+- **Проблема:** `GetAllUnreadCountsAsync` не обновляется при `MarkAllAsReadAsync` → stale данные
+- **Статус:** требуется broadcast через GlobalHub
+
+### 4. Звонок при свёрнутом окне
+- **Код:** `Desktop/Services/Features/Call/CallService.cs`, `OnIncomingCall`
+- **Проблема:** если `NavigationService` ещё не готов, `CallViewModel` не создаётся
+- **Статус:** требуется отложенная инициализация или глобальный диспатчер UI
+
+### 5. Конфликты ролей ChatRole
+- **Код:** `Desktop/ViewModels/Chat/Permissions/ChatPermissionsManager.cs`
+- **Проблема:** флаг `IsSystemAdmin` в `ChatContext` не обновляется при смене роли администратора
+- **Статус:** требуется переподписка на `IChatHubConnection.UserRoleUpdated`
+
+### 6. Миграции SQLite
+- **Код:** `Desktop/Data/LocalDatabase.cs`, `MigrateToVersion2`
+- **Проблема:** при переполнении WAL-файла миграция падает с `SQLITE_BUSY`
+- **Статус:** требуется проверка `PRAGMA wal_checkpoint(TRUNCATE)` перед миграцией
+
+### 7. Запись голосового сообщения
+- **Код:** `Desktop/Services/Features/Media/AudioRecorderService.cs`
+- **Проблема:** при прерывании (CancelAsync) временный WAV-файл не удаляется
+- **Обход:** расширенный try-finally с очисткой
+- **Статус:** требуется утилита очистки по таймеру

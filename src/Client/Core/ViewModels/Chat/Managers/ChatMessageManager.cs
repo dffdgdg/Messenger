@@ -26,8 +26,10 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private int? _oldestLoadedMessageId;
     private int? _newestLoadedMessageId;
-    private volatile bool _hasMoreOlder = true;
-    private volatile bool _hasMoreNewer;
+
+    private bool _hasMoreOlder = true;
+    private bool _hasMoreNewer;
+
     private readonly HashSet<int> _loadedMessageIds = [];
     private readonly Dictionary<int, MessageViewModel> _messageIndex = [];
     private int _isLoading;
@@ -45,8 +47,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     public RangeObservableCollection<MessageViewModel> Messages { get; } = [];
     public bool IsLoading => Volatile.Read(ref _isLoading) != 0;
-    public bool HasMoreOlder => _hasMoreOlder;
-    public bool HasMoreNewer => _hasMoreNewer;
+    public bool HasMoreOlder => Volatile.Read(ref _hasMoreOlder);
+    public bool HasMoreNewer => Volatile.Read(ref _hasMoreNewer);
     public int? LastReadMessageId { get; private set; }
     public int? FirstUnreadMessageId { get; private set; }
 
@@ -97,17 +99,22 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
                 Debug.WriteLine($"[MessageManager] Кэш рассинхронизирован: syncState.Oldest={syncState.OldestLoadedId}, actual={actualOldest}");
                 Debug.WriteLine("[MessageManager] Очищаем кэш и грузим с сервера");
 
-                // Очищаем рассинхронизированный кэш
-                try { await _cacheService.ClearChatMessagesAsync(_chatId); } catch { }
+                try
+                {
+                    await _cacheService.ClearChatMessagesAsync(_chatId);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[MessageManager] Не удалось очистить кэш при рассинхронизации: {ex.Message}");
+                }
 
-                // Грузим с сервера
                 return await LoadInitialFromServerAsync(CancellationToken.None);
             }
         }
 
         RenderMessages(cached.Messages);
-        _hasMoreOlder = cached.HasMoreOlder;
-        _hasMoreNewer = false;
+        Volatile.Write(ref _hasMoreOlder, cached.HasMoreOlder);
+        Volatile.Write(ref _hasMoreNewer, false);
         Debug.WriteLine($"[MessageManager] Загружено {cached.Messages.Count} из кэша, hasMoreOlder={_hasMoreOlder}");
 
         if (syncState != null && (DateTime.UtcNow - syncState.LastSyncAt).TotalSeconds > CacheRevalidationThresholdSeconds)
@@ -174,12 +181,12 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         if (direction == LoadDirection.Older)
         {
             PrependNewMessages(page.Messages);
-            _hasMoreOlder = page.HasMore;
+            Volatile.Write(ref _hasMoreOlder, page.HasMore);
         }
         else
         {
             AppendNewMessages(page.Messages);
-            _hasMoreNewer = page.HasMore;
+            Volatile.Write(ref _hasMoreNewer, page.HasMore);
         }
 
         await SafeUpdateSyncStateAsync();
@@ -243,9 +250,15 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
                 Debug.WriteLine($"[MessageManager] GapFill: +{totalAdded} за {batches} батчей");
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}"); }
-        finally { EndLoading(); }
+        catch (OperationCanceledException) { /* Отмена при закрытии чата */ }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MessageManager] Ошибка GapFill: {ex.Message}");
+        }
+        finally
+        {
+            EndLoading();
+        }
     }
 
     private async Task<(int batches, int totalAdded)> GapFillLoopAsync(CancellationToken ct)
@@ -266,7 +279,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 totalAdded += AppendAndCount(d.Messages);
-                _hasMoreNewer = d.HasNewerMessages;
+                Volatile.Write(ref _hasMoreNewer, d.HasNewerMessages);
             });
 
             await SafeUpdateSyncStateAsync();
@@ -294,7 +307,10 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
             await SafeSaveToCacheAsync(data.Messages, data.HasMoreMessages, false);
         }
-        catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка сброса: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MessageManager] Ошибка сброса: {ex.Message}");
+        }
     }
 
     private async Task RevalidateNewestAsync(CancellationToken ct)
@@ -309,12 +325,15 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 AppendNewMessages(data.Messages);
-                _hasMoreNewer = data.HasNewerMessages;
+                Volatile.Write(ref _hasMoreNewer, data.HasNewerMessages);
             });
             await SafeUpdateSyncStateAsync();
         }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}"); }
+        catch (OperationCanceledException) { /* Фоновая ревалидация отменена */ }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MessageManager] Ошибка ревалидации: {ex.Message}");
+        }
     }
 
     public void AddReceivedMessage(MessageDto message)
@@ -331,7 +350,7 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         UpdateDateSeparatorForNewMessage(vm);
         MessageViewModel.UpdateGroupingAround(Messages, Messages.Count - 1);
         TrimOldMessagesFromStart();
-        _hasMoreNewer = false;
+        Volatile.Write(ref _hasMoreNewer, false);
 
         RunInBackground(async () =>
         {
@@ -394,7 +413,6 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private async Task<PollDto?> FetchPollForCurrentUserAsync(int pollId, CancellationToken ct)
     {
         var result = await _apiClient.GetAsync<PollDto>(ApiEndpoints.Polls.ById(pollId, _userId), ct);
-
         return result is { Success: true, Data: not null } ? result.Data : null;
     }
 
@@ -473,13 +491,18 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private void TrimOldMessagesFromStart()
     {
         if (Messages.Count <= MaxMessagesInMemory) return;
-        TrimMessages(Messages.Take(Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory)), ref _hasMoreOlder);
+        var hasMore = true;
+        TrimMessages(Messages.Take(Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory)), ref hasMore);
+        Volatile.Write(ref _hasMoreOlder, hasMore);
     }
 
     private void TrimNewMessagesFromEnd()
     {
         if (Messages.Count <= MaxMessagesInMemory) return;
-        TrimMessages(Messages.Skip(Messages.Count - Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory)), ref _hasMoreNewer);
+        // Fix 5: L482 — avoid passing volatile field by ref; use local copy
+        var hasMore = true;
+        TrimMessages(Messages.Skip(Messages.Count - Math.Min(TrimBatchSize, Messages.Count - MaxMessagesInMemory)), ref hasMore);
+        Volatile.Write(ref _hasMoreNewer, hasMore);
     }
 
     private void TrimMessages(IEnumerable<MessageViewModel> toRemove, ref bool hasMoreFlag)
@@ -524,8 +547,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         _loadedMessageIds.Clear();
         _messageIndex.Clear();
         _oldestLoadedMessageId = _newestLoadedMessageId = null;
-        _hasMoreOlder = true;
-        _hasMoreNewer = false;
+        Volatile.Write(ref _hasMoreOlder, true);
+        Volatile.Write(ref _hasMoreNewer, false);
     }
 
     private int AppendAndCount(List<MessageDto> dtos)
@@ -558,8 +581,15 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private sealed record DirectionalPage(List<MessageDto> Messages, bool HasMore);
 
     private int? GetAnchor(LoadDirection d) => d == LoadDirection.Older ? _oldestLoadedMessageId : _newestLoadedMessageId;
-    private bool GetHasMore(LoadDirection d) => d == LoadDirection.Older ? _hasMoreOlder : _hasMoreNewer;
-    private void SetHasMore(LoadDirection d, bool value) { if (d == LoadDirection.Older) _hasMoreOlder = value; else _hasMoreNewer = value; }
+    private bool GetHasMore(LoadDirection d) => d == LoadDirection.Older ? Volatile.Read(ref _hasMoreOlder) : Volatile.Read(ref _hasMoreNewer);
+
+    private void SetHasMore(LoadDirection d, bool value)
+    {
+        if (d == LoadDirection.Older)
+            Volatile.Write(ref _hasMoreOlder, value);
+        else
+            Volatile.Write(ref _hasMoreNewer, value);
+    }
 
     private string BuildDirectionalUrl(LoadDirection d, int anchor, int count) => d == LoadDirection.Older
         ? ApiEndpoints.Messages.Before(_chatId, anchor, _userId, count)
@@ -568,7 +598,11 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
     private static bool GetCachedHasMore(CachedMessagesResult c, LoadDirection d) => d == LoadDirection.Older ? c.HasMoreOlder : c.HasMoreNewer;
     private static bool GetServerHasMore(PagedMessagesDto p, LoadDirection d) => d == LoadDirection.Older ? p.HasMoreMessages : p.HasNewerMessages;
 
-    private void SetBounds(bool hasOlder, bool hasNewer) { _hasMoreOlder = hasOlder; _hasMoreNewer = hasNewer; }
+    private void SetBounds(bool hasOlder, bool hasNewer)
+    {
+        Volatile.Write(ref _hasMoreOlder, hasOlder);
+        Volatile.Write(ref _hasMoreNewer, hasNewer);
+    }
 
     private void TrackBounds(int id)
     {
@@ -674,9 +708,16 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         var token = _disposeCts.Token;
         var task = Task.Run(async () =>
         {
-            try { token.ThrowIfCancellationRequested(); await action(); }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { Debug.WriteLine($"[MessageManager] Фоновая ошибка в {caller}: {ex.Message}"); }
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                await action();
+            }
+            catch (OperationCanceledException) { /* Фоновые задачи отменяются */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MessageManager] Фоновая ошибка в {caller}: {ex.Message}");
+            }
         }, token);
 
         lock (_bgLock)
@@ -705,8 +746,14 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
 
     private static async Task SafeCacheAsync(Func<Task> action)
     {
-        try { await action(); }
-        catch (Exception ex) { Debug.WriteLine($"[MessageManager] Ошибка кеша: {ex.Message}"); }
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MessageManager] Ошибка кеша: {ex.Message}");
+        }
     }
 
     private Task SafeCacheIfAvailable(Func<Task> action)
@@ -733,8 +780,8 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         ChatId = _chatId,
         OldestLoadedId = _oldestLoadedMessageId,
         NewestLoadedId = _newestLoadedMessageId,
-        HasMoreOlder = hasOlder ?? _hasMoreOlder,
-        HasMoreNewer = hasNewer ?? _hasMoreNewer
+        HasMoreOlder = hasOlder ?? Volatile.Read(ref _hasMoreOlder),
+        HasMoreNewer = hasNewer ?? Volatile.Read(ref _hasMoreNewer)
     };
 
     private void DisposeAllMessages()
@@ -761,8 +808,14 @@ public sealed class ChatMessageManager(ChatContext context, MediaServices media,
         Task[] pending;
         lock (_bgLock) pending = [.. _backgroundTasks];
 
-        try { await Task.WhenAll(pending); }
-        catch { }
+        try
+        {
+            await Task.WhenAll(pending);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MessageManager] DisposeAsync: одна или несколько фоновых задач завершились с ошибкой: {ex.Message}");
+        }
 
         DisposeAllMessages();
         Messages.Clear();

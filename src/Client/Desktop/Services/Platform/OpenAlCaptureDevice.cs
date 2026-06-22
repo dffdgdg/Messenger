@@ -47,8 +47,13 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice, IAsyncDisposable
 
     public async Task StopAsync()
     {
-        var cts = _cts;
-        await cts?.CancelAsync();
+        var cts = Interlocked.Exchange(ref _cts, null);
+
+        if (cts is not null)    
+        {
+            await cts.CancelAsync();
+            cts.Dispose();
+        }
 
         if (_captureTask != null)
         {
@@ -56,9 +61,6 @@ public sealed class OpenAlCaptureDevice : IAudioCaptureDevice, IAsyncDisposable
             catch { /* таймаут или отмена — ожидаемо */ }
             _captureTask = null;
         }
-
-        cts?.Dispose();
-        if (ReferenceEquals(cts, _cts)) _cts = null;
 
         CloseDevice();
         Debug.WriteLine("[OpenAlCapture] Stopped");

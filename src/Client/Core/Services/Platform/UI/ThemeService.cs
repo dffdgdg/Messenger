@@ -8,8 +8,12 @@ using AvaloniaApp = Avalonia.Application;
 
 namespace Core.Services.Platform.UI;
 
-public class ThemeService(ISettingsService settings) : IThemeService
+public partial class ThemeService(ISettingsService settings) : IThemeService
 {
+    private const string AccentColorKey = "AccentColor";
+    private const string UseSystemAccentKey = "UseSystemAccent";
+    private const string ThemeKey = "Theme";
+
     public bool IsColoredTheme { get; private set; }
 
     public static readonly Color[] PresetAccents =
@@ -71,11 +75,11 @@ public class ThemeService(ISettingsService settings) : IThemeService
                 Debug.WriteLine("[ThemeService] WARNING: dictionaries not initialized!");
             }
 
-            var theme = _settings.Get<AppTheme?>("Theme") ?? AppTheme.system;
+            var theme = _settings.Get<AppTheme?>(ThemeKey) ?? AppTheme.system;
 
             SwitchTheme(theme);
 
-            UseSystemAccent = _settings.Get<bool>("UseSystemAccent");
+            UseSystemAccent = _settings.Get<bool>(UseSystemAccentKey);
 
             if (UseSystemAccent)
             {
@@ -85,12 +89,12 @@ public class ThemeService(ISettingsService settings) : IThemeService
             }
             else
             {
-                var hex = _settings.Get<string?>("AccentColor");
+                var hex = _settings.Get<string?>(AccentColorKey);
                 if (hex != null && Color.TryParse(hex, out var saved))
                     CurrentAccent = saved;
             }
 
-            if (theme != AppTheme.colored && (UseSystemAccent || _settings.Get<string?>("AccentColor") != null))
+            if (theme != AppTheme.colored && (UseSystemAccent || _settings.Get<string?>(AccentColorKey) != null))
             {
                 ApplyAccentInternal(CurrentAccent, ActualIsDark());
             }
@@ -105,7 +109,7 @@ public class ThemeService(ISettingsService settings) : IThemeService
 
     public void SaveTheme(AppTheme theme)
     {
-        try { _settings.Set("Theme", theme); }
+        try { _settings.Set(ThemeKey, theme); }
         catch (Exception ex) { Debug.WriteLine($"[ThemeService] SaveTheme error: {ex.Message}"); }
     }
 
@@ -126,8 +130,8 @@ public class ThemeService(ISettingsService settings) : IThemeService
         }
 
         if (!saveToSettings) return;
-        _settings.Set("AccentColor", accent.ToString());
-        _settings.Set("UseSystemAccent", false);
+        _settings.Set(AccentColorKey, accent.ToString());
+        _settings.Set(UseSystemAccentKey, false);
     }
 
     public void ApplyColoredTheme(Color accent)
@@ -139,13 +143,13 @@ public class ThemeService(ISettingsService settings) : IThemeService
         _app.RequestedThemeVariant = useDarkBase ? ThemeVariant.Dark : ThemeVariant.Light;
 
         ApplyColoredPalette(accent);
-        _settings.Set("AccentColor", accent.ToString());
+        _settings.Set(AccentColorKey, accent.ToString());
     }
 
     public async Task SetUseSystemAccentAsync(bool use)
     {
         UseSystemAccent = use;
-        _settings.Set("UseSystemAccent", use);
+        _settings.Set(UseSystemAccentKey, use);
 
         if (use)
         {
@@ -161,7 +165,7 @@ public class ThemeService(ISettingsService settings) : IThemeService
         }
         else
         {
-            var hex = _settings.Get<string?>("AccentColor");
+            var hex = _settings.Get<string?>(AccentColorKey);
             var color = (hex != null && Color.TryParse(hex, out var c)) ? c : PresetAccents[0];
             SetAccent(color);
         }
@@ -197,6 +201,7 @@ public class ThemeService(ISettingsService settings) : IThemeService
         if (!IsColoredTheme)
             ApplyAccentInternal(CurrentAccent, isDark);
     }
+
     private void ApplyAccentInternal(Color accent, bool isDark)
     {
         var palette = AccentPaletteGenerator.Generate(accent, isDark);
@@ -235,7 +240,6 @@ public class ThemeService(ISettingsService settings) : IThemeService
         Patch(res, "SecondaryBG", p.SecondaryBg);
         Patch(res, "ThirdBG", p.ThirdBg);
         Patch(res, "FourthBG", p.FourthBg);
-
         Patch(res, "ChatHeaderBg", p.ChatHeaderBg);
         Patch(res, "ChatComposerBg", p.ChatComposerBg);
         Patch(res, "ChatComposerBorder", p.ChatComposerBorder);
@@ -243,43 +247,34 @@ public class ThemeService(ISettingsService settings) : IThemeService
         PatchColor(res, "ChatMessagesBgBottom", p.ChatMsgBgBottom);
         Patch(res, "ChatGlowPrimary", p.ChatGlowPrimary);
         Patch(res, "ChatGlowSecondary", p.ChatGlowSecondary);
-
         Patch(res, "Accent", p.Accent);
         Patch(res, "AccentHover", p.AccentHover);
         Patch(res, "AccentPressed", p.AccentPressed);
         Patch(res, "AccentMuted", p.AccentMuted);
-
         Patch(res, "TextPrimary", p.TextPrimary);
         Patch(res, "TextSecondary", p.TextSecondary);
         Patch(res, "TextMuted", p.TextMuted);
         Patch(res, "Icon", p.Icon);
-
         Patch(res, "BorderDefault", p.BorderDefault);
         Patch(res, "BorderHover", p.BorderHover);
         Patch(res, "ControlBg", p.ControlBg);
         Patch(res, "ControlBorder", p.ControlBorder);
         Patch(res, "AvatarPlaceholderBG", p.AvatarPlaceholder);
         Patch(res, "HoverOverlay", p.HoverOverlay);
-
         Patch(res, "MessageOwnBackground", p.MessageOwn);
         Patch(res, "MessageOtherBackground", p.MessageOther);
-
         Patch(res, "NavButtonSelectedBg", p.NavSelectedBg);
         Patch(res, "NavButtonSelectedFg", p.NavSelectedFg);
         Patch(res, "ChatItemSelectedBg", p.ChatItemSelectedBg);
         Patch(res, "ChatItemHoverBg", p.ChatItemHoverBg);
-
         Patch(res, "CardBgBrush", p.CardBg);
         Patch(res, "CardHoverBrush", p.CardHover);
         Patch(res, "ItemBgBrush", p.ItemBg);
         Patch(res, "HierarchyLineBrush", p.HierarchyLine);
-
         Patch(res, "PinnedBannerBg", p.PinnedBannerBg);
         Patch(res, "OnlineIndicatorBorder", p.OnlineIndicatorBorder);
-
         Patch(res, "InfoBgBrush", p.InfoBg);
         Patch(res, "InfoBorderBrush", p.InfoBorder);
-
         PatchColor(res, "LoginBgStart", p.LoginBgStart);
         PatchColor(res, "LoginBgMiddle", p.LoginBgMiddle);
         PatchColor(res, "LoginBgEnd", p.LoginBgEnd);
@@ -370,8 +365,15 @@ public class ThemeService(ISettingsService settings) : IThemeService
 
     private static Color? GetSystemAccentColorSync()
     {
-        try { return GetSystemAccentColorAsync().GetAwaiter().GetResult(); }
-        catch { return null; }
+        try
+        {
+            return GetSystemAccentColorAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ThemeService] GetSystemAccentColorSync failed: {ex.Message}");
+            return null;
+        }
     }
 
     public static async Task<Color?> GetSystemAccentColorAsync()
@@ -393,10 +395,14 @@ public class ThemeService(ISettingsService settings) : IThemeService
 
     private static Color? GetWindowsAccent()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return null;
+
         try
         {
             using var key = Microsoft.Win32.Registry.CurrentUser
                 .OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Accent");
+
             if (key?.GetValue("AccentColorMenu") is int raw)
             {
                 byte b = (byte)((raw >> 16) & 0xFF);
@@ -405,9 +411,15 @@ public class ThemeService(ISettingsService settings) : IThemeService
                 return Color.FromArgb(255, r, g, b);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ThemeService] GetWindowsAccent failed: {ex.Message}");
+        }
         return null;
     }
+
+    [GeneratedRegex(@"[\d.]+(?:e[+-]?\d+)?")]
+    private static partial Regex LinuxAccentNumberPattern();
 
     private static async Task<Color?> GetLinuxAccentAsync()
     {
@@ -432,7 +444,7 @@ public class ThemeService(ISettingsService settings) : IThemeService
             var output = await process.StandardOutput.ReadToEndAsync(cts.Token);
             await process.WaitForExitAsync(cts.Token);
 
-            var matches = Regex.Matches(output, @"[\d.]+(?:e[+-]?\d+)?");
+            var matches = LinuxAccentNumberPattern().Matches(output);
 
             if (matches.Count >= 3
                 && double.TryParse(matches[0].Value,
@@ -448,7 +460,10 @@ public class ThemeService(ISettingsService settings) : IThemeService
                 return Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ThemeService] GetLinuxAccentAsync failed: {ex.Message}");
+        }
         return null;
     }
 

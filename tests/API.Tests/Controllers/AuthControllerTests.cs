@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using Shared.Dto.Auth;
-using Shared.Response;
+using Shared.Contracts.Auth;
+using Shared.Infrastructure;
 using Xunit;
 
 namespace API.Tests.Controllers;

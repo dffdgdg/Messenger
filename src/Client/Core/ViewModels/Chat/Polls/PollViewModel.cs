@@ -1,3 +1,4 @@
+using Shared.Contracts.Poll;
 using System.ComponentModel;
 
 namespace Core.ViewModels.Chat;

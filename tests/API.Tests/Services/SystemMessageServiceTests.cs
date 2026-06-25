@@ -9,7 +9,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Shared.Dto.Message;
+using Shared.Contracts.Message;
 using Shared.Enum;
 using Xunit;
 

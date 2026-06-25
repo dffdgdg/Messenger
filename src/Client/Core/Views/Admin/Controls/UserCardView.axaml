@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Core.Views.Controls"
     xmlns:local="using:Core.Views.Controls.Admin"
-    xmlns:user="using:Shared.Dto.User"
+    xmlns:user="using:Shared.Contracts.User"
     x:DataType="user:UserDto">
 
     <UserControl.Styles>

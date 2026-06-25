@@ -1,4 +1,5 @@
 ﻿using Core.ViewModels.Chat;
+using Shared.Contracts.Chat;
 
 namespace Core.ViewModels.ChatList.Factories;
 

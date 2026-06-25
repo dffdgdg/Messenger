@@ -1,4 +1,10 @@
-﻿using Shared.Dto.Online;
+﻿using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.Notification;
+using Shared.Contracts.Online;
+using Shared.Contracts.Poll;
+using Shared.Contracts.ReadReceipt;
+using Shared.Contracts.User;
 
 namespace Core.Services.Abstractions;
 

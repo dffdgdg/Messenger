@@ -13,7 +13,7 @@ public class RefreshTokenRepositoryTests : IntegrationTestBase
 
     public RefreshTokenRepositoryTests() => _repo = new RefreshTokenRepository(Context);
 
-    private async Task SeedTokensAsync()
+    private async Task<(int userId, DateTime now)> SeedTokensAsync()
     {
         var user = await DbContextFactory.SeedUserAsync(Context, "testuser", "pass");
         var now = DateTime.UtcNow;
@@ -24,15 +24,15 @@ public class RefreshTokenRepositoryTests : IntegrationTestBase
             new RefreshToken { UserId = user.Id, TokenHash = "hash4", FamilyId = "fam2", JwtId = "j4", CreatedAt = now, ExpiresAt = now.AddDays(-1) }
         );
         await Context.SaveChangesAsync();
+        return (user.Id, now);
     }
 
     [Fact]
-    public async Task FindByHash_ReturnsToken()
+    public async Task FindByHashWithUser_ReturnsToken()
     {
-        await SeedTokensAsync();
-        var user = await Context.Users.FirstAsync(u => u.Username == "testuser");
+        var (userId, _) = await SeedTokensAsync();
 
-        var token = await _repo.FindByHashAsync("hash1", user.Id);
+        var token = await _repo.FindByHashWithUserAsync("hash1", userId);
 
         token.Should().NotBeNull();
         token!.TokenHash.Should().Be("hash1");
@@ -40,12 +40,11 @@ public class RefreshTokenRepositoryTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task FindByHash_ReturnsNull_WhenNotFound()
+    public async Task FindByHashWithUser_ReturnsNull_WhenNotFound()
     {
-        await SeedTokensAsync();
-        var user = await Context.Users.FirstAsync(u => u.Username == "testuser");
+        var (userId, _) = await SeedTokensAsync();
 
-        var token = await _repo.FindByHashAsync("nonexistent", user.Id);
+        var token = await _repo.FindByHashWithUserAsync("nonexistent", userId);
         token.Should().BeNull();
     }
 

@@ -1,4 +1,5 @@
 ﻿using Core.Services.Features.Media.Files;
+using Shared.Contracts.Message;
 
 namespace Core.ViewModels.Chat;
 

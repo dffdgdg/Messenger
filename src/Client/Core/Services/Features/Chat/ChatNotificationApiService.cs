@@ -1,4 +1,6 @@
-﻿namespace Core.Services.Features.Chat;
+﻿using Shared.Contracts.Chat;
+
+namespace Core.Services.Features.Chat;
 
 public class ChatNotificationApiService(IApiClientService apiClient) : IChatNotificationApiService
 {

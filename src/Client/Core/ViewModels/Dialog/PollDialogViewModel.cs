@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Shared.Contracts.Poll;
 using System.Collections.Specialized;
 using System.ComponentModel;
 

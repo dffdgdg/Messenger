@@ -2,6 +2,8 @@
 using Core.Infrastructure.Configuration;
 using Core.ViewModels.ChatList.Search;
 using Core.ViewModels.Chats;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Search;
 
 namespace Core.ViewModels.Chat;
 

@@ -1,4 +1,6 @@
-﻿namespace Core.ViewModels.Dialog;
+﻿using Shared.Contracts.User;
+
+namespace Core.ViewModels.Dialog;
 
 public partial class UserListItemViewModel(UserDto user, bool isSelected = false) : ObservableObject
 {

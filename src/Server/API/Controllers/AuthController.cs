@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
-using Shared.Dto.Auth;
+using Shared.Contracts.Auth;
 
 namespace API.Web.Controllers;
 
-public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtSettings,
-    ILogger<AuthController> logger) : BaseController<AuthController>(logger)
+public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtSettings, ILogger<AuthController> logger)
+    : BaseController<AuthController>(logger)
 {
     private const string RefreshTokenCookieName = "refresh_token";
 
@@ -63,13 +63,12 @@ public sealed class AuthController(IAuthService auth, IOptions<JwtSettings> jwtS
         return Map(result);
     }
 
-    private void SetRefreshTokenCookie(string refreshToken)
-        => Response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = HttpContext.Request.IsHttps,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(jwtSettings.Value.RefreshTokenLifetimeDays),
-            Path = "/api/auth"
-        });
+    private void SetRefreshTokenCookie(string refreshToken) => Response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = HttpContext.Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Expires = DateTimeOffset.UtcNow.AddDays(jwtSettings.Value.RefreshTokenLifetimeDays),
+        Path = "/api/auth"
+    });
 }

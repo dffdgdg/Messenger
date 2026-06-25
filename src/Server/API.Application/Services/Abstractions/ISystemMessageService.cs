@@ -1,4 +1,4 @@
-﻿using Shared.Enum;
+using Shared.Enum;
 
 namespace API.Application.Services.Abstractions;
 

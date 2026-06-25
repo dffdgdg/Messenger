@@ -1,5 +1,5 @@
-﻿using API.Domain.Entities;
-using Shared.Dto.Poll;
+using API.Domain.Entities;
+using Shared.Contracts.Poll;
 
 namespace API.Application.Mapping;
 
@@ -13,10 +13,10 @@ public static class PollMappings
         {
             Id = poll.Id,
             MessageId = poll.MessageId,
-            IsAnonymous = poll.IsAnonymous ?? false,
-            AllowsMultipleAnswers = poll.AllowsMultipleAnswers ?? false,
+            IsAnonymous = poll.IsAnonymous,
+            AllowsMultipleAnswers = poll.AllowsMultipleAnswers,
             ClosesAt = poll.ClosesAt,
-            Options = poll.PollOptions?.OrderBy(o => o.Position).Select(o => o.ToDto(poll.IsAnonymous ?? false)).ToList() ?? [],
+            Options = poll.PollOptions?.OrderBy(o => o.Position).Select(o => o.ToDto(poll.IsAnonymous)).ToList() ?? [],
             SelectedOptionIds = selectedOptionIds,
             CanVote = selectedOptionIds.Count == 0
         };

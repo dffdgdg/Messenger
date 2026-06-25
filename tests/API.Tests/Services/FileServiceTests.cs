@@ -1,8 +1,8 @@
 ﻿using API.Application.Configuration;
 using API.Application.Services.Abstractions;
-using API.Application.Services.Features.Messaging;
 using API.Domain.Common;
 using API.Infrastructure.Database;
+using API.Infrastructure.Services.Features.Messaging;
 using API.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -83,7 +83,7 @@ public class FileServiceTests : IDisposable
     [Fact]
     public async Task SaveMessageFile_NoAccess_ReturnsForbidden()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(1, 10)).ReturnsAsync(false);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(1, 10)).ReturnsAsync(Result.Forbidden("Нет доступа"));
         var fileMock = new Mock<IFormFile>();
         fileMock.Setup(f => f.Length).Returns(100);
 
@@ -96,7 +96,8 @@ public class FileServiceTests : IDisposable
     [Fact]
     public async Task SaveMessageFile_NullFile_ReturnsFailure()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(1, 10)).ReturnsAsync(true);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(1, 10))
+            .ReturnsAsync(Result.Success());
 
         var result = await _service.SaveMessageFileAsync(null!, 10, 1);
 
@@ -107,7 +108,8 @@ public class FileServiceTests : IDisposable
     [Fact]
     public async Task SaveMessageFile_TooLarge_ReturnsFailure()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(1, 10)).ReturnsAsync(true);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(1, 10))
+            .ReturnsAsync(Result.Success());
         var fileMock = new Mock<IFormFile>();
         fileMock.Setup(f => f.Length).Returns(2048);
 

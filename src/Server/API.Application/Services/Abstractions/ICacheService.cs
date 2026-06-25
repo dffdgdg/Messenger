@@ -1,4 +1,4 @@
-﻿using API.Domain.Entities;
+using API.Domain.Entities;
 
 namespace API.Application.Services.Abstractions;
 
@@ -9,5 +9,4 @@ public interface ICacheService
     void InvalidateUserChats(int userId);
     void InvalidateMembership(int userId, int chatId);
     void InvalidateChat(int chatId);
-    void InvalidateChatMembers(int chatId);
 }

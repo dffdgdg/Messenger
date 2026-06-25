@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
 using Shared.Enum;
-using Shared.Helpers;
+using Shared.Infrastructure;
 using Xunit;
 
 namespace API.Tests.Helpers;

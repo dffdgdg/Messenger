@@ -1,5 +1,7 @@
-﻿using API.Application.Configuration;
-using API.Application.Services.Abstractions;
+﻿using API.Application.Common;
+using API.Application.Configuration;
+using API.Application.Features.File;
+using API.Application.Features.File.Commands;
 using API.Domain.Common;
 using API.Tests.Helpers;
 using API.Web.Controllers;
@@ -9,23 +11,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using Shared.Dto.Message;
-using Shared.Response;
+using Shared.Contracts.Message;
+using Shared.Infrastructure;
 using Xunit;
 
 namespace API.Tests.Controllers;
 
-public class FilesControllerTests
+public class FilesControllerTests : ControllerTestBase
 {
-    private readonly Mock<IFileService> _fileMock = new();
-    private readonly FilesController _controller;
+    private readonly Mock<IFileHandlers> _handlers = new();
+    private readonly Mock<ICommandHandler<UploadFileCommand, MessageFileDto>> _uploadFile = new();
     private readonly MessengerSettings _settings = new() { MaxFileSizeBytes = 1024 };
+    private readonly FilesController _controller;
 
     public FilesControllerTests()
     {
+        _handlers.Setup(h => h.UploadFile).Returns(_uploadFile.Object);
+
         var options = Mock.Of<IOptions<MessengerSettings>>(o => o.Value == _settings);
-        _controller = new FilesController(_fileMock.Object, options, NullLogger<FilesController>.Instance);
-        AuthHelper.SetUser(_controller, userId: 582);
+        _controller = new FilesController(_handlers.Object, options, NullLogger<FilesController>.Instance);
+        SetUser(_controller, userId: 582);
     }
 
     [Fact]
@@ -47,8 +52,9 @@ public class FilesControllerTests
         var fileMock = new Mock<IFormFile>();
         fileMock.Setup(f => f.Length).Returns(512);
 
-        _fileMock.Setup(s => s.SaveMessageFileAsync(fileMock.Object, 10, 582))
-            .Returns(Result<MessageFileDto>.Success(new MessageFileDto()).AsTask());
+        _uploadFile
+            .Setup(h => h.HandleAsync(It.IsAny<UploadFileCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<MessageFileDto>.Success(new MessageFileDto()));
 
         var result = await _controller.Upload(chatId: 10, fileMock.Object);
 
@@ -62,10 +68,13 @@ public class FilesControllerTests
     {
         var fileMock = new Mock<IFormFile>();
         fileMock.Setup(f => f.Length).Returns(512);
-        var result = ResultFactory.CreateByStatusCode<MessageFileDto>(expectedStatus, errorMessage);
-        _fileMock.Setup(s => s.SaveMessageFileAsync(fileMock.Object, 10, 582))
-            .Returns(result.AsTask());
-        var actionResult = await _controller.Upload(chatId: 10, fileMock.Object);
-        actionResult.ShouldHaveStatus(expectedStatus);
+
+        _uploadFile
+            .Setup(h => h.HandleAsync(It.IsAny<UploadFileCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResultFactory.CreateByStatusCode<MessageFileDto>(expectedStatus, errorMessage));
+
+        var result = await _controller.Upload(chatId: 10, fileMock.Object);
+
+        result.ShouldHaveStatus(expectedStatus);
     }
 }

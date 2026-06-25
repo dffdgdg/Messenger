@@ -1,5 +1,5 @@
-﻿using API.Domain.Common;
-using Shared.Dto.ReadReceipt;
+using API.Domain.Common;
+using Shared.Contracts.ReadReceipt;
 
 namespace API.Application.Services.Abstractions;
 

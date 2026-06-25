@@ -1,4 +1,4 @@
-﻿using Shared.Dto.Call;
+﻿using Shared.Contracts.Call;
 
 namespace Core.Services.Features.Call.WebRtc;
 

@@ -1,4 +1,4 @@
-﻿using Shared.Dto.Auth;
+using Shared.Contracts.Auth;
 
 namespace API.Application.Services.Core.Auth;
 

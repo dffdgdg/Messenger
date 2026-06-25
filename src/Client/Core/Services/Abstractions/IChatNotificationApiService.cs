@@ -1,4 +1,6 @@
-﻿namespace Core.Services.Abstractions;
+﻿using Shared.Contracts.Chat;
+
+namespace Core.Services.Abstractions;
 
 public interface IChatNotificationApiService
 {

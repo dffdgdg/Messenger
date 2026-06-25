@@ -5,28 +5,29 @@ using Microsoft.Extensions.Logging;
 
 namespace API.Infrastructure.Cache;
 
-public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logger) : ICacheService
+public sealed partial class CacheService(IMemoryCache cache, ILogger<CacheService> logger)
+    : ICacheService
 {
     private static readonly TimeSpan UserChatsTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MembershipTtl = TimeSpan.FromMinutes(10);
 
-    #region User Chats
+    #region User chats
 
     public async Task<List<int>> GetUserChatIdsAsync(int userId, Func<Task<List<int>>> factory)
     {
-        var cacheKey = GetUserChatsKey(userId);
+        var key = GetUserChatsKey(userId);
 
-        if (cache.TryGetValue(cacheKey, out List<int>? cachedIds) && cachedIds != null)
+        if (cache.TryGetValue(key, out List<int>? cached) && cached != null)
         {
             LogUserChatsHit(userId);
-            return cachedIds;
+            return cached;
         }
 
         LogUserChatsMiss(userId);
 
         var chatIds = await factory();
 
-        cache.Set(cacheKey, chatIds, new MemoryCacheEntryOptions
+        cache.Set(key, chatIds, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = UserChatsTtl,
             SlidingExpiration = TimeSpan.FromMinutes(2)
@@ -41,16 +42,24 @@ public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logg
 
     public async Task<ChatMember?> GetMembershipAsync(int userId, int chatId, Func<Task<ChatMember?>> factory)
     {
-        var cacheKey = GetMembershipKey(userId, chatId);
-        if (cache.TryGetValue(cacheKey, out ChatMember? cached))
+        var key = GetMembershipKey(userId, chatId);
+
+        if (cache.TryGetValue(key, out ChatMember? cached))
+        {
+            LogMembershipHit(userId, chatId);
             return cached;
+        }
+
+        LogMembershipMiss(userId, chatId);
 
         var member = await factory();
-        cache.Set(cacheKey, member, new MemoryCacheEntryOptions
+
+        cache.Set(key, member, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = MembershipTtl,
             SlidingExpiration = TimeSpan.FromMinutes(3)
         });
+
         return member;
     }
 
@@ -77,18 +86,17 @@ public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logg
         LogChatInvalidated(chatId);
     }
 
-    public void InvalidateChatMembers(int chatId) => LogChatMembersChanged(chatId);
-
     #endregion
 
-    #region Key Generation
+    #region Keys
 
     private static string GetUserChatsKey(int userId) => $"user_chats_{userId}";
-    private static string GetMembershipKey(int userId, int chatId) => $"membership_{userId}_{chatId}";
+    private static string GetMembershipKey(int userId, int chatId)
+        => $"membership_{userId}_{chatId}";
 
     #endregion
 
-    #region Log
+    #region Logging
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Cache HIT: user_chats_{UserId}")]
     private partial void LogUserChatsHit(int userId);
@@ -110,9 +118,6 @@ public partial class CacheService(IMemoryCache cache, ILogger<CacheService> logg
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Cache invalidated: chat_{ChatId}")]
     private partial void LogChatInvalidated(int chatId);
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Chat {ChatId} members changed - related caches will expire naturally")]
-    private partial void LogChatMembersChanged(int chatId);
 
     #endregion
 }

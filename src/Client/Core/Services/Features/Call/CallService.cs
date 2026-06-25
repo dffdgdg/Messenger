@@ -1,7 +1,7 @@
 ﻿using Core.Services.Features.Call;
 using Core.Services.Features.Call.WebRtc;
 using Microsoft.Extensions.Logging;
-using Shared.Dto.Call;
+using Shared.Contracts.Call;
 
 namespace Core.Services.Call;
 

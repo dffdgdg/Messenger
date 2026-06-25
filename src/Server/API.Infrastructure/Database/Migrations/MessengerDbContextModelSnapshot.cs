@@ -263,7 +263,7 @@ namespace API.Infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<bool?>("AllowsMultipleAnswers")
+                    b.Property<bool>("AllowsMultipleAnswers")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
@@ -273,7 +273,7 @@ namespace API.Infrastructure.Database.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("closes_at");
 
-                    b.Property<bool?>("IsAnonymous")
+                    b.Property<bool>("IsAnonymous")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
@@ -641,7 +641,7 @@ namespace API.Infrastructure.Database.Migrations
             modelBuilder.Entity("API.Domain.Entities.Chat", b =>
                 {
                     b.HasOne("API.Domain.Entities.User", "CreatedBy")
-                        .WithMany("Chats")
+                        .WithMany("CreatedChats")
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("Chats_CreatedById_fkey");
@@ -687,7 +687,7 @@ namespace API.Infrastructure.Database.Migrations
                         .HasConstraintName("Departments_ChatId_fkey");
 
                     b.HasOne("API.Domain.Entities.User", "Head")
-                        .WithMany("Departments")
+                        .WithMany("HeadedDepartments")
                         .HasForeignKey("HeadId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("Departments_Head_fkey");
@@ -950,9 +950,9 @@ namespace API.Infrastructure.Database.Migrations
                 {
                     b.Navigation("ChatMembers");
 
-                    b.Navigation("Chats");
+                    b.Navigation("CreatedChats");
 
-                    b.Navigation("Departments");
+                    b.Navigation("HeadedDepartments");
 
                     b.Navigation("PollVotes");
 

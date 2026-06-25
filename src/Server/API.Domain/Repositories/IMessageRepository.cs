@@ -1,6 +1,6 @@
 using API.Domain.Entities;
 using API.Domain.Repositories.Base;
-using Shared.Dto.Message;
+using Shared.Contracts.Message;
 
 namespace API.Domain.Repositories;
 

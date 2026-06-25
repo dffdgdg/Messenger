@@ -1,4 +1,5 @@
 ﻿using API.Application.Services.Abstractions;
+using API.Application.Services.Core.Auth;
 using API.Domain.Repositories;
 using API.Infrastructure.Cache;
 using API.Infrastructure.Database;
@@ -6,6 +7,9 @@ using API.Infrastructure.Database.SeedData;
 using API.Infrastructure.Network;
 using API.Infrastructure.Repositories.Implementations;
 using API.Infrastructure.Security;
+using API.Infrastructure.Services.Features;
+using API.Infrastructure.Services.Features.Call;
+using API.Infrastructure.Services.Features.Messaging;
 using API.Infrastructure.Status;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -75,10 +79,16 @@ public static class InfrastructureExtensions
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddScoped<IUrlBuilder, HttpUrlBuilder>();
-
+        services.AddScoped<IUserInfoService, UserInfoService>();
         services.AddSingleton<IOnlineUserService, OnlineUserService>();
-        services.AddScoped<IUserStatusService, UserStatusService>();
         services.AddHostedService<StatusCleanupHostedService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IFileService, FileService>();
+        services.AddSingleton<CallMixerService>();
+        services.AddSingleton<CallRelayService>();
+        services.AddHostedService(sp => sp.GetRequiredService<CallRelayService>());
+        services.AddSingleton<ICallSessionService, CallSessionService>();
 
         return services;
     }

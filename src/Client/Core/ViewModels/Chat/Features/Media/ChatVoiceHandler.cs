@@ -2,6 +2,7 @@
 using Core.Services.Features.Media.Audio;
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Shared;
+using Shared.Contracts.Message;
 
 namespace Core.ViewModels.Chat;
 
@@ -11,7 +12,7 @@ namespace Core.ViewModels.Chat;
 /// Передаётся как Func для избежания циклических зависимостей.
 /// </param>
 /// </summary>
-public sealed partial class ChatVoiceHandler(ChatContext context, Action cancelReply) : ChatFeatureHandler(context)
+public partial class ChatVoiceHandler(ChatContext context, Action cancelReply) : ChatFeatureHandler(context)
 {
     private IAudioRecorderService _audioRecorder = null!;
     private CancellationTokenSource? _voiceSendCts;

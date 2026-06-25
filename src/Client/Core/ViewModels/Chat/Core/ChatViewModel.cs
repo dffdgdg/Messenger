@@ -16,6 +16,9 @@ using Core.ViewModels.Chat.Scroll;
 using Core.ViewModels.ChatList.Factories;
 using Core.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.User;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat;

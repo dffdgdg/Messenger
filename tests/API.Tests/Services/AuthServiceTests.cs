@@ -144,7 +144,7 @@ public class AuthServiceTests : IDisposable
         ]));
         _tokenMock.Setup(t => t.GetPrincipalFromExpiredToken("expired"))
             .Returns(Result<ClaimsPrincipal>.Success(principal));
-        _tokenRepoMock.Setup(t => t.FindByHashAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
+        _tokenRepoMock.Setup(t => t.FindByHashWithUserAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((RefreshToken?)null);
 
         var result = await _service.RefreshTokenAsync("expired", "refresh");
@@ -190,14 +190,14 @@ public class AuthServiceTests : IDisposable
         var storedToken = new RefreshToken
         {
             UserId = 1,
-            TokenHash = ITokenService.HashToken("refresh_token"),
+            TokenHash = _tokenMock.Object.HashToken("refresh_token"),
             JwtId = "jti-1",
             FamilyId = "fam-1",
             ExpiresAt = DateTime.UtcNow.AddHours(-1),
             CreatedAt = DateTime.UtcNow.AddDays(-1),
             User = new User { Id = 1, Username = "test", IsBanned = false }
         };
-        _tokenRepoMock.Setup(t => t.FindByHashAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
+        _tokenRepoMock.Setup(t => t.FindByHashWithUserAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
         var result = await _service.RefreshTokenAsync("expired_access", "refresh_token");
@@ -220,14 +220,14 @@ public class AuthServiceTests : IDisposable
         var storedToken = new RefreshToken
         {
             UserId = 1,
-            TokenHash = ITokenService.HashToken("refresh_token"),
+            TokenHash = _tokenMock.Object.HashToken("refresh_token"),
             JwtId = "jti-1",
             FamilyId = "fam-1",
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow.AddDays(-1),
             User = new User { Id = 1, Username = "test", IsBanned = true }
         };
-        _tokenRepoMock.Setup(t => t.FindByHashAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
+        _tokenRepoMock.Setup(t => t.FindByHashWithUserAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
         var result = await _service.RefreshTokenAsync("expired_access", "refresh_token");
@@ -249,14 +249,14 @@ public class AuthServiceTests : IDisposable
         var storedToken = new RefreshToken
         {
             UserId = 1,
-            TokenHash = ITokenService.HashToken("old_refresh"),
+            TokenHash = _tokenMock.Object.HashToken("old_refresh"),
             JwtId = "jti-1",
             FamilyId = "fam-1",
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow.AddDays(-1),
             User = new User { Id = 1, Username = "test", IsBanned = false }
         };
-        _tokenRepoMock.Setup(t => t.FindByHashAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
+        _tokenRepoMock.Setup(t => t.FindByHashWithUserAsync(It.IsAny<string>(), 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
         _deptRepoMock.Setup(r => r.IsHeadOfAnyDepartmentAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);

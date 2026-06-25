@@ -1,5 +1,6 @@
 ﻿using Core.Data.Models.Cache;
 using Core.Data.Repositories.Abstractions;
+using Shared.Contracts.Message;
 using System.Diagnostics;
 
 namespace Core.Services.Features.Media.Files;

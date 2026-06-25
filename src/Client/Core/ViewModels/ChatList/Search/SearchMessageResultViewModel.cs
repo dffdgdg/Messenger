@@ -1,4 +1,5 @@
 ﻿using Core.Infrastructure.Helpers;
+using Shared.Contracts.Search;
 
 namespace Core.ViewModels.ChatList.Search;
 

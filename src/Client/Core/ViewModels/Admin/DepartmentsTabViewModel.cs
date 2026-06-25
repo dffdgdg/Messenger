@@ -2,7 +2,8 @@
 using CommunityToolkit.Mvvm.Input;
 using Core.Services.Abstractions;
 using Core.ViewModels.Dialog;
-using Shared.Dto.Department;
+using Shared.Contracts.Department;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels;
 

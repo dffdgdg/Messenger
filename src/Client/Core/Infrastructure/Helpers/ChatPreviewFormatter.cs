@@ -1,4 +1,5 @@
-﻿using Shared.Helpers;
+﻿using Shared.Contracts.Message;
+using Shared.Infrastructure;
 
 namespace Core.Infrastructure.Helpers;
 

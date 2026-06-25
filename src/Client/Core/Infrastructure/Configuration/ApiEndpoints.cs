@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Shared.Contracts.Search;
+using System.Text;
 
 namespace Core.Infrastructure.Configuration;
 

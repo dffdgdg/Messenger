@@ -1,5 +1,7 @@
 ﻿using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Context;
+using Shared.Contracts.Message;
+using Shared.Contracts.Search;
 
 namespace Core.ViewModels.Chat.Managers;
 

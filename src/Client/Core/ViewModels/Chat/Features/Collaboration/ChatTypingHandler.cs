@@ -4,7 +4,7 @@ using Core.ViewModels.Chat.Shared;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatTypingHandler : ChatFeatureHandler
+public partial class ChatTypingHandler : ChatFeatureHandler
 {
     private readonly Dictionary<int, DateTime> _typingUsers = [];
     private CancellationTokenSource? _cleanupCts;

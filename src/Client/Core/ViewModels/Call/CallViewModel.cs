@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Core.Services.Abstractions;
 using Core.Services.Features.Call;
-using Shared.Dto.Call;
+using Shared.Contracts.Call;
 
 namespace Core.ViewModels.Call;
 

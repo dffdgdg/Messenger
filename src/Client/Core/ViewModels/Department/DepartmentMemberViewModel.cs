@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Department;
 

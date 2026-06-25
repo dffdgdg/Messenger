@@ -1,5 +1,6 @@
 ﻿using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Dialog;
+using Shared.Contracts.Chat;
 
 namespace Core.ViewModels.Chat.Permissions;
 

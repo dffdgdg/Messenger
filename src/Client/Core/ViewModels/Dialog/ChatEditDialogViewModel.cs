@@ -3,6 +3,8 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 using Core.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Contracts.Chat;
+using Shared.Contracts.User;
 using System.ComponentModel;
 
 namespace Core.ViewModels.Dialog;

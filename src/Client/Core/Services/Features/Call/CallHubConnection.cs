@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
-using Shared.Dto.Call;
-using Shared.Hubs;
+using Shared.Contracts.Call;
+using Shared.HubProtocol;
 
 namespace Core.Services.Call;
 

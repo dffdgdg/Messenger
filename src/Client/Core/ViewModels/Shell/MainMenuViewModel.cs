@@ -8,10 +8,16 @@ using Core.ViewModels.Chats;
 using Core.ViewModels.Department;
 using Core.ViewModels.Dialog;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Dto.Call;
-using Shared.Dto.Online;
 using System.Diagnostics;
 using Core.ViewModels.Call;
+using Shared.Contracts.Online;
+using Shared.Contracts.Call;
+using Shared.Contracts.Search;
+using Shared.Contracts.Message;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Notification;
+using Shared.Contracts.User;
+using Shared.Contracts.Poll;
 
 namespace Core.ViewModels;
 

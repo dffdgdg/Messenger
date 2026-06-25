@@ -1,4 +1,6 @@
-﻿namespace Core.Services.Features.Media.Files;
+﻿using Shared.Contracts.Message;
+
+namespace Core.Services.Features.Media.Files;
 
 public enum FileDownloadStatus
 {

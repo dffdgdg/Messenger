@@ -1,7 +1,7 @@
 ﻿using API.Domain.Common;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Shared.Response;
+using Shared.Infrastructure;
 
 namespace API.Tests.Helpers;
 

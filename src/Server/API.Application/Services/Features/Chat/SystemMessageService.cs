@@ -1,4 +1,4 @@
-﻿using API.Application.Mapping;
+using API.Application.Mapping;
 using API.Application.Services.Abstractions;
 using API.Application.Services.Base;
 using API.Domain.Common;
@@ -6,7 +6,7 @@ using API.Domain.Entities;
 using API.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Shared.Enum;
-using Shared.Hubs;
+using Shared.HubProtocol;
 
 namespace API.Application.Services.Features.Chat;
 

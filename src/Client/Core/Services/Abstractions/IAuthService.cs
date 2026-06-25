@@ -1,4 +1,5 @@
-﻿using Shared.Dto.Auth;
+﻿using Shared.Contracts.Auth;
+using Shared.Infrastructure;
 
 namespace Core.Services.Abstractions;
 

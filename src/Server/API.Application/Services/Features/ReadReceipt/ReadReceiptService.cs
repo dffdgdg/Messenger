@@ -1,11 +1,11 @@
-﻿using API.Application.Bundles;
+using API.Application.Bundles;
 using API.Application.Services.Abstractions;
 using API.Application.Services.Base;
 using API.Domain.Common;
 using API.Domain.Entities;
 using API.Domain.Repositories;
 using Microsoft.Extensions.Logging;
-using Shared.Dto.ReadReceipt;
+using Shared.Contracts.ReadReceipt;
 
 namespace API.Application.Services.Features.ReadReceipt;
 
@@ -161,8 +161,7 @@ public partial class ReadReceiptService(
 
     #region Log
 
-    [LoggerMessage(Level = LogLevel.Debug,
-        Message = "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Пользователь {UserId} прочитал до {MessageId} в чате {ChatId}")]
     private partial void LogReadReceipt(int userId, int messageId, int chatId);
 
     #endregion

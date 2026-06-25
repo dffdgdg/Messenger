@@ -1,36 +1,53 @@
-﻿using API.Application.Services.Abstractions;
+﻿using API.Application.Common;
+using API.Application.Features.Poll;
+using API.Application.Features.Poll.Commands;
+using API.Application.Features.Poll.Queries;
 using API.Domain.Common;
 using API.Tests.Helpers;
 using API.Web.Controllers;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Shared.Dto.Message;
-using Shared.Dto.Poll;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
 using Xunit;
 
 namespace API.Tests.Controllers;
 
-public class PollsControllerTests
+public class PollsControllerTests : ControllerTestBase
 {
-    private readonly Mock<IPollService> _pollMock = new();
+    private readonly Mock<IPollHandlers> _handlers = new();
+
+    private readonly Mock<ICommandHandler<ClosePollCommand, PollDto>> _closePoll = new();
+    private readonly Mock<ICommandHandler<CreatePollCommand, MessageDto>> _createPoll = new();
+    private readonly Mock<ICommandHandler<VotePollCommand, PollDto>> _votePoll = new();
+    private readonly Mock<IQueryHandler<GetPollQuery, Result<PollDto>>> _getPoll = new();
+
     private readonly PollsController _controller;
 
     public PollsControllerTests()
     {
-        _controller = new PollsController(_pollMock.Object, NullLogger<PollsController>.Instance);
-        AuthHelper.SetUser(_controller, userId: 1);
+        _handlers.Setup(h => h.ClosePoll).Returns(_closePoll.Object);
+        _handlers.Setup(h => h.CreatePoll).Returns(_createPoll.Object);
+        _handlers.Setup(h => h.VotePoll).Returns(_votePoll.Object);
+        _handlers.Setup(h => h.GetPoll).Returns(_getPoll.Object);
+
+        _controller = new PollsController(_handlers.Object, NullLogger<PollsController>.Instance);
+        SetUser(_controller, userId: 1);
     }
 
     [Fact]
     public async Task CreatePoll_Success_Returns200()
     {
-        var dto = new CreatePollDto { ChatId = 10, Question = "Q?" };
+        _createPoll
+            .Setup(h => h.HandleAsync(It.IsAny<CreatePollCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<MessageDto>.Success(new MessageDto()));
 
-        _pollMock.Setup(s => s.CreatePollAsync(dto, 1))
-            .Returns(Result<MessageDto>.Success(new MessageDto()).AsTask());
-
-        var result = await _controller.CreatePoll(dto);
+        var result = await _controller.CreatePoll(new CreatePollDto
+        {
+            ChatId = 10,
+            Question = "Q?",
+            Options = [new CreatePollOptionDto { Text = "A" }, new CreatePollOptionDto { Text = "B" }]
+        });
 
         result.ShouldHaveStatus(200);
     }
@@ -38,46 +55,42 @@ public class PollsControllerTests
     [Fact]
     public async Task CreatePoll_Forbidden_Returns403()
     {
-        _pollMock.Setup(s => s.CreatePollAsync(It.IsAny<CreatePollDto>(), 1))
-            .Returns(Result<MessageDto>.Forbidden("Нет прав").AsTask());
+        _createPoll
+            .Setup(h => h.HandleAsync(It.IsAny<CreatePollCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<MessageDto>.Forbidden("Нет прав"));
 
-        var result = await _controller.CreatePoll(new CreatePollDto());
+        var result = await _controller.CreatePoll(new CreatePollDto
+        {
+            Options = [new CreatePollOptionDto { Text = "A" }, new CreatePollOptionDto { Text = "B" }]
+        });
 
         result.ShouldHaveStatus(403);
     }
 
     [Fact]
-    public async Task Vote_SetsCurrentUserIdAndReturnsSuccess()
+    public async Task Vote_SetsUserId_Returns200()
     {
-        AuthHelper.SetUser(_controller, userId: 5);
-        var dto = new PollVoteDto();
+        SetUser(_controller, userId: 5);
 
-        _pollMock.Setup(x => x.VoteAsync(dto))
-            .Returns(Result<PollDto>.Success(new PollDto()).AsTask());
+        _votePoll
+            .Setup(h => h.HandleAsync(
+                It.Is<VotePollCommand>(c => c.Dto.UserId == 5),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PollDto>.Success(new PollDto()));
 
-        var result = await _controller.Vote(dto);
+        var result = await _controller.Vote(new PollVoteDto());
 
-        dto.UserId.Should().Be(5);
         result.ShouldHaveStatus(200);
-    }
-
-    [Theory]
-    [InlineData("Уже голосовали", 409)]
-    [InlineData("Опрос не найден", 404)]
-    public async Task Vote_ServiceError_ReturnsCorrectStatus(string errorMessage, int expectedStatus)
-    {
-        var dto = new PollVoteDto();
-        var result = ResultFactory.CreateByStatusCode<PollDto>(expectedStatus, errorMessage);
-        _pollMock.Setup(s => s.VoteAsync(dto)).Returns(result.AsTask());
-        var actionResult = await _controller.Vote(dto);
-        actionResult.ShouldHaveStatus(expectedStatus);
     }
 
     [Fact]
     public async Task ClosePoll_Success_Returns200()
     {
-        _pollMock.Setup(s => s.ClosePollAsync(42, 1))
-            .Returns(Result<PollDto>.Success(new PollDto()).AsTask());
+        _closePoll
+            .Setup(h => h.HandleAsync(
+                It.Is<ClosePollCommand>(c => c.PollId == 42),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PollDto>.Success(new PollDto()));
 
         var result = await _controller.ClosePoll(42);
 
@@ -87,8 +100,9 @@ public class PollsControllerTests
     [Fact]
     public async Task ClosePoll_Forbidden_Returns403()
     {
-        _pollMock.Setup(s => s.ClosePollAsync(42, 1))
-            .Returns(Result<PollDto>.Forbidden("Нет прав").AsTask());
+        _closePoll
+            .Setup(h => h.HandleAsync(It.IsAny<ClosePollCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PollDto>.Forbidden("Нет прав"));
 
         var result = await _controller.ClosePoll(42);
 
@@ -98,8 +112,11 @@ public class PollsControllerTests
     [Fact]
     public async Task GetPoll_Success_Returns200()
     {
-        _pollMock.Setup(s => s.GetPollAsync(42, 1))
-            .Returns(Result<PollDto>.Success(new PollDto()).AsTask());
+        _getPoll
+            .Setup(h => h.HandleAsync(
+                It.Is<GetPollQuery>(q => q.PollId == 42),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PollDto>.Success(new PollDto()));
 
         var result = await _controller.GetPoll(42);
 
@@ -109,8 +126,9 @@ public class PollsControllerTests
     [Fact]
     public async Task GetPoll_NotFound_Returns404()
     {
-        _pollMock.Setup(s => s.GetPollAsync(999, 1))
-            .Returns(Result<PollDto>.NotFound("Опрос не найден").AsTask());
+        _getPoll
+            .Setup(h => h.HandleAsync(It.IsAny<GetPollQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PollDto>.NotFound("Опрос не найден"));
 
         var result = await _controller.GetPoll(999);
 

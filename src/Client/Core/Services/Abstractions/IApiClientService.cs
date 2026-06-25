@@ -1,4 +1,6 @@
-﻿namespace Core.Services.Abstractions;
+﻿using Shared.Infrastructure;
+
+namespace Core.Services.Abstractions;
 
 public interface IApiClientService : IDisposable
 {

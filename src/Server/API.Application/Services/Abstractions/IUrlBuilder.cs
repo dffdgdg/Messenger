@@ -1,4 +1,4 @@
-﻿namespace API.Application.Services.Abstractions;
+namespace API.Application.Services.Abstractions;
 
 public interface IUrlBuilder
 {

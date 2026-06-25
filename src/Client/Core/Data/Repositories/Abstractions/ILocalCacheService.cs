@@ -1,6 +1,9 @@
 ﻿using Core.Data.Models.Cache;
 using Core.Data.Models.Sync;
-using Shared.Dto.Chat;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
+using Shared.Contracts.User;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

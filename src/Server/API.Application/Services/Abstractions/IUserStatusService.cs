@@ -1,5 +1,5 @@
-﻿using API.Domain.Common;
-using Shared.Dto.Online;
+using API.Domain.Common;
+using Shared.Contracts.Online;
 using Shared.Enum;
 
 namespace API.Application.Services.Abstractions;

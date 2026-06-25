@@ -1,5 +1,6 @@
 ﻿using Core.Infrastructure.Helpers;
-using Shared.Dto.Auth;
+using Shared.Contracts.Auth;
+using Shared.Infrastructure;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Text.Json;

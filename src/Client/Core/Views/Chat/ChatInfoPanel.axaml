@@ -7,7 +7,7 @@
     xmlns:conv="using:Core.Converters"
     xmlns:media="using:Core.Infrastructure.Media"
     xmlns:skeleton="using:Core.Views.Controls.Skeleton"
-    xmlns:user="using:Shared.Dto.User"
+    xmlns:user="using:Shared.Contracts.User"
     xmlns:vm="using:Core.ViewModels.Chat"
     MinWidth="320"
     x:DataType="vm:ChatViewModel"

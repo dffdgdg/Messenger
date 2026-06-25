@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Shared.Contracts.Poll;
 
 namespace Core.ViewModels.Chat;
 

@@ -8,7 +8,7 @@ using API.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Shared.Dto.ReadReceipt;
+using Shared.Contracts.ReadReceipt;
 using Xunit;
 
 namespace API.Tests.Services;

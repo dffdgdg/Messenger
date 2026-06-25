@@ -1,7 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Core.ViewModels.Admin;
 using Core.ViewModels.Shared;
-using Shared.Dto.Department;
+using Shared.Contracts.Department;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels;
 

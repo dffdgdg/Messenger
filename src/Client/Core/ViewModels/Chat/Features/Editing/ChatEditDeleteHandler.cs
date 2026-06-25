@@ -2,10 +2,11 @@
 using Avalonia.Input.Platform;
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Shared;
+using Shared.Contracts.Message;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatEditDeleteHandler : ChatFeatureHandler
+public partial class ChatEditDeleteHandler : ChatFeatureHandler
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEditMode))]

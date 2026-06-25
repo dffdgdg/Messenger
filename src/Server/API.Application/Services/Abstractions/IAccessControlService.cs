@@ -1,4 +1,5 @@
-﻿using API.Domain.Entities;
+using API.Domain.Common;
+using API.Domain.Entities;
 using Shared.Enum;
 
 namespace API.Application.Services.Abstractions;
@@ -14,4 +15,10 @@ public interface IAccessControlService
     Task<ChatType> GetChatTypeAsync(int chatId);
     Task<ChatMember?> GetChatMemberAsync(int userId, int chatId);
     void InvalidateSystemAdminCache();
+
+    async Task<Result> EnsureMemberOfAsync(int userId, int chatId)
+    {
+        var isMember = await IsMemberAsync(userId, chatId);
+        return isMember ? Result.Success() : Result.Forbidden("Нет доступа к чату");
+    }
 }

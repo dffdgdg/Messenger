@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using Shared.Response;
+using Shared.Infrastructure;
 using Xunit;
 
 namespace API.Tests.Shared;

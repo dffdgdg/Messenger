@@ -6,7 +6,7 @@ global using Avalonia.Threading;
 global using CommunityToolkit.Mvvm.Input;
 global using Core.Infrastructure.Configuration;
 global using Core.Services.Abstractions;
-global using Shared.Dto.Chat;
+global using Shared.Contracts.Chat;
 global using Shared.Enum;
 global using Application = Avalonia.Application;
 global using Button = Avalonia.Controls.Button;

@@ -1,4 +1,6 @@
-﻿namespace Core.ViewModels.Chat.Context;
+﻿using Shared.Contracts.Message;
+
+namespace Core.ViewModels.Chat.Context;
 
 public sealed class ChatInfoPanelMediaItem(MessageViewModel message, MessageFileDto file)
 {

@@ -1,17 +1,23 @@
-﻿using API.Application.Services.Abstractions;
+﻿using API.Application.Features.Call;
+using API.Application.Services.Abstractions;
 using API.Domain.Common;
 using API.Domain.Entities;
 using API.Infrastructure.Database;
+using API.Infrastructure.Services.Call;
+using API.Infrastructure.Services.Features;
+using API.Web.Configuration;
 using API.Web.Hubs;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
-using Shared.Dto.Online;
-using Shared.Dto.ReadReceipt;
-using Shared.Hubs;
+using Shared.Contracts.Online;
+using Shared.Contracts.ReadReceipt;
+using Shared.Enum;
+using Shared.HubProtocol;
 using Xunit;
 
 namespace API.Tests.Hubs;
@@ -30,9 +36,8 @@ public class MessengerHubTests : IntegrationTestBase
     private readonly Mock<ISystemMessageService> _sysMsgMock = new();
     private readonly Mock<IUserStatusService> _statusServiceMock = new();
     private readonly Mock<IReadReceiptService> _receiptServiceMock = new();
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
-    private readonly Mock<IServiceScope> _scopeMock = new();
-    private readonly Mock<IServiceProvider> _serviceProviderMock = new();
+    private readonly Mock<IUserInfoService> _userInfoMock = new();
+    private readonly TurnCredentialService _turnService;
     private MessengerHub _hub;
     private readonly int _userId = 582;
 
@@ -87,26 +92,24 @@ public class MessengerHubTests : IntegrationTestBase
         _receiptServiceMock.Setup(r => r.GetChatReadInfoAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(Result<ChatReadInfoDto>.Success(new ChatReadInfoDto()));
 
-        _serviceProviderMock
-            .Setup(p => p.GetService(typeof(IUserStatusService)))
-            .Returns(_statusServiceMock.Object);
-        _serviceProviderMock
-            .Setup(p => p.GetService(typeof(IReadReceiptService)))
-            .Returns(_receiptServiceMock.Object);
-        _serviceProviderMock
-            .Setup(p => p.GetService(typeof(MessengerDbContext)))
-            .Returns(Context);
+        _userInfoMock.Setup(u => u.GetDisplayInfoAsync(It.IsAny<int>())).ReturnsAsync(new UserDisplayInfo("Test User", null));
 
-        _scopeMock.Setup(s => s.ServiceProvider).Returns(_serviceProviderMock.Object);
-        _scopeFactoryMock.Setup(s => s.CreateScope()).Returns(_scopeMock.Object);
+        var turnOptions = new Mock<IOptions<TurnSettings>>();
+        turnOptions.Setup(t => t.Value).Returns(new TurnSettings
+        {
+            Enabled = false
+        });
+        _turnService = new TurnCredentialService(turnOptions.Object, NullLogger<TurnCredentialService>.Instance);
 
         _hub = new MessengerHub(
-            _scopeFactoryMock.Object,
+            _accessMock.Object,
             _onlineMock.Object,
             _callMock.Object,
-            _accessMock.Object,
             _sysMsgMock.Object,
-            Context,
+            _receiptServiceMock.Object,
+            _statusServiceMock.Object,
+            _userInfoMock.Object,
+            _turnService,
             appDateTime,
             config,
             NullLogger<MessengerHub>.Instance)
@@ -120,7 +123,8 @@ public class MessengerHubTests : IntegrationTestBase
     [Fact]
     public async Task JoinChat_AccessDenied_ThrowsHubException()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(_userId, 1)).ReturnsAsync(false);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(_userId, 1))
+            .ReturnsAsync(Result.Forbidden("Нет доступа"));
 
         await _hub.Invoking(h => h.JoinChat(1))
             .Should().ThrowAsync<HubException>()
@@ -130,7 +134,8 @@ public class MessengerHubTests : IntegrationTestBase
     [Fact]
     public async Task JoinChat_Success_AddsToGroup()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(_userId, 1)).ReturnsAsync(true);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(_userId, 1))
+            .ReturnsAsync(Result.Success());
 
         await _hub.JoinChat(1);
 
@@ -219,10 +224,12 @@ public class MessengerHubTests : IntegrationTestBase
         await _hub.Invoking(h => h.SetStatus((int)UserStatusType.Away, "1h"))
             .Should().NotThrowAsync();
     }
+
     [Fact]
     public async Task JoinChat_Success_VerifiesSendAsync()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(_userId, 1)).ReturnsAsync(true);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(_userId, 1))
+            .ReturnsAsync(Result.Success());
         await _hub.JoinChat(1);
         _groupsMock.Verify(g => g.AddToGroupAsync("conn-123", "chat_1", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -264,6 +271,7 @@ public class MessengerHubTests : IntegrationTestBase
             It.Is<object[]>(args => args[0].ToString()!.Contains("инициатор")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
     [Fact]
     public async Task LeaveChat_VerifiesGroupRemoval()
     {

@@ -1,6 +1,6 @@
-﻿using API.Domain.Common;
+using API.Domain.Common;
 using Microsoft.AspNetCore.Http;
-using Shared.Dto.Message;
+using Shared.Contracts.Message;
 
 namespace API.Application.Services.Abstractions;
 

@@ -5,13 +5,14 @@ using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Managers;
 using Core.ViewModels.Chat.Shared;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Dto.Online;
+using Shared.Contracts.Online;
+using Shared.Contracts.User;
 using System.Collections.Specialized;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader, IPlatformService platformService)
+public partial class ChatInfoPanelHandler(ChatContext context, IChatInfoPanelStateStore stateStore, ChatMemberLoader memberLoader, IPlatformService platformService)
     : ChatFeatureHandler(context)
 {
     [ObservableProperty] public partial UserDto? ContactUser { get; set; }

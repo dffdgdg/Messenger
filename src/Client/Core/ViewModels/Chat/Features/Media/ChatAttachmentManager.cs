@@ -4,6 +4,7 @@ using Core.Infrastructure.Configuration;
 using Core.Infrastructure.Helpers;
 using Core.Services.Abstractions;
 using Core.ViewModels.Chat.Managers;
+using Shared.Contracts.Message;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat.Features.Media;

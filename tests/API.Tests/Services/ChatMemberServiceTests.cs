@@ -31,9 +31,8 @@ public class ChatMemberServiceTests : IDisposable
         _unitOfWork = new UnitOfWork(_context, NullLogger<UnitOfWork>.Instance);
 
         var cacheBundle = new CacheBundle(_accessMock.Object, _cacheMock.Object);
-        var notifBundle = new NotificationBundle(_notifierMock.Object, Mock.Of<INotificationService>());
         var timeBundle = new TimeBundle(new AppDateTime(TimeProvider.System));
-        var chatBundle = new ChatBundle(_sysMsgMock.Object, cacheBundle, notifBundle, timeBundle);
+        var chatBundle = new ChatBundle(_sysMsgMock.Object, cacheBundle, timeBundle);
 
         _service = new ChatMemberService(
             _unitOfWork,
@@ -49,7 +48,7 @@ public class ChatMemberServiceTests : IDisposable
     [Fact]
     public async Task AddMember_NoAccess_ReturnsForbidden()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(1, 1)).ReturnsAsync(false);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(1, 1)).ReturnsAsync(Result.Forbidden("Нет доступа"));
 
         var result = await _service.AddMemberAsync(1, 10, 1);
 
@@ -60,8 +59,9 @@ public class ChatMemberServiceTests : IDisposable
     [Fact]
     public async Task AddMember_AlreadyMember_ReturnsConflict()
     {
+        _accessMock.Setup(a => a.IsAdminAsync(1, 1)).ReturnsAsync(false);
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(1, 1)).ReturnsAsync(Result.Success());
         _chatRepoMock.Setup(r => r.IsMemberAsync(1, 10, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _accessMock.Setup(a => a.IsMemberAsync(1, 1)).ReturnsAsync(true);
 
         var result = await _service.AddMemberAsync(1, 10, 1);
 
@@ -133,8 +133,7 @@ public class ChatMemberServiceTests : IDisposable
     [Fact]
     public async Task GetMembers_NoAccess_ReturnsForbidden()
     {
-        _accessMock.Setup(a => a.IsMemberAsync(10, 1)).ReturnsAsync(false);
-
+        _accessMock.Setup(a => a.EnsureMemberOfAsync(10, 1)).ReturnsAsync(Result.Forbidden("Нет доступа"));
         var result = await _service.GetMembersAsync(1, 10);
 
         result.IsFailure.Should().BeTrue();

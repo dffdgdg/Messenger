@@ -9,12 +9,10 @@ using System.Security.Claims;
 
 namespace API.Infrastructure.Security;
 
-public sealed partial class AccessControlService(MessengerDbContext context, ICacheService cache,
-    IHttpContextAccessor httpContextAccessor, ILogger<AccessControlService> logger) : IAccessControlService
+public sealed partial class AccessControlService(MessengerDbContext context,ICacheService cache, IHttpContextAccessor httpContextAccessor,
+    ILogger<AccessControlService> logger) : IAccessControlService
 {
     private bool? _cachedIsSystemAdmin;
-
-    private readonly Dictionary<(int UserId, int ChatId), ChatMember?> _requestCache = [];
 
     public async Task<List<int>> GetUserChatIdsAsync(int userId)
         => await cache.GetUserChatIdsAsync(userId, () => context.ChatMembers.Where(cm => cm.UserId == userId).Select(cm => cm.ChatId).ToListAsync());
@@ -40,16 +38,14 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
     public async Task<ChatType> GetChatTypeAsync(int chatId)
         => await context.Chats.Where(c => c.Id == chatId).Select(c => c.Type).FirstOrDefaultAsync();
 
+    public void InvalidateSystemAdminCache()
+        => _cachedIsSystemAdmin = null;
+
     private async Task<ChatMember?> GetMembershipAsync(int userId, int chatId)
     {
-        var key = (userId, chatId);
-        if (_requestCache.TryGetValue(key, out var requestCached))
-            return requestCached;
+        var member = await cache.GetMembershipAsync(userId, chatId, ()
+            => context.ChatMembers.AsNoTracking().FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
 
-        var member = await cache.GetMembershipAsync(userId,chatId, () => context.ChatMembers.AsNoTracking()
-            .FirstOrDefaultAsync(cm => cm.UserId == userId && cm.ChatId == chatId));
-
-        _requestCache[key] = member;
         LogMembershipResult(userId, chatId, member?.Role);
         return member;
     }
@@ -60,6 +56,7 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
             return _cachedIsSystemAdmin.Value;
 
         var roleClaim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.Role)?.Value;
+
         var isAdmin = int.TryParse(roleClaim, out var roleInt) && ((UserRole)roleInt).HasFlag(UserRole.Admin);
 
         _cachedIsSystemAdmin = isAdmin;
@@ -69,9 +66,6 @@ public sealed partial class AccessControlService(MessengerDbContext context, ICa
 
         return isAdmin;
     }
-
-
-    public void InvalidateSystemAdminCache() => _cachedIsSystemAdmin = null;
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Членство: пользователь {UserId} в чате {ChatId} имеет роль {Role}")]
     private partial void LogMembershipResult(int userId, int chatId, ChatRole? role);

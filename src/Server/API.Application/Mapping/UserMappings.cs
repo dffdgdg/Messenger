@@ -1,6 +1,6 @@
-﻿using API.Application.Services.Abstractions;
+using API.Application.Services.Abstractions;
 using API.Domain.Entities;
-using Shared.Dto.User;
+using Shared.Contracts.User;
 
 namespace API.Application.Mapping;
 

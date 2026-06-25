@@ -1,5 +1,6 @@
 ﻿using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Shared.Contracts.User;
 using AppTheme = Shared.Enum.Theme;
 
 namespace Core.ViewModels;

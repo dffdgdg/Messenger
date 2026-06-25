@@ -2,7 +2,8 @@
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Features.Media;
 using Core.ViewModels.Chat.Managers;
-using Shared.DTO.Message;
+using Shared.Contracts.Message;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Chat.Composer;
 

@@ -1,4 +1,5 @@
 using Avalonia.Media.Imaging;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Dialog;
 

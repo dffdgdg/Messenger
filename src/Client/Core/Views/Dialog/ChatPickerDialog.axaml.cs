@@ -1,5 +1,6 @@
 using Avalonia.Input;
 using Core.ViewModels.Dialog;
+using Shared.Contracts.Chat;
 
 namespace Core.Views.Dialog;
 

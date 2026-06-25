@@ -1,6 +1,6 @@
 ﻿using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Shared;
-using Shared.Dto.Call;
+using Shared.Contracts.Call;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat.Features.Call;

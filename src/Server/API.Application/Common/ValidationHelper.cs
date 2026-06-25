@@ -1,4 +1,4 @@
-﻿using API.Domain.Common;
+using API.Domain.Common;
 using System.Text.RegularExpressions;
 
 namespace API.Application.Common;

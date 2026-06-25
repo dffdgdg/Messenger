@@ -1,5 +1,6 @@
 ﻿using Core.Infrastructure.Configuration;
 using Core.Infrastructure.Helpers;
+using Shared.Infrastructure;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;

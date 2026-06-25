@@ -2,6 +2,9 @@
 using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Navigation;
 using Core.ViewModels.ChatList.Factories;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Chat.Context;
 

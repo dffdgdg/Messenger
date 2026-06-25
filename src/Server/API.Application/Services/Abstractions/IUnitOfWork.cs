@@ -1,4 +1,4 @@
-﻿using API.Domain.Common;
+using API.Domain.Common;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace API.Application.Services.Abstractions;

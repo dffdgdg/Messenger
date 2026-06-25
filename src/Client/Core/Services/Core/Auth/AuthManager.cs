@@ -1,5 +1,6 @@
 ﻿using Core.Services.Abstractions;
-using Shared.Dto.Auth;
+using Shared.Contracts.Auth;
+using Shared.Infrastructure;
 using System.Diagnostics;
 
 namespace Core.Services.Core.Auth;

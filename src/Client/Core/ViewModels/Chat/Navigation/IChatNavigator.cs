@@ -1,4 +1,5 @@
-﻿using Shared.Dto.Call;
+﻿using Shared.Contracts.Call;
+using Shared.Contracts.Chat;
 
 namespace Core.ViewModels.Chat.Navigation;
 

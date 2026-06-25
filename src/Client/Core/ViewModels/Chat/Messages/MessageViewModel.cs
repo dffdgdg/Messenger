@@ -8,7 +8,9 @@ using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Commands;
 using Core.ViewModels.Chat.Messages;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Helpers;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
+using Shared.Infrastructure;
 using System.Windows.Input;
 
 namespace Core.ViewModels.Chat;

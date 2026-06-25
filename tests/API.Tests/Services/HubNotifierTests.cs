@@ -24,7 +24,7 @@ public class HubNotifierTests
         clientsMock.Setup(c => c.Group(It.IsAny<string>())).Returns(_clientProxyMock.Object);
         _hubMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-        _notifier = new HubNotifier(_hubMock.Object, NullLogger<HubNotifier>.Instance, _onlineMock.Object);
+        _notifier = new HubNotifier(_hubMock.Object, _onlineMock.Object, NullLogger<HubNotifier>.Instance);
     }
 
     [Fact]

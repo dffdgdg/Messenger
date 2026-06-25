@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmDialog="using:Core.ViewModels.Dialog"
              xmlns:conv="using:Core.Converters"
-             xmlns:department="using:Shared.Dto.Department"
+             xmlns:department="using:Shared.Contracts.Department"
              xmlns:shared="using:Core.Views.Controls.Shared"
              x:Class="Core.Views.UserEditDialog"
              x:DataType="vmDialog:UserEditDialogViewModel">

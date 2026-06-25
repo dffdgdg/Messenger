@@ -1,17 +1,20 @@
 ﻿using System.Text.Json;
+using API.Domain.Common;
 using API.Web.Middleware;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Shared.Response;
+using Shared.Infrastructure;
 using Xunit;
 
 namespace API.Tests.Middleware;
 
 public class ExceptionHandlingMiddlewareTests
 {
+    private readonly AppDateTime _appDateTime = new(TimeProvider.System);
+
     [Fact]
     public async Task NoException_PassesThrough()
     {
@@ -20,7 +23,8 @@ public class ExceptionHandlingMiddlewareTests
         var middleware = new ExceptionHandlingMiddleware(
             _ => Task.CompletedTask,
             NullLogger<ExceptionHandlingMiddleware>.Instance,
-            env.Object);
+            env.Object,
+            _appDateTime);
         var context = new DefaultHttpContext();
 
         await middleware.InvokeAsync(context);
@@ -36,7 +40,8 @@ public class ExceptionHandlingMiddlewareTests
         var middleware = new ExceptionHandlingMiddleware(
             _ => throw new InvalidOperationException("Test error"),
             NullLogger<ExceptionHandlingMiddleware>.Instance,
-            env.Object);
+            env.Object,
+            _appDateTime);
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
@@ -62,7 +67,8 @@ public class ExceptionHandlingMiddlewareTests
         var middleware = new ExceptionHandlingMiddleware(
             _ => throw new InvalidOperationException("Dev error"),
             NullLogger<ExceptionHandlingMiddleware>.Instance,
-            env.Object);
+            env.Object,
+            _appDateTime);
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
@@ -85,7 +91,8 @@ public class ExceptionHandlingMiddlewareTests
         var middleware = new ExceptionHandlingMiddleware(
             _ => throw new InvalidOperationException("Secret details"),
             NullLogger<ExceptionHandlingMiddleware>.Instance,
-            env.Object);
+            env.Object,
+            _appDateTime);
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 

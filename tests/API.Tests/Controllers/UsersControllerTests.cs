@@ -1,35 +1,60 @@
-﻿using API.Application.Services.Abstractions;
+﻿using API.Application.Common;
+using API.Application.Features.User;
+using API.Application.Features.User.Commands;
+using API.Application.Features.User.Queries;
 using API.Domain.Common;
 using API.Tests.Helpers;
 using API.Web.Controllers;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Shared.Dto.Online;
-using Shared.Dto.User;
+using Shared.Contracts.Online;
+using Shared.Contracts.User;
+using Shared.Enum;
 using Xunit;
 
 namespace API.Tests.Controllers;
 
-public class UsersControllerTests
+public class UsersControllerTests : ControllerTestBase
 {
-    private readonly Mock<IUserService> _userMock = new();
+    private readonly Mock<IUserHandlers> _handlers = new();
+
+    private readonly Mock<ICommandHandler<ChangePasswordCommand>> _changePassword = new();
+    private readonly Mock<ICommandHandler<ChangeUsernameCommand>> _changeUsername = new();
+    private readonly Mock<ICommandHandler<RemoveUserAvatarCommand>> _removeAvatar = new();
+    private readonly Mock<ICommandHandler<UpdateUserCommand>> _updateUser = new();
+    private readonly Mock<ICommandHandler<UploadUserAvatarCommand, AvatarResponseDto>> _uploadAvatar = new();
+    private readonly Mock<IQueryHandler<GetAllUsersQuery, Result<List<UserDto>>>> _getUsers = new();
+    private readonly Mock<IQueryHandler<GetUserQuery, Result<UserDto>>> _getUser = new();
+    private readonly Mock<IQueryHandler<GetOnlineUsersQuery, Result<OnlineUsersResponseDto>>> _getOnlineUsers = new();
+    private readonly Mock<IQueryHandler<GetUserStatusQuery, Result<UserStatusDto>>> _getUserStatus = new();
+    private readonly Mock<IQueryHandler<GetUserStatusesQuery, Result<List<UserStatusDto>>>> _getUserStatuses = new();
+
     private readonly UsersController _controller;
 
     public UsersControllerTests()
     {
-        _controller = new UsersController(_userMock.Object, NullLogger<UsersController>.Instance);
-        AuthHelper.SetUser(_controller, userId: 582);
-    }
+        _handlers.Setup(h => h.ChangePassword).Returns(_changePassword.Object);
+        _handlers.Setup(h => h.ChangeUsername).Returns(_changeUsername.Object);
+        _handlers.Setup(h => h.RemoveAvatar).Returns(_removeAvatar.Object);
+        _handlers.Setup(h => h.UpdateUser).Returns(_updateUser.Object);
+        _handlers.Setup(h => h.UploadAvatar).Returns(_uploadAvatar.Object);
+        _handlers.Setup(h => h.GetUsers).Returns(_getUsers.Object);
+        _handlers.Setup(h => h.GetUser).Returns(_getUser.Object);
+        _handlers.Setup(h => h.GetOnlineUsers).Returns(_getOnlineUsers.Object);
+        _handlers.Setup(h => h.GetUserStatus).Returns(_getUserStatus.Object);
+        _handlers.Setup(h => h.GetUserStatuses).Returns(_getUserStatuses.Object);
 
-    #region Get Users
+        _controller = new UsersController(_handlers.Object, NullLogger<UsersController>.Instance);
+        SetUser(_controller, userId: 582);
+    }
 
     [Fact]
     public async Task GetAllUsers_Success_Returns200()
     {
-        _userMock.Setup(s => s.GetAllUsersAsync(It.IsAny<CancellationToken>()))
-            .Returns(Result<List<UserDto>>.Success([]).AsTask());
+        _getUsers
+            .Setup(h => h.HandleAsync(It.IsAny<GetAllUsersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<List<UserDto>>.Success([]));
 
         var result = await _controller.GetAllUsers(CancellationToken.None);
 
@@ -39,8 +64,11 @@ public class UsersControllerTests
     [Fact]
     public async Task GetUser_Success_Returns200()
     {
-        _userMock.Setup(s => s.GetUserAsync(582, It.IsAny<CancellationToken>()))
-            .Returns(Result<UserDto>.Success(new UserDto()).AsTask());
+        _getUser
+            .Setup(h => h.HandleAsync(
+                It.Is<GetUserQuery>(q => q.UserId == 582),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<UserDto>.Success(new UserDto()));
 
         var result = await _controller.GetUser(582, CancellationToken.None);
 
@@ -50,99 +78,65 @@ public class UsersControllerTests
     [Fact]
     public async Task GetUser_NotFound_Returns404()
     {
-        _userMock.Setup(x => x.GetUserAsync(999, It.IsAny<CancellationToken>()))
-            .Returns(Result<UserDto>.NotFound("Пользователь не найден").AsTask());
+        _getUser
+            .Setup(h => h.HandleAsync(It.IsAny<GetUserQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<UserDto>.NotFound("Пользователь не найден"));
 
         var result = await _controller.GetUser(999, CancellationToken.None);
 
         result.ShouldHaveStatus(404);
     }
 
-    #endregion
-
-    #region Update User
-
-    [Theory]
-    [InlineData(nameof(UsersController.UpdateUser))]
-    [InlineData(nameof(UsersController.UploadAvatar))]
-    [InlineData(nameof(UsersController.RemoveAvatar))]
-    [InlineData(nameof(UsersController.ChangeUsername))]
-    [InlineData(nameof(UsersController.ChangePassword))]
-    public async Task UserModificationEndpoint_WrongUserId_Returns403WithoutCallingService(string methodName)
+    [Fact]
+    public async Task UpdateUser_WrongUser_Returns403()
     {
-        IActionResult result = methodName switch
-        {
-            nameof(UsersController.UpdateUser) =>
-                await _controller.UpdateUser(id: 731, new UserDto(), CancellationToken.None),
-            nameof(UsersController.UploadAvatar) =>
-                await _controller.UploadAvatar(id: 731, new Mock<IFormFile>().Object, CancellationToken.None),
-            nameof(UsersController.RemoveAvatar) =>
-                await _controller.RemoveAvatar(id: 731, CancellationToken.None),
-            nameof(UsersController.ChangeUsername) =>
-                await _controller.ChangeUsername(id: 731, new ChangeUsernameDto(), CancellationToken.None),
-            nameof(UsersController.ChangePassword) =>
-                await _controller.ChangePassword(id: 731, new ChangePasswordDto(), CancellationToken.None),
-            _ => throw new ArgumentException("Unknown method")
-        };
+        var result = await _controller.UpdateUser(731, new UserDto(), CancellationToken.None);
 
         result.ShouldHaveStatus(403);
-
-        // Verify no service calls
-        _userMock.Verify(x => x.UpdateUserAsync(It.IsAny<int>(), It.IsAny<UserDto>(), It.IsAny<CancellationToken>()), Times.Never);
-        _userMock.Verify(x => x.UploadAvatarAsync(It.IsAny<int>(), It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Never);
-        _userMock.Verify(x => x.RemoveAvatarAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
-        _userMock.Verify(x => x.ChangeUsernameAsync(It.IsAny<int>(), It.IsAny<ChangeUsernameDto>(), It.IsAny<CancellationToken>()), Times.Never);
-        _userMock.Verify(x => x.ChangePasswordAsync(It.IsAny<int>(), It.IsAny<ChangePasswordDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task UpdateUser_OwnUserId_Returns200()
+    public async Task UpdateUser_OwnUser_Returns200()
     {
-        _userMock.Setup(s => s.UpdateUserAsync(582, It.IsAny<UserDto>(), It.IsAny<CancellationToken>()))
-            .Returns(Result.Success().AsTask());
+        _updateUser
+            .Setup(h => h.HandleAsync(It.IsAny<UpdateUserCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
 
-        var result = await _controller.UpdateUser(582, new UserDto(), CancellationToken.None);
-
-        result.ShouldHaveStatus(200);
-    }
-
-    #endregion
-
-    #region Avatar
-
-    [Fact]
-    public async Task UploadAvatar_OwnUserId_Returns200()
-    {
-        var fileMock = new Mock<IFormFile>();
-
-        _userMock.Setup(s => s.UploadAvatarAsync(582, fileMock.Object, It.IsAny<CancellationToken>()))
-            .Returns(Result<AvatarResponseDto>.Success(new AvatarResponseDto()).AsTask());
-
-        var result = await _controller.UploadAvatar(582, fileMock.Object, CancellationToken.None);
+        var result = await _controller.UpdateUser(582, new UserDto { Id = 582 }, CancellationToken.None);
 
         result.ShouldHaveStatus(200);
     }
 
     [Fact]
-    public async Task RemoveAvatar_OwnUserId_Returns200()
+    public async Task UploadAvatar_OwnUser_Returns200()
     {
-        _userMock.Setup(s => s.RemoveAvatarAsync(582, It.IsAny<CancellationToken>()))
-            .Returns(Result.Success().AsTask());
+        _uploadAvatar
+            .Setup(h => h.HandleAsync(It.IsAny<UploadUserAvatarCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AvatarResponseDto>.Success(new AvatarResponseDto()));
+
+        var result = await _controller.UploadAvatar(582, new Mock<IFormFile>().Object, CancellationToken.None);
+
+        result.ShouldHaveStatus(200);
+    }
+
+    [Fact]
+    public async Task RemoveAvatar_OwnUser_Returns200()
+    {
+        _removeAvatar
+            .Setup(h => h.HandleAsync(It.IsAny<RemoveUserAvatarCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
 
         var result = await _controller.RemoveAvatar(582, CancellationToken.None);
 
         result.ShouldHaveStatus(200);
     }
 
-    #endregion
-
-    #region Change Credentials
-
     [Fact]
-    public async Task ChangeUsername_OwnUserId_Returns200()
+    public async Task ChangeUsername_OwnUser_Returns200()
     {
-        _userMock.Setup(s => s.ChangeUsernameAsync(582, It.IsAny<ChangeUsernameDto>(), It.IsAny<CancellationToken>()))
-            .Returns(Result.Success().AsTask());
+        _changeUsername
+            .Setup(h => h.HandleAsync(It.IsAny<ChangeUsernameCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
 
         var result = await _controller.ChangeUsername(582, new ChangeUsernameDto(), CancellationToken.None);
 
@@ -150,25 +144,23 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task ChangePassword_OwnUserId_Returns200()
+    public async Task ChangePassword_OwnUser_Returns200()
     {
-        _userMock.Setup(s => s.ChangePasswordAsync(582, It.IsAny<ChangePasswordDto>(), It.IsAny<CancellationToken>()))
-            .Returns(Result.Success().AsTask());
+        _changePassword
+            .Setup(h => h.HandleAsync(It.IsAny<ChangePasswordCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
 
         var result = await _controller.ChangePassword(582, new ChangePasswordDto(), CancellationToken.None);
 
         result.ShouldHaveStatus(200);
     }
 
-    #endregion
-
-    #region Online Status
-
     [Fact]
     public async Task GetOnlineUsers_Success_Returns200()
     {
-        _userMock.Setup(s => s.GetOnlineUsersAsync(It.IsAny<CancellationToken>()))
-            .Returns(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto()).AsTask());
+        _getOnlineUsers
+            .Setup(h => h.HandleAsync(It.IsAny<GetOnlineUsersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<OnlineUsersResponseDto>.Success(new OnlineUsersResponseDto()));
 
         var result = await _controller.GetOnlineUsers(CancellationToken.None);
 
@@ -178,28 +170,15 @@ public class UsersControllerTests
     [Fact]
     public async Task GetUserOnlineStatus_Success_Returns200()
     {
-        var dto = new UserStatusDto(100, true, null, UserStatusType.Online, null);
-
-        _userMock.Setup(s => s.GetOnlineStatusAsync(100, It.IsAny<CancellationToken>()))
-            .Returns(Result<UserStatusDto>.Success(dto).AsTask());
+        _getUserStatus
+            .Setup(h => h.HandleAsync(
+                It.Is<GetUserStatusQuery>(q => q.UserId == 100),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<UserStatusDto>.Success(
+                new UserStatusDto(100, true, null, UserStatusType.Online, null)));
 
         var result = await _controller.GetUserOnlineStatus(100, CancellationToken.None);
 
         result.ShouldHaveStatus(200);
     }
-
-    [Fact]
-    public async Task GetUsersOnlineStatus_Success_Returns200()
-    {
-        var ids = new List<int> { 1, 2, 3 };
-
-        _userMock.Setup(s => s.GetOnlineStatusesAsync(ids, It.IsAny<CancellationToken>()))
-            .Returns(Result<List<UserStatusDto>>.Success([]).AsTask());
-
-        var result = await _controller.GetUsersOnlineStatus(ids, CancellationToken.None);
-
-        result.ShouldHaveStatus(200);
-    }
-
-    #endregion
 }

@@ -8,6 +8,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\API.Application\API.Application.csproj" />
+		<ProjectReference Include="..\API.Domain\API.Domain.csproj" />
+		<ProjectReference Include="..\API.Infrastructure\API.Infrastructure.csproj" />
+		<ProjectReference Include="..\..\Shared\Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" />
 		<PackageReference Include="Concentus" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
@@ -26,19 +32,13 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\API.Application\API.Application.csproj" />
-		<ProjectReference Include="..\API.Domain\API.Domain.csproj" />
-		<ProjectReference Include="..\API.Infrastructure\API.Infrastructure.csproj" />
-		<ProjectReference Include="..\..\Shared\Shared.csproj" />
-	</ItemGroup>
-
 	<ItemGroup>
 		<InternalsVisibleTo Include="API.Tests" />
 		<Compile Remove="Dockerfile" />
 		<Compile Remove="dockerfile" />
+		<Compile Remove="Hubs\MessengerHub.ReadReceipts.cs" />
 		<None Include="Dockerfile" />
+		<None Include="Hubs\MessengerHub.ReadReceipts.cs" />
 	</ItemGroup>
 
 </Project>

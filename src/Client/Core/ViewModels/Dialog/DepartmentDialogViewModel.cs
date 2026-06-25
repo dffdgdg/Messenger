@@ -1,4 +1,4 @@
-using Shared.Dto.Department;
+using Shared.Contracts.Department;
 
 namespace Core.ViewModels.Dialog;
 

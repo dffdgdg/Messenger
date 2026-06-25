@@ -1,5 +1,5 @@
-﻿using API.Domain.Common;
-using Shared.Dto.Chat;
+using API.Domain.Common;
+using Shared.Contracts.Chat;
 using Shared.Enum;
 
 namespace API.Application.Services.Abstractions;

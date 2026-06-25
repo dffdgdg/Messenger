@@ -1,4 +1,6 @@
-﻿namespace Core.ViewModels.Admin;
+﻿using Shared.Contracts.User;
+
+namespace Core.ViewModels.Admin;
 
 public class DepartmentGroup(string departmentName, int? departmentId, ObservableCollection<UserDto> users)
 {

@@ -45,7 +45,7 @@ public class TokenServiceTests
         var opts = Mock.Of<IOptions<JwtSettings>>(o => o.Value == placeholderSettings);
 
         Action act = () => new TokenService(opts);
-        act.Should().Throw<InvalidOperationException>().WithMessage("*not configured*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*не настроен*");
     }
 
     [Fact]
@@ -152,7 +152,6 @@ public class TokenServiceTests
     [Fact]
     public void GetPrincipalFromExpiredToken_ValidExpired_ReturnsPrincipal()
     {
-        // Создаём токен с истекшим сроком вручную
         var handler = new JwtSecurityTokenHandler();
         var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(Settings.Secret));
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -216,8 +215,8 @@ public class TokenServiceTests
     [Fact]
     public void HashToken_ProducesConsistentHash()
     {
-        var hash1 = ITokenService.HashToken("test_token");
-        var hash2 = ITokenService.HashToken("test_token");
+        var hash1 = _service.HashToken("test_token");
+        var hash2 = _service.HashToken("test_token");
 
         hash1.Should().Be(hash2);
         hash1.Should().NotBe("test_token");

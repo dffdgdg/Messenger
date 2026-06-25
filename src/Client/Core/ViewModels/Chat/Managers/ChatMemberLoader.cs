@@ -1,4 +1,7 @@
-﻿namespace Core.ViewModels.Chat.Managers;
+﻿using Shared.Contracts.Chat;
+using Shared.Contracts.User;
+
+namespace Core.ViewModels.Chat.Managers;
 
 public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService apiClient)
 {

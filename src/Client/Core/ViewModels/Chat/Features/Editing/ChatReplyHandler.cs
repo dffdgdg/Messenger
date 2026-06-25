@@ -6,7 +6,7 @@ using Core.ViewModels.Chat.Shared;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatReplyHandler : ChatFeatureHandler
+public partial class ChatReplyHandler : ChatFeatureHandler
 {
     private readonly ChatMessageManager _messageManager;
 

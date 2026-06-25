@@ -12,29 +12,23 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var messengerSettings = builder.Configuration
-    .GetSection(MessengerSettings.SectionName)
-    .Get<MessengerSettings>() ?? new MessengerSettings();
+var messengerSettings = builder.Configuration.GetSection(MessengerSettings.SectionName).Get<MessengerSettings>() ?? new MessengerSettings();
+
 var maxUploadRequestBodySize = messengerSettings.MaxFileSizeBytes + 1024L * 1024L;
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-options.Limits.MaxRequestBodySize = maxUploadRequestBodySize;
-options.Listen(System.Net.IPAddress.Any, 5274,
-        listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+    options.Limits.MaxRequestBodySize = maxUploadRequestBodySize;
+    options.ListenAnyIP(5274, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
 });
 
-builder.Services.Configure<FormOptions>(options =>
-    options.MultipartBodyLengthLimit = messengerSettings.MaxFileSizeBytes);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = messengerSettings.MaxFileSizeBytes);
 
-builder.Services.Configure<IISServerOptions>(options =>
-    options.MaxRequestBodySize = maxUploadRequestBodySize);
+builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = maxUploadRequestBodySize);
 
-builder.Services.Configure<MessengerSettings>(
-    builder.Configuration.GetSection(MessengerSettings.SectionName));
+builder.Services.Configure<MessengerSettings>(builder.Configuration.GetSection(MessengerSettings.SectionName));
 
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection(JwtSettings.SectionName));
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 
 builder.Services
     .AddMessengerDatabase(builder.Configuration, builder.Environment)
@@ -108,16 +102,13 @@ builder.Services.AddRateLimiter(options =>
 
     options.OnRejected = async (context, cancellationToken) =>
     {
-        context.HttpContext.Response.StatusCode =
-            StatusCodes.Status429TooManyRequests;
-
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         context.HttpContext.Response.ContentType = "application/json";
 
-        var retryAfter =
-            context.Lease.TryGetMetadata(MetadataName.RetryAfter,
-                out var retryAfterValue)
-                ? retryAfterValue
-                : TimeSpan.FromSeconds(10);
+        var retryAfter = context.Lease.TryGetMetadata(
+            MetadataName.RetryAfter, out var retryAfterValue)
+            ? retryAfterValue
+            : TimeSpan.FromSeconds(10);
 
         context.HttpContext.Response.Headers.RetryAfter =
             ((int)retryAfter.TotalSeconds).ToString();
@@ -143,13 +134,11 @@ builder.Services.AddSignalR(options =>
 builder.Services.AddHostedService<UdpDiscoveryService>();
 
 builder.Services.AddCors(options =>
-    options.AddDefaultPolicy(policy =>
-        policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .SetIsOriginAllowed(_ => true)
-              .AllowCredentials()));
-
-builder.Services.Configure<TurnSettings>(builder.Configuration.GetSection(TurnSettings.Section));
+    options.AddDefaultPolicy(policy => policy
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .SetIsOriginAllowed(_ => true)
+        .AllowCredentials()));
 
 var app = builder.Build();
 
@@ -158,11 +147,9 @@ app.UseExceptionHandling();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MessengerDbContext>();
-
     await db.Database.MigrateAsync();
 
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
-
     await seeder.SeedAsync();
 }
 
@@ -176,9 +163,7 @@ var disableHttpsRedirection =
     app.Configuration.GetValue<bool>("DisableHttpsRedirection");
 
 if (!disableHttpsRedirection)
-{
     app.UseHttpsRedirection();
-}
 
 app.Use(async (context, next) =>
 {
@@ -191,8 +176,7 @@ app.UseMissingFileCleanup();
 
 app.UseCors();
 
-var isHttpInDocker =
-    app.Configuration.GetValue<bool>("DisableHttpsRedirection");
+var isHttpInDocker = app.Configuration.GetValue<bool>("DisableHttpsRedirection");
 
 app.UseCookiePolicy(new CookiePolicyOptions
 {
@@ -209,16 +193,11 @@ app.UseWebSockets(new WebSocketOptions
 });
 
 app.UseRateLimiter();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () =>
-    Results.Text("Messenger API is running"))
-    .AllowAnonymous();
-
+app.MapGet("/", () => Results.Text("Messenger API is running")).AllowAnonymous();
 app.MapHub<MessengerHub>("/chatHub");
-
 app.MapControllers();
 
 await app.RunAsync();

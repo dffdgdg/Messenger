@@ -1,5 +1,7 @@
 ﻿using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Managers;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat.Core;

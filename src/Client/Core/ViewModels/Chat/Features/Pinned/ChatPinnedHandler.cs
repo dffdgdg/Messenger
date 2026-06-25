@@ -1,6 +1,7 @@
 ﻿using Core.Services.Features.Media.Files;
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Shared;
+using Shared.Contracts.Message;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chat.Features.Pinned;

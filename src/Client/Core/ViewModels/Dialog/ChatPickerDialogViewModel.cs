@@ -1,4 +1,6 @@
-﻿namespace Core.ViewModels.Dialog;
+﻿using Shared.Contracts.Chat;
+
+namespace Core.ViewModels.Dialog;
 
 public partial class ChatPickerDialogViewModel : DialogBaseViewModel
 {

@@ -1,4 +1,4 @@
-﻿using API.Application.Services.Core.Auth;
+using API.Application.Services.Core.Auth;
 using API.Domain.Common;
 
 namespace API.Application.Services.Abstractions;

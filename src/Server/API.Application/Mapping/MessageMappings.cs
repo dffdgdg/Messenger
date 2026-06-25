@@ -1,7 +1,7 @@
-﻿using API.Application.Services.Abstractions;
+using API.Application.Services.Abstractions;
 using API.Application.Services.Features.Chat;
 using API.Domain.Entities;
-using Shared.Dto.Message;
+using Shared.Contracts.Message;
 
 namespace API.Application.Mapping;
 

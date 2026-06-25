@@ -1,15 +1,24 @@
-﻿using API.Domain.Common;
+using API.Domain.Common;
 
 namespace API.Application.Services.Abstractions;
 
 public static class AccessControlExtensions
 {
-    public static async Task<Result> EnsureMemberOfAsync(this IAccessControlService access, int userId, int chatId)
-        => await access.IsMemberAsync(userId, chatId) ? Result.Success() : Result.Forbidden("У вас нет доступа к этому чату");
+    public static async Task<Result> EnsureMemberOfAsync(this IAccessControlService accessControl, int userId, int chatId)
+    {
+        var isMember = await accessControl.IsMemberAsync(userId, chatId);
+        return isMember ? Result.Success() : Result.Forbidden("Вы не являетесь участником этого чата");
+    }
 
-    public static async Task<Result> EnsureAdminOfAsync(this IAccessControlService access, int userId, int chatId)
-        => await access.IsAdminAsync(userId, chatId) ? Result.Success() : Result.Forbidden("Требуются права администратора");
+    public static async Task<Result> EnsureAdminOfAsync(this IAccessControlService accessControl, int userId, int chatId)
+    {
+        var isAdmin = await accessControl.IsAdminAsync(userId, chatId);
+        return isAdmin ? Result.Success() : Result.Forbidden("Требуются права администратора");
+    }
 
-    public static async Task<Result> EnsureOwnerOfAsync(this IAccessControlService access, int userId, int chatId)
-        => await access.IsOwnerAsync(userId, chatId) ? Result.Success() : Result.Forbidden("Только владелец может выполнить это действие");
+    public static async Task<Result> EnsureOwnerOfAsync(this IAccessControlService accessControl, int userId, int chatId)
+    {
+        var isOwner = await accessControl.IsOwnerAsync(userId, chatId);
+        return isOwner ? Result.Success() : Result.Forbidden("Требуются права владельца");
+    }
 }

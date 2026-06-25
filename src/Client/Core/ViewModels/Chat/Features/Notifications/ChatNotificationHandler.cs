@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatNotificationHandler(ChatContext context) : ChatFeatureHandler(context)
+public partial class ChatNotificationHandler(ChatContext context) : ChatFeatureHandler(context)
 {
     [ObservableProperty] public partial bool IsNotificationEnabled { get; set; }
     [ObservableProperty] public partial bool IsLoadingMuteState { get; set; }

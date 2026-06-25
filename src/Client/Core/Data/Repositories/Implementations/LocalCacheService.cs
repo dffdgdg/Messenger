@@ -3,6 +3,10 @@ using Core.Data.Mapping;
 using Core.Data.Models.Cache;
 using Core.Data.Models.Sync;
 using Core.Data.Repositories.Abstractions;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
+using Shared.Contracts.User;
 using System.Diagnostics;
 using System.Text.Json;
 

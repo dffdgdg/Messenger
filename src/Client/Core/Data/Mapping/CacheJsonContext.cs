@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
+using System.Text.Json.Serialization;
 
 namespace Core.Data.Mappers;
 

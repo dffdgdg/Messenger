@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Shared.Contracts.Chat;
 using System.Diagnostics;
 
 namespace Core.ViewModels.Chats;

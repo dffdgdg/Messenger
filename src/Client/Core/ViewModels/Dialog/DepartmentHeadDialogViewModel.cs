@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Shared.Dto.Department;
+using Shared.Contracts.Department;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Dialog;
 

@@ -1,4 +1,4 @@
-﻿namespace API.Application.Configuration;
+namespace API.Application.Configuration;
 
 public sealed class MessengerSettings
 {

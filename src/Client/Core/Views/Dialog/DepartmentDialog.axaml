@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmDialog="using:Core.ViewModels.Dialog"
-             xmlns:department="using:Shared.Dto.Department"
+             xmlns:department="using:Shared.Contracts.Department"
              x:Class="Core.Views.DepartmentDialog"
              x:DataType="vmDialog:DepartmentDialogViewModel">
 

@@ -1,7 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using Core.Services.Abstractions;
-using Shared.Dto.Department;
-using Shared.Dto.Online;
+using Shared.Contracts.Department;
+using Shared.Contracts.Online;
+using Shared.Contracts.User;
 
 namespace Core.ViewModels.Department;
 

@@ -47,9 +47,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\API.Application\API.Application.csproj" />
-    <ProjectReference Include="..\API.Domain\API.Domain.csproj" />
+	  <ProjectReference Include="..\API.Application\API.Application.csproj" />
+	  <ProjectReference Include="..\API.Domain\API.Domain.csproj" />
 	  <ProjectReference Include="..\..\Shared\Shared.csproj" />
-  </ItemGroup>
+   </ItemGroup>
 
 </Project>

@@ -2,10 +2,12 @@
 using Core.ViewModels.Chat.Context;
 using Core.ViewModels.Chat.Shared;
 using Core.ViewModels.Dialog;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
 
 namespace Core.ViewModels.Chat;
 
-public sealed partial class ChatForwardHandler : ChatFeatureHandler
+public partial class ChatForwardHandler : ChatFeatureHandler
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsForwardMode))]

@@ -1,4 +1,4 @@
-﻿namespace API.Web.Configuration;
+namespace API.Web.Configuration;
 
 public sealed class TurnSettings
 {

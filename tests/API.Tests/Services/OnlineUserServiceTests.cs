@@ -1,5 +1,6 @@
 ﻿using API.Infrastructure.Status;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace API.Tests.Services;
@@ -10,7 +11,7 @@ public class OnlineUserServiceTests : IDisposable
 
     public OnlineUserServiceTests()
     {
-        _service = new OnlineUserService();
+        _service = new OnlineUserService(NullLogger<OnlineUserService>.Instance);
     }
 
     public void Dispose() => _service.Dispose();

@@ -1,5 +1,9 @@
 ﻿using Core.Data.Mappers;
 using Core.Data.Models.Cache;
+using Shared.Contracts.Chat;
+using Shared.Contracts.Message;
+using Shared.Contracts.Poll;
+using Shared.Contracts.User;
 using System.Diagnostics;
 using System.Text.Json;
 

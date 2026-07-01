@@ -1,0 +1,48 @@
+﻿using Core.Services.Api.Abstraction;
+using Core.Shared.Configuration;
+using Shared.Contracts.Chat;
+using Shared.Contracts.User;
+
+namespace Core.Features.Chat.ViewModels.Managers;
+
+public class ChatMemberLoader(int chatId, int currentUserId, IApiClientService apiClient)
+{
+    public async Task<ObservableCollection<UserDto>> LoadMembersAsync(ChatDto? chat, CancellationToken ct = default)
+    {
+        var result = await apiClient.GetAsync<List<UserDto>>(ApiEndpoints.Chats.Members(chatId), ct);
+
+        if (result.Success && result.Data is { Count: > 0 })
+            return new ObservableCollection<UserDto>(result.Data);
+
+        if (chat?.Type == ChatType.Contact)
+            return await LoadContactMembersAsync(chat, ct);
+
+        return [];
+    }
+
+    private async Task<ObservableCollection<UserDto>> LoadContactMembersAsync(ChatDto chat, CancellationToken ct)
+    {
+        if (!int.TryParse(chat.Name, out var otherUserId))
+        {
+            return [];
+        }
+
+        var members = new ObservableCollection<UserDto>();
+        var meResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(currentUserId), ct);
+        if (meResult is { Success: true, Data: not null })
+        {
+            members.Add(meResult.Data);
+        }
+
+        if (otherUserId != currentUserId)
+        {
+            var otherResult = await apiClient.GetAsync<UserDto>(ApiEndpoints.Users.ById(otherUserId), ct);
+            if (otherResult is { Success: true, Data: not null })
+            {
+                members.Add(otherResult.Data);
+            }
+        }
+
+        return members;
+    }
+}

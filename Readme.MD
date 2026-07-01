@@ -141,10 +141,10 @@
 │   │   │   ├── 📂 Managers/    #   ChatMessageManager, AttachmentManager
 │   │   │   ├── 📂 Polls/       #   PollViewModel, PollOptionViewModel
 │   │   │   └── 📂 Messages/    #   MessageViewModel, MessageFileViewModel
-│   │   ├── 📂 ChatList/        # ChatsViewModel, GlobalSearchManager
+│   │   ├── 📂 ChatList/        # ChatListViewModel, GlobalSearchManager
 │   │   ├── 📂 Call/            # CallViewModel, IncomingCallViewModel
 │   │   ├── 📂 Dialog/          # Модальные диалоги
-│   │   └── 📂 Factories/       # ChatViewModelFactory, ChatsViewModelFactory
+│   │   └── 📂 Factories/       # ChatViewModelFactory, ChatListViewModelFactory
 │   ├── 📂 Services/
 │   │   ├── 📂 Core/            # ApiClientService, GlobalHubConnection,
 │   │   │                       #   AuthManager, SessionStore, CookieStorage

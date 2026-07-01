@@ -2,9 +2,9 @@
 using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
-using Core.Services.Abstractions;
-using Core.Services.Features.Call;
-using Core.Services.Features.Media.Abstractions;
+using Core.Services.Call.Abstractions;
+using Core.Services.Media.Abstractions;
+using Core.Services.Platform.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Mobile.Android.Services;
 using Mobile.Android.Services.Platform;

@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Core.Features.Chat.Views.MessageParts"
+             xmlns:vm="using:Core.Features.Chat.ViewModels.Messages"
+             x:Class="Core.Features.Chat.Views.MessageParts.SystemMessagePart"
+             x:DataType="vm:MessageViewModel">
+
+    <Border HorizontalAlignment="Center" Margin="0,8">
+        <Border Background="{DynamicResource SecondaryBG}"
+                CornerRadius="14"
+                Padding="14,6,8,6" 
+                BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}">
+           
+           <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+               
+               <WrapPanel IsVisible="{Binding HasStructuredSystemMessage}" VerticalAlignment="Center">
+                   <Button Classes="SystemUserLink"
+                           IsVisible="{Binding CanOpenSenderProfile}"
+                           Command="{Binding $parent[local:SystemMessagePart].OpenProfileCommand}"
+                           CommandParameter="{Binding SenderId}"
+                           VerticalAlignment="Center">
+                       <TextBlock Text="{Binding SystemActorDisplayName}"
+                                  FontSize="12"
+                                  FontStyle="Italic"
+                                  Foreground="{DynamicResource Accent}"
+                                  VerticalAlignment="Center"/>
+                   </Button>
+
+                   <TextBlock Text="{Binding SystemActorDisplayName}"
+                              IsVisible="{Binding !CanOpenSenderProfile}"
+                              FontSize="12"
+                              FontStyle="Italic"
+                              Foreground="{DynamicResource TextSecondary}"
+                              VerticalAlignment="Center"/>
+
+                   <TextBlock Text="{Binding SystemActionPrefixText}"
+                              FontSize="12"
+                              FontStyle="Italic"
+                              Foreground="{DynamicResource TextSecondary}"
+                              VerticalAlignment="Center"
+                              Margin="4,0,0,0"/>
+
+                   <Button Classes="SystemUserLink"
+                           IsVisible="{Binding HasSystemTargetUser}"
+                           Command="{Binding $parent[local:SystemMessagePart].OpenProfileCommand}"
+                           CommandParameter="{Binding SystemTargetUserId}"
+                           Margin="4,0,0,0"
+                           VerticalAlignment="Center">
+                       <TextBlock Text="{Binding SystemTargetDisplayName}"
+                                  FontSize="12"
+                                  FontStyle="Italic"
+                                  Foreground="{DynamicResource Accent}"
+                                  VerticalAlignment="Center"/>
+                   </Button>
+
+                   <TextBlock Text="{Binding SystemActionSuffixText}"
+                              FontSize="12"
+                              FontStyle="Italic"
+                              Foreground="{DynamicResource TextSecondary}"
+                              VerticalAlignment="Center"
+                              Margin="4,0,0,0"/>
+               </WrapPanel>
+
+               <TextBlock Text="{Binding Content}"
+                          IsVisible="{Binding !HasStructuredSystemMessage}"
+                          FontSize="12"
+                          Foreground="{DynamicResource TextSecondary}"
+                          TextWrapping="Wrap"
+                          TextAlignment="Center"
+                          FontStyle="Italic"
+                          VerticalAlignment="Center"/>
+
+               <Border Background="{DynamicResource ThirdBG}"
+                       CornerRadius="10"
+                       Padding="6,2"
+                       Margin="8,0,0,0"
+                       VerticalAlignment="Center">
+                   
+                   <TextBlock Text="{Binding SystemMessageTime}"
+                              FontSize="10"
+                              FontWeight="Medium"
+                              Foreground="{DynamicResource TextMuted}"
+                              VerticalAlignment="Center"/>
+               </Border>
+
+           </WrapPanel>
+        </Border>
+    </Border>
+</UserControl>

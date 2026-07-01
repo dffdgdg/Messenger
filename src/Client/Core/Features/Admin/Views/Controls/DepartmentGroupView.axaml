@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:local="using:Core.Features.Admin.Views.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:user="using:Shared.Contracts.User"
+             xmlns:vm="using:Core.Features.Admin.ViewModels"
+             x:Class="Core.Features.Admin.Views.Controls.DepartmentGroupView"
+             x:DataType="vm:DepartmentGroup">
+
+    <StackPanel Spacing="8">
+        <Border Padding="4,0,4,12" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderDefault}">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Background="{DynamicResource AccentMuted}" Width="32" Height="32" CornerRadius="8">
+                        <PathIcon Data="{StaticResource OrganizationIcon}" Width="14" Height="14" Foreground="{DynamicResource Accent}"/>
+                    </Border>
+                    <TextBlock Text="{Binding DepartmentName}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource ThirdBG}" Padding="8,2" CornerRadius="10" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Users.Count}" FontSize="12" FontWeight="Bold" Opacity="0.7"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Users}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="user:UserDto">
+                    <local:UserCardView
+                        EditCommand="{Binding $parent[local:DepartmentGroupView].EditUserCommand}"
+                        BanCommand="{Binding $parent[local:DepartmentGroupView].BanUserCommand}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

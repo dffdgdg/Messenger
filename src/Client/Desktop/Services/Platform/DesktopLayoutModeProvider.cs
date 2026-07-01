@@ -1,4 +1,5 @@
 ﻿using Core.Infrastructure;
+using Core.Services.Platform.Abstractions;
 using Desktop.Views;
 
 namespace Desktop.Shared.Services.Platform;

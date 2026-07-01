@@ -3,8 +3,10 @@ using API.Application.Mapping;
 using API.Application.Services.Abstractions;
 using API.Application.Services.Base;
 using API.Domain.Common;
+using API.Domain.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shared.Contracts.Message;
@@ -17,6 +19,10 @@ namespace API.Infrastructure.Services.Features.Messaging;
 public partial class FileService(
     IUnitOfWork unitOfWork,
     IAccessControlService accessControl,
+    IMessageRepository messageRepository,
+    IUserRepository userRepository,
+    IChatRepository chatRepository,
+    IPendingUploadStore pendingUploadStore,
     IWebHostEnvironment env,
     IUrlBuilder urlBuilder,
     IOptions<MessengerSettings> settings,
@@ -25,6 +31,7 @@ public partial class FileService(
     private readonly MessengerSettings _settings = settings.Value;
 
     private static readonly HashSet<string> AllowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     public async Task<Result<string>> SaveImageAsync(IFormFile file, string subFolder, string? oldFilePath = null)
     {
@@ -78,6 +85,9 @@ public partial class FileService(
             await file.CopyToAsync(fs);
 
         var resultRelativePath = NormalizeToWebPath(relativePath);
+        var contentType = file.ContentType ?? "application/octet-stream";
+
+        var token = pendingUploadStore.Register(userId, chatId, absolutePath, resultRelativePath, file.FileName, contentType, file.Length);
 
         LogFileSaved(fileName, chatId);
 
@@ -86,11 +96,118 @@ public partial class FileService(
             Id = 0,
             MessageId = 0,
             FileName = file.FileName,
-            ContentType = file.ContentType ?? "application/octet-stream",
-            Url = urlBuilder.BuildUrl(resultRelativePath)!,
-            PreviewType = FileMappings.DeterminePreviewType(file.ContentType),
+            ContentType = contentType,
+            Url = null,
+            UploadToken = token,
+            PreViewType = FileMappings.DeterminePreViewType(contentType),
             FileSize = file.Length
         });
+    }
+
+    public async Task<Result<FileDownloadInfo>> ResolveDownloadAsync(int fileId, int? contextMessageId, int userId, CancellationToken ct = default)
+    {
+        var file = await messageRepository.FindFileForDownloadAsync(fileId, ct);
+        if (file is null || string.IsNullOrEmpty(file.Path))
+            return Result<FileDownloadInfo>.NotFound("Файл не найден");
+
+        if (file.Message.IsDeleted == true)
+            return Result<FileDownloadInfo>.NotFound("Файл не найден");
+
+        if (contextMessageId.HasValue)
+        {
+            var contextMessage = await messageRepository.FindUserMessageByIdAsync(contextMessageId.Value, ct);
+            if (contextMessage is null || contextMessage.IsDeleted == true)
+                return Result<FileDownloadInfo>.NotFound("Сообщение не найдено");
+
+            var ownerMessageId = contextMessage.ForwardedFromMessageId ?? contextMessage.Id;
+
+            if (file.MessageId != ownerMessageId)
+                return Result<FileDownloadInfo>.Forbidden("Нет доступа к файлу");
+
+            var access = await accessControl.EnsureMemberOfAsync(userId, contextMessage.ChatId);
+            if (access.IsFailure) return access.As<FileDownloadInfo>();
+        }
+        else
+        {
+            var legacyAccess = await accessControl.EnsureMemberOfAsync(userId, file.Message.ChatId);
+            if (legacyAccess.IsFailure) return legacyAccess.As<FileDownloadInfo>();
+        }
+
+        var absolutePath = GetAbsolutePath(file.Path.TrimStart('/'));
+
+        if (!IsWithinUploadsRoot(absolutePath) || !File.Exists(absolutePath))
+            return Result<FileDownloadInfo>.NotFound("Файл отсутствует на сервере");
+
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+
+        return Result<FileDownloadInfo>.Success(new FileDownloadInfo(absolutePath, contentType, file.FileName));
+    }
+
+    public async Task<Result<FileDownloadInfo>> ResolveVoiceDownloadAsync(int messageId, int userId, CancellationToken ct = default)
+    {
+        var contextMessage = await messageRepository.FindUserMessageByIdAsync(messageId, ct);
+        if (contextMessage is null || contextMessage.IsDeleted == true)
+            return Result<FileDownloadInfo>.NotFound("Голосовое сообщение не найдено");
+
+        var access = await accessControl.EnsureMemberOfAsync(userId, contextMessage.ChatId);
+        if (access.IsFailure) return access.As<FileDownloadInfo>();
+
+        var ownerMessageId = contextMessage.ForwardedFromMessageId ?? contextMessage.Id;
+
+        var voice = await messageRepository.FindVoiceForDownloadAsync(ownerMessageId, ct);
+        if (voice is null || string.IsNullOrEmpty(voice.FilePath))
+            return Result<FileDownloadInfo>.NotFound("Голосовое сообщение не найдено");
+
+        if (voice.Message.IsDeleted == true)
+            return Result<FileDownloadInfo>.NotFound("Голосовое сообщение не найдено");
+
+        return ResolveStoredFile(voice.FilePath, $"voice_{messageId}");
+    }
+
+    public async Task<Result<FileDownloadInfo>> ResolveUserAvatarDownloadAsync(int targetUserId, int viewerId, CancellationToken ct = default)
+    {
+        var access = await accessControl.EnsureCanViewUserAvatarAsync(viewerId, targetUserId);
+        if (access.IsFailure) return access.As<FileDownloadInfo>();
+
+        var user = await userRepository.FindByIdAsync(targetUserId, ct);
+        if (user is null || string.IsNullOrEmpty(user.Avatar))
+            return Result<FileDownloadInfo>.NotFound("Аватар не найден");
+
+        return ResolveStoredFile(user.Avatar, $"avatar_user_{targetUserId}");
+    }
+
+    public async Task<Result<FileDownloadInfo>> ResolveChatAvatarDownloadAsync(int chatId, int viewerId, CancellationToken ct = default)
+    {
+        var access = await accessControl.EnsureMemberOfAsync(viewerId, chatId);
+        if (access.IsFailure) return access.As<FileDownloadInfo>();
+
+        var chat = await chatRepository.FindByIdAsync(chatId, ct);
+        if (chat is null || string.IsNullOrEmpty(chat.Avatar))
+            return Result<FileDownloadInfo>.NotFound("Аватар не найден");
+
+        return ResolveStoredFile(chat.Avatar, $"avatar_chat_{chatId}");
+    }
+
+    private Result<FileDownloadInfo> ResolveStoredFile(string relativePath, string downloadFileNameWithoutExt)
+    {
+        var absolutePath = GetAbsolutePath(relativePath.TrimStart('/'));
+
+        if (!IsWithinUploadsRoot(absolutePath) || !File.Exists(absolutePath))
+            return Result<FileDownloadInfo>.NotFound("Файл отсутствует на сервере");
+
+        if (!ContentTypeProvider.TryGetContentType(absolutePath, out var contentType))
+            contentType = "application/octet-stream";
+
+        var fileName = $"{downloadFileNameWithoutExt}{Path.GetExtension(absolutePath)}";
+
+        return Result<FileDownloadInfo>.Success(new FileDownloadInfo(absolutePath, contentType, fileName));
+    }
+
+    private bool IsWithinUploadsRoot(string absolutePath)
+    {
+        var uploadsRoot = Path.GetFullPath(GetAbsolutePath("uploads"));
+        var fullPath = Path.GetFullPath(absolutePath);
+        return fullPath.StartsWith(uploadsRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     public void DeleteFile(string? filePath)

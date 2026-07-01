@@ -1,5 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y libkrb5-3 \
@@ -15,7 +14,6 @@ RUN mkdir -p /app/wwwroot/uploads /app/wwwroot/avatars \
     && chown -R appuser:appgroup /app
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-
 WORKDIR /src
 
 COPY ["src/Server/API/API.Web.csproj", "src/Server/API/"]
@@ -23,15 +21,14 @@ COPY ["src/Server/API.Domain/API.Domain.csproj", "src/Server/API.Domain/"]
 COPY ["src/Server/API.Application/API.Application.csproj", "src/Server/API.Application/"]
 COPY ["src/Server/API.Infrastructure/API.Infrastructure.csproj", "src/Server/API.Infrastructure/"]
 COPY ["src/Shared/Shared.csproj", "src/Shared/"]
+COPY ["Directory.Packages.props", "."]
 
 RUN dotnet restore "src/Server/API/API.Web.csproj"
 
 COPY . .
 
-RUN mkdir -p /src/src/Server/API.Infrastructure/Database/SeedData
-
-COPY src/Server/API.Infrastructure/Database/SeedData/*.json \
-     /src/src/Server/API.Infrastructure/Database/SeedData/
+RUN mkdir -p /app/Data/SeedData
+COPY src/Server/API.Infrastructure/Database/SeedData/*.json /app/Data/SeedData/
 
 RUN dotnet publish "src/Server/API/API.Web.csproj" \
     -c Release \
@@ -39,15 +36,10 @@ RUN dotnet publish "src/Server/API/API.Web.csproj" \
     --no-restore
 
 FROM base AS final
-
 WORKDIR /app
 
 COPY --from=build /app/publish .
-
-RUN mkdir -p /app/Data/SeedData
-
-COPY --from=build /src/src/Server/API.Infrastructure/Database/SeedData/*.json \
-     /app/Data/SeedData/
+COPY --from=build /app/Data/SeedData /app/Data/SeedData/
 
 RUN chown -R appuser:appgroup /app
 

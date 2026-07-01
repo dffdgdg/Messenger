@@ -1,4 +1,5 @@
 using API.Application.Common;
+using API.Application.Mapping;
 using API.Application.Services.Abstractions;
 using API.Domain.Common;
 using API.Domain.Repositories;
@@ -48,7 +49,7 @@ public class RemoveChatAvatarCommandHandler(
         Name = chat.Name,
         Type = chat.Type,
         CreatedById = chat.CreatedById ?? 0,
-        Avatar = urlBuilder.BuildUrl(chat.Avatar),
+        Avatar = AvatarUrlHelper.BuildChatAvatarUrl(urlBuilder, chat.Id, chat.Avatar),
         ShowHistoryForNewMembers = chat.ShowHistoryForNewMembers
     };
 }

@@ -10,6 +10,6 @@ public class NotificationDto
     public int? SenderId { get; set; }
     public string? SenderName { get; set; }
     public string? SenderAvatar { get; set; }
-    public string? Preview { get; set; }
+    public string? PreView { get; set; }
     public DateTime CreatedAt { get; set; }
 }

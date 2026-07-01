@@ -25,7 +25,7 @@ public class CachedMessage
     [Column("sender_name")] public string? SenderName { get; set; }
     [Column("sender_avatar_url")] public string? SenderAvatarUrl { get; set; }
     [Column("reply_sender_name")] public string? ReplySenderName { get; set; }
-    [Column("reply_content_preview")] public string? ReplyContentPreview { get; set; }
+    [Column("reply_content_preView")] public string? ReplyContentPreView { get; set; }
     [Column("reply_is_deleted")] public bool ReplyIsDeleted { get; set; }
     [Column("reply_sender_id")] public int? ReplySenderId { get; set; }
     [Column("reply_chat_id")] public int? ReplyChatId { get; set; }

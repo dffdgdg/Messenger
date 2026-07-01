@@ -1,0 +1,129 @@
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Shared.Contracts.Chat;
+using System.Diagnostics;
+
+namespace Core.Features.ChatList.ViewModels.Items;
+
+public partial class ChatListItemViewModel : ObservableObject
+{
+    public ChatListItemViewModel(ChatDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        Id = dto.Id;
+        Name = dto.Name;
+        Type = dto.Type;
+        CreatedById = dto.CreatedById;
+        LastMessageDate = dto.LastMessageDate;
+        Avatar = dto.Avatar;
+        LastMessagePreView = dto.LastMessagePreView;
+        LastMessageSenderName = dto.LastMessageSenderName;
+        UnreadCount = dto.UnreadCount;
+
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers;
+    }
+    partial void OnAvatarChanged(string? value) =>
+        Debug.WriteLine($"[ChatListItem id={Id}] Avatar = '{value}'");
+
+    partial void OnLastMessagePreViewChanged(string? value) =>
+    OnPropertyChanged(nameof(FormattedPreView));
+
+    partial void OnLastMessageSenderNameChanged(string? value) =>
+        OnPropertyChanged(nameof(FormattedPreView));
+
+    partial void OnHideSenderPrefixChanged(bool value) =>
+        OnPropertyChanged(nameof(FormattedPreView));
+    public int Id { get; }
+    public ChatType Type { get; }
+    public int CreatedById { get; }
+    public int? ContactUserId { get; set; }
+
+    public string FormattedPreView
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(LastMessagePreView))
+                return string.Empty;
+
+            if (HideSenderPrefix || string.IsNullOrEmpty(LastMessageSenderName))
+                return LastMessagePreView;
+
+            return $"{LastMessageSenderName}: {LastMessagePreView}";
+        }
+    }
+
+    [ObservableProperty] public partial string? Name { get; set; }
+    [ObservableProperty] public partial DateTime? LastMessageDate { get; set; }
+    [ObservableProperty] public partial string? Avatar { get; set; }
+    [ObservableProperty] public partial string? LastMessagePreView { get; set; }
+    [ObservableProperty] public partial string? LastMessageSenderName { get; set; }
+    [ObservableProperty] public partial int UnreadCount { get; set; }
+    [ObservableProperty] public partial bool HideSenderPrefix { get; set; }
+    [ObservableProperty] public partial bool ContactIsOnline { get; set; }
+    [ObservableProperty] public partial UserStatusType ContactStatusType { get; set; } = UserStatusType.Online;
+    [ObservableProperty] public partial DateTime? ContactStatusExpiresAt { get; set; }
+    [ObservableProperty] public partial bool ShowHistoryForNewMembers { get; set; }
+
+    public bool ShowStatusIndicator => Type == ChatType.Contact;
+
+    public ChatDto ToDto() => new()
+    {
+        Id = Id,
+        Name = Name,
+        Type = Type,
+        CreatedById = CreatedById,
+        LastMessageDate = LastMessageDate,
+        Avatar = Avatar,
+        LastMessagePreView = LastMessagePreView,
+        LastMessageSenderName = LastMessageSenderName,
+        UnreadCount = UnreadCount,
+        HideSenderPrefix = HideSenderPrefix
+    };
+
+    public void Apply(ChatDto dto)
+    {
+        Name = dto.Name;
+        LastMessageDate = dto.LastMessageDate;
+        Avatar = dto.Avatar;
+        LastMessagePreView = dto.LastMessagePreView;
+        LastMessageSenderName = dto.LastMessageSenderName;
+        UnreadCount = dto.UnreadCount;
+        HideSenderPrefix = dto.HideSenderPrefix;
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+        ShowHistoryForNewMembers = dto.ShowHistoryForNewMembers;
+    }
+
+    /// <summary>
+    /// Применяет обновление из ChatUpdated, НЕ трогая Avatar.
+    /// LastMessage* не затираются, если в DTO они пустые.
+    /// </summary>
+    public void ApplyExceptAvatar(ChatDto dto)
+    {
+        Name = dto.Name;
+
+        if (dto.LastMessageDate.HasValue)
+            LastMessageDate = dto.LastMessageDate;
+        if (dto.LastMessagePreView is not null)
+        {
+
+            LastMessagePreView = dto.LastMessagePreView;
+            LastMessageSenderName = dto.LastMessageSenderName;
+            HideSenderPrefix = dto.HideSenderPrefix;
+        }
+
+        if (dto.UnreadCount > 0)
+            UnreadCount = dto.UnreadCount;
+
+        ContactUserId = dto.ContactUserId;
+        ContactIsOnline = dto.ContactIsOnline;
+        ContactStatusType = dto.ContactStatusType;
+        ContactStatusExpiresAt = dto.ContactStatusExpiresAt;
+    }
+}

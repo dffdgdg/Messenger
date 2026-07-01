@@ -1,4 +1,5 @@
 using API.Application.Common;
+using API.Application.Mapping;
 using API.Application.Services.Abstractions;
 using API.Domain.Common;
 using API.Domain.Repositories;
@@ -29,8 +30,7 @@ public class UploadUserAvatarCommandHandler(IUnitOfWork unitOfWork, IUserReposit
 
         return Result<AvatarResponseDto>.Success(new AvatarResponseDto
         {
-            AvatarUrl = urlBuilder.BuildUrl(saveResult.Value)!
+            AvatarUrl = AvatarUrlHelper.BuildUserAvatarUrl(urlBuilder, user.Id, user.Avatar)!
         });
     }
 }
-

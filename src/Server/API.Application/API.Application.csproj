@@ -29,4 +29,22 @@
 	  <ProjectReference Include="..\API.Domain\API.Domain.csproj" />
 		<ProjectReference Include="..\..\Shared\Shared.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Using Include=" API.Domain.Entities;" />
+	  <Using Include=" Shared.Contracts.Call;" />
+	  <Using Include="API.Application.Common;" />
+	  <Using Include="API.Application.Services.Abstractions;" />
+	  <Using Include="API.Domain.Common;" />
+	  <Using Include="API.Domain.Repositories;" />
+	  <Using Include="Shared.Contracts.Chat;" />
+	  <Using Include="Shared.Contracts.Department;" />
+	  <Using Include="Shared.Contracts.Message;" />
+	  <Using Include="Shared.Contracts.Notification;" />
+	  <Using Include="Shared.Contracts.Poll;" />
+	  <Using Include="Shared.Contracts.ReadReceipt;" />
+	  <Using Include="Shared.Contracts.Search;" />
+	  <Using Include="Shared.Contracts.User;" />
+	  <Using Include="Shared.Enum;" />
+	  <Using Include="Shared.Infrastructure;" />
+	</ItemGroup>
 </Project>

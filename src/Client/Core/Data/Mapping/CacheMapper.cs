@@ -54,7 +54,7 @@ public static class CacheMapper
             SenderName = dto.SenderName,
             SenderAvatarUrl = dto.SenderAvatarUrl,
             ReplySenderName = dto.ReplyToMessage?.SenderName,
-            ReplyContentPreview = dto.ReplyToMessage?.Content,
+            ReplyContentPreView = dto.ReplyToMessage?.Content,
             ReplyIsDeleted = dto.ReplyToMessage?.IsDeleted == true,
             ReplySenderId = dto.ReplyToMessage?.SenderId,
             ReplyChatId = dto.ReplyToMessage?.ChatId,
@@ -103,13 +103,13 @@ public static class CacheMapper
 
         if (entity.ReplyToMessageId.HasValue && entity.ReplySenderName != null)
         {
-            dto.ReplyToMessage = new MessageReplyPreviewDto
+            dto.ReplyToMessage = new MessageReplyPreViewDto
             {
                 Id = entity.ReplyToMessageId.Value,
                 SenderId = entity.ReplySenderId ?? 0,
                 ChatId = entity.ReplyChatId ?? 0,
                 SenderName = entity.ReplySenderName,
-                Content = entity.ReplyContentPreview,
+                Content = entity.ReplyContentPreView,
                 IsDeleted = entity.ReplyIsDeleted,
                 IsVoiceMessage = entity.ReplyIsVoice,
                 HasPoll = entity.ReplyHasPoll,
@@ -169,7 +169,7 @@ public static class CacheMapper
         Avatar = dto.Avatar,
         CreatedById = dto.CreatedById,
         LastMessageDateTicks = dto.LastMessageDate?.ToUniversalTime().Ticks,
-        LastMessagePreview = dto.LastMessagePreview,
+        LastMessagePreView = dto.LastMessagePreView,
         LastMessageSenderName = dto.LastMessageSenderName,
         LastMessageSenderId = dto.LastMessageSenderId,
         LastMessageIsSystem = dto.LastMessageIsSystem,
@@ -191,7 +191,7 @@ public static class CacheMapper
         Avatar = entity.Avatar,
         CreatedById = entity.CreatedById,
         LastMessageDate = entity.LastMessageDate,
-        LastMessagePreview = entity.LastMessagePreview,
+        LastMessagePreView = entity.LastMessagePreView,
         LastMessageSenderName = entity.LastMessageSenderName,
         LastMessageSenderId = entity.LastMessageSenderId,
         LastMessageIsSystem = entity.LastMessageIsSystem,

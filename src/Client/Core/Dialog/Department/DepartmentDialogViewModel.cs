@@ -1,0 +1,75 @@
+using Core.Dialog.Shared;
+using Shared.Contracts.Department;
+
+namespace Core.Dialog.Department;
+
+public partial class DepartmentDialogViewModel : DialogBaseViewModel
+{
+    private static readonly DepartmentDto NoParentPlaceholder = new()
+    {
+        Id = -1,
+        Name = "(Нет родительского отдела)"
+    };
+
+    private readonly IReadOnlyList<DepartmentDto> _allDepartments;
+
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<DepartmentDto> AvailableParents { get; set; } = [];
+    [ObservableProperty] public partial DepartmentDto SelectedParent { get; set; } = NoParentPlaceholder;
+    public int? EditId { get; }
+    public bool IsNewDepartment => EditId == null;
+    public int? ParentDepartmentId => SelectedParent.Id > 0 ? SelectedParent.Id : null;
+    public bool CanSave => !string.IsNullOrWhiteSpace(Name);
+
+    public Func<DepartmentDialogViewModel, Task>? SaveAction { get; set; }
+
+    public DepartmentDialogViewModel(List<DepartmentDto> departments, DepartmentDto? department = null)
+    {
+        _allDepartments = departments ?? throw new ArgumentNullException(nameof(departments));
+        EditId = department?.Id;
+
+        Title = department == null ? "Создать отдел" : $"Редактировать: {department.Name}";
+        CanCloseOnBackgroundClick = true;
+
+        if (department != null)
+            Name = department.Name;
+
+        BuildAvailableParents(department);
+    }
+
+    private void BuildAvailableParents(DepartmentDto? current)
+    {
+        var currentDepartmentId = current?.Id;
+
+        var parents = _allDepartments.Where(d => d.Id > 0 && d.Id != currentDepartmentId).OrderBy(d => d.Name).Prepend(NoParentPlaceholder);
+
+        AvailableParents = new ObservableCollection<DepartmentDto>(parents);
+
+        SelectedParent = current?.ParentDepartmentId is int parentId ? AvailableParents.FirstOrDefault(d => d.Id == parentId) ?? NoParentPlaceholder : NoParentPlaceholder;
+    }
+
+    partial void OnNameChanged(string value)
+    {
+        if (CanSave) ErrorMessage = null;
+        SaveCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            ErrorMessage = "Введите название отдела";
+            return;
+        }
+
+        await SafeExecuteAsync(async () =>
+        {
+            if (SaveAction != null)
+                await SaveAction(this);
+
+            SuccessMessage = IsNewDepartment ? "Отдел создан" : "Отдел обновлён";
+            await RequestCloseAsync();
+        });
+    }
+}

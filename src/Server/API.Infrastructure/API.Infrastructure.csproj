@@ -51,5 +51,15 @@
 	  <ProjectReference Include="..\API.Domain\API.Domain.csproj" />
 	  <ProjectReference Include="..\..\Shared\Shared.csproj" />
    </ItemGroup>
+  <ItemGroup>
+    <Using Include="API.Domain.Common;" />
+    <Using Include="API.Domain.Entities;" />
+    <Using Include="API.Domain.Repositories;" />
+    <Using Include="API.Infrastructure.Database;" />
+    <Using Include="API.Infrastructure.Repositories.Base;" />
+    <Using Include="Microsoft.EntityFrameworkCore;" />
+    <Using Include="Shared.Enum;" />
+    <Using Include="Shared.Infrastructure;" />
+  </ItemGroup>
 
 </Project>

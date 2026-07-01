@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
-using Core.Services.Abstractions;
+using Core.Services.Platform.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

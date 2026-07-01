@@ -2,7 +2,7 @@
     x:Class="Mobile.Views.Auth.LoginView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:vm="using:Core.ViewModels"
+    xmlns:vm="using:Core.Features.Auth.ViewModels"
     x:DataType="vm:LoginViewModel">
 
     <UserControl.Styles>

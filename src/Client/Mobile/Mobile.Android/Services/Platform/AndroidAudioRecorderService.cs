@@ -1,5 +1,5 @@
 ﻿using Android.Media;
-using Core.Services.Abstractions;
+using Core.Services.Media.Abstractions;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using IOBinaryWriter = System.IO.BinaryWriter;

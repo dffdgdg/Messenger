@@ -1,4 +1,5 @@
 using API.Application.Common;
+using API.Application.Mapping;
 using API.Application.Services.Abstractions;
 using API.Domain.Common;
 using API.Domain.Repositories;
@@ -42,7 +43,7 @@ public class UploadChatAvatarCommandHandler(IUnitOfWork unitOfWork, IChatReposit
 
         await hubNotifier.SendToChatAsync(command.ChatId, HubMethods.Chat.ChatUpdated, BuildUpdateEvent(chat));
 
-        return Result<string>.Success(urlBuilder.BuildUrl(saveResult.Value)!);
+        return Result<string>.Success(AvatarUrlHelper.BuildChatAvatarUrl(urlBuilder, chat.Id, chat.Avatar)!);
     }
 
     private ChatUpdateEventDto BuildUpdateEvent(Domain.Entities.Chat chat) => new()
@@ -51,8 +52,7 @@ public class UploadChatAvatarCommandHandler(IUnitOfWork unitOfWork, IChatReposit
         Name = chat.Name,
         Type = chat.Type,
         CreatedById = chat.CreatedById ?? 0,
-        Avatar = urlBuilder.BuildUrl(chat.Avatar),
+        Avatar = AvatarUrlHelper.BuildChatAvatarUrl(urlBuilder, chat.Id, chat.Avatar),
         ShowHistoryForNewMembers = chat.ShowHistoryForNewMembers
     };
 }
-

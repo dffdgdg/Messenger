@@ -14,7 +14,7 @@ public static class ChatMappings
         Type = chat.Type,
         CreatedById = chat.CreatedById ?? 0,
         LastMessageDate = chat.LastMessageTime,
-        Avatar = urlBuilder?.BuildUrl(chat.Avatar),
+        Avatar = AvatarUrlHelper.BuildChatAvatarUrl(urlBuilder, chat.Id, chat.Avatar),
         ShowHistoryForNewMembers = chat.ShowHistoryForNewMembers
     };
 
@@ -25,7 +25,7 @@ public static class ChatMappings
         if (chat.Type == ChatType.Contact && dialogPartner != null)
         {
             dto.Name = dialogPartner.GetDisplayName();
-            dto.Avatar = urlBuilder?.BuildUrl(dialogPartner.Avatar);
+            dto.Avatar = AvatarUrlHelper.BuildUserAvatarUrl(urlBuilder, dialogPartner.Id, dialogPartner.Avatar);
             dto.ContactUserId = dialogPartner.Id;
             dto.ContactStatusType = dialogPartner.StatusType;
             dto.ContactStatusExpiresAt = dialogPartner.StatusExpiresAt;

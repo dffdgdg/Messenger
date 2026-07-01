@@ -1,0 +1,49 @@
+<UserControl
+    x:Class="Core.Features.ChatList.Views.Controls.ChatFullItemView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Core.Features.ChatList.Views.Controls"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:items="using:Core.Features.ChatList.ViewModels.Items"
+    xmlns:avatar="using:Core.Shared.Controls"
+    x:DataType="items:ChatListItemViewModel">
+    
+    <UserControl.Resources>
+        <x:Double x:Key="ChatItemHeight">52</x:Double>
+        <x:Double x:Key="FontSizeSmall">11</x:Double>
+        <Thickness x:Key="TimeMargin">0,4,0,0</Thickness>
+        <Thickness x:Key="BadgeMargin">0,4,0,0</Thickness>
+    </UserControl.Resources>
+
+    <Grid Height="{StaticResource ChatItemHeight}" HorizontalAlignment="Stretch" ColumnDefinitions="*,Auto">
+        <controls:ChatItemView Grid.Column="0" HorizontalAlignment="Stretch" />
+
+        <StackPanel
+            Grid.Column="1"
+            MinWidth="40"
+            Margin="{StaticResource TimeMargin}"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top">
+
+            <TextBlock
+                HorizontalAlignment="Right"
+                FontSize="{StaticResource FontSizeSmall}"
+                Foreground="{DynamicResource TextMuted}"
+                Text="{Binding LastMessageDate, Converter={conv:Converter Name=MessageTime}}" />
+
+            <Border
+                Margin="{StaticResource BadgeMargin}"
+                HorizontalAlignment="Right"
+                Classes="UnreadBadge"
+                IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="{StaticResource FontSizeSmall}"
+                    FontWeight="SemiBold"
+                    Foreground="White"
+                    Text="{Binding UnreadCount}" />
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

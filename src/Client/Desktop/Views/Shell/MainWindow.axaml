@@ -2,29 +2,48 @@
     x:Class="Desktop.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:auth="using:Desktop.Views.Auth"
-    xmlns:call="using:Core.ViewModels.Call"
-    xmlns:callView="using:Core.Views.Call"
-    xmlns:chat="using:Core.Views.Chat"
-    xmlns:chatItem="using:Core.ViewModels.Chats"
-    xmlns:chatVm="using:Core.ViewModels.Chat"
-    xmlns:controls="using:Core.Views.Controls"
-    xmlns:conv="using:Core.Converters"
-    xmlns:department="using:Core.Views.Department"
-    xmlns:dialog="using:Core.Views.Dialog"
-    xmlns:dialogs="using:Core.Views.Dialogs"
-    xmlns:search="using:Core.ViewModels.ChatList.Search"
+    xmlns:adminView="using:Core.Features.Admin.Views"
+    xmlns:authView="using:Desktop.Views.Auth"
+    xmlns:callView="using:Core.Features.Call.Views"
+    xmlns:chatItem="using:Core.Features.ChatList.ViewModels.Items"
+    xmlns:chatListView="using:Core.Features.ChatList.Views"
+    xmlns:chatView="using:Core.Features.Chat.Views"
+    xmlns:chatedit="using:Core.Dialog.ChatEdit"
+    xmlns:chatpicker="using:Core.Dialog.ChatPicker"
+    xmlns:confirm="using:Core.Dialog.Confirm"
+    xmlns:controls="using:Core.Features.Admin.Views.Controls"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:department="using:Core.Dialog.Department"
+    xmlns:departmentView="using:Core.Features.Department.Views"
+    xmlns:mainmenuView="using:Core.Features.Shell.MainMenu"
+    xmlns:notification="using:Core.Dialog.Notification"
+    xmlns:poll="using:Core.Dialog.Poll"
+    xmlns:polls="using:Core.Features.Chat.ViewModels.Polls"
+    xmlns:profileView="using:Core.Features.Profile.Views"
+    xmlns:search="using:Core.Features.ChatList.ViewModels.Search"
+    xmlns:searchs="using:Core.Dialog.Search"
+    xmlns:serverurl="using:Core.Dialog.ServerUrl"
+    xmlns:settingsView="using:Core.Features.Settings.Views"
+    xmlns:sharedControls="using:Core.Shared.Controls"
+    xmlns:shell="using:Core.Features.Shell"
     xmlns:sys="using:System"
-    xmlns:views="using:Core.Views"
-    xmlns:vm="using:Core.ViewModels"
-    xmlns:vmChat="using:Core.ViewModels.Chat"
-    xmlns:vmDepartment="using:Core.ViewModels.Department"
-    xmlns:vmDialog="using:Core.ViewModels.Dialog"
+    xmlns:useredit="using:Core.Dialog.UserEdit"
+    xmlns:userpicker="using:Core.Dialog.UserPicker"
+    xmlns:userprofile="using:Core.Dialog.UserProfile"
+    xmlns:vmAdmin="using:Core.Features.Admin.ViewModels"
+    xmlns:vmAuth="using:Core.Features.Auth.ViewModels"
+    xmlns:vmCall="using:Core.Features.Call.ViewModels"
+    xmlns:vmChat="using:Core.Features.Chat.ViewModels"
+    xmlns:vmChatList="using:Core.Features.ChatList.ViewModels"
+    xmlns:vmDepartment="using:Core.Features.Department.ViewModels"
+    xmlns:vmProfile="using:Core.Features.Profile.ViewModels"
+    xmlns:vmSettings="using:Core.Features.Settings.ViewModels"
+
     x:Name="MainWindowRoot"
     Title="ВнутрьСеть"
     MinWidth="380"
     MinHeight="500"
-    x:DataType="vm:MainWindowViewModel"
+    x:DataType="shell:MainWindowViewModel"
     Background="{DynamicResource PrimaryBG}"
     CanResize="True"
     ExtendClientAreaTitleBarHeightHint="-1"
@@ -191,34 +210,34 @@
     <Panel>
 
         <!--  Основной контент  -->
-        <ContentControl
+                <ContentControl
             Margin="{Binding IsMainMenuActive, Converter={conv:Converter Name=BoolToThickness}, ConverterParameter='0,48,0,0|0'}"
             Content="{Binding CurrentViewModel}"
             ZIndex="0">
             <ContentControl.DataTemplates>
-                <DataTemplate DataType="vm:LoginViewModel">
-                    <auth:LoginView />
+                <DataTemplate DataType="vmAuth:LoginViewModel">
+                    <authView:LoginView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:MainMenuViewModel">
-                    <views:MainMenuView />
+                <DataTemplate DataType="mainmenuView:MainMenuViewModel">
+                    <mainmenuView:MainMenuView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:ChatsViewModel">
-                    <views:ChatsView />
+                <DataTemplate DataType="vmChatList:ChatListViewModel">
+                    <chatListView:ChatListView />
                 </DataTemplate>
                 <DataTemplate DataType="vmChat:ChatViewModel">
-                    <chat:ChatView />
+                    <chatView:ChatView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:AdminViewModel">
-                    <views:AdminView />
+                <DataTemplate DataType="vmAdmin:AdminViewModel">
+                    <adminView:AdminView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:ProfileViewModel">
-                    <views:ProfileView />
+                <DataTemplate DataType="vmProfile:ProfileViewModel">
+                    <profileView:ProfileView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:SettingsViewModel">
-                    <views:SettingsView />
+                <DataTemplate DataType="vmSettings:SettingsViewModel">
+                    <settingsView:SettingsView />
                 </DataTemplate>
                 <DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
-                    <department:DepartmentManagementView />
+                    <departmentView:DepartmentManagementView />
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
@@ -285,7 +304,7 @@
                 </Button>
             </StackPanel>
 
-            <controls:SearchBox
+            <sharedControls:SearchBox
                 x:Name="GlobalSearchBox"
                 Grid.Column="1"
                 Width="360"
@@ -294,7 +313,7 @@
                 VerticalAlignment="Bottom"
                 SearchText="{Binding MainMenu.SearchText, Mode=TwoWay}"
                 Watermark="{Binding MainMenu.SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToWatermark}}">
-                <controls:SearchBox.IsVisible>
+                <sharedControls:SearchBox.IsVisible>
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                         <Binding Path="IsMainMenuActive" />
                         <Binding
@@ -302,8 +321,8 @@
                             ElementName="MainWindowRoot"
                             Path="LayoutMode" />
                     </MultiBinding>
-                </controls:SearchBox.IsVisible>
-            </controls:SearchBox>
+                </sharedControls:SearchBox.IsVisible>
+            </sharedControls:SearchBox>
 
             <Grid Grid.Column="2" Margin="0,0,138,0" IsHitTestVisible="False" />
         </Grid>
@@ -390,7 +409,7 @@
             <Panel Grid.Column="3" Background="Transparent" PointerPressed="OnTitleBarPointerPressed" />
         </Grid>
 
-        <controls:NotificationOverlay ZIndex="9000" />
+        <notification:NotificationOverlay ZIndex="9000" />
 
         <!--  Call UI  -->
         <Border
@@ -400,7 +419,7 @@
             ZIndex="1001">
             <ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="call:CallViewModel">
+                    <DataTemplate DataType="vmCall:CallViewModel">
                         <callView:CallView />
                     </DataTemplate>
                 </ContentControl.DataTemplates>
@@ -424,49 +443,49 @@
             Classes="DialogAnimWrapper"
             IsVisible="{Binding IsDialogVisible}"
             ZIndex="10001">
-            <ContentControl Content="{Binding CurrentDialog}">
+                        <ContentControl Content="{Binding CurrentDialog}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="vmDialog:ServerUrlDialogViewModel">
-                        <dialog:ServerUrlDialogView />
+                    <DataTemplate DataType="serverurl:ServerUrlDialogViewModel">
+                        <serverurl:ServerUrlDialogView />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
-                        <dialog:UserProfileDialog />
+                    <DataTemplate DataType="userprofile:UserProfileDialogViewModel">
+                        <userprofile:UserProfileDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:SearchFiltersDialogViewModel">
-                        <dialog:SearchFiltersDialog />
+                    <DataTemplate DataType="searchs:SearchFiltersDialogViewModel">
+                        <searchs:SearchFiltersDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
-                        <views:PollDialog />
+                    <DataTemplate DataType="poll:PollDialogViewModel">
+                        <poll:PollDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
-                        <views:ChatEditDialog />
+                    <DataTemplate DataType="chatedit:ChatEditDialogViewModel">
+                        <chatedit:ChatEditDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
-                        <views:UserEditDialog />
+                    <DataTemplate DataType="useredit:UserEditDialogViewModel">
+                        <useredit:UserEditDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
-                        <views:DepartmentDialog />
+                    <DataTemplate DataType="department:DepartmentDialogViewModel">
+                        <controls:DepartmentDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
-                        <dialogs:ConfirmDialog />
+                    <DataTemplate DataType="confirm:ConfirmDialogViewModel">
+                        <confirm:ConfirmDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentHeadDialogViewModel">
-                        <views:DepartmentHeadDialog />
+                    <DataTemplate DataType="department:DepartmentHeadDialogViewModel">
+                        <department:DepartmentHeadDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserPickerDialogViewModel">
-                        <dialog:UserPickerDialog />
+                    <DataTemplate DataType="userpicker:UserPickerDialogViewModel">
+                        <userpicker:UserPickerDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserListDialogViewModel">
-                        <dialog:UserListDialog />
+                    <DataTemplate DataType="userpicker:UserListDialogViewModel">
+                        <userpicker:UserListDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatPickerDialogViewModel">
-                        <dialog:ChatPickerDialog />
+                    <DataTemplate DataType="chatpicker:ChatPickerDialogViewModel">
+                        <chatpicker:ChatPickerDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="call:IncomingCallViewModel">
+                    <DataTemplate DataType="vmCall:IncomingCallViewModel">
                         <callView:IncomingCallDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmChat:PollResultsDialogViewModel">
-                        <dialog:PollResultsDialog />
+                    <DataTemplate DataType="polls:PollResultsDialogViewModel">
+                        <poll:PollResultsDialog />
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>
@@ -626,7 +645,7 @@
                     <Border
                         DockPanel.Dock="Top"
                         Padding="10,10,10,0">
-                        <controls:SearchBox
+                        <sharedControls:SearchBox
                             x:Name="CompactSearchBox"
                             HorizontalAlignment="Stretch"
                             SearchText="{Binding MainMenu.SearchText, Mode=TwoWay}"
@@ -645,7 +664,7 @@
                                 <ToggleButton
                                     Classes="SwitchSmall"
                                     Command="{Binding MainMenu.SetSearchScopeCommand}"
-                                    CommandParameter="{x:Static chatVm:SearchScopeMode.All}"
+                                    CommandParameter="{x:Static search:SearchScopeMode.All}"
                                     IsChecked="{Binding MainMenu.SearchManager.IsAllScope}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <PathIcon Width="11" Height="11" Data="{StaticResource SearchIcon}" />
@@ -655,7 +674,7 @@
                                 <ToggleButton
                                     Classes="SwitchSmall"
                                     Command="{Binding MainMenu.SetSearchScopeCommand}"
-                                    CommandParameter="{x:Static chatVm:SearchScopeMode.Chats}"
+                                    CommandParameter="{x:Static search:SearchScopeMode.Chats}"
                                     IsChecked="{Binding MainMenu.SearchManager.IsChatsScope}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <PathIcon Width="11" Height="11" Data="{StaticResource ChatsIcon}" />
@@ -665,7 +684,7 @@
                                 <ToggleButton
                                     Classes="SwitchSmall"
                                     Command="{Binding MainMenu.SetSearchScopeCommand}"
-                                    CommandParameter="{x:Static chatVm:SearchScopeMode.Contacts}"
+                                    CommandParameter="{x:Static search:SearchScopeMode.Contacts}"
                                     IsChecked="{Binding MainMenu.SearchManager.IsContactsScope}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <PathIcon Width="11" Height="11" Data="{StaticResource ContactsIcon}" />
@@ -736,10 +755,10 @@
                                         <DataTemplate x:DataType="chatItem:ChatListItemViewModel">
                                             <Button
                                                 Classes="SearchResultItem"
-                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).MainMenu.OpenSearchedChatCommand}"
+                                                Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).MainMenu.OpenSearchedChatCommand}"
                                                 CommandParameter="{Binding}">
                                                 <Grid Margin="2" ColumnDefinitions="Auto,*">
-                                                    <controls:AvatarControl
+                                                    <sharedControls:AvatarControl
                                                         Grid.Column="0"
                                                         VerticalAlignment="Center"
                                                         Classes="Small"
@@ -761,9 +780,9 @@
                                                         <TextBlock
                                                             FontSize="12"
                                                             Foreground="{DynamicResource TextMuted}"
-                                                            IsVisible="{Binding LastMessagePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                            IsVisible="{Binding LastMessagePreView, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                                             MaxLines="1"
-                                                            Text="{Binding LastMessagePreview}"
+                                                            Text="{Binding LastMessagePreView}"
                                                             TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                 </Grid>
@@ -799,10 +818,10 @@
                                         <DataTemplate x:DataType="search:SearchMessageResultViewModel">
                                             <Button
                                                 Classes="SearchResultItem"
-                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).MainMenu.OpenSearchResultCommand}"
+                                                Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).MainMenu.OpenSearchResultCommand}"
                                                 CommandParameter="{Binding Source}">
                                                 <Grid Margin="2" ColumnDefinitions="Auto,*,Auto">
-                                                    <controls:AvatarControl
+                                                    <sharedControls:AvatarControl
                                                         Grid.Column="0"
                                                         VerticalAlignment="Center"
                                                         Classes="Small"
@@ -838,9 +857,9 @@
                                                         <TextBlock
                                                             FontSize="12"
                                                             Foreground="{DynamicResource TextSecondary}"
-                                                            IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                            IsVisible="{Binding PreView, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                                             MaxLines="2"
-                                                            Text="{Binding Preview}"
+                                                            Text="{Binding PreView}"
                                                             TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                     <TextBlock

@@ -1,4 +1,4 @@
-﻿using Core.Services.Features.Media.Abstractions;
+﻿using Core.Services.Media.Abstractions;
 using System.Diagnostics;
 
 namespace Desktop.Shared.Services.Platform;

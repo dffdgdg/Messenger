@@ -57,7 +57,7 @@ public interface ILocalCacheService
     Task<CachedMessagesResult?> GetMessagesAroundAsync(int chatId, int messageId, int count);
     Task<List<ChatDto>> GetChatsAsync(bool isGroupMode);
     Task UpsertChatsAsync(IEnumerable<ChatDto> chats);
-    Task UpdateChatLastMessageAsync(int chatId, string? preview, string? senderName, DateTime date);
+    Task UpdateChatLastMessageAsync(int chatId, string? preView, string? senderName, DateTime date);
     Task<ChatSyncState?> GetSyncStateAsync(int chatId);
     Task UpdateSyncStateAsync(ChatSyncState state);
     Task UpdateReadPointerAsync(int chatId, int? lastReadMessageId, int unreadCount);

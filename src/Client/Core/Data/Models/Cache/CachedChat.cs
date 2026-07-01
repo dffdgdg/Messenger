@@ -12,7 +12,7 @@ public class CachedChat
     [Column("avatar")] public string? Avatar { get; set; }
     [Column("created_by_id")] public int CreatedById { get; set; }
     [Column("last_message_date")] public long? LastMessageDateTicks { get; set; }
-    [Column("last_message_preview")] public string? LastMessagePreview { get; set; }
+    [Column("last_message_preView")] public string? LastMessagePreView { get; set; }
     [Column("last_message_sender_name")] public string? LastMessageSenderName { get; set; }
     [Column("last_message_sender_id")] public int? LastMessageSenderId { get; set; }
     [Column("last_message_is_system")] public bool LastMessageIsSystem { get; set; }

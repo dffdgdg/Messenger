@@ -41,6 +41,21 @@ public sealed partial class AccessControlService(MessengerDbContext context,ICac
     public void InvalidateSystemAdminCache()
         => _cachedIsSystemAdmin = null;
 
+    public async Task<bool> CanViewUserAvatarAsync(int viewerId, int targetUserId)
+    {
+        if (viewerId == targetUserId) return true;
+        if (IsSystemAdmin()) return true;
+
+        var viewerChatIds = await GetUserChatIdsAsync(viewerId);
+        if (viewerChatIds.Count == 0) return false;
+
+        var targetChatIds = await GetUserChatIdsAsync(targetUserId);
+        if (targetChatIds.Count == 0) return false;
+
+        var targetSet = new HashSet<int>(targetChatIds);
+        return viewerChatIds.Any(targetSet.Contains);
+    }
+
     private async Task<ChatMember?> GetMembershipAsync(int userId, int chatId)
     {
         var member = await cache.GetMembershipAsync(userId, chatId, ()

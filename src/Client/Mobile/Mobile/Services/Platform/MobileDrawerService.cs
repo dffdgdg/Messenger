@@ -1,4 +1,4 @@
-﻿using Core.Services.Abstractions;
+﻿using Core.Services.Platform.Abstractions;
 
 namespace Mobile.Services.Platform;
 

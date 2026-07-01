@@ -517,7 +517,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 
 | DTO | Ключевые поля |
 |---|---|
-| `ChatDto` | `Id`, `Name`, `Type`, `CreatedById`, `LastMessageDate`, `Avatar`, `LastMessagePreview`, `LastMessageSenderName`, `UnreadCount`, `LastMessageSenderId`, `LastMessageIsSystem`, `LastMessageIsPoll`, `LastMessageIsVoice`, `LastMessageHasFilesOnly`, `CurrentUserRole` (JsonIgnore WhenWritingNull), `HideSenderPrefix` (JsonIgnore), `ShowHistoryForNewMembers`, `ContactUserId`, `ContactIsOnline`, `ContactStatusType`, `ContactStatusExpiresAt` |
+| `ChatDto` | `Id`, `Name`, `Type`, `CreatedById`, `LastMessageDate`, `Avatar`, `LastMessagePreView`, `LastMessageSenderName`, `UnreadCount`, `LastMessageSenderId`, `LastMessageIsSystem`, `LastMessageIsPoll`, `LastMessageIsVoice`, `LastMessageHasFilesOnly`, `CurrentUserRole` (JsonIgnore WhenWritingNull), `HideSenderPrefix` (JsonIgnore), `ShowHistoryForNewMembers`, `ContactUserId`, `ContactIsOnline`, `ContactStatusType`, `ContactStatusExpiresAt` |
 | `ChatMemberDto` | `ChatId`, `UserId`, `Role`, `JoinedAt`, `NotificationsEnabled`, `Username`, `DisplayName`, `Avatar` |
 | `ChatUpdateEventDto` | `Id`, `Name`, `Type`, `CreatedById`, `Avatar`, `ShowHistoryForNewMembers`, `CurrentUserRole` (JsonIgnore WhenWritingNull, заполняется персонально при смене роли) |
 | `UpdateChatDto` | `Id`, `Name?`, `ChatType?`, `ShowHistoryForNewMembers?` |
@@ -531,8 +531,8 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|
 | `CreateMessageRequest` | `ChatId` [Required], `Content` [MaxLength 4000], `ReplyToMessageId?`, `ForwardedFromMessageId?`, `IsVoiceMessage`, `VoiceFileUrl`, `VoiceFileName`, `VoiceContentType`, `VoiceFileSize`, `VoiceDurationSeconds`, `VoiceWaveform`, `Files?` |
 | `MessageDto` | Полное представление (33 поля). `IsOwn`, `IsPrevSameSender`, `IsEdited`, `IsDeleted`, `IsPinned`, `IsSystemMessage`, `IsVoiceMessage`. Поля `EditedAt`, `PinnedAt`, `PinnedByUserId`, `ReplyToMessageId`, `ReplyToMessage`, `ForwardedFromMessageId`, `ForwardedFrom`, `SystemEventType`, `TargetUserId`, `TargetUserName`, `VoiceDurationSeconds`, `VoiceWaveform`, `VoiceFileUrl`, `VoiceFileSize`, `Poll`, `Files` — с `JsonIgnore(WhenWritingNull)`. |
-| `MessageFileDto` | `Id`, `MessageId`, `FileName`, `ContentType`, `Url`, `PreviewType` (file/image/video/audio), `FileSize` |
-| `MessageReplyPreviewDto` | `Id`, `ChatId`, `SenderId?`, `SenderName?`, `Content?`, `CreatedAt`, `IsDeleted`, `IsVoiceMessage`, `HasPoll`, `FilesCount` |
+| `MessageFileDto` | `Id`, `MessageId`, `FileName`, `ContentType`, `Url`, `PreViewType` (file/image/video/audio), `FileSize` |
+| `MessageReplyPreViewDto` | `Id`, `ChatId`, `SenderId?`, `SenderName?`, `Content?`, `CreatedAt`, `IsDeleted`, `IsVoiceMessage`, `HasPoll`, `FilesCount` |
 | `MessageForwardInfoDto` | `OriginalMessageId`, `OriginalChatId`, `OriginalSenderId?`, `OriginalSenderName?`, `OriginalCreatedAt` |
 | `PagedMessagesDto` | `Messages`, `HasMoreMessages`, `HasNewerMessages` |
 | `UpdateMessageDto` | `Id`, `Content?` |
@@ -547,7 +547,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 - `UpdateDepartmentMemberDto` — `UserId`
 
 ### Notification (`Shared/Dto/Notification/`)
-- `NotificationDto` — `Type` (message/mention/poll), `ChatId`, `ChatName`, `Avatar`, `MessageId`, `SenderId`, `SenderName`, `SenderAvatar`, `Preview` (до 100 символов), `CreatedAt`
+- `NotificationDto` — `Type` (message/mention/poll), `ChatId`, `ChatName`, `Avatar`, `MessageId`, `SenderId`, `SenderName`, `SenderAvatar`, `PreView` (до 100 символов), `CreatedAt`
 
 ### Online (`Shared/Dto/Online/`)
 - `UserStatusDto` — record: `UserId`, `IsOnline`, `LastOnline`, `StatusType`, `StatusExpiresAt`
@@ -872,7 +872,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 | Файл | Ключевые методы |
 |---|---|
 | `ChatMappings.cs` | `.ToDto(IUrlBuilder?)`, `.ToDto(User? contact, IUrlBuilder?)` |
-| `FileMappings.cs` | `.ToDto()`, `DeterminePreviewType(contentType)` → file/image/video/audio |
+| `FileMappings.cs` | `.ToDto()`, `DeterminePreViewType(contentType)` → file/image/video/audio |
 | `MessageMappings.cs` | `.ToDto(currentUserId, urlBuilder)` — рекурсивный обход цепочки пересылки, заполняет `OriginalSenderId` |
 | `PollMappings.cs` | `Poll.ToDto(currentUserId?)` (SelectedOptionIds, CanVote), `PollOption.ToDto(isAnonymous)` |
 | `UserMappings.cs` | `.ToDto(urlBuilder, isOnline?)` — включает `StatusType` и `StatusExpiresAt` |
@@ -1026,9 +1026,9 @@ Key-Value: `Key: string (PK)`, `Value: string`
 ### Chat (`API/Services/Chat/`)
 | Сервис | Строк | Ключевое поведение |
 |---|---|---|
-| `ChatService` | ~486 | Принимает `ChatBundle`, `MediaBundle`, `PresenceBundle`, `UrlBundle`, `IHubContext<MessengerHub>`. `GetUserChatsAsync` — загрузка с `ChatWithLastMessage`, `BuildLastMessagePreview` (опросы/голосовые/файлы). `CreateChatAsync` — транзакция, валидация Contact через `FindContactChatAsync`, авто-добавление в SignalR группы. `UpdateChatAsync` — проверка Owner для смены типа. `DeleteChatAsync` — удаление голосовых файлов, инвалидация кэша. `UploadChatAvatarAsync` / `RemoveChatAvatarAsync` |
+| `ChatService` | ~486 | Принимает `ChatBundle`, `MediaBundle`, `PresenceBundle`, `UrlBundle`, `IHubContext<MessengerHub>`. `GetUserChatsAsync` — загрузка с `ChatWithLastMessage`, `BuildLastMessagePreView` (опросы/голосовые/файлы). `CreateChatAsync` — транзакция, валидация Contact через `FindContactChatAsync`, авто-добавление в SignalR группы. `UpdateChatAsync` — проверка Owner для смены типа. `DeleteChatAsync` — удаление голосовых файлов, инвалидация кэша. `UploadChatAvatarAsync` / `RemoveChatAvatarAsync` |
 | `ChatMemberService` | ~136 | Принимает `ChatBundle`, `IOnlineUserService`, `IHubContext<MessengerHub>`. `AddMemberAsync` — отправка `ChatUpdated` с `CurrentUserRole` новому участнику. `RemoveMemberAsync` — запрет удаления Owner, отправка `ChatRemoved`. `UpdateRoleAsync` — персональная отправка `ChatUpdated` с новой ролью. `LeaveAsync` |
-| `NotificationService` | ~108 | Принимает `IHubNotifier`, `IUrlBuilder`. `GetChatNotificationSettingsAsync`, `SetChatMuteAsync`, `GetAllChatSettingsAsync`. Для Contact-чата: `ChatName` = имя отправителя, `ChatAvatar` = аватар отправителя. Preview ≤100 символов |
+| `NotificationService` | ~108 | Принимает `IHubNotifier`, `IUrlBuilder`. `GetChatNotificationSettingsAsync`, `SetChatMuteAsync`, `GetAllChatSettingsAsync`. Для Contact-чата: `ChatName` = имя отправителя, `ChatAvatar` = аватар отправителя. PreView ≤100 символов |
 | `SystemMessageService` | ~43 | Принимает `IHubNotifier`, `IUrlBuilder`, `AppDateTime`. Создаёт `SystemMessage`, игнорирует Contact-чаты. `CreateCallEndedMessageAsync` форматирует длительность |
 | `SystemMessageFormatter` | ~12 | Статический форматтер, делегирует `SystemEventMeta.Format` |
 
@@ -1204,7 +1204,7 @@ Key-Value: `Key: string (PK)`, `Value: string`
 |---|---|
 | `AvatarHelper` | `GetSafeUri`, `GetUriWithCacheBuster`, `WithFreshCacheBuster` |
 | `MimeTypeHelper` | `GetMimeType(extension)` |
-| `ChatPreviewFormatter` | `BuildPreview`, `BuildReplyPreview`, `Pluralize` (публичный), делегирует системные сообщения `SystemEventMeta` |
+| `ChatPreViewFormatter` | `BuildPreView`, `BuildReplyPreView`, `Pluralize` (публичный), делегирует системные сообщения `SystemEventMeta` |
 | `HttpResponseHelper` | `TryExtractErrorMessage` |
 | `PasswordHelper` | `CalculateStrength(0–4)`, `ToStrengthLabel` |
 | `RangeObservableCollection<T>` | `AddRange`, `InsertRange`, `RemoveRange` |
@@ -1397,11 +1397,11 @@ WebRTC установка соединения:
 | `MediaServices` | `IAudioPlayerService` + `IAudioRecorderService` + `IFileDownloadService` + `IFileDownloadStateService` |
 | `ChatViewModelDependencies` | Полный набор зависимостей для `ChatViewModel` |
 | `ChatViewModelFactory` | Фабрика: `ChatViewModel(chatId, targetMessageId?)` |
-| `ChatsViewModelFactory` | Фабрика `ChatsViewModel` |
+| `ChatListViewModelFactory` | Фабрика `ChatListViewModel` |
 
 ---
 
-# 18. DESKTOP — VIEW MODELS
+# 18. DESKTOP — View MODELS
 
 ## Базовые классы (`Desktop/ViewModels/Shared/`)
 
@@ -1480,7 +1480,7 @@ Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, F
 - Загрузка при инициализации (`LoadInitialAsync`)
 - Обновление при изменении состояния пина
 - `PinnedBannerMessage` — отображаемое в банере сообщение
-- `PinnedBannerPreviewText` — формат "Имя: превью"
+- `PinnedBannerPreViewText` — формат "Имя: превью"
 - `PinnedMessages` — коллекция для отображения в секции
 
 ### ChatCallHandler (`Features/Call/ChatCallHandler.cs`)
@@ -1535,7 +1535,7 @@ Mutable-контейнер команд (Edit, Copy, Delete, TogglePin, Reply, F
 
 ## ChatList (`Desktop/ViewModels/ChatList/`)
 
-### ChatsViewModel (`Core/ChatsViewModel.cs`)
+### ChatListViewModel (`Core/ChatListViewModel.cs`)
 - `IsChatMatchingCurrentTab`: `type is not ChatType.Contact` для групп
 - `UpdateChatMeta` — обновляет только метаданные чата
 - Отложенная прокрутка: `_pendingScrollToMessageId` — если чат уже открыт, вызывает `ScrollToMessageAsync` немедленно; иначе передаёт id в конструктор `ChatViewModel`
@@ -1677,7 +1677,7 @@ MainMenuViewModel.InitializeAsync()
 ```
 ChatService → BuildUpdateEvent(chatEntity) → ChatUpdateEventDto
   → HubNotifier.SendToChatAsync("ChatUpdated", dto)
-  → GlobalHubConnection → ChatsViewModel.UpdateChatMeta()
+  → GlobalHubConnection → ChatListViewModel.UpdateChatMeta()
                         → ChatViewModel.OnChatUpdated()
 ```
 
@@ -1686,7 +1686,7 @@ ChatService → BuildUpdateEvent(chatEntity) → ChatUpdateEventDto
 ChatMemberService.RemoveMemberAsync()
   → HubNotifier.SendToUserAsync(userId, "ChatRemoved", chatId)
   → GlobalHubConnection.ChatRemoved
-  → ChatsViewModel удаляет чат из списка, сбрасывает SelectedChat
+  → ChatListViewModel удаляет чат из списка, сбрасывает SelectedChat
 ```
 
 ## Смена роли участника
@@ -1700,7 +1700,7 @@ ChatMemberService.UpdateRoleAsync(chatId, userId, newRole, updatedByUserId)
 
 ---
 
-# 20. DESKTOP — VIEWS
+# 20. DESKTOP — ViewS
 
 ## 20.1 Ресурсы и стили
 - `App.axaml`: подключает `Icons.axaml`, `Animations.axaml`, `MainStyle.axaml`, `MessageStyles.axaml`
@@ -1718,7 +1718,7 @@ ChatMemberService.UpdateRoleAsync(chatId, userId, newRole, updatedByUserId)
 - Центрирование при программном скролле к сообщению: `ScrollIntoView` → отложенный `TransformToVisual` → `ScrollViewer.Offset`. До трёх повторных попыток если контейнер не готов. При флаге `highlight` — `IsHighlighted` на `AppConstants.HighlightDurationMs` мс
 - `ShouldDeferScrollRequest(isExplicitMessageNavigation)`: явная навигация (включая `HasInitialMessageTarget`) не блокируется; обычная инициализация откладывается до восстановления состояния скролла
 - Баннеры и кнопки звонков используют свойства `Call.HasActiveCall`, `Call.IsInActiveCall`, `Call.ActiveCallBannerText`
-- Баннер закреплённых сообщений использует `Pinned.IsPinnedBannerVisible`, `Pinned.PinnedBannerPreviewText`, `Pinned.HasMultiplePinned`, `Pinned.PinnedCount`
+- Баннер закреплённых сообщений использует `Pinned.IsPinnedBannerVisible`, `Pinned.PinnedBannerPreViewText`, `Pinned.HasMultiplePinned`, `Pinned.PinnedCount`
 
 ## 20.4 Информационная панель чата (`Views/Chat/ChatInfoPanel.axaml.cs`)
 - Кнопки редактирования/удаления/выхода управляются `CanEditGroupChat`/`CanLeaveChat`

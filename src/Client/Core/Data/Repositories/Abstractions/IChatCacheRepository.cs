@@ -10,7 +10,7 @@ public interface IChatCacheRepository
     Task UpsertBatchAsync(IReadOnlyList<CachedChat> chats);
     Task<List<CachedChat>> GetByTypeAsync(int[] chatTypes);
     Task<CachedChat?> GetByIdAsync(int chatId);
-    Task UpdateLastMessageAsync(int chatId, string? preview, string? senderName, long dateTicks);
+    Task UpdateLastMessageAsync(int chatId, string? preView, string? senderName, long dateTicks);
     Task DeleteAsync(int chatId);
     Task<int> GetCountAsync();
 }

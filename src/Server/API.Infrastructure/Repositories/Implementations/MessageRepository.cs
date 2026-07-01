@@ -53,7 +53,11 @@ public sealed class MessageRepository(MessengerDbContext context)
 
     public Task<SystemMessage?> FindSystemMessageWithIncludesAsync(int messageId, CancellationToken ct = default)
         => _context.SystemMessages.Include(m => m.Initiator).Include(m => m.TargetUser).AsNoTracking().FirstOrDefaultAsync(m => m.Id == messageId, ct);
-
+    
+    public Task<MessageFile?> FindFileForDownloadAsync(int fileId, CancellationToken ct = default)
+        => _context.Set<MessageFile>().Include(f => f.Message).AsNoTracking().FirstOrDefaultAsync(f => f.Id == fileId, ct);
+    public Task<VoiceMessage?> FindVoiceForDownloadAsync(int messageId, CancellationToken ct = default)
+        => _context.VoiceMessages.Include(v => v.Message).AsNoTracking().FirstOrDefaultAsync(v => v.MessageId == messageId, ct);
     // ─── Навигация по истории ────────────────────────────────────────────────
 
     public async Task<(List<Message> Messages, bool HasOlder)> GetLatestAsync(int chatId, int take, DateTime? cutoff = null, CancellationToken ct = default)

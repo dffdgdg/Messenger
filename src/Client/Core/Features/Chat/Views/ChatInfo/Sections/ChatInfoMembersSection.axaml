@@ -1,0 +1,47 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatInfo.Sections.ChatInfoMembersSection"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Core.Shared.Controls"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:user="using:Shared.Contracts.User"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    x:DataType="vm:ChatViewModel">
+    <StackPanel Spacing="8">
+        <controls:SearchBox Margin="0,0,0,8" SearchText="{Binding InfoPanel.MemberSearchQuery, Mode=TwoWay}" Watermark="Поиск участников..." />
+        <ItemsControl
+            ItemsSource="{Binding InfoPanel.FilteredMembers}"
+            Tag="{Binding OpenProfileCommand}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="user:UserDto">
+                    <Button Classes="MemberRow" Command="{Binding $parent[ItemsControl].Tag}" CommandParameter="{Binding Id}">
+                        <Grid Margin="0,2" ColumnDefinitions="Auto,*">
+                            <controls:AvatarControl Classes="Medium" DisplayName="{Binding DisplayName}" IsOnline="{Binding IsOnline}" Source="{Binding Avatar}" StatusType="{Binding StatusType}" />
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock FontSize="14" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding Username, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="{Binding Username, StringFormat='@{0}'}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="·" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="{Binding Department}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}" IsVisible="{Binding !IsOnline}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
+                                            <Binding Path="IsOnline" />
+                                            <Binding Path="LastOnline" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Classes="EmptyState" IsVisible="{Binding !InfoPanel.FilteredMembers.Count}">
+            <PathIcon Width="28" Height="28" HorizontalAlignment="Center" Data="{StaticResource SearchIcon}" Foreground="{DynamicResource TextMuted}" Opacity="0.4" />
+            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding InfoPanel.MemberSearchQuery, Converter={x:Static StringConverters.IsNullOrEmpty}}" Text="Нет участников" />
+            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding InfoPanel.MemberSearchQuery, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="Никого не найдено" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

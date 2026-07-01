@@ -1,12 +1,17 @@
-﻿using Avalonia.Input;
+﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Transformation;
 using Avalonia.Reactive;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Core.Features.ChatList.ViewModels.Search;
+using Core.Features.Shell;
+using Core.Features.Shell.MainMenu;
 using Core.Infrastructure;
-using Core.ViewModels;
-using Core.ViewModels.Chat;
-using Core.Views;
+using Core.Services.Platform.Abstractions;
+using Core.Shared.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 
@@ -105,8 +110,7 @@ public partial class MainWindow : Window
         base.OnAttachedToVisualTree(e);
         AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel);
 
-        this.GetObservable(LayoutModeProperty)
-            .Subscribe(new AnonymousObserver<LayoutMode>(mode =>
+        this.GetObservable(LayoutModeProperty).Subscribe(new AnonymousObserver<LayoutMode>(mode =>
             {
                 PushLayoutModeToMainMenu();
 

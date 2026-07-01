@@ -1,8 +1,8 @@
 <Application
     x:Class="Mobile.App"
     xmlns="https://github.com/avaloniaui"
+    xmlns:conv="using:Core.Shared.Converters"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:converters="using:Core.Converters"
     xmlns:local="using:Mobile"
     RequestedThemeVariant="Default">
 
@@ -19,7 +19,7 @@
 
     <Application.Resources>
         <ResourceDictionary>
-            <converters:ConverterLocator x:Key="Converters" />
+            <conv:ConverterLocator x:Key="Converters" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Core/Assets/Icons.axaml" />
             </ResourceDictionary.MergedDictionaries>

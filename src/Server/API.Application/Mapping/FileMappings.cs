@@ -6,17 +6,26 @@ namespace API.Application.Mapping;
 
 public static class FileMappings
 {
-    public static MessageFileDto ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null) => new()
+    public static MessageFileDto ToDto(this MessageFile file, IUrlBuilder? urlBuilder = null, int? viewerMessageId = null) => new()
     {
         Id = file.Id,
         MessageId = file.MessageId,
         FileName = file.FileName,
         ContentType = file.ContentType,
-        Url = urlBuilder?.BuildUrl(file.Path),
-        PreviewType = DeterminePreviewType(file.ContentType),
+        Url = BuildDownloadUrl(file, urlBuilder, viewerMessageId),
+        PreViewType = DeterminePreViewType(file.ContentType),
         FileSize = GetFileSize(file.Path)
     };
 
+    private static string? BuildDownloadUrl(MessageFile file, IUrlBuilder? urlBuilder, int? viewerMessageId)
+    {
+        var path = $"api/files/{file.Id}/download";
+
+        if (viewerMessageId.HasValue)
+            path += $"?contextMessageId={viewerMessageId.Value}";
+
+        return urlBuilder?.BuildUrl(path);
+    }
     private static long GetFileSize(string? relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
@@ -32,7 +41,7 @@ public static class FileMappings
         return candidatePaths.Where(File.Exists).Select(p => new FileInfo(p).Length).FirstOrDefault();
     }
 
-    public static string DeterminePreviewType(string? contentType)
+    public static string DeterminePreViewType(string? contentType)
     {
         if (string.IsNullOrEmpty(contentType))
             return "file";

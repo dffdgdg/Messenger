@@ -38,8 +38,8 @@ public class ChatCacheRepository(LocalDatabase localDb) : IChatCacheRepository
 
     public async Task<CachedChat?> GetByIdAsync(int chatId) => await Db.FindAsync<CachedChat>(chatId);
 
-    public async Task UpdateLastMessageAsync(int chatId, string? preview, string? senderName, long dateTicks)
-        => await Db.ExecuteAsync("UPDATE chats SET last_message_preview = ?, last_message_sender_name = ?, last_message_date = ? WHERE id = ?", preview, senderName, dateTicks, chatId);
+    public async Task UpdateLastMessageAsync(int chatId, string? preView, string? senderName, long dateTicks)
+        => await Db.ExecuteAsync("UPDATE chats SET last_message_preView = ?, last_message_sender_name = ?, last_message_date = ? WHERE id = ?", preView, senderName, dateTicks, chatId);
 
     public async Task DeleteAsync(int chatId) => await Db.ExecuteAsync("DELETE FROM chats WHERE id = ?", chatId);
 

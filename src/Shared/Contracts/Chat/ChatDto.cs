@@ -10,7 +10,7 @@ public class ChatDto
     public int CreatedById { get; set; }
     public DateTime? LastMessageDate { get; set; }
     public string? Avatar { get; set; } = string.Empty;
-    public string? LastMessagePreview { get; set; }
+    public string? LastMessagePreView { get; set; }
     public string? LastMessageSenderName { get; set; }
     public int UnreadCount { get; set; }
 

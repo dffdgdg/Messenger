@@ -42,9 +42,9 @@ public class PinMessageCommandHandler(
         var dto = updated.ToDto(command.UserId, urlBuilder);
         await hubNotifier.SendToChatAsync(updated.ChatId, HubMethods.Chat.MessageUpdated, dto);
 
-        var preview = updated.Content?.Length > 50 ? updated.Content[..50] + "..." : updated.Content;
+        var preView = updated.Content?.Length > 50 ? updated.Content[..50] + "..." : updated.Content;
 
-        await systemMessages.CreateAsync(updated.ChatId, command.UserId, SystemEventType.MessagePinned, content: preview);
+        await systemMessages.CreateAsync(updated.ChatId, command.UserId, SystemEventType.MessagePinned, content: preView);
 
         return Result<MessageDto>.Success(dto);
     }

@@ -1,5 +1,6 @@
 ﻿using Avalonia.Styling;
 using Core.Infrastructure.Theming;
+using Core.Services.Platform.Abstractions;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;

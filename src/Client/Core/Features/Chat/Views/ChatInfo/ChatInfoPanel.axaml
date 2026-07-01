@@ -1,0 +1,534 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatInfoPanel"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:chatInfo="using:Core.Features.Chat.Views.ChatInfo.Sections"
+    xmlns:context="using:Core.Features.Chat.ViewModels.Context"
+    xmlns:controls="using:Core.Shared.Controls"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:media="using:Core.Infrastructure.Media"
+    xmlns:messages="using:Core.Features.Chat.ViewModels.Messages"
+    xmlns:skeleton="using:Core.Shared.Controls.Skeleton"
+    xmlns:user="using:Shared.Contracts.User"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    MinWidth="320"
+    x:DataType="vm:ChatViewModel"
+    Design.Height="720">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.SectionHeader">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="Margin" Value="8,12,8,6" />
+        </Style>
+        <Style Selector="Button.ActionButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Easing="CubicEaseOut" Property="RenderTransform" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.ActionButton /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentMuted}" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.ActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Accent}" />
+        </Style>
+        <Style Selector="Button.ActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
+        </Style>
+        <Style Selector="Button.ActionButton:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
+        </Style>
+        <Style Selector="Button.ActionButton PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.ActionButton:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+        </Style>
+        <Style Selector="Button.ActionButton TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.ActionButton:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+        </Style>
+        <Style Selector="Button.InfoRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.InfoRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+        <Style Selector="Button.InfoRow:pressed">
+            <Setter Property="Background" Value="{DynamicResource PressedBrush}" />
+        </Style>
+        <Style Selector="Button.CopyableField">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ToolTip.Tip" Value="Нажмите, чтобы скопировать" />
+        </Style>
+        <Style Selector="Button.CopyableField:pointerover TextBlock.CopyValue">
+            <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}" />
+        </Style>
+        <Style Selector="Border.CountBadge">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="MinWidth" Value="24" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style Selector="Border.Divider">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource BorderDefault}" />
+            <Setter Property="Margin" Value="0,4" />
+        </Style>
+        <Style Selector="StackPanel.EmptyState">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,24" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="Button.MemberRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,8" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+        <Style Selector="Button.MemberRow /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.MemberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+        </Style>
+        <Style Selector="Button.MemberRow:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderHover}" />
+        </Style>
+        <Style Selector="Button.MemberRow:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.MemberRow:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.MediaThumb">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.MediaThumb:pointerover">
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="{DynamicResource PrimaryBG}" CornerRadius="0,16,16,0">
+        <Grid RowDefinitions="65,*">
+
+            <Border
+                Grid.Row="0"
+                Padding="16,0"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,0,0,1">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" MinWidth="0" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button
+                        Grid.Column="0"
+                        Width="28" Height="28"
+                        Margin="0,0,8,0"
+                        Classes="IconButton Small"
+                        Command="{Binding CloseInfoSectionCommand}"
+                        IsVisible="{Binding IsInfoSectionOpen}">
+                        <PathIcon Width="14" Height="14" Data="{StaticResource ChevronLeftIcon}" />
+                    </Button>
+
+                    <Panel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            IsVisible="{Binding IsInfoSectionOpen}"
+                            Text="{Binding InfoSectionTitle}" />
+                        <TextBlock
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            IsVisible="{Binding !IsInfoSectionOpen}"
+                            Text="{Binding InfoPanel.InfoPanelTitle}" />
+                    </Panel>
+
+                    <Button
+                        Grid.Column="2"
+                        Classes="IconButton Small"
+                        Command="{Binding ToggleInfoPanelCommand}">
+                        <PathIcon Width="12" Height="12" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+                <skeleton:ChatInfoSkeleton
+                    IsContactChat="{Binding InfoPanel.IsContactChat}"
+                    IsVisible="{Binding IsInitialLoading}" />
+
+                <ScrollViewer
+                    Classes="ThinScrollbar AutoHideScrollbar"
+                    IsVisible="{Binding !IsInitialLoading}">
+                    <StackPanel Margin="0,0,0,32">
+
+                        <StackPanel IsVisible="{Binding !IsInfoSectionOpen}" Spacing="0">
+
+                            <StackPanel
+                                Margin="16,24,16,20"
+                                HorizontalAlignment="Center"
+                                Spacing="10">
+
+                                <Border
+                                    HorizontalAlignment="Center"
+                                    BoxShadow="0 6 20 2 #352B74D9, 0 2 6 0 #18000000"
+                                    ClipToBounds="False"
+                                    CornerRadius="999"
+                                    IsVisible="{Binding InfoPanel.IsContactChat}">
+                                    <Border ClipToBounds="True" CornerRadius="999">
+                                        <controls:AvatarControl
+                                            Classes="XXLarge"
+                                            DisplayName="{Binding InfoPanel.ContactDisplayName}"
+                                            IsOnline="{Binding InfoPanel.IsContactOnline}"
+                                            Source="{Binding InfoPanel.ContactAvatar}" />
+                                    </Border>
+                                </Border>
+
+                                <Border
+                                    HorizontalAlignment="Center"
+                                    BoxShadow="0 6 20 2 #352B74D9, 0 2 6 0 #18000000"
+                                    ClipToBounds="False"
+                                    CornerRadius="999"
+                                    IsVisible="{Binding InfoPanel.IsGroupChat}">
+                                    <Border ClipToBounds="True" CornerRadius="999">
+                                        <controls:AvatarControl
+                                            Classes="XXLarge"
+                                            DisplayName="{Binding Chat.Name}"
+                                            FallbackIcon="{StaticResource GroupIcon}"
+                                            ShowOnlineIndicator="False"
+                                            Source="{Binding Chat.Avatar}" />
+                                    </Border>
+                                </Border>
+
+                                <TextBlock
+                                    MaxWidth="260"
+                                    HorizontalAlignment="Center"
+                                    FontSize="18"
+                                    FontWeight="Bold"
+                                    IsVisible="{Binding InfoPanel.IsContactChat}"
+                                    Text="{Binding InfoPanel.ContactDisplayName, FallbackValue='Пользователь'}"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+
+                                <TextBlock
+                                    MaxWidth="260"
+                                    HorizontalAlignment="Center"
+                                    FontSize="18"
+                                    FontWeight="Bold"
+                                    IsVisible="{Binding InfoPanel.IsGroupChat}"
+                                    Text="{Binding Chat.Name}"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+
+                                <StackPanel
+                                    HorizontalAlignment="Center"
+                                    IsVisible="{Binding InfoPanel.IsContactChat}"
+                                    Orientation="Horizontal"
+                                    Spacing="5">
+                                    <Ellipse
+                                        Width="7" Height="7"
+                                        VerticalAlignment="Center"
+                                        Fill="{DynamicResource OnlineBrush}"
+                                        IsVisible="{Binding InfoPanel.IsContactOnline}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        Foreground="{DynamicResource TextSecondary}"
+                                        Text="{Binding InfoPanel.ContactLastSeen, FallbackValue=''}" />
+                                </StackPanel>
+
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="{DynamicResource TextSecondary}"
+                                    IsVisible="{Binding InfoPanel.IsGroupChat}"
+                                    Text="{Binding InfoPanel.InfoPanelSubtitle}" />
+
+                                <UniformGrid Margin="0,6,0,0" Rows="1">
+
+                                    <Panel Margin="0,0,3,0">
+                                        <Button
+                                            Classes="ActionButton"
+                                            Command="{Binding ToggleMuteCommand}"
+                                            IsEnabled="{Binding !Notification.IsLoadingMuteState}"
+                                            IsVisible="{Binding Notification.IsNotificationEnabled}"
+                                            ToolTip.Tip="Уведомления включены — нажмите, чтобы выключить">
+                                            <StackPanel VerticalAlignment="Center" Spacing="5">
+                                                <PathIcon HorizontalAlignment="Center" Data="{StaticResource NotificationsIcon}" />
+                                                <TextBlock HorizontalAlignment="Center" Text="Включено" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button
+                                            Classes="ActionButton"
+                                            Command="{Binding ToggleMuteCommand}"
+                                            IsEnabled="{Binding !Notification.IsLoadingMuteState}"
+                                            IsVisible="{Binding !Notification.IsNotificationEnabled}"
+                                            ToolTip.Tip="Уведомления выключены — нажмите, чтобы включить">
+                                            <StackPanel VerticalAlignment="Center" Spacing="5">
+                                                <PathIcon HorizontalAlignment="Center" Data="{StaticResource NotificationsMutedIcon}" />
+                                                <TextBlock HorizontalAlignment="Center" Text="Выключено" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Panel>
+
+                                    <Button
+                                        Margin="3,0"
+                                        Classes="ActionButton"
+                                        Command="{Binding Call.StartOrJoinCallCommand}">
+                                        <StackPanel VerticalAlignment="Center" Spacing="5">
+                                            <PathIcon HorizontalAlignment="Center" Data="{StaticResource Call}" />
+                                            <TextBlock HorizontalAlignment="Center" Text="Звонок" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Margin="3,0"
+                                        Classes="ActionButton"
+                                        Command="{Binding OpenEditChatCommand}"
+                                        IsVisible="{Binding Permissions.CanEditGroupChat}">
+                                        <StackPanel VerticalAlignment="Center" Spacing="5">
+                                            <PathIcon HorizontalAlignment="Center" Data="{StaticResource EditIcon}" />
+                                            <TextBlock HorizontalAlignment="Center" Text="Управление" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Margin="3,0,0,0"
+                                        Classes="ActionButton"
+                                        Command="{Binding LeaveChatCommand}"
+                                        IsVisible="{Binding Permissions.CanLeaveChatVisible}">
+                                        <StackPanel VerticalAlignment="Center" Spacing="5">
+                                            <PathIcon HorizontalAlignment="Center" Data="{StaticResource SignOutIcon}" />
+                                            <TextBlock HorizontalAlignment="Center" Text="Покинуть" />
+                                        </StackPanel>
+                                    </Button>
+
+                                </UniformGrid>
+                            </StackPanel>
+
+                            <Border Margin="16,0" Classes="Divider" />
+
+                            <StackPanel
+                                Margin="16,8,16,0"
+                                IsVisible="{Binding InfoPanel.IsContactChat}"
+                                Spacing="0">
+                                <TextBlock Classes="SectionHeader" Text="ИНФОРМАЦИЯ" />
+
+                                <Button
+                                    Classes="CopyableField"
+                                    Command="{Binding InfoPanel.CopyUsernameCommand}"
+                                    IsVisible="{Binding InfoPanel.ContactUsername, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <StackPanel Margin="0,4" Spacing="2">
+                                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMuted}" Text="Имя пользователя" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Classes="CopyValue" FontSize="14" Foreground="{DynamicResource AccentBrush}" Text="{Binding InfoPanel.ContactUsername, StringFormat='@{0}'}" />
+                                            <PathIcon Grid.Column="1" Width="14" Height="14" VerticalAlignment="Center" Data="{StaticResource CopyIcon}" Foreground="{DynamicResource TextMuted}" Opacity="0.5" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Button>
+
+                                <StackPanel
+                                    Margin="8,4,8,8"
+                                    IsVisible="{Binding InfoPanel.ContactDepartment, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    Spacing="2">
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextMuted}" Text="Отдел" />
+                                    <TextBlock FontSize="14" Text="{Binding InfoPanel.ContactDepartment}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border
+                                Margin="16,12"
+                                Classes="Divider"
+                                IsVisible="{Binding InfoPanel.IsContactChat}" />
+
+                            <StackPanel
+                                Margin="16,0,16,0"
+                                IsVisible="{Binding HasGroupInfoMediaSection}"
+                                Spacing="0">
+                                <TextBlock Classes="SectionHeader" Text="МЕДИА И ФАЙЛЫ" />
+
+                                <Button Classes="InfoRow" Command="{Binding OpenPhotosSectionCommand}" IsVisible="{Binding Sections.PhotosCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Width="18" Height="18" Data="{StaticResource ImageIcon}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="Фото" />
+                                        <Border Grid.Column="2" Classes="CountBadge">
+                                            <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Sections.PhotosCount}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="InfoRow" Command="{Binding OpenFilesSectionCommand}" IsVisible="{Binding Sections.FilesCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Width="18" Height="18" Data="{StaticResource DocumentIcon}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="Файлы" />
+                                        <Border Grid.Column="2" Classes="CountBadge">
+                                            <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Sections.FilesCount}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="InfoRow" Command="{Binding OpenPinnedSectionCommand}" IsVisible="{Binding Pinned.PinnedCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Width="18" Height="18" Data="{StaticResource PinStroke}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="Закреплённые" />
+                                        <Border Grid.Column="2" Classes="CountBadge">
+                                            <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Pinned.PinnedCount}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
+                                <Button Classes="InfoRow" Command="{Binding OpenPollsSectionCommand}" IsVisible="{Binding Sections.PollsCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Width="18" Height="18" Data="{StaticResource PollIcon}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="Опросы" />
+                                        <Border Grid.Column="2" Classes="CountBadge">
+                                            <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Sections.PollsCount}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <Border
+                                Margin="16,12"
+                                Classes="Divider"
+                                IsVisible="{Binding InfoPanel.IsGroupChat}" />
+
+                            <StackPanel
+                                Margin="16,0,16,0"
+                                IsVisible="{Binding InfoPanel.IsGroupChat}"
+                                Spacing="0">
+                                <Button
+                                    Margin="0,0,0,4"
+                                    Classes="InfoRow"
+                                    Command="{Binding OpenMembersSectionCommand}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Margin="0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}" Text="УЧАСТНИКИ" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Context.Members.Count}" />
+                                            <PathIcon Width="12" Height="12" Data="{StaticResource ChevronRightIcon}" Foreground="{DynamicResource TextMuted}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <ItemsControl ItemsSource="{Binding MembersPreView}" Tag="{Binding OpenProfileCommand}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="user:UserDto">
+                                            <Button Classes="MemberRow" Command="{Binding $parent[ItemsControl].Tag}" CommandParameter="{Binding Id}">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <controls:AvatarControl Classes="Medium" DisplayName="{Binding DisplayName}" IsOnline="{Binding IsOnline}" Source="{Binding Avatar}" StatusType="{Binding StatusType}" />
+                                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="1">
+                                                        <TextBlock FontSize="14" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding Department, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="{Binding Department}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}" IsVisible="{Binding !IsOnline}" TextTrimming="CharacterEllipsis">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding Converter="{conv:MultiConverter Name=LastSeen}">
+                                                                    <Binding Path="IsOnline" />
+                                                                    <Binding Path="LastOnline" />
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                        <StackPanel
+                            Margin="16,8,16,0"
+                            IsVisible="{Binding IsInfoSectionOpen}"
+                            Spacing="4">
+
+                            <chatInfo:ChatInfoPhotosSection IsVisible="{Binding ShowPhotosSection}" />
+
+                            <chatInfo:ChatInfoFilesSection IsVisible="{Binding ShowFilesSection}" />
+
+                            <chatInfo:ChatInfoPollsSection IsVisible="{Binding ShowPollsSection}" />
+
+                            <chatInfo:ChatInfoPinnedSection IsVisible="{Binding ShowPinnedSection}" />
+
+                            <chatInfo:ChatInfoMembersSection IsVisible="{Binding ShowMembersSection}" />
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

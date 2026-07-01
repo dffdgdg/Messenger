@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<UseAvalonia>true</UseAvalonia>
 	</PropertyGroup>
 	<ItemGroup>
 	  <AvaloniaXaml Remove="Assets\Icons.axaml" />
@@ -64,17 +65,37 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Using Include=" Shared.Contracts.Department;" />
 	  <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
 	  <Using Include="CommunityToolkit.Mvvm.Input" />
-	  <Using Include="Core.Infrastructure.Configuration" />
-	  <Using Include="Core.Services.Abstractions" />
+	  <Using Include="Core.Services.Auth.Abstractions;" />
+	  <Using Include="Core.Services.Chat.Abstractions;" />
+	  <Using Include="Core.Services.Media.Abstractions;" />
+	  <Using Include="Core.Services.Platform.Abstractions;" />
+	  <Using Include="Core.Services.Realtime.Abstractions;" />
+	  <Using Include="Core.Shared.Configuration;" />
+	  <Using Include="Core.Shared.ViewModels;" />
+	  <Using Include="Shared.Contracts.Call;" />
+	  <Using Include="Shared.Contracts.Chat;" />
+	  <Using Include="Shared.Contracts.Message;" />
+	  <Using Include="Shared.Contracts.Notification;" />
+	  <Using Include="Shared.Contracts.Poll;" />
+	  <Using Include="Shared.Contracts.ReadReceipt;" />
+	  <Using Include="Shared.Contracts.User;" />
+	  <Using Include="Shared.Enum;" />
+	  <Using Include="Shared.HubProtocol;" />
+	  <Using Include="Shared.Infrastructure;" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Assets\Images\Avatars\" />
 	  <Folder Include="Assets\Images\Icons\" />
 	  <Folder Include="Assets\Images\Illustrations\" />
-	  <Folder Include="Views\Chat\Poll\" />
-	  <Folder Include="Views\Controls\Admin\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Features\ChatList\Views\ChatListView.axaml.cs">
+	    <DependentUpon>ChatListView.axaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 </Project>

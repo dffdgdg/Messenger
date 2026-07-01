@@ -1,18 +1,18 @@
 ﻿using Avalonia;
 using Core.Infrastructure;
-using Core.Services.Abstractions;
+using Core.Services.Platform.Abstractions;
 using Mobile.Views;
 using System;
 
 namespace Mobile.Services.Platform;
 
-public class MobileLayoutModeProvider(MainView view) : ILayoutModeProvider
+public class MobileLayoutModeProvider(MainView View) : ILayoutModeProvider
 {
-    public LayoutMode LayoutMode => view.LayoutMode;
+    public LayoutMode LayoutMode => View.LayoutMode;
 
     public IObservable<LayoutMode> LayoutModeChanged
-        => view.GetObservable(MainView.LayoutModeProperty);
+        => View.GetObservable(MainView.LayoutModeProperty);
 
     public IObservable<Rect> WindowBoundsChanged
-        => view.GetObservable(MainView.BoundsProperty);
+        => View.GetObservable(MainView.BoundsProperty);
 }

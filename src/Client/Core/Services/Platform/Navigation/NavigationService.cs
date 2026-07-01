@@ -1,5 +1,7 @@
-﻿using Core.Services.Abstractions;
-using Core.ViewModels;
+﻿using Core.Features.Auth.ViewModels;
+using Core.Features.Shell.MainMenu;
+using Core.Services.Auth.Abstractions;
+using Core.Services.Platform.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Core.Services.Platform.Navigation;

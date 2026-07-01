@@ -1,0 +1,207 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Core.Shared.Controls"
+             xmlns:conv="using:Core.Shared.Converters"
+             xmlns:converters="using:Core.Converters"
+             xmlns:media="using:Core.Infrastructure.Media"
+             xmlns:vm="using:Core.Features.Chat.ViewModels.Messages"
+			 x:Class="Core.Features.Chat.Views.MessageParts.FileAttachmentControl"
+			 x:DataType="vm:MessageFileViewModel">
+	<Grid>
+		<Border Classes="ImageAttachment"
+				HorizontalAlignment="Left"
+				Width="280"
+				Height="200"
+				IsVisible="{Binding IsImage}">
+			<Grid>
+				<Border Classes="ImagePlaceholder"
+						IsVisible="{Binding !IsImageLoaded}">
+					<StackPanel HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Spacing="6">
+						<Path Data="{StaticResource ImageIcon}"
+							  Fill="{DynamicResource TextMuted}"
+							  Width="28" Height="28"
+							  Stretch="Uniform"
+							  Opacity="0.25"
+							  HorizontalAlignment="Center"/>
+						<TextBlock Text="{Binding FileSizeFormatted}"
+								   FontSize="11"
+								   Foreground="{DynamicResource TextMuted}"
+								   Opacity="0.6"
+								   HorizontalAlignment="Center"/>
+					</StackPanel>
+				</Border>
+
+				<Image x:Name="AttachmentImage"
+					   Stretch="UniformToFill"
+					   media:RemoteImage.Source="{Binding ImageUrl}"/>
+
+				<Border Classes="ImageOverlay">
+					<StackPanel Orientation="Horizontal"
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Spacing="8">
+						<Button Classes="ImageOverlayButton"
+								Command="{Binding DownloadCommand}"
+								IsVisible="{Binding !IsDownloaded}"
+								ToolTip.Tip="Скачать"
+								AutomationProperties.Name="Скачать изображение">
+							<Path Data="{StaticResource DownloadIcon}"
+								  Fill="White"
+								  Width="18" Height="18"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
+
+						<Button Classes="ImageOverlayButton"
+								Command="{Binding OpenFileCommand}"
+								IsVisible="{Binding IsDownloaded}"
+								ToolTip.Tip="Открыть"
+								AutomationProperties.Name="Открыть изображение">
+							<Path Data="{StaticResource OpenIcon}"
+								  Fill="White"
+								  Width="18" Height="18"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
+					</StackPanel>
+				</Border>
+			</Grid>
+		</Border>
+
+		<Border Classes="FileAttachment"
+				HorizontalAlignment="Stretch"
+				IsVisible="{Binding !IsImage}"
+				AutomationProperties.Name="{Binding FileName}"
+				AutomationProperties.HelpText="Вложенный файл">
+			<Grid RowDefinitions="Auto,Auto">
+				<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+					<Border Grid.Column="0" Classes="FileIcon">
+						<Path Data="{Binding FileIconResourceKey, Converter={conv:Converter Name=ResourceGeometry}}"
+							  Fill="White"
+							  Width="20" Height="20"
+							  Stretch="Uniform"
+							  HorizontalAlignment="Center"
+							  VerticalAlignment="Center"/>
+					</Border>
+
+					<StackPanel Grid.Column="1"
+								Margin="10,0,6,0"
+								VerticalAlignment="Center"
+								Spacing="1">
+						<TextBlock Text="{Binding DisplayFileName}"
+								   FontWeight="Medium"
+								   FontSize="13"
+								   TextTrimming="CharacterEllipsis"
+								   Foreground="{DynamicResource TextPrimary}"/>
+						<TextBlock Text="{Binding FileSizeFormatted}"
+								   FontSize="11"
+								   Foreground="{DynamicResource TextMuted}"
+								   IsVisible="{Binding FileSizeFormatted,
+								   Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+					</StackPanel>
+
+					<StackPanel Grid.Column="2"
+								Orientation="Horizontal"
+								VerticalAlignment="Center"
+								Spacing="2">
+						<Button Classes="FileActionButton"
+								Command="{Binding ExecuteActionCommand}"
+								IsVisible="{Binding !IsDownloading}"
+								ToolTip.Tip="{Binding ActionLabel}"
+								AutomationProperties.Name="{Binding ActionLabel}">
+							<Panel>
+								<Path Data="{StaticResource DownloadIcon}"
+									  Fill="{DynamicResource TextSecondary}"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding !IsDownloaded}"/>
+								<Path Data="{StaticResource CheckIcon}"
+									  Fill="{DynamicResource SuccessBrush}"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding IsDownloaded}"/>
+								<Path Data="{StaticResource RefreshIcon}"
+									  Fill="Orange"
+									  Width="16" Height="16"
+									  Stretch="Uniform"
+									  HorizontalAlignment="Center"
+									  VerticalAlignment="Center"
+									  IsVisible="{Binding IsChanged}"/>
+							</Panel>
+						</Button>
+
+						<Grid Width="28" Height="28"
+							  IsVisible="{Binding IsDownloading}">
+							<controls:CircularProgress Value="{Binding DownloadProgress}"
+													 Maximum="100"
+													 StrokeWidth="2.5"
+													 Size="22"
+													 Foreground="{DynamicResource Accent}"/>
+							<Button Classes="FileActionButton"
+									Command="{Binding CancelDownloadCommand}"
+									ToolTip.Tip="Отменить"
+									AutomationProperties.Name="Отменить загрузку"
+									Width="16" Height="16"
+									CornerRadius="8">
+								<TextBlock Text="✕"
+										   FontSize="9"
+										   Foreground="{DynamicResource TextMuted}"
+										   HorizontalAlignment="Center"
+										   VerticalAlignment="Center"/>
+							</Button>
+						</Grid>
+
+						<Button Classes="FileActionButton"
+								Command="{Binding OpenFileCommand}"
+								IsVisible="{Binding IsDownloaded}"
+								ToolTip.Tip="Открыть файл"
+								AutomationProperties.Name="Открыть файл">
+							<Path Data="{StaticResource OpenIcon}"
+								  Fill="{DynamicResource Accent}"
+								  Width="16" Height="16"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Button>
+					</StackPanel>
+				</Grid>
+
+				<ProgressBar Grid.Row="1"
+							 Classes="FileDownloadProgress"
+							 Value="{Binding DownloadProgress}"
+							 IsVisible="{Binding IsDownloading}"/>
+
+				<Border Grid.Row="1"
+						Classes="FileError"
+						IsVisible="{Binding HasError}">
+					<Grid ColumnDefinitions="*,Auto">
+						<TextBlock Grid.Column="0"
+								   Classes="FileErrorText"
+								   Text="{Binding ErrorMessage}"
+								   VerticalAlignment="Center"/>
+						<Button Grid.Column="1"
+								Classes="FileActionButton"
+								Command="{Binding RetryDownloadCommand}"
+								ToolTip.Tip="Повторить"
+								AutomationProperties.Name="Повторить загрузку"
+								Width="24" Height="24">
+							<TextBlock Text="↻"
+									   FontSize="14"
+									   Foreground="{DynamicResource Accent}"
+									   HorizontalAlignment="Center"
+									   VerticalAlignment="Center"/>
+						</Button>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
+	</Grid>
+</UserControl>

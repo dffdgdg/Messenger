@@ -2,8 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Reactive;
 using Avalonia.VisualTree;
+using Core.Features.Shell.MainMenu;
 using Core.Infrastructure;
-using Core.Views;
 using System;
 
 namespace Mobile.Views;
@@ -11,8 +11,7 @@ namespace Mobile.Views;
 public partial class MainView : UserControl
 {
     public static readonly DirectProperty<MainView, LayoutMode> LayoutModeProperty =
-        AvaloniaProperty.RegisterDirect<MainView, LayoutMode>(
-            nameof(LayoutMode), o => o.LayoutMode);
+        AvaloniaProperty.RegisterDirect<MainView, LayoutMode>(nameof(LayoutMode), o => o.LayoutMode);
 
     private LayoutMode _layoutMode = LayoutMode.Normal;
     public LayoutMode LayoutMode
@@ -33,12 +32,11 @@ public partial class MainView : UserControl
     {
         base.OnAttachedToVisualTree(e);
 
-        _boundsSub = this.GetObservable(BoundsProperty)
-            .Subscribe(new AnonymousObserver<Rect>(_ =>
-            {
-                UpdateLayoutMode();
-                PushLayoutModeToMainMenu();
-            }));
+        _boundsSub = this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ =>
+        {
+            UpdateLayoutMode();
+            PushLayoutModeToMainMenu();
+        }));
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -56,5 +54,5 @@ public partial class MainView : UserControl
     }
 
     private void PushLayoutModeToMainMenu()
-        => this.FindDescendantOfType<MainMenuView>()?.WindowLayoutMode = LayoutMode;
+        => this.FindDescendantOfType<MainMenuView>()?.LayoutMode = LayoutMode;
 }

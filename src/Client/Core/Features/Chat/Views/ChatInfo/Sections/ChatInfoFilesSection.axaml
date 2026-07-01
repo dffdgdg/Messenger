@@ -1,0 +1,37 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatInfo.Sections.ChatInfoFilesSection"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:context="using:Core.Features.Chat.ViewModels.Context"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    x:DataType="vm:ChatViewModel">
+    <StackPanel>
+        <ItemsControl
+            ItemsSource="{Binding Sections.FilesItems}"
+            Tag="{Binding OpenInfoSectionMessageCommand}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="context:ChatInfoPanelFileItem">
+                    <Button Classes="InfoRow" Command="{Binding $parent[ItemsControl].Tag}" CommandParameter="{Binding Message}">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Border Width="36" Height="36" VerticalAlignment="Center" Background="{DynamicResource SurfaceBrush}" CornerRadius="8">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondary}" Text="{Binding FileExtension}" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock FontSize="13" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" Text="{Binding FileSizeFormatted}" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" Text="•" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Classes="EmptyState" IsVisible="{Binding !Sections.FilesCount}">
+            <PathIcon Width="32" Height="32" HorizontalAlignment="Center" Data="{StaticResource DocumentIcon}" Foreground="{DynamicResource TextMuted}" />
+            <TextBlock Margin="0,8,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" Text="Нет файлов" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

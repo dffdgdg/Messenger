@@ -137,6 +137,16 @@
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Using Include="Avalonia" />
+	  <Using Include="Avalonia.Controls" />
+	  <Using Include="Avalonia.Controls.ApplicationLifetimes" />
+	  <Using Include="Core.Services.Auth.Abstractions" />
+	  <Using Include="Core.Services.Platform.Abstractions" />
+	  <Using Include="Microsoft.Extensions.DependencyInjection" />
+	  <Using Include="Shared.Enum" />
+	</ItemGroup>
+
 	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
 		<BaseOutputPath>/tmp/MessengerDesktop/bin/</BaseOutputPath>
 		<BaseIntermediateOutputPath>/tmp/MessengerDesktop/obj/</BaseIntermediateOutputPath>

@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Core.Dialog.Department"
+             xmlns:department="using:Shared.Contracts.Department"
+             x:Class="Core.Features.Admin.Views.Controls.DepartmentDialog"
+             x:DataType="vm:DepartmentDialogViewModel">
+
+    <Border Classes="DialogContainer">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="24,24,24,16">
+                <TextBlock Text="{Binding Title}"
+                           Classes="DialogTitle"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <Border Grid.Row="1" Classes="DialogDivider"/>
+
+            <ScrollViewer Grid.Row="2"
+                          Classes="ThinScrollbar"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="12" Margin="24,16,24,16">
+
+                    <TextBox Text="{Binding Name}"
+                             Classes="Input"
+                             PlaceholderText="Название отдела">
+                        <TextBox.InnerLeftContent>
+                            <PathIcon Data="{StaticResource FolderIcon}"
+                                      Classes="InputIcon"
+                                      Margin="12,0,8,0"/>
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
+
+                    <ComboBox ItemsSource="{Binding AvailableParents}"
+                              SelectedItem="{Binding SelectedParent}"
+                              Classes="DialogCombo"
+                              PlaceholderText="Выбрать родительский отдел"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="department:DepartmentDto">
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Row="3" Classes="DialogDivider"/>
+
+            <StackPanel Grid.Row="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="12"
+                        Margin="24,16,24,24">
+                <Button Content="Отмена"
+                        Classes="DialogOutline"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="100"/>
+                <Button Content="Сохранить"
+                        Classes="DialogAccent"
+                        Command="{Binding SaveCommand}"
+                        MinWidth="100"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

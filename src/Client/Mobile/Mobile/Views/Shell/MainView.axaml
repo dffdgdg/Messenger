@@ -1,58 +1,74 @@
 <UserControl
     x:Class="Mobile.Views.MainView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:auth="using:Mobile.Views.Auth"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:call="using:Core.ViewModels.Call"
-    xmlns:callView="using:Core.Views.Call"
-    xmlns:chat="using:Core.Views.Chat"
-    xmlns:controls="using:Core.Views.Controls"
-    xmlns:conv="using:Core.Converters"
-    xmlns:department="using:Core.Views.Department"
-    xmlns:dialog="using:Core.Views.Dialog"
-    xmlns:dialogs="using:Core.Views.Dialogs"
-    xmlns:views="using:Core.Views"
-    xmlns:vm="using:Core.ViewModels"
-    xmlns:vmChat="using:Core.ViewModels.Chat"
-    xmlns:vmDepartment="using:Core.ViewModels.Department"
-    xmlns:vmDialog="using:Core.ViewModels.Dialog"
+    xmlns:admin="using:Core.Features.Admin.Views"
+    xmlns:auth="using:Mobile.Views.Auth"
+    xmlns:call="using:Core.Features.Call.Views"
+    xmlns:chat="using:Core.Features.Chat.Views"
+    xmlns:chatList="using:Core.Features.ChatList.Views"
+    xmlns:chatedit="using:Core.Dialog.ChatEdit"
+    xmlns:chatpicker="using:Core.Dialog.ChatPicker"
+    xmlns:confirm="using:Core.Dialog.Confirm"
+    xmlns:controlsAdmin="using:Core.Features.Admin.Views.Controls"
+    xmlns:controlsCore="using:Core.Views.Controls"
+    xmlns:department="using:Core.Dialog.Department"
+    xmlns:departmentView="using:Core.Features.Department.Views"
+    xmlns:mainmenu="using:Core.Features.Shell.MainMenu"
+    xmlns:notification="using:Core.Dialog.Notification"
+    xmlns:poll="using:Core.Dialog.Poll"
+    xmlns:pollsVM="using:Core.Features.Chat.ViewModels.Polls"
+    xmlns:profile="using:Core.Features.Profile.Views"
+    xmlns:searchs="using:Core.Dialog.Search"
+    xmlns:serverurl="using:Core.Dialog.ServerUrl"
+    xmlns:settings="using:Core.Features.Settings.Views"
+    xmlns:shell="using:Core.Features.Shell"
+    xmlns:useredit="using:Core.Dialog.UserEdit"
+    xmlns:userpicker="using:Core.Dialog.UserPicker"
+    xmlns:userprofile="using:Core.Dialog.UserProfile"
+    xmlns:vm="using:Core.Features.Auth.ViewModels"
+    xmlns:vmAdmin="using:Core.Features.Admin.ViewModels"
+    xmlns:vmCall="using:Core.Features.Call.ViewModels"
+    xmlns:vmChat="using:Core.Features.Chat.ViewModels"
+    xmlns:vmChatList="using:Core.Features.ChatList.ViewModels"
+    xmlns:vmDepartment="using:Core.Features.Department.ViewModels"
+    xmlns:vmProfile="using:Core.Features.Profile.ViewModels"
+    xmlns:vmSettings="using:Core.Features.Settings.ViewModels"
     x:Name="MainViewRoot"
-    x:DataType="vm:MainWindowViewModel"
+    x:DataType="shell:MainWindowViewModel"
     Background="{DynamicResource PrimaryBG}">
 
     <Panel>
 
-        <!-- Основной контент -->
         <ContentControl Content="{Binding CurrentViewModel}">
             <ContentControl.DataTemplates>
                 <DataTemplate DataType="vm:LoginViewModel">
                     <auth:LoginView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:MainMenuViewModel">
-                    <views:MainMenuView />
+                <DataTemplate DataType="mainmenu:MainMenuViewModel">
+                    <mainmenu:MainMenuView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:ChatsViewModel">
-                    <views:ChatsView />
+                <DataTemplate DataType="vmChatList:ChatListViewModel">
+                    <chatList:ChatListView />
                 </DataTemplate>
                 <DataTemplate DataType="vmChat:ChatViewModel">
                     <chat:ChatView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:AdminViewModel">
-                    <views:AdminView />
+                <DataTemplate DataType="vmAdmin:AdminViewModel">
+                    <admin:AdminView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:ProfileViewModel">
-                    <views:ProfileView />
+                <DataTemplate DataType="vmProfile:ProfileViewModel">
+                    <profile:ProfileView />
                 </DataTemplate>
-                <DataTemplate DataType="vm:SettingsViewModel">
-                    <views:SettingsView />
+                <DataTemplate DataType="vmSettings:SettingsViewModel">
+                    <settings:SettingsView />
                 </DataTemplate>
                 <DataTemplate DataType="vmDepartment:DepartmentManagementViewModel">
-                    <department:DepartmentManagementView />
+                    <departmentView:DepartmentManagementView />
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
 
-        <!-- Call UI — поверх контента -->
         <Border
             Margin="8,56,8,8"
             ClipToBounds="True"
@@ -61,24 +77,21 @@
             ZIndex="1001">
             <ContentControl Content="{Binding ActiveCallStore.ActiveCall}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="call:CallViewModel">
-                        <callView:CallView />
+                    <DataTemplate DataType="vmCall:CallViewModel">
+                        <call:CallView />
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>
         </Border>
 
-        <!-- Уведомления -->
-        <controls:NotificationOverlay ZIndex="9000" />
+        <notification:NotificationOverlay ZIndex="9000" />
 
-        <!-- Dialog overlay -->
         <Border
             x:Name="DialogOverlay"
             Background="#80000000"
             IsVisible="{Binding IsDialogVisible}"
             ZIndex="10000" />
 
-        <!-- Dialog wrapper — адаптивный -->
         <Border
             x:Name="DialogWrapper"
             Margin="0,48,0,0"
@@ -91,29 +104,29 @@
                 VerticalAlignment="Center"
                 Content="{Binding CurrentDialog}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="vmDialog:ServerUrlDialogViewModel">
-                        <dialog:ServerUrlDialogView />
+                    <DataTemplate DataType="serverurl:ServerUrlDialogViewModel">
+                        <serverurl:ServerUrlDialogView />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserProfileDialogViewModel">
-                        <dialog:UserProfileDialog />
+                    <DataTemplate DataType="userprofile:UserProfileDialogViewModel">
+                        <userprofile:UserProfileDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ConfirmDialogViewModel">
-                        <dialogs:ConfirmDialog />
+                    <DataTemplate DataType="confirm:ConfirmDialogViewModel">
+                        <confirm:ConfirmDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:PollDialogViewModel">
-                        <views:PollDialog />
+                    <DataTemplate DataType="poll:PollDialogViewModel">
+                        <poll:PollDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:ChatEditDialogViewModel">
-                        <views:ChatEditDialog />
+                    <DataTemplate DataType="chatedit:ChatEditDialogViewModel">
+                        <chatedit:ChatEditDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:UserEditDialogViewModel">
-                        <views:UserEditDialog />
+                    <DataTemplate DataType="useredit:UserEditDialogViewModel">
+                        <useredit:UserEditDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmDialog:DepartmentDialogViewModel">
-                        <views:DepartmentDialog />
+                    <DataTemplate DataType="department:DepartmentDialogViewModel">
+                        <controlsAdmin:DepartmentDialog />
                     </DataTemplate>
-                    <DataTemplate DataType="vmChat:PollResultsDialogViewModel">
-                        <dialog:PollResultsDialog />
+                    <DataTemplate DataType="pollsVM:PollResultsDialogViewModel">
+                        <poll:PollResultsDialog />
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>

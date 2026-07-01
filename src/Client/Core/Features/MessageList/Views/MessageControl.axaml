@@ -1,0 +1,236 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Core.Shared.Controls"
+             xmlns:conv="using:Core.Shared.Converters"
+             xmlns:local="using:Core.Features.Chat.Views"
+             xmlns:messages="using:Core.Features.Chat.ViewModels.Messages"
+             xmlns:parts="using:Core.Features.Chat.Views.MessageParts"
+             xmlns:messagelist="using:Core.Features.MessageList.Views"
+             xmlns:shared="using:Core.Features.Chat.Views.MessageParts.Shared"
+             x:Class="Core.Features.Chat.Views.MessageControl"
+             x:DataType="messages:MessageViewModel"
+             x:Name="BubbleRoot">
+
+    <UserControl.Resources>
+        <messagelist:MessagePartSelector x:Key="MessagePartSelector">
+            <messagelist:MessagePartSelector.VoiceTemplate>
+                <DataTemplate x:DataType="messages:MessageViewModel">
+                    <parts:VoiceMessagePart />
+                </DataTemplate>
+            </messagelist:MessagePartSelector.VoiceTemplate>
+            <messagelist:MessagePartSelector.TextTemplate>
+                <DataTemplate x:DataType="messages:MessageViewModel">
+                    <parts:TextMessagePart />
+                </DataTemplate>
+            </messagelist:MessagePartSelector.TextTemplate>
+            <messagelist:MessagePartSelector.PollTemplate>
+                <DataTemplate x:DataType="messages:MessageViewModel">
+                    <parts:PollMessagePart />
+                </DataTemplate>
+            </messagelist:MessagePartSelector.PollTemplate>
+        </messagelist:MessagePartSelector>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <parts:DateSeparatorPart/>
+
+        <parts:SystemMessagePart
+            IsVisible="{Binding IsSystemMessage}"
+            OpenProfileCommand="{Binding Commands.OpenProfile}"/>
+
+        <Border Classes="MessageHighlight MessageWrapper"
+                Classes.Highlighted="{Binding IsHighlighted}"
+                Classes.DeletedMessage="{Binding IsDeleted}"
+                IsVisible="{Binding !IsSystemMessage}"
+                Padding="12,2,12,2"
+                Margin="0,2,0,2"
+                AutomationProperties.Name="{Binding SenderName}"
+                AutomationProperties.HelpText="{Binding DisplayContent}">
+
+            <Border.Styles>
+                <Style Selector="Border.DeletedMessage">
+                    <Setter Property="Opacity" Value="0.55"/>
+                </Style>
+                <Style Selector="Border.MessageWrapper StackPanel.QuickActions">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="Transitions">
+                        <Transitions>
+                            <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+                        </Transitions>
+                    </Setter>
+                </Style>
+                <Style Selector="Border.MessageWrapper:pointerover StackPanel.QuickActions">
+                    <Setter Property="Opacity" Value="1"/>
+                </Style>
+            </Border.Styles>
+
+            <Border.ContextFlyout>
+                <MenuFlyout>
+                    <MenuItem Header="Ответить"
+                              Command="{Binding Commands.Reply}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding !IsDeleted}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource ReplyIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Переслать"
+                              Command="{Binding Commands.Forward}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding !IsDeleted}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource ForwardIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Редактировать"
+                              Command="{Binding Commands.Edit}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding CanEdit}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource EditIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Копировать текст"
+                              Command="{Binding Commands.Copy}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding Content, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource CopyIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Закрепить"
+                              Command="{Binding Commands.TogglePin}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding ShowPinAction}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource PinIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Открепить"
+                              Command="{Binding Commands.TogglePin}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding ShowUnpinAction}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource PinIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Скачать аудио"
+                              Command="{Binding DownloadVoiceCommand}"
+                              IsVisible="{Binding ShowVoiceMessage}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource DownloadIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Отменить голос"
+                              Command="{Binding Poll.CancelVoteCommand, FallbackValue={x:Null}}"
+                              IsVisible="{Binding Poll.HasVoted, FallbackValue=False}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource CloseIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Результаты опроса"
+                              Command="{Binding Commands.ShowPollResults, FallbackValue={x:Null}}"
+                              CommandParameter="{Binding Poll}"
+                              IsVisible="{Binding Poll.ShowResultsButton, FallbackValue=False}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource ChartIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Завершить опрос"
+                              Command="{Binding Poll.ClosePollCommand, FallbackValue={x:Null}}"
+                              IsVisible="{Binding Poll.CanClose, FallbackValue=False}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource LockIcon}"
+                                  Fill="{DynamicResource TextPrimary}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator IsVisible="{Binding CanDelete}"/>
+                    <MenuItem Header="Удалить"
+                              Command="{Binding Commands.Delete}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding CanDelete}"
+                              Foreground="{DynamicResource DangerBrush}">
+                        <MenuItem.Icon>
+                            <Path Data="{StaticResource DeleteIcon}"
+                                  Fill="{DynamicResource DangerBrush}"
+                                  Width="14" Height="14" Stretch="Uniform"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuFlyout>
+            </Border.ContextFlyout>
+
+            <Grid ColumnDefinitions="Auto,*,Auto">
+
+                <Panel Grid.Column="0"
+                       Width="40"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,8,0"
+                       IsVisible="{Binding !IsOwn}">
+                    <Button Classes="AvatarButton"
+                            IsVisible="{Binding ShowSenderName}"
+                            Command="{Binding Commands.OpenProfile}"
+                            CommandParameter="{Binding SenderId}"
+                            Width="36" Height="36"
+                            ToolTip.Tip="{Binding SenderName}">
+                        <controls:AvatarControl Classes="Small"
+                                                Source="{Binding SenderAvatarUrl}"
+                                                DisplayName="{Binding SenderName}"
+                                                ShowOnlineIndicator="False"/>
+                    </Button>
+                </Panel>
+
+                <StackPanel Grid.Column="1"
+                            HorizontalAlignment="{Binding IsOwn,
+                                Converter={conv:Converter Name=BoolToHAlignment},
+                                ConverterParameter='Right|Left'}"
+                            MaxWidth="520">
+
+                    <Button Classes="SenderNameButton"
+                            IsVisible="{Binding ShowSenderName}"
+                            Command="{Binding Commands.OpenProfile}"
+                            CommandParameter="{Binding SenderId}">
+                        <TextBlock Text="{Binding SenderName}"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Accent}"
+                                   Margin="0,0,0,2"/>
+                    </Button>
+
+                    <Border x:Name="BubbleBorder">
+                        <StackPanel>
+                            <shared:ForwardHeaderBlock/>
+                            <parts:ReplyPreViewBlock ScrollToReplyCommand="{Binding Commands.ScrollToReply}"/>
+                            <ContentControl Content="{Binding}"
+                                            ContentTemplate="{StaticResource MessagePartSelector}" />
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+
+                <shared:MessageQuickActions Grid.Column="2"
+                            ReplyCommand="{Binding ReplyActionCommand}"
+                            ForwardCommand="{Binding ForwardActionCommand}"
+                            IsVisible="{Binding !IsUltraCompact, ElementName=BubbleRoot}" />
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -789,7 +789,7 @@ COPY public.departments (id, name, parent_department_id, chat_id, head_id) FROM 
 COPY public.message_files (id, file_name, content_type, message_id, path) FROM stdin;
 70	AULA_F75_Setup_v2.0_20240509.zip	application/octet-stream	525	/uploads/chats/5/f50b6161-d7c8-4ccb-b279-5278d24fc21f.zip
 72	Архитектура (1).png	image/png	885	/uploads/chats/5/1f8589e8-7e30-4ef5-b120-81bd413ce211.png
-79	gemini-3-pro-image-preview-2k (nano-banana-pro)_a_Fix_face_skin..png	image/png	937	/http://10.96.171.12:5274/uploads/chats/1/c8fe9c74-b350-4826-a51e-5c9b15be4b1f.png
+79	gemini-3-pro-image-preView-2k (nano-banana-pro)_a_Fix_face_skin..png	image/png	937	/http://10.96.171.12:5274/uploads/chats/1/c8fe9c74-b350-4826-a51e-5c9b15be4b1f.png
 80	zapret-discord-youtube-1.9.5.rar	application/octet-stream	1014	/uploads/chats/4/22c5e9a0-9f78-41a8-946e-8c1512b62319.rar
 88	Архитектура (1).png	image/png	1247	/uploads/chats/5/1f8589e8-7e30-4ef5-b120-81bd413ce211.png
 89	Бланк задания (2).docx	application/msword	1261	/uploads/chats/74/69ece863-d7fb-421e-9063-cb4b6e9076eb.docx

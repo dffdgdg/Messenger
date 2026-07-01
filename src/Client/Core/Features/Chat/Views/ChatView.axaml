@@ -1,0 +1,204 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:local="using:Core.Features.Chat.Views"
+    xmlns:messages="using:Core.Features.Chat.ViewModels.Messages"
+    xmlns:skeleton="using:Core.Shared.Controls.Skeleton"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    x:Name="Root"
+    x:DataType="vm:ChatViewModel"
+    Background="Transparent">
+
+    <UserControl.Styles>
+        <Style Selector="Border.PinnedBanner Button.Flat /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.PinnedBanner Button.Flat:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+        </Style>
+        <Style Selector="Border.PinnedBanner Button.Flat:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderHover}" />
+        </Style>
+
+        <Style Selector="ListBox.MessagesList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ListBox.MessagesList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="ListBox.MessagesList ListBoxItem:selected /template/ ContentPresenter,
+        ListBox.MessagesList ListBoxItem:pointerover /template/ ContentPresenter,
+        ListBox.MessagesList ListBoxItem:selected:pointerover /template/ ContentPresenter,
+        ListBox.MessagesList ListBoxItem:selected:focus /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Border.HeaderIconBadge">
+            <Setter Property="Background" Value="{DynamicResource Accent}" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{DynamicResource SecondaryBG}" CornerRadius="16">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                <Border
+                    Grid.Row="0"
+                    Height="64"
+                    Padding="16,0"
+                    Background="{DynamicResource ChatHeaderBg}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="0,0,0,1"
+                    ZIndex="10">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                        <Button
+                            Grid.Column="0"
+                            Classes="IconButton"
+                            Command="{Binding GoBackToListCommand}"
+                            IsVisible="{Binding LayoutMode, Converter={conv:Converter Name=LayoutModeIsUltraCompact}, ElementName=Root}"
+                            ToolTip.Tip="К списку чатов"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0">
+                            <Path Width="20" Height="20" Data="{StaticResource ArrowLeft}" Fill="{DynamicResource TextPrimary}" Stretch="Uniform" />
+                        </Button>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Chat.Name}" />
+                                <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondary}" IsVisible="{Binding Typing.TypingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="{Binding Typing.TypingText}" />
+                                <TextBlock FontSize="12" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding Typing.TypingText, Converter={x:Static StringConverters.IsNullOrEmpty}}" Text="{Binding MemberCountText}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Grid.Column="3" VerticalAlignment="Center" Background="{DynamicResource PrimaryBG}" BoxShadow="0 4 20 0 #18000000" CornerRadius="4">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <Button Classes="IconButton" Command="{Binding Call.StartOrJoinCallCommand}" ToolTip.Tip="{Binding Call.HasActiveCall, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Войти в звонок|Начать звонок'}">
+                                    <Path Width="20" Height="20" Data="{StaticResource CallOutline}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Stretch="Uniform" />
+                                </Button>
+                                <ToggleButton Classes="IconButton" IsChecked="{Binding Search.IsSearchMode}" IsVisible="{Binding LayoutMode, Converter={conv:Converter Name=LayoutModeToSplitterVisible}, ElementName=Root}" ToolTip.Tip="Поиск">
+                                    <Path Width="20" Height="20" Data="{StaticResource SearchIcon}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Stretch="Uniform" />
+                                </ToggleButton>
+                                <ToggleButton Classes="IconButton" IsChecked="{Binding InfoPanel.IsInfoPanelOpen}" IsVisible="{Binding LayoutMode, Converter={conv:Converter Name=LayoutModeToSplitterVisible}, ElementName=Root}" ToolTip.Tip="Информация о чате">
+                                    <Path Width="20" Height="20" Data="{StaticResource PanelRight}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Stretch="Uniform" />
+                                </ToggleButton>
+                                <Button Classes="IconButton" ToolTip.Tip="Меню">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Command="{Binding OpenEditChatCommand}" Header="Редактировать чат" IsVisible="{Binding Permissions.CanEditGroupChat}" />
+                                            <MenuItem Command="{Binding OpenCreatePollCommand}" Header="Создать опрос" IsVisible="{Binding Permissions.CanEditGroupChat}" />
+                                            <MenuItem Command="{Binding LeaveChatCommand}" Foreground="{DynamicResource DangerBrush}" Header="Выйти из чата" IsVisible="{Binding Permissions.CanLeaveChat}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Path Width="20" Height="20" Margin="3,0,0,0" HorizontalAlignment="Center" Data="{StaticResource Options}" Fill="{DynamicResource TextPrimary}" Stretch="Uniform" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Row="1" Orientation="Vertical">
+                    <Border Background="{DynamicResource InfoBgBrush}" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,0,0,1" Classes="PinnedBanner" IsVisible="{Binding Pinned.IsPinnedBannerVisible}">
+                        <Button Padding="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Classes="Flat" Command="{Binding OpenPinnedSectionCommand}" ToolTip.Tip="Показать все закреплённые сообщения">
+                            <Grid Margin="16,6" ColumnDefinitions="Auto,*,Auto">
+                                <Path Grid.Column="0" Width="14" Height="14" Margin="0,0,10,0" VerticalAlignment="Center" Data="{StaticResource PinIcon}" Fill="{DynamicResource Accent}" Stretch="Uniform" />
+                                <StackPanel Grid.Column="1" Spacing="1">
+                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" Text="Закреплённое сообщение" />
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondary}" MaxLines="1" Text="{Binding Pinned.PinnedBannerPreViewText}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <Border Grid.Column="2" Margin="8,0,0,0" Classes="CountBadge" IsVisible="{Binding Pinned.HasMultiplePinned}">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextMuted}" Text="{Binding Pinned.PinnedCount}"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+                    </Border>
+
+                    <Border Background="{DynamicResource AccentMuted}" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,0,0,1" IsVisible="{Binding Call.HasActiveCall}">
+                        <Grid Margin="16,8" ColumnDefinitions="Auto,*,Auto">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" Text="{Binding Call.ActiveCallBannerText}" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}" Text="{Binding Call.IsInActiveCall, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Вы участвуете · нажмите чтобы вернуться|Нажмите чтобы войти'}" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Padding="12,6" Classes="DialogAccent" Command="{Binding Call.StartOrJoinCallCommand}" Content="{Binding Call.IsInActiveCall, Converter={conv:Converter Name=BoolToString}, ConverterParameter='Открыть|Войти'}" FontSize="12" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <Panel Grid.Row="2">
+                    <Panel>
+                        <Border Opacity="0.4">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0" Color="{DynamicResource TopBg}" />
+                                    <GradientStop Offset="1" Color="{DynamicResource BaseBg}" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Panel>
+
+                    <skeleton:ChatMessagesSkeleton IsVisible="{Binding IsInitialLoading}" />
+
+                    <ListBox
+                        x:Name="MessagesList"
+                        Margin="0,8"
+                        Padding="16,0"
+                        Classes="MessagesList"
+                        IsVisible="{Binding !IsInitialLoading}"
+                        ItemsSource="{Binding MessageManager.Messages}"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectionMode="Single,Toggle">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel CacheLength="2" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="messages:MessageViewModel">
+                                <local:MessageControl />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Padding="0,10,0,12" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="{DynamicResource SecondaryBG}" CornerRadius="0,0,12,12" IsHitTestVisible="False" IsVisible="{Binding IsLoadingOlderMessages}" Opacity="0.95" ZIndex="50">
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                            <ProgressBar Width="80" Height="4" VerticalAlignment="Center" IsIndeterminate="True" />
+                            <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondary}" Text="Загрузка сообщений..." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Padding="0,12,0,10" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Background="{DynamicResource SecondaryBG}" CornerRadius="12,12,0,0" IsHitTestVisible="False" IsVisible="{Binding IsLoadingNewerMessages}" Opacity="0.95" ZIndex="50">
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                            <ProgressBar Width="80" Height="4" VerticalAlignment="Center" IsIndeterminate="True" />
+                            <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondary}" Text="Загрузка сообщений..." />
+                        </StackPanel>
+                    </Border>
+
+                    <Button Margin="0,0,24,16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Classes="ScrollToBottomBtn" Command="{Binding ScrollToBottomCommand}" IsVisible="{Binding ShowScrollToBottom}">
+                        <Panel>
+                            <Path Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center" Data="{StaticResource ChevronIcon}" Fill="{DynamicResource TextPrimary}" Stretch="Uniform" />
+                            <Border Height="20" MinWidth="20" Margin="0,0,-8,0" Padding="6,0" HorizontalAlignment="Right" VerticalAlignment="Top" Background="{DynamicResource Accent}" CornerRadius="10" IsVisible="{Binding HasNewMessages}">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextOnAccent}" Text="{Binding UnreadCount, FallbackValue=!}" />
+                            </Border>
+                        </Panel>
+                    </Button>
+                </Panel>
+
+                <local:ChatComposerView Grid.Row="3" />
+
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

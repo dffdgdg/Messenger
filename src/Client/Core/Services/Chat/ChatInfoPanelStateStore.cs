@@ -1,0 +1,18 @@
+using Core.Services.Chat.Abstractions;
+using Core.Services.Platform.Abstractions;
+
+namespace Core.Services.Chat;
+
+public class ChatInfoPanelStateStore(ISettingsService settingsService) : IChatInfoPanelStateStore
+{
+    private readonly ISettingsService _settingsService = settingsService
+        ?? throw new System.ArgumentNullException(nameof(settingsService));
+
+    private const string Key = "ChatInfoPanelIsOpen";
+
+    public bool IsOpen
+    {
+        get => _settingsService.Get<bool?>(Key) ?? false;
+        set => _settingsService.Set(Key, value);
+    }
+}

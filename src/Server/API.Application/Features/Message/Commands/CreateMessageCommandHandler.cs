@@ -20,6 +20,7 @@ public partial class CreateMessageCommandHandler(
     IAccessControlService accessControl,
     IHubNotifier hubNotifier,
     IUrlBuilder urlBuilder,
+    IPendingUploadStore pendingUploadStore,
     AppDateTime appDateTime)
     : ICommandHandler<CreateMessageCommand, MessageDto>
 {
@@ -43,7 +44,10 @@ public partial class CreateMessageCommandHandler(
             ? await ResolveRootForwardedIdAsync(request.ForwardedFromMessageId.Value, ct)
             : null;
 
-        var message = await BuildMessageAsync(request, senderId, resolvedForwardId, ct);
+        var buildResult = await BuildMessageAsync(request, senderId, resolvedForwardId, ct);
+        if (buildResult.IsFailure) return buildResult.As<MessageDto>();
+
+        var message = buildResult.Value!;
 
         messageRepository.Add(message);
         await chatRepository.UpdateLastMessageTimeAsync(request.ChatId, appDateTime.UtcNow, ct);
@@ -99,7 +103,7 @@ public partial class CreateMessageCommandHandler(
 
     #region Message building
 
-    private async Task<UserMessage> BuildMessageAsync(CreateMessageRequest request, int senderId, int? resolvedForwardId, CancellationToken ct)
+    private async Task<Result<UserMessage>> BuildMessageAsync(CreateMessageRequest request, int senderId, int? resolvedForwardId, CancellationToken ct)
     {
         var content = request.IsVoiceMessage ? null : request.Content;
 
@@ -121,52 +125,70 @@ public partial class CreateMessageCommandHandler(
         };
 
         if (request.IsVoiceMessage)
-            AttachVoice(message, request);
+        {
+            var attachVoice = AttachVoice(message, request, senderId);
+            if (attachVoice.IsFailure) return attachVoice.As<UserMessage>();
+        }
 
         if (request.Files is { Count: > 0 })
-            AttachFiles(message, request);
-
-        return message;
-    }
-
-    private static void AttachVoice(UserMessage message, CreateMessageRequest request) => message.VoiceMessage = new VoiceMessage
-    {
-        DurationSeconds = request.VoiceDurationSeconds ?? 0,
-        Waveform = request.VoiceWaveform,
-        FilePath = ToRelativePath(request.VoiceFileUrl),
-        FileSize = request.VoiceFileSize ?? 0
-    };
-
-    private static void AttachFiles(UserMessage message, CreateMessageRequest request)
-    {
-        foreach (var f in request.Files!)
         {
-            message.MessageFiles.Add(new MessageFile
-            {
-                FileName = f.FileName,
-                ContentType = f.ContentType,
-                Path = ToRelativePath(f.Url)
-            });
+            var attach = AttachFiles(message, request, senderId);
+            if (attach.IsFailure) return attach.As<UserMessage>();
         }
+
+        return Result<UserMessage>.Success(message);
     }
 
     /// <summary>
-    /// Извлекает путь из URL. Принимает как абсолютные URL
-    /// (https://host/files/x.jpg → /files/x.jpg),
-    /// так и уже относительные (/files/x.jpg → /files/x.jpg).
+    /// Голосовое, как и обычные файлы, резолвится ТОЛЬКО через одноразовый
+    /// токен, выданный при аплоаде через тот же upload-эндпоинт.
+    /// Path/FileSize берутся из серверной записи pending-upload, а не из
+    /// полей, присланных клиентом.
     /// </summary>
-    private static string ToRelativePath(string? url)
+    private Result AttachVoice(UserMessage message, CreateMessageRequest request, int senderId)
     {
-        if (string.IsNullOrEmpty(url))
-            return string.Empty;
+        if (string.IsNullOrWhiteSpace(request.VoiceUploadToken))
+            return Result.Failure("Голосовое сообщение не было загружено корректно");
 
-        if (url.StartsWith('/'))
-            return url;
+        if (!pendingUploadStore.TryConsume(request.VoiceUploadToken, senderId, request.ChatId, out var pending) || pending is null)
+            return Result.Failure("Голосовое сообщение не найдено или срок его загрузки истёк");
 
-        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return uri.PathAndQuery;
+        message.VoiceMessage = new VoiceMessage
+        {
+            DurationSeconds = request.VoiceDurationSeconds ?? 0,
+            Waveform = request.VoiceWaveform,
+            FilePath = pending.RelativePath,
+            FileSize = pending.FileSize
+        };
 
-        return "/" + url;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Файлы резолвятся ТОЛЬКО через одноразовый токен, выданный при аплоаде.
+    /// FileName/ContentType/Path берутся из серверной записи pending-upload,
+    /// а не из полей, присланных клиентом — иначе клиент мог бы подделать
+    /// произвольный путь/тип и "подсунуть" чужой файл в своё сообщение.
+    /// </summary>
+    private Result AttachFiles(UserMessage message, CreateMessageRequest request, int senderId)
+    {
+        foreach (var f in request.Files!)
+        {
+            if (string.IsNullOrWhiteSpace(f.UploadToken))
+                return Result.Failure("Файл не был загружен корректно");
+
+            if (!pendingUploadStore.TryConsume(f.UploadToken, senderId, request.ChatId, out var pending) || pending is null)
+                return Result.Failure("Файл не найден или срок его загрузки истёк");
+
+            message.MessageFiles.Add(new MessageFile
+            {
+                FileName = pending.FileName,
+                ContentType = pending.ContentType,
+                Path = pending.RelativePath
+            });
+        }
+
+        return Result.Success();
     }
 
     private async Task<int?> ResolveRootForwardedIdAsync(int messageId, CancellationToken ct)
@@ -227,19 +249,19 @@ public partial class CreateMessageCommandHandler(
     {
         var notificationType = type == NotificationType.Mention ? "mention" : message.Poll != null ? "poll" : "message";
 
-        var preview = type == NotificationType.Mention ? $"Вас упомянули: {Truncate(message.Content, 100)}" : Truncate(message.Content, 100);
+        var preView = type == NotificationType.Mention ? $"Вас упомянули: {Truncate(message.Content, 100)}" : Truncate(message.Content, 100);
 
         return new NotificationDto
         {
             Type = notificationType,
             ChatId = message.ChatId,
             ChatName = isContact ? message.SenderName : chat?.Name,
-            ChatAvatar = isContact ? message.SenderAvatarUrl : urlBuilder.BuildUrl(chat?.Avatar),
+            ChatAvatar = isContact ? message.SenderAvatarUrl : AvatarUrlHelper.BuildChatAvatarUrl(urlBuilder, chat?.Id ?? message.ChatId, chat?.Avatar),
             MessageId = message.Id,
             SenderId = message.SenderId,
             SenderName = message.SenderName,
             SenderAvatar = message.SenderAvatarUrl,
-            Preview = preview,
+            PreView = preView,
             CreatedAt = message.CreatedAt
         };
     }
@@ -270,4 +292,3 @@ public partial class CreateMessageCommandHandler(
 
     #endregion
 }
-

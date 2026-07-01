@@ -21,4 +21,10 @@ public static class AccessControlExtensions
         var isOwner = await accessControl.IsOwnerAsync(userId, chatId);
         return isOwner ? Result.Success() : Result.Forbidden("Требуются права владельца");
     }
+
+    public static async Task<Result> EnsureCanViewUserAvatarAsync(this IAccessControlService accessControl, int viewerId, int targetUserId)
+    {
+        var allowed = await accessControl.CanViewUserAvatarAsync(viewerId, targetUserId);
+        return allowed ? Result.Success() : Result.Forbidden("Нет доступа к аватару пользователя");
+    }
 }

@@ -1,0 +1,34 @@
+﻿using System.Globalization;
+
+namespace Core.Shared.Converters.DateTime;
+
+public sealed class LastSeenTextConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count < 2) return "";
+
+        var isOnline = values[0] is true;
+        var lastOnline = values[1] switch
+        {
+            System.DateTime value => value,
+            System.DateTimeOffset value => value.UtcDateTime,
+            _ => (System.DateTime?)null
+        };
+
+        if (isOnline) return "в сети";
+        if (!lastOnline.HasValue) return "";
+
+        var diff = System.DateTime.UtcNow - lastOnline.Value;
+
+        return diff.TotalMinutes switch
+        {
+            < 1 => "был(а) только что",
+            < 60 => $"был(а) {(int)diff.TotalMinutes} мин. назад",
+            < 1440 => $"был(а) {(int)diff.TotalHours} ч. назад",
+            < 2880 => "был(а) вчера",
+            < 10080 => $"был(а) {(int)diff.TotalDays} дн. назад",
+            _ => $"был(а) {lastOnline.Value:dd.MM.yyyy}"
+        };
+    }
+}

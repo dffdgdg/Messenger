@@ -85,6 +85,8 @@ public static class InfrastructureExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileService, FileService>();
+        services.AddSingleton<IPendingUploadStore, PendingUploadStore>();
+        services.AddHostedService<PendingUploadCleanupHostedService>();
         services.AddSingleton<CallMixerService>();
         services.AddSingleton<CallRelayService>();
         services.AddHostedService(sp => sp.GetRequiredService<CallRelayService>());

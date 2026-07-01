@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Core.Features.Chat.ViewModels.Messages"
+             x:Class="Core.Features.Chat.Views.MessageParts.DateSeparatorPart"
+             x:DataType="vm:MessageViewModel">
+
+    <Grid IsVisible="{Binding ShowDateSeparator}"
+          Margin="0,16,0,12"
+          ColumnDefinitions="*,Auto,*">
+        
+        <Border Grid.Column="0"
+                Height="1"
+                Background="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center"
+                Margin="0,0,12,0"/>
+        
+        <Border Grid.Column="1"
+                Background="{DynamicResource SecondaryBG}"
+                CornerRadius="10"
+                Padding="12,4"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center">
+            <TextBlock Text="{Binding DateSeparatorText}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextSecondary}"
+                       HorizontalAlignment="Center"/>
+        </Border>
+        
+        <Border Grid.Column="2"
+                Height="1"
+                Background="{DynamicResource BorderDefault}"
+                VerticalAlignment="Center"
+                Margin="12,0,0,0"/>
+    </Grid>
+</UserControl>

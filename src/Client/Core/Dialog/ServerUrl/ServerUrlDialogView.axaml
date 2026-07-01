@@ -1,0 +1,50 @@
+<UserControl x:Name="Root"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Core.Dialog.ServerUrl"
+             x:Class="Core.Dialog.ServerUrl.ServerUrlDialogView"
+             x:DataType="vm:ServerUrlDialogViewModel">
+
+    <Border Classes="DialogContainer"
+            Background="{DynamicResource SecondaryBG}"
+            CornerRadius="16"
+            MaxWidth="440"
+            Padding="24">
+        <StackPanel Spacing="20">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="Введите IP-адрес или домен сервера с портом"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="Адрес сервера" Classes="FieldLabel"/>
+                <TextBox Text="{Binding ServerUrl}"
+                         PlaceholderText="Например: 192.168.1.100:5274"
+                         Classes="Input"/>
+                <TextBlock Text="{Binding ValidationError}"
+                           Foreground="{DynamicResource ErrorColor}"
+                           FontSize="12"
+                           IsVisible="{Binding ValidationError,
+                               Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
+                <Button Grid.Column="1"
+                        Content="Отмена"
+                        Classes="DialogOutline"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="100"
+                        Margin="0,0,12,0"/>
+                <Button Grid.Column="2"
+                        Content="Подтвердить"
+                        Classes="DialogAccent"
+                        Command="{Binding ConfirmCommand}"
+                        MinWidth="100"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

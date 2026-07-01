@@ -6,7 +6,7 @@ using Android.Security.Keystore;
 using Java.Security;
 using Javax.Crypto;
 using Javax.Crypto.Spec;
-using Core.Services.Abstractions;
+using Core.Services.Platform.Abstractions;
 
 namespace Mobile.Android.Services;
 

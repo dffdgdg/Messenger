@@ -1,0 +1,47 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatInfo.Sections.ChatInfoPhotosSection"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:context="using:Core.Features.Chat.ViewModels.Context"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:media="using:Core.Infrastructure.Media"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    x:DataType="vm:ChatViewModel">
+    <StackPanel>
+        <ItemsControl
+            ItemsSource="{Binding InfoPanel.PhotosItems}"
+            Tag="{Binding OpenInfoSectionMessageCommand}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="context:ChatInfoPanelMediaItem">
+                    <Button
+                        Width="88" Height="88"
+                        Margin="2"
+                        Classes="MediaThumb"
+                        Command="{Binding $parent[ItemsControl].Tag}"
+                        CommandParameter="{Binding Message}">
+                        <Panel>
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" />
+                            <Image media:RemoteImage.Source="{Binding PreViewUrl}" Stretch="UniformToFill" />
+                        </Panel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button
+            Margin="0,8,0,0"
+            Classes="InfoRow"
+            Command="{Binding InfoPanel.LoadMorePhotosCommand}"
+            IsVisible="{Binding InfoPanel.HasMorePhotos}">
+            <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource Accent}" Text="{Binding InfoPanel.RemainingPhotosText}" />
+        </Button>
+        <StackPanel Classes="EmptyState" IsVisible="{Binding !Sections.PhotosCount}">
+            <PathIcon Width="32" Height="32" HorizontalAlignment="Center" Data="{StaticResource ImageIcon}" Foreground="{DynamicResource TextMuted}" />
+            <TextBlock Margin="0,8,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" Text="Нет фотографий" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,76 @@
+<UserControl
+    x:Class="Core.Features.ChatList.Views.Controls.SearchMessageResultItemView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:search="using:Core.Features.ChatList.ViewModels.Search"
+    xmlns:avatar="using:Core.Shared.Controls"
+    x:DataType="search:SearchMessageResultViewModel">
+    
+    <UserControl.Resources>
+        <x:Double x:Key="ChatItemHeight">52</x:Double>
+        <x:Double x:Key="FontSizeSmall">11</x:Double>
+        <x:Double x:Key="FontSizeTitle">14</x:Double>
+        <x:Double x:Key="FontSizeBody">13</x:Double>
+        <Thickness x:Key="ChatInfoMargin">12,0,8,0</Thickness>
+        <Thickness x:Key="PreViewTopMargin">0,2,0,0</Thickness>
+        <Thickness x:Key="TimeMargin">0,4,0,0</Thickness>
+    </UserControl.Resources>
+
+    <Grid Height="{StaticResource ChatItemHeight}" ColumnDefinitions="Auto,*,50">
+        <avatar:AvatarControl
+            Grid.Column="0"
+            VerticalAlignment="Center"
+            Classes="Medium"
+            DisplayName="{Binding ChatName}"
+            FallbackIcon="{StaticResource GroupIcon}"
+            ShowOnlineIndicator="False"
+            Source="{Binding ChatAvatar}" />
+
+        <StackPanel Grid.Column="1" Margin="{StaticResource ChatInfoMargin}" VerticalAlignment="Center">
+            <TextBlock
+                FontSize="{StaticResource FontSizeTitle}"
+                FontWeight="SemiBold"
+                MaxLines="1"
+                Text="{Binding ChatName}"
+                TextTrimming="CharacterEllipsis" />
+
+            <TextBlock Margin="{StaticResource PreViewTopMargin}" Classes="ChatPreView">
+                <TextBlock.IsVisible>
+                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                        <Binding Converter="{x:Static StringConverters.IsNotNullOrEmpty}" Path="PreView" />
+                        <Binding Path="!HideSenderPrefix" />
+                    </MultiBinding>
+                </TextBlock.IsVisible>
+                <Run Foreground="{DynamicResource Accent}" Text="{Binding SenderName}" />
+                <Run Text=": " />
+                <Run Text="{Binding PreView}" />
+            </TextBlock>
+
+            <TextBlock Margin="{StaticResource PreViewTopMargin}" Classes="ChatPreView" Text="{Binding PreView}">
+                <TextBlock.IsVisible>
+                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                        <Binding Converter="{x:Static StringConverters.IsNotNullOrEmpty}" Path="PreView" />
+                        <Binding Path="HideSenderPrefix" />
+                    </MultiBinding>
+                </TextBlock.IsVisible>
+            </TextBlock>
+
+            <TextBlock
+                Margin="{StaticResource PreViewTopMargin}"
+                FontSize="{StaticResource FontSizeBody}"
+                Foreground="{DynamicResource TextMuted}"
+                IsVisible="{Binding PreView, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                Text="Нет сообщений" />
+        </StackPanel>
+
+        <TextBlock
+            Grid.Column="2"
+            Margin="{StaticResource TimeMargin}"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            FontSize="{StaticResource FontSizeSmall}"
+            Foreground="{DynamicResource TextMuted}"
+            Text="{Binding CreatedAt, Converter={conv:Converter Name=MessageTime}}" />
+    </Grid>
+</UserControl>

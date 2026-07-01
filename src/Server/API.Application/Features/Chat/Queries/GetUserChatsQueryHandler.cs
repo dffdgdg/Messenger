@@ -90,8 +90,8 @@ public class GetUserChatsQueryHandler(
         Dictionary<int, ChatRole> userRoles)
     {
         var msg = item.LastMessage;
-        var (preview, senderName, isSystem) =
-            msg is not null ? BuildLastMessagePreview(msg) : (null, null, false);
+        var (preView, senderName, isSystem) =
+            msg is not null ? BuildLastMessagePreView(msg) : (null, null, false);
 
         var isContact = item.Chat.Type == ChatType.Contact;
 
@@ -101,7 +101,7 @@ public class GetUserChatsQueryHandler(
             Type = item.Chat.Type,
             CreatedById = item.Chat.CreatedById ?? 0,
             LastMessageDate = msg?.CreatedAt ?? item.Chat.LastMessageTime,
-            LastMessagePreview = preview,
+            LastMessagePreView = preView,
             LastMessageSenderName = isContact ? null : senderName,
             LastMessageSenderId = msg?.SenderId,
             LastMessageIsSystem = isSystem,
@@ -130,7 +130,7 @@ public class GetUserChatsQueryHandler(
         return dto;
     }
 
-    private static (string? Preview, string? SenderName, bool IsSystem) BuildLastMessagePreview(LastMessageInfo msg)
+    private static (string? PreView, string? SenderName, bool IsSystem) BuildLastMessagePreView(LastMessageInfo msg)
     {
         if (msg.IsSystemMessage)
         {
@@ -139,12 +139,12 @@ public class GetUserChatsQueryHandler(
             return (formatted, null, true);
         }
 
-        var preview = BuildContentPreview(msg);
+        var preView = BuildContentPreView(msg);
         var firstName = ExtractFirstName(msg.SenderName);
-        return (preview, firstName, false);
+        return (preView, firstName, false);
     }
 
-    private static string? BuildContentPreview(LastMessageInfo msg)
+    private static string? BuildContentPreView(LastMessageInfo msg)
     {
         if (msg.HasPoll)
             return $"📊 {Truncate(msg.Content, 50) ?? "Опрос"}";

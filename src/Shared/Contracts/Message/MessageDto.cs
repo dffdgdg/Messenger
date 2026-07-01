@@ -23,7 +23,7 @@ public class MessageDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? PinnedAt { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? PinnedByUserId { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? ReplyToMessageId { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public MessageReplyPreviewDto? ReplyToMessage { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public MessageReplyPreViewDto? ReplyToMessage { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? ForwardedFromMessageId { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public MessageForwardInfoDto? ForwardedFrom { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SystemEventType? SystemEventType { get; set; }

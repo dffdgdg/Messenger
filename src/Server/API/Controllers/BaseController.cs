@@ -75,7 +75,7 @@ public abstract class BaseController<T>(ILogger<T> logger) : ControllerBase
         return MapFailure<object>(result);
     }
 
-    private ObjectResult MapFailure<TData>(Result result)
+    protected ObjectResult MapFailure<TData>(Result result)
     {
         var response = ApiResponse<TData>.Fail(result.Error!);
 

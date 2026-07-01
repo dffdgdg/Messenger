@@ -1,0 +1,40 @@
+<UserControl
+    x:Class="Core.Features.Chat.Views.ChatInfo.Sections.ChatInfoPollsSection"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Core.Shared.Controls"
+    xmlns:messages="using:Core.Features.Chat.ViewModels.Messages"
+    xmlns:vm="using:Core.Features.Chat.ViewModels"
+    x:DataType="vm:ChatViewModel">
+    <StackPanel Spacing="8">
+        <controls:SearchBox Margin="0,0,0,8" SearchText="{Binding InfoPanel.PollSearchQuery, Mode=TwoWay}" Watermark="Поиск по вопросам..." />
+        <ItemsControl
+            ItemsSource="{Binding InfoPanel.FilteredPolls}"
+            Tag="{Binding OpenInfoSectionMessageCommand}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="messages:MessageViewModel">
+                    <Button Classes="InfoRow" Command="{Binding $parent[ItemsControl].Tag}" CommandParameter="{Binding}">
+                        <Grid Margin="0,2" ColumnDefinitions="Auto,*">
+                            <Border Width="36" Height="36" VerticalAlignment="Center" Background="{DynamicResource SurfaceBrush}" CornerRadius="8">
+                                <PathIcon Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Data="{StaticResource PollIcon}" Foreground="{DynamicResource Accent}" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="3">
+                                <TextBlock FontSize="13" FontWeight="Medium" MaxLines="2" Text="{Binding Content}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource Accent}" IsVisible="{Binding SenderName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="{Binding SenderName}" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding SenderName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="·" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}" Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Classes="EmptyState" IsVisible="{Binding !InfoPanel.FilteredPolls.Count}">
+            <PathIcon Width="28" Height="28" HorizontalAlignment="Center" Data="{StaticResource PollIcon}" Foreground="{DynamicResource TextMuted}" Opacity="0.4" />
+            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding InfoPanel.PollSearchQuery, Converter={x:Static StringConverters.IsNullOrEmpty}}" Text="Нет опросов" />
+            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding InfoPanel.PollSearchQuery, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Text="Ничего не найдено" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

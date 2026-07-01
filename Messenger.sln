@@ -21,11 +21,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mobile.Android", "src\Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "src\Shared\Shared.csproj", "{B4A82D10-22FD-47AA-997E-1DC674B50E8D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Tests", "tests\API.Tests\API.Tests.csproj", "{A890E864-CCB6-4865-A3FC-7CF03620D1C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Tests.Unit", "tests\API\API.Tests\API.Tests.Unit.csproj", "{A890E864-CCB6-4865-A3FC-7CF03620D1C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.LoadTests", "tests\API.LoadTests\API.LoadTests.csproj", "{9AA18B52-1206-409B-B0BB-8476DE7D3E3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.LoadTests", "tests\API\API.LoadTests\API.LoadTests.csproj", "{9AA18B52-1206-409B-B0BB-8476DE7D3E3E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{6D43745B-522D-41D8-BED4-1A6E11EF92C8}"
+	ProjectSection(SolutionItems) = preProject
+		src\Server\API\docker-compose.yml = src\Server\API\docker-compose.yml
+		src\Server\API\Dockerfile = src\Server\API\Dockerfile
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client", "Client", "{72143A81-30FB-46FF-8997-895D24657E89}"
 EndProject
@@ -39,13 +43,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{334C6C17
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}"
 	ProjectSection(SolutionItems) = preProject
-		Doc.md = Doc.md
-		Readme.MD = Readme.MD
+		.dockerignore = .dockerignore
+		.editorconfig = .editorconfig
+		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{374FA5A4-A9B8-4521-90DB-CBDFF809FF6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Tests.Integration", "tests\API\API.Tests.Integration\API.Tests.Integration.csproj", "{F9A634C2-8FC7-4C73-944D-094B5655B195}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Doc", "Doc", "{217B44DB-306D-4F9E-ABCD-8C74673D2A50}"
 	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
+		Doc.md = Doc.md
+		Readme.MD = Readme.MD
 	EndProjectSection
 EndProject
 Global
@@ -192,6 +200,18 @@ Global
 		{9AA18B52-1206-409B-B0BB-8476DE7D3E3E}.Release|x64.Build.0 = Release|Any CPU
 		{9AA18B52-1206-409B-B0BB-8476DE7D3E3E}.Release|x86.ActiveCfg = Release|Any CPU
 		{9AA18B52-1206-409B-B0BB-8476DE7D3E3E}.Release|x86.Build.0 = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|x64.Build.0 = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Debug|x86.Build.0 = Debug|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|x64.ActiveCfg = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|x64.Build.0 = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|x86.ActiveCfg = Release|Any CPU
+		{F9A634C2-8FC7-4C73-944D-094B5655B195}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -210,6 +230,8 @@ Global
 		{9AA18B52-1206-409B-B0BB-8476DE7D3E3E} = {334C6C17-B9FC-432C-B95A-C967C9112B28}
 		{56186A6F-16D3-41AB-A194-3EF47709899B} = {72143A81-30FB-46FF-8997-895D24657E89}
 		{E0FC68D3-40F2-542A-6A90-38B94336C1AE} = {72143A81-30FB-46FF-8997-895D24657E89}
+		{F9A634C2-8FC7-4C73-944D-094B5655B195} = {334C6C17-B9FC-432C-B95A-C967C9112B28}
+		{217B44DB-306D-4F9E-ABCD-8C74673D2A50} = {F9B6B8D5-EDDF-4584-B432-9D44DC53BF2E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A20C657B-CE0E-4948-9F14-6811BF438ABC}

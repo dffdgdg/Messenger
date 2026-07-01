@@ -62,32 +62,33 @@ public static class MessageMappings
             PinnedAt = isPinnedAndVisible ? user.PinnedAt : null,
             PinnedByUserId = isPinnedAndVisible ? user.PinnedByUserId : null,
             SenderName = senderName,
-            SenderAvatarUrl = urlBuilder?.BuildUrl(user.Sender?.Avatar),
+            SenderAvatarUrl = user.SenderId.HasValue 
+                ? AvatarUrlHelper.BuildUserAvatarUrl(urlBuilder, user.SenderId.Value, user.Sender?.Avatar) : null,
             IsOwn = currentUserId.HasValue && user.SenderId == currentUserId,
 
             ReplyToMessageId = user.ReplyToMessageId,
             ForwardedFromMessageId = user.ForwardedFromMessageId,
-            ReplyToMessage = user.ReplyToMessage?.ToReplyPreviewDto(),
+            ReplyToMessage = user.ReplyToMessage?.ToReplyPreViewDto(),
             ForwardedFrom = user.ForwardedFromMessage?.ToForwardInfoDto(),
 
             IsVoiceMessage = voice != null,
             VoiceDurationSeconds = voice?.DurationSeconds,
             VoiceWaveform = voice?.Waveform,
-            VoiceFileUrl = isDeleted ? null : urlBuilder?.BuildUrl(voice?.FilePath),
+            VoiceFileUrl = isDeleted || voice is null ? null : urlBuilder?.BuildUrl($"api/files/voice/{user.Id}/download"),
             VoiceFileSize = voice?.FileSize,
 
-            Files = isDeleted ? [] : resolvedFiles?.Select(f => f.ToDto(urlBuilder)).ToList() ?? [],
+            Files = isDeleted ? [] : resolvedFiles?.Select(f => f.ToDto(urlBuilder, user.Id)).ToList() ?? [],
             Poll = isDeleted ? null : resolvedPoll?.ToDto(currentUserId)
         };
     }
 
-    public static MessageReplyPreviewDto ToReplyPreviewDto(this Message message)
+    public static MessageReplyPreViewDto ToReplyPreViewDto(this Message message)
     {
         var isDeleted = message.IsDeleted ?? false;
 
         if (message is SystemMessage sys)
         {
-            return new MessageReplyPreviewDto
+            return new MessageReplyPreViewDto
             {
                 Id = sys.Id,
                 ChatId = sys.ChatId,
@@ -100,7 +101,7 @@ public static class MessageMappings
         }
 
         var user = (UserMessage)message;
-        return new MessageReplyPreviewDto
+        return new MessageReplyPreViewDto
         {
             Id = user.Id,
             ChatId = user.ChatId,

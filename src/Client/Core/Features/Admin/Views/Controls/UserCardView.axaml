@@ -1,0 +1,146 @@
+<UserControl
+    x:Class="Core.Features.Admin.Views.Controls.UserCardView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Core.Shared.Controls"
+    xmlns:local="using:Core.Features.Admin.Views.Controls"
+    xmlns:user="using:Shared.Contracts.User"
+    x:DataType="user:UserDto">
+
+    <UserControl.Styles>
+        <Style Selector="Button:disabled StackPanel.Actions PathIcon">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
+        <Style Selector="Border.UserCard">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.UserCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlay}" />
+        </Style>
+
+        <Style Selector="StackPanel.Actions">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.UserCard:pointerover StackPanel.Actions">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style Selector="Button.BanButton:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+        <Style Selector="Button.UnbanButton:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border
+        Margin="0,1"
+        Padding="10,7"
+        Classes="UserCard"
+        CornerRadius="10">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+
+            <controls:AvatarControl
+                Grid.Column="0"
+                Margin="0,0,12,0"
+                DisplayName="{Binding DisplayName}"
+                IsOnline="{Binding IsOnline}"
+                Size="40"
+                Source="{Binding Avatar}" />
+
+            <StackPanel
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Spacing="1">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextPrimary}"
+                        Text="{Binding DisplayName}" />
+                </StackPanel>
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{DynamicResource TextMuted}"
+                    Text="{Binding Username, StringFormat='@{0}'}" />
+            </StackPanel>
+
+            <Border
+                Grid.Column="2"
+                Margin="0,0,10,0"
+                Padding="8,3"
+                VerticalAlignment="Center"
+                Background="{DynamicResource DangerBgBrush}"
+                BorderBrush="{DynamicResource DangerBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                IsVisible="{Binding IsBanned}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <PathIcon
+                        Width="10"
+                        Height="10"
+                        Data="{StaticResource BlockIcon}"
+                        Foreground="{DynamicResource DangerBrush}" />
+                    <TextBlock
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource DangerBrush}"
+                        Text="Заблокирован" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel
+                Grid.Column="3"
+                VerticalAlignment="Center"
+                Classes="Actions"
+                Orientation="Horizontal"
+                Spacing="2">
+
+                <Button
+                    Classes="IconButton Small"
+                    Command="{Binding $parent[local:UserCardView].EditCommand}"
+                    CommandParameter="{Binding .}"
+                    IsEnabled="{Binding CanManage}"
+                    ToolTip.Tip="Редактировать">
+                    <PathIcon
+                        Width="14"
+                        Height="14"
+                        Data="{StaticResource EditIcon}"
+                        Foreground="{DynamicResource TextSecondary}" />
+                </Button>
+
+                <Button
+                    Classes="IconButton Small"
+                    Command="{Binding $parent[local:UserCardView].BanCommand}"
+                    CommandParameter="{Binding .}"
+                    IsEnabled="{Binding CanManage}"
+                    ToolTip.Tip="{Binding IsBanned, Converter={x:Static BoolConverters.Not}, ConverterParameter='Разблокировать|Заблокировать'}">
+                    <Panel>
+                        <PathIcon
+                            Width="14"
+                            Height="14"
+                            Data="{StaticResource BlockIcon}"
+                            Foreground="{DynamicResource TextMuted}"
+                            IsVisible="{Binding !IsBanned}" />
+                        <PathIcon
+                            Width="14"
+                            Height="14"
+                            Data="{StaticResource UnblockIcon}"
+                            Foreground="{DynamicResource SuccessBrush}"
+                            IsVisible="{Binding IsBanned}" />
+                    </Panel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

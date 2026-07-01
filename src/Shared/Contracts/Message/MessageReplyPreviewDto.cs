@@ -1,6 +1,6 @@
 ﻿namespace Shared.Contracts.Message;
 
-public class MessageReplyPreviewDto
+public class MessageReplyPreViewDto
 {
     public int Id { get; set; }
     public int ChatId { get; set; }

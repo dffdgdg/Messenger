@@ -1,4 +1,5 @@
 ﻿using Core.Infrastructure.Diagnostics;
+using Core.Services.Auth.Abstractions;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;

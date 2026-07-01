@@ -38,6 +38,8 @@ public interface IMessageRepository : IRepository<Message>
         Dictionary<int, DateTime> historyFilter,
         CancellationToken ct = default);
     void Add(SystemMessage message);
+    Task<MessageFile?> FindFileForDownloadAsync(int fileId, CancellationToken ct = default);
+    Task<VoiceMessage?> FindVoiceForDownloadAsync(int messageId, CancellationToken ct = default);
     Task<SystemMessage?> FindSystemMessageWithIncludesAsync(int messageId, CancellationToken ct = default);
     Task<List<int>> GetForwardedToChatIdsAsync(int originalMessageId, CancellationToken ct = default);
     Task<int> SoftDeleteAsync(int messageId, DateTime editedAt, CancellationToken ct = default);

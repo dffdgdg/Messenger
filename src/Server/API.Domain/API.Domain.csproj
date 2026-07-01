@@ -14,5 +14,11 @@
   <ItemGroup>
 	  <ProjectReference Include="..\..\Shared\Shared.csproj" />
   </ItemGroup>
+	
+  <ItemGroup>
+    <Using Include="API.Domain.Common;" />
+    <Using Include="API.Domain.Entities;" />
+    <Using Include="Shared.Enum;" />
+  </ItemGroup>
 
 </Project>

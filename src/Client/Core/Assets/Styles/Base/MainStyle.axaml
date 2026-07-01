@@ -1,13 +1,13 @@
 <Styles
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:views="using:Core.Views">
-
+    xmlns:chatViews="clr-namespace:Core.Features.Chat.Views"
+    xmlns:chatListViews="clr-namespace:Core.Features.ChatList.Views">
     <!--
-        ═══════════════════════════════════════════════════════════════
-        1. ГЛОБАЛЬНЫЕ ПЕРЕОПРЕДЕЛЕНИЯ
-        Базовые стили для стандартных контролов
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    1. ГЛОБАЛЬНЫЕ ПЕРЕОПРЕДЕЛЕНИЯ
+    Базовые стили для стандартных контролов
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="TextBlock">
@@ -29,10 +29,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        2. ТИПОГРАФИКА
-        Заголовки, подписи и текстовые стили
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    2. ТИПОГРАФИКА
+    Заголовки, подписи и текстовые стили
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Заголовок страницы ──  -->
@@ -103,7 +103,7 @@
         <Setter Property="MaxLines" Value="1" />
     </Style>
 
-    <Style Selector="TextBlock.ChatPreview">
+    <Style Selector="TextBlock.ChatPreView">
         <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -152,10 +152,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        3. ПОЛЯ ВВОДА
-        TextBox, ComboBox, CheckBox, InputIcon
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    3. ПОЛЯ ВВОДА
+    TextBox, ComboBox, CheckBox, InputIcon
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Стандартный Input ──  -->
@@ -206,10 +206,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        4. КНОПКИ — ICON BUTTON
-        Квадратные кнопки-иконки
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    4. КНОПКИ — ICON BUTTON
+    Квадратные кнопки-иконки
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Базовый стиль  ──  -->
@@ -374,10 +374,10 @@
         <Setter Property="Background" Value="{DynamicResource BorderHover}" />
     </Style>
     <!--
-        ═══════════════════════════════════════════════════════════════
-        5. КНОПКИ — PRIMARY
-        Главная акцентная кнопка действия
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    5. КНОПКИ — PRIMARY
+    Главная акцентная кнопка действия
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="Button.Primary">
@@ -416,10 +416,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        6. КНОПКИ — ДИАЛОГОВЫЕ
-        Outline / Accent / Danger — для модальных окон
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    6. КНОПКИ — ДИАЛОГОВЫЕ
+    Outline / Accent / Danger — для модальных окон
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Outline ──  -->
@@ -494,10 +494,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        7. КНОПКИ — СПЕЦИАЛЬНЫЕ
-        Emoji, Clear, Avatar, SenderName
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    7. КНОПКИ — СПЕЦИАЛЬНЫЕ
+    Emoji, Clear, Avatar, SenderName
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Emoji ──  -->
@@ -547,10 +547,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        8. НАВИГАЦИЯ
-        Боковые RadioButton с иконкой + подписью
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    8. НАВИГАЦИЯ
+    Боковые RadioButton с иконкой + подписью
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Шаблон навигационной кнопки ──  -->
@@ -656,10 +656,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        9. КОНТЕЙНЕРЫ И СЕКЦИИ
-        PageContainer, Section, DialogContainer, PanelHeader, DialogDivider
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    9. КОНТЕЙНЕРЫ И СЕКЦИИ
+    PageContainer, Section, DialogContainer, PanelHeader, DialogDivider
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Контейнер страницы ──  -->
@@ -708,10 +708,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        11. БЕЙДЖИ
-        Непрочитанные, счётчики, иконка-бейдж
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    11. БЕЙДЖИ
+    Непрочитанные, счётчики, иконка-бейдж
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="Border.CountBadge">
@@ -726,10 +726,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        13. СПИСКИ
-        NavMenu, ChatListItem, MemberItem, PickerItem, MessagesList
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    13. СПИСКИ
+    NavMenu, ChatListItem, MemberItem, PickerItem, MessagesList
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="ListBox.NavMenu ListBoxItem">
@@ -820,10 +820,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        14. ПОЛЕ ВВОДА ЧАТА
-        ChatInput, режим редактирования, превью вложений
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    14. ПОЛЕ ВВОДА ЧАТА
+    ChatInput, режим редактирования, превью вложений
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="TextBox.ChatInput">
@@ -848,10 +848,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        15. HOVER-ЭФФЕКТЫ
-        Универсальные классы для интерактивности
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    15. HOVER-ЭФФЕКТЫ
+    Универсальные классы для интерактивности
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="Border.Hoverable">
@@ -863,13 +863,13 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        16. ПАНЕЛЬ ИНФОРМАЦИИ О ЧАТЕ
-        ChatInfoPanel — выезжающая боковая панель
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    16. ПАНЕЛЬ ИНФОРМАЦИИ О ЧАТЕ
+    ChatInfoPanel — выезжающая боковая панель
+    ═══════════════════════════════════════════════════════════════
     -->
 
-    <Style Selector="views|ChatInfoPanel">
+    <Style Selector="chatViews|ChatInfoPanel">
         <Setter Property="Width" Value="320" />
         <Setter Property="ClipToBounds" Value="True" />
         <Setter Property="Margin" Value="-320,0,0,0" />
@@ -883,15 +883,15 @@
         </Setter>
     </Style>
 
-    <Style Selector="views|ChatInfoPanel[IsVisible=true]">
+    <Style Selector="chatViews|ChatInfoPanel[IsVisible=true]">
         <Setter Property="Margin" Value="0" />
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        17. КАРТОЧКИ ДЕПАРТАМЕНТОВ
-        DepartmentCard — дерево отделов
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    17. КАРТОЧКИ ДЕПАРТАМЕНТОВ
+    DepartmentCard — дерево отделов
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="Border.DepartmentCard">
@@ -933,10 +933,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        19. РЕДАКТИРОВАНИЕ АВАТАРА
-        Overlay, кнопка удаления
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    19. РЕДАКТИРОВАНИЕ АВАТАРА
+    Overlay, кнопка удаления
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <!--  ── Кнопка-оверлей (наведение на аватар) ──  -->
@@ -1024,10 +1024,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        20. КОНТЕКСТНОЕ МЕНЮ
-        MenuFlyoutPresenter, MenuItem, Separator
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    20. КОНТЕКСТНОЕ МЕНЮ
+    MenuFlyoutPresenter, MenuItem, Separator
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="MenuFlyoutPresenter">
@@ -1060,10 +1060,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        21. SCROLLBAR
-        Треки, ползунки, состояния
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    21. SCROLLBAR
+    Треки, ползунки, состояния
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="ScrollBar">
@@ -1124,10 +1124,10 @@
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        22. SCROLLVIEWER
-        Модификаторы: ThinScrollbar, AutoHideScrollbar
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    22. SCROLLViewER
+    Модификаторы: ThinScrollbar, AutoHideScrollbar
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="ScrollViewer">
@@ -1165,57 +1165,57 @@
     </Style>
 
     <!--  ── Скроллбар панели чатов ──  -->
-    <Style Selector="views|ChatsView ListBox ScrollBar">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar">
         <Setter Property="Opacity" Value="1" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar:vertical">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar:vertical">
         <Setter Property="Width" Value="5" />
         <Setter Property="MinWidth" Value="5" />
         <Setter Property="MaxWidth" Value="5" />
         <Setter Property="Margin" Value="0" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar /template/ Thumb">
         <Setter Property="Background" Value="{DynamicResource TextSecondary}" />
         <Setter Property="Opacity" Value="1" />
         <Setter Property="Width" Value="5" />
         <Setter Property="MinWidth" Value="5" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb /template/ Border">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar /template/ Thumb /template/ Border">
         <Setter Property="Background" Value="{DynamicResource TextSecondary}" />
         <Setter Property="CornerRadius" Value="2.5" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar:pointerover /template/ Thumb">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar:pointerover /template/ Thumb">
         <Setter Property="Opacity" Value="1" />
         <Setter Property="Width" Value="5" />
         <Setter Property="MinWidth" Value="5" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar:pointerover /template/ Thumb /template/ Border">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar:pointerover /template/ Thumb /template/ Border">
         <Setter Property="Background" Value="{DynamicResource TextPrimary}" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb:pointerover /template/ Border">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar /template/ Thumb:pointerover /template/ Border">
         <Setter Property="Background" Value="{DynamicResource TextPrimary}" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar /template/ Thumb:pressed /template/ Border">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar /template/ Thumb:pressed /template/ Border">
         <Setter Property="Background" Value="{DynamicResource Accent}" />
     </Style>
 
-    <Style Selector="views|ChatsView ListBox ScrollBar /template/ Border#TrackBackground">
+    <Style Selector="chatListViews|ChatListView ListBox ScrollBar /template/ Border#TrackBackground">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Width" Value="5" />
     </Style>
 
     <!--
-        ═══════════════════════════════════════════════════════════════
-        23. КОМПАКТНЫЙ РЕЖИМ
-        Переопределения для узкой панели чатов
-        ═══════════════════════════════════════════════════════════════
+    ═══════════════════════════════════════════════════════════════
+    23. КОМПАКТНЫЙ РЕЖИМ
+    Переопределения для узкой панели чатов
+    ═══════════════════════════════════════════════════════════════
     -->
 
     <Style Selector="ToggleButton.SwitchSmall">
@@ -1241,7 +1241,7 @@
         <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
     </Style>
 
-    <Style Selector="views|ChatsView[IsCompactMode=True] ListBoxItem">
+    <Style Selector="chatListViews|ChatListView[IsCompactMode=True] ListBoxItem">
         <Setter Property="Padding" Value="4" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
@@ -1253,7 +1253,7 @@
         <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
     </Style>
 
-    <Style Selector="views|ChatsView[IsCompactMode=True] ListBox">
+    <Style Selector="chatListViews|ChatListView[IsCompactMode=True] ListBox">
         <Setter Property="Margin" Value="4" />
     </Style>
 

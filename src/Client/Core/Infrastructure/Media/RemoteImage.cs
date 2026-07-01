@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media.Imaging;
 using Core.Infrastructure.Diagnostics;
+using Core.Shared.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 

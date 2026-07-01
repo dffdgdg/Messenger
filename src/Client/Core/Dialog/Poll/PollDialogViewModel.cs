@@ -1,0 +1,146 @@
+using Core.Dialog.Shared;
+using System.Collections.Specialized;
+using System.ComponentModel;
+
+namespace Core.Dialog.Poll;
+
+public partial class PollDialogViewModel : DialogBaseViewModel
+{
+    private const int MinOptions = 2;
+    private const int MaxOptions = 10;
+
+    private readonly int _chatId;
+    public override bool IsFullscreenInCompactMode => true;
+    [ObservableProperty] public partial string Question { get; set; } = string.Empty;
+    [ObservableProperty] public partial ObservableCollection<OptionItem> Options { get; set; }
+    [ObservableProperty] public partial bool AllowsMultipleAnswers { get; set; }
+    [ObservableProperty] public partial bool IsAnonymous { get; set; } = true;
+
+    public Action<CreatePollDto>? CreateAction { get; set; }
+
+    public bool CanAddOption => Options.Count < MaxOptions;
+    public bool CanRemoveOption => Options.Count > MinOptions;
+    public bool CanCreate => !string.IsNullOrWhiteSpace(Question) && Options.Count >= MinOptions && Options.All(o => !string.IsNullOrWhiteSpace(o.Text));
+
+    public PollDialogViewModel(int chatId)
+    {
+        _chatId = chatId;
+        Title = "Создать опрос";
+        CanCloseOnBackgroundClick = true;
+        Options = [new(), new()];
+        SubscribeToOptions(Options);
+    }
+
+    partial void OnQuestionChanged(string value)
+    {
+        if (CanCreate) ErrorMessage = null;
+        NotifyStateChanged();
+    }
+
+    partial void OnOptionsChanged(ObservableCollection<OptionItem> oldValue, ObservableCollection<OptionItem> newValue)
+    {
+        if (oldValue != null)
+            UnsubscribeFromOptions(oldValue);
+
+        SubscribeToOptions(newValue);
+        NotifyStateChanged();
+    }
+
+    private void SubscribeToOptions(ObservableCollection<OptionItem> options)
+    {
+        options.CollectionChanged += OnOptionsCollectionChanged;
+        foreach (var item in options)
+            item.PropertyChanged += OnOptionPropertyChanged;
+    }
+
+    private void UnsubscribeFromOptions(ObservableCollection<OptionItem> options)
+    {
+        options.CollectionChanged -= OnOptionsCollectionChanged;
+        foreach (var item in options)
+            item.PropertyChanged -= OnOptionPropertyChanged;
+    }
+
+    private void OnOptionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (OptionItem item in e.OldItems)
+                item.PropertyChanged -= OnOptionPropertyChanged;
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (OptionItem item in e.NewItems)
+                item.PropertyChanged += OnOptionPropertyChanged;
+        }
+
+        NotifyStateChanged();
+    }
+
+    private void OnOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(OptionItem.Text))
+        {
+            if (CanCreate) ErrorMessage = null;
+            NotifyStateChanged();
+        }
+    }
+
+    private void NotifyStateChanged()
+    {
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanAddOption));
+        OnPropertyChanged(nameof(CanRemoveOption));
+        CreateCommand.NotifyCanExecuteChanged();
+        AddOptionCommand.NotifyCanExecuteChanged();
+        RemoveOptionCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddOption))]
+    private void AddOption() => Options.Add(new OptionItem());
+
+    [RelayCommand(CanExecute = nameof(CanRemoveOption))]
+    private void RemoveOption(OptionItem? item)
+    {
+        if (item != null)
+            Options.Remove(item);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCreate))]
+    private void Create()
+    {
+        if (!CanCreate)
+        {
+            ErrorMessage = "Заполните вопрос и минимум 2 варианта ответа";
+            return;
+        }
+
+        CreateAction?.Invoke(new CreatePollDto
+        {
+            ChatId = _chatId,
+            Question = Question.Trim(),
+            AllowsMultipleAnswers = AllowsMultipleAnswers,
+            IsAnonymous = IsAnonymous,
+            Options = [.. Options.Select((o, i) => new CreatePollOptionDto
+            {
+                Text = o.Text.Trim(),
+                Position = i
+            })]
+        });
+
+        RequestClose();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            UnsubscribeFromOptions(Options);
+
+        base.Dispose(disposing);
+    }
+
+    public partial class OptionItem : ObservableObject
+    {
+        [ObservableProperty] public partial string Text { get; set; } = string.Empty;
+    }
+}

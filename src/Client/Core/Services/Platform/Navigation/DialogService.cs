@@ -1,4 +1,5 @@
-﻿using Core.ViewModels.Dialog;
+﻿using Core.Dialog.Shared;
+using Core.Services.Platform.Abstractions;
 using System.Diagnostics;
 using System.Threading.Channels;
 

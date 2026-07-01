@@ -16,7 +16,7 @@ public static class UserMappings
         Midname = user.Midname,
         Department = user.Department?.Name,
         DepartmentId = user.Department?.Id,
-        Avatar = urlBuilder?.BuildUrl(user.Avatar),
+        Avatar = AvatarUrlHelper.BuildUserAvatarUrl(urlBuilder, user.Id, user.Avatar),
         Theme = user.UserSetting?.Theme,
         NotificationsEnabled = user.UserSetting?.NotificationsEnabled,
         IsOnline = isOnline ?? false,

@@ -5,4 +5,21 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Using Include="Shared.Contracts.Auth" />
+	  <Using Include="Shared.Contracts.Call;" />
+	  <Using Include="Shared.Contracts.Chat;" />
+	  <Using Include="Shared.Contracts.Department;" />
+	  <Using Include="Shared.Contracts.Message;" />
+	  <Using Include="Shared.Contracts.Notification;" />
+	  <Using Include="Shared.Contracts.Online;" />
+	  <Using Include="Shared.Contracts.Poll;" />
+	  <Using Include="Shared.Contracts.ReadReceipt;" />
+	  <Using Include="Shared.Contracts.Search;" />
+	  <Using Include="Shared.Contracts.User;" />
+	  <Using Include="Shared.Enum;" />
+	  <Using Include="Shared.HubProtocol;" />
+	  <Using Include="Shared.Infrastructure;" />
+	</ItemGroup>
 </Project>

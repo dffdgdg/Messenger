@@ -2,11 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Core.Infrastructure.Configuration;
-using Core.Infrastructure.Extensions;
-using Core.Services.Abstractions;
+using Core.Features.Shell;
+using Core.Services.Platform.Abstractions;
 using Core.Services.Platform.Network;
-using Core.ViewModels;
+using Core.Shared.Configuration;
+using Core.Shared.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mobile.Services.Platform;
@@ -86,7 +86,6 @@ public partial class App : Application
     {
         try
         {
-            // 1. База данных
             var db = Services.GetRequiredService<Core.Data.LocalDatabase>();
             await db.InitializeAsync();
 
@@ -94,8 +93,6 @@ public partial class App : Application
             await maintenance.RunMaintenanceAsync();
 
             Debug.WriteLine("[App] Database initialized");
-
-            // 2. Обнаружение сервера (асинхронно, не блокирует UI)
             await DiscoverServerAsync();
         }
         catch (Exception ex)
@@ -112,7 +109,6 @@ public partial class App : Application
             var logger = loggerFactory.CreateLogger<ServerDiscoveryService>();
             var discovery = new ServerDiscoveryService(logger);
 
-            // CancellationToken с таймаутом вместо Task.Run
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             var discovered = await discovery.DiscoverAsync(2000);
 
@@ -120,7 +116,6 @@ public partial class App : Application
             {
                 Debug.WriteLine($"[App] Сервер найден: {discovered}");
                 AppConfig.ApiUrl = discovered;
-                // Уведомляем сервисы об изменении URL если нужно
                 AppConfig.SetApiUrlCallback?.Invoke(discovered, false);
             }
         }

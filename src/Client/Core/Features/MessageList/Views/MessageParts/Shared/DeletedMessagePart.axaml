@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Core.Features.Chat.Views.MessageParts.Shared"
+             xmlns:vm="using:Core.Features.Chat.ViewModels.Messages"
+             x:Class="Core.Features.Chat.Views.MessageParts.Shared.DeletedMessagePart"
+             x:DataType="vm:MessageViewModel">
+
+    <StackPanel IsVisible="{Binding IsDeleted}">
+        <TextBlock Text="{Binding DisplayContent}"
+                   FontStyle="Italic"
+                   Foreground="{DynamicResource TextSecondary}"
+                   TextWrapping="Wrap"
+                   FontSize="15"
+                   LineHeight="22"/>
+        <local:MessageMetaBlock
+            HorizontalAlignment="Right"
+            Margin="0,-2,0,0"
+            Opacity="0.7"/>
+    </StackPanel>
+</UserControl>

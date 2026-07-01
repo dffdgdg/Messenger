@@ -14,6 +14,8 @@ public interface IAccessControlService
     Task<List<int>> GetChatMemberIdsAsync(int chatId);
     Task<ChatType> GetChatTypeAsync(int chatId);
     Task<ChatMember?> GetChatMemberAsync(int userId, int chatId);
+    Task<bool> CanViewUserAvatarAsync(int viewerId, int targetUserId);
+
     void InvalidateSystemAdminCache();
 
     async Task<Result> EnsureMemberOfAsync(int userId, int chatId)

@@ -5,7 +5,7 @@ namespace API.Web.Middleware;
 
 public sealed partial class MissingFileCleanupMiddleware(RequestDelegate next)
 {
-    private static readonly PathString[] WatchedPrefixes = [new("/uploads"), new("/avatars")];
+    private static readonly PathString[] WatchedPrefixes = [new("/avatars")];
 
     public async Task InvokeAsync(HttpContext context)
     {

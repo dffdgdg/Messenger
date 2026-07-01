@@ -1,0 +1,273 @@
+<UserControl
+    x:Class="Core.Features.ChatList.Views.ChatSearchPanelView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avatar="using:Core.Shared.Controls"
+    xmlns:controls="using:Core.Features.ChatList.Views.Controls"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:items="using:Core.Features.ChatList.ViewModels.Items"
+    xmlns:search="using:Core.Features.ChatList.ViewModels.Search"
+    xmlns:vm="using:Core.Features.ChatList.ViewModels"
+    x:DataType="vm:ChatListViewModel">
+
+    <ScrollViewer
+        Classes="ThinScrollbar AutoHideScrollbar"
+        HorizontalScrollBarVisibility="Disabled"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="8,4,8,8" HorizontalAlignment="Stretch">
+
+            <!-- Найденные чаты -->
+            <StackPanel IsVisible="{Binding SearchManager.HasChatResults}">
+                <TextBlock
+                    Margin="4,0,0,4"
+                    Classes="SectionHeader"
+                    IsVisible="{Binding !IsCompactMode}"
+                    Text="Чаты" />
+
+                <ListBox
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Найденные чаты"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ItemsSource="{Binding SearchManager.ChatResults}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel HorizontalAlignment="Stretch" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,1" />
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                    </ListBox.Styles>
+                                        <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="items:ChatListItemViewModel">
+                            <Button
+                                Margin="0,1"
+                                Classes="ChatListItem"
+                                Command="{Binding $parent[UserControl].((vm:ChatListViewModel)DataContext).OpenSearchedChatCommand}"
+                                CommandParameter="{Binding}">
+                                <Panel>
+                                    <controls:ChatFullItemView 
+                                        IsVisible="{Binding !$parent[UserControl].((vm:ChatListViewModel)DataContext).IsCompactMode}" />
+                                    <avatar:AvatarControl
+                                        HorizontalAlignment="Center"
+                                        Classes="Medium"
+                                        DisplayName="{Binding Name}"
+                                        FallbackIcon="{StaticResource GroupIcon}"
+                                        IsVisible="{Binding $parent[UserControl].((vm:ChatListViewModel)DataContext).IsCompactMode}"
+                                        ShowOnlineIndicator="False"
+                                        Source="{Binding Avatar}" />
+                                </Panel>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+
+            <Border
+                Height="1"
+                Margin="0,8"
+                Background="{DynamicResource BorderDefault}">
+                <Border.IsVisible>
+                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                        <Binding Path="SearchManager.HasChatResults" />
+                        <Binding Path="SearchManager.HasMessageResults" />
+                        <Binding Path="!IsCompactMode" />
+                        <Binding Path="!IsChatLocalSearchMode" />
+                    </MultiBinding>
+                </Border.IsVisible>
+            </Border>
+
+            <!-- Найденные сообщения -->
+            <StackPanel>
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                        <Binding Path="SearchManager.HasMessageResults" />
+                        <Binding Path="!IsCompactMode" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+
+                <TextBlock
+                    Margin="4,0,0,4"
+                    Classes="SectionHeader"
+                    IsVisible="{Binding !IsCompactMode}"
+                    Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToMessagesHeader}}" />
+
+                <ListBox
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Найденные сообщения"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ItemsSource="{Binding SearchManager.MessageResults}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel HorizontalAlignment="Stretch" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,1" />
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="search:SearchMessageResultViewModel">
+                            <Button
+                                Margin="0,1"
+                                Classes="ChatListItem"
+                                Command="{Binding $parent[UserControl].((vm:ChatListViewModel)DataContext).OpenSearchResultCommand}"
+                                CommandParameter="{Binding Source}">
+                                <controls:SearchMessageResultItemView />
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button
+                    Margin="0,8,0,4"
+                    HorizontalAlignment="Center"
+                    Classes="DialogOutline"
+                    Command="{Binding LoadMoreSearchResultsCommand}"
+                    Content="Показать ещё"
+                    IsVisible="{Binding SearchManager.HasMoreMessages}" />
+            </StackPanel>
+
+            <!-- Пустые состояния и ошибки поиска -->
+            <StackPanel
+                Margin="0,48"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsVisible="{Binding !SearchManager.HasResults}">
+
+                <!-- Лоадер -->
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding SearchManager.IsSearching}"
+                    Spacing="12">
+                    <avatar:CircularProgress
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource Accent}"
+                        IsIndeterminate="True"
+                        Size="48"
+                        StrokeWidth="4" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{DynamicResource TextSecondary}"
+                        IsVisible="{Binding !IsCompactMode}"
+                        Text="Поиск..." />
+                </StackPanel>
+
+                <!-- Пустой запрос -->
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <StackPanel.IsVisible>
+                        <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                            <Binding Path="!SearchManager.IsSearching" />
+                            <Binding Converter="{x:Static StringConverters.IsNullOrEmpty}" Path="SearchManager.SearchQuery" />
+                        </MultiBinding>
+                    </StackPanel.IsVisible>
+                    <Border
+                        Width="72"
+                        Height="72"
+                        HorizontalAlignment="Center"
+                        Background="{DynamicResource SecondaryBG}"
+                        CornerRadius="36">
+                        <PathIcon
+                            Width="32"
+                            Height="32"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource SearchIcon}"
+                            Foreground="{DynamicResource TextMuted}"
+                            Opacity="0.5" />
+                    </Border>
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextSecondary}"
+                        IsVisible="{Binding !IsCompactMode}"
+                        Text="Начните поиск" />
+                    <TextBlock
+                        MaxWidth="200"
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextMuted}"
+                        IsVisible="{Binding !IsCompactMode}"
+                        Text="{Binding SearchManager.SelectedScope, Converter={conv:Converter Name=SearchScopeToHint}}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Ничего не найдено -->
+                <StackPanel HorizontalAlignment="Center" Spacing="10">
+                    <StackPanel.IsVisible>
+                        <MultiBinding Converter="{conv:MultiConverter Name=BooleanAnd}">
+                            <Binding Path="!SearchManager.IsSearching" />
+                            <Binding Converter="{x:Static StringConverters.IsNotNullOrEmpty}" Path="SearchManager.SearchQuery" />
+                        </MultiBinding>
+                    </StackPanel.IsVisible>
+                    <Border
+                        Width="72"
+                        Height="72"
+                        HorizontalAlignment="Center"
+                        Background="{DynamicResource SecondaryBG}"
+                        CornerRadius="36">
+                        <PathIcon
+                            Width="32"
+                            Height="32"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource SearchIcon}"
+                            Foreground="{DynamicResource TextMuted}"
+                            Opacity="0.5" />
+                    </Border>
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextSecondary}"
+                        Text="Ничего не найдено" />
+                    <TextBlock
+                        MaxWidth="210"
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextMuted}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap">
+                        <Run Text="По запросу " />
+                        <Run Foreground="{DynamicResource TextMuted}" Text="«" />
+                        <Run
+                            FontWeight="Bold"
+                            Foreground="{DynamicResource TextPrimary}"
+                            Text="{Binding SearchManager.SearchQuery}" />
+                        <Run Foreground="{DynamicResource TextMuted}" Text="»" />
+                        <Run Text=" ничего не нашлось" />
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+
+            <Border
+                Margin="0,8"
+                Classes="AlertError"
+                IsVisible="{Binding SearchManager.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock
+                    FontSize="13"
+                    Foreground="{DynamicResource ErrorBrush}"
+                    IsVisible="{Binding !IsCompactMode}"
+                    Text="{Binding SearchManager.ErrorMessage}"
+                    TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

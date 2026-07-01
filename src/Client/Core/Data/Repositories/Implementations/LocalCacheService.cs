@@ -154,10 +154,10 @@ public class LocalCacheService(LocalDatabase localDb, IMessageCacheRepository me
         await _chatRepo.UpsertBatchAsync(entities);
     }
 
-    public async Task UpdateChatLastMessageAsync(int chatId, string? preview, string? senderName, DateTime date)
+    public async Task UpdateChatLastMessageAsync(int chatId, string? preView, string? senderName, DateTime date)
     {
         var dateTicks = date.ToUniversalTime().Ticks;
-        await _chatRepo.UpdateLastMessageAsync(chatId, preview, senderName, dateTicks);
+        await _chatRepo.UpdateLastMessageAsync(chatId, preView, senderName, dateTicks);
     }
 
     public async Task<ChatSyncState?> GetSyncStateAsync(int chatId)

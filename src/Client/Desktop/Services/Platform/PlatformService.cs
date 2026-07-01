@@ -1,6 +1,9 @@
-﻿using Avalonia.Controls.ApplicationLifetimes;
+﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
+using Core.Services.Platform.Abstractions;
 using System.Diagnostics;
 
 namespace Desktop.Shared.Services.Platform;

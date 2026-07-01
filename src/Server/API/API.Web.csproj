@@ -40,5 +40,32 @@
 		<None Include="Dockerfile" />
 		<None Include="Hubs\MessengerHub.ReadReceipts.cs" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Using Include=" Shared.Contracts.Chat;" />
+	  <Using Include=" Shared.Contracts.User;" />
+	  <Using Include="API.Application.Features.Admin;" />
+	  <Using Include="API.Application.Features.Call;" />
+	  <Using Include="API.Application.Features.Chat;" />
+	  <Using Include="API.Application.Features.Department;" />
+	  <Using Include="API.Application.Features.File;" />
+	  <Using Include="API.Application.Features.Message;" />
+	  <Using Include="API.Application.Features.Notification;" />
+	  <Using Include="API.Application.Features.Poll;" />
+	  <Using Include="API.Application.Features.ReadReceipt;" />
+	  <Using Include="API.Application.Features.Status;" />
+	  <Using Include="API.Application.Features.User;" />
+	  <Using Include="API.Domain.Common;" />
+	  <Using Include="Shared.Contracts.Auth;" />
+	  <Using Include="Shared.Contracts.Call;" />
+	  <Using Include="Shared.Contracts.Department;" />
+	  <Using Include="Shared.Contracts.Message;" />
+	  <Using Include="Shared.Contracts.Notification;" />
+	  <Using Include="Shared.Contracts.Poll;" />
+	  <Using Include="Shared.Contracts.ReadReceipt;" />
+	  <Using Include="Shared.Contracts.Search;" />
+	  <Using Include="Shared.Enum;" />
+	  <Using Include="Shared.HubProtocol;" />
+	  <Using Include="Shared.Infrastructure;" />
+	</ItemGroup>
 
 </Project>

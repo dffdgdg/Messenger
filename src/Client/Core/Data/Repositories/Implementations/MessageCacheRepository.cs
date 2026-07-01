@@ -42,7 +42,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
                 files_json = NULL,
                 reply_to_message_id = NULL,
                 reply_sender_name = NULL,
-                reply_content_preview = NULL,
+                reply_content_preView = NULL,
                 reply_is_deleted = 0,
                 reply_sender_id = NULL,
                 reply_chat_id = NULL,
@@ -58,7 +58,7 @@ public class MessageCacheRepository(LocalDatabase localDb) : IMessageCacheReposi
 
             UPDATE messages
             SET reply_is_deleted = 1,
-                reply_content_preview = NULL
+                reply_content_preView = NULL
             WHERE reply_to_message_id = ?
             """, messageId, messageId);
 

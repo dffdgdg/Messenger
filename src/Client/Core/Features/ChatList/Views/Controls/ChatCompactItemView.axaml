@@ -1,0 +1,43 @@
+<UserControl
+    x:Class="Core.Features.ChatList.Views.Controls.ChatCompactItemView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Core.Shared.Converters"
+    xmlns:items="using:Core.Features.ChatList.ViewModels.Items"
+    xmlns:avatar="using:Core.Shared.Controls"
+    x:DataType="items:ChatListItemViewModel">
+    
+    <UserControl.Resources>
+        <x:Double x:Key="ChatItemHeight">52</x:Double>
+    </UserControl.Resources>
+
+    <Grid Height="{StaticResource ChatItemHeight}" HorizontalAlignment="Center" ToolTip.Tip="{Binding Name}">
+        <Panel>
+            <avatar:AvatarControl
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Classes="Medium"
+                DisplayName="{Binding Name}"
+                FallbackIcon="{StaticResource GroupIcon}"
+                ShowOnlineIndicator="True"
+                Source="{Binding Avatar}" />
+
+            <Border
+                Height="18"
+                MinWidth="18"
+                Margin="0,-2,-6,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Classes="UnreadBadge CompactBadge"
+                IsVisible="{Binding UnreadCount, Converter={conv:Converter Name=GreaterThanZero}}">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="10"
+                    FontWeight="SemiBold"
+                    Foreground="White"
+                    Text="{Binding UnreadCount}" />
+            </Border>
+        </Panel>
+    </Grid>
+</UserControl>

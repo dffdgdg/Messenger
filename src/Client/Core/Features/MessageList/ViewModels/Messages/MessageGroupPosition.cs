@@ -1,0 +1,6 @@
+﻿namespace Core.Features.MessageList.ViewModels.Messages;
+
+/// <summary>
+/// Позиция сообщения в группе для определения радиусов пузыря
+/// </summary>
+public enum MessageGroupPosition { Alone, First, Middle, Last }

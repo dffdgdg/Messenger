@@ -2,7 +2,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Core.Infrastructure.Helpers;
+using Core.Services.Platform.Abstractions;
+using Core.Shared.Helpers;
 
 namespace Desktop.Shared.Services.Platform;
 
